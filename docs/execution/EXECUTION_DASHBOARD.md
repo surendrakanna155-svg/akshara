@@ -11,10 +11,10 @@
 | Field | Value |
 |---|---|
 | **Current Phase** | **P1 — Remaining Backend & Code Fixes** 🟠 (P0 code/security ✅ 14/19; 5 live-lane tasks ⏳ owner-deferred) |
-| **Current Wave** | **P1-CODE-5 — HR payroll engine** (MOD-2/3) — 🔵 ready (non-blocked sibling; P1-CODE-4 identity is 👤-gated, surfaced not blocking) |
-| **Wave Status** | **P1-CODE-1 ✅ + P1-CODE-2 ✅ + P1-CODE-3 ✅** — reliability REL-1..9 + backend hardening (ENG-4/5/7/8/9/10, DB-6) closed. P0: 14/19 ✅; 5 live-lane ⏳ owner-deferred. |
-| **Planning** | 🔒 FROZEN 2026-07-04 → **AUTONOMOUS EXECUTION UNDER WAY** (P1 code waves; live lane deferred) |
-| **Last commit-gated wave** | **P1-CODE-3** (`b4bee40`) — Backend hardening ENG-4/5/7/8/9/10+DB-6 (error-leak fix, bulk caps, 400→422, forced-auth lint, taxonomy lint, audit-retention seam); EOS SECURITY+ARCH PASS, deno 2021 pass |
+| **Current Wave** | **P1-PROD-0 — XCT foundations (C0)** (XCT-1/2/3) — ⏸ **awaiting owner approval to start** (owner instruction 2026-07-04: STOP after P1-CODE-5 close). P1-CODE-4 identity stays 👤-gated. |
+| **Wave Status** | **P1-CODE-1 ✅ + P1-CODE-2 ✅ + P1-CODE-3 ✅ + P1-CODE-5 ✅** — reliability REL-1..9, backend hardening (ENG-4/5/7/8/9/10, DB-6), HR payroll engine (MOD-2/3) closed. P0: 14/19 ✅; 5 live-lane ⏳ owner-deferred. |
+| **Planning** | 🔒 FROZEN 2026-07-04 → **AUTONOMOUS EXECUTION UNDER WAY** (P1 code waves; live lane deferred; paused at the P1-CODE-5→P1-PROD-0 boundary for owner approval) |
+| **Last commit-gated wave** | **P1-CODE-5** (`56939bb` backend + `770ed00` client) — HR payroll engine MOD-2/3 (salary structures + draft-run generation, money-safe; employee-code 409; real employee picker; payroll un-hidden behind `module.hr_payroll` 402); EOS FEATURE PASS, suite 3605 pass (0 new fails) |
 
 ## 2. Wave arithmetic
 
@@ -31,7 +31,7 @@ Waves as the roadmap + Autonomous Plan group them (a "wave" = one EOS-gated comm
 | P6 | 1 | P6-PILOT-1 (single + 3-school concurrent, stages 0–16) |
 | P7 | 1 | P7-CERT-1 (gates T/S/O/U/A/P/B/D + `QA-R-012`) |
 | P8 | 5 | P8-GA-1..5 |
-| **Total** | **≈68** | **Completed: P0·W1 + W2 non-blocked legs (14/19 P0) + P1-CODE-1 (REL-1..5) + P1-CODE-2 (REL-6..9) + P1-CODE-3 (ENG-4/5/7/8/9/10,DB-6), 2026-07-04** · **Remaining:** P0 live-lane tail (INFRA-1/3, TEST-1/2/3) then ≈63 (P5 variable) |
+| **Total** | **≈68** | **Completed: P0·W1 + W2 non-blocked legs (14/19 P0) + P1-CODE-1 (REL-1..5) + P1-CODE-2 (REL-6..9) + P1-CODE-3 (ENG-4/5/7/8/9/10,DB-6) + P1-CODE-5 (MOD-2/3), 2026-07-04** · **Remaining:** P0 live-lane tail (INFRA-1/3, TEST-1/2/3) then ≈62 (P5 variable) |
 
 ## 3. Current Blockers
 
@@ -98,7 +98,7 @@ Hard gates: P0 gates P4/P6/P7/P8 · P1-CODE-1 → P2-UX-2 · P3-AI-1 → P3-AI-2
 |---|---:|---:|---:|---:|---|
 | Planning | — | 🔒 FROZEN + reviewed | — | — | audit + final review |
 | P0 — Truth/Docs/Live-Verify | 3 (19 tasks; **14 ✅**) | **2** (W1 ✅ · W2 non-blocked legs ✅) | 0 | 1 (W3 + INFRA-1/3 — ⏳ live-lane) | EOS per task |
-| P1 — Backend & Code Fixes | 35 | 0 | 0 | 35 | EOS per wave |
+| P1 — Backend & Code Fixes | 35 | 4 (CODE-1/2/3/5) | 0 | 31 (next: PROD-0 ⏸ owner-approval; CODE-4 👤) | EOS per wave |
 | P2 — UI/UX | 5 | 0 | 0 | 5 | EOS UX per wave |
 | P3 — Adaptive AI | 15 sub-waves | 0 | 0 | 15 | EOS AI per sub-wave |
 | P4 — Red Team | 2 | 0 | 0 | 2 | RED-TEAM verdict |
@@ -111,7 +111,7 @@ Hard gates: P0 gates P4/P6/P7/P8 · P1-CODE-1 → P2-UX-2 · P3-AI-1 → P3-AI-2
 ## 8. EOS Status
 
 - **Gate protocol:** every wave ends with `/eos <scope>`; **commit only on PASS**; CONDITIONAL PASS only with P1s tracked *and* roadmap permission; BLOCKED = fix and re-run, never advance. Verdicts append to `docs/engineering/eos/EOS_RUN_LEDGER.md` + the journal.
-- **Implementation EOS runs so far:** **1** — P0·W1 Documentation Truth → **EOS DOCS PASS** (2026-07-04).
+- **Implementation EOS runs so far:** **12** — P0·W1 DOCS PASS · P0·W2 legs (SEC-1/2/3, CODE-1/2, INFRA-4/5/6) PASS · P1-CODE-1 RELIABILITY PASS · P1-CODE-2 RELIABILITY PASS · P1-CODE-3 SECURITY+ARCH PASS · **P1-CODE-5 FEATURE PASS (2026-07-04, latest)**. See `docs/engineering/eos/EOS_RUN_LEDGER.md`.
 - **Open P0 findings:** none known at baseline (audit P0s are scheduled tasks, not open gate failures).
 - **Automatic-failure tripwires** (instant BLOCKED): data loss · security breach · escalation · tenant-isolation failure · critical crash · duplicate financial transaction · broken auth/sync · critical regression · failed backup verification · production blocker.
 - **Pre-execution baseline (verified live 2026-07-03, do NOT redo):** RLS isolation PASS · edge = `erp_tenant` NOBYPASSRLS · entitlement ON · encrypted backups + monthly restore drill green · watchdog green · AI live via OpenRouter · live DB password rotated · `flutter analyze` 0.
@@ -126,9 +126,9 @@ Hard gates: P0 gates P4/P6/P7/P8 · P1-CODE-1 → P2-UX-2 · P3-AI-1 → P3-AI-2
 
 ## 10. Current Focus
 
-> **P0 · W1 ✅ + W2 non-blocked legs ✅ COMPLETE (2026-07-04) — 14/19 P0 tasks done.** Shipped this session: docs truth (DOC-1/2/4/5); release fail-closed + no debug-signing (SEC-1); PII session → encrypted storage (SEC-2); mock/QA auth out of release (SEC-3); finance `row_version` optimistic lock (CODE-1); backup-script clean + migration credential→GUC + deploy-time `erp_tenant` assertion (INFRA-4/5/6); 8 backend-less surfaces route-guarded off (CODE-2). Owner decisions resolved: DR RPO ~24h nightly (INFRA-2); hide-list = hide all 8. `flutter analyze` 0; full suite 3567 pass (2 pre-existing UX-7 tracked → P2-UX); backend deno finance 136/0 + tenant 7/0.
+> **P1 code lane through P1-CODE-5 ✅ (2026-07-04).** Done since planning freeze: P0·W1 docs truth + W2 non-blocked legs (14/19 P0) · P1-CODE-1/2 (reliability platform REL-1..9) · P1-CODE-3 (backend hardening ENG-4/5/7/8/9/10 + DB-6) · **P1-CODE-5 (HR payroll engine MOD-2/3: money-safe salary-structure→generate→process engine backend `56939bb` + client `770ed00`; employee-code uniqueness; hardcoded-employeeId fix; payroll un-hidden behind the `module.hr_payroll` 402 gate).** analyze 0 · suite 3605 pass (2 known UX-7 → P2-UX) · deno HR 85/0 (full deno 2021 baseline at P1-CODE-3).
 >
-> **⛔ PAUSED at the live-lane boundary.** The remaining 5 P0 tasks — `P0-INFRA-1` (off-site backup), `P0-INFRA-3` (alert delivery), `P0-TEST-1/2/3` (CI green + isolation suite in CI + live-regression cron → 7-day P7 clock) — need the **owner-provisioned live lane** (VPS SSH + tenant Postgres + branch CI). The Phase-1 entry gate ("CI green") also depends on these, so **P1 does not start until the lane opens.** To resume: provision the lane, then run INFRA-1/3 + W3 for real.
+> **⏸ PAUSED at the P1-CODE-5 → P1-PROD-0 boundary (owner instruction 2026-07-04): do NOT auto-start P1-PROD-0 (XCT foundations); wait for explicit owner approval.** Also still owner-gated: the identity-decision batch (P1-CODE-4), module-scope 👤s (P1-CODE-6/7/8), and the live lane (`P0-INFRA-1/3`, `P0-TEST-1/2/3` — VPS SSH + tenant Postgres + branch CI; the 7-day cron clock → P7 starts only when P0-TEST-3 runs for real).
 
 ---
 
