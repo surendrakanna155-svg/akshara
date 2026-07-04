@@ -96,6 +96,8 @@ implement → validate → `/eos` PASS → commit → append a journal row here.
 
 | 2026-07-04 | `afd1106` | P1 | **P1-CODE-1 · REL-3/REL-5** (part 3, wave-close) | `lib/features/academics/exam_admin/exam_marks_entry_screen.dart` (DraftAutosaveMixin on `_MarksEntryBodyState` + didUpdateWidget tighten), `lib/features/finance/finance_workflow_actions.dart` (extract `_RecordCollectionForm` + money-safe resume), exam store/requests/mapper/datasource/provider (`rowVersion`→`expectedVersion`), `lib/core/testing/qa_test_keys.dart`, +3 test files | **PASS** (EOS RELIABILITY) | analyze 0; full suite **3584 pass, 0 new failures** (2 known UX-7); +11 tests; backend untouched | REL-3, REL-5 | P1-CODE-1 |
 
+| 2026-07-04 | `c0f450f` | P1 | **P1-CODE-2** (Reliability polish, REL-6..9) | `lib/core/reliability/store/{reliability_store,in_memory_reliability_store,sqflite_reliability_store,reliability_store_opener}.dart` (reclaim + open result), `sync/sync_engine.dart` (reclaim + ordering + reachability gate), `connectivity/*` (isReachable), `sync_center/{sync_summary,sync_center_controller,sync_banner}.dart` + `reliability_providers.dart` + `main.dart` (degraded telemetry), `lib/core/network/interceptors/offline_read_cache_interceptor.dart` (TTL), +3 test files + fakes | **PASS** (EOS RELIABILITY) | analyze 0; full suite **3599 pass, 0 new failures** (2 known UX-7); +15 tests; backend untouched | REL-6, REL-7, REL-8, REL-9 | P1-CODE-2 |
+
 *(Wave-2 onward: the executing session appends one row per task as each passes EOS and commits.)*
 
 ---

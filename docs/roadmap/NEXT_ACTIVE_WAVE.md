@@ -4,42 +4,49 @@
 **Updated by:** the executor at each wave boundary (on EOS PASS + commit → advance to the next wave; refresh the dashboard at the same moment).
 **Authority:** [`FINAL_EXECUTION_MASTER_ROADMAP.md`](FINAL_EXECUTION_MASTER_ROADMAP.md) · run per [`AUTONOMOUS_EXECUTION_PLAN.md`](AUTONOMOUS_EXECUTION_PLAN.md) · journal to [`../execution/IMPLEMENTATION_PROGRESS.md`](../execution/IMPLEMENTATION_PROGRESS.md).
 
-> **Previous wave:** **P1-CODE-1 — Reliability finish (REL-1..5) ✅ COMPLETE (2026-07-04)** — EOS RELIABILITY PASS. REL-1/4 `5908509`, REL-2 `66f9f35`, REL-3/5 `afd1106`. Universal idempotency-key + boot/resume flush + bulk-marks via ReliableWriter + drafts on marks & fee (money-safe) + first-write `row_version` on the per-cell mark save. `flutter analyze` 0; full suite 3584 pass (only the 2 known UX-7 `TeacherDashboard` overflow fails, → P2-UX). Roadmap P1-CODE-1 ✅; ledger REL-1..5 closed.
+> **Previous waves:** **P1-CODE-1 — Reliability finish (REL-1..5) ✅** (`5908509`/`66f9f35`/`afd1106`) · **P1-CODE-2 — Reliability polish (REL-6..9) ✅ COMPLETE (2026-07-04)** — EOS RELIABILITY PASS `c0f450f`: crash-safe dequeue reclaim (fixes a latent dropped-write), 24h read-cache TTL, degraded-store Sync banner, per-entity ordering + real DNS reachability probe. `flutter analyze` 0; suite 3599 pass (only the 2 known UX-7 overflow fails → P2-UX); +15 tests. The full reliability platform (REL-1..9) is now closed.
 
 ---
 
 ## ▶ CURRENT
 
 - **Phase:** **P1 — Backend & Code Fixes** 🟠
-- **Wave:** **P1-CODE-2 — Reliability polish** (REL-6..9)
+- **Wave:** **P1-CODE-3 — Backend hardening** (ENG-4/5/7/8/9/10, DB-6 code)
 - **Status:** 🔵 Ready to start
 - **Sequencing (owner, 2026-07-04):** the **complete live lane is provisioned in ONE dedicated phase after all code implementation is done** — so `P0-INFRA-1/3` + `P0-TEST-1/2/3` (and CI-green) are **explicitly owner-deferred**. Execution proceeds through the **code** waves of P1→P3 first; do NOT request off-site creds / alert sink / CI setup until the dedicated live phase. (VPS access exists — `ssh akshara` — but hold all live work.)
-- **P0 status:** code/security tasks **14/19 ✅ COMPLETE**; the 5 live-lane tasks are **queued** (owner-deferred, tracked for the live-lane phase).
+- **P0 status:** code/security tasks **14/19 ✅ COMPLETE**; the 5 live-lane tasks are **queued** (owner-deferred).
 
-### P1-CODE-2 tasks (this wave) — findings REL-6..9
+### P1-CODE-3 scope (this wave) — backend hardening (SECURITY + ARCH)
+This is a **backend** wave (`supabase/functions/**`), so `deno test` + `deno check` are the primary gates (client largely untouched → `flutter analyze` still 0).
+
 | Sub | Sev | What |
 |---|---|---|
-| **REL-6** | P1 | Transactional dequeue — the outbox drain must claim + delete/complete an operation atomically so a crash mid-drain never double-sends or drops a queued write. |
-| **REL-7** | P1 | Read-cache TTL — the offline read-cache must not serve stale-past-TTL rows; expire/refresh on read when online. |
-| **REL-8** | P2 | Store-fallback telemetry — surface when the reliability store falls back (e.g. SQLCipher open failure → in-memory) so a silent durability downgrade is observable. |
-| **REL-9** | P2 | Connectivity ping + per-entity ordering — a real reachability check (not just the OS flag) gates the drain; queued writes for one entity replay in submission order. |
+| **ENG-7 (=SEC-6)** | P1 | Stop raw `error.message` leaking to clients (~154 sites) — return a safe code/message; log the detail server-side only. |
+| **ENG-8 (=SEC-11)** | P1 | Cap the 4 unbounded bulk-array inputs (reject oversized payloads before work) — DoS / memory guard. |
+| **ENG-9** | P1 | Standardize error codes across handlers (one taxonomy; stable machine-readable `code`). |
+| **ENG-10** | P2 | Map validation failures `400 → 422` consistently (semantic HTTP status). |
+| **ENG-4** | P2 | Route-registry lint — every mounted route is declared/authorized (no orphan/unguarded route). |
+| **ENG-5** | P2 | Forced-auth choke point — every handler passes through the single auth/RBAC gate (no bypass path). |
+| **DB-6 (code)** | P2 | Audit retention / partitioning **code** seam (the doc target from DOC-5); schema/migration only where non-destructive. |
 
 ### EOS gate
-- `/eos reliability` → PASS. Regression: `flutter analyze` 0 · full suite green (no NEW failures; the 2 UX-7 `TeacherDashboard` overflow fails are the known pre-existing baseline) · new transactional-dequeue / TTL / ordering tests · `deno test` for any backend touch.
+- Relevant scopes: **SECURITY** (ENG-7/8/5) + **ARCH** (ENG-9/10/4, DB-6). Each → PASS. Automatic-failure tripwires apply (security breach / broken auth → instant BLOCKED).
+- Regression: `deno test` green (+ new error-path / payload-cap / route-lint tests) · `deno check` clean · `flutter analyze` 0 · full suite no NEW failures (beyond the 2 known UX-7).
 
 ### Next
-On P1-CODE-2 EOS PASS + commit → **P1-CODE-3** (backend hardening: error-leak/bulk-caps/error-codes/retention — SECURITY+ARCH) ∥ **P1-CODE-4** (identity finish, 👤 PLAT-0 partial) ∥ **P1-CODE-5** (HR payroll); then **P1-PROD-0** (XCT). Owner-scope tasks (P1-CODE-6/7/8 Hostel/Alumni/Finance-posting) pause + surface when reached.
+On P1-CODE-3 EOS PASS + commit → **P1-CODE-4** (identity finish — change-phone/PLAT-4, ledger triggers, student 2-table integrity; **👤 PLAT-0** partial — pause + surface the identity-cluster owner decisions when reached) ∥ **P1-CODE-5** (HR payroll engine); then **P1-PROD-0** (XCT). Owner-scope tasks P1-CODE-6/7/8 (Finance-posting / Hostel / Alumni) pause + surface when reached.
 
 > **Deferred live-lane tail (run in the dedicated live phase):** `P0-INFRA-1` off-site backup · `P0-INFRA-3` alert delivery · `P0-TEST-1/2/3` CI + isolation-in-CI + live-regression cron (starts the 7-day P7 clock). Plus every LIVE-graded re-verification across P0→P3.
+> **Reliability P2 residual:** none open — REL-1..9 fully delivered (REL-9 reachability probe shipped, not deferred).
 
 ### Regression required
-- `flutter analyze` = 0 · `flutter test` green (no NEW failures beyond the 2 known UX-7) · backend `deno test` green for any `supabase/**` change.
+- `deno test` + `deno check` green for the touched `supabase/functions/**` · `flutter analyze` 0 · `flutter test` no NEW failures (beyond the 2 known UX-7).
 
 ### Exit criteria (all true → wave complete)
-- [ ] Outbox dequeue is crash-safe (no double-send, no dropped write) — test proves it.
-- [ ] Read-cache never serves a row past its TTL when online — test proves it.
-- [ ] Store-fallback (durability downgrade) is observable in telemetry/UI.
-- [ ] Reachability ping gates the drain; per-entity writes replay in order.
-- [ ] `/eos reliability` PASS; journal row + roadmap P1-CODE-2 ✅ + ledger REL-6..9; advance this file to **P1-CODE-3** + refresh the dashboard.
+- [ ] No raw internal `error.message` reaches a client; server logs retain the detail.
+- [ ] The 4 unbounded bulk arrays are capped (oversized payload rejected with a clear code).
+- [ ] Error codes standardized; validation → 422; route-registry lint green; no unguarded route / auth-bypass path.
+- [ ] DB-6 audit retention/partitioning code seam in place (or explicitly staged if it needs a live-only migration).
+- [ ] `/eos` PASS for SECURITY + ARCH; journal row + roadmap P1-CODE-3 ✅ + ledger ENG-4/5/7/8/9/10+DB-6; advance this file to **P1-CODE-4** + refresh the dashboard.
 
 > **Rule:** never begin the next wave with an open P0 or an EOS BLOCKED. Owner-decision (👤) tasks pause and surface in a batch; live-lane (⏳) tasks defer until provisioned; non-blocked tasks in the wave proceed.
