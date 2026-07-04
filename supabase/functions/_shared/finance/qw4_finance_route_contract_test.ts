@@ -156,6 +156,7 @@ const routes: RouteCase[] = [
   { method: "GET", path: `/finance/payments/qr/${ID}`, holder: ["viewFinance"], other: ["viewInventory"] },
   // FIN-R: fee-recovery CRM (reads gate viewFinance, writes gate manageFinance)
   { method: "GET", path: "/finance/recovery/dashboard", holder: ["viewFinance"], other: ["viewInventory"] },
+  { method: "GET", path: "/finance/recovery/call-queue", holder: ["viewFinance"], other: ["viewInventory"] },
   { method: "POST", path: "/finance/recovery/contacts", holder: ["manageFinance"], other: ["viewFinance"] },
   { method: "GET", path: `/finance/recovery/contacts/${ID}`, holder: ["viewFinance"], other: ["viewInventory"] },
   { method: "GET", path: "/finance/recovery/promises", holder: ["viewFinance"], other: ["viewInventory"] },

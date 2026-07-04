@@ -80,6 +80,9 @@ class FinanceDefaultersScreen extends ConsumerWidget {
         // FIN-R1/R5 — recovery dashboard section.
         const _RecoverySection(),
         const SizedBox(height: AksharaSpacing.s6),
+        // FIN-R2 — telecaller call queue (who to call next).
+        const _CallQueueSection(),
+        const SizedBox(height: AksharaSpacing.s6),
         // FIN-R3 — promise-to-pay worklist.
         const _PromiseWorklistSection(),
         const SizedBox(height: AksharaSpacing.s6),
@@ -369,6 +372,180 @@ class _RecoverySection extends ConsumerWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// FIN-R2 — the telecaller call queue: defaulters in server-ranked call order,
+/// each showing WHY it's prioritised, with one-tap WhatsApp / log-contact /
+/// promise-to-pay. Rides the same recovery dialogs + repos as the list below;
+/// logging a contact or a promise re-ranks the queue live.
+class _CallQueueSection extends ConsumerWidget {
+  const _CallQueueSection();
+
+  static const int _maxVisible = 8;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(financeCallQueueViewStateProvider);
+    return Column(
+      key: QaTestKeys.financeCallQueueSection,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const AksharaSectionHeader(title: 'Call queue'),
+        const SizedBox(height: AksharaSpacing.s3),
+        FinanceAsyncBody<List<CallQueueEntry>>(
+          state: state,
+          loadingLabel: 'Loading call queue',
+          emptyMessage: 'No one to call — collections are current.',
+          emptyIcon: Icons.phone_disabled_outlined,
+          onRetry: () => retryFinanceFuture(ref, financeCallQueueFutureProvider),
+          builder: (entries) {
+            final visible = entries.take(_maxVisible).toList();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final entry in visible) _CallQueueTile(entry: entry),
+                if (entries.length > visible.length)
+                  Padding(
+                    padding: const EdgeInsets.only(top: AksharaSpacing.s2),
+                    child: Text(
+                      '+${entries.length - visible.length} more in the queue',
+                      style: context.aksharaText.bodySmall.copyWith(
+                        color: context.colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+DefaulterAgingBucket _bucketForDays(int days) {
+  if (days <= 0) return DefaulterAgingBucket.current;
+  if (days <= 30) return DefaulterAgingBucket.days1to30;
+  if (days <= 60) return DefaulterAgingBucket.days31to60;
+  if (days <= 90) return DefaulterAgingBucket.days61to90;
+  return DefaulterAgingBucket.over90;
+}
+
+KpiAccent _reasonTone(int priority) => switch (priority) {
+      0 => KpiAccent.error, // promise broken
+      1 => KpiAccent.warning, // promise due
+      2 => KpiAccent.warning, // not yet contacted
+      3 => KpiAccent.primary, // stale contact
+      _ => KpiAccent.neutral,
+    };
+
+class _CallQueueTile extends ConsumerWidget {
+  const _CallQueueTile({required this.entry});
+
+  final CallQueueEntry entry;
+
+  /// Adapts the queue entry to the [DefaulterRecord] the shared recovery
+  /// dialogs prefill from (student, fee account, outstanding amount).
+  DefaulterRecord get _asRecord => DefaulterRecord(
+        id: entry.studentId,
+        studentName: entry.studentName,
+        admissionNumber: entry.admissionNumber,
+        classLabel: entry.classLabel,
+        overdueAmount: entry.outstanding,
+        daysOverdue: entry.daysOverdue,
+        bucket: _bucketForDays(entry.daysOverdue),
+        lastContact: entry.lastContact,
+        collectionProbability: 0,
+        contactHistory: const [],
+        feeAccountId: entry.feeAccountId,
+        guardianPhone: entry.guardianPhone,
+      );
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.colors;
+    final text = context.aksharaText;
+    final record = _asRecord;
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: AksharaSpacing.s2),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AksharaSpacing.s3),
+        side: BorderSide(color: colors.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${entry.studentName} · ${entry.classLabel}',
+              style: text.titleSmall,
+            ),
+            const SizedBox(height: AksharaSpacing.s1),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: AksharaStatusChip(
+                label: entry.reason,
+                tone: _reasonTone(entry.priority),
+              ),
+            ),
+            const SizedBox(height: AksharaSpacing.s1),
+            Text(
+              '₹${entry.outstanding} · ${entry.daysOverdue} days overdue',
+              style: text.bodySmall,
+            ),
+            Text(
+              entry.guardianPhone.isEmpty
+                  ? 'No guardian number on file'
+                  : 'Guardian: ${entry.guardianPhone}',
+              style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
+            ),
+            const SizedBox(height: AksharaSpacing.s2),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                WhatsAppContactButton(
+                  phone: entry.guardianPhone,
+                  style: WhatsAppButtonStyle.icon,
+                  label: 'WhatsApp ${entry.studentName}\'s guardian',
+                  message: _defaulterMessage(record),
+                  unavailableMessage: 'No guardian number on file.',
+                ),
+                AksharaManageAction(
+                  permission: Permission.manageFinance,
+                  child: IconButton(
+                    key: QaTestKeys.financeCallQueueLogButton(entry.studentId),
+                    tooltip: 'Log contact',
+                    icon: const Icon(Icons.phone_in_talk_outlined),
+                    onPressed: () => showLogRecoveryContactDialog(
+                      context,
+                      ref,
+                      record: record,
+                    ),
+                  ),
+                ),
+                AksharaManageAction(
+                  permission: Permission.manageFinance,
+                  child: IconButton(
+                    key:
+                        QaTestKeys.financeCallQueuePromiseButton(entry.studentId),
+                    tooltip: 'Promise to pay',
+                    icon: const Icon(Icons.event_available_outlined),
+                    onPressed: () => showCreatePromiseToPayDialog(
+                      context,
+                      ref,
+                      record: record,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -728,7 +905,10 @@ class _AgingBucketChip extends StatelessWidget {
   }
 }
 
-/// FIN-R4 — shows the defaulter's already-populated contact history in a sheet.
+/// FIN-R4 — shows the defaulter's contact history in a sheet. Reads the LIVE
+/// per-student contact log (`financeStudentContactsFutureProvider`) so a contact
+/// logged this session appears immediately; falls back to the record's embedded
+/// history while the live list loads or on error.
 void showContactHistorySheet(
   BuildContext context, {
   required DefaulterRecord record,
@@ -748,45 +928,71 @@ void showContactHistorySheet(
             AksharaSpacing.s5,
             AksharaSpacing.s5,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Contact history — ${record.studentName}',
-                  style: text.titleMedium),
-              const SizedBox(height: AksharaSpacing.s1),
-              Text('Last contact: ${record.lastContact}', style: text.bodySmall),
-              const SizedBox(height: AksharaSpacing.s3),
-              if (record.contactHistory.isEmpty)
-                const AksharaEmptyState(
-                  message: 'No contact attempts logged yet.',
-                  icon: Icons.history_outlined,
-                )
-              else
-                Flexible(
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: record.contactHistory.length,
-                    separatorBuilder: (_, __) => Divider(
-                      color: colors.outlineVariant,
-                      height: AksharaSpacing.s4,
+          child: Consumer(
+            builder: (context, ref, _) {
+              final live =
+                  ref.watch(financeStudentContactsFutureProvider(record.id));
+              // Prefer the live log when it has rows; otherwise keep the
+              // embedded history (loading / error / genuinely empty live list).
+              final entries = live.maybeWhen(
+                data: (contacts) => contacts.isEmpty
+                    ? record.contactHistory
+                    : [
+                        for (final c in contacts)
+                          ContactHistoryEntry(
+                            id: c.id,
+                            timestamp: c.timestamp,
+                            channel: c.channel,
+                            outcome: c.outcome,
+                            notes: c.notes,
+                          ),
+                      ],
+                orElse: () => record.contactHistory,
+              );
+              final lastContact = entries.isNotEmpty
+                  ? entries.first.timestamp
+                  : record.lastContact;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Contact history — ${record.studentName}',
+                      style: text.titleMedium),
+                  const SizedBox(height: AksharaSpacing.s1),
+                  Text('Last contact: $lastContact', style: text.bodySmall),
+                  const SizedBox(height: AksharaSpacing.s3),
+                  if (entries.isEmpty)
+                    const AksharaEmptyState(
+                      message: 'No contact attempts logged yet.',
+                      icon: Icons.history_outlined,
+                    )
+                  else
+                    Flexible(
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: entries.length,
+                        separatorBuilder: (_, __) => Divider(
+                          color: colors.outlineVariant,
+                          height: AksharaSpacing.s4,
+                        ),
+                        itemBuilder: (context, index) {
+                          final entry = entries[index];
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('${entry.channel} · ${entry.outcome}',
+                                  style: text.titleSmall),
+                              Text(entry.timestamp, style: text.bodySmall),
+                              if (entry.notes.isNotEmpty)
+                                Text(entry.notes, style: text.bodySmall),
+                            ],
+                          );
+                        },
+                      ),
                     ),
-                    itemBuilder: (context, index) {
-                      final entry = record.contactHistory[index];
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('${entry.channel} · ${entry.outcome}',
-                              style: text.titleSmall),
-                          Text(entry.timestamp, style: text.bodySmall),
-                          if (entry.notes.isNotEmpty)
-                            Text(entry.notes, style: text.bodySmall),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-            ],
+                ],
+              );
+            },
           ),
         ),
       );

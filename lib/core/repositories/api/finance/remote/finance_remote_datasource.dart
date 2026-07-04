@@ -771,6 +771,16 @@ class FinanceRemoteDataSource {
     return RecoveryDashboardDto.fromJson(_responseMap(response));
   }
 
+  Future<CallQueueResponseDto> fetchCallQueue({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      FinanceApiPaths.recoveryCallQueue,
+      queryParameters: _queryParams(query),
+    );
+    return CallQueueResponseDto.fromJson(_responseMap(response));
+  }
+
   Map<String, dynamic> _queryParams(RepositoryQuery query) {
     return {
       'tenantId': query.tenantId,

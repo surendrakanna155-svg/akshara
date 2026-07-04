@@ -67,3 +67,34 @@ class RecoveryDashboardDto {
 
   final Map<String, dynamic> raw;
 }
+
+/// FIN-R2 — one call-queue entry.
+class CallQueueEntryDto {
+  const CallQueueEntryDto({required this.raw});
+
+  factory CallQueueEntryDto.fromJson(Map<String, dynamic> json) {
+    return CallQueueEntryDto(raw: json);
+  }
+
+  final Map<String, dynamic> raw;
+}
+
+/// FIN-R2 — `{generatedAt, items: [...]}` telecaller call queue.
+class CallQueueResponseDto {
+  const CallQueueResponseDto({required this.items});
+
+  factory CallQueueResponseDto.fromJson(Map<String, dynamic> json) {
+    final envelope = ApiEnvelopeDto.fromJson(json);
+    final data = envelope.requireData();
+    final rawItems = data['items'];
+    return CallQueueResponseDto(
+      items: [
+        if (rawItems is List)
+          for (final item in rawItems)
+            if (item is Map<String, dynamic>) CallQueueEntryDto.fromJson(item),
+      ],
+    );
+  }
+
+  final List<CallQueueEntryDto> items;
+}

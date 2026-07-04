@@ -73,11 +73,34 @@ final financeStudentContactsFutureProvider =
       );
 });
 
-/// Invalidates every recovery-adjacent read after a mutation succeeds.
+/// FIN-R2 — the telecaller call queue (server-ranked "who to call next").
+final financeCallQueueLoadingProvider = StateProvider<bool>((ref) => false);
+final financeCallQueueErrorProvider = StateProvider<bool>((ref) => false);
+
+final financeCallQueueFutureProvider =
+    FutureProvider<List<CallQueueEntry>>((ref) async {
+  return ref.read(financeRepositoryProvider).getCallQueue(
+        query: ref.watch(repositoryQueryProvider),
+      );
+});
+
+final financeCallQueueViewStateProvider =
+    Provider<FinanceViewState<List<CallQueueEntry>>>((ref) {
+  return resolveFinanceAsync(
+    ref.watch(financeCallQueueFutureProvider),
+    forceLoading: ref.watch(financeCallQueueLoadingProvider),
+    forceError: ref.watch(financeCallQueueErrorProvider),
+    isDataEmpty: (data) => data.isEmpty,
+  );
+});
+
+/// Invalidates every recovery-adjacent read after a mutation succeeds — incl.
+/// the call queue, so logging a contact / a promise re-ranks it immediately.
 void _invalidateRecoveryReads(Ref ref) {
   ref.invalidate(financeDefaultersFutureProvider);
   ref.invalidate(financePromisesFutureProvider);
   ref.invalidate(financeRecoveryDashboardFutureProvider);
+  ref.invalidate(financeCallQueueFutureProvider);
 }
 
 class LogRecoveryContactNotifier extends AsyncNotifier<RecoveryContact?> {

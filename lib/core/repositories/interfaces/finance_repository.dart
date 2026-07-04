@@ -259,4 +259,10 @@ abstract class FinanceRepository {
   Future<RecoveryDashboardData> getRecoveryDashboard({
     required RepositoryQuery query,
   });
+
+  /// FIN-R2 — the telecaller call queue: defaulters ranked (server-side) into
+  /// the order they should be called.
+  Future<List<CallQueueEntry>> getCallQueue({
+    required RepositoryQuery query,
+  });
 }

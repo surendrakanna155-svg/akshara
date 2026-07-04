@@ -450,6 +450,29 @@ class FinanceMapper {
     );
   }
 
+  List<CallQueueEntry> toCallQueue(CallQueueResponseDto dto) {
+    return [for (final item in dto.items) toCallQueueEntry(item)];
+  }
+
+  CallQueueEntry toCallQueueEntry(CallQueueEntryDto dto) {
+    final raw = dto.raw;
+    return CallQueueEntry(
+      studentId: raw['studentId'] as String? ?? '',
+      studentName: raw['studentName'] as String? ?? '',
+      admissionNumber: raw['admissionNumber'] as String? ?? '',
+      classLabel: raw['classLabel'] as String? ?? '',
+      outstanding: raw['outstanding']?.toString() ?? '0',
+      daysOverdue: (raw['daysOverdue'] as num?)?.toInt() ?? 0,
+      guardianPhone: raw['guardianPhone'] as String? ?? '',
+      feeAccountId: raw['feeAccountId'] as String? ?? '',
+      lastContact: raw['lastContact'] as String? ?? '',
+      pendingPromiseDate: raw['pendingPromiseDate'] as String? ?? '',
+      hasBrokenPromise: raw['hasBrokenPromise'] as bool? ?? false,
+      priority: (raw['priority'] as num?)?.toInt() ?? 99,
+      reason: raw['reason'] as String? ?? '',
+    );
+  }
+
   List<RefundRequest> toRefundRequests(RefundRequestsResponseDto dto) {
     return [for (final item in dto.items) toRefundRequest(item)];
   }

@@ -80,6 +80,7 @@ import {
 import { handleFinanceDefaulters } from "./finance_defaulters_handlers.ts";
 import {
   handleCreatePromiseToPay,
+  handleFinanceCallQueue,
   handleListPromisesToPay,
   handleListRecoveryContacts,
   handleListRecoveryTargets,
@@ -336,6 +337,9 @@ export function matchFinanceRoute(
   // ─── FIN-R: fee-recovery CRM ───────────────────────────────────────────────
   if (path === "/finance/recovery/dashboard" && method === "GET") {
     return { handler: handleRecoveryDashboard, args: [] };
+  }
+  if (path === "/finance/recovery/call-queue" && method === "GET") {
+    return { handler: handleFinanceCallQueue, args: [] };
   }
   if (path === "/finance/recovery/contacts" && method === "POST") {
     return { handler: handleLogRecoveryContact, args: [] };

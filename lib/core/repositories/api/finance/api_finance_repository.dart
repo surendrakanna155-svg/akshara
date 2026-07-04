@@ -640,4 +640,12 @@ class ApiFinanceRepository implements FinanceRepository {
     final dto = await _remote.fetchRecoveryDashboard(query: query);
     return _mapper.toRecoveryDashboard(dto);
   }
+
+  @override
+  Future<List<CallQueueEntry>> getCallQueue({
+    required RepositoryQuery query,
+  }) async {
+    final dto = await _remote.fetchCallQueue(query: query);
+    return _mapper.toCallQueue(dto);
+  }
 }

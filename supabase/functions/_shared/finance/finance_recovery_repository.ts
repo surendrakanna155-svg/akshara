@@ -118,6 +118,84 @@ export async function listRecentContactsForStudents(
   );
 }
 
+export interface CallQueueRow {
+  student_id: string;
+  student_name: string;
+  admission_number: string;
+  class_label: string;
+  outstanding: string;
+  fee_account_id: string;
+  days_overdue: string;
+  guardian_phone: string | null;
+  last_contact_at: string | null;
+  pending_promise_date: string | null;
+  has_broken_promise: boolean;
+}
+
+/// FIN-R2 — the telecaller call-queue candidate pool: the SAME open/overdue
+/// student accounts the defaulters list is built from (no duplicate source),
+/// enriched per student with the signals a telecaller prioritises on — last
+/// contact time, the nearest pending promise date, and whether a promise was
+/// broken. Ranking + reason are computed by the pure functions in the handler
+/// (testable); this only pulls the rows. Bounded to the highest-balance arrears.
+export async function listCallQueue(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  limit = 100,
+): Promise<CallQueueRow[]> {
+  return await db.queryObject<CallQueueRow>(
+    `SELECT
+        fsa.student_id,
+        COALESCE(s.display_name, 'Student') AS student_name,
+        COALESCE(
+          (SELECT afh.admission_number FROM admissions_fee_handoffs afh
+            WHERE afh.student_id = fsa.student_id
+              AND afh.organization_id = fsa.organization_id LIMIT 1),
+          s.student_code, '') AS admission_number,
+        COALESCE(
+          (SELECT afh.class_label FROM admissions_fee_handoffs afh
+            WHERE afh.student_id = fsa.student_id
+              AND afh.organization_id = fsa.organization_id LIMIT 1),
+          '') AS class_label,
+        COALESCE(fsa.outstanding_amount, 0)::text AS outstanding,
+        fsa.id::text AS fee_account_id,
+        COALESCE((
+          SELECT MAX(EXTRACT(day FROM now() - fi.due_date))::int
+            FROM finance_invoices fi
+           WHERE fi.student_id = fsa.student_id
+             AND fi.organization_id = fsa.organization_id
+             AND fi.invoice_status IN ('issued', 'partially_paid')
+             AND fi.due_date < CURRENT_DATE), 0)::text AS days_overdue,
+        (SELECT u.phone FROM student_guardians sg
+           JOIN users u ON u.id = sg.guardian_user_id
+          WHERE sg.student_id = fsa.student_id AND u.phone IS NOT NULL
+          ORDER BY sg.is_primary DESC LIMIT 1) AS guardian_phone,
+        (SELECT MAX(c.created_at) FROM finance_recovery_contacts c
+          WHERE c.organization_id = fsa.organization_id
+            AND c.school_id = fsa.school_id
+            AND c.student_id = fsa.student_id) AS last_contact_at,
+        (SELECT MIN(p.promise_date)::text FROM finance_promises_to_pay p
+          WHERE p.organization_id = fsa.organization_id
+            AND p.school_id = fsa.school_id
+            AND p.student_id = fsa.student_id
+            AND p.status = 'pending') AS pending_promise_date,
+        EXISTS(SELECT 1 FROM finance_promises_to_pay p
+          WHERE p.organization_id = fsa.organization_id
+            AND p.school_id = fsa.school_id
+            AND p.student_id = fsa.student_id
+            AND p.status = 'broken') AS has_broken_promise
+      FROM finance_student_accounts fsa
+      LEFT JOIN students s ON s.id = fsa.student_id
+     WHERE fsa.organization_id = $1 AND fsa.school_id = $2
+       AND fsa.status = 'open'
+       AND fsa.outstanding_amount > 0
+     ORDER BY fsa.outstanding_amount DESC
+     LIMIT $3`,
+    [orgId, schoolId, limit],
+  );
+}
+
 export async function insertPromiseToPay(
   db: TenantQueryClient,
   input: {

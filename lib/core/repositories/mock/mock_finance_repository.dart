@@ -1964,6 +1964,108 @@ class MockFinanceRepository implements FinanceRepository {
     );
   }
 
+  @override
+  Future<List<CallQueueEntry>> getCallQueue({
+    required RepositoryQuery query,
+  }) async {
+    // FIN-R2: the call queue rides the SAME defaulter source as the defaulters
+    // list (no duplicate data), enriched with the session's logged promises /
+    // contacts so the queue re-orders live as a telecaller works it — mirroring
+    // the backend ranking.
+    final dash = await getDefaultersDashboard(query: query);
+    final todayIso = DateTime.now().toUtc().toIso8601String().split('T').first;
+    final entries = <CallQueueEntry>[];
+    for (final d in dash.defaulters) {
+      final pending = _promises
+          .where((p) =>
+              p.studentId == d.id && p.status == PromiseToPayStatus.pending)
+          .map((p) => p.promiseDate)
+          .toList()
+        ..sort();
+      final pendingDate = pending.isNotEmpty ? pending.first : '';
+      final broken = _promises.any(
+        (p) => p.studentId == d.id && p.status == PromiseToPayStatus.broken,
+      );
+      final logged = _contacts[d.id] ?? const <RecoveryContact>[];
+      final lastContact = logged.isNotEmpty ? logged.first.timestamp : '';
+      entries.add(CallQueueEntry(
+        studentId: d.id,
+        studentName: d.studentName,
+        admissionNumber: d.admissionNumber,
+        classLabel: d.classLabel,
+        outstanding: d.overdueAmount,
+        daysOverdue: d.daysOverdue,
+        guardianPhone: d.guardianPhone,
+        feeAccountId: d.feeAccountId,
+        lastContact: lastContact,
+        pendingPromiseDate: pendingDate,
+        hasBrokenPromise: broken,
+        priority: _callQueuePriority(
+          daysOverdue: d.daysOverdue,
+          hasBroken: broken,
+          pendingDate: pendingDate,
+          lastContactIso: lastContact,
+          todayIso: todayIso,
+        ),
+        reason: _callQueueReason(
+          daysOverdue: d.daysOverdue,
+          hasBroken: broken,
+          pendingDate: pendingDate,
+          lastContactIso: lastContact,
+          todayIso: todayIso,
+        ),
+      ));
+    }
+    entries.sort((a, b) =>
+        a.priority != b.priority
+            ? a.priority.compareTo(b.priority)
+            : b.daysOverdue.compareTo(a.daysOverdue));
+    return List<CallQueueEntry>.unmodifiable(entries);
+  }
+
+  int _daysSince(String fromIso, String todayIso) {
+    final a = DateTime.tryParse(fromIso.split('T').first);
+    final b = DateTime.tryParse(todayIso);
+    if (a == null || b == null) return 0;
+    return b.difference(a).inDays;
+  }
+
+  int _callQueuePriority({
+    required int daysOverdue,
+    required bool hasBroken,
+    required String pendingDate,
+    required String lastContactIso,
+    required String todayIso,
+  }) {
+    if (hasBroken) return 0;
+    if (pendingDate.isNotEmpty) {
+      return pendingDate.compareTo(todayIso) <= 0 ? 1 : 5;
+    }
+    if (lastContactIso.isEmpty) return daysOverdue > 0 ? 2 : 4;
+    return _daysSince(lastContactIso, todayIso) >= 7 ? 3 : 4;
+  }
+
+  String _callQueueReason({
+    required int daysOverdue,
+    required bool hasBroken,
+    required String pendingDate,
+    required String lastContactIso,
+    required String todayIso,
+  }) {
+    if (hasBroken) return 'Promise broken — follow up';
+    if (pendingDate.isNotEmpty) {
+      return pendingDate.compareTo(todayIso) <= 0
+          ? 'Promise due — confirm payment'
+          : 'Promised — awaiting date';
+    }
+    if (lastContactIso.isEmpty) {
+      return daysOverdue > 0 ? 'Not yet contacted' : 'Follow up';
+    }
+    return _daysSince(lastContactIso, todayIso) >= 7
+        ? 'No contact in 7+ days'
+        : 'Recently contacted';
+  }
+
   String _promiseStudentName(String studentId) => switch (studentId) {
         'def_1' => 'Priya Sharma',
         'def_2' => 'Ananya Reddy',

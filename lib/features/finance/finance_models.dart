@@ -794,6 +794,50 @@ class CollectorPerformance {
   final String amountRecovered;
 }
 
+/// FIN-R2 — one entry in the telecaller call queue: a defaulter to call,
+/// carrying the signals the queue is ranked on so the UI can show WHY it's here
+/// ([reason]) and how urgent ([priority], lower = call sooner).
+@immutable
+class CallQueueEntry {
+  const CallQueueEntry({
+    required this.studentId,
+    required this.studentName,
+    required this.admissionNumber,
+    required this.classLabel,
+    required this.outstanding,
+    required this.daysOverdue,
+    required this.guardianPhone,
+    required this.feeAccountId,
+    required this.lastContact,
+    required this.pendingPromiseDate,
+    required this.hasBrokenPromise,
+    required this.priority,
+    required this.reason,
+  });
+
+  final String studentId;
+  final String studentName;
+  final String admissionNumber;
+  final String classLabel;
+  final String outstanding;
+  final int daysOverdue;
+  final String guardianPhone;
+  final String feeAccountId;
+
+  /// ISO timestamp of the last contact ('' when never contacted).
+  final String lastContact;
+
+  /// Nearest pending promise date ('' when none).
+  final String pendingPromiseDate;
+  final bool hasBrokenPromise;
+
+  /// 0 = call first. Server-authoritative ranking.
+  final int priority;
+
+  /// Human label for why this entry is prioritised (e.g. "Not yet contacted").
+  final String reason;
+}
+
 /// FIN-R1/R5 — fee-recovery CRM dashboard aggregates.
 @immutable
 class RecoveryDashboardData {

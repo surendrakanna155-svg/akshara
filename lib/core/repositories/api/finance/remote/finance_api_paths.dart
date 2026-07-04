@@ -71,6 +71,7 @@ abstract final class FinanceApiPaths {
   static const String recoveryContacts = '$recovery/contacts';
   static const String recoveryPromises = '$recovery/promises';
   static const String recoveryDashboard = '$recovery/dashboard';
+  static const String recoveryCallQueue = '$recovery/call-queue';
 
   static String recoveryContactsForStudent(String studentId) =>
       '$recoveryContacts/$studentId';

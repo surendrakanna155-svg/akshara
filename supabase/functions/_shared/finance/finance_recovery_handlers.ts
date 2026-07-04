@@ -14,9 +14,11 @@ import {
   recordMutationAudit,
 } from "../audit/audit_repository.ts";
 import {
+  type CallQueueRow,
   collectorPerformanceForMonth,
   insertPromiseToPay,
   insertRecoveryContact,
+  listCallQueue,
   listPromisesToPay,
   listRecoveryContactsForStudent,
   listRecoveryTargets,
@@ -340,6 +342,127 @@ export async function handleRecoveryDashboard(
         collectionsCount: parseInt(c.collections_count, 10),
         amountRecovered: minorToRupees(c.amount_recovered_minor),
       })),
+    }));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    throw error;
+  }
+}
+
+// ── FIN-R2: telecaller call queue ──────────────────────────────────────────
+// The order a telecaller works top-down. Ranking is a PURE function so the
+// "who to call next" priority is deterministic and unit-tested; the handler
+// only pulls the candidate pool (the same open/overdue accounts the defaulters
+// list uses — no duplicate source) and sorts it.
+
+export interface CallQueueSignals {
+  daysOverdue: number;
+  hasBrokenPromise: boolean;
+  /** nearest pending promise date (YYYY-MM-DD) or null. */
+  pendingPromiseDate: string | null;
+  /** last contact timestamp (ISO) or null. */
+  lastContactAt: string | null;
+  /** today (YYYY-MM-DD) — injected so ranking is time-testable. */
+  today: string;
+}
+
+function daysSince(fromIso: string, todayIsoDate: string): number {
+  const a = Date.parse(fromIso.slice(0, 10));
+  const b = Date.parse(todayIsoDate);
+  if (Number.isNaN(a) || Number.isNaN(b)) return 0;
+  return Math.floor((b - a) / 86400000);
+}
+
+/** Lower = call sooner. A future pending promise is DE-prioritised (they've
+ *  already committed to a date — leave them alone until it arrives). */
+export function callQueuePriority(s: CallQueueSignals): number {
+  if (s.hasBrokenPromise) return 0;
+  if (s.pendingPromiseDate) return s.pendingPromiseDate <= s.today ? 1 : 5;
+  if (s.lastContactAt === null) return s.daysOverdue > 0 ? 2 : 4;
+  return daysSince(s.lastContactAt, s.today) >= 7 ? 3 : 4;
+}
+
+export function callQueueReason(s: CallQueueSignals): string {
+  if (s.hasBrokenPromise) return "Promise broken — follow up";
+  if (s.pendingPromiseDate) {
+    return s.pendingPromiseDate <= s.today
+      ? "Promise due — confirm payment"
+      : "Promised — awaiting date";
+  }
+  if (s.lastContactAt === null) {
+    return s.daysOverdue > 0 ? "Not yet contacted" : "Follow up";
+  }
+  return daysSince(s.lastContactAt, s.today) >= 7
+    ? "No contact in 7+ days"
+    : "Recently contacted";
+}
+
+function formatAmount(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(2);
+}
+
+function clampLimit(raw: string | null): number {
+  const n = parseInt(raw ?? "", 10);
+  if (!Number.isFinite(n) || n <= 0) return 100;
+  return Math.min(n, 200);
+}
+
+export function callQueueEntryToApi(
+  row: CallQueueRow,
+  today: string,
+): Record<string, unknown> {
+  const daysOverdue = parseInt(row.days_overdue, 10) || 0;
+  const signals: CallQueueSignals = {
+    daysOverdue,
+    hasBrokenPromise: row.has_broken_promise === true,
+    pendingPromiseDate: row.pending_promise_date,
+    lastContactAt: row.last_contact_at,
+    today,
+  };
+  return {
+    studentId: row.student_id,
+    studentName: row.student_name,
+    admissionNumber: row.admission_number,
+    classLabel: row.class_label,
+    outstanding: formatAmount(parseFloat(row.outstanding) || 0),
+    daysOverdue,
+    guardianPhone: row.guardian_phone ?? "",
+    feeAccountId: row.fee_account_id,
+    lastContact: row.last_contact_at ?? "",
+    pendingPromiseDate: row.pending_promise_date ?? "",
+    hasBrokenPromise: row.has_broken_promise === true,
+    priority: callQueuePriority(signals),
+    reason: callQueueReason(signals),
+  };
+}
+
+export async function handleFinanceCallQueue(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireFinanceRead(auth.claims);
+  if (denied) return denied;
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims)!;
+  const url = new URL(req.url);
+  const limit = clampLimit(url.searchParams.get("limit"));
+  const today = new Date().toISOString().slice(0, 10);
+
+  try {
+    const rows = await withTenantContext(config, auth.claims, (db) =>
+      listCallQueue(db, orgId, schoolId, limit));
+    const items = rows.map((r) => callQueueEntryToApi(r, today));
+    // Priority first, then highest balance, then oldest arrears.
+    items.sort((a, b) =>
+      (a.priority as number) - (b.priority as number) ||
+      (parseFloat(String(b.outstanding)) - parseFloat(String(a.outstanding))) ||
+      (b.daysOverdue as number) - (a.daysOverdue as number));
+    return jsonResponse(envelope({
+      generatedAt: new Date().toISOString(),
+      items,
     }));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);

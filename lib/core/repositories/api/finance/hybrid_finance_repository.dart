@@ -433,4 +433,10 @@ class HybridFinanceRepository implements FinanceRepository {
     required RepositoryQuery query,
   }) =>
       _api.getRecoveryDashboard(query: query);
+
+  @override
+  Future<List<CallQueueEntry>> getCallQueue({
+    required RepositoryQuery query,
+  }) =>
+      _api.getCallQueue(query: query);
 }

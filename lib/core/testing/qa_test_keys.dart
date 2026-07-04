@@ -319,6 +319,13 @@ abstract final class QaTestKeys {
       ValueKey<String>('finance_promise_to_pay_submit_button');
   static const financePromiseToPaySuccessSnackbar =
       ValueKey<String>('finance_promise_to_pay_success_snackbar');
+  // FIN-R2 — telecaller call queue.
+  static const financeCallQueueSection =
+      ValueKey<String>('finance_call_queue_section');
+  static ValueKey<String> financeCallQueueLogButton(String studentId) =>
+      ValueKey<String>('finance_call_queue_log_$studentId');
+  static ValueKey<String> financeCallQueuePromiseButton(String studentId) =>
+      ValueKey<String>('finance_call_queue_promise_$studentId');
   static ValueKey<String> financeResolvePromiseButton(String promiseId) =>
       ValueKey<String>('finance_resolve_promise_$promiseId');
   static const financeExportClassDuesButton =
