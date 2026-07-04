@@ -107,7 +107,7 @@ disposition: a Master-Roadmap task (`docs/audits/MASTER_EXECUTION_ROADMAP.md`), 
 | Cross-module Finance posting (library fines / hostel fees) — real posting vs label out-of-Finance | MOD-1 | P1-CODE-6 |
 | `APP_ENV=staging` on the live pilot backend — intentional? | LV-5 | P0-INFRA / pilot |
 | Shared-box strategy (Akshara + velora-salon + n8n) — isolate before scale? | LV-4 / OPS-4 | P1-INFRA / scale |
-| DR RPO acceptance — tighten to ≤15 min (WAL) vs accept ~24h for pilot | LV-1 / OPS-1 | P0-INFRA-2 |
+| DR RPO acceptance — tighten to ≤15 min (WAL) vs accept ~24h for pilot | LV-1 / OPS-1 | P0-INFRA-2 — ✅ **RESOLVED 2026-07-04: owner accepted ~24h nightly RPO for pilot; WAL/PITR deferred post-pilot** |
 | **Appendix A (~26 behaviour/policy items)** in PRODUCT_ENHANCEMENT_BACKLOG | backlog | P1-PROD module waves |
 | Consolidation wave (14 overlapping surfaces) go/no-go | DOC-8 | Phase D |
 | PLAT-0 non-student Public-ID scheme (parent/employee) | identity | P1-CODE-4 (partial) |

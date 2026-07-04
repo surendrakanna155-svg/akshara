@@ -27,7 +27,7 @@
 | **P0-INFRA-4** | INFRA | Fix backup script `$1` unbound-variable warning | LV-10 | script edit proceeds; verify on live |
 | **P0-INFRA-1** | INFRA | Off-site backup (3-2-1): `RCLONE_REMOTE` + nightly encrypted push | LV-3 | ⏳ **live lane** |
 | **P0-INFRA-3** | INFRA | Wire watchdog alert delivery to a human sink | LV-6 | ⏳ **live lane** |
-| **P0-INFRA-2** | INFRA | WAL archiving / PITR → RPO ≤15 min (or owner-accepted RPO) | LV-1 | 👤 **RPO decision** + ⏳ live lane |
+| ~~P0-INFRA-2~~ | INFRA | WAL/PITR → **✅ RESOLVED: owner accepted ~24h nightly RPO (2026-07-04)**; WAL deferred post-pilot | LV-1 | ✅ done (RPO signed off) |
 | **P0-CODE-2** | CODE | Hide backend-less/thin surfaces (~8, reachable-mock) | ENG-3/MOD-4 | 👤 **hide-list** |
 
 ### Dependencies

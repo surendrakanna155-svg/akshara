@@ -90,9 +90,9 @@
 - **Evidence:** off-site object listing after a nightly run; `offsite=true` in backup.log. **EOS gate:** OPS PASS. **Done when:** a backup exists off-box.
 
 ### P0-INFRA-2 · 🟠 · INFRA · WAL archiving / PITR
-- **Depends:** 👤 RPO decision · **Complexity:** M · **Status:** ⚪ Pending / 👤 · **Finding:** LV-1
-- **Outcome:** `archive_mode=on` + `archive_command` → RPO ≤15 min (or owner-accepted RPO).
-- **Evidence:** WAL shipping; PITR test. **EOS gate:** OPS PASS. **Done when:** point-in-time recovery works or RPO signed off.
+- **Depends:** 👤 RPO decision · **Complexity:** M · **Status:** ✅ Resolved — **owner accepted ~24h nightly RPO for the pilot (2026-07-04)**; WAL/PITR deferred to a post-pilot layer-2 upgrade · **Finding:** LV-1
+- **Outcome:** ~~`archive_mode=on` + `archive_command` → RPO ≤15 min~~ → **owner-accepted RPO ≈ 24h** (nightly encrypted `pg_dump`, per `BACKUP_RESTORE_RUNBOOK.md §5`). WAL/PITR remains a tracked follow-up (not pilot-gating).
+- **Evidence:** owner decision (this session); runbook §5 already documents the ≈24h RPO + WAL as follow-up. **EOS gate:** OPS PASS (RPO signed off). **Done when:** ~~PITR works~~ RPO signed off ✅.
 
 ### P0-INFRA-3 · 🟡 · INFRA · Wire watchdog alert delivery
 - **Depends:** — · **Complexity:** S · **Status:** ⚪ Pending · **Finding:** LV-6
