@@ -2,7 +2,7 @@
 
 **Document ID:** `AKS-FLUTTER-DS-v1.0`  
 **Purpose:** Implementation specification for Material 3 theming and shared widgets in the Akshara Flutter monorepo  
-**Sources:** `TechnicalArchitecture.md` · `DesignSystem.md` · `FigmaDesignSystemBuildGuide.md`  
+**Sources:** `TechnicalArchitecture.md` · `archive/design/DesignSystem.md` · `archive/design/FigmaDesignSystemBuildGuide.md`  
 **Target stack:** Flutter **3.35+** · **Riverpod** · **GoRouter** · **Material 3** · responsive desktop / tablet / mobile
 
 ---
@@ -239,7 +239,7 @@ class AksharaApp extends ConsumerWidget {
 
 1. Start from `AksharaAppTheme.light()`
 2. If `whiteLabelConfigProvider` has `primaryHex`, replace `ColorScheme.primary` and derive `primaryContainer` via `ColorScheme.fromSeed(seedColor: primary, brightness: Brightness.light)`
-3. Rebuild `ThemeData` — fonts and spacing unchanged per `DesignSystem.md` §20
+3. Rebuild `ThemeData` — fonts and spacing unchanged per `archive/design/DesignSystem.md` §20
 
 ---
 
@@ -1437,9 +1437,9 @@ akshara_erp/
 
 | Document | Relationship |
 |----------|--------------|
-| `DesignSystem.md` | Visual source of truth |
-| `FigmaDesignSystemBuildGuide.md` | Figma layer trees → Flutter widget anatomy |
-| `FigmaImplementationRoadmap.md` | Design build order before Flutter Phase A |
+| `archive/design/DesignSystem.md` | Visual source of truth |
+| `archive/design/FigmaDesignSystemBuildGuide.md` | Figma layer trees → Flutter widget anatomy |
+| `archive/roadmap/FigmaImplementationRoadmap.md` | Design build order before Flutter Phase A |
 | `TechnicalArchitecture.md` | Folder structure, Riverpod, GoRouter, breakpoints |
 | `docs/figma-screens/*` | Per-screen layout reference for feature adoption |
 

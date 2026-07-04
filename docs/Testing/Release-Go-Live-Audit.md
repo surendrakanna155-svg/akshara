@@ -133,4 +133,4 @@ No Critical items open. Android distribution approved.
 ## Reference index
 
 All testing docs: `docs/Testing/`  
-Release history: `docs/Releases/v17.0-iOS-Release-Readiness.md`
+Release history: `../archive/completed/releases/v17.0-iOS-Release-Readiness.md`

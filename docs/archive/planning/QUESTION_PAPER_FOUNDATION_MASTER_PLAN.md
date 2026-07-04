@@ -1,5 +1,12 @@
 # Akshara — Academic Knowledge Platform & Question Intelligence Master Plan
 
+> ⚠️ **SUPERSEDED (2026-07-02)** by `docs/Vision/design/Assessment-Intelligence-Platform.md`
+> (Master Plan **v3.0**, locked owner decisions). v3.0 preserves this document's architecture
+> by reference but **amends §10** (publisher licensing demoted — original-content-first) and
+> adds the response-centric spine, marks-grid collection, canonical concepts, governed
+> blueprint templates, trust pipeline, ERP integration, and adaptive AI. Use v3.0 for all
+> forward planning; this file remains the v2.0 architecture record.
+
 **Document ID:** `AKS-QP-FOUNDATION-PLAN-v2.0`  
 **Created:** June 2026 · **Revised:** June 2026 (architecture refinement)  
 **Purpose:** Enterprise product architecture — long-term vision (10+ year roadmap) for Akshara's **Academic Knowledge Platform** and **Question Intelligence Platform**. Question paper generation, DPP, foundation tracks (Class 6 → Inter), and competitive exam modules are **features built on top of structured academic knowledge** — not the product itself.  

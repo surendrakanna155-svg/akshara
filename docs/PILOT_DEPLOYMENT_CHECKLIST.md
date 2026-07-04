@@ -135,7 +135,7 @@
 
 ## References
 
-- `docs/PILOT_SIGNOFF_REPORT.md`
-- `docs/WORKFLOW_CERTIFICATION_REPORT.md`
+- `archive/completed/PILOT_SIGNOFF_REPORT.md`
+- `archive/completed/WORKFLOW_CERTIFICATION_REPORT.md`
 - `docs/PilotSchoolChecklist.md`
-- `docs/PRODUCTION_HARDENING_REPORT.md`
+- `archive/audit/PRODUCTION_HARDENING_REPORT.md`

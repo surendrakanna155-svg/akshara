@@ -176,4 +176,4 @@ Do **not** block internal UAT on a provisioned tenant — block **parent-wide** 
 | School admin | [`guides/School-Admin-Quick-Start.md`](./guides/School-Admin-Quick-Start.md) |
 | Teacher | [`guides/Teacher-Quick-Start.md`](./guides/Teacher-Quick-Start.md) |
 | Parent | [`guides/Parent-Activation-Guide.md`](./guides/Parent-Activation-Guide.md) |
-| Release evidence | [`Production-Validation-Report.md`](./Production-Validation-Report.md) · [`v1.0-Release-Candidate.md`](../Releases/v1.0-Release-Candidate.md) |
+| Release evidence | [`Production-Validation-Report.md`](./Production-Validation-Report.md) · [`../archive/completed/releases/v1.0-Release-Candidate.md`](../archive/completed/releases/v1.0-Release-Candidate.md) |

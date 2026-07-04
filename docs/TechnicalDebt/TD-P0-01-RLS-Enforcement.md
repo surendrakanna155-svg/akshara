@@ -1,18 +1,34 @@
 # TD-P0-01 — RLS Enforcement
 
-**ID:** `TD-P0-01`  
-**Priority:** P0 (blocking for tenant-data API exposure)  
-**Status:** Partially closed — **Admissions + handoff table verified on staging (2026-06-12)**; Finance/SIS+ pending  
-**Opened:** June 2026 (Sprint 3 Phase 2 closure)  
+**ID:** `TD-P0-01`
+**Priority:** P0 (blocking for tenant-data API exposure)
+**Status:** ✅ **Substantially CLOSED (verified live 2026-07-03).** Tenant-data API paths run on the non-bypass `erp_tenant` role (`rolbypassrls=f`) with `FORCE ROW LEVEL SECURITY` and cross-tenant isolation **live-verified** (7/7 read + 2/2 write PASS, audit report 11 §3b). Residual is **regression-hardening only**, re-scoped to `P0-TEST-2` (isolation suite into CI) + `P0-INFRA-6` (deploy-time `erp_tenant` assert) — **not** an open RLS gap.
+**Opened:** June 2026 (Sprint 3 Phase 2 closure)
+**Closed (enforcement):** Phase 3A `erp_tenant` rollout; live-verified 2026-07-03 (Fable audit)
 **Baseline:** `v6.1-phase1-rbac-foundation` → Phase 2 auth scope expansion
+
+> **Correction (DOC-9 / DB-9, 2026-07-04).** An earlier revision of this doc said Finance/SIS RLS was
+> *"not started (gated)"*. That was **stale**: RLS is enforced across the tenant-data path (the edge
+> connects as `erp_tenant`, a `NOBYPASSRLS` role, and FORCE RLS is on core tables), and live
+> cross-tenant probes pass. Module handlers query through the tenant context helper. This doc is kept
+> as the debt's closure record; the only forward work is keeping enforcement regression-guarded
+> (the two P0 tasks above).
 
 ---
 
 ## Summary
 
-Edge Functions currently use **Supabase `service_role`**, which **bypasses PostgreSQL RLS**. Sprint 3 Phase 2 delivered RLS policies, `auth.set_request_context`, aggregate views, and tenant isolation self-tests as **infrastructure**. These are **not authoritative** for the live API path until tenant data queries move to **non-bypass connections**.
+**Original debt (June 2026):** Edge Functions used **Supabase `service_role`**, which **bypasses
+PostgreSQL RLS**. Sprint 3 Phase 2 delivered RLS policies, `set_request_context`, aggregate views, and
+tenant isolation self-tests as **infrastructure** only — not authoritative until tenant-data queries
+moved to a **non-bypass connection**.
 
-**Approved framing (Phase 2):** Auth Scope Expansion Foundation — not complete RLS enforcement.
+**Resolution (Phase 3A → live 2026-07-03):** tenant-data queries now run on the dedicated
+**`erp_tenant`** role (no `BYPASSRLS`) via the `withTenantContext` helper, with `FORCE ROW LEVEL
+SECURITY` on core tables so policies apply even to privileged roles. Cross-tenant isolation is
+**live-verified** on the VPS (read + write, cross-tenant / cross-school / parent scopes). `service_role`
+is reserved for auth plumbing, provisioning, and cron. The debt's original gate — "don't expose
+tenant-data APIs on `service_role`" — is satisfied.
 
 ---
 
@@ -30,11 +46,12 @@ Edge Functions currently use **Supabase `service_role`**, which **bypasses Postg
 | `ERP_TENANT_DATABASE_URL` secret | ✅ Required on staging |
 | `FORCE ROW LEVEL SECURITY` on core tables | ✅ Phase 3A |
 | `run_tenant_isolation_enforced_test()` | ✅ Passes under `erp_tenant` |
-| Module API handlers use tenant helper | ✅ Admissions (staging verified); ❌ Finance/SIS+ |
-| Admissions APIs | ✅ Live on staging — 23/23 smoke tests pass (incl. handoff E2E) |
+| Module API handlers use tenant helper | ✅ Across the tenant-data path (`withTenantContext`); no longer Admissions-only |
+| Admissions APIs | ✅ Live — smoke + handoff E2E pass |
 | `admissions_fee_handoffs` RLS | ✅ FORCE RLS, school scope only — Phase 4B0 |
-| Module APIs (Finance, SIS, …) | ❌ Not started (gated) |
-| Staging isolation probes | ✅ 17/17 pass incl. admissions + handoff tables |
+| Module APIs (Finance, SIS, HR, Transport, …) | ✅ On `erp_tenant` (non-bypass) with RLS enforced |
+| Cross-tenant isolation (live VPS) | ✅ **Live-verified 2026-07-03** — 7/7 read + 2/2 write PASS (report 11 §3b) |
+| Regression into CI · deploy-time role assert | 🔜 `P0-TEST-2` · `P0-INFRA-6` (keep enforcement guarded) |
 
 ---
 
@@ -85,9 +102,9 @@ Auth-only endpoints (OTP, token issue, refresh, context switch, `/auth/me`, `/au
 
 ## Related documents
 
-- `docs/Releases/v6.1-Sprint3-RBAC-Tenant-Architecture.md` §6.5, §19 Phase 2–3  
+- `../archive/completed/releases/v6.1-Sprint3-RBAC-Tenant-Architecture.md` §6.5, §19 Phase 2–3  
 - `docs/TenantArchitecture.md` §4  
-- `docs/BackendRoadmap.md` §4 (Sprint 3 gate)  
+- `../archive/roadmap/BackendRoadmap.md` §4 (Sprint 3 gate)  
 - `docs/AuthArchitecture.md` §2 (scope + session vars)
 
 ---
@@ -99,3 +116,5 @@ Auth-only endpoints (OTP, token issue, refresh, context switch, `/auth/me`, `/au
 | 2026-06 | Opened at Phase 2 approval; accepted technical debt for auth scope expansion deploy |
 | 2026-06 | Phase 3A: `erp_tenant` role, `withTenantContext`, FORCE RLS, enforced isolation tests |
 | 2026-06-12 | Phase 4B0: `admissions_fee_handoffs` — school-only RLS, 5 new isolation probes, handoff APIs |
+| 2026-07-03 | **Enforcement live-verified** (Fable audit report 11): edge = `erp_tenant` (`NOBYPASSRLS`), FORCE RLS on, cross-tenant isolation 7/7 read + 2/2 write PASS. Debt substantially closed; residual = regression-into-CI (`P0-TEST-2`) + deploy-assert (`P0-INFRA-6`). |
+| 2026-07-04 | Doc corrected to reality (DOC-9/DB-9); removed stale "Finance/SIS not started" framing. |

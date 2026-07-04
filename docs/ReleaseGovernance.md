@@ -47,7 +47,7 @@
 
 1. Agent G validates gates (`flutter analyze`, `flutter test`)
 2. Agent F creates release + audit docs
-3. Agent G updates `docs/Roadmap.md` milestone
+3. Agent G updates `archive/roadmap/Roadmap.md` milestone
 4. Commit to `main` with message: `v{X.Y} {summary}`
 5. Annotated tag: `git tag -a v{X.Y}-{slug} -m "{description}"`
 6. Push `main` + tag to `origin`
@@ -70,7 +70,7 @@ Examples:
 
 - Tags are annotated (`-a`) with descriptive messages
 - One tag per release milestone (not per commit)
-- Tags reference `docs/Releases/` document
+- Tags reference `archive/completed/releases/` document
 
 ---
 

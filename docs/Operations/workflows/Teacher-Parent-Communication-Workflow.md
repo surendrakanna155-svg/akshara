@@ -115,5 +115,5 @@ flowchart LR
 ## Related documents
 
 - `docs/Operations/workflows/Escalation-Workflow.md`
-- `docs/ArchitectureReview/v1.0-Post-RedTeam-Operational-Hardening.md`
+- `../../archive/audit/architecture-review/v1.0-Post-RedTeam-Operational-Hardening.md`
 - `docs/Vision/FutureVision.md` § Communication Vision

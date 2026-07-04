@@ -51,7 +51,7 @@ The **school (Institution) is the Data Fiduciary** for student/parent/staff data
 The app enforces acceptance of the mandatory policies on first login (and on material
 updates) and records who accepted which version, when, and from which device. See the
 [Change Log](CHANGELOG.md) and
-[`../LEGAL_COMPLIANCE_CERTIFICATION.md`](../LEGAL_COMPLIANCE_CERTIFICATION.md).
+[`../archive/completed/LEGAL_COMPLIANCE_CERTIFICATION.md`](../archive/completed/LEGAL_COMPLIANCE_CERTIFICATION.md).
 
 ## Before going public (owner)
 

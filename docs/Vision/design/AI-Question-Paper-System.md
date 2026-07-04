@@ -1,58 +1,53 @@
 # Design — AI Question Paper System
 
-**Status:** Future education module · not in v1.0
+**Status:** ✅ Foundation SHIPPED & PRODUCTION CERTIFIED (2026-06-25) · forward vision → [Assessment-Intelligence-Platform.md](./Assessment-Intelligence-Platform.md)
 
-## Goals
+> This track note originated the question-paper module. The rollout below has been
+> **built and live-certified** (see `docs/archive/completed/QUESTION_INTELLIGENCE_LIVE_CERTIFICATION.md`,
+> 20/20 against the VPS pilot). The long-term architecture now lives in
+> **[Assessment-Intelligence-Platform.md](./Assessment-Intelligence-Platform.md)** (Master Plan v3.0,
+> locked owner decisions 2026-07-02) — consult that document for all forward planning.
+
+## Goals (original — achieved)
 
 Teachers generate syllabus-aligned papers (unit → annual) with review before print/PDF.
 
-## Architecture
+## As-built architecture
 
-| Component | Role |
-|-----------|------|
-| Syllabus catalog | Class → subject → chapter → topic (links academic catalog) |
-| Question bank | Tagged items: type, difficulty, marks, Bloom level |
-| Generator service | LLM + retrieval from bank; constraint solver for total marks |
-| Review workflow | Draft → teacher edit → approve → PDF export |
-| Audit | Prompt hash, model version, approver |
+| Component | As built |
+|-----------|----------|
+| Syllabus boundary | `education_syllabus_boundary.ts` — hard server-side 422 on off-syllabus chapters; school syllabus first, global `subject_templates` fallback |
+| Question bank | `edu_question_bank_items` — type, difficulty, marks, Bloom (`cognitive_level`), provenance, fingerprint dedup, review status |
+| Generator service | Deterministic blueprint solver (`education_blueprint_solver.ts`) bank-first; constrained Claude gap-fill produces **moderation candidates only** |
+| Review workflow | draft → submit → review → approve → publish; principal-only `approveEducation`; pending AI candidates hard-block publish (409) |
+| Audit | Education events per paper entity; review trail in `edu_question_paper_reviews` |
 
-Build on v7.4 Copilot session pattern — **write** actions require new permissions.
-
-## Permissions
+## As-built permissions
 
 | Permission | Action |
 |------------|--------|
-| `manageQuestionBank` | CRUD bank items |
-| `generateQuestionPaper` | Run generator |
-| `approveQuestionPaper` | Publish to class |
+| `viewEducation` | Read bank + papers |
+| `manageEducation` | CRUD bank items, generate/edit/submit papers, moderate AI candidates |
+| `approveEducation` | Principal-level review, approve, publish |
 
-## Data model (conceptual)
+(The finer-grained catalog originally sketched here was consolidated into these three;
+future additions are listed in Assessment-Intelligence-Platform.md §16.2.)
 
-- `edu_syllabus_nodes`  
-- `edu_question_bank_items`  
-- `edu_question_papers` (draft/published)  
-- `edu_question_paper_sections`  
+## Data model (as built)
 
-No v1.0 migrations.
+- `edu_question_bank_items` · `edu_question_papers` · `edu_question_paper_items` · `edu_question_paper_reviews`
+- Migrations: `20260620000000_education_suite_foundation.sql` · `20260710000000_education_question_intelligence.sql` · `20260712000000_education_approve_permission.sql` · `20260728000000_subject_templates_tenant_read.sql`
 
-## APIs (conceptual)
+## APIs (as built, under `/education`)
 
-- `POST /education/question-papers/generate`  
-- `GET /education/question-papers/:id`  
-- `POST /education/question-papers/:id/approve`  
-- `GET /education/question-bank`  
+- `POST /question-papers/generate` · `GET /question-papers/:id`
+- `POST /question-papers/:id/submit` · `/review` · `GET /:id/reviews`
+- `POST /question-papers/:id/items/:itemId/moderate` · publish · corrections
+- `GET/POST /question-bank` (+ import with fingerprint dedup)
 
-## Rollout plan
+## What comes next
 
-1. Question bank CRUD (no AI)  
-2. Template-based paper assembly  
-3. LLM generation with human review  
-4. PDF + print layout  
-
-## Risks
-
-| Risk | Mitigation |
-|------|------------|
-| Incorrect syllabus alignment | RAG from verified bank only |
-| Copyright / leakage | No external publish without review |
-| Student PII in prompts | Anonymize; class-level context only |
+The evolution — response-centric data spine, marks-grid collection, canonical concepts,
+governed blueprint templates, evidence-based trust pipeline, ERP-integrated adaptive
+generation — is specified in **[Assessment-Intelligence-Platform.md](./Assessment-Intelligence-Platform.md)**
+with a locked Phase 1/2/3 roadmap. Do not extend this file; it is kept as the track's origin record.

@@ -23,7 +23,7 @@ Format: `- [ ] (YYYY-MM-DD) The idea, in plain words.`
   reshapes the whole app" vision (board / school type / strength / facilities /
   programs / channels → fully tailored workspaces & navigation). Stays
   future/owner-gated — validate the shipped pieces with pilots first.
-  Full spec: [docs/FUTURE_VISION_AI_SCHOOL_BUILDER.md](docs/FUTURE_VISION_AI_SCHOOL_BUILDER.md)
+  Full spec: [docs/FUTURE_VISION_AI_SCHOOL_BUILDER.md](docs/archive/design/FUTURE_VISION_AI_SCHOOL_BUILDER.md)
 
 - [ ] (2026-06-20) **Notifications, posters & holiday calendar.** Three gaps: (1) real
   push notifications — backend ready but phone app not connected to Firebase
@@ -33,7 +33,7 @@ Format: `- [ ] (YYYY-MM-DD) The idea, in plain words.`
   (**not started**). Note: transactional SMS is certified-ready but the go-live flag
   is **off** (owner action — sends real paid SMS). Suggested build order (mine):
   holiday calendar → posters; push/SMS are owner-gated. Full plan:
-  [docs/NOTIFICATIONS_POSTERS_HOLIDAYS_PLAN.md](docs/NOTIFICATIONS_POSTERS_HOLIDAYS_PLAN.md)
+  [docs/NOTIFICATIONS_POSTERS_HOLIDAYS_PLAN.md](docs/archive/planning/NOTIFICATIONS_POSTERS_HOLIDAYS_PLAN.md)
 
 - [ ] (2026-06-23) **Deployment model: Shared SaaS vs Dedicated Infrastructure + backup &
   data security.** At onboarding, school picks Shared SaaS (lives in our one big database,
@@ -49,7 +49,7 @@ Format: `- [ ] (YYYY-MM-DD) The idea, in plain words.`
   [docs/DEPLOYMENT_MODEL_AND_DR_PLAN.md](docs/DEPLOYMENT_MODEL_AND_DR_PLAN.md)
 
 - **Batch 7 follow-ups (owner/external deps).** Backups/storage/monitoring are live
-  ([docs/LIVE_BACKEND_BATCH7_STORAGE_BACKUPS_MONITORING.md](docs/LIVE_BACKEND_BATCH7_STORAGE_BACKUPS_MONITORING.md)),
+  ([docs/LIVE_BACKEND_BATCH7_STORAGE_BACKUPS_MONITORING.md](docs/archive/completed/LIVE_BACKEND_BATCH7_STORAGE_BACKUPS_MONITORING.md)),
   but these need an account/decision to finish:
   (1) **Off-site backups** — provision an S3/R2 bucket + rclone remote, set RCLONE_REMOTE
   (today backups are local-only, honestly flagged offsite=false). (2) **WAL/PITR** to cut
@@ -70,7 +70,7 @@ Format: `- [ ] (YYYY-MM-DD) The idea, in plain words.`
   boundary fell back to the global `subject_templates` catalogue, which the `erp_tenant` edge
   role couldn't read → 500 on generate for any school without a materialised syllabus; fixed
   with a SELECT grant (migration `20260728000000`). *Deepening (PYQ import/analytics) stays
-  paused — validate teacher adoption first.* Cert: `docs/QUESTION_INTELLIGENCE_LIVE_CERTIFICATION.md`.
+  paused — validate teacher adoption first.* Cert: `docs/archive/completed/QUESTION_INTELLIGENCE_LIVE_CERTIFICATION.md`.
 
 - [x] (2026-06-24) **First-time student data onboarding (bulk import + structure + placeholders).**
   Day-one student setup for a new school: backend CSV/Excel import
@@ -79,4 +79,25 @@ Format: `- [ ] (YYYY-MM-DD) The idea, in plain words.`
   decisions honoured: admission number is the real ID; Aadhaar optional + stored **masked**
   (dedupe only, never the login); placeholders carry no real parent phone until replaced.
   **Live-certified 10/10** on the VPS pilot and merged (`3a381b3`). The concrete first slice
-  of the AI School Builder. Cert: `docs/B7_ONBOARDING_LIVE_CERTIFICATION.md`.
+  of the AI School Builder. Cert: `docs/archive/completed/B7_ONBOARDING_LIVE_CERTIFICATION.md`.
+
+---
+
+## Future / Next-roadmap architecture ideas
+
+- [ ] (2026-07-02, owner) **Cross-module Student Clearance / No-Dues Engine.**
+  ONE consolidated clearance check office staff run before a student lifecycle event —
+  **Year Closing · Promotion · Transfer Certificate · Student Transfer · Graduation/Alumni** —
+  instead of checking each module by hand. Aggregates pending obligations across modules:
+  **fee dues (Finance) · library books-not-returned + library fines · transport dues ·
+  hostel dues · inventory/assets not returned · other module obligations** → one report
+  (per-module PENDING vs CLEARED + what must be resolved before close/promote/transfer/exit).
+  **Verdict: NEXT roadmap / post module-completion** — build once every dues-producing
+  module (Transport/Hostel/Inventory dues) exists; slot after the 10 modules + roadmap gaps,
+  before/with the 🔒 pre-pilot hardening. Suggested design: a **contributor-registry** (each
+  module registers a read-only `{module, items[], blocking, amount}` provider), a
+  `GET /students/{id}/clearance` (+ batch-by-class for year-close), **gate the transitions**
+  (promotion-commit / TC / transfer / alumni) and **snapshot the clearance decision onto the
+  TC/transfer record** (idempotent, immutable, auditable), plus a maker-checker override path
+  (schools waive small dues at exit). **OWNER DECISION before build:** which obligations are
+  hard-blocking vs advisory-warn per lifecycle event, and who may override. Do not build now.

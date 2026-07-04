@@ -7,7 +7,7 @@ Each track follows the same template: goals, architecture, permissions, data mod
 
 | Track | Document |
 |-------|----------|
-| Universal Organization Builder | [Universal-Organization-Builder.md](./Universal-Organization-Builder.md) |
+| Universal Organization Builder | [Universal-Organization-Builder.md](../../archive/design/Universal-Organization-Builder.md) |
 | Universal Organization Builder v2 | [Universal-Organization-Builder-v2.md](./Universal-Organization-Builder-v2.md) |
 | Dynamic Widget Platform | [Dynamic-Widget-Platform.md](./Dynamic-Widget-Platform.md) |
 | Universal Employee System | [Universal-Employee-System.md](./Universal-Employee-System.md) |
@@ -17,6 +17,7 @@ Each track follows the same template: goals, architecture, permissions, data mod
 | Multi-School SaaS Operations | [Multi-School-SaaS-Operations.md](./Multi-School-SaaS-Operations.md) |
 | WhatsApp Business Integration | [WhatsApp-Business-Integration.md](./WhatsApp-Business-Integration.md) |
 | AI Question Paper System | [AI-Question-Paper-System.md](./AI-Question-Paper-System.md) |
+| **Assessment Intelligence Platform (Master Plan v3.0)** | [Assessment-Intelligence-Platform.md](./Assessment-Intelligence-Platform.md) |
 | AI Content Generation | [AI-Content-Generation.md](./AI-Content-Generation.md) |
 | Franchise Management | [Franchise-Management.md](./Franchise-Management.md) |
 | Multi-Branch Management | [Multi-Branch-Management.md](./Multi-Branch-Management.md) |

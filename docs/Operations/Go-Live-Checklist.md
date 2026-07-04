@@ -2,7 +2,7 @@
 
 **Version:** 1.0 (v1.0-rc1)  
 **Scope:** Limited production pilot cutover — no new features  
-**Prerequisite:** [`v1.0-Release-Candidate.md`](../Releases/v1.0-Release-Candidate.md) validated on staging · [`Deployment-Guide.md`](./Deployment-Guide.md)
+**Prerequisite:** [`../archive/completed/releases/v1.0-Release-Candidate.md`](../archive/completed/releases/v1.0-Release-Candidate.md) validated on staging · [`Deployment-Guide.md`](./Deployment-Guide.md)
 
 ---
 
@@ -190,7 +190,7 @@ export ACADEMIC_YEAR_ID=<current-year-uuid>   # optional
 | Demo school E2E | `python3 scripts/demo_school_validate.py` |
 | Launch gate | `./scripts/production_launch_verify.sh` |
 | Pilot gate | `./scripts/pilot_staging_verify.sh` |
-| RC release notes | `docs/Releases/v1.0-Release-Candidate.md` |
+| RC release notes | `../archive/completed/releases/v1.0-Release-Candidate.md` |
 | Validation evidence | `docs/Operations/Production-Validation-Report.md` |
 | School setup (pre-import) | `docs/Operations/School-Setup-Checklist.md` |
 | First day operations | `docs/Operations/First-Day-Go-Live-Checklist.md` |

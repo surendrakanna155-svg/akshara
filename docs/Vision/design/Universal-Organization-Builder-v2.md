@@ -1,7 +1,7 @@
 # Design — Universal Organization Builder v2
 
 **Status:** Architecture only — not implemented  
-**Version:** 2.0 (extends [Universal-Organization-Builder.md](./Universal-Organization-Builder.md))  
+**Version:** 2.0 (extends [Universal-Organization-Builder.md](../../archive/design/Universal-Organization-Builder.md))  
 **Target industries:** School · Salon · Hospital · Restaurant  
 **Depends on:** Auth, tenant model, RBAC registry, v7.15 onboarding, Phase 5 composition patterns
 

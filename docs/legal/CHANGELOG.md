@@ -49,4 +49,4 @@ ship ahead of the owner-gated steps.
 
 **Owner action outstanding:** fill placeholders (see [PLACEHOLDERS.md](PLACEHOLDERS.md)),
 host the documents publicly, and deploy the backend migration + edge route. See
-[`../LEGAL_COMPLIANCE_CERTIFICATION.md`](../LEGAL_COMPLIANCE_CERTIFICATION.md).
+[`../archive/completed/LEGAL_COMPLIANCE_CERTIFICATION.md`](../archive/completed/LEGAL_COMPLIANCE_CERTIFICATION.md).

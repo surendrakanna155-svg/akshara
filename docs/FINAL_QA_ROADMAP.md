@@ -1,5 +1,15 @@
 # AKSHARA ERP — Final QA Completion Roadmap
 
+> **⏭ FORWARD PLAN MOVED (2026-07-03).** QW1–QW8 + Phase 0 below remain the **frozen QA-wave history**.
+> The **single authoritative forward execution plan** (all remaining work → pilot → GA) is now
+> [`docs/roadmap/FINAL_EXECUTION_MASTER_ROADMAP.md`](roadmap/FINAL_EXECUTION_MASTER_ROADMAP.md) (Phases 0–8),
+> built from the Fable Final Audit (`docs/audits/00`–`11`) + its finding-traceability ledger
+> ([`docs/audits/AUDIT_FINDINGS_LEDGER.md`](audits/AUDIT_FINDINGS_LEDGER.md)) and the strategy set
+> (`docs/strategy/`). The Phase B/C/D section below is **superseded as a plan**; it is retained for history —
+> **with one carve-out:** the **§Phase-C C0–C21 wave table** (wave composition, dependencies, per-wave
+> completion criteria) remains the **normative decomposition** the final roadmap's **P1-PROD-1..21** executes
+> (item scope = the frozen `PRODUCT_ENHANCEMENT_BACKLOG.md` rev 5; sequencing authority = the final roadmap).
+
 **Date:** 2026-06-27 · HEAD `0f33c6a` · Companion to [`FINAL_QA_AUDIT.md`](FINAL_QA_AUDIT.md) and [`FINAL_QA_MASTER_TRACKER.md`](FINAL_QA_MASTER_TRACKER.md).
 
 > **Scope vs quality.** This roadmap proves *quality* (the QA waves QW1–QW8). For *scope* — every

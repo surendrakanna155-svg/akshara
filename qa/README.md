@@ -103,4 +103,4 @@ Flutter `router_smoke_test.dart` validates **123** ERP/mobile routes in widget t
 ## Documentation
 
 - Setup guide: `docs/Testing/Maestro-Setup.md`
-- Release notes: `docs/Releases/v18.1-Autonomous-QA-Platform.md`
+- Release notes: `../docs/archive/completed/releases/v18.1-Autonomous-QA-Platform.md`

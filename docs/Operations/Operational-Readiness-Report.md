@@ -221,7 +221,7 @@ Akshara ERP is operationally ready to onboard the first real school for **manual
 
 | Evidence | Location |
 |----------|----------|
-| RC release notes | [`docs/Releases/v1.0-Release-Candidate.md`](../Releases/v1.0-Release-Candidate.md) |
+| RC release notes | [`../archive/completed/releases/v1.0-Release-Candidate.md`](../archive/completed/releases/v1.0-Release-Candidate.md) |
 | Production validation | [`Production-Validation-Report.md`](./Production-Validation-Report.md) |
 | Demo school 31/31 | `python3 scripts/demo_school_validate.py` |
 | Pilot defects | [`Pilot-Issue-Tracker.md`](./Pilot-Issue-Tracker.md) |

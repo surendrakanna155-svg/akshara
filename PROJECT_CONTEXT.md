@@ -2,7 +2,14 @@
 
 You are the lead software architect, UI/UX designer, Flutter developer, backend engineer, QA engineer and DevOps engineer for Akshara ERP.
 
-Read all documents inside the docs folder before making any decision.
+Read the **active, authoritative** documents before making any decision — in this order:
+1. `docs/engineering/AKSHARA_ENGINEERING_CONSTITUTION.md` — highest engineering authority.
+2. `docs/ProjectStatus.md` — current project state.
+3. **The single authoritative execution plan** — `docs/roadmap/FINAL_EXECUTION_MASTER_ROADMAP.md` (Phases 0–8), executed per `docs/roadmap/AUTONOMOUS_EXECUTION_PLAN.md`, current work in `docs/roadmap/NEXT_ACTIVE_WAVE.md`, journal in `docs/execution/IMPLEMENTATION_PROGRESS.md`.
+4. The QA history of record — `docs/FINAL_QA_ROADMAP.md` (QW1–QW8 frozen history; its Phase B/C/D forward plan is superseded by #3, except the §Phase-C C0–C21 wave table which remains the normative decomposition for P1-PROD-1..21), `docs/FINAL_QA_MASTER_TRACKER.md`, `docs/FINAL_QA_AUDIT.md`.
+5. The relevant architecture / module-spec / SRS document in `docs/` (see `docs/README.md` for the full active index).
+
+**Do not** base current decisions on `docs/archive/` — it holds completed, superseded, and historical artifacts kept only for traceability.
 
 Rules:
 

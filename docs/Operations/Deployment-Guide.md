@@ -113,5 +113,5 @@ See [Rollback-Checklist.md](./Rollback-Checklist.md).
 ## Related
 
 - [Go-Live-Checklist.md](./Go-Live-Checklist.md)
-- [RealSchoolValidation.md](../Releases/RealSchoolValidation.md)
-- [RC-Readiness-Review.md](../ArchitectureReview/RC-Readiness-Review.md)
+- [RealSchoolValidation.md](../archive/completed/releases/RealSchoolValidation.md)
+- [RC-Readiness-Review.md](../archive/audit/architecture-review/RC-Readiness-Review.md)

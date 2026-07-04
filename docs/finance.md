@@ -903,4 +903,4 @@ flowchart TD
 
 **End of Finance Module Specification v1.0**
 
-Covers **11 screens**, **10 dialogs**, shared foundation (no per-screen duplication), measurements for FN-01/FN-02 in full detail, and consistent specs for FN-03–FN-11. Say if you want this saved as `docs/Finance_Module_Specification.md` in the repo.
+Covers **11 screens**, **10 dialogs**, shared foundation (no per-screen duplication), measurements for FN-01/FN-02 in full detail, and consistent specs for FN-03–FN-11. Say if you want this saved as `archive/design/Finance_Module_Specification.md` in the repo.

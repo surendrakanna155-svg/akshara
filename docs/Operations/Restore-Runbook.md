@@ -1,61 +1,15 @@
-# Restore Runbook
+# Restore Runbook — moved
 
-**Version:** 1.0 (v7.7)
+> **Consolidated (DOC-7, 2026-07-04).** There is now **one canonical backup & restore runbook**:
+> **[`../BACKUP_RESTORE_RUNBOOK.md`](../BACKUP_RESTORE_RUNBOOK.md)** (§2 Restore procedure, §3 drill
+> thresholds, §5 RPO/RTO, §6 escalation).
+>
+> The previous content of this file described a **Supabase PITR restore** with an **RPO of 15 minutes**.
+> That does **not** match the deployment: Akshara restores are **operator-assisted over SSH** from the
+> nightly encrypted `pg_dump` artifacts (`deploy/akshara-vps/backup/akshara-restore.sh`, with the
+> `--force`-to-overwrite-production guard), giving a current **RPO ≈ 24h**. The 15-minute PITR target
+> requires WAL archiving that is **not yet enabled** (owner-gated `P0-INFRA-2`). The stale content was
+> removed to avoid contradicting the canonical runbook and overstating recovery guarantees.
 
----
-
-## When to use
-
-- Failed migration corrupts data
-- Accidental tenant-wide DELETE
-- Region outage requiring PITR
-
----
-
-## RPO / RTO targets
-
-| Metric | Target | Notes |
-|--------|--------|-------|
-| **RPO** (Recovery Point Objective) | **15 minutes** | Supabase PITR granularity |
-| **RTO** (Recovery Time Objective) | **2 hours** | Includes validation + DNS cutover |
-
----
-
-## PITR restore (Supabase)
-
-1. **Stop writes:** Disable API function or set maintenance flag
-2. Supabase Dashboard → Database → Backups → **Restore to point in time**
-3. Select timestamp **before** incident
-4. Restore to **new** branch/project if possible; validate before cutover
-5. Re-link Edge Functions secrets (`JWT_SECRET`, `ERP_TENANT_DATABASE_URL`, integration secrets)
-6. Run `./scripts/production_launch_verify.sh` with `INTERNAL_HEALTH_TOKEN`
-7. Confirm **213/213** tenant probes pass
-8. Resume traffic
-
----
-
-## Migration rollback
-
-If restore is not needed and only schema rollback:
-
-1. Create reverse migration or restore from pre-deploy SQL dump
-2. `supabase db push` on rollback branch
-3. Redeploy previous Edge Function tag
-4. Run launch verify script
-
----
-
-## Post-restore validation
-
-- [ ] Auth login (staff OTP)
-- [ ] Finance dashboard + one collection read
-- [ ] Audit batch upload accepted
-- [ ] Tenant isolation probes 213/213 pass
-- [ ] Pilot school smoke (parent dashboard)
-
----
-
-## Communication
-
-- Notify pilot school admins within 30 minutes of restore start
-- Log incident in audit + post-mortem within 48h
+**Go to → [`../BACKUP_RESTORE_RUNBOOK.md`](../BACKUP_RESTORE_RUNBOOK.md)** for the real restore
+procedure and recovery objectives.

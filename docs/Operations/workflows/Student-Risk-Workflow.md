@@ -92,4 +92,4 @@ Current gap: API teacher dashboard returns `studentsNeedingAttention: const []`.
 
 - `docs/Operations/workflows/Teacher-Parent-Communication-Workflow.md`
 - `docs/Vision/FutureVision.md` § Student Intelligence
-- `docs/ArchitectureReview/v1.0-Post-RedTeam-Operational-Hardening.md` §4
+- `../../archive/audit/architecture-review/v1.0-Post-RedTeam-Operational-Hardening.md` §4

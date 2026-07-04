@@ -90,5 +90,5 @@ Auto-persist on each field change when API mode is active.
 
 - `docs/Operations/Pilot/School-Onboarding-Guide.md`
 - `docs/Operations/Go-Live-Checklist.md`
-- `docs/BACKUP_RESTORE_ARCHITECTURE.md`
+- `../../archive/planning/BACKUP_RESTORE_ARCHITECTURE.md`
 - `docs/Vision/FutureVision.md` § Startup Onboarding

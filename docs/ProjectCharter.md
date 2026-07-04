@@ -128,7 +128,7 @@ Every release requires:
 
 1. `docs/Releases/v{X.Y}-{Name}.md`
 2. `docs/ArchitectureReview/v{X.Y}-*-Audit.md` (≥1 audit doc)
-3. Updated `docs/Roadmap.md` milestone status
+3. Updated `archive/roadmap/Roadmap.md` milestone status
 4. Completion report with analyze + test results
 5. Git tag `v{X.Y}-{slug}` on `main`
 
@@ -143,4 +143,4 @@ Every release requires:
 | Staging | All live modules + audit ingestion + permission sync validated |
 | Production SaaS | Server RBAC/RLS, secure storage audit, monitoring, DR plan |
 
-Current production readiness: **97 / 100** (see `docs/ArchitectureReview/v2.7-Security-Review.md`).
+Current production readiness: **97 / 100** (see `archive/audit/architecture-review/v2.7-Security-Review.md`).

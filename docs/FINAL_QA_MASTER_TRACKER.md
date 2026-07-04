@@ -7,6 +7,8 @@ Date: 2026-06-27 · HEAD `0f33c6a` · Companion to [`FINAL_QA_AUDIT.md`](FINAL_Q
 
 > **Engineering gate:** Every row here is governed by the Engineering Operating System (`/eos`) per [`engineering/ENGINEERING_GATE_POLICY.md`](engineering/ENGINEERING_GATE_POLICY.md). A row is not `Done` until `/eos <scope>` returns PASS against the [Engineering Constitution](engineering/AKSHARA_ENGINEERING_CONSTITUTION.md). The EOS is the only engineering standard for this work — do not add bespoke checklists.
 
+> **⏭ Roadmap continuation (added 2026-07-01).** The QW1–QW8 rows below are **complete and frozen** and are **not** modified by the next-generation roadmap. The `QA-R` (QW8) rows' remaining **live-only legs** are executed as **Phase B — Release Engineering (Track B)** in [`FINAL_QA_ROADMAP.md`](FINAL_QA_ROADMAP.md#next-generation-roadmap--phases-b--c--d) — each row flips to live-Verified as its staged harness runs green on the VPS; **no row is rewritten here**. Post-GA product work (**Phase C**) and future commercial work (**Phase D**) live in the roadmap, sourced from [`PRODUCT_ENHANCEMENT_BACKLOG.md`](PRODUCT_ENHANCEMENT_BACKLOG.md) and [`PRODUCT_COMMERCIAL_BACKLOG.md`](PRODUCT_COMMERCIAL_BACKLOG.md) respectively — not from this tracker.
+
 ---
 
 ## How to read this tracker
@@ -38,7 +40,44 @@ Every gap row has the 9 required columns:
 
 ---
 
+## Evidence grade — how to read every `Verified` row (finding DOC-4 / QA-1)
+
+> **Re-scope banner (added 2026-07-04, P0-DOC-4).** A row's `Status = Verified` in this frozen tracker
+> means **"the recommended test was written and passes at the grade stated in its parenthetical
+> evidence"** — it does **not**, on its own, mean *live-on-VPS* verification. To keep the aggregate
+> honest, read every `Verified` through this **evidence grade**, which the row's own parenthetical
+> already implies. These rows are **frozen and are NOT rewritten** — this section governs how their
+> existing Status is interpreted.
+
+| Grade | Meaning | How to recognise it in a row's parenthetical |
+|---|---|---|
+| **LIVE** | Proven against the live VPS + tenant Postgres with real auth/RBAC/RLS. | Cites a live-cert script run (`scripts/qa/live_cert_*`) with real school-JWT + prod DB. |
+| **LOCAL-LOGIC** | Business logic proven by a local unit/widget/integration test (no live DB). | "persist on re-read", "deterministic integration test", named `*_test.dart` green. |
+| **CONTRACT** | Route/permission/authorization contract asserted, DB-free. | "Verified (authorization)", "holds `<perm>` … denied", 503-when-authorized. |
+| **RENDER-MOCK** | UI renders against a mock/in-memory source; backend wiring pending/thin. | "renders", "nav-only", mock store, "UI … = follow-up". |
+| **STAGED** | Harness/fixtures authored, **not yet run for real** — awaits the live lane (Track B). | QA-R live legs; "staged harness runs green on the VPS". |
+
+**Grade-of-record by wave (aggregate honesty):**
+- **QW1–QW7** rows are predominantly **LOCAL-LOGIC** and **CONTRACT** (many say *"Verified (authorization)"*) with a few **RENDER-MOCK** follow-ups noted inline — **not** LIVE. A small set carry an archived LIVE cert (B-batch / onboarding); those are historical, not a current GA claim.
+- **QW8 (`QA-R`)** live-only legs are **STAGED** until **Phase B — Release Engineering (Track B)** runs them on the VPS. They are **not** LIVE today.
+
+**Explicit over-claim corrections (DOC-4):**
+- **"Universal idempotency"** is a *target*, not shipped reality — idempotency guards currently cover **~4%** of mutations (REL-1); the backend "universal-idempotency" migration referenced in the Phase-0 note is **scheduled work** (→ `P1-CODE-1`), not a present fact.
+- **"Universal `row_version` conflict"** is likewise a target — the `row_version` optimistic-lock guard is wired on **1 of 4** critical money/marks paths and is **inert on finance** until `P0-CODE-1` (ENG-1). Do not read it as platform-wide.
+- **"237 Verified" / "PRODUCTION CERTIFIED"** aggregate superlatives (seen in older summaries and companion docs) are **local-evidence** counts and **historical batch certs** — **not** a live GA certification. Live GA certification is gated on P6 (pilot) + P7 (`QA-R-012` + 7-day cron), per [`roadmap/FINAL_EXECUTION_MASTER_ROADMAP.md`](roadmap/FINAL_EXECUTION_MASTER_ROADMAP.md).
+
+*(This section is the "evidence-grade column" for the frozen tracker: rather than mutating 283 frozen
+rows, it defines the grade vocabulary and the per-wave grade-of-record that every row's Status inherits.
+New/live-flipped rows in Track B should cite their grade explicitly in the parenthetical.)*
+
+---
+
 ## Summary counts
+
+> **Read with the evidence grade above.** The totals below count **rows whose recommended test exists
+> and passes at its stated grade** — overwhelmingly LOCAL-LOGIC/CONTRACT, not LIVE. They are a
+> *local-verification* backlog burn-down, **not** a live production-certification count.
+
 
 | Layer | P0 | P1 | P2 | Total |
 |---|---:|---:|---:|---:|
@@ -67,7 +106,7 @@ Every gap row has the 9 required columns:
 These rows depend on a reusable **Data Reliability Platform** (Draft Persistence + Sync Engine + Repository Integration) that is built in **Phase 0**, before QW1. They are **not** `Won't-Build` — they are tested-and-closed once the platform ships. Architecture is reviewed/approved before implementation: see [`DATA_RELIABILITY_PLATFORM_DESIGN.md`](DATA_RELIABILITY_PLATFORM_DESIGN.md).
 `QA-X-001` (offline attendance draft), `QA-X-002` (offline fee collect), `QA-X-004` (offline cached reads), `QA-X-005` (connectivity status), `QA-X-006` (double-submit guard), `QA-X-007` (auth refresh-replay), `QA-X-008` (5xx/429 retry+backoff), `QA-X-009` (unsaved-changes guard).
 
-**Status (2026-06-27):** Design APPROVED with refinements R1–R4. **Phase 0a foundation IMPLEMENTED & VERIFIED** on branch `feature/data-reliability-platform` (`lib/core/reliability/**`, 34/34 tests, analyze clean, 0 project errors, additive). The platform mechanics these rows depend on now exist + are unit-tested; rows move to `Verified` after the integration steps (bootstrap wiring, pilot-critical screen integration, backend universal-idempotency + conflict-version migration, airplane-mode integration tests) — see [`DATA_RELIABILITY_PLATFORM_PHASE0_PROGRESS.md`](DATA_RELIABILITY_PLATFORM_PHASE0_PROGRESS.md).
+**Status (2026-06-27):** Design APPROVED with refinements R1–R4. **Phase 0a foundation IMPLEMENTED & VERIFIED** on branch `feature/data-reliability-platform` (`lib/core/reliability/**`, 34/34 tests, analyze clean, 0 project errors, additive). The platform mechanics these rows depend on now exist + are unit-tested; rows move to `Verified` after the integration steps (bootstrap wiring, pilot-critical screen integration, backend idempotency + conflict-version migration **rolled out across all mutations** — a *target*, currently ~4% coverage per REL-1, scheduled as `P1-CODE-1`; do not read "universal" as shipped — airplane-mode integration tests) — see [`DATA_RELIABILITY_PLATFORM_PHASE0_PROGRESS.md`](DATA_RELIABILITY_PLATFORM_PHASE0_PROGRESS.md).
 
 ---
 

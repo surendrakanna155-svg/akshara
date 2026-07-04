@@ -367,7 +367,7 @@ The **Akshara Intelligence Layer** unifies risk prediction, multilingual communi
 | Google Drive export | OAuth destination picker | 🔄 UI stub |
 | OneDrive export | OAuth destination picker | 🔄 UI stub |
 
-**Docs:** `docs/BACKUP_RESTORE_ARCHITECTURE.md` · `docs/BACKUP_RECOVERY_ARCHITECTURE.md` (infra PITR)
+**Docs:** `../archive/planning/BACKUP_RESTORE_ARCHITECTURE.md` · `../archive/planning/BACKUP_RECOVERY_ARCHITECTURE.md` (infra PITR)
 
 ---
 
@@ -388,17 +388,18 @@ The **Akshara Intelligence Layer** unifies risk prediction, multilingual communi
 | Principal | School building / community |
 | Director | Network of connected schools |
 
-**Readiness:** `docs/M15_THEME_MODERNIZATION_READINESS.md` — READY TO BEGIN on dedicated branch.
+**Readiness:** `../archive/design/M15_THEME_MODERNIZATION_READINESS.md` — READY TO BEGIN on dedicated branch.
 
 ---
 
-## O. Deferred — Academic Assessment Platform
+## O. Academic Assessment Platform → Assessment Intelligence Platform
 
 | Capability | Status | Doc |
 |------------|--------|-----|
-| Bank-first assessment workflow | 📐 Design only | `docs/ACADEMIC_ASSESSMENT_PLATFORM_DESIGN.md` |
-| Question paper generation (formal exams) | ⏸ Deferred | Distinct from Evolution FV-23 |
-| Assessment AI | ⏸ Deferred | Requires assessment platform foundation |
+| Bank-first assessment workflow | ✅ Shipped & live-certified (Batches 8b/8c) | `../archive/completed/QUESTION_INTELLIGENCE_LIVE_CERTIFICATION.md` |
+| Question paper generation (formal exams) | ✅ Shipped (governed lifecycle, principal-only approval) | Distinct from Evolution FV-23 |
+| Assessment AI (constrained gap-fill, candidates only) | ✅ Shipped, safe-by-default | — |
+| **Assessment Intelligence Platform (long-term vision)** | 🔒 Locked owner vision (2026-07-02), phased | [`design/Assessment-Intelligence-Platform.md`](./design/Assessment-Intelligence-Platform.md) |
 
 ---
 
@@ -414,7 +415,7 @@ Evolution work must **not break**: onboarding, attendance, finance, payments, co
 |----------|---------|
 | [`ImplementationRoadmap.md`](./ImplementationRoadmap.md) | Priority, dependencies, rollout |
 | [`design/FutureTracks-Index.md`](./design/FutureTracks-Index.md) | Per-track design specs |
-| [`../Roadmap.md`](../Roadmap.md) | Shipped milestones |
-| [`../DOCUMENTATION_SYNC_REPORT.md`](../DOCUMENTATION_SYNC_REPORT.md) | June 2026 documentation sync + gap analysis |
-| [`../ArchitectureReview/v1.0-Post-RedTeam-Operational-Hardening.md`](../ArchitectureReview/v1.0-Post-RedTeam-Operational-Hardening.md) | Post-RT architecture |
+| [`../archive/roadmap/Roadmap.md`](../archive/roadmap/Roadmap.md) | Shipped milestones |
+| [`../archive/temporary/DOCUMENTATION_SYNC_REPORT.md`](../archive/temporary/DOCUMENTATION_SYNC_REPORT.md) | June 2026 documentation sync + gap analysis |
+| [`../archive/audit/architecture-review/v1.0-Post-RedTeam-Operational-Hardening.md`](../archive/audit/architecture-review/v1.0-Post-RedTeam-Operational-Hardening.md) | Post-RT architecture |
 | [`../Operations/workflows/`](../Operations/workflows/) | Operational process flows |

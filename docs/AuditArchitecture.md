@@ -1,10 +1,25 @@
 # Akshara ERP — Audit Architecture
 
-**Document ID:** `AKS-AUDIT-ARCH-v1.1`  
-**Status:** Architecture specification (no implementation)  
-**Aligned with:** Client `AuditLogger` · `AuditEventType` · `AuditUploadQueue`  
-**Resolves:** TD-P0-02 (upon Sprint 5 implementation)  
-**Last updated:** June 2026 (v5.6 gap closure)
+**Document ID:** `AKS-AUDIT-ARCH-v1.1`
+**Status:** Architecture specification — **target design, partially implemented** (see banner below)
+**Aligned with:** Client `AuditLogger` · `AuditEventType` · `AuditUploadQueue`
+**Resolves:** TD-P0-02 (upon full backend implementation)
+**Last updated:** 2026-07-04 (DOC-6 implementation-status correction)
+
+> **⚠ Implementation status (DOC-6 / DB-6, 2026-07-04).** This is a **design spec**; not everything
+> described below is built. Read the storage/compliance sections as *target*, not *present*:
+>
+> | Capability | This spec says | Actually implemented (HEAD `68f15cb`) |
+> |---|---|---|
+> | Append-only `audit_events` ingestion + client queue drain | §2 | ✅ Built — INSERT-only, idempotent on client `id` |
+> | Server-side mutation audit at the request choke point | §2 | ✅ Built (single `handleRequest` seam; denied-audit included) |
+> | Correlation IDs (client + server) | §4 | ✅ Built (client interceptor + server propagate) |
+> | **Monthly partitioning** of `audit_events` (§3) | §3 | ❌ **Not implemented** — single table today |
+> | **Warm/cold tiering + retention** (90d/1y/7y, archive, R2 JSONL) (§3, §7) | §3/§7 | ❌ **Not implemented** — no automated retention/partition/archive |
+> | **Hash-chain tamper detection** per partition (§7) | §7 | ❌ **Not implemented** — immutability is grant-based (no UPDATE/DELETE), no hash chain |
+>
+> Building the retention/partitioning/archive layer is tracked as **`P1-CODE-3`** (backend, DB-6 code
+> side). Do not cite partitioning, tiered retention, or the hash chain as shipped until that task lands.
 
 ---
 
@@ -78,7 +93,10 @@ All mutation handlers emit audit events **after** successful commit (same transa
 | Warm | `audit_events_archive` | 1 year | Compliance reports |
 | Cold | R2 JSONL exports | 7 years | Legal hold |
 
-### Partitioning
+> 🎯 **Target tiering — not implemented.** Today there is one `audit_events` table (INSERT-only, no
+> automated Warm/Cold archive or retention job). The tiered retention above is scheduled as `P1-CODE-3`.
+
+### Partitioning — 🎯 target, **not implemented** (P1-CODE-3)
 
 ```sql
 -- Monthly partitions on created_at
@@ -186,8 +204,8 @@ Admin UI: Control Center audit viewer (future); API query with pagination.
 
 | Requirement | Approach |
 |-------------|----------|
-| Immutability | INSERT-only tables; no UPDATE/DELETE grants |
-| Tamper detection | Hash chain per partition (Sprint 5) |
+| Immutability | ✅ INSERT-only tables; no UPDATE/DELETE grants |
+| Tamper detection | 🎯 Hash chain per partition — **not implemented** (P1-CODE-3) |
 | Data residency | Tenant-configurable region (future) |
 | PII in metadata | Minimize; reference entity IDs only |
 | Retention policy | Configurable per plan; minimum 1 year |

@@ -1,7 +1,7 @@
 # Akshara ERP — Product & Commercial Backlog (SINGLE SOURCE OF TRUTH)
 
 **Date:** 2026-06-30 · **Owner:** surendrakanna155@gmail.com
-**Reconciled from:** [`still_pending.md`](../still_pending.md) (Master Product & Commercial Audit, ~155 capabilities)
+**Reconciled from:** [`still_pending.md`](archive/audit/still_pending.md) (Master Product & Commercial Audit, ~155 capabilities — now archived)
 **Governed by:** the Engineering Operating System (`/eos`) per [`engineering/ENGINEERING_GATE_POLICY.md`](engineering/ENGINEERING_GATE_POLICY.md).
 **Companions:** [`FINAL_QA_ROADMAP.md`](FINAL_QA_ROADMAP.md) · [`FINAL_QA_MASTER_TRACKER.md`](FINAL_QA_MASTER_TRACKER.md).
 

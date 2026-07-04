@@ -88,5 +88,5 @@ After publish:
 
 ## Related documents
 
-- `docs/RED_TEAM_REMEDIATION_REPORT.md` § #9
-- `docs/ArchitectureReview/v1.0-Post-RedTeam-Operational-Hardening.md` §1
+- `../../archive/planning/RED_TEAM_REMEDIATION_REPORT.md` § #9
+- `../../archive/audit/architecture-review/v1.0-Post-RedTeam-Operational-Hardening.md` §1

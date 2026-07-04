@@ -1,49 +1,16 @@
-# Backup Runbook
+# Backup Runbook — moved
 
-**Version:** 1.0 (v7.7)  
-**Owner:** Platform / Release Manager
+> **Consolidated (DOC-7, 2026-07-04).** There is now **one canonical backup & restore runbook**:
+> **[`../BACKUP_RESTORE_RUNBOOK.md`](../BACKUP_RESTORE_RUNBOOK.md)**.
+>
+> The previous content of this file described **Supabase-managed PITR / daily snapshots**, which does
+> **not** match the actual deployment. Akshara runs on a **self-hosted VPS** with nightly, AES-256
+> **encrypted** `pg_dump` backups (script `deploy/akshara-vps/backup/akshara-backup.sh`), an
+> `ops_backup_runs` ledger, a monthly restore drill, and an operator-only `/health/backup` probe. The
+> stale Supabase-PITR description was removed to avoid contradicting the canonical runbook.
+>
+> A tighter RPO via WAL archiving / PITR is a **tracked follow-up** (owner-gated `P0-INFRA-2`), not the
+> current mechanism — see the canonical runbook §5.
 
----
-
-## Scope
-
-PostgreSQL (Supabase), Edge Function config secrets, R2 file storage (when enabled).
-
----
-
-## Automated backups (Supabase)
-
-| Asset | Method | Frequency | Retention |
-|-------|--------|-----------|-----------|
-| PostgreSQL | Supabase PITR + daily snapshot | Continuous WAL | 30 days (plan-dependent) |
-| Edge secrets | Supabase vault | On change | Version history in dashboard |
-
----
-
-## Pre-deploy snapshot (required)
-
-Before every production migration push:
-
-1. Confirm Supabase dashboard → Database → Backups shows recent snapshot
-2. Note current migration version: `supabase migration list --linked`
-3. Export manual snapshot if major schema change (Copilot, Timetable, Analytics migrations)
-
----
-
-## Manual export (optional)
-
-```bash
-supabase db dump --linked -f backups/pre-v7.7-$(date +%Y%m%d).sql
-```
-
-Store dumps in encrypted object storage — never commit to git.
-
----
-
-## Verification
-
-- [ ] Backup timestamp within 24h of deploy
-- [ ] PITR enabled on production project
-- [ ] Migration list documented in release notes
-
-See also: [Restore Runbook](./Restore-Runbook.md), [Disaster Recovery Checklist](./Disaster-Recovery-Checklist.md).
+**Go to → [`../BACKUP_RESTORE_RUNBOOK.md`](../BACKUP_RESTORE_RUNBOOK.md)** for backup production,
+restore (operator-over-SSH), restore-drill thresholds, RPO/RTO, and escalation.

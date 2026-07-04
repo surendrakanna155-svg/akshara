@@ -98,6 +98,6 @@ Customize tasks per sprint; keep Agent letters aligned with `AGENTS.md`.
 
 ## Related docs
 
-- [`docs/MULTI_AGENT_SYSTEM.md`](../MULTI_AGENT_SYSTEM.md) — architecture diagram  
-- [`docs/CURSOR_WORKFLOW.md`](../CURSOR_WORKFLOW.md) — single-agent session flow  
-- [`docs/QA/v18.8_readiness_assessment.md`](../QA/v18.8_readiness_assessment.md) — blocker priorities
+- [`../../docs/archive/temporary/MULTI_AGENT_SYSTEM.md`](../../docs/archive/temporary/MULTI_AGENT_SYSTEM.md) — architecture diagram  
+- [`../../docs/archive/temporary/CURSOR_WORKFLOW.md`](../../docs/archive/temporary/CURSOR_WORKFLOW.md) — single-agent session flow  
+- [`../../docs/archive/qa/v18.8_readiness_assessment.md`](../../docs/archive/qa/v18.8_readiness_assessment.md) — blocker priorities

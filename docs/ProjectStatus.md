@@ -1,233 +1,164 @@
 # Akshara ERP — Project Status
 
-**Last updated:** June 2026  
-**Current version:** `v0.2-academic-mvp`  
-**HEAD commit:** `42b7018`
+**Last updated:** 2026-07-04
+**HEAD commit:** `68f15cb`
+**Phase:** P0 — Truth · Documentation · Live Verification (autonomous execution, planning frozen)
+**Single source of truth:** [`roadmap/FINAL_EXECUTION_MASTER_ROADMAP.md`](roadmap/FINAL_EXECUTION_MASTER_ROADMAP.md) ·
+state in [`execution/EXECUTION_DASHBOARD.md`](execution/EXECUTION_DASHBOARD.md) ·
+journal in [`execution/IMPLEMENTATION_PROGRESS.md`](execution/IMPLEMENTATION_PROGRESS.md).
 
-> **Pilot School Simulation — LIVE CERTIFIED (2026-06-27):** ran Akshara the way
-> real customers do — Small Private (State), Large CBSE, ICSE and State-board
-> schools; single-school organizations vs. multi-school trusts; the full dynamic
-> module lifecycle (Inventory/Hostel/Library/Transport/HR/Alumni: enable → use →
-> disable → re-enable, with **data never deleted on disable**); and a full month
-> of operations — all against the live VPS pilot. **Live total 83/83**
-> (`scripts/qa/live_cert_pilot_simulation.py` 41/41 + `live_cert_full_journeys.py`
-> 25/25 + `live_cert_onboarding_dynamic_config.py` 17/17); analyze 0, flutter
-> 2440/0, backend 857/0. Found, fixed and live-verified **one** genuine production
-> bug: snapshot dashboards (Transport/Inventory/Hostel + Management/Control-Center)
-> returned **404** for every school but the seeded demo pilot — they now return a
-> clean **200 empty-state** when no snapshot row exists (5 edge handlers, no
-> migration, deployed). See `docs/PILOT_SCHOOL_SIMULATION.md` +
-> `docs/PILOT_SIMULATION_ROADMAP.md`. *(Legal & Compliance and GA certification
-> not yet started — intentionally out of scope.)*
->
-> **Onboarding & Dynamic Configuration PRODUCTION CERTIFIED (2026-06-27):** the
-> first-time-school experience is now proven end-to-end — Akshara builds the right
-> ERP per school and disabling a module removes it everywhere (and re-enabling
-> restores it). Closed the systemic root cause (the founder's module choice never
-> reached the runtime gate: onboarding wrote `schools.settings.modules_enabled`
-> while gating reads `school_configuration.capabilities`) plus 12 gaps (G1–G12):
-> go-live now derives + writes capabilities (G1) and a default subject/syllabus set
-> (G8) idempotently (G9, find-or-create); the brief UI collects facilities (G2);
-> the **backend now rejects school-disabled modules with 403 MODULE_DISABLED** (G3);
-> dashboard/search/notifications honour disabled modules (G5/G6/G7); Organization
-> Builder is reachable (backend emits `isChainOrganization`, G4); plus honesty
-> polish (G10/G11/G12). The first real go-live (B7 only ever certified the
-> propose-only AI prefill) surfaced and fixed three latent bugs — `schools` write
-> needed a SECURITY DEFINER fn (migration `20260813000000`), and two CHECK-constraint
-> violations (`syllabus.source`, `fee.status`). Live cert
-> `scripts/qa/live_cert_onboarding_dynamic_config.py` **17/17** (real auth + DB +
-> RBAC, isolated throwaway school, pilot untouched); Deno 102/102; analyze 0; tests
-> green. See `docs/ONBOARDING_DYNAMIC_CONFIGURATION_CERTIFICATION.md`.
->
-> **Live backend / pilot state (2026-06-25):** the self-hosted backend is live on the
-> VPS (`akshara.veloraunisexsalon.com`). **The entire P1 (Revenue & Pilot Success) layer is
-> PRODUCTION CERTIFIED and now INTEGRATION CERTIFIED end-to-end:** B1 Admissions CRM
-> (2026-06-24), B2 Capability Gating (2026-06-25, enforcement on, pilot=Professional), B3
-> Parent Insights, B4 AI Admissions Assistant, B5 WhatsApp surfaces, B6 Marketing Engine
-> (all 2026-06-25). **P1 Integration Certification (2026-06-25):** the batches were verified
-> to work together — Marketing→CRM→AI handoff, capability gating, parent insights, RBAC
-> scope, WhatsApp readiness — live smoke **11/11** (`scripts/p1_integration_smoke.sh`). One
-> real cross-batch gap was found and fixed: the Marketing→CRM convert handoff wrote a UUID
-> owner, hiding marketing-sourced leads from the AI's assign next-best-action; the handoff
-> now leaves leads unassigned.
->
-> **P2 complete + P3 complete (2026-06-25):** all three P2 (moat) items — B7 AI School Builder,
-> B8 Director Multi-School, B9 Advanced AI Predictions — are PRODUCTION CERTIFIED, and **both
-> P3 (Platform Expansion)** items — **B10 Organization Builder** and **B11 Dynamic Widget
-> Platform** — are now PRODUCTION CERTIFIED too. This completes every planned roadmap batch
-> (B1–B11); only P4 (B12 Verticals, frozen until pilot validation) remains (details below).
->
-> **B11 Dynamic Widget Platform PRODUCTION CERTIFIED (2026-06-25) — second P3 (Platform
-> Expansion), final planned batch:** the role/vertical-pack dashboard contract the shipped Flutter
-> `dynamic_widgets` UI consumes (data-source registry, layout versions, per-role layouts with tenant
-> overrides). The older flat per-user dashboard layout already existed; the gap was the **rich
-> role-scoped contract** — `GET /widgets/data-sources` (404, no handler), `GET /widgets/layouts/versions`
-> (mis-routed), and `GET/PUT/POST /widgets/layouts/:role` (returned the wrong shape) — so the app was
-> silently falling back to its in-app mock. Built **no-migration** on the existing
-> `widget_platform_foundation` tables (`widget_registry`, `dashboard_layouts`): a backend pack catalog
-> (`widget_pack_catalog.ts`, mirrors the client mock — 6 data sources + per-role/vertical-pack default
-> layouts) and rich handlers (`widget_layout_handlers.ts`) that resolve the pack default or a persisted
-> **tenant override** (stored in `dashboard_layouts` under `role:<role>`, `owner_user_id` NULL).
-> RBAC-gated (`viewDynamicWidgets`/`manageDynamicWidgets`, school scope) — **no entitlement gate**, a
-> school-level configurability feature matching the UI. The edge `erp_tenant` role lacks DELETE on
-> `dashboard_layouts`, so save is UPDATE-first/INSERT-fallback and reset rewrites the row to the pack
-> default (no DELETE). Flutter unchanged (`EVOLUTION_API_ENABLED` already on). Backend Deno 10/10,
-> Flutter analyze clean + dynamic-widget tests 8/8. Live cert **16/16** (real school-JWT + prod DB +
-> RBAC): data-sources registry, pack-default layout, override save (version bump + audit) + durable
-> persist, versions reflect override, reset to default, RBAC 403 (manage/view/school-scope) + unauth
-> 401, legacy registry intact, clean teardown. See `docs/B11_DYNAMIC_WIDGET_PLATFORM_CERTIFICATION.md`.
->
-> **P2 — B7 AI School Builder (Phase 1) PRODUCTION CERTIFIED (2026-06-25):** an
-> entitlement-gated AI pre-fill (`POST /onboarding/startup/ai-prefill`,
-> `feature.ai_school_builder`, Professional+Enterprise) that turns a short founder brief into a
-> complete, board-appropriate startup-onboarding proposal (classes, sections, fees, language,
-> modules) on the certified onboarding foundation — deterministic baseline + Claude refinement
-> with safe fallback, **non-destructive** (proposes only). Live smoke **10/10** (real auth +
-> prod DB + real AI, `source=ai`).
->
-> **B10 Organization Builder PRODUCTION CERTIFIED (2026-06-25) — first P3 (Platform Expansion):**
-> the chains/trusts no-touch org-setup flow (vertical packs → 7-step interview with a real AI
-> recommendation → config preview → real provisioning → job status), built as a backend to the
-> already-shipped Flutter UI. New migration `20260727000000` — three tables (`org_builder_packs`
-> catalog + four verticals; `org_builder_interview_drafts` with a client-supplied TEXT id;
-> `org_builder_provisioning_jobs`), `view`/`manageOrganizationBuilder` perms, org-scope RLS
-> (mirrors Director), Enterprise `feature.organization_builder` entitlement. New
-> `_shared/organization_builder/` module: repository (create-on-demand drafts, pure `buildPreview`,
-> **real synchronous provisioning** — six persisted step outcomes, draft → provisioned, no timers),
-> real-Claude interview recommendations (safe fallback), handlers (auth → RBAC → org-scope →
-> audit), router owning both contract prefixes (`/platform/org-builder/...` and
-> `/platform/provisioning-jobs/:id`) and self-enforcing the entitlement. Flutter unchanged — flipped
-> `ORGANIZATION_BUILDER_API_ENABLED` on; module stays chain-gated + Enterprise-gated at runtime.
-> Backend Deno 3/3, Flutter analyze clean + 9/9 org-builder tests. Live cert **17/17**: gate denies
-> the Professional pilot (402) → override enables → real org-scoped flow + real AI (137-char rec) +
-> real provision (6/6 steps) + audit; RBAC 403 (manage/view/org-scope) + unauth 401; override
-> restored. See `docs/B10_ORGANIZATION_BUILDER_CERTIFICATION.md`.
->
-> **B9 Advanced AI Predictions PRODUCTION CERTIFIED (2026-06-25):** the first prediction models,
-> shipped as one gated product — three school-scoped, data-grounded feeds: fee-default (finance
-> invoices), admission-conversion likelihood (admissions funnel), and student-risk (reuses the
-> certified intelligence engine). Each returns a deterministic list + an optional real-AI narrative
-> (Claude, safe fallback). New `_shared/predictions/` module gated by the Enterprise
-> `feature.ai_predictions` entitlement (per-deal override-grantable); per-endpoint RBAC
-> (viewFinance/viewAdmissions/viewStudentRisk). No migration, no new permission slugs. Flutter
-> `PredictionsScreen` at `/intelligence/predictions` + intelligence-hub launch tile. Live cert
-> **11/11**: gate denies the Professional pilot (402) → override enables → real predictions on real
-> data + real AI; RBAC + unauth + school-scope enforced. See `docs/B9_ADVANCED_AI_PREDICTIONS_CERTIFICATION.md`.
->
-> **B8 Director Multi-School PRODUCTION CERTIFIED (2026-06-25):** polish for multi-branch sales
-> on the certified Batch-6 Director backend — closed three honesty gaps: (A) a metric-input
-> write path (`GET`/`POST /director/metric-inputs`, manage-gated, audited) so the chain owner
-> can enter the figures with no operational source (marketing spend, operating expense,
-> capacity), now feeding Margin / Marketing ROI / Capacity instead of permanent zeros; (B) a
-> real board-pack export (`POST /director/reports/:id/export` returns a document built from live
-> aggregates, rendered to a real PDF client-side); (C) a real-AI executive summary
-> (`director_ai.ts`, deterministic baseline + Claude, safe fallback). No migration (Batch-6
-> `director_metric_inputs` reused). Backend Deno tests 10/10, live cert **13/13** (real org-JWT
-> + prod DB + RBAC + multi-school aggregation + real AI). For current status see
-> `docs/ROADMAP_RECONCILED_2026-06-24.md`, `docs/B8_DIRECTOR_MULTI_SCHOOL_CERTIFICATION.md`,
-> `docs/B7_AI_SCHOOL_BUILDER_CERTIFICATION.md`,
-> `docs/P1_INTEGRATION_CERTIFICATION.md`, and `docs/B2_STATUS_LEDGER.md`.
+> **Read this first.** An earlier version of this file (dated "June 2026", HEAD `42b7018`) listed
+> Admissions / Finance / HR / Transport / SIS / Management etc. as *"not started in Flutter."* That
+> was **stale by dozens of completed module waves** and has been corrected here (finding DOC-1). The
+> project is far past the academic MVP: it is a broad, multi-module ERP whose **engineering is
+> local-complete** and whose **remaining gate is live verification on real infrastructure** (Track B),
+> followed by Red-Team → Pilot → Production Certification → GA.
 
 ---
 
-## Release History
+## 1. Where the project actually is
+
+| Dimension | State (HEAD `68f15cb`) |
+|---|---|
+| **Product surface** | 47 feature modules in [`lib/features/`](../lib/features/) (Admissions, Finance, HR, Transport, SIS, Academics, Exams, Attendance, Homework, Communication, Library, Inventory, Hostel, Alumni, Parent, Teacher, Student, Director, Management/Principal, Onboarding, Staff-Attendance, Adaptive-AI/Intelligence, Platform, …) — **885 Dart files**, ~**607 routed screens**. |
+| **Backend** | Self-hosted Supabase edge (single `supabase/functions/api` request-router monolith) + `_shared` domain modules; **168 SQL migrations**; live on the VPS pilot (`akshara.veloraunisexsalon.com`). |
+| **Tests** | **632 test files** (widget/unit/contract/route); backend Deno suites; live-cert Python scripts under `scripts/qa/`. `flutter analyze` = **0** (verified live 2026-07-03). |
+| **Engineering maturity** | **Local-complete** across the module set (client + backend + migrations + RBAC + tests). Not yet **production-certified**. |
+| **Readiness** | **Pre-pilot.** GA is **blocked** on live Track-B verification, one Global Red Team, a full pilot simulation, and Production Certification — see §4. |
+
+**Honesty note (finding DOC-4).** This document uses **evidence grades** and does not restate the
+older certification-era superlatives ("237 Verified", "universal idempotency", "PRODUCTION CERTIFIED
+platform"). Where a capability is claimed, its grade says how strongly it is proven:
+
+| Grade | Meaning |
+|---|---|
+| **LIVE** | Exercised against the live VPS + tenant Postgres with real auth/RBAC/RLS. |
+| **LOCAL-LOGIC** | Business logic proven by local unit/widget/contract tests (no live DB). |
+| **CONTRACT** | Route/permission contract asserted (e.g. 503-when-authorized), DB-free. |
+| **RENDER-MOCK** | UI renders against a mock/in-memory source; backend wiring pending or thin. |
+| **STAGED** | Harness/fixtures authored and ready, but not yet run for real (awaits live lane). |
+
+The historical batch/QW certifications (B1–B11, QW1–QW8) remain in `archive/` as **frozen history**;
+they are **not** re-asserted here. The live re-proof of every critical claim is scheduled work in
+Phases P0/P6/P7, not a completed fact.
+
+---
+
+## 2. Module status (client · backend · evidence)
+
+Grades reflect the strongest evidence currently on record; the P0/P6/P7 waves upgrade the critical
+ones to **LIVE**. "Built" = client screens + providers + backend handlers + migrations present and
+passing local suites.
+
+| Domain | Client | Backend | Strongest evidence | Notes |
+|---|---|---|---|---|
+| Admissions / CRM | Built | Built | LOCAL-LOGIC + prior LIVE (archived) | Marketing→CRM→AI handoff wired. |
+| Finance (fees/invoices/receipts/concession) | Built | Built | LOCAL-LOGIC | Money `row_version` guard hardening = **P0-CODE-1**; recovery CRM = P1-PROD-1. |
+| Exams / Assessment | Built | Built | LOCAL-LOGIC | Result-status model frozen (AB/ML/DB = NULL, excluded from stats). |
+| Attendance (student) | Built | Built | LOCAL-LOGIC | — |
+| Staff Attendance (GA track) | Built | Built | STAGED | GPS geofence + anti-mock + live-camera face (P1-PROD-22). |
+| HR / Payroll | Built | Partial | LOCAL-LOGIC | Payroll run-generation engine = **P1-CODE-5**. |
+| Transport | Built | Built | LOCAL-LOGIC | Raises fee demand; Finance is sole payment engine. |
+| SIS / Student identity | Built | Built | LOCAL-LOGIC | Public Student ID + admission-# (identity platform, frozen design). |
+| Homework | Built | Built | LOCAL-LOGIC | Slice A/B complete. |
+| Communication | Built | Built | LOCAL-LOGIC | Deterministic parent-comms localization (catalog, no LLM). |
+| Library / Inventory / Hostel / Alumni | Built | Built / Partial | LOCAL-LOGIC / RENDER-MOCK | Cross-module Finance posting = **P1-CODE-6** (👤 real-vs-label). Hostel/Alumni scope = 👤 owner. |
+| Parent / Teacher / Student apps | Built | Built | LOCAL-LOGIC | Beyond v0.2: messages, report cards, certificates, submissions, AI surfaces. |
+| Director / Management / Principal | Built | Built | LOCAL-LOGIC | Multi-school aggregation, board packs. |
+| Onboarding / Dynamic config | Built | Built | LOCAL-LOGIC + prior LIVE (archived) | Capability-gating drives per-school module set. |
+| Adaptive AI / Intelligence | Built | Foundation pending | RENDER-MOCK / STAGED | Gateway hardening (cache/rate-limit/timeout/injection) = **P3-AI-1**; per-school adaptation = P3-AI-2. |
+| Platform / Entitlements / Widgets | Built | Built | LOCAL-LOGIC | Capability + entitlement gating live-enforced (audit-verified). |
+
+*A handful of thin/backend-less surfaces (~8, ENG-3/MOD-4) are reachable-mock and are handled by
+**P0-CODE-2** (hide-list, 👤 owner). Do not read RENDER-MOCK as production-ready.*
+
+---
+
+## 3. Verified baseline (audit, live 2026-07-03 — do not re-run)
+
+These were proven live during the Fable independent audit and recorded as the execution baseline
+([`audits/11_LIVE_VPS_VERIFICATION_ADDENDUM.md`](audits/11_LIVE_VPS_VERIFICATION_ADDENDUM.md),
+[`audits/AUDIT_FINDINGS_LEDGER.md §A`](audits/AUDIT_FINDINGS_LEDGER.md)):
+
+- Cross-tenant **RLS isolation** (read + write, cross-tenant/cross-school/parent) — **PASS**.
+- Edge connects as `erp_tenant` (`NOBYPASSRLS`) — confirmed.
+- **Entitlement enforcement ON** (`ENTITLEMENT_ENFORCEMENT=true`).
+- Automated **encrypted nightly backups** + monthly **restore drill** — running + passing (184 tables).
+- **Watchdog** monitoring — running (5-min cadence, green).
+- **AI live** via OpenRouter (key present).
+- Live tenant DB password **rotated** (≠ git default).
+- `flutter analyze` — **0 issues**.
+
+*(Regression/hardening tasks exist to make these permanent — e.g. RLS suite into CI = P0-TEST-2,
+`erp_tenant` deploy-assert = P0-INFRA-6 — but the facts above need no re-verification to proceed.)*
+
+---
+
+## 4. What stands between here and GA
+
+Execution is autonomous, one EOS-gated wave at a time, per
+[`roadmap/AUTONOMOUS_EXECUTION_PLAN.md`](roadmap/AUTONOMOUS_EXECUTION_PLAN.md). Phase order is strict:
+
+```
+P0  Truth · Docs · Live Verification   🔴 (gates everything)  ← current
+P1  Backend & Code fixes + module waves 🟠
+P2  UI/UX                               🟠
+P3  Adaptive AI (foundation → adaptive) 🟡
+P4  Global Red Team                     🔴
+P5  Red Team Fixes                      🔴
+P6  Pilot Simulation (single + 3-school)🔴 → PILOT-READY
+P7  Production Certification            🔴 (QA-R-012 + 7-day cron green)
+P8  GA Readiness & Launch               🔴 → GA DECLARED
+```
+
+**Current wave:** P0 · W1 — Documentation Truth (this pass). The long pole is the **owner-provisioned
+live lane** (VPS SSH, tenant Postgres, CI runner on the branch): it gates every **LIVE**-graded item,
+and the 7-day certification cron clock (a P7 prerequisite) only starts when P0-TEST-3 runs for real.
+
+---
+
+## 5. Release history (frozen)
 
 | Version | Tag | Scope | Status |
-|---------|-----|-------|--------|
-| v0.1 Foundation | `v0.1-foundation` | Theme, auth skeleton, initial parent dashboard/fees/attendance | ✅ Released |
+|---|---|---|---|
+| v0.1 Foundation | `v0.1-foundation` | Theme, auth, initial parent dashboard/fees/attendance | ✅ Released |
 | v0.2 Academic MVP | `v0.2-academic-mvp` | Parent PA-01–12, Teacher TA-01–07, Student ST-01–07 | ✅ Released |
-| v0.3 Admissions MVP | — | AD-01 → AD-10 | 🔜 Planned |
-| v0.4 Finance MVP | — | FN-01 → FN-11 | Planned |
-| v0.5 Operations MVP | — | Transport, Hostel, Inventory | Planned |
-| v0.6 Management MVP | — | MG-01 → MG-08 | Planned |
-| v1.0 Production Release | — | Full platform + API + CI/CD | Planned |
+| — post-v0.2 module build-out | — | Full multi-module ERP (Admissions→Director), backend + migrations, QW1–QW8 QA waves, B1–B11 batches | ✅ Local-complete (see §2) |
+| v1.0 GA | — | Live-verified, Red-Teamed, pilot-proven, production-certified platform | ⏳ Gated on P0→P8 |
+
+*The v0.3–v0.6 "MVP" milestones in the old status file are **superseded** — those modules are built;
+the remaining ladder is the P0→P8 phase plan above, not per-module MVP releases.*
 
 ---
 
-## Completed Modules (v0.2)
-
-### Mobile apps — feature-complete for academic MVP
-
-| App | Screens | Routes | Providers | Tests |
-|-----|---------|--------|-----------|-------|
-| **Parent** | 13 + receipt detail | 14 | 11 | 12 files |
-| **Teacher** | 8 | 9 (+ conversation) | 8 | 7 files |
-| **Student** | 7 | 7 | 7 | 7 files |
-| **Auth** | 3 | 3 | 1 | 2 files |
-| **Notifications** | 1 | 1 | 1 | — |
-
-### Totals
-
-| Metric | Count |
-|--------|-------|
-| Feature screens | 32 |
-| GoRouter route registrations | 36 |
-| Riverpod provider files | 28 |
-| Shared widgets | 12 |
-| Test files | 31 |
-| Tests passing | 130 |
-| Analyzer issues | 0 |
-| `lib/features/` Dart files | 136 |
-
----
-
-## Remaining Modules (not started in Flutter)
-
-| Module | Spec | Screens (per docs) | Platform |
-|--------|------|-------------------|----------|
-| Admissions | `Admissions.md` | AD-01 → AD-10 | Web primary |
-| Finance | `finance.md` | FN-01 → FN-11 | Web primary |
-| Management | `Management.md` | MG-01 → MG-08 | Web primary |
-| HR | `HR.md` | HR-01 → HR-09 | Web primary |
-| Transport | `Transport.md` | TR-01 → TR-09 | Web + mobile companion |
-| Hostel | `Hostel.md` | — | Web |
-| Marketing | `Marketing.md` | — | Web |
-| Director | `Director.md` | — | Web |
-| Library | `Library.md` | — | Web |
-| Inventory | `Inventory.md` | — | Web |
-| Alumni | `Alumni.md` | — | Web |
-| Akshara Control Center | `AksharaControlCenter.md` | ACC-01 → ACC-12 | Web desktop |
-| Academic (admin) | `Academic.md` | — | Web |
-| Student SIS | `StudentSIS.md` | — | Web |
-| Principal | `Principal.md` | — | Web |
-
-### Mobile app gaps (within v0.2 apps)
-
-- Parent: messages, bus tracking, report cards, certificates, language selection
-- Teacher: dedicated notifications, AI copilot, class-teacher dashboard
-- Student: fifth nav tab, homework submit/upload, join class, AI quiz
-
----
-
-## Quality Status
-
-```
-flutter analyze  → 0 issues
-flutter test     → 130/130 passing
-git status       → clean working tree
-```
-
----
-
-## Architecture Summary
+## 6. Architecture summary
 
 ```
 lib/
-├── features/
-│   ├── auth/           # Splash, login, OTP, session
-│   ├── notifications/  # Shared notifications
-│   ├── parent/         # 12 modules + shell
-│   ├── teacher/        # 7 modules + shell
-│   └── student/        # 7 modules + shell
-├── router/             # GoRouter + role guards + navigation handlers
-├── shared/widgets/     # 12 reusable Akshara widgets
-└── theme/              # M3 design tokens
+├── features/            # 47 domain modules (admissions, finance, hr, transport, sis, exams,
+│                        #   academics, communication, library, inventory, hostel, alumni,
+│                        #   parent, teacher, student_app, director, management, onboarding,
+│                        #   staff_attendance, intelligence/adaptive-ai, platform, …)
+├── router/              # GoRouter + role guards + navigation handlers (~607 routes)
+├── shared/              # reusable Akshara widgets, offline read-cache, reliability writer
+└── theme/               # M3 design tokens / design system
+
+supabase/
+├── functions/api        # single edge request-router monolith
+├── functions/_shared    # domain backend modules (repositories, handlers, services)
+└── migrations/          # 168 SQL migrations (RLS, identity, finance, capability gating, …)
 ```
 
 ---
 
-## Recommended Roadmap (v0.3 → v1.0)
+## 7. Pointers
 
-See release notes in `docs/Releases/v0.2-Academic-MVP.md` for detailed next-phase analysis.
-
-**Immediate next:** Admissions MVP — highest business value, unblocks SIS and Management KPIs.
+- **Forward plan (authoritative):** [`roadmap/FINAL_EXECUTION_MASTER_ROADMAP.md`](roadmap/FINAL_EXECUTION_MASTER_ROADMAP.md)
+- **Now / next wave:** [`roadmap/NEXT_ACTIVE_WAVE.md`](roadmap/NEXT_ACTIVE_WAVE.md)
+- **Live state dashboard:** [`execution/EXECUTION_DASHBOARD.md`](execution/EXECUTION_DASHBOARD.md)
+- **Permanent journal:** [`execution/IMPLEMENTATION_PROGRESS.md`](execution/IMPLEMENTATION_PROGRESS.md)
+- **Findings traceability:** [`audits/AUDIT_FINDINGS_LEDGER.md`](audits/AUDIT_FINDINGS_LEDGER.md)
+- **Engineering standard / gate:** `docs/engineering/AKSHARA_ENGINEERING_CONSTITUTION.md` + the EOS gate.
+- **Frozen history:** `archive/` (QW1–QW8, B1–B11 certifications) — preserved, not re-asserted.
+</content>
+</invoke>

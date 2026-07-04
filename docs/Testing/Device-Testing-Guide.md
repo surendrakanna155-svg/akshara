@@ -147,7 +147,7 @@ File under `reports/pilot_validation/` or project issue tracker.
 
 ## Reference
 
-- **Execution index (v16.8):** `docs/Releases/v16.8-Testing-Execution-Readiness.md`
+- **Execution index (v16.8):** `../archive/completed/releases/v16.8-Testing-Execution-Readiness.md`
 - iOS execution checklist: `docs/Testing/iOS-Execution-Checklist.md`
 - Android tester pack: `docs/Testing/Android-Tester-Pack.md`
 - iPhone tester pack: `docs/Testing/iPhone-Tester-Pack.md`
@@ -162,4 +162,4 @@ File under `reports/pilot_validation/` or project issue tracker.
 - Bug reports: `docs/Testing/Bug-Report-Template.md`
 - Release audit: `docs/Testing/Final-Release-Audit.md`
 - Deployment flags: `docs/Operations/Deployment-Guide.md`
-- UI stress coverage: `docs/Releases/v16.5-UI-Stress-Test.md`
+- UI stress coverage: `../archive/completed/releases/v16.5-UI-Stress-Test.md`

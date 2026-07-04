@@ -52,8 +52,16 @@ patrol_test/test_bundle.dart
 coverage/
 lcov.info
 
-# Local tool / CLI state (never commit)
-.claude/
+# Flutter golden-test failure diffs (transient — regenerated each run, never commit)
+test/**/failures/
+
+# Stray flutter run logs
+flutter_*.log
+
+# Local tool / CLI state (never commit) — except versioned project skills & commands
+.claude/*
+!.claude/skills/
+!.claude/commands/
 supabase/.branches/
 
 # Firebase service-account secrets — never commit

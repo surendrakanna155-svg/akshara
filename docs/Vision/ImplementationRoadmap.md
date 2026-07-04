@@ -17,6 +17,24 @@
 
 ---
 
+## Foundational architecture (P1 · precedes feature waves)
+
+> Cross-cutting foundations that other capabilities build on. Frozen product-architecture decisions; **design
+> only** — implementation begins when the owner promotes them out of the backlog.
+
+| # | Capability | Priority | Business value | Dependencies | Architecture impact | Data model | Rollout | Target | Source |
+|---|------------|:--------:|----------------|--------------|---------------------|------------|---------|--------|--------|
+| F1 | **Public Student ID — permanent human identity** (`<SCHOOL_CODE>-<RUNNING_NUMBER>`, e.g. `DPSKKP-0001`; running number 4-digit zero-padded, sequential per school, **never reused**; UUID stays canonical PK; School Code **globally unique**, set-once → editable-before-confirm → **locked forever**; **coexists with — does not replace — the school-configurable Admission Number**; **no student phone required**; future student login = Login ID + OTP to **parent**) | **P1** | Standard human identifier across the whole ERP; safe multi-school disambiguation; parent-authenticated student login | Schools/`code`, SIS `student_profiles`, admissions/onboarding provisioning | Add `public_student_id` (alongside `admission_number`) + per-school running-number sequence; make `schools.code` **globally unique + locked**; make the id **immutable**; backfill existing students | `public_student_id`, per-school sequence, global `schools.code` lock | High (touches nearly every module) | **Foundation — before feature waves** | 🔒 Frozen 2026-07-01 — [`PRODUCT_ENHANCEMENT_BACKLOG.md` § Public Student ID](../PRODUCT_ENHANCEMENT_BACKLOG.md#public-student-id-foundational-identity-architecture) |
+| F2 | **Akshara Identity Platform — all person types** (generalizes F1 to Students + Parents + Teachers + Staff + Employees + Directors + every future user type; 4 frozen principles: UUID = only canonical identity · permanent Public IDs · **phone = login credential only, never identity** · **Identity-Permanence Invariant** — a phone change never creates a new identity / changes any UUID or Public ID / breaks relationships, history, attendance, finance, exams, payroll, audit, permissions) | **P1** | One consistent, permanent human identity per person; phone becomes a swappable credential, not an identity | F1; `users`, `employees`, `student_guardians`, `organization_memberships` | New Public Guardian ID + standardized Public Employee ID; **change-phone flow** preserving UUID + Public ID + all links; stop treating phone as the identity/upsert key | `public_guardian_id`, `public_employee_id`, phone-as-credential | High | **Foundation — after F1** | 🔒 Principles + Identity-Permanence Invariant frozen 2026-07-01; Parent/Teacher/Staff Public-ID formats = future model — [`PRODUCT_ENHANCEMENT_BACKLOG.md` § Identity Platform](../PRODUCT_ENHANCEMENT_BACKLOG.md#akshara-identity-platform-unified-identity-architecture) |
+
+> **Scope & conflicts:** F1's per-module impact matrix, ordered checklist, and conflicts **C1–C9** (owner has
+> resolved C1/C4/C8) live in the backlog; F2's per-persona model, `PLAT-*` items, and platform conflicts
+> **IC-1…IC-6** (e.g. `users.phone` is `NOT NULL UNIQUE` and used as the identity/upsert key today; no
+> change-phone flow; parents/directors have no Public ID) live in the backlog Identity-Platform section. These
+> roadmap rows are **pointers** — they do not re-specify. **Documentation-only; no code, migration, or commit.**
+
+---
+
 ## Master capability matrix
 
 | # | Capability | Priority | Business value | Dependencies | Architecture impact | Data model | AI | Rollout | Target |

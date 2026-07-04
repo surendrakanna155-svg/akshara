@@ -2,21 +2,23 @@
 
 **Version:** 1.0  
 **Last updated:** June 2026  
-**Purpose:** Define autonomous Cursor Agent roles, ownership boundaries, and handoff rules so releases execute without re-prompting.
+**Purpose:** Define autonomous agent roles, ownership boundaries, and handoff rules so releases execute without re-prompting.
+
+> **Authority note (2026-06):** For engineering standards this file is **subordinate to** `docs/engineering/AKSHARA_ENGINEERING_CONSTITUTION.md` and the Engineering Operating System (`docs/engineering/ENGINEERING_GATE_POLICY.md`, `docs/engineering/eos/`). The role/ownership map below remains a useful reference; the historical release process it describes (`docs/Releases/`, the architecture-review audits, the old milestone `Roadmap.md`) is **frozen under `docs/archive/`** and is kept for history only.
 
 ---
 
 ## Global Rules (All Agents)
 
-1. **Read first:** `docs/Roadmap.md` → `AGENTS.md` → latest release doc → latest audit
+1. **Read first:** `docs/engineering/AKSHARA_ENGINEERING_CONSTITUTION.md` → `docs/ProjectStatus.md` → current QA program (`docs/FINAL_QA_ROADMAP.md`, `docs/FINAL_QA_MASTER_TRACKER.md`) → relevant active spec/architecture in `docs/` (`docs/README.md` is the active index)
 2. **Never modify files outside your ownership** unless fixing compile breaks in shared infrastructure explicitly assigned
 3. **Reuse existing abstractions** — extend, do not duplicate (`TokenStorage`, `AuditLogger`, `RbacService`, `TenantContext`, `RouteGuards`, `Dio`)
-4. **Run gates before completion:** `flutter analyze` (0 issues) + `flutter test` (all passing)
+4. **Run gates before completion:** `flutter analyze` (0 issues) + `flutter test` (all passing), and `/eos <scope>` PASS per the Engineering Constitution
 5. **Emulator & Patrol workflow:** `.cursor/rules/emulator-validation-workflow.mdc` — reuse emulator; unit tests before Patrol; never block coding on boot
-6. **Create docs:** Every release needs `docs/Releases/` + `docs/ArchitectureReview/` entries
-7. **No business features** unless assigned by Roadmap milestone
-8. **Completion report required** — see `docs/CURSOR_WORKFLOW.md`
-9. **Multi-milestone sessions:** default depth = 3 milestones — see `docs/CURSOR_WORKFLOW.md` §11; do not stop after one milestone unless a stop condition applies
+6. **Record changes:** track work in the current QA program (`docs/FINAL_QA_MASTER_TRACKER.md`) and `docs/ProjectStatus.md`. (The per-version `docs/Releases/` + architecture-review process is historical — see `docs/archive/`.)
+7. **No business features** unless assigned by the current roadmap (`docs/FINAL_QA_ROADMAP.md`)
+8. **Completion report required** — follow the Engineering Operating System (`docs/engineering/`); the legacy workflow lives at `docs/archive/temporary/CURSOR_WORKFLOW.md`
+9. **Multi-milestone sessions:** default depth = 3 milestones — see `docs/archive/temporary/CURSOR_WORKFLOW.md` §11 (legacy); do not stop after one milestone unless a stop condition applies
 
 ---
 
@@ -353,13 +355,13 @@ README.md (updates only)
 
 ### Responsibilities
 
-- Release notes (`docs/Releases/`)
-- Architecture audits (`docs/ArchitectureReview/`)
-- Roadmap updates (`docs/Roadmap.md`)
-- Technical debt register updates
-- Production checklist updates
-- System inventory refresh
-- Completion reports
+- Keep `docs/README.md` (active index) and `docs/ProjectStatus.md` current
+- Current roadmap upkeep (`docs/FINAL_QA_ROADMAP.md`) and tracker (`docs/FINAL_QA_MASTER_TRACKER.md`)
+- Technical debt register updates (`docs/TechnicalDebtRegister.md`)
+- Production checklist updates (`docs/ProductionReadinessChecklist.md`)
+- System inventory refresh (`docs/RouteInventory.md`, `docs/PermissionCoverageInventory.md`)
+- Archive hygiene: move completed/superseded docs into `docs/archive/` (never delete)
+- _(Legacy, frozen under `docs/archive/`: per-version release notes, architecture-review audits, milestone `Roadmap.md`.)_
 
 ### Allowed Actions
 

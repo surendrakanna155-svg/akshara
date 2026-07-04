@@ -555,7 +555,7 @@ Use a **non–Demo School** tenant or a fresh academic batch after [`School-Setu
 
 | Document | Purpose |
 |----------|---------|
-| [`v1.0-Release-Candidate.md`](../Releases/v1.0-Release-Candidate.md) | RC scope and known limits |
+| [`../archive/completed/releases/v1.0-Release-Candidate.md`](../archive/completed/releases/v1.0-Release-Candidate.md) | RC scope and known limits |
 | [`Production-Validation-Report.md`](./Production-Validation-Report.md) | Automated validation evidence |
 | [`Demo-School-Validation-Plan.md`](./Demo-School-Validation-Plan.md) | Dataset and seed strategy |
 | [`Pilot-Issue-Tracker.md`](./Pilot-Issue-Tracker.md) | Defect log |

@@ -400,7 +400,7 @@ Capital assets (high-value inventory) may trigger additional capitalization entr
 | v7.2b | `procurement.approved` → AP posting | v7.2a |
 | v7.2c | Reconciliation UI in Finance | v7.2b |
 
-See `BackendRoadmap.md` §8.
+See `archive/roadmap/BackendRoadmap.md` §8.
 
 ---
 
@@ -417,4 +417,4 @@ See `docs/ClientBackendAlignment.md` for enum additions, JWT scope parsing, and 
 - No database migrations
 - No API endpoint implementations
 
-See `docs/BackendRoadmap.md` for implementation phases.
+See `archive/roadmap/BackendRoadmap.md` for implementation phases.

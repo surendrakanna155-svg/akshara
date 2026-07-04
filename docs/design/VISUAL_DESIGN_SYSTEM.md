@@ -125,7 +125,7 @@ future **AI School Builder** can emit a per-school theme: a school's brand color
 becomes `primary`/gradient; its type (IIT/NEET foundation, residential, K-12…)
 selects the **workspace set + motif pack**; light/dark is a per-user toggle on top.
 Nothing here hardcodes a single school's identity — dynamic theming drops in at the
-token layer. (See `docs/FUTURE_VISION_AI_SCHOOL_BUILDER.md`.)
+token layer. (See `../archive/design/FUTURE_VISION_AI_SCHOOL_BUILDER.md`.)
 
 ## 13. Rollout (not yet implemented)
 - **Phase A:** encode tokens in `lib/theme/` (light first), build the shared
