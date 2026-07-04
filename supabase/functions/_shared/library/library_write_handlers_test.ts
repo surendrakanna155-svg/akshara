@@ -12,6 +12,7 @@ import {
   type LibrarySettings,
   normalizeResourceUrl,
   normalizeSettings,
+  planImportRow,
 } from "./library_write_handlers.ts";
 import { computeFines } from "./library_aggregations.ts";
 
@@ -317,4 +318,53 @@ Deno.test("normalizeSettings: reads camelCase and snake_case, coerces strings", 
 
 Deno.test("normalizeSettings: a negative value falls back to the default", () => {
   assertEquals(normalizeSettings({ maxBooksPerMember: -1 }).maxBooksPerMember, 2);
+});
+
+// --- LIB-2 bulk import: pure per-row accept/reject + ISBN dedupe -------------
+
+Deno.test("planImportRow: a valid row is accepted with a catalog payload", () => {
+  const plan = planImportRow(
+    { isbn: "978-1", title: "Algebra", author: "Rao", totalCopies: 4 },
+    "id-1",
+    new Set<string>(),
+  );
+  assertEquals(plan.ok, true);
+  if (plan.ok) {
+    assertEquals(plan.isbn, "978-1");
+    assertEquals(plan.payload.title, "Algebra");
+    assertEquals(plan.payload.totalCopies, 4);
+    assertEquals(plan.payload.availableCopies, 4);
+    assertEquals(plan.payload.status, "available");
+  }
+});
+
+Deno.test("planImportRow: a non-object row is rejected", () => {
+  assertEquals(planImportRow("not a row", "id-1", new Set()), {
+    ok: false,
+    reason: "Row must be an object",
+  });
+  assertEquals(planImportRow(null, "id-1", new Set()), {
+    ok: false,
+    reason: "Row must be an object",
+  });
+});
+
+Deno.test("planImportRow: a row missing a required field is rejected (not thrown)", () => {
+  // No title/author → buildBookPayload's requireStr fails; the row is collected
+  // as a per-row failure rather than aborting the whole import.
+  const plan = planImportRow({ isbn: "978-2" }, "id-1", new Set());
+  assertEquals(plan.ok, false);
+  if (!plan.ok) assertEquals(plan.reason.length > 0, true);
+});
+
+Deno.test("planImportRow: a duplicate ISBN (already seen) is rejected", () => {
+  const seen = new Set<string>(["978-1"]);
+  assertEquals(
+    planImportRow(
+      { isbn: "978-1", title: "Dup", author: "Rao" },
+      "id-2",
+      seen,
+    ),
+    { ok: false, reason: "A book with this ISBN already exists" },
+  );
 });

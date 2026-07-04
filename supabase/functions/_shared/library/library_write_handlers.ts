@@ -404,6 +404,41 @@ export async function handleDeleteBook(
  * without aborting the whole batch). Dedupe is enforced BOTH against the
  * existing catalogue AND within the batch itself.
  */
+/** LIB-2: the pure accept/reject decision for one bulk-import row — validates it
+ * into a catalog payload and dedupes its ISBN against the ISBNs already seen
+ * (existing catalogue + earlier rows in this import). The handler owns the
+ * SAVEPOINT/INSERT; this owns the decision so partial-success import is
+ * unit-testable. A blank ISBN is never deduped (optional-field convention). */
+export type ImportRowPlan =
+  | { ok: true; payload: Record<string, unknown>; isbn: string }
+  | { ok: false; reason: string };
+
+export function planImportRow(
+  raw: unknown,
+  id: string,
+  seenIsbns: Set<string>,
+): ImportRowPlan {
+  if (raw === null || typeof raw !== "object") {
+    return { ok: false, reason: "Row must be an object" };
+  }
+  let payload: Record<string, unknown>;
+  try {
+    payload = buildBookPayload(raw as Record<string, unknown>, id);
+  } catch (error) {
+    return {
+      ok: false,
+      reason: error instanceof WriteValidationError
+        ? error.message
+        : (error instanceof Error ? error.message : "Import failed"),
+    };
+  }
+  const isbn = String(payload.isbn);
+  if (isbn.length > 0 && seenIsbns.has(isbn)) {
+    return { ok: false, reason: "A book with this ISBN already exists" };
+  }
+  return { ok: true, payload, isbn };
+}
+
 export async function handleBulkImportBooks(
   req: Request,
   config: AppConfig,
@@ -430,35 +465,31 @@ export async function handleBulkImportBooks(
 
     for (let index = 0; index < rows.length; index++) {
       const rowNum = index + 1;
-      const raw = rows[index];
-      if (raw === null || typeof raw !== "object") {
-        failed.push({ row: rowNum, reason: "Row must be an object" });
+      const plan = planImportRow(rows[index], crypto.randomUUID(), seenIsbns);
+      if (!plan.ok) {
+        failed.push({ row: rowNum, reason: plan.reason });
         continue;
       }
-      const rowBody = raw as Record<string, unknown>;
       // Per-row SAVEPOINT so a single bad insert rolls back only that row and
       // does NOT poison the outer tenant transaction (onboarding import pattern).
       await db.queryObject(`SAVEPOINT library_import_row`);
       try {
-        const id = crypto.randomUUID();
-        const payload = buildBookPayload(rowBody, id);
-        const isbn = String(payload.isbn);
-        if (isbn.length > 0 && seenIsbns.has(isbn)) {
-          await db.queryObject(`ROLLBACK TO SAVEPOINT library_import_row`);
-          failed.push({ row: rowNum, reason: "A book with this ISBN already exists" });
-          continue;
-        }
-        await writeStore.insert(db, organizationId, schoolId, "catalog", id, payload);
+        await writeStore.insert(
+          db,
+          organizationId,
+          schoolId,
+          "catalog",
+          plan.payload.id as string,
+          plan.payload,
+        );
         await db.queryObject(`RELEASE SAVEPOINT library_import_row`);
-        if (isbn.length > 0) seenIsbns.add(isbn);
+        if (plan.isbn.length > 0) seenIsbns.add(plan.isbn);
         imported++;
       } catch (error) {
         await db.queryObject(`ROLLBACK TO SAVEPOINT library_import_row`);
         failed.push({
           row: rowNum,
-          reason: error instanceof WriteValidationError
-            ? error.message
-            : (error instanceof Error ? error.message : "Import failed"),
+          reason: error instanceof Error ? error.message : "Import failed",
         });
       }
     }
