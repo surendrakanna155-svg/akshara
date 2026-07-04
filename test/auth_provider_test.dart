@@ -1,3 +1,4 @@
+import 'package:akshara_erp/core/auth/secure_storage_backend.dart';
 import 'package:akshara_erp/features/auth/auth_models.dart';
 import 'package:akshara_erp/features/auth/auth_provider.dart';
 import 'package:akshara_erp/features/auth/auth_session_storage.dart';
@@ -73,14 +74,14 @@ void main() {
     expect(auth().displayName, kMockGuardianName);
     expect(auth().selectedChild?.id, kMockLinkedChildren.first.id);
 
-    final storage = AuthSessionStorage(prefs);
+    final storage = AuthSessionStorage(PreferencesStorageBackend(prefs), prefs);
     final persisted = await storage.read();
     expect(persisted?.phoneNumber, '9876543210');
     expect(persisted?.role, UserRole.parent.name);
   });
 
   test('resolveSession restores persisted teacher session', () async {
-    await AuthSessionStorage(prefs).write(
+    await AuthSessionStorage(PreferencesStorageBackend(prefs), prefs).write(
       const AuthState(
         status: AuthStatus.authenticated,
         phoneNumber: '9876543210',
@@ -104,7 +105,7 @@ void main() {
 
     expect(auth().selectedChild?.id, 'child-priya');
 
-    final storage = AuthSessionStorage(prefs);
+    final storage = AuthSessionStorage(PreferencesStorageBackend(prefs), prefs);
     final persisted = await storage.read();
     expect(persisted?.selectedChildId, 'child-priya');
   });
@@ -116,7 +117,7 @@ void main() {
 
     expect(auth().status, AuthStatus.unauthenticated);
 
-    final storage = AuthSessionStorage(prefs);
+    final storage = AuthSessionStorage(PreferencesStorageBackend(prefs), prefs);
     expect(await storage.read(), isNull);
   });
 }

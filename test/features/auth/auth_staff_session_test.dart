@@ -32,7 +32,11 @@ void main() {
       expect(container.read(canViewFinanceProvider), isTrue);
       expect(container.read(canViewControlCenterProvider), isFalse);
 
-      final raw = prefs.getString(kAuthSessionStorageKey);
+      // SEC-3: the PII session snapshot is now written to the (encrypted in
+      // production) secure backend under its dedicated key, not the legacy
+      // plaintext key. The test's secure backend is preferences-backed.
+      expect(prefs.getString(kAuthSessionStorageKey), isNull);
+      final raw = prefs.getString(kAuthSessionSecureKey);
       expect(raw, isNotNull);
       expect(raw, contains('financeAdmin'));
     });

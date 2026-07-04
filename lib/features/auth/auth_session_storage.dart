@@ -2,14 +2,21 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/auth/secure_storage_backend.dart';
 import '../../core/security/erp_role.dart';
 import 'auth_claims.dart';
 import 'auth_models.dart';
 
-/// SharedPreferences key — bump suffix when persisted schema changes.
+/// Encrypted storage key for the PII session snapshot (SEC-3). The snapshot
+/// (phone, name, child, claims) lives in [SecureStorageBackend], never in
+/// plaintext SharedPreferences.
+const String kAuthSessionSecureKey = 'auth_session_secure_v1';
+
+/// Legacy PLAINTEXT SharedPreferences key — read once and scrubbed on the next
+/// [AuthSessionStorage.read] (migrated into [kAuthSessionSecureKey]).
 const String kAuthSessionStorageKey = 'auth_session_v2';
 
-/// Legacy session key (migrated on read).
+/// Legacy plaintext session key (v1) — also migrated + scrubbed on read.
 const String kAuthSessionStorageKeyV1 = 'auth_session_v1';
 
 /// Last demo role chosen on the login screen.
@@ -124,10 +131,18 @@ class PersistedAuthSession {
       selectedChildClass.isNotEmpty;
 }
 
-/// Reads and writes auth session data via [SharedPreferences].
+/// Reads and writes auth session data.
+///
+/// The **PII session snapshot** (phone / name / child / claims) is persisted to
+/// an encrypted [SecureStorageBackend] (SEC-3). Only the non-PII UI preferences
+/// (last demo role, staff ERP role, "remember session") stay in plaintext
+/// [SharedPreferences] because they require synchronous reads and carry no PII.
+/// A legacy plaintext session (from before this change) is migrated into secure
+/// storage — and the plaintext copy scrubbed — the first time it is read.
 class AuthSessionStorage {
-  AuthSessionStorage(this._prefs);
+  AuthSessionStorage(this._secure, this._prefs);
 
+  final SecureStorageBackend _secure;
   final SharedPreferences _prefs;
 
   UserRole? readDemoRolePreferenceSync() {
@@ -155,12 +170,19 @@ class AuthSessionStorage {
   }
 
   Future<PersistedAuthSession?> read() async {
-    var raw = _prefs.getString(kAuthSessionStorageKey);
+    var raw = await _secure.read(kAuthSessionSecureKey);
     if (raw == null || raw.isEmpty) {
-      raw = _prefs.getString(kAuthSessionStorageKeyV1);
-      if (raw == null || raw.isEmpty) {
+      // One-time migration: pull any legacy PLAINTEXT session out of
+      // SharedPreferences into encrypted storage, then scrub the plaintext
+      // copy so PII never lingers in cleartext (SEC-3).
+      final legacy = _prefs.getString(kAuthSessionStorageKey) ??
+          _prefs.getString(kAuthSessionStorageKeyV1);
+      if (legacy == null || legacy.isEmpty) {
         return null;
       }
+      await _secure.write(kAuthSessionSecureKey, legacy);
+      await _scrubLegacyPlaintext();
+      raw = legacy;
     }
 
     try {
@@ -184,8 +206,8 @@ class AuthSessionStorage {
 
   Future<void> write(AuthState state) async {
     final snapshot = PersistedAuthSession.fromAuthState(state);
-    await _prefs.setString(
-      kAuthSessionStorageKey,
+    await _secure.write(
+      kAuthSessionSecureKey,
       jsonEncode(snapshot.toJson()),
     );
   }
@@ -204,15 +226,23 @@ class AuthSessionStorage {
       selectedChildId: child.id,
       selectedChildName: child.name,
       selectedChildClass: child.classLabel,
+      claims: existing.claims,
     );
 
-    await _prefs.setString(
-      kAuthSessionStorageKey,
+    await _secure.write(
+      kAuthSessionSecureKey,
       jsonEncode(updated.toJson()),
     );
   }
 
   Future<void> clear() async {
+    await _secure.delete(kAuthSessionSecureKey);
+    await _scrubLegacyPlaintext();
+  }
+
+  /// Removes any legacy plaintext session copies from SharedPreferences.
+  Future<void> _scrubLegacyPlaintext() async {
     await _prefs.remove(kAuthSessionStorageKey);
+    await _prefs.remove(kAuthSessionStorageKeyV1);
   }
 }

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:akshara_erp/core/auth/secure_storage_backend.dart';
 import 'package:akshara_erp/features/auth/auth_models.dart';
 import 'package:akshara_erp/features/auth/auth_session_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,12 +10,17 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late SharedPreferences prefs;
+  late PreferencesStorageBackend secure;
   late AuthSessionStorage storage;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
-    storage = AuthSessionStorage(prefs);
+    // In production this is an encrypted FlutterSecureStorage backend; tests use
+    // the preferences-backed fallback under a DISTINCT key from the legacy
+    // plaintext key, so migration + scrub behaviour is exercised faithfully.
+    secure = PreferencesStorageBackend(prefs);
+    storage = AuthSessionStorage(secure, prefs);
   });
 
   AuthState parentSession() {
@@ -106,5 +112,38 @@ void main() {
     await storage.clear();
 
     expect(await storage.read(), isNull);
+  });
+
+  test('SEC-3: write persists the PII snapshot only under the secure key',
+      () async {
+    await storage.write(parentSession());
+
+    // The PII snapshot goes to the (encrypted, in production) secure backend
+    // under its dedicated key — never to the legacy plaintext session keys.
+    // (In this test the secure backend is preferences-backed, so the value is
+    // reachable via the SECURE key only; in production that store is encrypted.)
+    expect(prefs.getString(kAuthSessionStorageKey), isNull);
+    expect(prefs.getString(kAuthSessionStorageKeyV1), isNull);
+    final secured = await secure.read(kAuthSessionSecureKey);
+    expect(secured, isNotNull);
+    expect(secured, contains('9876543210'));
+  });
+
+  test('SEC-3: legacy plaintext session is migrated to secure + scrubbed',
+      () async {
+    // Simulate a pre-migration install: session sitting in plaintext prefs.
+    await prefs.setString(
+      kAuthSessionStorageKey,
+      jsonEncode(PersistedAuthSession.fromAuthState(parentSession()).toJson()),
+    );
+
+    final restored = await storage.read();
+
+    expect(restored, isNotNull);
+    expect(restored!.phoneNumber, '9876543210');
+    // Plaintext copy scrubbed; encrypted copy now present.
+    expect(prefs.getString(kAuthSessionStorageKey), isNull);
+    expect(prefs.getString(kAuthSessionStorageKeyV1), isNull);
+    expect(await secure.read(kAuthSessionSecureKey), isNotNull);
   });
 }

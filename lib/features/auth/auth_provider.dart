@@ -38,7 +38,10 @@ const List<LinkedChild> kMockLinkedChildren = [
 ];
 
 final authSessionStorageProvider = Provider<AuthSessionStorage>((ref) {
-  return AuthSessionStorage(ref.watch(sharedPreferencesProvider));
+  return AuthSessionStorage(
+    ref.watch(secureStorageBackendProvider),
+    ref.watch(sharedPreferencesProvider),
+  );
 });
 
 /// Demo role pre-selected on the login screen (persisted locally).

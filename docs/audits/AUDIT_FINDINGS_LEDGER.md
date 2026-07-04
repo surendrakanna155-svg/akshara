@@ -40,7 +40,7 @@ disposition: a Master-Roadmap task (`docs/audits/MASTER_EXECUTION_ROADMAP.md`), 
 | DB-9 = DOC-5 (TD-P0-01 stale) · DB-6 = DOC-6 (audit-retention doc-only, doc side) | Med | → **P0-DOC-5** ✅ Fixed 2026-07-04 (P0·W1) — DB-6 code side remains → P1-CODE-3 |
 | DOC-7 backup-runbook duplication | Low | → **P0-DOC-5** ✅ Fixed 2026-07-04 (P0·W1) |
 | SEC-1 release default=dev · SEC-2 debug-signing fallback | High | → **P0-SEC-1** ✅ Fixed 2026-07-04 (P0·W2) |
-| SEC-3 PII in plaintext SharedPreferences | High | → **P0-SEC-2** |
+| SEC-3 PII in plaintext SharedPreferences | High | → **P0-SEC-2** ✅ Fixed 2026-07-04 (P0·W2) |
 | SEC-9 mock/QA code in release binary · SEC-10 ENABLE_DEMO_AUTH prod-guard | Med | → **P0-SEC-3** |
 | LV-3 no off-site backup (= OPS-1 offsite half) | High | → **P0-INFRA-1** |
 | LV-1 no WAL/PITR (= OPS-1 RPO half) | High | → **P0-INFRA-2** |
@@ -78,6 +78,7 @@ disposition: a Master-Roadmap task (`docs/audits/MASTER_EXECUTION_ROADMAP.md`), 
 | UX-4 design-system enforcement · prior-audit Tier 3 | Med | → **P2-UX-3** |
 | Accessibility depth (EOS verification gap) | Med | → **P2-UX-4** |
 | UX-6 dark-theme toggle | Low | → **P2-UX-5** |
+| UX-7 (found 2026-07-04 during P0·W2 full-suite run) `TeacherDashboardScreen` **RenderFlex overflow at 360×640** (Phase-1 responsive + Phase-2 long-data stress tests fail; pre-existing, NOT introduced by W2) | Med | → **P2-UX-2/4** (daily-task ergonomics / a11y layout) — tracked, `test/features/mobile/dashboard_stress_test.dart` |
 
 ### Phase 3 — Adaptive AI & Product Intelligence — MEDIUM
 

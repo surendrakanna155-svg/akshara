@@ -75,7 +75,7 @@
 - **Evidence:** build test proving dev-config release fails; signing config. **EOS gate:** SEC PASS. **Done when:** no insecure release build is possible.
 
 ### P0-SEC-2 · 🟠 · SEC · Encrypt the PII session snapshot
-- **Depends:** — · **Complexity:** S · **Status:** ⚪ Pending · **Finding:** SEC-3
+- **Depends:** — · **Complexity:** S · **Status:** ✅ Complete (2026-07-04, P0·W2) · **Finding:** SEC-3
 - **Outcome:** session snapshot (phone/name/child) via encrypted secure storage, not plaintext prefs.
 - **Evidence:** code + test; no PII in SharedPreferences. **EOS gate:** SEC PASS. **Done when:** PII at rest encrypted.
 

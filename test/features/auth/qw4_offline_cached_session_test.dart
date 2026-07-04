@@ -1,4 +1,5 @@
 import 'package:akshara_erp/core/auth/auth_providers.dart';
+import 'package:akshara_erp/core/auth/auth_security_providers.dart';
 import 'package:akshara_erp/core/config/environment.dart';
 import 'package:akshara_erp/core/config/environment_provider.dart';
 import 'package:akshara_erp/core/providers/shared_preferences_provider.dart';
@@ -41,6 +42,11 @@ Future<void> _seedCachedStaffSession(SharedPreferences prefs) async {
   final container = ProviderContainer(
     overrides: providerTestOverrides([
       sharedPreferencesProvider.overrideWithValue(prefs),
+      // Pin the (SEC-3) secure session store to the test's own persistent prefs
+      // so the seeded session survives into the pump container's restore.
+      secureStorageBackendProvider.overrideWith(
+        (ref) => PreferencesStorageBackend(prefs),
+      ),
       environmentProvider.overrideWith(
         (ref) => Environment.development.copyWith(enableQaLogin: true),
       ),
@@ -133,6 +139,9 @@ Future<GoRouter> _pumpApp(WidgetTester tester, SharedPreferences prefs) async {
     ProviderScope(
       overrides: providerTestOverrides([
         sharedPreferencesProvider.overrideWithValue(prefs),
+        secureStorageBackendProvider.overrideWith(
+          (ref) => PreferencesStorageBackend(prefs),
+        ),
         environmentProvider.overrideWith(
           (ref) => Environment.development.copyWith(enableQaLogin: true),
         ),
