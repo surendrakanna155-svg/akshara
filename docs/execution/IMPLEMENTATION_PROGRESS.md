@@ -31,7 +31,7 @@
 |---|---:|---:|---:|---:|---|
 | **Planning** | — | ✅ FROZEN 2026-07-04 | — | — | audit-verified |
 | P0 — Truth/Docs/Live-Verify | 19 | 14 (DOC-1/2/3/4/5, SEC-1/2/3, INFRA-2/4/5/6, CODE-1/2) | 0 | 5 (⏳ live-lane: INFRA-1/3, TEST-1/2/3) | per task |
-| P1 — Backend & Code Fixes | 13 (+22 PROD waves incl. P1-PROD-22 staff-attendance GA track) | 9 (CODE-1/2/3/5, PROD-0, C1, C2, C4✓, C5) | 0 | 26 (next: C7 HR Payroll Registers — C3+C6 defer; CODE-4 👤-gated) | per wave |
+| P1 — Backend & Code Fixes | 13 (+22 PROD waves incl. P1-PROD-22 staff-attendance GA track) | 10 (CODE-1/2/3/5, PROD-0, C1, C2, C4✓, C5, C7) | 0 | 25 (next: C8 Transport — C3+C6 defer; CODE-4 👤-gated) | per wave |
 | P2 — UI/UX | 5 | 0 | 0 | 5 | per wave |
 | P3 — Adaptive AI (W1.1–1.5 · W2.0–2.9) | 2 (15 sub-waves) | 0 | 0 | all | per sub-wave |
 | P4 — Red Team Prep | 2 | 0 | 0 | 2 | verdict |
@@ -119,6 +119,8 @@ implement → validate → `/eos` PASS → commit → append a journal row here.
 | 2026-07-04 | (no code) | P1 | **P1-PROD-3 · C4 — Exams Fast Marks & Tabulation (EXM-1/2/3) — VERIFICATION** | Discovery-first found C4 already built end-to-end + tested (fast bulk marks save + keyboard nav + validation + AB/ML/DB status; tabulation totals/%/rank/grade with present-only exclusion; tabulation register CSV/PDF via the shared service). Per EOS rule #4 + "don't invent features," NO rebuild made. | **PASS** (EOS FEATURE — covered by existing impl + tests) | deno exam-administration **118/0**; flutter exam client **109/0**; no files changed. Noted for P2-UX: EXM-1 grid affordance (not a C4 gap). | EXM-1, EXM-2, EXM-3 | P1-PROD-3 |
 
 | 2026-07-04 | `1fc6104` | P1 | **P1-PROD-4 · C5 — Academic Registers & Certificates (ATT-1/ATT-2/SIS-1)** | Discovery-first: all three already built (ATT-1 office register + ATT-2 monthly students×days grid, both real SQL + shared CSV/PDF export; SIS-1 Bonafide/Study/Conduct immutable-register + print-ready PDFs from the identity cluster). Per EOS rule #4 no rebuild. One gap closed: **ATT-2 cell-level render test** (`office_attendance_screen_test.dart` — monthly matrix DataTable + code cells + % + export). Test-only. | **PASS** (EOS FEATURE — covered by existing + test gap closed) | flutter attendance+sis **73/0**; deno **151/0 + 1 known ISO-COUNT**; analyze 0; suite unaffected. C6 defers (HWK-1 owner schema change); C3 defers (GA-1 live). | ATT-1, ATT-2, SIS-1 | P1-PROD-4 |
+
+| 2026-07-04 | `524105e` | P1 | **P1-PROD-5 · C7 — HR Payroll & Salary Registers (HR-1/HR-2)** | Discovery-first: HR-1 salary register export (rows + TOTAL, CSV+PDF) + HR-2 all-employees payslip batch already built (roadmap "stub snackbar" stale). Closed the one gap — **HR-2 individual per-employee payslip PDF**: `AksharaReportExportService.buildPayslipPdf`/`sharePayslipPdf` (per-document, decoupled), `HrReportExporters.sharePayslipPdf`, "Individual payslips" picker sheet (`_IndividualPayslipSheet`) reusing `hrPayslipsProvider`; `qa_test_keys.dart`. Client-only, read-only rendering. | **PASS** (EOS FEATURE) | analyze 0; full suite **3616 pass, 0 new fails** (2 known UX-7); HR+reports+contracts **103/0**; no backend changes | HR-1, HR-2 | P1-PROD-5 |
 
 *(Wave-2 onward: the executing session appends one row per task as each passes EOS and commits.)*
 
