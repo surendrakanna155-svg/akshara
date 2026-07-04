@@ -361,6 +361,31 @@ class HrPayrollData {
   final String financeRoute;
 }
 
+/// MOD-2 — a per-employee monthly salary structure (the payroll engine's
+/// input; runs are generated from these).
+@immutable
+class HrSalaryStructure {
+  const HrSalaryStructure({
+    required this.employeeId,
+    required this.employeeCode,
+    required this.employeeName,
+    required this.department,
+    required this.basicPay,
+    required this.allowances,
+    required this.deductions,
+  });
+
+  final String employeeId;
+  final String employeeCode;
+  final String employeeName;
+  final String department;
+  final double basicPay;
+  final double allowances;
+  final double deductions;
+
+  double get netPay => basicPay + allowances - deductions;
+}
+
 @immutable
 class HrCandidate {
   const HrCandidate({

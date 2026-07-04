@@ -11,6 +11,10 @@ abstract final class HrApiPaths {
   static const String performance = '$base/performance';
   static const String settings = '$base/settings';
   static const String payrollRun = '$payroll/run';
+
+  /// MOD-2 — payroll engine: salary structures + draft-run generation.
+  static const String payrollStructures = '$payroll/structures';
+  static const String payrollRunGenerate = '$payrollRun/generate';
   static String approveLeave(String leaveRequestId) =>
       '$base/leave/$leaveRequestId/approve';
   static String rejectLeave(String leaveRequestId) =>

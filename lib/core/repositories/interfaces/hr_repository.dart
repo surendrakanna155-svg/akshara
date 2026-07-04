@@ -39,6 +39,18 @@ abstract class HrRepository {
     required BatchDecideHrLeaveRequest request,
   });
 
+  /// MOD-2 — define/update a per-employee salary structure.
+  Future<HrSalaryStructure> upsertSalaryStructure({
+    required RepositoryQuery query,
+    required UpsertHrSalaryStructureRequest request,
+  });
+
+  /// MOD-2 — generate a DRAFT payroll run from the stored salary structures.
+  Future<HrPayrollRun> generatePayrollRun({
+    required RepositoryQuery query,
+    required GenerateHrPayrollRunRequest request,
+  });
+
   Future<HrPayrollRun> processPayrollRun({
     required RepositoryQuery query,
     required ProcessHrPayrollRunRequest request,

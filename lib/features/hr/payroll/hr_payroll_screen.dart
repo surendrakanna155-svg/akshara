@@ -72,9 +72,18 @@ class HrPayrollScreen extends ConsumerWidget {
     }
 
     if (isEmpty || data == null) {
-      return const AksharaEmptyState(
-        message: 'No payroll runs for the selected period.',
-        icon: Icons.payments_outlined,
+      // A fresh school still needs the engine entry points: define salary
+      // structures → generate the first draft run (MOD-2).
+      return const Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _PayrollManageActions(data: null),
+          SizedBox(height: AksharaSpacing.s4),
+          AksharaEmptyState(
+            message: 'No payroll runs for the selected period.',
+            icon: Icons.payments_outlined,
+          ),
+        ],
       );
     }
 
@@ -84,23 +93,7 @@ class HrPayrollScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Align(
-          alignment: Alignment.centerRight,
-          child: AksharaManageAction(
-            permission: Permission.manageHr,
-            child: FilledButton.icon(
-              key: QaTestKeys.hrProcessPayrollButton,
-              onPressed: () {
-                final drafts = data.runs
-                    .where((r) => r.status == HrPayrollStatus.draft);
-                if (drafts.isEmpty) return;
-                showProcessPayrollRunDialog(context, ref, run: drafts.first);
-              },
-              icon: const Icon(Icons.play_arrow, size: 18),
-              label: const Text('Process payroll'),
-            ),
-          ),
-        ),
+        _PayrollManageActions(data: data),
         const SizedBox(height: AksharaSpacing.s4),
         _PayrollExportBar(runs: data.runs),
         const SizedBox(height: AksharaSpacing.s4),
@@ -126,6 +119,60 @@ class HrPayrollScreen extends ConsumerWidget {
           onAction: () => context.go(data.financeRoute),
         ),
       ],
+    );
+  }
+}
+
+/// MOD-2 — the payroll engine's manage actions: define salary structures,
+/// generate a draft run from them, then process the draft. All three are
+/// manageHr-gated; [data] is null on the empty state (no runs yet), where
+/// Process payroll is disabled because there is no draft to process.
+class _PayrollManageActions extends ConsumerWidget {
+  const _PayrollManageActions({required this.data});
+
+  final HrPayrollData? data;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final drafts = (data?.runs ?? const <HrPayrollRun>[])
+        .where((r) => r.status == HrPayrollStatus.draft)
+        .toList();
+
+    return AksharaManageAction(
+      permission: Permission.manageHr,
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: Wrap(
+          spacing: AksharaSpacing.s3,
+          runSpacing: AksharaSpacing.s3,
+          children: [
+            OutlinedButton.icon(
+              key: QaTestKeys.hrSalaryStructureButton,
+              onPressed: () => showUpsertSalaryStructureDialog(context, ref),
+              icon: const Icon(Icons.request_quote_outlined, size: 18),
+              label: const Text('Salary structure'),
+            ),
+            OutlinedButton.icon(
+              key: QaTestKeys.hrGeneratePayrollRunButton,
+              onPressed: () => showGeneratePayrollRunDialog(context, ref),
+              icon: const Icon(Icons.auto_mode, size: 18),
+              label: const Text('Generate run'),
+            ),
+            FilledButton.icon(
+              key: QaTestKeys.hrProcessPayrollButton,
+              onPressed: drafts.isEmpty
+                  ? null
+                  : () => showProcessPayrollRunDialog(
+                        context,
+                        ref,
+                        run: drafts.first,
+                      ),
+              icon: const Icon(Icons.play_arrow, size: 18),
+              label: const Text('Process payroll'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

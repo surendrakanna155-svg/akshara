@@ -153,6 +153,30 @@ class HrRemoteDataSource {
     return HrBatchLeaveDecisionDto.fromJson(_responseMap(response));
   }
 
+  Future<HrSalaryStructureDto> upsertSalaryStructure({
+    required RepositoryQuery query,
+    required Map<String, dynamic> data,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      HrApiPaths.payrollStructures,
+      queryParameters: _queryParams(query),
+      data: data,
+    );
+    return HrSalaryStructureDto.fromJson(_responseMap(response));
+  }
+
+  Future<HrGeneratedPayrollRunDto> generatePayrollRun({
+    required RepositoryQuery query,
+    required Map<String, dynamic> data,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      HrApiPaths.payrollRunGenerate,
+      queryParameters: _queryParams(query),
+      data: data,
+    );
+    return HrGeneratedPayrollRunDto.fromJson(_responseMap(response));
+  }
+
   Future<HrPayrollRunDto> processPayrollRun({
     required RepositoryQuery query,
     required Map<String, dynamic> data,

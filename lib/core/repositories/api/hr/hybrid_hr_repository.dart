@@ -119,6 +119,26 @@ class HybridHrRepository implements HrRepository {
       );
 
   @override
+  Future<HrSalaryStructure> upsertSalaryStructure({
+    required RepositoryQuery query,
+    required UpsertHrSalaryStructureRequest request,
+  }) =>
+      withMockWriteFallback(
+        apiCall: () => _api.upsertSalaryStructure(query: query, request: request),
+        mockCall: () => _mock.upsertSalaryStructure(query: query, request: request),
+      );
+
+  @override
+  Future<HrPayrollRun> generatePayrollRun({
+    required RepositoryQuery query,
+    required GenerateHrPayrollRunRequest request,
+  }) =>
+      withMockWriteFallback(
+        apiCall: () => _api.generatePayrollRun(query: query, request: request),
+        mockCall: () => _mock.generatePayrollRun(query: query, request: request),
+      );
+
+  @override
   Future<HrPayrollRun> processPayrollRun({
     required RepositoryQuery query,
     required ProcessHrPayrollRunRequest request,

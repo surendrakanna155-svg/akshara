@@ -672,6 +672,29 @@ abstract final class QaTestKeys {
   static const hrPayrollProcessedSnackbar =
       ValueKey<String>('hr_payroll_processed_snackbar');
 
+  // MOD-2 — payroll engine (salary structures + draft-run generation).
+  static const hrSalaryStructureButton =
+      ValueKey<String>('hr_salary_structure_button');
+
+  static const hrSalaryStructureDialogSubmitButton =
+      ValueKey<String>('hr_salary_structure_dialog_submit_button');
+
+  static const hrSalaryStructureSuccessSnackbar =
+      ValueKey<String>('hr_salary_structure_success_snackbar');
+
+  static const hrGeneratePayrollRunButton =
+      ValueKey<String>('hr_generate_payroll_run_button');
+
+  static const hrGeneratePayrollRunDialogSubmitButton =
+      ValueKey<String>('hr_generate_payroll_run_dialog_submit_button');
+
+  static const hrPayrollRunGeneratedSnackbar =
+      ValueKey<String>('hr_payroll_run_generated_snackbar');
+
+  // MOD-3 — the leave dialog picks a REAL employee (no hardcoded id).
+  static const hrLeaveEmployeePicker =
+      ValueKey<String>('hr_leave_employee_picker');
+
   static const hrPayrollExportPdfButton =
       ValueKey<String>('hr_payroll_export_pdf_button');
 

@@ -282,6 +282,68 @@ final setHrEmployeeProbationProvider =
   SetHrEmployeeProbationNotifier.new,
 );
 
+/// MOD-2 — define/update a per-employee salary structure. Backend emits the
+/// audit row (hr.salary_structure.upserted).
+class UpsertHrSalaryStructureNotifier extends AsyncNotifier<HrSalaryStructure?> {
+  @override
+  FutureOr<HrSalaryStructure?> build() => null;
+
+  Future<HrSalaryStructure?> execute(UpsertHrSalaryStructureRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageHr(ref);
+      try {
+        final result = await ref.read(hrRepositoryProvider).upsertSalaryStructure(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            );
+        ref.invalidate(hrPayrollFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final upsertHrSalaryStructureProvider =
+    AsyncNotifierProvider<UpsertHrSalaryStructureNotifier, HrSalaryStructure?>(
+  UpsertHrSalaryStructureNotifier.new,
+);
+
+/// MOD-2 — generate a DRAFT payroll run from the stored salary structures.
+/// Backend emits the audit row (hr.payroll_run.generated).
+class GenerateHrPayrollRunNotifier extends AsyncNotifier<HrPayrollRun?> {
+  @override
+  FutureOr<HrPayrollRun?> build() => null;
+
+  Future<HrPayrollRun?> execute(GenerateHrPayrollRunRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageHr(ref);
+      try {
+        final result = await ref.read(hrRepositoryProvider).generatePayrollRun(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            );
+        ref.invalidate(hrPayrollFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final generateHrPayrollRunProvider =
+    AsyncNotifierProvider<GenerateHrPayrollRunNotifier, HrPayrollRun?>(
+  GenerateHrPayrollRunNotifier.new,
+);
+
 class ProcessHrPayrollRunNotifier extends AsyncNotifier<HrPayrollRun?> {
   @override
   FutureOr<HrPayrollRun?> build() => null;

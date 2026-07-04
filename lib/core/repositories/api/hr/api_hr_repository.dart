@@ -156,6 +156,42 @@ class ApiHrRepository implements HrRepository {
   }
 
   @override
+  Future<HrSalaryStructure> upsertSalaryStructure({
+    required RepositoryQuery query,
+    required UpsertHrSalaryStructureRequest request,
+  }) async {
+    final dto = await _remote.upsertSalaryStructure(
+      query: query,
+      data: {
+        'employeeId': request.employeeId,
+        'employeeCode': request.employeeCode,
+        'employeeName': request.employeeName,
+        'department': HrEnumCodec.departmentToApi(request.department),
+        'basicPay': request.basicPay,
+        'allowances': request.allowances,
+        'deductions': request.deductions,
+      },
+    );
+    return _mapper.toSalaryStructure(dto);
+  }
+
+  @override
+  Future<HrPayrollRun> generatePayrollRun({
+    required RepositoryQuery query,
+    required GenerateHrPayrollRunRequest request,
+  }) async {
+    final dto = await _remote.generatePayrollRun(
+      query: query,
+      data: {
+        'runId': request.runId,
+        'period': request.period,
+        if (request.employeeIds.isNotEmpty) 'employeeIds': request.employeeIds,
+      },
+    );
+    return _mapper.toGeneratedPayrollRun(dto);
+  }
+
+  @override
   Future<HrPayrollRun> processPayrollRun({
     required RepositoryQuery query,
     required ProcessHrPayrollRunRequest request,

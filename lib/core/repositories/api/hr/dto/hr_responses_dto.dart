@@ -98,6 +98,30 @@ class HrPayrollRunDto {
   final Map<String, dynamic> raw;
 }
 
+/// MOD-2 — POST /hr/payroll/structures response ({structure, structures}).
+class HrSalaryStructureDto {
+  const HrSalaryStructureDto({required this.raw});
+
+  factory HrSalaryStructureDto.fromJson(Map<String, dynamic> json) {
+    final envelope = ApiEnvelopeDto.fromJson(json);
+    return HrSalaryStructureDto(raw: envelope.requireData());
+  }
+
+  final Map<String, dynamic> raw;
+}
+
+/// MOD-2 — POST /hr/payroll/run/generate response ({run, entries}).
+class HrGeneratedPayrollRunDto {
+  const HrGeneratedPayrollRunDto({required this.raw});
+
+  factory HrGeneratedPayrollRunDto.fromJson(Map<String, dynamic> json) {
+    final envelope = ApiEnvelopeDto.fromJson(json);
+    return HrGeneratedPayrollRunDto(raw: envelope.requireData());
+  }
+
+  final Map<String, dynamic> raw;
+}
+
 class HrPayrollResponseDto {
   const HrPayrollResponseDto({required this.raw});
 

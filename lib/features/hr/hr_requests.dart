@@ -79,6 +79,42 @@ class SetHrEmployeeProbationRequest {
   String get action => extend ? 'extend' : 'confirm';
 }
 
+/// MOD-2 — define/update an employee's monthly salary structure.
+class UpsertHrSalaryStructureRequest {
+  const UpsertHrSalaryStructureRequest({
+    required this.employeeId,
+    required this.employeeCode,
+    required this.employeeName,
+    required this.department,
+    required this.basicPay,
+    required this.allowances,
+    required this.deductions,
+  });
+
+  final String employeeId;
+  final String employeeCode;
+  final String employeeName;
+  final HrDepartment department;
+  final double basicPay;
+  final double allowances;
+  final double deductions;
+}
+
+/// MOD-2 — generate a DRAFT payroll run for [period] from the stored salary
+/// structures (optionally limited to [employeeIds]). Regenerating a draft is
+/// idempotent; a processed run is refused by the backend.
+class GenerateHrPayrollRunRequest {
+  const GenerateHrPayrollRunRequest({
+    required this.runId,
+    required this.period,
+    this.employeeIds = const [],
+  });
+
+  final String runId;
+  final String period;
+  final List<String> employeeIds;
+}
+
 class ProcessHrPayrollRunRequest {
   const ProcessHrPayrollRunRequest({
     required this.runId,

@@ -113,6 +113,31 @@ class HrMapper {
     return _mapPayrollRun(dto.raw);
   }
 
+  /// MOD-2 — the saved structure from a POST /hr/payroll/structures response.
+  HrSalaryStructure toSalaryStructure(HrSalaryStructureDto dto) {
+    final item = dto.raw['structure'] as Map<String, dynamic>? ?? dto.raw;
+    return HrSalaryStructure(
+      employeeId: item['employeeId'] as String? ?? '',
+      employeeCode: item['employeeCode'] as String? ?? '',
+      employeeName: item['employeeName'] as String? ?? '',
+      department: item['department'] as String? ?? '',
+      basicPay: _asDouble(item['basicPay']),
+      allowances: _asDouble(item['allowances']),
+      deductions: _asDouble(item['deductions']),
+    );
+  }
+
+  /// MOD-2 — the draft run from a POST /hr/payroll/run/generate response.
+  HrPayrollRun toGeneratedPayrollRun(HrGeneratedPayrollRunDto dto) {
+    final run = dto.raw['run'] as Map<String, dynamic>? ?? dto.raw;
+    return _mapPayrollRun(run);
+  }
+
+  double _asDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse('$value') ?? 0;
+  }
+
   HrPayrollData toPayroll(HrPayrollResponseDto dto) {
     final raw = dto.raw;
     return HrPayrollData(

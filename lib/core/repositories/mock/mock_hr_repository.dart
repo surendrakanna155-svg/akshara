@@ -750,7 +750,7 @@ class MockHrRepository implements HrRepository {
     );
 
     final store = MockHrWriteStore.instance;
-    final runs = base.runs.map((run) {
+    HrPayrollRun applyOverride(HrPayrollRun run) {
       final override = store.payrollRunStatuses[run.id];
       if (override == null) return run;
       return HrPayrollRun(
@@ -764,11 +764,21 @@ class MockHrRepository implements HrRepository {
             ? (requestProcessedOn(store, run.id) ?? '2026-06-13')
             : run.processedOn,
       );
-    }).toList();
+    }
+
+    // MOD-2 — engine-generated runs/entries surface alongside the seeded demo.
+    final runs = [
+      ...base.runs.map(applyOverride),
+      ...store.generatedRuns.values.map(applyOverride),
+    ];
+    final entries = [
+      ...base.entries,
+      for (final generated in store.generatedEntries.values) ...generated,
+    ];
 
     return HrPayrollData(
       runs: runs,
-      entries: base.entries,
+      entries: entries,
       salaryTrend: base.salaryTrend,
       financeIntegrationNote: base.financeIntegrationNote,
       financeRoute: base.financeRoute,
@@ -778,25 +788,126 @@ class MockHrRepository implements HrRepository {
   static String? requestProcessedOn(MockHrWriteStore store, String runId) =>
       store.payrollProcessedOn[runId];
 
+  /// MOD-2 — mock ₹ formatting consistent with the seeded demo strings.
+  static String _inr(double value) {
+    final digits = value.round().toString();
+    final buffer = StringBuffer('₹');
+    for (var i = 0; i < digits.length; i++) {
+      buffer.write(digits[i]);
+      final remaining = digits.length - i - 1;
+      if (remaining > 0 && remaining % 3 == 0) buffer.write(',');
+    }
+    return buffer.toString();
+  }
+
+  @override
+  Future<HrSalaryStructure> upsertSalaryStructure({
+    required RepositoryQuery query,
+    required UpsertHrSalaryStructureRequest request,
+  }) async {
+    // Same money-safety guards the backend enforces (422 SALARY_STRUCTURE_INVALID).
+    if (request.basicPay <= 0) {
+      throw StateError('Salary structure invalid: basicPay must be greater than 0');
+    }
+    if (request.allowances < 0 || request.deductions < 0) {
+      throw StateError('Salary structure invalid: components must be non-negative');
+    }
+    if (request.basicPay + request.allowances - request.deductions < 0) {
+      throw StateError(
+        'Salary structure invalid: deductions exceed basic + allowances',
+      );
+    }
+    final structure = HrSalaryStructure(
+      employeeId: request.employeeId,
+      employeeCode: request.employeeCode,
+      employeeName: request.employeeName,
+      department: request.department.name,
+      basicPay: request.basicPay,
+      allowances: request.allowances,
+      deductions: request.deductions,
+    );
+    MockHrWriteStore.instance.salaryStructures[request.employeeId] = structure;
+    return structure;
+  }
+
+  @override
+  Future<HrPayrollRun> generatePayrollRun({
+    required RepositoryQuery query,
+    required GenerateHrPayrollRunRequest request,
+  }) async {
+    final store = MockHrWriteStore.instance;
+    // Never regenerate a disbursed run (backend: 409 PAYROLL_RUN_ALREADY_PROCESSED).
+    if (store.payrollRunStatuses[request.runId] == HrPayrollStatus.processed) {
+      throw StateError(
+        'Payroll run ${request.runId} is already processed; regenerate is not allowed',
+      );
+    }
+    final wanted =
+        request.employeeIds.isEmpty ? null : request.employeeIds.toSet();
+    final selected = store.salaryStructures.values
+        .where((s) => wanted == null || wanted.contains(s.employeeId))
+        .toList();
+    if (selected.isEmpty) {
+      throw StateError(
+        'No salary structures to generate payroll from — define salary structures first',
+      );
+    }
+    final entries = [
+      for (final s in selected)
+        HrPayrollEntry(
+          id: '${request.runId}_${s.employeeId}',
+          employeeId: s.employeeId,
+          employeeName: s.employeeName,
+          department: HrDepartment.values.firstWhere(
+            (d) => d.name == s.department,
+            orElse: () => HrDepartment.administration,
+          ),
+          basicPay: _inr(s.basicPay),
+          allowances: _inr(s.allowances),
+          deductions: _inr(s.deductions),
+          netPay: _inr(s.netPay),
+          status: HrPayrollStatus.draft,
+        ),
+    ];
+    final gross =
+        selected.fold<double>(0, (sum, s) => sum + s.basicPay + s.allowances);
+    final net = selected.fold<double>(0, (sum, s) => sum + s.netPay);
+    final run = HrPayrollRun(
+      id: request.runId,
+      period: request.period,
+      employeeCount: entries.length,
+      grossAmount: _inr(gross),
+      netAmount: _inr(net),
+      status: HrPayrollStatus.draft,
+      processedOn: '—',
+    );
+    store.generatedRuns[request.runId] = run;
+    store.generatedEntries[request.runId] = entries;
+    store.payrollRunStatuses.remove(request.runId);
+    return run;
+  }
+
   @override
   Future<HrPayrollRun> processPayrollRun({
     required RepositoryQuery query,
     required ProcessHrPayrollRunRequest request,
   }) async {
-    const draftRunId = 'pay_run_2';
-    if (request.runId != draftRunId) {
+    final store = MockHrWriteStore.instance;
+    // Processable: the seeded June draft, or an engine-generated draft (MOD-2).
+    const seededDraftId = 'pay_run_2';
+    if (request.runId != seededDraftId &&
+        !store.generatedRuns.containsKey(request.runId)) {
       throw StateError('Payroll run not found or not processable');
     }
-    final store = MockHrWriteStore.instance;
-    final current = store.payrollRunStatuses[draftRunId];
+    final current = store.payrollRunStatuses[request.runId];
     if (current == HrPayrollStatus.processed) {
       throw StateError('Payroll run already processed');
     }
-    store.payrollRunStatuses[draftRunId] = HrPayrollStatus.processed;
-    store.payrollProcessedOn[draftRunId] =
+    store.payrollRunStatuses[request.runId] = HrPayrollStatus.processed;
+    store.payrollProcessedOn[request.runId] =
         request.processedOn ?? '2026-06-13';
     final data = await getPayroll(query: query);
-    return data.runs.firstWhere((r) => r.id == draftRunId);
+    return data.runs.firstWhere((r) => r.id == request.runId);
   }
 
   Future<List<HrEmployee>> _loadEmployees() async {
