@@ -7,6 +7,7 @@ import '../core/constants/app_constants.dart';
 import '../core/notifications/notification_ui_keys.dart';
 import '../core/providers/router_provider.dart';
 import '../core/reliability/drafts/draft_autosave.dart';
+import '../core/reliability/reliability_providers.dart';
 import '../core/reliability/sync_center/sync_banner.dart';
 import '../features/school_completion/school_branding_theme_provider.dart';
 import '../router/route_names.dart';
@@ -51,6 +52,10 @@ class _AksharaAppState extends ConsumerState<AksharaApp>
       // Persist every in-progress form immediately (covers phone-lock,
       // app-switch and kill). Fire-and-forget — never block the lifecycle.
       unawaited(ref.read(draftFlushRegistryProvider).flushAll());
+    } else if (state == AppLifecycleState.resumed) {
+      // REL-4: on foreground, drain any writes queued while backgrounded/offline
+      // (a killed-then-relaunched session may have undrained outbox entries).
+      ref.read(syncEngineProvider).flushIfOnline();
     }
   }
 

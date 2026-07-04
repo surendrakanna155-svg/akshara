@@ -5,6 +5,7 @@ import 'api_config.dart';
 import 'interceptors/api_error_interceptor.dart';
 import 'interceptors/auth_interceptor.dart';
 import 'interceptors/correlation_id_interceptor.dart';
+import 'interceptors/idempotency_key_interceptor.dart';
 import 'interceptors/offline_read_cache_interceptor.dart';
 import 'interceptors/retry_interceptor.dart';
 import 'interceptors/tenant_interceptor.dart';
@@ -57,6 +58,10 @@ Dio createDioClient({DioClientDependencies? dependencies}) {
   );
 
   dio.interceptors.addAll([
+    // REL-1: mint an Idempotency-Key for every mutation BEFORE auth, so a
+    // 401 refresh→replay carries the same key and the backend's universal
+    // store-and-replay idempotency dedupes it (no duplicate row on retry).
+    IdempotencyKeyInterceptor(),
     CorrelationIdInterceptor(),
     if (deps.tenantAccessor != null)
       TenantInterceptor(tenantAccessor: deps.tenantAccessor!),

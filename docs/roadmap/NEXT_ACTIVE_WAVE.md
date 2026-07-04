@@ -10,18 +10,28 @@
 
 ## ▶ CURRENT
 
-- **Phase:** P0 — Truth · Documentation · Live Verification 🔴 (gates everything)
-- **Wave:** **W2 — Safety Fixes** — **all non-blocked legs ✅ COMPLETE (2026-07-04)**; remainder ⏳ live-lane-gated
-- **Status:** 🟢 **14 / 19 P0 tasks done.** ⛔ **The remaining 5 are BLOCKED on the owner-provisioned live lane** (VPS SSH + tenant Postgres + branch CI). Autonomous execution has reached the live boundary.
-- **Done this wave:** `P0-SEC-1` (`c80f18c`) · `P0-SEC-2` (`619338b`) · `P0-SEC-3` (`63358bc`) · `P0-CODE-1` (`6408d90`) · `P0-INFRA-4/5/6` (`bacc56a`) · `P0-CODE-2` (`3cbf45c`). Owner decisions resolved: DR RPO = ~24h nightly; hide-list = hide all 8.
-- **⛔ Remaining P0 (need the live lane — STOP condition, do not fake):**
-  - `P0-INFRA-1` — off-site backup 3-2-1 (`RCLONE_REMOTE` + nightly encrypted push).
-  - `P0-INFRA-3` — wire watchdog alert delivery to a human sink.
-  - **W3 — Live Proof / CI:** `P0-TEST-1` (CI green on branch) → `P0-TEST-2` (233-probe isolation suite in CI) / `P0-TEST-3` (live-regression cron — **starts the 7-day P7 clock**).
-- **Phase-1 gate:** the roadmap requires "CI green; isolation suite in CI; cron started" before P1 — so **P1 does not start until the live lane opens.** Do not begin P1 early.
+- **Phase:** **P1 — Backend & Code Fixes** 🟠
+- **Wave:** **P1-CODE-1 — Reliability finish** (REL-1..5)
+- **Status:** 🔵 In progress
+- **Sequencing (owner, 2026-07-04):** the **complete live lane is provisioned in ONE dedicated phase after all code implementation is done** — so `P0-INFRA-1/3` + `P0-TEST-1/2/3` (and CI-green) are **explicitly owner-deferred**, satisfying the Autonomous-Plan Phase-0 gate ("all P0 ✅ or explicitly owner-deferred"). Execution proceeds through the **code** waves of P1→P3 first; the live lane + all LIVE-graded verification runs as the dedicated pre-pilot phase. Do NOT request off-site creds / alert sink / CI setup until then.
+- **P0 status:** code/security tasks **14/19 ✅ COMPLETE**; the 5 live-lane tasks are **queued** (owner-deferred, not blocked-and-forgotten — tracked for the live-lane phase).
 
-### To resume: owner opens the live lane
-Provision VPS SSH + tenant Postgres + a CI runner on `feature/data-reliability-platform`, then run W2's INFRA-1/3 for real and W3's TEST-1/2/3. On P0-TEST-3 the 7-day cron clock starts (P7 prerequisite). Only after all P0 ✅ (or explicitly owner-deferred) + CI green does execution advance to **P1 — Backend & Code Fixes**.
+### P1-CODE-1 tasks (this wave) — findings REL-1..5
+| Sub | Sev | What |
+|---|---|---|
+| **REL-1** | P0 | Mint an `Idempotency-Key` in a Dio interceptor for **all** mutating verbs (today ~4% coverage — only ~6 ReliableWriter paths). A retried non-migrated write duplicates the row (double fee/leave). |
+| **REL-2** | P1 | Route marks "Save all" (`bulkUpdateMarks`) through `ReliableWriter` (not raw `_dio.post`). |
+| **REL-3** | P1 | Wire `DraftAutosaveMixin` into the marks grid + fee form (currently only leave + attendance). |
+| **REL-4** | P1 | Boot/resume outbox flush — `syncEngine.flush()` on boot + on app-resume when online. |
+| **REL-5** | P1 | First-write optimistic concurrency — capture + send base `row_version` on the first write of high-risk ops (today set only on retry). |
+
+### EOS gate
+- `/eos reliability` → PASS. Regression: `flutter analyze` 0 · full suite green (no new failures) · new idempotency/draft/boot-flush/first-write tests.
+
+### Next
+On P1-CODE-1 EOS PASS + commit → **P1-CODE-2** (reliability polish: REL-6..9) then P1-CODE-3 (backend hardening) ∥ P1-CODE-4 (identity, 👤 PLAT-0 partial) ∥ P1-CODE-5 (HR payroll); P1-PROD-0 (XCT). Owner-scope tasks (P1-CODE-6/7/8 Hostel/Alumni/Finance-posting) pause + surface when reached.
+
+> **Deferred live-lane tail (run in the dedicated live phase):** `P0-INFRA-1` off-site backup · `P0-INFRA-3` alert delivery · `P0-TEST-1/2/3` CI + isolation-in-CI + live-regression cron (starts the 7-day P7 clock). Plus every LIVE-graded re-verification across P0→P3.
 
 ### Active tasks (this wave only)
 | Task | Category | Description | Finding | Gate / blocker |

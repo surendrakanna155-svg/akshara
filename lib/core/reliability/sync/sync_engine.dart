@@ -54,6 +54,21 @@ class SyncEngine {
         unawaited(flush());
       }
     });
+    // REL-4: a relaunch while already-online fires no connectivity *transition*,
+    // so writes queued by a previous (killed) session would sit undrained. Drain
+    // once on boot when online. (Offline boot is a no-op — the executor throws
+    // and ops stay pending until the next reconnect.)
+    if (_connectivity.isOnline) {
+      unawaited(flush());
+    }
+  }
+
+  /// REL-4: drain on app-resume when online (foregrounding after a background
+  /// kill/offline stint). Safe to call anytime — re-entrant and no-op offline.
+  void flushIfOnline() {
+    if (_connectivity.isOnline) {
+      unawaited(flush());
+    }
   }
 
   Future<void> dispose() async {

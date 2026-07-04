@@ -226,4 +226,50 @@ void main() {
     await engine.resolveConflict('opA', keepClient: false);
     expect(await store.getOperation('opA'), isNull);
   });
+
+  test('REL-4: start() drains the outbox on boot when already online '
+      '(relaunch-while-online, no connectivity transition)', () async {
+    final FakeExecutor exec = FakeExecutor((_, __) => ok());
+    final engine = SyncEngine(
+      store: store,
+      executor: exec,
+      connectivity: conn, // online by default
+      registry: registryWith(const {}),
+      clock: clock,
+    );
+    await enqueuePending('attendance.mark');
+
+    // No setOnline() transition is emitted — only the boot flush can drain this.
+    engine.start();
+    await pumpEventQueue();
+
+    expect(exec.callCount, 1);
+    expect((await store.getOperation('op1'))!.status, SyncStatus.confirmed);
+    await engine.dispose();
+  });
+
+  test('REL-4: boot while offline is a no-op; flushIfOnline drains once online',
+      () async {
+    conn = FakeConnectivity(online: false);
+    final FakeExecutor exec = FakeExecutor((_, __) => ok());
+    final engine = SyncEngine(
+      store: store,
+      executor: exec,
+      connectivity: conn,
+      registry: registryWith(const {}),
+      clock: clock,
+    );
+    await enqueuePending('attendance.mark');
+
+    engine.start();
+    await pumpEventQueue();
+    expect(exec.callCount, 0, reason: 'offline boot must not attempt sends');
+
+    conn.setOnline(true);
+    engine.flushIfOnline();
+    await pumpEventQueue();
+    expect(exec.callCount, 1);
+    expect((await store.getOperation('op1'))!.status, SyncStatus.confirmed);
+    await engine.dispose();
+  });
 }
