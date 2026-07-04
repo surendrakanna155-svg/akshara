@@ -27,6 +27,7 @@ const baseConfig: AppConfig = {
   erpTenantDatabaseUrl: null,
   internalHealthToken: "test-internal-token",
   backupMaxAgeHours: 26,
+  auditRetentionDays: 730,
 };
 
 Deno.test("internal health allows matching token header", () => {

@@ -32,6 +32,7 @@ const config: AppConfig = {
   erpTenantDatabaseUrl: null,
   internalHealthToken: null,
   backupMaxAgeHours: 26,
+  auditRetentionDays: 730,
 };
 
 function mockRequest(method: string, path: string): Request {

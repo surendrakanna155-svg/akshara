@@ -281,3 +281,43 @@ export function correlationIdFromRequest(req: Request): string | undefined {
     req.headers.get("X-Correlation-Id") ??
     undefined;
 }
+
+// ── DB-6 — audit retention code seam ────────────────────────────────────────
+//
+// `audit_events` is APPEND-ONLY (an immutable governance record), so retention
+// is enforced by an ops-lane purge / partition-drop under a privileged role —
+// never a client-reachable delete path. This is the code seam that the retention
+// policy (AuditArchitecture.md, DOC-5) plugs into:
+//   • `auditRetentionCutoff` — pure: the instant before which events are beyond
+//     the configured horizon (unit-testable, no DB).
+//   • `countAuditEventsBeyondRetention` — read-only: how many of the actor's
+//     tenant's events are past the horizon, so ops can size a purge.
+// The destructive DELETE / DROP PARTITION + the table-partitioning migration
+// land in the live/ops lane, keeping this seam non-destructive.
+
+/** The instant before which audit events are beyond the retention window. */
+export function auditRetentionCutoff(nowMs: number, retentionDays: number): Date {
+  if (!Number.isFinite(retentionDays) || retentionDays <= 0) {
+    throw new Error("retentionDays must be a positive number");
+  }
+  return new Date(nowMs - retentionDays * 24 * 60 * 60 * 1000);
+}
+
+/** Read-only: count the actor tenant's audit events older than the retention
+ * window. Drives an ops "purge N rows" decision; performs no deletion. */
+export async function countAuditEventsBeyondRetention(
+  db: TenantQueryClient,
+  claims: AccessTokenClaims,
+  retentionDays: number,
+  nowMs: number = Date.now(),
+): Promise<number> {
+  const cutoff = auditRetentionCutoff(nowMs, retentionDays);
+  const rows = await db.queryObject<{ count: string }>(
+    `SELECT count(*)::text AS count
+       FROM audit_events
+      WHERE organization_id = $1
+        AND created_at < $2`,
+    [claims.tenant_id, cutoff.toISOString()],
+  );
+  return Number(rows[0]?.count ?? "0");
+}

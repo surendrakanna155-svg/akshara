@@ -52,6 +52,15 @@ export interface AppConfig {
    * reports degraded (503). Default 26h covers a nightly cadence + slack.
    */
   backupMaxAgeHours: number;
+
+  /**
+   * DB-6 — audit-event retention window (days). The policy the retention seam
+   * (`audit_repository.ts`) reads to decide which append-only `audit_events`
+   * are beyond the compliance horizon and eligible for the ops-lane
+   * purge/partition-drop. Default 730 (2 years) suits school-compliance
+   * retention; the destructive prune + table partitioning land in the live lane.
+   */
+  auditRetentionDays: number;
 }
 
 /** Parse a comma/space separated phone allowlist into normalized E.164-ish strings. */
@@ -124,6 +133,10 @@ export function loadConfig(): AppConfig {
     internalHealthToken: Deno.env.get("INTERNAL_HEALTH_TOKEN") ?? null,
     backupMaxAgeHours: parseInt(
       Deno.env.get("BACKUP_MAX_AGE_HOURS") ?? "26",
+      10,
+    ),
+    auditRetentionDays: parseInt(
+      Deno.env.get("AUDIT_RETENTION_DAYS") ?? "730",
       10,
     ),
   };

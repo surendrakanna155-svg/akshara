@@ -78,6 +78,7 @@ const baseConfig: AppConfig = {
   erpTenantDatabaseUrl: null,
   internalHealthToken: TOKEN,
   backupMaxAgeHours: 26,
+  auditRetentionDays: 730,
 };
 
 function withToken(path: string): Request {

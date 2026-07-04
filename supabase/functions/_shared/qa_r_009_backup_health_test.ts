@@ -67,6 +67,7 @@ const baseConfig: AppConfig = {
   erpTenantDatabaseUrl: null,
   internalHealthToken: "test-internal-token",
   backupMaxAgeHours: 26,
+  auditRetentionDays: 730,
 };
 
 const AUTHED_HEADERS = { "x-internal-health-token": "test-internal-token" };

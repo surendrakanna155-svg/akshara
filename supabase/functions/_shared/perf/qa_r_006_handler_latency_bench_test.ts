@@ -78,6 +78,7 @@ const config = {
   erpTenantDatabaseUrl: null,
   internalHealthToken: null,
   backupMaxAgeHours: 26,
+  auditRetentionDays: 730,
 } as AppConfig;
 
 const configLoader = () => config;
