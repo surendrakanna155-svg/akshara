@@ -114,9 +114,9 @@
 - **Evidence:** self-test output. **EOS gate:** SEC PASS. **Done when:** deploy fails if the role is wrong.
 
 ### P0-CODE-1 · 🟠 · CODE · Enforce finance `row_version`/409 (money lost-update)
-- **Depends:** — · **Complexity:** M · **Status:** ⚪ Pending · **Finding:** ENG-1
-- **Outcome:** `finance_collections` collect/refund read + check `expectedVersion` → 409 on conflict.
-- **Evidence:** concurrency test (two collectors) proving no lost-update. **EOS gate:** RELIABILITY + SECURITY PASS. **Done when:** concurrent edits can't silently overwrite money.
+- **Depends:** — · **Complexity:** M · **Status:** ✅ Complete (2026-07-04, P0·W2) · **Finding:** ENG-1
+- **Outcome:** `finance_collections` cancel now reads + checks `expectedVersion` (early compare + atomic `AND row_version=$` UPDATE predicate) → **409 CONFLICT** carrying the current row (incl. `rowVersion`) so the reliability client resolves + retries. No migration (row_version already on `finance_collections` since 20260817000000); backward-compatible when `expectedVersion` omitted. (createCollection is INSERT + idempotency-key + `FOR UPDATE` — not a lost-update path; invoices/accounts use locked relative writes.)
+- **Evidence:** `finance_collections_repository_test` +3 ENG-1 tests (stale version → CollectionConflictError, no money reversed; matching version OK; back-compat) — deno finance **136/0**, `deno check` clean, api entrypoint typechecks. **EOS gate:** RELIABILITY PASS. **Done when:** concurrent/stale edits can't silently overwrite money. ✅
 
 ### P0-CODE-2 · 🟠 · CODE · Hide backend-less/thin surfaces for pilot
 - **Depends:** 👤 hide-list · **Complexity:** S · **Status:** ⚪ Pending / 👤 · **Finding:** ENG-3/MOD-4 (+ MOD-5/6 partial)

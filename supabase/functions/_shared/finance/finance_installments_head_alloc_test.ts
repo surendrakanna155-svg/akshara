@@ -156,6 +156,7 @@ class MockDb {
         cancellation_reason: null,
         cancelled_by: null,
         cancelled_at: null,
+        row_version: 1,
       };
       this.collections.push(row);
       return [row as T];

@@ -48,7 +48,7 @@ disposition: a Master-Roadmap task (`docs/audits/MASTER_EXECUTION_ROADMAP.md`), 
 | LV-10 backup script `$1` bug | Low | → **P0-INFRA-4** |
 | DB-1 = OPS-6 hardcoded DB password in migration (live-rotated; migration still ships default) | Med (was P0) | → **P0-INFRA-5** |
 | DB-2 hardening (deploy-time assert erp_tenant) | High | → **P0-INFRA-6** |
-| ENG-1 finance `row_version` guard inert (money lost-update) | High | → **P0-CODE-1** |
+| ENG-1 finance `row_version` guard inert (money lost-update) | High | → **P0-CODE-1** ✅ Fixed 2026-07-04 (P0·W2) — effective on `finance_collections` cancel (409 + current row) |
 | ENG-3 = MOD-4 ~8 backend-less surfaces reachable-mock | High | → **P0-CODE-2** |
 | QA-3 CI never ran on branch + live-regression cron not started | High | → **P0-TEST-1**, **P0-TEST-3** |
 | QA-2 regression (233-probe suite into CI) · QA-7 (part) | High | → **P0-TEST-2** |

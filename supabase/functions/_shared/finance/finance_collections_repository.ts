@@ -33,6 +33,10 @@ export interface FinanceCollectionRow {
   cancellation_reason: string | null;
   cancelled_by: string | null;
   cancelled_at: string | null;
+  // ENG-1: optimistic-lock version, auto-incremented by the bump_row_version
+  // trigger (migration 20260817000000). Guarded on cancel to prevent a stale
+  // client from overwriting a newer state (money lost-update).
+  row_version: number;
   created_at: string;
   updated_at: string;
 }
@@ -116,6 +120,25 @@ export class InvalidCollectionTransitionError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "InvalidCollectionTransitionError";
+  }
+}
+
+/**
+ * ENG-1: raised when a money-mutating collection write is rejected because the
+ * caller's `expectedVersion` no longer matches the row's current `row_version`
+ * — i.e. the collection was modified since the caller read it. Carries the
+ * current server row so the client (Data Reliability Platform) can resolve the
+ * conflict and re-submit with the correct version. Maps to 409 CONFLICT.
+ */
+export class CollectionConflictError extends Error {
+  constructor(
+    readonly collectionId: string,
+    readonly currentRow: FinanceCollectionRow,
+  ) {
+    super(
+      `Collection ${collectionId} was modified by another operation; refresh and retry.`,
+    );
+    this.name = "CollectionConflictError";
   }
 }
 
@@ -583,6 +606,13 @@ export interface CancelCollectionInput {
   reason: string;
   /** FIN-D3: the acting user (claims.sub). */
   cancelledBy: string;
+  /**
+   * ENG-1: optional optimistic-lock version. When provided, the cancel is
+   * rejected (409 CONFLICT) if the collection's current `row_version` differs —
+   * preventing a stale/queued client from reversing money against an outdated
+   * view of the record. When omitted, behaviour is unchanged (back-compatible).
+   */
+  expectedVersion?: number | null;
 }
 
 export async function cancelCollection(
@@ -603,6 +633,18 @@ export async function cancelCollection(
   }
   if (collection.collection_status === "cancelled") {
     throw new InvalidCollectionTransitionError("Collection is already cancelled");
+  }
+
+  // ENG-1: optimistic-lock guard. Reject a stale cancel (the collection changed
+  // since the caller read it) BEFORE any money is reversed, mirroring the
+  // exam-marks conflict guard. The atomic `row_version` predicate on the UPDATE
+  // below is the belt-and-suspenders against a read→write race inside the txn.
+  const expectedVersion = input.expectedVersion;
+  if (
+    expectedVersion != null &&
+    Number(collection.row_version) !== Number(expectedVersion)
+  ) {
+    throw new CollectionConflictError(collectionId, collection);
   }
 
   // FIN-D1: a collection whose date sits on/before the latest closed day cannot
@@ -670,9 +712,17 @@ export async function cancelCollection(
       cancelled_at = timezone('utc', now()),
       updated_at = timezone('utc', now())
      WHERE id = $1 AND organization_id = $2 AND school_id = $3
+       AND ($6::int IS NULL OR row_version = $6)
      RETURNING *`,
-    [collectionId, organizationId, schoolId, reason, input.cancelledBy],
+    [collectionId, organizationId, schoolId, reason, input.cancelledBy, expectedVersion ?? null],
   );
+  if (updatedCollectionRows.length === 0) {
+    // ENG-1: the version changed between our read and this write (a concurrent
+    // modification committed after we read), or the row vanished. The enclosing
+    // transaction rolls back the reversal above; surface the current row.
+    const current = await getCollection(db, organizationId, schoolId, collectionId);
+    throw new CollectionConflictError(collectionId, current ?? collection);
+  }
 
   const updatedInvoiceRows = await db.queryObject<FinanceInvoiceRow>(
     `SELECT * FROM finance_invoices WHERE id = $1`,

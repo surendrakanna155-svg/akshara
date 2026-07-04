@@ -13,6 +13,7 @@ import { emitMutationAudit, financeAudit } from "../audit/mutation_audit_catalog
 import {
   CancellationReasonRequiredError,
   CollectionAmountError,
+  CollectionConflictError,
   CollectionNotFoundError,
   DayLockedError,
   DuplicateReceiptError,
@@ -37,6 +38,7 @@ import {
   collectionCreateToApi,
   collectionDetailToApi,
   collectionPaymentToApi,
+  collectionRowToApi,
   dailySummaryToApi,
   listEnvelope,
   receiptToApi,
@@ -131,6 +133,15 @@ function parseAmount(body: Record<string, unknown>): number | null {
   return Number.isFinite(num) ? num : null;
 }
 
+/** ENG-1: reads the optional optimistic-lock version from a request body. */
+function parseExpectedVersion(body: Record<string, unknown>): number | null {
+  const raw = body.expectedVersion ?? body.expected_version ??
+    body.rowVersion ?? body.row_version;
+  if (raw == null) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
 function mapCollectionError(error: unknown): Response | null {
   if (error instanceof CollectionNotFoundError || error instanceof ReceiptNotFoundError) {
     return errorEnvelope("NOT_FOUND", error.message, 404);
@@ -150,6 +161,17 @@ function mapCollectionError(error: unknown): Response | null {
   }
   if (error instanceof DuplicateReceiptError) {
     return errorEnvelope("CONFLICT", error.message, 409);
+  }
+  if (error instanceof CollectionConflictError) {
+    // ENG-1: 409 CONFLICT carrying the current server row (incl. rowVersion) in
+    // `data` so the Data Reliability Platform can resolve and re-submit.
+    return jsonResponse(
+      {
+        data: collectionRowToApi(error.currentRow),
+        error: { code: "CONFLICT", message: error.message },
+      },
+      { status: 409 },
+    );
   }
   return null;
 }
@@ -365,6 +387,8 @@ export async function handleCancelCollection(
   if (reason === "") {
     return errorEnvelope("VALIDATION_ERROR", "A cancellation reason is required", 422);
   }
+  // ENG-1: optional optimistic-lock version (camelCase or snake_case).
+  const expectedVersion = parseExpectedVersion(body);
 
   const orgId = organizationIdFromClaims(auth.claims);
   const schoolId = schoolIdFromClaims(auth.claims);
@@ -374,6 +398,7 @@ export async function handleCancelCollection(
       const cancelled = await cancelCollection(db, orgId, schoolId, collectionId, {
         reason,
         cancelledBy: auth.claims.sub,
+        expectedVersion,
       });
       await emitMutationAudit(
         db,

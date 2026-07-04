@@ -370,6 +370,25 @@ export function collectionCreateToApi(result: CollectionWithReceipt): Record<str
   };
 }
 
+/**
+ * ENG-1: single collection row for the 409 CONFLICT body. Includes `rowVersion`
+ * so the Data Reliability Platform can re-submit with the correct expected
+ * version (it reads `row_version`/`rowVersion` off the returned server row).
+ */
+export function collectionRowToApi(row: FinanceCollectionRow): Record<string, unknown> {
+  return {
+    id: row.id,
+    invoiceId: row.invoice_id,
+    studentAccountId: row.student_account_id,
+    receiptNumber: row.receipt_number,
+    amountCollected: formatAmount(row.amount_collected),
+    paymentMethod: row.payment_method,
+    collectionStatus: row.collection_status,
+    collectionDate: row.collection_date,
+    rowVersion: row.row_version,
+  };
+}
+
 export function receiptToApi(row: FinanceReceiptRow): Record<string, unknown> {
   return {
     id: row.id,

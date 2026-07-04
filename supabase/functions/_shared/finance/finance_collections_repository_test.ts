@@ -7,6 +7,7 @@ import {
 import type { TenantQueryClient } from "../tenant_db.ts";
 import {
   CollectionAmountError,
+  CollectionConflictError,
   DuplicateReceiptError,
   InvoiceNotCollectibleError,
   InvalidCollectionTransitionError,
@@ -78,6 +79,8 @@ class MockCollectionsDb {
         notes: args[10],
         collection_status: "completed",
         collected_by: args[11],
+        // Mirror the bump_row_version trigger default (migration 20260817000000).
+        row_version: 1,
         created_at: "2026-06-09T00:00:00.000Z",
         updated_at: "2026-06-09T00:00:00.000Z",
       };
@@ -139,7 +142,17 @@ class MockCollectionsDb {
     }
     if (sql.includes("UPDATE finance_collections SET") && sql.includes("cancelled")) {
       const row = this.collections.find((c) => c.id === args[0]);
-      if (row) row.collection_status = "cancelled";
+      // ENG-1: honor the atomic `AND ($6::int IS NULL OR row_version = $6)`
+      // predicate — a version mismatch yields 0 rows; a match bumps the version
+      // (mirrors the bump_row_version trigger).
+      const expected = args[5];
+      if (row && expected != null && Number(row.row_version) !== Number(expected)) {
+        return [] as T[];
+      }
+      if (row) {
+        row.collection_status = "cancelled";
+        row.row_version = Number(row.row_version ?? 1) + 1;
+      }
       return (row ? [row] : []) as T[];
     }
     if (sql.includes("UPDATE finance_invoices SET") && sql.includes("outstanding_amount = $1") && sql.includes("cancel")) {
@@ -360,6 +373,72 @@ Deno.test("cancelCollection rejects already cancelled", async () => {
   );
 });
 
+Deno.test("ENG-1: cancelCollection rejects a stale expectedVersion (no money reversed)", async () => {
+  const db = new MockCollectionsDb();
+  const created = await createCollection(asDb(db), ORG, SCHOOL_A, {
+    invoiceId: INVOICE,
+    amountCollected: 15000,
+    paymentMethod: "cash",
+    collectedBy: STAFF,
+  });
+  // The freshly-created collection is at row_version 1. A stale/queued client
+  // that still believes it is version 0 must be rejected with a conflict.
+  await assertRejects(
+    () =>
+      cancelCollection(asDb(db), ORG, SCHOOL_A, created.collection.id, {
+        reason: "duplicate entry",
+        cancelledBy: STAFF,
+        expectedVersion: 0,
+      }),
+    CollectionConflictError,
+  );
+  // The lost-update was prevented: the collection is still completed and the
+  // invoice/account balances were NOT reversed.
+  const still = db.collections.find((c) => c.id === created.collection.id);
+  assertEquals(still?.collection_status, "completed");
+  assertEquals(db.invoices[0]!.outstanding_amount, "35000");
+  assertEquals(db.accounts[0]!.amount_paid, "15000");
+});
+
+Deno.test("ENG-1: cancelCollection accepts the matching expectedVersion", async () => {
+  const db = new MockCollectionsDb();
+  const created = await createCollection(asDb(db), ORG, SCHOOL_A, {
+    invoiceId: INVOICE,
+    amountCollected: 15000,
+    paymentMethod: "cash",
+    collectedBy: STAFF,
+  });
+  const cancelled = await cancelCollection(
+    asDb(db),
+    ORG,
+    SCHOOL_A,
+    created.collection.id,
+    { reason: "correction", cancelledBy: STAFF, expectedVersion: 1 },
+  );
+  assertEquals(cancelled.collection.collection_status, "cancelled");
+  // Version bumped by the (mock) trigger on the successful cancel.
+  assertEquals(Number(cancelled.collection.row_version), 2);
+  // Balances reversed exactly once.
+  assertEquals(db.invoices[0]!.outstanding_amount, "50000");
+  assertEquals(db.accounts[0]!.amount_paid, "0");
+});
+
+Deno.test("ENG-1: cancelCollection without expectedVersion stays backward-compatible", async () => {
+  const db = new MockCollectionsDb();
+  const created = await createCollection(asDb(db), ORG, SCHOOL_A, {
+    invoiceId: INVOICE,
+    amountCollected: 15000,
+    paymentMethod: "cash",
+    collectedBy: STAFF,
+  });
+  // No expectedVersion supplied → guard is a no-op, cancel proceeds as before.
+  const cancelled = await cancelCollection(asDb(db), ORG, SCHOOL_A, created.collection.id, {
+    reason: "no version",
+    cancelledBy: STAFF,
+  });
+  assertEquals(cancelled.collection.collection_status, "cancelled");
+});
+
 Deno.test("getReceipt returns receipt and collection", async () => {
   const db = new MockCollectionsDb();
   const created = await createCollection(asDb(db), ORG, SCHOOL_A, {
@@ -393,6 +472,7 @@ Deno.test("collectionPaymentToApi maps client status field", () => {
     cancellation_reason: null,
     cancelled_by: null,
     cancelled_at: null,
+    row_version: 1,
     created_at: "2026-06-09T00:00:00.000Z",
     updated_at: "2026-06-09T00:00:00.000Z",
     student_name: "Probe",
@@ -460,6 +540,7 @@ Deno.test("collectionDetailToApi builds timeline and receipt links from db rows"
     cancellation_reason: null,
     cancelled_by: null,
     cancelled_at: null,
+    row_version: 1,
     created_at: "2026-06-09T00:00:00.000Z",
     updated_at: "2026-06-09T00:00:00.000Z",
     student_name: "Probe",

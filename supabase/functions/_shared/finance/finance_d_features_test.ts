@@ -91,6 +91,7 @@ class MockDb {
         cancellation_reason: null,
         cancelled_by: null,
         cancelled_at: null,
+        row_version: 1,
       };
       this.collections.push(row);
       return [row as T];
@@ -351,6 +352,7 @@ Deno.test("FIN-2 studentLedgerToApi builds a running balance (debit invoice, cre
       cancellation_reason: null,
       cancelled_by: null,
       cancelled_at: null,
+      row_version: 1,
       created_at: "2026-06-09T00:00:00Z",
       updated_at: "2026-06-09T00:00:00Z",
     }],
@@ -401,6 +403,7 @@ Deno.test("FIN-2 studentLedgerToApi ignores cancelled collections in the running
       cancellation_reason: "error",
       cancelled_by: STAFF,
       cancelled_at: "2026-06-10T00:00:00Z",
+      row_version: 2,
       created_at: "2026-06-09T00:00:00Z",
       updated_at: "2026-06-10T00:00:00Z",
     }],
