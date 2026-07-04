@@ -11,10 +11,10 @@
 | Field | Value |
 |---|---|
 | **Current Phase** | **P1 — Remaining Backend & Code Fixes** 🟠 (P0 code/security ✅ 14/19; 5 live-lane tasks ⏳ owner-deferred) |
-| **Current Wave** | **P1-PROD-4 — C5 · Academic Registers & Certificates (ATT-1/ATT-2/SIS-1)** — 🔵 next up (SIS-1 likely already built in the identity cluster). **C3 defers** (GA-1 live); **C4 ✅ verified**. **P2-UX-1 ∥-eligible**. P1-CODE-4 identity stays 👤-gated. |
-| **Wave Status** | **P1-CODE-1/2/3/5 ✅ + P1-PROD-0 ✅ + C1 ✅ + C2 ✅ + C4 ✅ (verified)** — reliability, backend hardening, HR payroll, XCT foundations, Finance Recovery CRM, Finance Reports (FIN-6 aging), and Exams Fast-Marks/Tabulation (already-built, verified) closed. P0: 14/19 ✅; 5 live-lane ⏳ owner-deferred. |
+| **Current Wave** | **P1-PROD-5 — C7 · HR Payroll & Salary Registers (HR-1/HR-2)** — 🔵 next up (builds on P1-CODE-5 payroll engine). **C3 defers** (GA-1 live); **C6 defers** (HWK-1 owner schema change); **C4/C5 ✅**. **P2-UX-1 ∥-eligible**. P1-CODE-4 stays 👤-gated. |
+| **Wave Status** | **P1-CODE-1/2/3/5 ✅ + P1-PROD-0 ✅ + C1 ✅ + C2 ✅ + C4 ✅ + C5 ✅** — reliability, backend hardening, HR payroll engine, XCT foundations, Finance Recovery CRM, Finance Reports (FIN-6 aging), Exams Fast-Marks/Tabulation (verified), Academic Registers & Certificates (ATT-1/2/SIS-1) closed. P0: 14/19 ✅; 5 live-lane ⏳ owner-deferred. |
 | **Planning** | 🔒 FROZEN 2026-07-04 → **AUTONOMOUS EXECUTION UNDER WAY** (P1 code + PROD waves; live lane deferred) |
-| **Last commit-gated wave** | **P1-PROD-3** (docs-only) — C4 Exams Fast Marks & Tabulation VERIFIED complete: discovery-first found EXM-1/2/3 already built + tested (bulk marks save + keyboard nav + validation + AB/ML/DB; tabulation totals/%/rank/grade present-only-exclusion; register CSV/PDF via shared service). EOS PASS (covered by existing, rule #4 — no rebuild). deno exam 118/0 · flutter exam 109/0 |
+| **Last commit-gated wave** | **P1-PROD-4** (`1fc6104`) — C5 Academic Registers & Certificates: discovery-first found ATT-1 office register + ATT-2 monthly students×days grid (real SQL + shared CSV/PDF) + SIS-1 certs (immutable register + print-ready PDFs) all built; closed one gap — ATT-2 cell-level render test. EOS PASS (covered by existing + test gap closed). attendance+sis 73/0 |
 
 ## 2. Wave arithmetic
 
@@ -31,7 +31,7 @@ Waves as the roadmap + Autonomous Plan group them (a "wave" = one EOS-gated comm
 | P6 | 1 | P6-PILOT-1 (single + 3-school concurrent, stages 0–16) |
 | P7 | 1 | P7-CERT-1 (gates T/S/O/U/A/P/B/D + `QA-R-012`) |
 | P8 | 5 | P8-GA-1..5 |
-| **Total** | **≈68** | **Completed: P0·W1 + W2 non-blocked legs (14/19 P0) + P1-CODE-1 (REL-1..5) + P1-CODE-2 (REL-6..9) + P1-CODE-3 (ENG-4/5/7/8/9/10,DB-6) + P1-CODE-5 (MOD-2/3) + P1-PROD-0 (XCT-1/2/3) + C1 + C2 (FIN-6 aging) + C4 (verified), 2026-07-04** · **Remaining:** P0 live-lane tail (INFRA-1/3, TEST-1/2/3) then ≈58 (P5 variable) |
+| **Total** | **≈68** | **Completed: P0·W1 + W2 non-blocked legs (14/19 P0) + P1-CODE-1 (REL-1..5) + P1-CODE-2 (REL-6..9) + P1-CODE-3 (ENG-4/5/7/8/9/10,DB-6) + P1-CODE-5 (MOD-2/3) + P1-PROD-0 (XCT-1/2/3) + C1 + C2 + C4 + C5, 2026-07-04** · **Remaining:** P0 live-lane tail (INFRA-1/3, TEST-1/2/3) then ≈57 (P5 variable) |
 
 ## 3. Current Blockers
 
@@ -98,7 +98,7 @@ Hard gates: P0 gates P4/P6/P7/P8 · P1-CODE-1 → P2-UX-2 · P3-AI-1 → P3-AI-2
 |---|---:|---:|---:|---:|---|
 | Planning | — | 🔒 FROZEN + reviewed | — | — | audit + final review |
 | P0 — Truth/Docs/Live-Verify | 3 (19 tasks; **14 ✅**) | **2** (W1 ✅ · W2 non-blocked legs ✅) | 0 | 1 (W3 + INFRA-1/3 — ⏳ live-lane) | EOS per task |
-| P1 — Backend & Code Fixes | 35 | 8 (CODE-1/2/3/5, PROD-0, C1, C2, C4✓) | 0 | 27 (next: C5 Academic Registers/Certs — C3 defers; CODE-4 👤) | EOS per wave |
+| P1 — Backend & Code Fixes | 35 | 9 (CODE-1/2/3/5, PROD-0, C1, C2, C4✓, C5) | 0 | 26 (next: C7 HR Payroll — C3+C6 defer; CODE-4 👤) | EOS per wave |
 | P2 — UI/UX | 5 | 0 | 0 | 5 | EOS UX per wave |
 | P3 — Adaptive AI | 15 sub-waves | 0 | 0 | 15 | EOS AI per sub-wave |
 | P4 — Red Team | 2 | 0 | 0 | 2 | RED-TEAM verdict |
@@ -111,7 +111,7 @@ Hard gates: P0 gates P4/P6/P7/P8 · P1-CODE-1 → P2-UX-2 · P3-AI-1 → P3-AI-2
 ## 8. EOS Status
 
 - **Gate protocol:** every wave ends with `/eos <scope>`; **commit only on PASS**; CONDITIONAL PASS only with P1s tracked *and* roadmap permission; BLOCKED = fix and re-run, never advance. Verdicts append to `docs/engineering/eos/EOS_RUN_LEDGER.md` + the journal.
-- **Implementation EOS runs so far:** **16** — P0·W1 DOCS · P0·W2 legs · P1-CODE-1/2/3/5 · P1-PROD-0 FOUNDATION · P1-PROD-1 FEATURE (C1 Recovery CRM) · P1-PROD-2 FEATURE (C2 / FIN-6 aging) · **P1-PROD-3 (C4 Exams) VERIFIED PASS (2026-07-04, latest)**. See `docs/engineering/eos/EOS_RUN_LEDGER.md`.
+- **Implementation EOS runs so far:** **17** — P0·W1 DOCS · P0·W2 legs · P1-CODE-1/2/3/5 · P1-PROD-0 FOUNDATION · P1-PROD-1 FEATURE (C1 Recovery CRM) · P1-PROD-2 FEATURE (C2 / FIN-6 aging) · P1-PROD-3 (C4 Exams) VERIFIED · **P1-PROD-4 (C5 Registers & Certs) PASS (2026-07-04, latest)**. See `docs/engineering/eos/EOS_RUN_LEDGER.md`.
 - **Open P0 findings:** none known at baseline (audit P0s are scheduled tasks, not open gate failures).
 - **Automatic-failure tripwires** (instant BLOCKED): data loss · security breach · escalation · tenant-isolation failure · critical crash · duplicate financial transaction · broken auth/sync · critical regression · failed backup verification · production blocker.
 - **Pre-execution baseline (verified live 2026-07-03, do NOT redo):** RLS isolation PASS · edge = `erp_tenant` NOBYPASSRLS · entitlement ON · encrypted backups + monthly restore drill green · watchdog green · AI live via OpenRouter · live DB password rotated · `flutter analyze` 0.
