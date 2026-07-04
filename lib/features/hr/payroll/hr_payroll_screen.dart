@@ -12,6 +12,7 @@ import '../../admin/admin_layout.dart';
 import '../hr_models.dart';
 import '../hr_providers.dart';
 import '../hr_workflow_actions.dart';
+import '../hr_report_models.dart';
 import '../reports/hr_export_providers.dart';
 import '../reports/hr_report_exporters.dart';
 import '../widgets/hr_module_scaffold.dart';
@@ -292,9 +293,118 @@ class _PayrollExportBar extends ConsumerWidget {
             icon: const Icon(Icons.table_view_outlined),
             label: const Text('Payslips Excel'),
           ),
+          // HR-2 — individual per-employee payslip PDFs (distinct from the
+          // all-employees bundle): pick an employee, download their own slip.
+          OutlinedButton.icon(
+            key: QaTestKeys.hrIndividualPayslipsButton,
+            onPressed: () => _showIndividualPayslips(context, ref, run),
+            icon: const Icon(Icons.badge_outlined),
+            label: const Text('Individual payslips'),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _showIndividualPayslips(
+    BuildContext context,
+    WidgetRef ref,
+    HrPayrollRun run,
+  ) async {
+    HrPayslipBundle bundle;
+    try {
+      bundle = await ref.read(hrPayslipsProvider(run.id).future);
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to load payslips.')),
+      );
+      return;
+    }
+    if (!context.mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (_) => _IndividualPayslipSheet(bundle: bundle),
+    );
+  }
+}
+
+/// HR-2 — a picker of the run's employees; each downloads its own payslip PDF.
+class _IndividualPayslipSheet extends ConsumerWidget {
+  const _IndividualPayslipSheet({required this.bundle});
+
+  final HrPayslipBundle bundle;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AksharaSpacing.s5,
+          AksharaSpacing.s2,
+          AksharaSpacing.s5,
+          AksharaSpacing.s5,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Individual payslips · ${bundle.period}',
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: AksharaSpacing.s3),
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: bundle.payslips.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final p = bundle.payslips[index];
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text('${p.name} · ${p.code}'),
+                    subtitle: Text(
+                      '${p.dept} · Net ${p.netPay.toStringAsFixed(0)}',
+                    ),
+                    trailing: IconButton(
+                      key: QaTestKeys.hrIndividualPayslipDownload(p.code),
+                      tooltip: 'Download payslip',
+                      icon: const Icon(Icons.download_outlined),
+                      onPressed: () => _download(context, ref, p),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _download(
+    BuildContext context,
+    WidgetRef ref,
+    HrPayslip payslip,
+  ) async {
+    final exporters =
+        HrReportExporters(ref.read(aksharaReportExportServiceProvider));
+    try {
+      await exporters.sharePayslipPdf(payslip, period: bundle.period);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          key: QaTestKeys.hrReportExportSuccessSnackbar,
+          content: Text('Payslip for ${payslip.name} ready'),
+        ),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to build the payslip.')),
+      );
+    }
   }
 }
 

@@ -715,6 +715,12 @@ abstract final class QaTestKeys {
   static const hrPayslipsExportButton =
       ValueKey<String>('hr_payslips_export_button');
 
+  // HR-2 — individual (one-per-employee) payslip PDF.
+  static const hrIndividualPayslipsButton =
+      ValueKey<String>('hr_individual_payslips_button');
+  static ValueKey<String> hrIndividualPayslipDownload(String code) =>
+      ValueKey<String>('hr_individual_payslip_download_$code');
+
   static const hrMusterExportButton =
       ValueKey<String>('hr_muster_export_button');
 

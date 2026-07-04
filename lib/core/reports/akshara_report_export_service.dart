@@ -76,6 +76,129 @@ class AksharaReportExportService {
     await Printing.sharePdf(bytes: bytes, filename: name);
   }
 
+  /// HR-2 — a single employee's payslip as its own printable document (mirrors
+  /// [buildReceiptPdf]). Earnings and deductions render as two tables with the
+  /// net pay called out. Amounts are pre-formatted strings (the caller owns the
+  /// money formatting); [schoolName] heads the slip when provided. Decoupled
+  /// from the HR domain models on purpose — primitive params only.
+  Future<Uint8List> buildPayslipPdf({
+    String? schoolName,
+    required String period,
+    required String employeeName,
+    required String employeeCode,
+    required String department,
+    required List<MapEntry<String, String>> earnings,
+    required List<MapEntry<String, String>> deductions,
+    required String grossEarnings,
+    required String totalDeductions,
+    required String netPay,
+  }) async {
+    final document = pw.Document();
+    document.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(AksharaSpacing.s7),
+        build: (context) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+          children: [
+            pw.Text(
+              (schoolName != null && schoolName.isNotEmpty)
+                  ? schoolName
+                  : 'Payslip',
+              style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 2),
+            pw.Text('Salary Slip · $period',
+                style: const pw.TextStyle(fontSize: 12)),
+            pw.Divider(color: PdfColors.grey400),
+            pw.Text('$employeeName ($employeeCode)',
+                style: const pw.TextStyle(fontSize: 11)),
+            pw.Text('Department: $department',
+                style: const pw.TextStyle(fontSize: 10)),
+            pw.SizedBox(height: 14),
+            pw.Text('Earnings',
+                style:
+                    pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 4),
+            pw.TableHelper.fromTextArray(
+              headers: const ['Component', 'Amount'],
+              data: [
+                for (final e in earnings) [e.key, e.value],
+                ['Gross earnings', grossEarnings],
+              ],
+              border: pw.TableBorder.all(color: PdfColors.grey400),
+              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
+              cellAlignments: const {1: pw.Alignment.centerRight},
+            ),
+            pw.SizedBox(height: 12),
+            pw.Text('Deductions',
+                style:
+                    pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 4),
+            pw.TableHelper.fromTextArray(
+              headers: const ['Component', 'Amount'],
+              data: [
+                for (final d in deductions) [d.key, d.value],
+                ['Total deductions', totalDeductions],
+              ],
+              border: pw.TableBorder.all(color: PdfColors.grey400),
+              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
+              cellAlignments: const {1: pw.Alignment.centerRight},
+            ),
+            pw.SizedBox(height: 16),
+            pw.Container(
+              padding: const pw.EdgeInsets.all(8),
+              decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Net pay',
+                      style: pw.TextStyle(
+                          fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                  pw.Text(netPay,
+                      style: pw.TextStyle(
+                          fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    return document.save();
+  }
+
+  Future<void> sharePayslipPdf({
+    String? schoolName,
+    required String period,
+    required String employeeName,
+    required String employeeCode,
+    required String department,
+    required List<MapEntry<String, String>> earnings,
+    required List<MapEntry<String, String>> deductions,
+    required String grossEarnings,
+    required String totalDeductions,
+    required String netPay,
+  }) async {
+    final bytes = await buildPayslipPdf(
+      schoolName: schoolName,
+      period: period,
+      employeeName: employeeName,
+      employeeCode: employeeCode,
+      department: department,
+      earnings: earnings,
+      deductions: deductions,
+      grossEarnings: grossEarnings,
+      totalDeductions: totalDeductions,
+      netPay: netPay,
+    );
+    final name = 'payslip_${employeeCode}_$period.pdf'
+        .replaceAll(RegExp(r'[^A-Za-z0-9_.]+'), '_');
+    await Printing.sharePdf(bytes: bytes, filename: name);
+  }
+
   /// Builds a printable report-card PDF. Layout is identical across grading
   /// systems (it renders the already-computed grade strings). Rank is included
   /// only when the school allows it ([ExamReportCard.rankShown]). Logo, principal

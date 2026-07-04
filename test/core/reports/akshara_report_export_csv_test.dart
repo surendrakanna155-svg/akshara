@@ -78,5 +78,26 @@ void main() {
       expect(bytes.length, greaterThan(0));
       expect(String.fromCharCodes(bytes.sublist(0, 5)), '%PDF-');
     });
+
+    test('HR-2 · buildPayslipPdf produces a non-empty single-employee PDF',
+        () async {
+      final bytes = await service.buildPayslipPdf(
+        schoolName: 'Akshara Public School',
+        period: 'May 2026',
+        employeeName: 'Mrs. Rao',
+        employeeCode: 'HR-EMP-102',
+        department: 'Academics',
+        earnings: const [
+          MapEntry('Basic', '40000'),
+          MapEntry('Allowances', '8000'),
+        ],
+        deductions: const [MapEntry('PF', '4800')],
+        grossEarnings: '48000',
+        totalDeductions: '4800',
+        netPay: '43200',
+      );
+      expect(bytes.length, greaterThan(0));
+      expect(String.fromCharCodes(bytes.sublist(0, 5)), '%PDF-');
+    });
   });
 }

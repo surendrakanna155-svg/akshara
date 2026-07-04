@@ -41,6 +41,22 @@ class _FakeExportService extends AksharaReportExportService {
   }) async {
     calls.add('pdf:$filename:${rows.length}');
   }
+
+  @override
+  Future<void> sharePayslipPdf({
+    String? schoolName,
+    required String period,
+    required String employeeName,
+    required String employeeCode,
+    required String department,
+    required List<MapEntry<String, String>> earnings,
+    required List<MapEntry<String, String>> deductions,
+    required String grossEarnings,
+    required String totalDeductions,
+    required String netPay,
+  }) async {
+    calls.add('payslip:$employeeCode:$netPay');
+  }
 }
 
 void _desktop(WidgetTester tester) {
@@ -115,6 +131,34 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(calls.any((c) => c.startsWith('pdf:payslips')), isTrue);
+    });
+
+    testWidgets(
+        'HR-2 · individual payslips sheet downloads a single per-employee slip',
+        (tester) async {
+      final calls = <String>[];
+      await _pump(tester, const HrPayrollScreen(), calls);
+
+      final open = find.byKey(QaTestKeys.hrIndividualPayslipsButton);
+      expect(open, findsOneWidget);
+      await tester.ensureVisible(open);
+      await tester.pumpAndSettle();
+      await tester.tap(open);
+      await tester.pumpAndSettle();
+
+      // The sheet (header carries the run period) lists the run's employees.
+      expect(find.textContaining('Individual payslips · '), findsOneWidget);
+      final download = find.byIcon(Icons.download_outlined);
+      expect(download, findsWidgets);
+      await tester.tap(download.first);
+      await tester.pumpAndSettle();
+
+      // A single per-employee payslip export fired (not the bundle grid).
+      expect(calls.any((c) => c.startsWith('payslip:')), isTrue);
+      expect(
+        find.byKey(QaTestKeys.hrReportExportSuccessSnackbar),
+        findsOneWidget,
+      );
     });
   });
 

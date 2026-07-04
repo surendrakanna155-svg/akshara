@@ -102,6 +102,33 @@ class HrReportExporters {
     );
   }
 
+  /// HR-2 — a single employee's payslip as its own document (individual PDF,
+  /// distinct from the all-employees bundle). Maps the [HrPayslip] view-model
+  /// onto the shared per-document payslip builder.
+  Future<void> sharePayslipPdf(
+    HrPayslip payslip, {
+    required String period,
+    String? schoolName,
+  }) {
+    return _service.sharePayslipPdf(
+      schoolName: schoolName,
+      period: period,
+      employeeName: payslip.name,
+      employeeCode: payslip.code,
+      department: payslip.dept,
+      earnings: [
+        for (final e in payslip.earnings) MapEntry(e.label, _money(e.amount)),
+      ],
+      deductions: [
+        for (final d in payslip.deductionLines)
+          MapEntry(d.label, _money(d.amount)),
+      ],
+      grossEarnings: _money(payslip.grossEarnings),
+      totalDeductions: _money(payslip.totalDeductions),
+      netPay: _money(payslip.netPay),
+    );
+  }
+
   /// Builds the all-in-one payslip bundle PDF — one section per employee (earnings
   /// / deductions breakdown + net), rendered as a single grid table so it prints
   /// as one document.
