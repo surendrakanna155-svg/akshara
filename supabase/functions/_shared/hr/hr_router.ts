@@ -28,8 +28,10 @@ import {
   handleCreateLeaveRequest,
   handleCreatePerformanceReview,
   handleCreateRecruitmentOpening,
+  handleGeneratePayrollRun,
   handleProcessPayrollRun,
   handleRejectLeaveRequest,
+  handleUpsertSalaryStructure,
   handleSetEmployeeProbation,
   handleSetEmployeeStatus,
   handleUpdateEmployee,
@@ -140,6 +142,14 @@ function matchHrRoute(
       return { handler: handleCreateRecruitmentOpening, args: [] };
     }
     // --- end A6 writes (AgentC) ---
+    // MOD-2 — payroll engine: salary structures + run generation. Generate is a
+    // distinct path from the run processor; both are exact matches.
+    if (path === "/hr/payroll/structures") {
+      return { handler: handleUpsertSalaryStructure, args: [] };
+    }
+    if (path === "/hr/payroll/run/generate") {
+      return { handler: handleGeneratePayrollRun, args: [] };
+    }
     if (path === "/hr/payroll/run") {
       return { handler: handleProcessPayrollRun, args: [] };
     }

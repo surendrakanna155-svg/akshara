@@ -82,6 +82,9 @@ const REGISTERED: Array<[string, string]> = [
   ["POST", "/hr/performance"],
   ["POST", "/hr/recruitment"],
   ["POST", "/hr/payroll/run"],
+  // MOD-2 — payroll engine: salary structures + run generation.
+  ["POST", "/hr/payroll/structures"],
+  ["POST", "/hr/payroll/run/generate"],
   ["PUT", "/hr/employees/emp-1"],
   ["PUT", "/hr/performance/pr-1"],
   ["PUT", "/hr/recruitment/rc-1"],
@@ -94,6 +97,27 @@ Deno.test("QA-B-022: all HR routes path-match to a handler (not 404)", async () 
     const res = await call(routeHr, method, path, perms);
     assertEquals(res !== null, true, `${method} ${path} returned null`);
     assertEquals(res!.status !== 404, true, `${method} ${path} unexpectedly 404'd`);
+  }
+});
+
+// MOD-2 — the payroll-engine writes gate manageHr (403 non-holder, 503 holder =
+// gate passed + reached the unconfigured tenant DB), like every HR write.
+Deno.test("MOD-2: payroll structure + generate writes require manageHr", async () => {
+  for (const path of ["/hr/payroll/structures", "/hr/payroll/run/generate"]) {
+    const denied = await call(routeHr, "POST", path, ["viewHr"], {
+      employeeId: "e1",
+      basicPay: 40000,
+      runId: "r",
+      period: "2026-07",
+    });
+    assertEquals(denied?.status, 403, `${path} should 403 without manageHr`);
+    const allowed = await call(routeHr, "POST", path, ["manageHr"], {
+      employeeId: "e1",
+      basicPay: 40000,
+      runId: "r",
+      period: "2026-07",
+    });
+    assertEquals(allowed?.status, 503, `${path} holder should reach the unconfigured DB (503)`);
   }
 });
 

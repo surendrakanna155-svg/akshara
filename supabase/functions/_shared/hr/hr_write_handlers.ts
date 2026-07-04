@@ -20,15 +20,40 @@ function isoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+/** MOD-3 — case-insensitive employee-code collision check (pure, testable). */
+export function employeeCodeExists(
+  existing: Array<Record<string, unknown>>,
+  code: string,
+): boolean {
+  const target = code.trim().toLowerCase();
+  return existing.some(
+    (e) => String(e.employeeCode ?? e.employee_code ?? "").trim().toLowerCase() === target,
+  );
+}
+
 /** POST /hr/employees — add an employee record (entity_type 'employee'). */
 export async function handleCreateEmployee(req: Request, config: AppConfig): Promise<Response> {
   return await runWrite(req, config, async (ctx) => {
     const { db, organizationId, schoolId, body, claims, req: request } = ctx;
     const id = crypto.randomUUID();
+    const employeeCode = requireStr(body, "employeeCode", "employee_code");
+    // MOD-3 — the employee code is the stable human key across payroll + reports;
+    // two employees sharing a code would collide (double-counted / mis-attributed
+    // salary). Reject a code already in use in this school. (Runs inside the write
+    // transaction; a DB partial-unique index on payload->>'employeeCode' is the
+    // concurrency backstop, deferred to the live/schema lane.)
+    const existingEmployees = await writeStore.findAll(db, organizationId, schoolId, "employee");
+    if (employeeCodeExists(existingEmployees, employeeCode)) {
+      throw new WriteValidationError(
+        `Employee code ${employeeCode} is already in use`,
+        409,
+        "EMPLOYEE_CODE_TAKEN",
+      );
+    }
     const payload: Record<string, unknown> = {
       id,
       name: requireStr(body, "name"),
-      employeeCode: requireStr(body, "employeeCode", "employee_code"),
+      employeeCode,
       department: str(body, "department") ?? "academics",
       role: str(body, "role") ?? "staff",
       designation: str(body, "designation") ?? "",
@@ -919,5 +944,262 @@ export async function handleProcessPayrollRun(req: Request, config: AppConfig): 
       request,
     );
     return { payload: processedRun!, status: 201 };
+  });
+}
+
+// ── MOD-2 — payroll ENGINE: salary structures + run generation ──────────────
+//
+// The run processor above (handleProcessPayrollRun) validates + disburses
+// entries; this is the missing front half — a per-employee salary STRUCTURE and
+// a generator that turns those structures into a run's per-employee lines
+// (netPay = basicPay + allowances − deductions). Structures live in the same
+// `snapshot_payroll` JSONB under a `structures` array (the register/payslip
+// reads already load the whole snapshot). All transforms are pure so the
+// money-safety guards are unit-testable DB-free.
+
+/** A per-employee monthly salary structure (`snapshot_payroll.structures`). */
+export interface SalaryStructure {
+  employeeId: string;
+  employeeCode: string;
+  employeeName: string;
+  department: string;
+  basicPay: number;
+  allowances: number;
+  deductions: number;
+}
+
+/**
+ * Parse + validate a salary-structure payload. Money components must be finite
+ * and non-negative, basicPay must be > 0, and the derived net
+ * (basic + allowances − deductions) must not be negative — a structure can never
+ * define a negative take-home. Throws 422 `SALARY_STRUCTURE_INVALID`.
+ */
+export function parseSalaryStructure(body: Record<string, unknown>): SalaryStructure {
+  const employeeId = requireStr(body, "employeeId", "employee_id");
+  const basicPay = money(body, "basicPay", "basic_pay");
+  const allowances = money(body, "allowances");
+  const deductions = money(body, "deductions");
+  for (const [label, value] of [["basicPay", basicPay], ["allowances", allowances], ["deductions", deductions]] as const) {
+    if (!Number.isFinite(value) || value < 0) {
+      throw new WriteValidationError(
+        `Salary structure invalid: ${label} must be a non-negative number`,
+        422,
+        "SALARY_STRUCTURE_INVALID",
+      );
+    }
+  }
+  if (basicPay <= 0) {
+    throw new WriteValidationError(
+      "Salary structure invalid: basicPay must be greater than 0",
+      422,
+      "SALARY_STRUCTURE_INVALID",
+    );
+  }
+  if (basicPay + allowances - deductions < 0) {
+    throw new WriteValidationError(
+      "Salary structure invalid: deductions exceed basic + allowances (net would be negative)",
+      422,
+      "SALARY_STRUCTURE_INVALID",
+    );
+  }
+  return {
+    employeeId,
+    employeeCode: str(body, "employeeCode", "employee_code") ?? "",
+    employeeName: str(body, "employeeName", "employee_name", "name") ?? "",
+    department: str(body, "department") ?? "",
+    basicPay,
+    allowances,
+    deductions,
+  };
+}
+
+/** Pure: upsert a salary structure into the snapshot, keyed by employeeId. */
+export function upsertSalaryStructure(
+  current: Record<string, unknown>,
+  structure: SalaryStructure,
+): Record<string, unknown> {
+  const structures = Array.isArray(current.structures)
+    ? current.structures as Array<Record<string, unknown>>
+    : [];
+  const idx = structures.findIndex(
+    (s) => String(s.employeeId ?? s.employee_id ?? "") === structure.employeeId,
+  );
+  const next = [...structures];
+  if (idx >= 0) next[idx] = { ...next[idx], ...structure };
+  else next.push({ ...structure });
+  return { ...current, structures: next };
+}
+
+/**
+ * Pure payroll-run GENERATION transform (MOD-2). Given the current
+ * `snapshot_payroll`, generates a DRAFT run `runId` for `period` from the stored
+ * salary structures (optionally filtered to `employeeIds`):
+ *   • Refuses to regenerate an already-`processed` run (409) — never overwrite a
+ *     disbursed run.
+ *   • Requires at least one matching structure (422 `PAYROLL_NO_STRUCTURES`).
+ *   • Computes each line's netPay = basic + allowances − deductions and runs the
+ *     SAME money-safety guards the processor enforces (validatePayrollEntries).
+ *   • Replaces any prior entries for this run (idempotent regenerate of a draft),
+ *     preserving other runs' entries.
+ * Returns the next snapshot + the draft run + its generated entries.
+ */
+export function generatePayrollRun(
+  current: Record<string, unknown>,
+  opts: { runId: string; period: string; employeeIds?: string[] },
+): { next: Record<string, unknown>; run: Record<string, unknown>; entries: Array<Record<string, unknown>> } {
+  const { runId, period } = opts;
+  const runs = Array.isArray(current.runs)
+    ? current.runs as Array<Record<string, unknown>>
+    : [];
+  const existingIdx = runs.findIndex((r) => String(r.id ?? "") === runId);
+  if (existingIdx >= 0 && String(runs[existingIdx]!.status ?? "") === "processed") {
+    throw new WriteValidationError(
+      `Payroll run ${runId} is already processed; regenerate is not allowed`,
+      409,
+      "PAYROLL_RUN_ALREADY_PROCESSED",
+    );
+  }
+
+  const allStructures = Array.isArray(current.structures)
+    ? current.structures as Array<Record<string, unknown>>
+    : [];
+  const wanted = opts.employeeIds && opts.employeeIds.length > 0
+    ? new Set(opts.employeeIds)
+    : null;
+  const selected = allStructures.filter(
+    (s) => wanted === null || wanted.has(String(s.employeeId ?? s.employee_id ?? "")),
+  );
+  if (selected.length === 0) {
+    throw new WriteValidationError(
+      "No salary structures to generate payroll from — define salary structures first",
+      422,
+      "PAYROLL_NO_STRUCTURES",
+    );
+  }
+
+  const entries = selected.map((s) => {
+    const basicPay = money(s, "basicPay", "basic_pay");
+    const allowances = money(s, "allowances");
+    const deductions = money(s, "deductions");
+    return {
+      runId,
+      employeeId: String(s.employeeId ?? s.employee_id ?? ""),
+      employeeCode: String(s.employeeCode ?? s.employee_code ?? ""),
+      employeeName: String(s.employeeName ?? s.employee_name ?? ""),
+      department: String(s.department ?? ""),
+      basicPay,
+      allowances,
+      deductions,
+      netPay: basicPay + allowances - deductions,
+    };
+  });
+  // The generated lines must pass the SAME guards the processor enforces.
+  validatePayrollEntries(entries);
+
+  const otherEntries = (Array.isArray(current.entries)
+    ? current.entries as Array<Record<string, unknown>>
+    : []).filter((e) => String(e.runId ?? e.run_id ?? "") !== runId);
+  const run: Record<string, unknown> = {
+    id: runId,
+    period,
+    status: "draft",
+    employeeCount: entries.length,
+  };
+  const nextRuns = [...runs];
+  if (existingIdx >= 0) nextRuns[existingIdx] = { ...nextRuns[existingIdx], ...run };
+  else nextRuns.push(run);
+  return {
+    next: { ...current, runs: nextRuns, entries: [...otherEntries, ...entries] },
+    run,
+    entries,
+  };
+}
+
+/** POST /hr/payroll/structures — upsert a per-employee salary structure (MOD-2). */
+export async function handleUpsertSalaryStructure(req: Request, config: AppConfig): Promise<Response> {
+  return await runWrite(req, config, async (ctx) => {
+    const { db, organizationId, schoolId, body, claims, req: request } = ctx;
+    const structure = parseSalaryStructure(body);
+    const saved = await writeStore.mutateSnapshot(
+      db,
+      organizationId,
+      schoolId,
+      "snapshot_payroll",
+      (current) => upsertSalaryStructure(current, structure),
+    );
+    await emitMutationAudit(
+      db,
+      claims,
+      moduleEntityAudit(
+        "hr.salary_structure.upserted",
+        "hr_salary_structure",
+        structure.employeeId,
+        {
+          basicPay: structure.basicPay,
+          allowances: structure.allowances,
+          deductions: structure.deductions,
+        },
+      ),
+      request,
+    );
+    return { payload: { structure, structures: saved.structures ?? [] }, status: 201 };
+  });
+}
+
+/** POST /hr/payroll/run/generate — generate a DRAFT run from salary structures (MOD-2). */
+export async function handleGeneratePayrollRun(req: Request, config: AppConfig): Promise<Response> {
+  return await runWrite(req, config, async (ctx) => {
+    const { db, organizationId, schoolId, body, claims, req: request } = ctx;
+    const runId = requireStr(body, "runId", "run_id");
+    const period = requireStr(body, "period");
+    const rawIds = body.employeeIds ?? body.employee_ids;
+    let employeeIds: string[] | undefined;
+    if (Array.isArray(rawIds)) {
+      // ENG-8 parity — cap the optional employee filter before any work.
+      if (rawIds.length > MAX_BULK_ITEMS) {
+        throw new WriteValidationError(
+          `Maximum ${MAX_BULK_ITEMS} employeeIds per request`,
+          422,
+          "PAYROLL_ENTRY_INVALID",
+        );
+      }
+      employeeIds = rawIds.map((v) => String(v ?? "").trim()).filter((v) => v.length > 0);
+    }
+
+    let generated: { run: Record<string, unknown>; entries: Array<Record<string, unknown>> } | null = null;
+    let guardError: WriteValidationError | null = null;
+    await writeStore.mutateSnapshot(
+      db,
+      organizationId,
+      schoolId,
+      "snapshot_payroll",
+      (current) => {
+        try {
+          const result = generatePayrollRun(current, { runId, period, employeeIds });
+          generated = { run: result.run, entries: result.entries };
+          return result.next;
+        } catch (error) {
+          if (error instanceof WriteValidationError) {
+            guardError = error;
+            return current; // never mutate on a rejected generation
+          }
+          throw error;
+        }
+      },
+    );
+    if (guardError !== null) {
+      throw guardError;
+    }
+
+    await emitMutationAudit(
+      db,
+      claims,
+      moduleEntityAudit("hr.payroll_run.generated", "hr_payroll_run", runId, {
+        period,
+        employeeCount: generated!.entries.length,
+      }),
+      request,
+    );
+    return { payload: { run: generated!.run, entries: generated!.entries }, status: 201 };
   });
 }
