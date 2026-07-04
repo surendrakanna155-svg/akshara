@@ -11,9 +11,17 @@
 ## ▶ CURRENT
 
 - **Phase:** P0 — Truth · Documentation · Live Verification 🔴 (gates everything)
-- **Wave:** **W2 — Safety Fixes** (SEC ∥ INFRA ∥ CODE)
-- **Status:** ⚪ Pending
-- **Why now:** W1 (docs) is done; the safety base (release fail-closed, PII-at-rest, money lost-update guard, off-site backup, alert delivery) must be true before Live Proof/CI (W3) and everything downstream.
+- **Wave:** **W2 — Safety Fixes** — **all non-blocked legs ✅ COMPLETE (2026-07-04)**; remainder ⏳ live-lane-gated
+- **Status:** 🟢 **14 / 19 P0 tasks done.** ⛔ **The remaining 5 are BLOCKED on the owner-provisioned live lane** (VPS SSH + tenant Postgres + branch CI). Autonomous execution has reached the live boundary.
+- **Done this wave:** `P0-SEC-1` (`c80f18c`) · `P0-SEC-2` (`619338b`) · `P0-SEC-3` (`63358bc`) · `P0-CODE-1` (`6408d90`) · `P0-INFRA-4/5/6` (`bacc56a`) · `P0-CODE-2` (`3cbf45c`). Owner decisions resolved: DR RPO = ~24h nightly; hide-list = hide all 8.
+- **⛔ Remaining P0 (need the live lane — STOP condition, do not fake):**
+  - `P0-INFRA-1` — off-site backup 3-2-1 (`RCLONE_REMOTE` + nightly encrypted push).
+  - `P0-INFRA-3` — wire watchdog alert delivery to a human sink.
+  - **W3 — Live Proof / CI:** `P0-TEST-1` (CI green on branch) → `P0-TEST-2` (233-probe isolation suite in CI) / `P0-TEST-3` (live-regression cron — **starts the 7-day P7 clock**).
+- **Phase-1 gate:** the roadmap requires "CI green; isolation suite in CI; cron started" before P1 — so **P1 does not start until the live lane opens.** Do not begin P1 early.
+
+### To resume: owner opens the live lane
+Provision VPS SSH + tenant Postgres + a CI runner on `feature/data-reliability-platform`, then run W2's INFRA-1/3 for real and W3's TEST-1/2/3. On P0-TEST-3 the 7-day cron clock starts (P7 prerequisite). Only after all P0 ✅ (or explicitly owner-deferred) + CI green does execution advance to **P1 — Backend & Code Fixes**.
 
 ### Active tasks (this wave only)
 | Task | Category | Description | Finding | Gate / blocker |

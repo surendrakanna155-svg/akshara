@@ -11,10 +11,10 @@
 | Field | Value |
 |---|---|
 | **Current Phase** | **P0 — Truth · Documentation · Live Verification** 🔴 (gates everything) |
-| **Current Wave** | **P0 · W2 — Safety Fixes** (SEC ∥ INFRA ∥ CODE) — **next**; W1 complete |
-| **Wave Status** | **P0 · W1 — Documentation Truth ✅ COMPLETE (2026-07-04, EOS DOCS PASS)**; W2 ⚪ Pending (needs live lane for INFRA) |
-| **Planning** | 🔒 FROZEN 2026-07-04 · final independent review complete ([`../roadmap/FINAL_ROADMAP_REVIEW.md`](../roadmap/FINAL_ROADMAP_REVIEW.md)) → **AUTONOMOUS EXECUTION UNDER WAY** |
-| **Last commit-gated wave** | **P0 · W1 — Documentation Truth** (DOC-1/2/4/5) — EOS DOCS PASS, `flutter analyze` 0 |
+| **Current Wave** | **P0 · W2 — Safety Fixes** — all non-blocked legs ✅ **COMPLETE**; remainder ⏳ live-lane-gated |
+| **Wave Status** | **14 / 19 P0 tasks ✅.** W1 ✅ + W2 SEC-1/2/3, INFRA-4/5/6, CODE-1/2 ✅. ⛔ Remaining 5 (INFRA-1/3, TEST-1/2/3) **BLOCKED on the owner-provisioned live lane** — autonomous execution at the live boundary. |
+| **Planning** | 🔒 FROZEN 2026-07-04 → **AUTONOMOUS EXECUTION UNDER WAY** (paused at live lane) |
+| **Last commit-gated wave** | **P0-CODE-2** (`3cbf45c`) — hide 8 backend-less surfaces; EOS FEATURE PASS, full suite 3567 pass |
 
 ## 2. Wave arithmetic
 
@@ -31,7 +31,7 @@ Waves as the roadmap + Autonomous Plan group them (a "wave" = one EOS-gated comm
 | P6 | 1 | P6-PILOT-1 (single + 3-school concurrent, stages 0–16) |
 | P7 | 1 | P7-CERT-1 (gates T/S/O/U/A/P/B/D + `QA-R-012`) |
 | P8 | 5 | P8-GA-1..5 |
-| **Total** | **≈68** | **Completed: 1** implementation wave (P0·W1 Documentation Truth, 2026-07-04) · **Remaining: ≈67** (P5 variable) |
+| **Total** | **≈68** | **Completed: P0·W1 + W2 non-blocked legs (14/19 P0 tasks), 2026-07-04** · **Remaining:** P0 live-lane tail (INFRA-1/3, TEST-1/2/3) then ≈66 (P5 variable) |
 
 ## 3. Current Blockers
 
@@ -97,7 +97,7 @@ Hard gates: P0 gates P4/P6/P7/P8 · P1-CODE-1 → P2-UX-2 · P3-AI-1 → P3-AI-2
 | Phase | Wave units | ✅ Done | 🔵 In progress | ⚪ Pending | Gate |
 |---|---:|---:|---:|---:|---|
 | Planning | — | 🔒 FROZEN + reviewed | — | — | audit + final review |
-| P0 — Truth/Docs/Live-Verify | 3 (19 tasks; DOC-3 ✅) | **1** (W1 ✅) | 1 (W2 — SEC-1 ✅; SEC-2/3, CODE-1, INFRA legs open) | 1 (W3) | EOS per task |
+| P0 — Truth/Docs/Live-Verify | 3 (19 tasks; **14 ✅**) | **2** (W1 ✅ · W2 non-blocked legs ✅) | 0 | 1 (W3 + INFRA-1/3 — ⏳ live-lane) | EOS per task |
 | P1 — Backend & Code Fixes | 35 | 0 | 0 | 35 | EOS per wave |
 | P2 — UI/UX | 5 | 0 | 0 | 5 | EOS UX per wave |
 | P3 — Adaptive AI | 15 sub-waves | 0 | 0 | 15 | EOS AI per sub-wave |
@@ -126,9 +126,9 @@ Hard gates: P0 gates P4/P6/P7/P8 · P1-CODE-1 → P2-UX-2 · P3-AI-1 → P3-AI-2
 
 ## 10. Current Focus
 
-> **P0 · W1 — Documentation Truth ✅ COMPLETE (2026-07-04).** ProjectStatus rewritten to HEAD reality; the ~600-file doc cleanup + governance layer (Constitution/EOS/CLAUDE) committed and version-controlled; evidence-grade framing + over-claim re-scope added to the QA tracker; TD-P0-01 (RLS) closed-with-residual; AuditArchitecture retention/partition/hash-chain marked target-not-built; backup runbooks consolidated to one canonical. `/eos docs` = PASS · `flutter analyze` 0 · junk (golden-failure diffs, run logs) gitignored.
+> **P0 · W1 ✅ + W2 non-blocked legs ✅ COMPLETE (2026-07-04) — 14/19 P0 tasks done.** Shipped this session: docs truth (DOC-1/2/4/5); release fail-closed + no debug-signing (SEC-1); PII session → encrypted storage (SEC-2); mock/QA auth out of release (SEC-3); finance `row_version` optimistic lock (CODE-1); backup-script clean + migration credential→GUC + deploy-time `erp_tenant` assertion (INFRA-4/5/6); 8 backend-less surfaces route-guarded off (CODE-2). Owner decisions resolved: DR RPO ~24h nightly (INFRA-2); hide-list = hide all 8. `flutter analyze` 0; full suite 3567 pass (2 pre-existing UX-7 tracked → P2-UX); backend deno finance 136/0 + tenant 7/0.
 >
-> **Next: P0 · W2 — Safety Fixes** (SEC ∥ INFRA ∥ CODE) per [`../roadmap/NEXT_ACTIVE_WAVE.md`](../roadmap/NEXT_ACTIVE_WAVE.md): `P0-SEC-1/2/3` · `P0-INFRA-1..6` (live-lane) · `P0-CODE-1` (finance `row_version`) · `P0-CODE-2` (👤 hide-list). SEC/CODE legs proceed now; INFRA legs need the owner-provisioned live lane.
+> **⛔ PAUSED at the live-lane boundary.** The remaining 5 P0 tasks — `P0-INFRA-1` (off-site backup), `P0-INFRA-3` (alert delivery), `P0-TEST-1/2/3` (CI green + isolation suite in CI + live-regression cron → 7-day P7 clock) — need the **owner-provisioned live lane** (VPS SSH + tenant Postgres + branch CI). The Phase-1 entry gate ("CI green") also depends on these, so **P1 does not start until the lane opens.** To resume: provision the lane, then run INFRA-1/3 + W3 for real.
 
 ---
 
