@@ -81,21 +81,47 @@ class SyncEngine {
     if (_draining) return;
     _draining = true;
     try {
+      // REL-9 — gate the drain on a REAL reachability probe, not just the OS
+      // interface flag: behind a captive portal the interface is "online" but no
+      // write can land, so skip the drain (queued ops stay pending) rather than
+      // burn attempts + backoff. Fails open, so it never wrongly blocks a drain.
+      if (!await _connectivity.isReachable()) return;
+      // REL-6 — crash-safe dequeue: before reading the queue, reclaim any op a
+      // prior run (or an unexpected throw this session) stranded `inFlight` back
+      // to `pending`. The single-flight `_draining` guard means no op is mid-send
+      // right now, so this only ever recovers orphans — never a live claim.
+      await _store.reclaimInFlightOperations();
       final List<MutationEnvelope> pending = await _store.pendingOperations();
       final DateTime now = _clock.now();
+      // REL-9 — per-entity ordering: writes for the SAME entity must apply in
+      // submission order. `pendingOperations()` is oldest-first; once an op for
+      // an entity does NOT confirm this drain (backoff-deferred, retried,
+      // conflicted or failed), every LATER op for that same entity is held until
+      // the earlier one clears — so a newer edit can never overtake an older one.
+      final Set<String> blockedEntities = <String>{};
       for (final MutationEnvelope op in pending) {
+        final String? entity = op.request.entityRef;
+        if (entity != null && blockedEntities.contains(entity)) {
+          continue; // an earlier write for this entity is still outstanding
+        }
         final DateTime? next = op.nextAttemptAt;
         if (next != null && next.isAfter(now)) {
-          continue; // backoff not yet elapsed
+          if (entity != null) blockedEntities.add(entity);
+          continue; // backoff not yet elapsed → hold this + later same-entity ops
         }
-        await _process(op);
+        final SyncStatus result = await _process(op);
+        if (result != SyncStatus.confirmed && entity != null) {
+          blockedEntities.add(entity);
+        }
       }
     } finally {
       _draining = false;
     }
   }
 
-  Future<void> _process(MutationEnvelope op) async {
+  /// Send one op and transition it; returns the resulting [SyncStatus] so the
+  /// drain can enforce per-entity ordering (REL-9).
+  Future<SyncStatus> _process(MutationEnvelope op) async {
     await _store.putOperation(op.copyWith(status: SyncStatus.inFlight));
     try {
       final ExecutorResponse resp = await _executor.send(op.request);
@@ -104,8 +130,10 @@ class SyncEngine {
           await _store.putOperation(
             op.copyWith(status: SyncStatus.confirmed, clearNextAttemptAt: true),
           );
+          return SyncStatus.confirmed;
         case SendClassification.conflict:
           await _onConflict(op, resp.data);
+          return SyncStatus.conflict;
         case SendClassification.failed:
           await _store.putOperation(
             op.copyWith(
@@ -114,11 +142,14 @@ class SyncEngine {
               clearNextAttemptAt: true,
             ),
           );
+          return SyncStatus.failed;
         case SendClassification.transient:
           await _scheduleRetry(op, resp.errorCode);
+          return SyncStatus.pending;
       }
     } on NetworkUnavailableException {
       await _scheduleRetry(op, 'OFFLINE');
+      return SyncStatus.pending;
     }
   }
 

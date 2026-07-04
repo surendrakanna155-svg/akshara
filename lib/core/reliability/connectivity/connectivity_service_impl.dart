@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 
@@ -55,6 +56,31 @@ class ConnectivityServiceImpl implements ConnectivityService {
 
   @override
   Stream<bool> get onStatusChange => _controller.stream;
+
+  /// Host resolved to confirm real internet reachability. A public anycast
+  /// resolver (fast, always-on) — we only need name resolution to succeed, not
+  /// an app request, so this stays independent of the API being up.
+  static const String _probeHost = 'one.one.one.one';
+
+  @override
+  Future<bool> isReachable() async {
+    // No interface at all → definitely unreachable, skip the probe.
+    if (!_isOnline) return false;
+    try {
+      final List<InternetAddress> result = await InternetAddress.lookup(
+        _probeHost,
+      ).timeout(const Duration(seconds: 2));
+      return result.isNotEmpty && result.first.rawAddress.isNotEmpty;
+    } on SocketException {
+      return false; // resolved-as-unreachable (e.g. captive portal / no upstream)
+    } on TimeoutException {
+      return false;
+    } catch (_) {
+      // Inconclusive (platform/permission issue) → fail open so a drain is never
+      // wrongly blocked; a real send then falls back to transient-retry anyway.
+      return _isOnline;
+    }
+  }
 
   Future<void> dispose() async {
     // Cancelling the platform subscription can also touch the binary messenger

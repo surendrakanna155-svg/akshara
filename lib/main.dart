@@ -35,10 +35,15 @@ Future<void> main() async {
   // Data Reliability Platform: open the durable, encrypted on-device store for
   // drafts + the outbox once, and bind it so every write inherits offline-safe
   // queue/retry and draft persistence (Phase 0b).
-  final reliabilityStore = await openReliabilityStore();
+  final reliabilityStoreOpen = await openReliabilityStore();
   final overrides = [
     sharedPreferencesProvider.overrideWithValue(prefs),
-    reliabilityStoreProvider.overrideWithValue(reliabilityStore),
+    reliabilityStoreProvider.overrideWithValue(reliabilityStoreOpen.store),
+    // REL-8: make a non-durable fallback (encrypted-DB open failed) observable
+    // instead of silent, so the Sync Center can warn that work won't survive a
+    // restart this session.
+    reliabilityStoreDegradedProvider
+        .overrideWithValue(reliabilityStoreOpen.degraded),
   ];
 
   final bootstrap = ProviderContainer(overrides: overrides);

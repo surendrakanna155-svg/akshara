@@ -45,6 +45,9 @@ ExecutorResponse idempotencyReplay([Map<String, dynamic>? data]) =>
 class FakeConnectivity implements ConnectivityService {
   FakeConnectivity({bool online = true}) : _online = online;
   bool _online;
+  // When set, overrides the reachability probe result; otherwise reachability
+  // mirrors [isOnline] (so existing tests behave exactly as before).
+  bool? _reachableOverride;
   final StreamController<bool> _controller = StreamController<bool>.broadcast();
 
   @override
@@ -53,10 +56,17 @@ class FakeConnectivity implements ConnectivityService {
   @override
   Stream<bool> get onStatusChange => _controller.stream;
 
+  @override
+  Future<bool> isReachable() async => _reachableOverride ?? _online;
+
   void setOnline(bool value) {
     _online = value;
     _controller.add(value);
   }
+
+  /// REL-9 — simulate "OS says online but the internet is unreachable"
+  /// (captive portal): [isOnline] stays true while [isReachable] returns false.
+  void setReachable(bool? value) => _reachableOverride = value;
 
   Future<void> dispose() => _controller.close();
 }

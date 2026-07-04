@@ -17,19 +17,23 @@ class SyncBanner extends ConsumerWidget {
     if (!s.shouldShowBanner) return const SizedBox.shrink();
 
     final ThemeData theme = Theme.of(context);
-    final bool conflicts = s.hasConflicts;
-    final Color bg = conflicts
+    // REL-8 — a non-durable storage fallback is the most serious state (work can
+    // be lost), so it takes the error tone alongside conflicts.
+    final bool alarm = s.hasConflicts || s.durabilityDegraded;
+    final Color bg = alarm
         ? theme.colorScheme.errorContainer
         : theme.colorScheme.secondaryContainer;
-    final Color fg = conflicts
+    final Color fg = alarm
         ? theme.colorScheme.onErrorContainer
         : theme.colorScheme.onSecondaryContainer;
 
-    final IconData icon = !s.online
-        ? Icons.cloud_off
-        : conflicts
-            ? Icons.error_outline
-            : Icons.sync;
+    final IconData icon = s.durabilityDegraded
+        ? Icons.report_gmailerrorred
+        : !s.online
+            ? Icons.cloud_off
+            : s.hasConflicts
+                ? Icons.error_outline
+                : Icons.sync;
 
     return Material(
       color: bg,
@@ -60,6 +64,10 @@ class SyncBanner extends ConsumerWidget {
   }
 
   String _message(SyncSummary s) {
+    if (s.durabilityDegraded) {
+      return 'Secure storage unavailable — your work is not being saved on this '
+          'device and may be lost if you close the app';
+    }
     if (s.hasConflicts) {
       return '${s.conflicts} item(s) need your attention to sync';
     }

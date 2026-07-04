@@ -21,6 +21,14 @@ import 'sync_center/sync_center_controller.dart';
 final Provider<ReliabilityStore> reliabilityStoreProvider =
     Provider<ReliabilityStore>((ref) => InMemoryReliabilityStore());
 
+/// REL-8 — true when the durable encrypted store failed to open and the app
+/// fell back to a NON-DURABLE in-memory store this session (drafts + queued
+/// writes will not survive a restart). Defaults to healthy; `main.dart`
+/// overrides it from the boot-time [openReliabilityStore] result so the Sync
+/// Center / telemetry can surface the downgrade instead of it being silent.
+final Provider<bool> reliabilityStoreDegradedProvider =
+    Provider<bool>((ref) => false);
+
 /// The single, centralized declaration of every operation's reliability
 /// behaviour (refinement R4). New modules add one entry here — no offline code.
 final Provider<OperationPolicyRegistry> operationPolicyRegistryProvider =
@@ -71,5 +79,6 @@ final ChangeNotifierProvider<SyncCenterController> syncCenterControllerProvider 
     store: ref.watch(reliabilityStoreProvider),
     connectivity: ref.watch(connectivityServiceProvider),
     engine: ref.watch(syncEngineProvider),
+    durabilityDegraded: ref.watch(reliabilityStoreDegradedProvider),
   );
 });

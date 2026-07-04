@@ -18,6 +18,14 @@ abstract interface class ReliabilityStore {
   /// Operations still needing work (pending), oldest first.
   Future<List<MutationEnvelope>> pendingOperations();
 
+  /// REL-6 — crash-safe dequeue recovery. Reset any operation stranded
+  /// `inFlight` (a previous run died — or threw — between claiming a write and
+  /// recording its terminal result) back to `pending` so it re-drains. Safe
+  /// because every queued write carries an idempotency key: a re-send the server
+  /// already processed is de-duplicated, so re-draining never double-applies.
+  /// Returns the number of operations reclaimed.
+  Future<int> reclaimInFlightOperations();
+
   /// Everything currently retained, newest first — drives the sync history.
   Future<List<MutationEnvelope>> allOperations();
 

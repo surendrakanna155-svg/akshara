@@ -154,6 +154,37 @@ class SqfliteReliabilityStore implements ReliabilityStore {
   }
 
   @override
+  Future<int> reclaimInFlightOperations() async {
+    // The status lives BOTH in the `status` column and inside the serialized
+    // envelope JSON (`_decodeOp` reads the JSON), so a column-only UPDATE would
+    // leave the two inconsistent. Read the in-flight rows, flip the envelope to
+    // pending, and re-persist both — in one transaction so a mid-reclaim crash
+    // is a no-op (idempotency-key makes a repeated reclaim safe anyway).
+    return _db.transaction<int>((Transaction txn) async {
+      final List<Map<String, Object?>> rows = await txn.query(
+        _opsTable,
+        where: 'status = ?',
+        whereArgs: <Object?>[SyncStatus.inFlight.name],
+      );
+      for (final Map<String, Object?> row in rows) {
+        final MutationEnvelope op =
+            _decodeOp(row).copyWith(status: SyncStatus.pending);
+        await txn.insert(
+          _opsTable,
+          <String, Object?>{
+            'id': op.id,
+            'json': jsonEncode(op.toJson()),
+            'status': op.status.name,
+            'created_at': op.createdAt.toIso8601String(),
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+      return rows.length;
+    });
+  }
+
+  @override
   Future<List<MutationEnvelope>> allOperations() async {
     final List<Map<String, Object?>> rows =
         await _db.query(_opsTable, orderBy: 'created_at DESC');

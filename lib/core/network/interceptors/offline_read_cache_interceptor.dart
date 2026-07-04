@@ -35,12 +35,23 @@ class OfflineReadCacheInterceptor extends Interceptor {
     this._store, {
     ReliabilityClock clock = const SystemReliabilityClock(),
     bool Function(RequestOptions options)? shouldCache,
+    this.cacheTtl = defaultCacheTtl,
   })  : _clock = clock,
         _shouldCache = shouldCache ?? _defaultShouldCache;
 
   final ReliabilityStore _store;
   final ReliabilityClock _clock;
   final bool Function(RequestOptions options) _shouldCache;
+
+  /// REL-7 — maximum age an offline-cached read may be served at. A body older
+  /// than this is treated as a cache miss (the error surfaces instead) so the UI
+  /// never presents genuinely stale data — an ERP fee balance / attendance mark
+  /// from days ago dressed as current — as if it were live. Tune per deployment;
+  /// the default keeps a day of previously-loaded screens available offline.
+  final Duration cacheTtl;
+
+  /// Default offline-cache freshness window.
+  static const Duration defaultCacheTtl = Duration(hours: 24);
 
   /// Response header / extra flag marking a body that came from the offline
   /// cache rather than the network.
@@ -96,6 +107,13 @@ class OfflineReadCacheInterceptor extends Interceptor {
     }
     final CacheRecord? cached = await _store.getCache(_cacheKey(options));
     if (cached == null) {
+      handler.next(err);
+      return;
+    }
+    // REL-7 — never serve a body older than the TTL. Drop the expired entry (so
+    // it stops occupying the LRU) and let the original connectivity error stand.
+    if (_clock.now().difference(cached.updatedAt) > cacheTtl) {
+      _store.deleteCache(_cacheKey(options)).catchError((Object _) {});
       handler.next(err);
       return;
     }

@@ -44,6 +44,18 @@ class InMemoryReliabilityStore implements ReliabilityStore {
   }
 
   @override
+  Future<int> reclaimInFlightOperations() async {
+    var count = 0;
+    for (final MapEntry<String, MutationEnvelope> entry in _ops.entries.toList()) {
+      if (entry.value.status == SyncStatus.inFlight) {
+        _ops[entry.key] = entry.value.copyWith(status: SyncStatus.pending);
+        count++;
+      }
+    }
+    return count;
+  }
+
+  @override
   Future<List<MutationEnvelope>> allOperations() async {
     final List<MutationEnvelope> all = _ops.values.toList()
       ..sort((MutationEnvelope a, MutationEnvelope b) =>

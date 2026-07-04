@@ -14,9 +14,11 @@ class SyncCenterController extends ChangeNotifier {
     required ReliabilityStore store,
     required ConnectivityService connectivity,
     required SyncEngine engine,
+    bool durabilityDegraded = false,
   })  : _store = store,
         _connectivity = connectivity,
-        _engine = engine {
+        _engine = engine,
+        _durabilityDegraded = durabilityDegraded {
     _connSub = _connectivity.onStatusChange.listen((_) => refresh());
     // Initial load.
     unawaited(refresh());
@@ -25,6 +27,7 @@ class SyncCenterController extends ChangeNotifier {
   final ReliabilityStore _store;
   final ConnectivityService _connectivity;
   final SyncEngine _engine;
+  final bool _durabilityDegraded;
   StreamSubscription<bool>? _connSub;
 
   SyncSummary _summary = const SyncSummary();
@@ -34,6 +37,7 @@ class SyncCenterController extends ChangeNotifier {
     final summary = SyncSummary.fromOperations(
       await _store.allOperations(),
       online: _connectivity.isOnline,
+      durabilityDegraded: _durabilityDegraded,
     );
     _summary = summary;
     notifyListeners();

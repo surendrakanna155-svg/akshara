@@ -11,6 +11,7 @@ class SyncSummary {
     this.failed = 0,
     this.lastSyncedAt,
     this.history = const <MutationEnvelope>[],
+    this.durabilityDegraded = false,
   });
 
   final bool online;
@@ -19,6 +20,10 @@ class SyncSummary {
   final int conflicts;
   final int failed;
   final DateTime? lastSyncedAt;
+
+  /// REL-8 — true when the durable store fell back to in-memory this session, so
+  /// queued work won't survive a restart. Drives a "storage unavailable" warning.
+  final bool durabilityDegraded;
 
   /// Recent operations, newest first (for the detailed history view).
   final List<MutationEnvelope> history;
@@ -30,11 +35,12 @@ class SyncSummary {
   bool get hasConflicts => conflicts > 0;
 
   /// Whether the offline/pending banner should be shown at all.
-  bool get shouldShowBanner => !online || hasOutstanding;
+  bool get shouldShowBanner => !online || hasOutstanding || durabilityDegraded;
 
   factory SyncSummary.fromOperations(
     List<MutationEnvelope> all, {
     required bool online,
+    bool durabilityDegraded = false,
   }) {
     int pending = 0, inFlight = 0, conflicts = 0, failed = 0;
     DateTime? lastSynced;
@@ -62,6 +68,7 @@ class SyncSummary {
       failed: failed,
       lastSyncedAt: lastSynced,
       history: all.take(50).toList(),
+      durabilityDegraded: durabilityDegraded,
     );
   }
 }
