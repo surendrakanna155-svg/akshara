@@ -11,10 +11,10 @@
 | Field | Value |
 |---|---|
 | **Current Phase** | **P1 — Remaining Backend & Code Fixes** 🟠 (P0 code/security ✅ 14/19; 5 live-lane tasks ⏳ owner-deferred) |
-| **Current Wave** | **P1-PROD-1 — C1 · Finance Fee Recovery / Collections CRM (FIN-R1..R5)** — 🔵 next up. **P2-UX-1 ∥-eligible** (disjoint ownership). P1-CODE-4 identity stays 👤-gated. |
-| **Wave Status** | **P1-CODE-1 ✅ + P1-CODE-2 ✅ + P1-CODE-3 ✅ + P1-CODE-5 ✅ + P1-PROD-0 ✅** — reliability REL-1..9, backend hardening (ENG-4/5/7/8/9/10, DB-6), HR payroll engine (MOD-2/3), XCT foundations (export pipeline / reminder rail / date pickers) closed. P0: 14/19 ✅; 5 live-lane ⏳ owner-deferred. |
+| **Current Wave** | **P1-PROD-2 — C2 · Finance Counter, Statements & Reports (FIN-1/2/6/7/8)** — 🔵 next up. **P2-UX-1 ∥-eligible** (disjoint ownership). P1-CODE-4 identity stays 👤-gated. |
+| **Wave Status** | **P1-CODE-1/2/3/5 ✅ + P1-PROD-0 ✅ + P1-PROD-1 ✅** — reliability REL-1..9, backend hardening, HR payroll, XCT foundations, and C1 Finance Fee-Recovery CRM (FIN-R2 call queue + FIN-R4 live history) closed. P0: 14/19 ✅; 5 live-lane ⏳ owner-deferred. |
 | **Planning** | 🔒 FROZEN 2026-07-04 → **AUTONOMOUS EXECUTION UNDER WAY** (P1 code + PROD waves; live lane deferred) |
-| **Last commit-gated wave** | **P1-PROD-0** (`83bc267`) — XCT foundations: shared `buildGridTable` PDF primitive (3 bespoke builders consolidated onto the ONE export pipeline ~15 modules ride); reminder/scheduling rail (`scheduleReminder` + one `runDueReminders` runner; due reminder fires end-to-end into a pending in-app delivery, test-proven); shared read-only `AksharaDateField` picker (HR leave/probation + intelligence). EOS FOUNDATION PASS, suite 3611 pass (0 new fails) |
+| **Last commit-gated wave** | **P1-PROD-1** (`c1b9feb`) — C1 Finance Fee-Recovery CRM: discovery-first (FIN-R1/R3/R5 verified existing); built **FIN-R2 telecaller call queue** (server-ranked, rides the same defaulter source — no dup; `GET /finance/recovery/call-queue`; `_CallQueueSection` reusing existing dialogs; log/PTP re-ranks live) + fixed **FIN-R4** (history sheet → live provider). EOS FEATURE PASS, suite 3613 pass (0 new fails), deno finance 143/0 |
 
 ## 2. Wave arithmetic
 
@@ -31,7 +31,7 @@ Waves as the roadmap + Autonomous Plan group them (a "wave" = one EOS-gated comm
 | P6 | 1 | P6-PILOT-1 (single + 3-school concurrent, stages 0–16) |
 | P7 | 1 | P7-CERT-1 (gates T/S/O/U/A/P/B/D + `QA-R-012`) |
 | P8 | 5 | P8-GA-1..5 |
-| **Total** | **≈68** | **Completed: P0·W1 + W2 non-blocked legs (14/19 P0) + P1-CODE-1 (REL-1..5) + P1-CODE-2 (REL-6..9) + P1-CODE-3 (ENG-4/5/7/8/9/10,DB-6) + P1-CODE-5 (MOD-2/3) + P1-PROD-0 (XCT-1/2/3), 2026-07-04** · **Remaining:** P0 live-lane tail (INFRA-1/3, TEST-1/2/3) then ≈61 (P5 variable) |
+| **Total** | **≈68** | **Completed: P0·W1 + W2 non-blocked legs (14/19 P0) + P1-CODE-1 (REL-1..5) + P1-CODE-2 (REL-6..9) + P1-CODE-3 (ENG-4/5/7/8/9/10,DB-6) + P1-CODE-5 (MOD-2/3) + P1-PROD-0 (XCT-1/2/3) + P1-PROD-1 (C1 Finance Recovery CRM), 2026-07-04** · **Remaining:** P0 live-lane tail (INFRA-1/3, TEST-1/2/3) then ≈60 (P5 variable) |
 
 ## 3. Current Blockers
 
@@ -98,7 +98,7 @@ Hard gates: P0 gates P4/P6/P7/P8 · P1-CODE-1 → P2-UX-2 · P3-AI-1 → P3-AI-2
 |---|---:|---:|---:|---:|---|
 | Planning | — | 🔒 FROZEN + reviewed | — | — | audit + final review |
 | P0 — Truth/Docs/Live-Verify | 3 (19 tasks; **14 ✅**) | **2** (W1 ✅ · W2 non-blocked legs ✅) | 0 | 1 (W3 + INFRA-1/3 — ⏳ live-lane) | EOS per task |
-| P1 — Backend & Code Fixes | 35 | 5 (CODE-1/2/3/5, PROD-0) | 0 | 30 (next: PROD-1 · C1; CODE-4 👤) | EOS per wave |
+| P1 — Backend & Code Fixes | 35 | 6 (CODE-1/2/3/5, PROD-0, PROD-1) | 0 | 29 (next: PROD-2 · C2; CODE-4 👤) | EOS per wave |
 | P2 — UI/UX | 5 | 0 | 0 | 5 | EOS UX per wave |
 | P3 — Adaptive AI | 15 sub-waves | 0 | 0 | 15 | EOS AI per sub-wave |
 | P4 — Red Team | 2 | 0 | 0 | 2 | RED-TEAM verdict |
@@ -111,7 +111,7 @@ Hard gates: P0 gates P4/P6/P7/P8 · P1-CODE-1 → P2-UX-2 · P3-AI-1 → P3-AI-2
 ## 8. EOS Status
 
 - **Gate protocol:** every wave ends with `/eos <scope>`; **commit only on PASS**; CONDITIONAL PASS only with P1s tracked *and* roadmap permission; BLOCKED = fix and re-run, never advance. Verdicts append to `docs/engineering/eos/EOS_RUN_LEDGER.md` + the journal.
-- **Implementation EOS runs so far:** **13** — P0·W1 DOCS PASS · P0·W2 legs (SEC-1/2/3, CODE-1/2, INFRA-4/5/6) PASS · P1-CODE-1 RELIABILITY PASS · P1-CODE-2 RELIABILITY PASS · P1-CODE-3 SECURITY+ARCH PASS · P1-CODE-5 FEATURE PASS · **P1-PROD-0 FOUNDATION PASS (2026-07-04, latest)**. See `docs/engineering/eos/EOS_RUN_LEDGER.md`.
+- **Implementation EOS runs so far:** **14** — P0·W1 DOCS · P0·W2 legs (SEC-1/2/3, CODE-1/2, INFRA-4/5/6) · P1-CODE-1/2 RELIABILITY · P1-CODE-3 SECURITY+ARCH · P1-CODE-5 FEATURE · P1-PROD-0 FOUNDATION · **P1-PROD-1 FEATURE (C1 Finance Recovery CRM) PASS (2026-07-04, latest)**. See `docs/engineering/eos/EOS_RUN_LEDGER.md`.
 - **Open P0 findings:** none known at baseline (audit P0s are scheduled tasks, not open gate failures).
 - **Automatic-failure tripwires** (instant BLOCKED): data loss · security breach · escalation · tenant-isolation failure · critical crash · duplicate financial transaction · broken auth/sync · critical regression · failed backup verification · production blocker.
 - **Pre-execution baseline (verified live 2026-07-03, do NOT redo):** RLS isolation PASS · edge = `erp_tenant` NOBYPASSRLS · entitlement ON · encrypted backups + monthly restore drill green · watchdog green · AI live via OpenRouter · live DB password rotated · `flutter analyze` 0.
@@ -126,7 +126,7 @@ Hard gates: P0 gates P4/P6/P7/P8 · P1-CODE-1 → P2-UX-2 · P3-AI-1 → P3-AI-2
 
 ## 10. Current Focus
 
-> **P1 lane through P1-PROD-0 ✅ (2026-07-04).** Done since planning freeze: P0·W1 docs truth + W2 non-blocked legs (14/19 P0) · P1-CODE-1/2 (reliability platform REL-1..9) · P1-CODE-3 (backend hardening ENG-4/5/7/8/9/10 + DB-6) · P1-CODE-5 (HR payroll engine MOD-2/3) · **P1-PROD-0 (XCT foundations `83bc267`: XCT-1 shared `buildGridTable` PDF primitive — 3 bespoke tabular-PDF builders consolidated onto the ONE export pipeline ~15 modules ride; XCT-2 reminder/scheduling rail `_shared/reminders` — `scheduleReminder` + one `runDueReminders` runner, a due reminder fires end-to-end into a pending in-app delivery, test-proven; XCT-3 shared read-only `AksharaDateField` picker across HR leave/probation + intelligence).** analyze 0 · suite 3611 pass (2 known UX-7 → P2-UX) · deno touched 108/1-known-ISO-COUNT.
+> **P1 lane through P1-PROD-1 ✅ (2026-07-04).** Done since planning freeze: P0·W1 docs truth + W2 non-blocked legs (14/19 P0) · P1-CODE-1/2 (reliability platform REL-1..9) · P1-CODE-3 (backend hardening) · P1-CODE-5 (HR payroll engine) · P1-PROD-0 (XCT foundations `83bc267`: shared PDF-table primitive, reminder/scheduling rail, date pickers) · **P1-PROD-1 (C1 Finance Fee-Recovery CRM `c1b9feb`: discovery-first — FIN-R1/R3/R5 verified existing; built FIN-R2 telecaller call queue server-ranked over the same defaulter source `GET /finance/recovery/call-queue` + `_CallQueueSection`, log/PTP re-ranks live; fixed FIN-R4 history sheet → live provider).** analyze 0 · suite 3613 pass (2 known UX-7 → P2-UX) · deno finance 143/0.
 >
 > **▶ NEXT: P1-PROD-1 (C1 — Finance Fee Recovery / Collections CRM, FIN-R1..R5)** — discovery-first (a `finance_recovery_crm` migration + actions already exist; verify/expand, don't duplicate). **P2-UX-1 ∥-eligible** under disjoint ownership. Still owner-gated: the identity-decision batch (P1-CODE-4), module-scope 👤s (P1-CODE-6/7/8), and the live lane (`P0-INFRA-1/3`, `P0-TEST-1/2/3` — VPS SSH + tenant Postgres + branch CI; the 7-day cron clock → P7 starts only when P0-TEST-3 runs for real).
 
