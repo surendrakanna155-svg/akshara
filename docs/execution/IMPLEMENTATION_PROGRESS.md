@@ -78,6 +78,8 @@ implement → validate → `/eos` PASS → commit → append a journal row here.
 | 2026-07-04 | (uncommitted) | Planning | FREEZE | docs/roadmap/* (finalized), docs/design/adaptive-ai/ folded into P3, NEXT_ACTIVE_WAVE + FINALIZATION report | n/a (planning) | ROADMAP_FINALIZATION_REPORT.md | — | planning freeze |
 | 2026-07-04 | `c2b8e27` | P0 | **P0-DOC-1/2/4/5 (W1 — Documentation Truth)** | `docs/ProjectStatus.md` (rewrite), `docs/FINAL_QA_MASTER_TRACKER.md` (evidence-grade framing + over-claim re-scope), `docs/TechnicalDebt/TD-P0-01-RLS-Enforcement.md` (closed-with-residual), `docs/AuditArchitecture.md` (target-not-built banner), `docs/Operations/{Backup,Restore}-Runbook.md` (→ redirect stubs), `docs/README.md`, `.gitignore` (govern `.claude/skills|commands`; ignore golden-failure diffs + `flutter_*.log`), + ~600-file cleanup/governance tree committed · 766 files | **PASS** (EOS DOCS) | `flutter analyze` 0; docs-only (0 `lib/**`/`supabase/**`); tracker frozen (0 rows rewritten); cleanup = moves-to-archive (content preserved) | DOC-1, DOC-2, DOC-4/QA-1, DB-9/DOC-5, DB-6/DOC-6, DOC-7 | P0-DOC-1/2/4/5 |
 
+| 2026-07-04 | `c80f18c` | P0 | **P0-SEC-1** (W2 — Safety Fixes) | `lib/core/config/environment.dart` (fail-closed `guardForRelease`), `android/app/build.gradle.kts` (no debug-signing + task-graph guard), `test/core/config/environment_test.dart` (+5) | **PASS** (EOS SEC) | `flutter analyze` 0; env tests 11/11 | SEC-1, SEC-2 | P0-SEC-1 |
+
 *(Wave-2 onward: the executing session appends one row per task as each passes EOS and commits.)*
 
 ---
