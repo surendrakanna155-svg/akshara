@@ -91,12 +91,12 @@ export async function handleCreatePromotion(req: Request, config: AppConfig): Pr
     description?: string;
   }>(req);
   if (!body) {
-    return errorEnvelope("VALIDATION_ERROR", "Request body required", 400);
+    return errorEnvelope("VALIDATION_ERROR", "Request body required", 422);
   }
   // subjectType is the general publisher field; achievementType kept for back-compat.
   const subjectType = body.subjectType ?? body.achievementType ?? "achievement";
   if (!body.title) {
-    return errorEnvelope("VALIDATION_ERROR", "title is required", 400);
+    return errorEnvelope("VALIDATION_ERROR", "title is required", 422);
   }
 
   try {
@@ -285,11 +285,11 @@ export async function handleTrackPromotion(
 
   const body = await readJson<{ metric?: string }>(req);
   if (!body) {
-    return errorEnvelope("VALIDATION_ERROR", "Request body required", 400);
+    return errorEnvelope("VALIDATION_ERROR", "Request body required", 422);
   }
   const metric = body.metric as "views" | "shares" | "downloads" | undefined;
   if (!metric || !["views", "shares", "downloads"].includes(metric)) {
-    return errorEnvelope("VALIDATION_ERROR", "metric must be views, shares, or downloads", 400);
+    return errorEnvelope("VALIDATION_ERROR", "metric must be views, shares, or downloads", 422);
   }
 
   try {

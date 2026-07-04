@@ -98,11 +98,11 @@ Deno.test("QA-B-007: POST memories events is denied for a non-holder (403)", asy
   assertEquals(env.error.code, "FORBIDDEN");
 });
 
-Deno.test("QA-B-007: POST memories events rejects missing title/category (400 before DB)", async () => {
+Deno.test("QA-B-007: POST memories events rejects missing title/category (422 before DB)", async () => {
   const res = await call("POST", "/memories/events", ["manageSchoolMemories"], {
     title: "Annual Day",
   });
-  assertEquals(res!.status, 400);
+  assertEquals(res!.status, 422);
 });
 
 Deno.test("QA-B-007: GET memories events authorizes a viewSchoolMemories holder (503)", async () => {
@@ -122,11 +122,11 @@ Deno.test("QA-B-007: POST upload presign is denied for a read-only holder (403 w
   assertEquals(res!.status, 403);
 });
 
-Deno.test("QA-B-007: POST upload presign rejects a missing filename (400 before DB)", async () => {
+Deno.test("QA-B-007: POST upload presign rejects a missing filename (422 before DB)", async () => {
   const res = await call("POST", `/memories/events/${EVENT_ID}/upload/presign`, [
     "manageSchoolMemories",
   ], {});
-  assertEquals(res!.status, 400);
+  assertEquals(res!.status, 422);
 });
 
 Deno.test("QA-B-007: POST upload presign rejects a disallowed file type (422 RT-31)", async () => {
@@ -143,11 +143,11 @@ Deno.test("QA-B-007: POST upload presign with a valid image authorizes (503 reac
   assertEquals(res!.status, 503);
 });
 
-Deno.test("QA-B-007: POST upload confirm rejects missing required fields (400 before DB)", async () => {
+Deno.test("QA-B-007: POST upload confirm rejects missing required fields (422 before DB)", async () => {
   const res = await call("POST", `/memories/events/${EVENT_ID}/upload/confirm`, [
     "manageSchoolMemories",
   ], { albumId: "a1" });
-  assertEquals(res!.status, 400);
+  assertEquals(res!.status, 422);
 });
 
 Deno.test("QA-B-007: memories rejects an unauthenticated caller (401)", async () => {

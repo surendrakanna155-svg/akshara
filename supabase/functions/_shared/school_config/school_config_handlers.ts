@@ -88,7 +88,7 @@ export async function handlePutSchoolConfig(
 
   const input = parseBody(await readJson<Record<string, unknown>>(req));
   if (!input) {
-    return errorEnvelope("INVALID_BODY", "A capabilities object is required", 400);
+    return errorEnvelope("INVALID_BODY", "A capabilities object is required", 422);
   }
 
   const orgId = organizationIdFromClaims(auth.claims);

@@ -110,7 +110,7 @@ export async function handleRecordAssetLifecycleEvent(
   try {
     body = await readJson(req) ?? {};
   } catch {
-    return errorEnvelope("VALIDATION_ERROR", "Invalid JSON body", 400);
+    return errorEnvelope("VALIDATION_ERROR", "Invalid JSON body", 422);
   }
 
   const assetId = typeof body.assetId === "string" ? body.assetId : "";
@@ -126,7 +126,7 @@ export async function handleRecordAssetLifecycleEvent(
     return errorEnvelope(
       "VALIDATION_ERROR",
       "assetId and valid eventType are required",
-      400,
+      422,
     );
   }
 

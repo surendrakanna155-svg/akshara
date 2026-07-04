@@ -7,7 +7,7 @@
 //   - PUT requires manageSchoolSetup + school scope; a manage-holder reaches the
 //     persist path (503); a non-holder gets 403; the read-only viewSchoolSetup
 //     holder is denied the write (403).
-//   - A PUT with no capabilities object is rejected (400 INVALID_BODY) before DB.
+//   - A PUT with no capabilities object is rejected (422 INVALID_BODY) before DB.
 //   - Method not registered on the path → router returns null (404 at dispatch).
 // Live remainder (infra): the real 200 + persisted school_configuration row and
 // the per-school RLS isolation are covered by the live cert.
@@ -86,9 +86,9 @@ Deno.test("QA-B-006: PUT school-config passes the gate with manageSchoolSetup (5
   assertEquals(res?.status, 503);
 });
 
-Deno.test("QA-B-006: PUT with no capabilities object is rejected (400 INVALID_BODY) before DB", async () => {
+Deno.test("QA-B-006: PUT with no capabilities object is rejected (422 INVALID_BODY) before DB", async () => {
   const res = await call("PUT", ["manageSchoolSetup"], { schoolType: "day_school" });
-  assertEquals(res?.status, 400);
+  assertEquals(res?.status, 422);
   const env = await res!.json();
   assertEquals(env.error.code, "INVALID_BODY");
 });

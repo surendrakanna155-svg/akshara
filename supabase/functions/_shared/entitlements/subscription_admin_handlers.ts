@@ -69,7 +69,7 @@ export async function handleAssignSubscription(
     return errorEnvelope(
       "INVALID_BODY",
       "A valid planSlug (trial|standard|professional|enterprise) is required",
-      400,
+      422,
     );
   }
 

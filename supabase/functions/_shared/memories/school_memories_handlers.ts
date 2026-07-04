@@ -134,10 +134,10 @@ export async function handleCreateMemoryEvent(req: Request, config: AppConfig): 
     visibility?: string;
   }>(req);
   if (!body) {
-    return errorEnvelope("VALIDATION_ERROR", "Request body required", 400);
+    return errorEnvelope("VALIDATION_ERROR", "Request body required", 422);
   }
   if (!body.title || !body.category) {
-    return errorEnvelope("VALIDATION_ERROR", "title and category are required", 400);
+    return errorEnvelope("VALIDATION_ERROR", "title and category are required", 422);
   }
 
   try {
@@ -224,10 +224,10 @@ export async function handleMemoryUploadPresign(
     sizeBytes?: number;
   }>(req);
   if (!body) {
-    return errorEnvelope("VALIDATION_ERROR", "Request body required", 400);
+    return errorEnvelope("VALIDATION_ERROR", "Request body required", 422);
   }
   if (!body.filename) {
-    return errorEnvelope("VALIDATION_ERROR", "filename is required", 400);
+    return errorEnvelope("VALIDATION_ERROR", "filename is required", 422);
   }
   // RT-31: reject wrong-type / oversized uploads at presign (bucket enforces too).
   const uploadError = validateUpload(
@@ -290,10 +290,10 @@ export async function handleMemoryUploadConfirm(
     mediaType?: string;
   }>(req);
   if (!body) {
-    return errorEnvelope("VALIDATION_ERROR", "Request body required", 400);
+    return errorEnvelope("VALIDATION_ERROR", "Request body required", 422);
   }
   if (!body.albumId || !body.storagePath || !body.title) {
-    return errorEnvelope("VALIDATION_ERROR", "albumId, storagePath, title required", 400);
+    return errorEnvelope("VALIDATION_ERROR", "albumId, storagePath, title required", 422);
   }
 
   const orgId = organizationIdFromClaims(auth.claims);

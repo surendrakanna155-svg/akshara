@@ -401,7 +401,7 @@ export async function handleUpdateAttendanceCorrectionStatus(
 
   const body = await readJson<Record<string, unknown>>(req);
   if (!body) {
-    return errorEnvelope("VALIDATION_ERROR", "Request body required", 400);
+    return errorEnvelope("VALIDATION_ERROR", "Request body required", 422);
   }
   const status = String(body.status ?? "").trim() as AttendanceCorrectionStatus;
   if (!status) {

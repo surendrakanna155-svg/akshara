@@ -125,7 +125,7 @@ Deno.test("QA-B-025: module.inventory 402 gate is wired via withEntitlement on t
   Deno.env.delete("ENTITLEMENT_ENFORCEMENT");
 });
 
-Deno.test("QA-B-025: POST /inventory/intelligence/lifecycle/events — 403 non-holder, 400 bad body, 503 valid", async () => {
+Deno.test("QA-B-025: POST /inventory/intelligence/lifecycle/events — 403 non-holder, 422 bad body, 503 valid", async () => {
   // Token holding NEITHER lifecycle perm → denied.
   const denied = await call(routeInventory, "POST", "/inventory/intelligence/lifecycle/events", ["viewInventory"], {
     assetId: "a1", eventType: "purchase",
@@ -137,12 +137,12 @@ Deno.test("QA-B-025: POST /inventory/intelligence/lifecycle/events — 403 non-h
   // QW4-INV-OR below: the `??` chain is an AND, not the intended OR). With both
   // slugs held but an invalid eventType → validation fires before the DB.
   const lifecyclePerms = ["manageAssetLifecycle", "manageInventory"];
-  // NOTE: this handler validates with 400 VALIDATION_ERROR (not 422); the point is
+  // NOTE: this handler validates with 422 VALIDATION_ERROR; the point is
   // that validation runs after the gate and before the DB.
   const badBody = await call(routeInventory, "POST", "/inventory/intelligence/lifecycle/events", lifecyclePerms, {
     assetId: "a1", eventType: "not-a-type",
   });
-  assertEquals(badBody?.status, 400);
+  assertEquals(badBody?.status, 422);
 
   // Both slugs held, valid body → reached the unconfigured tenant DB.
   const valid = await call(routeInventory, "POST", "/inventory/intelligence/lifecycle/events", lifecyclePerms, {

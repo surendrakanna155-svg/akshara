@@ -31,7 +31,7 @@ export async function handleParentExperienceHub(
   const url = new URL(req.url);
   const studentId = url.searchParams.get("studentId");
   if (!studentId) {
-    return errorEnvelope("VALIDATION_ERROR", "studentId is required", 400);
+    return errorEnvelope("VALIDATION_ERROR", "studentId is required", 422);
   }
 
   try {
@@ -69,10 +69,10 @@ export async function handleParentAcknowledge(
     notes?: string;
   }>(req);
   if (!body) {
-    return errorEnvelope("VALIDATION_ERROR", "Request body required", 400);
+    return errorEnvelope("VALIDATION_ERROR", "Request body required", 422);
   }
   if (!body.studentId || !body.distributionId) {
-    return errorEnvelope("VALIDATION_ERROR", "studentId and distributionId are required", 400);
+    return errorEnvelope("VALIDATION_ERROR", "studentId and distributionId are required", 422);
   }
   const ackType = body.acknowledgementType === "replacement_requested"
     ? "replacement_requested"
