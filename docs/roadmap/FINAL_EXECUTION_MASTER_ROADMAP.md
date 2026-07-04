@@ -70,7 +70,7 @@
 - **Evidence:** updated docs. **EOS gate:** DOCS PASS. **Done when:** docs match implementation.
 
 ### P0-SEC-1 · 🟠 · SEC · Release fail-closed guard
-- **Depends:** — · **Complexity:** M · **Status:** ⚪ Pending · **Finding:** SEC-1, SEC-2
+- **Depends:** — · **Complexity:** M · **Status:** ✅ Complete (2026-07-04, P0·W2) · **Finding:** SEC-1, SEC-2
 - **Outcome:** a `kReleaseMode` build refuses to run/auth unless `APP_ENV==production`; no debug-signing fallback.
 - **Evidence:** build test proving dev-config release fails; signing config. **EOS gate:** SEC PASS. **Done when:** no insecure release build is possible.
 

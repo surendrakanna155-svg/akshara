@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show kReleaseMode;
+
 /// Deployment environment for API and feature configuration.
 enum EnvironmentName {
   development,
@@ -122,7 +124,41 @@ class Environment {
         enableApiMode: false,
       );
     }
-    return resolved;
+    return guardForRelease(resolved, isRelease: kReleaseMode, rawAppEnv: raw);
+  }
+
+  /// Fail-closed release guard (SEC-1 / SEC-2 / SEC-9 / SEC-10).
+  ///
+  /// A **release** binary must run the `production` environment against a real
+  /// backend (`enableApiMode`) with **no** demo/QA shortcuts. Any other
+  /// configuration (missing/`development`/`staging`/unknown `APP_ENV`, or API
+  /// mode off) is refused by throwing, so the app cannot start — and therefore
+  /// cannot authenticate — in an insecure configuration. In non-release builds
+  /// (debug/profile/tests) the resolved environment is returned unchanged.
+  ///
+  /// Extracted as a pure, `isRelease`-parameterised function so the fail-closed
+  /// behaviour is unit-testable without a real release build.
+  static Environment guardForRelease(
+    Environment resolved, {
+    required bool isRelease,
+    required String rawAppEnv,
+  }) {
+    if (!isRelease) return resolved;
+    if (resolved.name != EnvironmentName.production) {
+      throw StateError(
+        'Insecure release build: APP_ENV must be "production" (was "$rawAppEnv"). '
+        'Refusing to start with a non-production configuration.',
+      );
+    }
+    if (!resolved.enableApiMode) {
+      throw StateError(
+        'Insecure release build: ENABLE_API_MODE must be true in production. '
+        'Refusing to start against mock auth/data.',
+      );
+    }
+    // Belt-and-suspenders: demo/mock and QA persona shortcuts can never be
+    // active in a release binary, regardless of the defines that were passed.
+    return resolved.copyWith(disableDemoAuth: true, enableQaLogin: false);
   }
 
   Environment copyWith({

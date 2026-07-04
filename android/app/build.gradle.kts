@@ -14,8 +14,9 @@ plugins {
 // This file is intentionally NOT committed (see android/.gitignore) and must be
 // created by the app owner — see android/key.properties.example for the format
 // and the keystore-generation command. When the file is absent (e.g. on CI, a
-// fresh clone, or any developer machine) the build transparently falls back to
-// debug signing so `flutter build apk --release` keeps working for everyone.
+// fresh clone, or any developer machine) DEBUG builds keep working, but a
+// RELEASE build is refused rather than being debug-signed (SEC-2 fail-closed —
+// see the buildTypes.release signingConfig and the task-graph guard below).
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 val hasReleaseKeystore = keystorePropertiesFile.exists()
@@ -70,12 +71,14 @@ android {
     buildTypes {
         release {
             // Use the owner's upload/release keystore when android/key.properties
-            // exists; otherwise fall back to debug signing so the build still
-            // succeeds on machines/CI without the secret keystore.
+            // exists. SEC-2: NEVER fall back to debug signing for a release build —
+            // leave it unsigned when no release keystore is present so a
+            // debug-signed release can never be produced. The task-graph guard
+            // below turns this into a hard build failure for any release assembly.
             signingConfig = if (hasReleaseKeystore) {
                 signingConfigs.getByName("release")
             } else {
-                signingConfigs.getByName("debug")
+                null
             }
 
             // R8: shrink + obfuscate Java/Kotlin bytecode and strip unused resources
@@ -88,6 +91,25 @@ android {
                 "proguard-rules.pro",
             )
         }
+    }
+}
+
+// SEC-2 fail-closed guard: refuse to assemble/bundle a RELEASE artifact unless a
+// real release keystore (android/key.properties) is present, so no release build
+// is ever debug-signed or shipped unsigned. Only fires when a release-packaging
+// task is actually scheduled — debug builds are unaffected.
+gradle.taskGraph.whenReady {
+    val buildingRelease = allTasks.any { task ->
+        val n = task.name
+        n.contains("Release") &&
+            (n.startsWith("assemble") || n.startsWith("bundle") || n.startsWith("package"))
+    }
+    if (buildingRelease && !hasReleaseKeystore) {
+        throw GradleException(
+            "Refusing to build a release without android/key.properties (a real " +
+                "release keystore). Debug-signing or shipping an unsigned release is " +
+                "forbidden (SEC-2). Provide the keystore or build a debug variant.",
+        )
     }
 }
 
