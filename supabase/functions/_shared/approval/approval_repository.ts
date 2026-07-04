@@ -314,6 +314,24 @@ function assertPending(row: ApprovalRequestRow, action: string): void {
   }
 }
 
+/**
+ * SoD: approval types where the requester may NOT approve their own request — a
+ * second person must decide. These all gate money/value:
+ *  - `inventoryPo`     — a purchase-order value commitment
+ *  - `feeConcession`   — FIN-D4 two-person maker-checker; WAIVES money
+ *  - `refund`          — pays money OUT
+ *  - `feeStructure`    — sets the fee amounts students are billed
+ * Rejection by the same person is allowed (only approvals are guarded). The
+ * check applies identically to the single- and batch-decide paths (both route
+ * through {@link decideApproval}).
+ */
+const SELF_APPROVE_DENIED_TYPES = new Set<string>([
+  "inventoryPo",
+  "feeConcession",
+  "refund",
+  "feeStructure",
+]);
+
 export async function decideApproval(
   db: TenantQueryClient,
   organizationId: string,
@@ -330,9 +348,12 @@ export async function decideApproval(
     throw new ApprovalRejectCommentRequiredError(input.approvalId);
   }
 
+  // SoD self-approve denial for value/money-gating approvals — the requester
+  // may not approve their OWN request (see SELF_APPROVE_DENIED_TYPES). Reject by
+  // the same person stays allowed.
   if (
     input.status === "approved" &&
-    current.type === "inventoryPo" &&
+    SELF_APPROVE_DENIED_TYPES.has(current.type) &&
     current.requester_id === input.actorId
   ) {
     throw new ApprovalSelfApproveDeniedError(input.approvalId);

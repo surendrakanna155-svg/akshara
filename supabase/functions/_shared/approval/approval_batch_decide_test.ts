@@ -285,6 +285,23 @@ Deno.test("PRI-1: SoD self-approve in a batch — the self-approved id is skippe
   assertEquals(spy.updateAttempts.includes("own"), false);
 });
 
+// ── (4b) SoD self-approve of a MONEY waiver in a batch → skipped (FIN-D4) ──────
+
+Deno.test("PRI-1: a fee-concession maker approving their OWN waiver in a batch is skipped (FIN-D4 maker-checker not bypassed)", async () => {
+  // feeConcession waives money — the requester may not approve it, on the batch
+  // path just as on the single path. 'own' is requested by APPROVER (the decider).
+  const perms = claims(["viewManagement", "approveFeeConcession"]);
+  const rows = new Map([
+    ["own", approval("own", { type: "feeConcession", entity_type: "fee_concession", requester_id: APPROVER })],
+  ]);
+  const spy = new BatchSpyDb(rows);
+
+  const out = await decideOne(db(spy), perms, ORG, SCHOOL, "own", "approved", null, APPROVER, "Approver");
+  assertEquals(out.kind, "denied"); // self-approve blocked → skipped, not decided
+  assertEquals(spy.auditInserts.length, 0); // never transitioned → no audit
+  assertEquals(spy.updateAttempts.includes("own"), false);
+});
+
 // ── (5) SoD exam verifier inside a batch → that id skipped ────────────────────
 
 Deno.test("PRI-1: SoD exam-verifier in a batch — the verifier's own results id is skipped('forbidden')", async () => {

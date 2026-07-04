@@ -4,6 +4,7 @@ import {
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 import {
+  ApprovalSelfApproveDeniedError,
   ApprovalSeparationOfDutiesError,
   decideApproval,
 } from "./approval_repository.ts";
@@ -130,7 +131,7 @@ Deno.test("SoD — rejection by the verifier is allowed (not an approval)", asyn
   assertEquals(result.status, "rejected");
 });
 
-Deno.test("SoD — check is exam-only (does not affect other approval types)", async () => {
+Deno.test("SoD — exam verifier check is exam-only (studentLeave self-approve is allowed)", async () => {
   const result = await decideApproval(
     db(approval({ type: "studentLeave", entity_type: "leave" }), COORDINATOR),
     ORG,
@@ -143,4 +144,74 @@ Deno.test("SoD — check is exam-only (does not affect other approval types)", a
     },
   );
   assertEquals(result.status, "approved");
+});
+
+// ── SoD self-approve denial for value/money-gating approvals (PRI-1 / FIN-D4) ──
+
+Deno.test("SoD — fee-concession requester cannot approve their OWN waiver (FIN-D4)", async () => {
+  await assertRejects(
+    () =>
+      decideApproval(
+        db(approval({ type: "feeConcession", entity_type: "fee_concession" }), null),
+        ORG,
+        SCHOOL,
+        {
+          approvalId: "appr_1",
+          status: "approved",
+          actorId: COORDINATOR, // same person who requested (requester_id default)
+          actorName: "Coordinator",
+        },
+      ),
+    ApprovalSelfApproveDeniedError,
+  );
+});
+
+Deno.test("SoD — a different checker MAY approve a fee concession", async () => {
+  const result = await decideApproval(
+    db(approval({ type: "feeConcession", entity_type: "fee_concession" }), null),
+    ORG,
+    SCHOOL,
+    {
+      approvalId: "appr_1",
+      status: "approved",
+      actorId: PRINCIPAL, // different from the requester
+      actorName: "Principal",
+    },
+  );
+  assertEquals(result.status, "approved");
+  assertEquals(result.decided_by_id, PRINCIPAL);
+});
+
+Deno.test("SoD — a refund requester cannot approve their OWN refund (money out)", async () => {
+  await assertRejects(
+    () =>
+      decideApproval(
+        db(approval({ type: "refund", entity_type: "refund" }), null),
+        ORG,
+        SCHOOL,
+        {
+          approvalId: "appr_1",
+          status: "approved",
+          actorId: COORDINATOR,
+          actorName: "Coordinator",
+        },
+      ),
+    ApprovalSelfApproveDeniedError,
+  );
+});
+
+Deno.test("SoD — the requester CAN reject their own value-gating request (only approvals guarded)", async () => {
+  const result = await decideApproval(
+    db(approval({ type: "feeConcession", entity_type: "fee_concession" }), null),
+    ORG,
+    SCHOOL,
+    {
+      approvalId: "appr_1",
+      status: "rejected",
+      actorId: COORDINATOR,
+      actorName: "Coordinator",
+      comment: "withdrawn",
+    },
+  );
+  assertEquals(result.status, "rejected");
 });
