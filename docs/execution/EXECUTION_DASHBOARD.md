@@ -47,8 +47,8 @@ From the roadmap's Deferred/Owner register (+ ledger §C):
 
 | Decision | Gates |
 |---|---|
-| Hide-list for backend-less/thin surfaces | P0-CODE-2 |
-| DR RPO acceptance (WAL ≤15 min vs ~24h pilot) | P0-INFRA-2 |
+| ~~Hide-list for backend-less/thin surfaces~~ | P0-CODE-2 — ✅ **RESOLVED 2026-07-04: hide all 8** |
+| ~~DR RPO acceptance (WAL ≤15 min vs ~24h pilot)~~ | P0-INFRA-2 — ✅ **RESOLVED 2026-07-04: accept ~24h nightly** |
 | Module scope: Finance-posting (MOD-1) / Hostel / Alumni | P1-CODE-6 / 7 / 8 (MOD-1 also gates the P3 recovery-CRM scope) |
 | PLAT-0 non-student Public-ID scheme | P1-CODE-4 (partial) |
 | **Appendix A ~26 behaviour/policy items** (frozen backlog) | P1-PROD module waves |

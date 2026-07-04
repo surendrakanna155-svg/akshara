@@ -120,9 +120,9 @@
 - **Evidence:** `finance_collections_repository_test` +3 ENG-1 tests (stale version → CollectionConflictError, no money reversed; matching version OK; back-compat) — deno finance **136/0**, `deno check` clean, api entrypoint typechecks. **EOS gate:** RELIABILITY PASS. **Done when:** concurrent/stale edits can't silently overwrite money. ✅
 
 ### P0-CODE-2 · 🟠 · CODE · Hide backend-less/thin surfaces for pilot
-- **Depends:** 👤 hide-list · **Complexity:** S · **Status:** ⚪ Pending / 👤 · **Finding:** ENG-3/MOD-4 (+ MOD-5/6 partial)
-- **Outcome:** the ~8 backend-less surfaces (Workflow/Academic-Ops/Continuity/Platform-Intel/Ops/Multi-School-Ops/Verticals/White-label) + Alumni + Hostel billing/leave route-guarded OFF.
-- **Evidence:** no mock surface reachable in the prod build. **EOS gate:** FEATURE PASS. **Done when:** every reachable surface is real.
+- **Depends:** 👤 hide-list ✅ (owner: **hide all 8**, 2026-07-04) · **Complexity:** S · **Status:** ✅ Complete (2026-07-04, P0·W2) · **Finding:** ENG-3/MOD-4
+- **Outcome:** the 8 backend-less surfaces (Workflow / Academic-Ops / Continuity / Platform-Intel / Platform-Ops / Multi-School-Ops / Verticals / White-Label) are **route-guarded OFF in a live build** when their API flag is off — new `isBackendLessSurfaceHidden()` gate wired into `ErpRouteGuard` (blocks deep-links → `AccessDeniedScreen`) and the management/SIS/control-center sub-navs (drops dead tabs). No-op in local/mock builds. (Alumni/Hostel scope = MOD-5/6 → P1-CODE-7/8, separate owner scope.)
+- **Evidence:** `surface_backend_gate_test` (local visible · live+flag-off hidden across all 8 · live+flag-on visible · backed routes never hidden); `flutter analyze` 0. **EOS gate:** FEATURE PASS. **Done when:** no mock surface reachable in a prod build ✅.
 
 ### P0-TEST-1 · 🟠 · TEST · CI on the working branch
 - **Depends:** — · **Complexity:** S · **Status:** ⚪ Pending · **Finding:** QA-3

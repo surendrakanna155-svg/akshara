@@ -10,6 +10,7 @@ import '../core/school_config/school_capability_registry.dart';
 import '../core/school_config/school_configuration_models.dart';
 import '../core/school_config/school_configuration_provider.dart';
 import '../core/security/denied_access_audit.dart';
+import 'surface_backend_gate.dart';
 import '../core/security/erp_role.dart';
 import '../core/testing/qa_test_keys.dart';
 import '../core/security/permissions.dart';
@@ -408,6 +409,14 @@ class ErpRouteGuard extends ConsumerWidget {
     // Modules hidden for the school-only build are blocked regardless of
     // permission. Reversible via SchoolBuildScope (hide now, delete later).
     if (SchoolBuildScope.isRouteHidden(location)) {
+      return const AccessDeniedScreen();
+    }
+
+    // P0-CODE-2 (ENG-3/MOD-4): backend-less surfaces are HIDDEN in a live build
+    // (no live API flag → don't serve mock a real user can reach). Mirrors the
+    // sub-nav tab filtering so a deep-link is blocked too. No-op in local/mock
+    // builds where the mock is the intended behaviour.
+    if (isBackendLessSurfaceHidden(ref, location)) {
       return const AccessDeniedScreen();
     }
 
