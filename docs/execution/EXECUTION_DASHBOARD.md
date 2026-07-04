@@ -11,10 +11,10 @@
 | Field | Value |
 |---|---|
 | **Current Phase** | **P1 — Remaining Backend & Code Fixes** 🟠 (P0 code/security ✅ 14/19; 5 live-lane tasks ⏳ owner-deferred) |
-| **Current Wave** | **P1-PROD-6 — C8 · Transport Fleet, Roster & Fee (TRN-1/2/3/4/9)** — 🔵 next up (TRN-9 raises fee demand → Finance collects; no dup payment path). **C3 defers** (GA-1 live); **C6 defers** (HWK-1 schema); **C4/C5/C7 ✅**. **P2-UX-1 ∥-eligible**. P1-CODE-4 stays 👤-gated. |
-| **Wave Status** | **P1-CODE-1/2/3/5 ✅ + P1-PROD-0 ✅ + C1 ✅ + C2 ✅ + C4 ✅ + C5 ✅ + C7 ✅** — through Finance CRM/Reports, Exams, Academic Registers & Certs, and HR Payroll & Salary Registers (individual payslips). P0: 14/19 ✅; 5 live-lane ⏳ owner-deferred. |
+| **Current Wave** | **P1-PROD-7 — C9 · Inventory, Library & Communication (INV-1/2, LIB-1/2, COM-1/2)** — 🔵 next up (COM-1/2 likely built; inventory governance = maker-checker). **C3 defers** (GA-1 live); **C6 defers** (HWK-1 schema); **C4/C5/C7/C8 ✅**. **P2-UX-1 ∥-eligible**. P1-CODE-4 stays 👤-gated. |
+| **Wave Status** | **P1-CODE-1/2/3/5 ✅ + P1-PROD-0 ✅ + C1/C2/C4/C5/C7/C8 ✅** — through Finance CRM/Reports, Exams, Academic Registers & Certs, HR Payroll, and Transport Fleet/Roster/Fee (money boundary verified intact). P0: 14/19 ✅; 5 live-lane ⏳ owner-deferred. |
 | **Planning** | 🔒 FROZEN 2026-07-04 → **AUTONOMOUS EXECUTION UNDER WAY** (P1 code + PROD waves; live lane deferred) |
-| **Last commit-gated wave** | **P1-PROD-5** (`524105e`) — C7 HR Payroll & Salary Registers: discovery-first found HR-1 register + HR-2 batch payslips already built; closed HR-2's individual per-employee payslip PDF (`buildPayslipPdf` + `_IndividualPayslipSheet` picker). Client-only, read-only rendering. EOS PASS, full suite 3616 pass (0 new), HR+reports 103/0 |
+| **Last commit-gated wave** | **P1-PROD-6** (docs-only) — C8 Transport VERIFIED complete: TRN-1/2/3/4/9 all built; **money boundary CONFIRMED intact + test-enforced** (zero payment code in Transport; get-or-create per-year account; Finance = sole payment engine). Candidate gap (TRN-9 app-level dedupe race) money-contained + unsafe to hot-patch → tracked TRN9-DEDUPE. deno transport 36/0 · flutter transport 42/0 |
 
 ## 2. Wave arithmetic
 
@@ -31,7 +31,7 @@ Waves as the roadmap + Autonomous Plan group them (a "wave" = one EOS-gated comm
 | P6 | 1 | P6-PILOT-1 (single + 3-school concurrent, stages 0–16) |
 | P7 | 1 | P7-CERT-1 (gates T/S/O/U/A/P/B/D + `QA-R-012`) |
 | P8 | 5 | P8-GA-1..5 |
-| **Total** | **≈68** | **Completed: P0·W1 + W2 non-blocked legs (14/19 P0) + P1-CODE-1 (REL-1..5) + P1-CODE-2 (REL-6..9) + P1-CODE-3 (ENG-4/5/7/8/9/10,DB-6) + P1-CODE-5 (MOD-2/3) + P1-PROD-0 (XCT-1/2/3) + C1 + C2 + C4 + C5 + C7, 2026-07-04** · **Remaining:** P0 live-lane tail (INFRA-1/3, TEST-1/2/3) then ≈56 (P5 variable) |
+| **Total** | **≈68** | **Completed: P0·W1 + W2 non-blocked legs (14/19 P0) + P1-CODE-1 (REL-1..5) + P1-CODE-2 (REL-6..9) + P1-CODE-3 (ENG-4/5/7/8/9/10,DB-6) + P1-CODE-5 (MOD-2/3) + P1-PROD-0 (XCT-1/2/3) + C1 + C2 + C4 + C5 + C7 + C8, 2026-07-04** · **Remaining:** P0 live-lane tail (INFRA-1/3, TEST-1/2/3) then ≈55 (P5 variable) |
 
 ## 3. Current Blockers
 
@@ -98,7 +98,7 @@ Hard gates: P0 gates P4/P6/P7/P8 · P1-CODE-1 → P2-UX-2 · P3-AI-1 → P3-AI-2
 |---|---:|---:|---:|---:|---|
 | Planning | — | 🔒 FROZEN + reviewed | — | — | audit + final review |
 | P0 — Truth/Docs/Live-Verify | 3 (19 tasks; **14 ✅**) | **2** (W1 ✅ · W2 non-blocked legs ✅) | 0 | 1 (W3 + INFRA-1/3 — ⏳ live-lane) | EOS per task |
-| P1 — Backend & Code Fixes | 35 | 10 (CODE-1/2/3/5, PROD-0, C1, C2, C4✓, C5, C7) | 0 | 25 (next: C8 Transport — C3+C6 defer; CODE-4 👤) | EOS per wave |
+| P1 — Backend & Code Fixes | 35 | 11 (CODE-1/2/3/5, PROD-0, C1, C2, C4✓, C5, C7, C8✓) | 0 | 24 (next: C9 Inv/Lib/Comm — C3+C6 defer; CODE-4 👤) | EOS per wave |
 | P2 — UI/UX | 5 | 0 | 0 | 5 | EOS UX per wave |
 | P3 — Adaptive AI | 15 sub-waves | 0 | 0 | 15 | EOS AI per sub-wave |
 | P4 — Red Team | 2 | 0 | 0 | 2 | RED-TEAM verdict |
@@ -111,7 +111,7 @@ Hard gates: P0 gates P4/P6/P7/P8 · P1-CODE-1 → P2-UX-2 · P3-AI-1 → P3-AI-2
 ## 8. EOS Status
 
 - **Gate protocol:** every wave ends with `/eos <scope>`; **commit only on PASS**; CONDITIONAL PASS only with P1s tracked *and* roadmap permission; BLOCKED = fix and re-run, never advance. Verdicts append to `docs/engineering/eos/EOS_RUN_LEDGER.md` + the journal.
-- **Implementation EOS runs so far:** **18** — P0·W1 DOCS · P0·W2 legs · P1-CODE-1/2/3/5 · P1-PROD-0 FOUNDATION · P1-PROD-1 FEATURE (C1 Recovery CRM) · P1-PROD-2 FEATURE (C2 / FIN-6 aging) · P1-PROD-3 (C4 Exams) VERIFIED · P1-PROD-4 (C5 Registers & Certs) · **P1-PROD-5 (C7 HR Payroll) PASS (2026-07-04, latest)**. See `docs/engineering/eos/EOS_RUN_LEDGER.md`.
+- **Implementation EOS runs so far:** **19** — P0·W1 DOCS · P0·W2 legs · P1-CODE-1/2/3/5 · P1-PROD-0 FOUNDATION · P1-PROD-1 FEATURE (C1 Recovery CRM) · P1-PROD-2 FEATURE (C2 / FIN-6 aging) · P1-PROD-3 (C4 Exams) VERIFIED · P1-PROD-4 (C5 Registers & Certs) · P1-PROD-5 (C7 HR Payroll) · **P1-PROD-6 (C8 Transport) VERIFIED PASS (2026-07-04, latest)**. See `docs/engineering/eos/EOS_RUN_LEDGER.md`.
 - **Open P0 findings:** none known at baseline (audit P0s are scheduled tasks, not open gate failures).
 - **Automatic-failure tripwires** (instant BLOCKED): data loss · security breach · escalation · tenant-isolation failure · critical crash · duplicate financial transaction · broken auth/sync · critical regression · failed backup verification · production blocker.
 - **Pre-execution baseline (verified live 2026-07-03, do NOT redo):** RLS isolation PASS · edge = `erp_tenant` NOBYPASSRLS · entitlement ON · encrypted backups + monthly restore drill green · watchdog green · AI live via OpenRouter · live DB password rotated · `flutter analyze` 0.
