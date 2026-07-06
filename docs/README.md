@@ -218,6 +218,18 @@
 - [`docs/Testing/iPhone-Tester-Pack.md`](Testing/iPhone-Tester-Pack.md)
 - [`docs/Testing/v18.0-Autonomous-QA-Report.md`](Testing/v18.0-Autonomous-QA-Report.md)
 
+## Curriculum Intelligence initiative (spec + audit + plan)
+
+> New program (2026-07-06): curriculum repository → knowledge base → question intelligence →
+> exam profiles → adaptive paper generation. Extends (never replaces) the live-certified
+> Question Intelligence foundation and the 🔒 Assessment-Intelligence-Platform Master Plan v3.0.
+> Index: [`docs/curriculum-intelligence/README.md`](curriculum-intelligence/README.md).
+
+- [`docs/curriculum-intelligence/spec/PROJECT_BOOTSTRAP.md`](curriculum-intelligence/spec/PROJECT_BOOTSTRAP.md) — canonical process spec (analyse → audit → plan → approval gate)
+- [`docs/curriculum-intelligence/spec/MASTER_CURRICULUM_INTELLIGENCE_PIPELINE.md`](curriculum-intelligence/spec/MASTER_CURRICULUM_INTELLIGENCE_PIPELINE.md) — canonical engineering spec (Parts 01–16)
+- [`docs/curriculum-intelligence/audits/`](curriculum-intelligence/audits/) — architecture audit · gap analysis · backward-compatibility plan
+- [`docs/curriculum-intelligence/planning/`](curriculum-intelligence/planning/) — implementation sequence, dependency graph, phases, sprints, risks, rollback, acceptance tests
+
 ## Product vision & future tracks
 
 - [`docs/Vision/FutureVision.md`](Vision/FutureVision.md)
