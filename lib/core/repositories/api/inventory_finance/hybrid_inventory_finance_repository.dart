@@ -186,4 +186,10 @@ class HybridInventoryFinanceRepository implements InventoryFinanceRepository {
     String? sku,
   }) =>
       _api.listStockRegister(query: query, sku: sku);
+
+  @override
+  Future<List<InventoryFinanceGoodsReceiptSummary>> listGrns({
+    required RepositoryQuery query,
+  }) =>
+      _api.listGrns(query: query);
 }

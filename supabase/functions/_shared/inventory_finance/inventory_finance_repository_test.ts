@@ -28,6 +28,46 @@ Deno.test("inventory finance router exposes purchase order detail route", async 
   assertEquals(match?.handler.name, "handleGetPurchaseOrder");
 });
 
+// INV-5: the GRN register is exposed on the INVENTORY surface (viewInventory-
+// gated in the handler) so store staff can list/export GRNs without viewFinance.
+Deno.test("inventory finance router exposes the GRN register route", async () => {
+  const { matchInventoryFinanceRoute } = await import("./inventory_finance_router.ts");
+  const match = matchInventoryFinanceRoute("GET", "/inventory/procurement/grns");
+  assertEquals(match?.handler.name, "handleListGrns");
+  // Not a write route: POST does not match.
+  assertEquals(matchInventoryFinanceRoute("POST", "/inventory/procurement/grns"), null);
+});
+
+Deno.test("INV-5: listGoodsReceipts scopes to org+school and joins PO + vendor", async () => {
+  const { listGoodsReceipts } = await import("./inventory_finance_repository.ts");
+  const calls: Array<{ sql: string; args: unknown[] }> = [];
+  const db = {
+    queryObject(sql: string, args: unknown[] = []) {
+      calls.push({ sql, args });
+      return Promise.resolve([{
+        id: "grn-1",
+        grn_number: "GRN-PO-1-000001",
+        purchase_order_id: "po-1",
+        po_number: "PO-1",
+        vendor_name: "Vendor A",
+        received_at: "2026-07-06T00:00:00.000Z",
+        status: "posted",
+        line_count: 2,
+      }]);
+    },
+    // deno-lint-ignore no-explicit-any
+  } as any;
+  const rows = await listGoodsReceipts(db, "org-1", "school-1");
+  assertEquals(rows.length, 1);
+  assertEquals(rows[0].grn_number, "GRN-PO-1-000001");
+  const q = calls[0];
+  assertEquals(q.args, ["org-1", "school-1"]);
+  assertEquals(q.sql.includes("FROM goods_receipts"), true);
+  assertEquals(q.sql.includes("JOIN purchase_orders"), true);
+  assertEquals(q.sql.includes("JOIN inventory_vendors"), true);
+  assertEquals(q.sql.includes("gr.organization_id = $1 AND gr.school_id = $2"), true);
+});
+
 Deno.test("finance router exposes inventory reconciliation dashboard", async () => {
   const { matchFinanceRoute } = await import("../finance/finance_router.ts");
   const match = matchFinanceRoute(

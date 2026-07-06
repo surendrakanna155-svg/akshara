@@ -1212,4 +1212,11 @@ class MockInventoryFinanceRepository implements InventoryFinanceRepository {
     }
     return List.of(_register);
   }
+
+  @override
+  Future<List<InventoryFinanceGoodsReceiptSummary>> listGrns({
+    required RepositoryQuery query,
+  }) async {
+    return List.of(_goodsReceipts);
+  }
 }

@@ -134,4 +134,11 @@ abstract class InventoryFinanceRepository {
     required RepositoryQuery query,
     String? sku,
   });
+
+  /// INV-5 — the GRN (goods received) register, newest first. Same rows as
+  /// [getGoodsReceipts] but served from the viewInventory-gated inventory
+  /// endpoint so store staff can list/export without a finance grant.
+  Future<List<InventoryFinanceGoodsReceiptSummary>> listGrns({
+    required RepositoryQuery query,
+  });
 }

@@ -79,6 +79,9 @@ export function normalizeBroadcastAudience(audience: string): string {
     students: "all_students",
     student: "all_students",
     school: "school_wide",
+    // INV-7: storekeeper-targeted alerts (low stock). Singular alias maps to the
+    // fixed 'storekeepers' audience token; the token itself passes through.
+    storekeeper: "storekeepers",
   };
   return aliases[audience] ?? audience;
 }

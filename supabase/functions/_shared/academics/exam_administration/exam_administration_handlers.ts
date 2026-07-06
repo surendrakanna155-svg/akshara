@@ -371,7 +371,7 @@ export async function handleRemindPendingMarks(
         },
         req,
       );
-      const reminderId = (scheduled.id as string | undefined) ?? asOf;
+      const reminderId = (scheduled.broadcastId as string | undefined) ?? asOf;
       await emitMutationAudit(
         db,
         claims,

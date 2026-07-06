@@ -65,6 +65,20 @@ class InventoryFinanceRemoteDataSource {
     );
   }
 
+  /// INV-5 — GRN register via the viewInventory-gated inventory endpoint (same
+  /// row shape as [fetchGoodsReceipts], different RBAC surface).
+  Future<List<InventoryFinanceGoodsReceiptSummaryDto>> fetchGrnRegister({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      InventoryFinanceApiPaths.procurementGrns,
+      queryParameters: _queryParams(query),
+    );
+    return parseInventoryFinanceItems(_responseMap(response))
+        .map(InventoryFinanceGoodsReceiptSummaryDto.fromJson)
+        .toList();
+  }
+
   Future<List<InventoryFinancePostingDto>> fetchPostings({
     required RepositoryQuery query,
   }) async {

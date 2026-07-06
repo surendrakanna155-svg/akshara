@@ -251,4 +251,12 @@ class ApiInventoryFinanceRepository implements InventoryFinanceRepository {
     final items = await _remote.listStockRegister(query: query, sku: sku);
     return _mapper.toStockRegisterRows(items);
   }
+
+  @override
+  Future<List<InventoryFinanceGoodsReceiptSummary>> listGrns({
+    required RepositoryQuery query,
+  }) async {
+    final items = await _remote.fetchGrnRegister(query: query);
+    return _mapper.toGoodsReceiptSummaries(items);
+  }
 }

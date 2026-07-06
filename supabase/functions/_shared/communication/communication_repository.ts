@@ -1092,6 +1092,25 @@ export async function resolveBroadcastRecipients(
     return rows.map((r) => r.user_id);
   }
 
+  // INV-7: the school's storekeeper users (role seeded by migration 20260851).
+  // Same org/school scoping as the all_staff branch. When the school has no
+  // active storekeeper membership yet, fall back to the all-staff recipient set
+  // so a low-stock alert is never silently dropped.
+  if (audience === "storekeepers") {
+    const rows = await db.queryObject<{ user_id: string }>(
+      `SELECT DISTINCT user_id FROM school_memberships
+       WHERE school_id = $1 AND role = 'storekeeper' AND status = 'active'`,
+      [schoolId],
+    );
+    if (rows.length > 0) return rows.map((r) => r.user_id);
+    const staff = await db.queryObject<{ user_id: string }>(
+      `SELECT DISTINCT user_id FROM school_memberships
+       WHERE school_id = $1 AND status = 'active'`,
+      [schoolId],
+    );
+    return staff.map((r) => r.user_id);
+  }
+
   return [];
 }
 

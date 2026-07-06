@@ -61,6 +61,14 @@ final inventoryStockRegisterFutureProvider =
       .listStockRegister(query: ref.watch(repositoryQueryProvider));
 });
 
+/// INV-5 — the GRN (goods received) register, for the reports list + export.
+final inventoryGrnsFutureProvider =
+    FutureProvider<List<InventoryFinanceGoodsReceiptSummary>>((ref) async {
+  return ref
+      .read(inventoryFinanceRepositoryProvider)
+      .listGrns(query: ref.watch(repositoryQueryProvider));
+});
+
 // ── Mutation notifiers ──
 
 /// INV-1 — issue stock (manageInventory-gated; surfaces 422 InsufficientStock).

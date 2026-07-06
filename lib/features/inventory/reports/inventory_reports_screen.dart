@@ -52,6 +52,30 @@ const List<String> _lowStockHeaders = [
   'Recommended qty',
 ];
 
+// INV-5 — GRN (goods received) register export columns.
+const List<String> _grnHeaders = [
+  'GRN number',
+  'PO number',
+  'Vendor',
+  'Received at',
+  'Status',
+  'Lines',
+];
+
+List<List<String>> _grnRows(List<InventoryFinanceGoodsReceiptSummary> grns) {
+  return [
+    for (final g in grns)
+      [
+        g.grnNumber,
+        g.poNumber,
+        g.vendorName,
+        g.receivedAt.toIso8601String(),
+        g.status,
+        '${g.lineCount}',
+      ],
+  ];
+}
+
 List<List<String>> _lowStockRows(List<LowStockRow> rows) {
   return [
     for (final r in rows)
@@ -150,6 +174,19 @@ class InventoryReportsScreen extends ConsumerWidget {
               onPressed: () => _exportLowStockCsv(context, ref),
               icon: const Icon(Icons.warning_amber_outlined),
               label: const Text('Low-stock CSV'),
+            ),
+            // INV-5 — GRN (goods received) register export.
+            OutlinedButton.icon(
+              key: const ValueKey('inventoryGrnExportCsvButton'),
+              onPressed: () => _exportGrnRegister(context, ref, pdf: false),
+              icon: const Icon(Icons.inventory_outlined),
+              label: const Text('GRN register CSV'),
+            ),
+            OutlinedButton.icon(
+              key: const ValueKey('inventoryGrnExportPdfButton'),
+              onPressed: () => _exportGrnRegister(context, ref, pdf: true),
+              icon: const Icon(Icons.picture_as_pdf_outlined),
+              label: const Text('GRN register PDF'),
             ),
           ],
         ),
@@ -268,6 +305,48 @@ class InventoryReportsScreen extends ConsumerWidget {
           );
       if (!context.mounted) return;
       _snack(context, 'Low-stock CSV ready (${rows.length} items)');
+    } catch (error) {
+      if (!context.mounted) return;
+      _snack(context, aksharaErrorMessage(error), success: false);
+    }
+  }
+
+  /// INV-5 — GRN register CSV/PDF riding the XCT-1 grid export primitive.
+  Future<void> _exportGrnRegister(
+    BuildContext context,
+    WidgetRef ref, {
+    required bool pdf,
+  }) async {
+    try {
+      final rows = await ref.read(inventoryGrnsFutureProvider.future);
+      if (rows.isEmpty) {
+        if (!context.mounted) return;
+        _snack(context, 'No goods receipts to export.');
+        return;
+      }
+      final service = ref.read(aksharaReportExportServiceProvider);
+      if (pdf) {
+        await service.shareGridPdf(
+          filename: 'grn_register',
+          reportTitle: 'GRN register',
+          moduleLabel: 'Inventory · Reports',
+          headers: _grnHeaders,
+          rows: _grnRows(rows),
+          generatedAtLabel: DateTime.now().toIso8601String(),
+          rightAlignFrom: 5,
+        );
+      } else {
+        await service.shareGridCsv(
+          filename: 'grn_register',
+          headers: _grnHeaders,
+          rows: _grnRows(rows),
+        );
+      }
+      if (!context.mounted) return;
+      _snack(
+        context,
+        'GRN register ${pdf ? 'PDF' : 'CSV'} ready (${rows.length} receipts)',
+      );
     } catch (error) {
       if (!context.mounted) return;
       _snack(context, aksharaErrorMessage(error), success: false);

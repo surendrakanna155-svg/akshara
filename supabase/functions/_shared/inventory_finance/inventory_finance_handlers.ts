@@ -16,6 +16,7 @@ import {
   createVendor,
   getPurchaseOrderDetail,
   InvalidPurchaseOrderStateError,
+  listGoodsReceipts,
   listPurchaseOrders,
   listStockValuations,
   listVendors,
@@ -355,6 +356,44 @@ export async function handleReceiveGoods(
     }
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
     return errorEnvelope("INTERNAL_ERROR", "Failed to receive goods", 500);
+  }
+}
+
+/**
+ * INV-5 — GET /inventory/procurement/grns: the goods-received (GRN) register for
+ * the caller's school. Same rows as the finance reconciliation surface
+ * ({@link listGoodsReceipts}: vendor + PO reference + line summary) but gated on
+ * viewInventory so store staff can list/export GRNs without a finance grant.
+ */
+export async function handleListGrns(req: Request, config: AppConfig): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireInventoryRead(auth.claims);
+  if (denied) return denied;
+
+  try {
+    const receipts = await withTenantContext(config, auth.claims, async (db) =>
+      await listGoodsReceipts(
+        db,
+        organizationIdFromClaims(auth.claims),
+        schoolIdFromClaims(auth.claims)!,
+      )
+    );
+    return jsonResponse(envelope({
+      items: receipts.map((row) => ({
+        id: row.id,
+        grnNumber: row.grn_number,
+        purchaseOrderId: row.purchase_order_id,
+        poNumber: row.po_number,
+        vendorName: row.vendor_name,
+        receivedAt: row.received_at,
+        status: row.status,
+        lineCount: row.line_count,
+      })),
+    }));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    return errorEnvelope("INTERNAL_ERROR", "Failed to list goods receipts", 500);
   }
 }
 

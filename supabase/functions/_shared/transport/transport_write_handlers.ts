@@ -11,6 +11,9 @@ import {
 import { createEntityWriteStore } from "../entity_write/entity_write_store.ts";
 import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
 import { sendBroadcastMessage } from "../communication/communication_service.ts";
+import { scheduleReminder } from "../reminders/reminders_service.ts";
+import type { AccessTokenClaims } from "../jwt.ts";
+import type { TenantQueryClient } from "../tenant_db.ts";
 import { MAX_BULK_ITEMS } from "../http.ts";
 import { resolveStudentId } from "../sis/sis_student_resolver.ts";
 import { assignFeeStructure } from "../finance/finance_assignments_repository.ts";
@@ -1081,14 +1084,133 @@ export async function handleBulkAllocateTransport(
   });
 }
 
-// ─── TRN-8: document-expiry reminder (in-app broadcast) ───────────────────────
+// ─── TRN-8: document-expiry reminder (XCT-2 reminder rail) ────────────────────
+
+/**
+ * The audience token TRN-8 digests are addressed to. This MUST be one of the
+ * `comm_broadcasts.audience` CHECK-constraint tokens (all_parents / all_teachers /
+ * all_students / all_staff / school_wide / class_parents / class_students) — the
+ * earlier shorthand `"staff"` is NOT aliased by `normalizeBroadcastAudience` and
+ * violated the CHECK at insert time whenever ≥1 expiry was found.
+ */
+export const TRANSPORT_DOC_EXPIRY_AUDIENCE = "all_staff";
+
+export interface DocumentExpiry {
+  subject: string;
+  document: string;
+  expiresOn: string;
+  inDays: number;
+}
+
+/**
+ * TRN-8 scan: collect vehicle (insurance/fitness/puc/permit/roadTax) + driver
+ * (licence) document dates falling within `withinDays` of `now` (already-expired
+ * dates count too — inDays goes negative). Legacy free-text values that are not
+ * strict ISO dates are skipped. Pure — exported for DB-free tests.
+ */
+export function collectDocumentExpiries(
+  vehicles: Array<Record<string, unknown>>,
+  drivers: Array<Record<string, unknown>>,
+  withinDays: number,
+  now: Date,
+): DocumentExpiry[] {
+  const expiries: DocumentExpiry[] = [];
+  for (const v of vehicles) {
+    for (const [payloadKey] of VEHICLE_EXPIRY_FIELDS) {
+      const raw = v[payloadKey];
+      if (typeof raw !== "string") continue;
+      const inDays = daysUntilIso(raw, now);
+      if (inDays === null) continue; // legacy free-text — not a real date, skip
+      if (inDays <= withinDays) {
+        expiries.push({
+          subject: `Vehicle ${v.registration ?? v.id}`,
+          document: payloadKey.replace(/Expiry$/, ""),
+          expiresOn: raw,
+          inDays,
+        });
+      }
+    }
+  }
+  for (const d of drivers) {
+    const raw = d.licenseExpiry;
+    if (typeof raw !== "string") continue;
+    const inDays = daysUntilIso(raw, now);
+    if (inDays === null) continue;
+    if (inDays <= withinDays) {
+      expiries.push({
+        subject: `Driver ${d.name ?? d.id}`,
+        document: "licence",
+        expiresOn: raw,
+        inDays,
+      });
+    }
+  }
+  return expiries;
+}
+
+/**
+ * TRN-8 core (exported so tests can drive it with a fake db, mirroring the
+ * EXM-6 remind-pending-marks pattern): check at trigger time — scan vehicles +
+ * drivers for documents expiring within N days. Nothing due → schedule nothing,
+ * `{reminded: 0}`. Otherwise schedule ONE `all_staff` digest on the shared XCT-2
+ * reminder rail ({@link scheduleReminder}, remindAt = now so it fires on the next
+ * runner pass into staff in-app inboxes; external SMS/WA stays owner-gated in the
+ * rail) and audit the run with the count + reminderId.
+ */
+export async function runDocumentExpiryReminder(
+  db: TenantQueryClient,
+  claims: AccessTokenClaims,
+  organizationId: string,
+  schoolId: string,
+  withinDays: number,
+  request?: Request,
+): Promise<Record<string, unknown>> {
+  const now = new Date();
+
+  const vehicles = await writeStore.findAll(db, organizationId, schoolId, "vehicle");
+  const drivers = await writeStore.findAll(db, organizationId, schoolId, "driver");
+  const expiries = collectDocumentExpiries(vehicles, drivers, withinDays, now);
+
+  if (expiries.length === 0) {
+    return { reminded: 0, withinDays, expiries: [] };
+  }
+
+  const lines = expiries
+    .map((e) => `${e.subject}: ${e.document} expires ${e.expiresOn} (in ${e.inDays} day(s))`)
+    .join("\n");
+  const scheduled = await scheduleReminder(
+    db,
+    claims,
+    {
+      audience: TRANSPORT_DOC_EXPIRY_AUDIENCE,
+      title: `Transport document expiries — ${expiries.length} upcoming`,
+      body: lines,
+      // Fire on the next scheduled-broadcast runner pass (i.e. promptly).
+      remindAt: now.toISOString(),
+    },
+    request,
+  );
+  const reminderId = String(scheduled.broadcastId ?? "");
+
+  await emitMutationAudit(
+    db,
+    claims,
+    moduleEntityAudit("transport.document.reminded", "transport_school", schoolId, {
+      count: expiries.length,
+      withinDays,
+      reminderId,
+    }),
+    request,
+  );
+
+  return { reminded: expiries.length, withinDays, expiries, reminderId };
+}
 
 /**
  * POST /transport/reminders/document-expiry — scan vehicles + drivers for TRN-2
- * document dates falling within N days (default 30), enqueue ONE in-app broadcast
- * summarising the upcoming expiries (external SMS/WA stays gated in the broadcast
- * pipeline), and audit the run with the count. Returns {reminded:0} when nothing
- * is due.
+ * document dates falling within N days (default 30) and, when any are due,
+ * schedule ONE in-app `all_staff` digest on the shared XCT-2 reminder rail.
+ * Returns {reminded:0} when nothing is due. manageTransport.
  */
 export async function handleDocumentExpiryReminder(
   req: Request,
@@ -1097,72 +1219,15 @@ export async function handleDocumentExpiryReminder(
   return await runWrite(req, config, async (ctx) => {
     const { db, organizationId, schoolId, body, claims, req: request } = ctx;
     const withinDays = intOr(body, 30, "withinDays", "within_days", "days");
-    const now = new Date();
-
-    const vehicles = await writeStore.findAll(db, organizationId, schoolId, "vehicle");
-    const drivers = await writeStore.findAll(db, organizationId, schoolId, "driver");
-
-    const expiries: Array<{ subject: string; document: string; expiresOn: string; inDays: number }> = [];
-    for (const v of vehicles) {
-      for (const [payloadKey] of VEHICLE_EXPIRY_FIELDS) {
-        const raw = v[payloadKey];
-        if (typeof raw !== "string") continue;
-        const inDays = daysUntilIso(raw, now);
-        if (inDays === null) continue; // legacy free-text — not a real date, skip
-        if (inDays <= withinDays) {
-          expiries.push({
-            subject: `Vehicle ${v.registration ?? v.id}`,
-            document: payloadKey.replace(/Expiry$/, ""),
-            expiresOn: raw,
-            inDays,
-          });
-        }
-      }
-    }
-    for (const d of drivers) {
-      const raw = d.licenseExpiry;
-      if (typeof raw !== "string") continue;
-      const inDays = daysUntilIso(raw, now);
-      if (inDays === null) continue;
-      if (inDays <= withinDays) {
-        expiries.push({
-          subject: `Driver ${d.name ?? d.id}`,
-          document: "licence",
-          expiresOn: raw,
-          inDays,
-        });
-      }
-    }
-
-    if (expiries.length === 0) {
-      return { payload: { reminded: 0, withinDays, expiries: [] }, status: 200 };
-    }
-
-    const lines = expiries
-      .map((e) => `${e.subject}: ${e.document} expires ${e.expiresOn} (in ${e.inDays} day(s))`)
-      .join("\n");
-    await sendBroadcastMessage(
+    const payload = await runDocumentExpiryReminder(
       db,
       claims,
-      {
-        audience: "staff",
-        title: `Transport document expiries — ${expiries.length} upcoming`,
-        body: lines,
-      },
+      organizationId,
+      schoolId,
+      withinDays,
       request,
     );
-
-    await emitMutationAudit(
-      db,
-      claims,
-      moduleEntityAudit("transport.document.reminded", "transport_school", schoolId, {
-        count: expiries.length,
-        withinDays,
-      }),
-      request,
-    );
-
-    return { payload: { reminded: expiries.length, withinDays, expiries }, status: 200 };
+    return { payload, status: 200 };
   });
 }
 

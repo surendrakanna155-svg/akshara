@@ -18,6 +18,10 @@ abstract final class InventoryFinanceApiPaths {
   static String approvePurchaseOrder(String id) =>
       '$procurementOrders/$id/approve';
   static String receiveGoods(String id) => '$procurementOrders/$id/receive';
+
+  /// INV-5 — GRN register on the inventory surface (viewInventory-gated),
+  /// unlike [goodsReceipts] which rides the viewFinance reconciliation surface.
+  static const String procurementGrns = '/inventory/procurement/grns';
   static const String stockValuation = '/inventory/stock/valuation';
 
   // ── INV-1..7 — Store STOCK module ──

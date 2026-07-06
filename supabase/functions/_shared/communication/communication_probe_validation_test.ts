@@ -31,6 +31,8 @@ function extractProbeNames(source: string): string[] {
   return names;
 }
 
-Deno.test("tenant isolation probe count includes v7.6 probes (220)", () => {
-  assertEquals(extractProbeNames(probesSource).length, 220);
+// Count updated 220 → 233: the RLS repair wave (20ae7762) registered 13 more
+// probes without bumping this tripwire, so it had been failing at HEAD.
+Deno.test("tenant isolation probe count includes v7.6 probes (233)", () => {
+  assertEquals(extractProbeNames(probesSource).length, 233);
 });

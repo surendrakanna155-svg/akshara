@@ -29,11 +29,15 @@ import {
 import {
   assertCapacity,
   CapacityExceededError,
+  collectDocumentExpiries,
   isoDateField,
   isStrictIsoDate,
   regKey,
+  runDocumentExpiryReminder,
+  TRANSPORT_DOC_EXPIRY_AUDIENCE,
 } from "./transport_write_handlers.ts";
 import { buildRoster } from "./transport_handlers.ts";
+import { normalizeBroadcastAudience } from "../communication/communication_service.ts";
 
 const ORG = "a1000000-0000-4000-8000-000000000001";
 const SCHOOL_A = "a2000000-0000-4000-8000-000000000001";
@@ -512,6 +516,164 @@ Deno.test("TRN-5: bulk assign yields per-student partial result with skips", asy
   assertEquals(skipped.length, 1);
   const listed = await writeStore.findAll(db, ORG, SCHOOL_A, "allocation");
   assertEquals(listed.length, 2);
+});
+
+// ── TRN-8: document-expiry reminder rides the XCT-2 rail as all_staff ─────────
+
+/**
+ * MockTransportWriteDb + call capture + a comm_broadcasts responder, so the
+ * FULL TRN-8 core (entity scan → scheduleReminder → audit) runs against one
+ * fake db and every INSERT the rail issues is assertable — same capturing
+ * fake-db pattern as reminders/reminders_service_test.ts.
+ */
+class MockReminderRailDb extends MockTransportWriteDb {
+  calls: Array<{ sql: string; args: unknown[] }> = [];
+
+  // deno-lint-ignore no-explicit-any
+  override queryObject<T>(sql: string, args: any[] = []): Promise<T[]> {
+    this.calls.push({ sql, args });
+    if (sql.includes("INSERT INTO comm_broadcasts")) {
+      // Echo the scheduled row back the way createScheduledBroadcast RETURNINGs it.
+      return Promise.resolve([{
+        id: "rem-trn8",
+        organization_id: args[0],
+        school_id: args[1],
+        audience: args[2],
+        audience_class: args[3],
+        audience_section: args[4],
+        requires_ack: args[5],
+        title: args[6],
+        body: args[7],
+        status: "scheduled",
+        scheduled_at: args[8],
+        created_by: args[9],
+        sent_at: null,
+        created_at: new Date().toISOString(),
+      }] as T[]);
+    }
+    return super.queryObject<T>(sql, args);
+  }
+}
+
+/** The exact comm_broadcasts.audience CHECK-constraint tokens (migration truth). */
+const VALID_BROADCAST_AUDIENCES = new Set([
+  "all_parents",
+  "all_teachers",
+  "all_students",
+  "all_staff",
+  "school_wide",
+  "class_parents",
+  "class_students",
+]);
+
+/** Strict ISO date n whole days from now (UTC), for rot-proof expiry fixtures. */
+function isoInDays(n: number): string {
+  return new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+}
+
+Deno.test("TRN-8: expiring docs schedule ONE all_staff reminder on the XCT-2 rail + audit", async () => {
+  const db = new MockReminderRailDb();
+  const client = db as unknown as TenantQueryClient;
+  await writeStore.insert(client, ORG, SCHOOL_A, "vehicle", "v1", {
+    id: "v1",
+    registration: "KA-01-AB-1234",
+    insuranceExpiry: isoInDays(5), // within 30 days → due
+    roadTaxExpiry: isoInDays(400), // far future → not due
+    permitExpiry: "Dec 2027", // legacy free-text → skipped, never crashes the scan
+  });
+  await writeStore.insert(client, ORG, SCHOOL_A, "driver", "d1", {
+    id: "d1",
+    name: "Ramesh",
+    licenseExpiry: isoInDays(-2), // already expired → still reminded
+  });
+
+  const result = await runDocumentExpiryReminder(client, schoolClaims(), ORG, SCHOOL_A, 30);
+
+  assertEquals(result.reminded, 2);
+  assertEquals(result.withinDays, 30);
+  assertEquals(result.reminderId, "rem-trn8");
+  assertEquals((result.expiries as unknown[]).length, 2);
+
+  // ONE scheduled reminder row rides the rail — persisted 'scheduled', not sent now.
+  const inserts = db.calls.filter((c) => c.sql.includes("INSERT INTO comm_broadcasts"));
+  assertEquals(inserts.length, 1);
+  assertEquals(inserts[0].sql.includes("'scheduled'"), true);
+  // Audience is the VALID role-scoped staff token (the "staff" CHECK-violation bug).
+  assertEquals(inserts[0].args[2], "all_staff");
+  assertEquals(inserts[0].args[2], TRANSPORT_DOC_EXPIRY_AUDIENCE);
+  assertEquals(String(inserts[0].args[6]), "Transport document expiries — 2 upcoming");
+  assertEquals(String(inserts[0].args[7]).includes("Vehicle KA-01-AB-1234"), true);
+  assertEquals(String(inserts[0].args[7]).includes("Driver Ramesh"), true);
+
+  // The run is audited (transport.document.reminded carries count + reminderId).
+  const audits = db.calls.filter((c) => c.sql.includes("INSERT INTO audit_events"));
+  assertEquals(audits.length >= 1, true);
+  assertEquals(
+    audits.some((c) => c.args.some((a) => String(a).includes("transport.document.reminded"))),
+    true,
+  );
+});
+
+Deno.test("TRN-8: no expiring docs → nothing scheduled, reminded 0", async () => {
+  const db = new MockReminderRailDb();
+  const client = db as unknown as TenantQueryClient;
+  await writeStore.insert(client, ORG, SCHOOL_A, "vehicle", "v1", {
+    id: "v1",
+    registration: "KA-01-AB-1234",
+    insuranceExpiry: isoInDays(200), // all comfortably outside the 30-day window
+    fitnessExpiry: isoInDays(365),
+  });
+  await writeStore.insert(client, ORG, SCHOOL_A, "driver", "d1", {
+    id: "d1",
+    name: "Ramesh",
+    licenseExpiry: isoInDays(180),
+  });
+
+  const result = await runDocumentExpiryReminder(client, schoolClaims(), ORG, SCHOOL_A, 30);
+
+  assertEquals(result.reminded, 0);
+  assertEquals(result.expiries, []);
+  assertEquals(result.reminderId, undefined);
+  // Check-at-trigger-time: nothing due → NOTHING rides the rail and nothing audits.
+  assertEquals(db.calls.some((c) => c.sql.includes("INSERT INTO comm_broadcasts")), false);
+  assertEquals(db.calls.some((c) => c.sql.includes("INSERT INTO audit_events")), false);
+});
+
+Deno.test("TRN-8: regression guard — the reminder audience is a valid CHECK token (never 'staff')", () => {
+  // The constant itself must be a CHECK-approved token…
+  assertEquals(VALID_BROADCAST_AUDIENCES.has(TRANSPORT_DOC_EXPIRY_AUDIENCE), true);
+  // …and must SURVIVE audience normalization still CHECK-approved (what hits SQL).
+  assertEquals(
+    VALID_BROADCAST_AUDIENCES.has(normalizeBroadcastAudience(TRANSPORT_DOC_EXPIRY_AUDIENCE)),
+    true,
+  );
+  // The old bug, pinned: "staff" is neither a CHECK token nor aliased to one, so
+  // any regression back to it would violate comm_broadcasts' CHECK at insert time.
+  assertEquals(VALID_BROADCAST_AUDIENCES.has("staff"), false);
+  assertEquals(VALID_BROADCAST_AUDIENCES.has(normalizeBroadcastAudience("staff")), false);
+});
+
+Deno.test("TRN-8: collectDocumentExpiries scans all five vehicle fields + driver licence", () => {
+  const now = new Date();
+  const expiries = collectDocumentExpiries(
+    [{
+      id: "v1",
+      registration: "KA-01-AB-1234",
+      insuranceExpiry: isoInDays(1),
+      fitnessExpiry: isoInDays(2),
+      pucExpiry: isoInDays(3),
+      permitExpiry: isoInDays(4),
+      roadTaxExpiry: isoInDays(5),
+    }],
+    [{ id: "d1", name: "Ramesh", licenseExpiry: isoInDays(6) }],
+    30,
+    now,
+  );
+  assertEquals(expiries.length, 6);
+  assertEquals(
+    expiries.map((e) => e.document),
+    ["insurance", "fitness", "puc", "permit", "roadTax", "licence"],
+  );
 });
 
 // ── TRN-9: demand idempotency + payment-free proof ────────────────────────────

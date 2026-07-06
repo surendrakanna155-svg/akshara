@@ -7,6 +7,7 @@ import {
   handleGetPurchaseOrder,
   handleListDbPurchaseOrders,
   handleListDbVendors,
+  handleListGrns,
   handleReceiveGoods,
   handleStockValuation,
 } from "./inventory_finance_handlers.ts";
@@ -38,6 +39,10 @@ export function matchInventoryFinanceRoute(
   }
   if (path === "/inventory/procurement/orders" && method === "POST") {
     return { handler: handleCreatePurchaseOrder, args: [] };
+  }
+  // INV-5: GRN (goods received) register, viewInventory-gated.
+  if (path === "/inventory/procurement/grns" && method === "GET") {
+    return { handler: handleListGrns, args: [] };
   }
 
   const poDetailMatch = path.match(/^\/inventory\/procurement\/orders\/([^/]+)$/);

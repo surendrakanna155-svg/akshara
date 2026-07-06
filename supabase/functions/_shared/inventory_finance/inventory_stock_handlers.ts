@@ -15,9 +15,11 @@ import {
   requireSchoolOperationalScope,
   schoolIdFromClaims,
 } from "../permission_middleware.ts";
+import type { AccessTokenClaims } from "../jwt.ts";
+import type { TenantQueryClient } from "../tenant_db.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
-import { sendBroadcastMessage } from "../communication/communication_service.ts";
+import { scheduleReminder } from "../reminders/reminders_service.ts";
 import {
   adjustStock,
   approveStockAdjustment,
@@ -69,6 +71,81 @@ function mapStockError(error: unknown): Response | null {
   return null;
 }
 
+// ── INV-7: low-stock alert on the shared XCT-2 reminder rail ──
+
+/** Fixed title of the low-stock reminder; also the idempotency discriminator. */
+export const LOW_STOCK_REMINDER_TITLE = "Inventory — low stock alert";
+
+/**
+ * INV-7 — schedule ONE in-app low-stock reminder for the school's storekeepers
+ * on the shared XCT-2 rail (fires via the scheduled-broadcast runner; the
+ * `storekeepers` audience resolves at dispatch time and falls back to all staff
+ * when no storekeeper membership exists).
+ *
+ * Idempotent: skips scheduling when a low-stock reminder is already pending
+ * (`status='scheduled'`, same audience+title, this org/school) so repeated
+ * issues don't pile up duplicate alerts before the runner fires.
+ *
+ * NEVER fails the stock issue: the whole thing runs inside a SAVEPOINT and any
+ * error rolls back only the reminder work (the posted issue + its movements
+ * commit untouched). Returns whether a reminder was scheduled.
+ */
+export async function scheduleLowStockReminderIfNeeded(
+  db: TenantQueryClient,
+  claims: AccessTokenClaims,
+  input: { issueId: string; lowStockCount: number },
+  req?: Request,
+): Promise<{ scheduled: boolean }> {
+  if (input.lowStockCount <= 0) return { scheduled: false };
+  await db.queryObject("SAVEPOINT inv7_low_stock_reminder");
+  try {
+    const orgId = organizationIdFromClaims(claims);
+    const schoolId = schoolIdFromClaims(claims);
+    const pending = await db.queryObject<{ id: string }>(
+      `SELECT id FROM comm_broadcasts
+        WHERE organization_id = $1
+          AND school_id = $2
+          AND audience = 'storekeepers'
+          AND status = 'scheduled'
+          AND title = $3
+        LIMIT 1`,
+      [orgId, schoolId, LOW_STOCK_REMINDER_TITLE],
+    );
+    if (pending.length > 0) {
+      await db.queryObject("RELEASE SAVEPOINT inv7_low_stock_reminder");
+      return { scheduled: false };
+    }
+    await scheduleReminder(db, claims, {
+      audience: "storekeepers",
+      title: LOW_STOCK_REMINDER_TITLE,
+      body:
+        `${input.lowStockCount} item(s) are at or below their reorder level. Review the low-stock list and raise purchase orders.`,
+      // Fire on the next scheduled-broadcast runner pass (i.e. promptly).
+      remindAt: new Date().toISOString(),
+    }, req);
+    await recordMutationAudit(db, claims, {
+      eventType: "lowStockAlerted",
+      category: "workflow",
+      entityType: "stock_low_stock_alert",
+      entityId: input.issueId,
+      metadata: { count: input.lowStockCount },
+    }, {
+      eventType: "inventory.low_stock.alerted",
+      sourceModule: "inventory",
+      payload: { count: input.lowStockCount, trigger: "issue", issueId: input.issueId },
+      idempotencyKey: `inventory.low_stock.alerted:${input.issueId}`,
+    }, req);
+    await db.queryObject("RELEASE SAVEPOINT inv7_low_stock_reminder");
+    return { scheduled: true };
+  } catch (error) {
+    // Alerting is best-effort — roll back ONLY the reminder work and keep the
+    // issue transaction healthy. The issue itself must never fail here.
+    await db.queryObject("ROLLBACK TO SAVEPOINT inv7_low_stock_reminder");
+    console.error("INV-7 low-stock reminder scheduling failed", error);
+    return { scheduled: false };
+  }
+}
+
 // ── INV-1: POST /inventory/stock/issue ──
 
 export async function handleIssueStock(req: Request, config: AppConfig): Promise<Response> {
@@ -114,25 +191,14 @@ export async function handleIssueStock(req: Request, config: AppConfig): Promise
         idempotencyKey: `inventory.stock.issued:${issued.issueId}`,
       }, req);
 
-      // INV-7: after an issue, alert store staff about any SKU now below reorder.
+      // INV-7: after an issue, remind the storekeepers about any SKU now below
+      // reorder — via the shared XCT-2 rail (scheduleReminder), never a direct
+      // broadcast. Best-effort + idempotent; can never fail the posted issue.
       const low = issued.posted ? await listLowStock(db, orgId, schoolId) : [];
       if (low.length > 0) {
-        await sendBroadcastMessage(db, auth.claims, {
-          audience: "all_staff",
-          title: "Inventory — low stock alert",
-          body: `${low.length} item(s) are at or below their reorder level. Review the low-stock list and raise purchase orders.`,
-        }, req);
-        await recordMutationAudit(db, auth.claims, {
-          eventType: "lowStockAlerted",
-          category: "workflow",
-          entityType: "stock_low_stock_alert",
-          entityId: issued.issueId,
-          metadata: { count: low.length },
-        }, {
-          eventType: "inventory.low_stock.alerted",
-          sourceModule: "inventory",
-          payload: { count: low.length, trigger: "issue", issueId: issued.issueId },
-          idempotencyKey: `inventory.low_stock.alerted:${issued.issueId}`,
+        await scheduleLowStockReminderIfNeeded(db, auth.claims, {
+          issueId: issued.issueId,
+          lowStockCount: low.length,
         }, req);
       }
       return { result: issued, lowStock: low };
