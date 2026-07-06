@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/exam_approval_config.dart';
 import '../../../core/exams/exam_administration_store.dart';
+import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../core/testing/qa_test_keys.dart';
+import '../reports/teacher_report_exporters.dart';
+import '../reports/teacher_report_share_sheet.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
@@ -40,6 +43,28 @@ class TeacherExamsScreen extends ConsumerWidget {
         unreadNotifications: data.unreadNotifications,
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,
+        additionalActions: [
+          // TCH-3 — export my-class marks summary (entered/total/pending +
+          // status) as CSV/PDF on the shared XCT-1 grid pipeline.
+          IconButton(
+            key: QaTestKeys.teacherMarksSummaryExportButton,
+            tooltip: 'Export marks summary',
+            onPressed: () {
+              final progress =
+                  ExamAdministrationStore.instance.marksEntryProgress();
+              final exporters = TeacherReportExporters(
+                ref.read(aksharaReportExportServiceProvider),
+              );
+              showTeacherExportSheet(
+                context,
+                title: 'Export marks summary',
+                onCsv: () => exporters.shareMarksSummaryCsv(progress),
+                onPdf: () => exporters.shareMarksSummaryPdf(progress),
+              );
+            },
+            icon: const Icon(Icons.ios_share_outlined),
+          ),
+        ],
       ),
       body: isLoading
           ? const AksharaLoadingState()

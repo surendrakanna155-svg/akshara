@@ -88,6 +88,8 @@ class _TaskTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = context.aksharaText;
+    // TCH-2 — an overdue task (past its deadline) is drawn in the error tone.
+    final accent = task.overdue ? colors.error : colors.primary;
 
     return Semantics(
       button: onTap != null,
@@ -115,7 +117,7 @@ class _TaskTile extends StatelessWidget {
                       Icon(
                         task.icon,
                         size: 24,
-                        color: colors.primary,
+                        color: accent,
                       ),
                       const Spacer(),
                       Text(

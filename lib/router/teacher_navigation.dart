@@ -66,7 +66,12 @@ void handleTeacherNavigation(
     case 'home':
       context.go(RouteNames.teacherDashboard);
     default:
-      if (actionId.startsWith('mark_attendance_')) {
+      if (actionId.startsWith('schedule_attendance_')) {
+        // TCH-1 — a today-schedule row → mark attendance for that class, using
+        // the attendance screen's `?class=<label>` preselect.
+        final label = actionId.replaceFirst('schedule_attendance_', '');
+        context.go('${RouteNames.teacherAttendance}?class=$label');
+      } else if (actionId.startsWith('mark_attendance_')) {
         context.go(RouteNames.teacherAttendance);
       } else if (actionId.startsWith('class_')) {
         context.go(RouteNames.teacherTimetable);

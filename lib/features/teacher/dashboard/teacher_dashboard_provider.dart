@@ -75,12 +75,17 @@ class PendingTask {
     required this.icon,
     required this.count,
     required this.label,
+    this.overdue = false,
   });
 
   final String id;
   final IconData icon;
   final int count;
   final String label;
+
+  /// TCH-2 — the task is past its deadline (e.g. marks-entry overdue), so the
+  /// tile is drawn with an urgent (error) tone.
+  final bool overdue;
 }
 
 @immutable
@@ -156,9 +161,15 @@ class TeacherDashboardData {
     final attention = TeacherStudentRiskService.attentionForClass(context);
     // TCH-2 — marks still to enter, from the same marks-entry source that backs
     // /teacher/exams/marks (exams in the marks_entry phase with unfilled marks).
-    final marksPending = ExamAdministrationStore.instance
-        .marksEntryProgress()
-        .fold<int>(0, (sum, p) => sum + (p.totalCount - p.enteredCount));
+    final marksProgress = ExamAdministrationStore.instance.marksEntryProgress();
+    final marksPending = marksProgress.fold<int>(
+      0,
+      (sum, p) => sum + (p.totalCount - p.enteredCount),
+    );
+    // TCH-2 — any exam past its marks-entry deadline with marks still pending
+    // flags the home task as overdue (reuses the EXM-6 `isOverdue` signal).
+    final marksOverdue =
+        marksProgress.any((p) => p.isOverdue(DateTime.now()));
     return TeacherDashboardData(
       teacherName: 'Priya Sharma',
       greetingEyebrow: 'Friday, 5 Jun',
@@ -213,13 +224,15 @@ class TeacherDashboardData {
           count: 5,
           label: 'HW to review',
         ),
-        // TCH-2 — deep-links to the exams marks-entry surface when > 0.
+        // TCH-2 — deep-links to the exams marks-entry surface when > 0; shows an
+        // urgent "Marks overdue" tile once any exam is past its deadline.
         if (marksPending > 0)
           PendingTask(
             id: 'marks_pending',
             icon: Icons.grading_outlined,
             count: marksPending,
-            label: 'Marks to enter',
+            label: marksOverdue ? 'Marks overdue' : 'Marks to enter',
+            overdue: marksOverdue,
           ),
         const PendingTask(
           id: 'unread_messages',

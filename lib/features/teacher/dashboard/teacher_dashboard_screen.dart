@@ -125,8 +125,10 @@ class _MobileBody extends StatelessWidget {
         TodayScheduleCard(
           classes: data.todaySchedule,
           onTimetableTap: () => onNavigate('timetable'),
+          // TCH-1 — tapping a today-schedule row jumps straight to marking
+          // attendance for that class (not the weekly timetable).
           onClassTap: (scheduleClass) =>
-              onNavigate('class_${scheduleClass.id}'),
+              onNavigate('schedule_attendance_${scheduleClass.classLabel}'),
         ),
         const SizedBox(height: AksharaSpacing.s4),
         _StudentsNeedingAttentionSection(

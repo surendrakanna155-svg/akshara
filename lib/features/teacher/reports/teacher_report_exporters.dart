@@ -1,3 +1,4 @@
+import '../../../core/exams/exam_administration_store.dart';
 import '../../../core/reports/akshara_report_export_service.dart';
 import '../attendance/attendance_models.dart';
 import '../timetable/timetable_models.dart';
@@ -115,6 +116,59 @@ class TeacherReportExporters {
       moduleLabel: 'Teacher · Timetable · ${data.weekRangeLabel}',
       headers: timetableHeaders,
       rows: timetableRows(data),
+      generatedAtLabel: DateTime.now().toIso8601String(),
+    );
+  }
+
+  // --- TCH-3 my-class marks summary ------------------------------------------
+
+  static const List<String> marksSummaryHeaders = [
+    'Class',
+    'Subject',
+    'Entered',
+    'Total',
+    'Pending',
+    'Status',
+  ];
+
+  /// TCH-3 — one row per exam still in marks entry: how many marks are in vs the
+  /// roster, and whether that exam is Complete / Pending / Overdue (reuses the
+  /// EXM-6 `isOverdue` signal). `asOf` decides overdue (injected for testing).
+  static List<List<String>> marksSummaryRows(
+    List<MarksEntryProgress> progress, {
+    DateTime? asOf,
+  }) {
+    final now = asOf ?? DateTime.now();
+    return [
+      for (final p in progress)
+        [
+          p.classLabel,
+          p.subject,
+          '${p.enteredCount}',
+          '${p.totalCount}',
+          '${p.pending}',
+          p.pending == 0
+              ? 'Complete'
+              : (p.isOverdue(now) ? 'Overdue' : 'Pending'),
+        ],
+    ];
+  }
+
+  Future<void> shareMarksSummaryCsv(List<MarksEntryProgress> progress) {
+    return _service.shareGridCsv(
+      filename: 'marks_summary',
+      headers: marksSummaryHeaders,
+      rows: marksSummaryRows(progress),
+    );
+  }
+
+  Future<void> shareMarksSummaryPdf(List<MarksEntryProgress> progress) {
+    return _service.shareGridPdf(
+      filename: 'marks_summary',
+      reportTitle: 'Marks entry summary',
+      moduleLabel: 'Teacher · Exams · Marks summary',
+      headers: marksSummaryHeaders,
+      rows: marksSummaryRows(progress),
       generatedAtLabel: DateTime.now().toIso8601String(),
     );
   }

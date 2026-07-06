@@ -510,6 +510,10 @@ abstract final class QaTestKeys {
   static const teacherTimetableExportButton =
       ValueKey<String>('teacher_timetable_export_button');
 
+  // TCH-3 — export my-class marks summary from the teacher exams screen.
+  static const teacherMarksSummaryExportButton =
+      ValueKey<String>('teacher_marks_summary_export_button');
+
   // --- Finance E2E journey ---
   static ValueKey<String> financeHandoffQueueRow(String studentName) =>
       ValueKey<String>(
