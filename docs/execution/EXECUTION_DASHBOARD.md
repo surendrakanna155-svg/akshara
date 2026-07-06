@@ -11,10 +11,10 @@
 | Field | Value |
 |---|---|
 | **Current Phase** | **P1 — Remaining Backend & Code Fixes** 🟠 (P0 code/security ✅ 14/19; 5 live-lane tasks ⏳ owner-deferred) |
-| **Current Wave** | **P1-PROD-12 — C14 · Teacher & Attendance productivity (TCH-1/2/3/4, ATT-3/4)** — 🔵 next up. **C6 + C13-Homework-half defer** (HWK-1 schema). **C3 defers** (GA-1 live); **C4/C5/C7/C8/C9/C10/C11/C12/C13-Exams ✅**. **P2-UX-1 ∥-eligible**. P1-CODE-4 stays 👤-gated. |
-| **Wave Status** | **P1-CODE-1/2/3/5 ✅ + P1-PROD-0 ✅ + C1/C2/C4/C5/C7/C8/C9/C10/C11/C12/C13-Exams ✅** — through Finance CRM/Reports, Exams, Academic Registers/Certs, HR Payroll, Transport, Inventory/Library/Communication, Principal Approval batch, Admissions productivity, Finance productivity & receipting, and Academic-work Exams half (EXM-6 marks-deadline teacher reminder on XCT-2). P0: 14/19 ✅; 5 live-lane ⏳ owner-deferred. |
+| **Current Wave** | **P1-PROD-13 — C15 · HR & SIS productivity (HR-3/4/7, SIS-2/5)** — 🔵 next up. **C6 + C13-Homework-half defer** (HWK-1 schema). **C3 defers** (GA-1 live); **C4/C5/C7/C8/C9/C10/C11/C12/C13-Exams/C14 ✅**. **P2-UX-1 ∥-eligible**. P1-CODE-4 stays 👤-gated. |
+| **Wave Status** | **P1-CODE-1/2/3/5 ✅ + P1-PROD-0 ✅ + C1/C2/C4/C5/C7/C8/C9/C10/C11/C12/C13-Exams/C14 ✅** — through Finance CRM/Reports, Exams, Academic Registers/Certs, HR Payroll, Transport, Inventory/Library/Communication, Principal Approval batch, Admissions, Finance receipting, Academic-work Exams half, and Teacher & Attendance productivity (TCH-1/2/3). P0: 14/19 ✅; 5 live-lane ⏳ owner-deferred. |
 | **Planning** | 🔒 FROZEN 2026-07-04 → **AUTONOMOUS EXECUTION UNDER WAY** (P1 code + PROD waves; live lane deferred) |
-| **Last commit-gated wave** | **P1-PROD-11** (`0a8c2a3`) — C13 Exams half: EXM-4/5/7 verified built (merit+topper, pass-fail+grade-dist, datesheet PDF); closed EXM-6 (marks-entry-deadline teacher reminder — first caller of the XCT-2 rail; `handleRemindPendingMarks` schedules an in-app `all_teachers` reminder for exams past deadline with pending marks; deadline+Overdue UI). Homework half defers with C6. analyze 0 · deno exam 124/0 + reminders/audit 24/0 · +12 tests · suite no-new-fail (2 known UX-7) |
+| **Last commit-gated wave** | **P1-PROD-12** (`9e5602a`) — C14 Teacher & Attendance: TCH-4/ATT-3/ATT-4 verified built; closed TCH-1 (schedule-row tap → mark attendance for that class), TCH-2 (teacher-home marks task reflects overdue via EXM-6 `isOverdue`, urgent tone), TCH-3 (my-class marks-summary export on XCT-1). Client-only; attendance integrity untouched. analyze 0 · +4 tests · golden unchanged · suite no-new-fail (2 known UX-7) |
 
 ## 2. Wave arithmetic
 
@@ -98,7 +98,7 @@ Hard gates: P0 gates P4/P6/P7/P8 · P1-CODE-1 → P2-UX-2 · P3-AI-1 → P3-AI-2
 |---|---:|---:|---:|---:|---|
 | Planning | — | 🔒 FROZEN + reviewed | — | — | audit + final review |
 | P0 — Truth/Docs/Live-Verify | 3 (19 tasks; **14 ✅**) | **2** (W1 ✅ · W2 non-blocked legs ✅) | 0 | 1 (W3 + INFRA-1/3 — ⏳ live-lane) | EOS per task |
-| P1 — Backend & Code Fixes | 35 | 16 (CODE-1/2/3/5, PROD-0, C1, C2, C4✓, C5, C7, C8✓, C9, C10, C11, C12, C13-Exams) | 0 | 19 (next: C14 Teacher/Attendance — C3+C6+C13-HW defer; CODE-4 👤) | EOS per wave |
+| P1 — Backend & Code Fixes | 35 | 17 (CODE-1/2/3/5, PROD-0, C1, C2, C4✓, C5, C7, C8✓, C9, C10, C11, C12, C13-Exams, C14) | 0 | 18 (next: C15 HR/SIS — C3+C6+C13-HW defer; CODE-4 👤) | EOS per wave |
 | P2 — UI/UX | 5 | 0 | 0 | 5 | EOS UX per wave |
 | P3 — Adaptive AI | 15 sub-waves | 0 | 0 | 15 | EOS AI per sub-wave |
 | P4 — Red Team | 2 | 0 | 0 | 2 | RED-TEAM verdict |
@@ -111,7 +111,7 @@ Hard gates: P0 gates P4/P6/P7/P8 · P1-CODE-1 → P2-UX-2 · P3-AI-1 → P3-AI-2
 ## 8. EOS Status
 
 - **Gate protocol:** every wave ends with `/eos <scope>`; **commit only on PASS**; CONDITIONAL PASS only with P1s tracked *and* roadmap permission; BLOCKED = fix and re-run, never advance. Verdicts append to `docs/engineering/eos/EOS_RUN_LEDGER.md` + the journal.
-- **Implementation EOS runs so far:** **24** — P0·W1 DOCS · P0·W2 legs · P1-CODE-1/2/3/5 · P1-PROD-0 FOUNDATION · P1-PROD-1 FEATURE (C1 Recovery CRM) · P1-PROD-2 FEATURE (C2 / FIN-6 aging) · P1-PROD-3 (C4 Exams) VERIFIED · P1-PROD-4 (C5 Registers & Certs) · P1-PROD-5 (C7 HR Payroll) · P1-PROD-6 (C8 Transport) VERIFIED · P1-PROD-7 (C9 Inv/Lib/Comm) · P1-PROD-8 (C10 Approval money-SoD fix) · P1-PROD-9 (C11 Admissions productivity) · P1-PROD-10 (C12 Finance productivity & receipting) · **P1-PROD-11 (C13 Exams half: EXM-4/5/7 verified + EXM-6 marks-deadline teacher reminder on XCT-2) PASS (2026-07-06, latest)**. See `docs/engineering/eos/EOS_RUN_LEDGER.md`.
+- **Implementation EOS runs so far:** **25** — P0·W1 DOCS · P0·W2 legs · P1-CODE-1/2/3/5 · P1-PROD-0 FOUNDATION · P1-PROD-1 FEATURE (C1 Recovery CRM) · P1-PROD-2 FEATURE (C2 / FIN-6 aging) · P1-PROD-3 (C4 Exams) VERIFIED · P1-PROD-4 (C5 Registers & Certs) · P1-PROD-5 (C7 HR Payroll) · P1-PROD-6 (C8 Transport) VERIFIED · P1-PROD-7 (C9 Inv/Lib/Comm) · P1-PROD-8 (C10 Approval money-SoD fix) · P1-PROD-9 (C11 Admissions productivity) · P1-PROD-10 (C12 Finance productivity & receipting) · P1-PROD-11 (C13 Exams half: EXM-4/5/7 verified + EXM-6 marks-deadline teacher reminder on XCT-2) · **P1-PROD-12 (C14 Teacher & Attendance: TCH-4/ATT-3/ATT-4 verified + TCH-1 schedule-row→attendance + TCH-2 overdue marks + TCH-3 marks-summary export) PASS (2026-07-06, latest)**. See `docs/engineering/eos/EOS_RUN_LEDGER.md`.
 - **Open P0 findings:** none known at baseline (audit P0s are scheduled tasks, not open gate failures).
 - **Automatic-failure tripwires** (instant BLOCKED): data loss · security breach · escalation · tenant-isolation failure · critical crash · duplicate financial transaction · broken auth/sync · critical regression · failed backup verification · production blocker.
 - **Pre-execution baseline (verified live 2026-07-03, do NOT redo):** RLS isolation PASS · edge = `erp_tenant` NOBYPASSRLS · entitlement ON · encrypted backups + monthly restore drill green · watchdog green · AI live via OpenRouter · live DB password rotated · `flutter analyze` 0.
