@@ -113,6 +113,7 @@ Live evidence referenced by the roadmap/tracker/EOS ledger — kept active, not 
 ---
 
 ## 5. Design documents
+- Curriculum Intelligence initiative (2026-07-06): [`docs/curriculum-intelligence/`](docs/curriculum-intelligence/) — canonical spec (`spec/`), architecture audit + gap analysis (`audits/`), engineering roadmap (`planning/`). Extends the 🔒 Assessment-Intelligence-Platform v3.0 and the live-certified Question Intelligence foundation.
 - Design system: [`docs/FlutterDesignSystem.md`](docs/FlutterDesignSystem.md) (implementation reference) · [`docs/design/VISUAL_DESIGN_SYSTEM.md`](docs/design/VISUAL_DESIGN_SYSTEM.md) (approved visual system).
 - Forward product designs: [`docs/Vision/design/`](docs/Vision/design/) — incl. 🔒 [`Assessment-Intelligence-Platform.md`](docs/Vision/design/Assessment-Intelligence-Platform.md) (Master Plan v3.0, locked), Org-Builder v2, Dynamic-Widget-Platform, WhatsApp-Business, etc.
 - Superseded design notes, figma-era mockups, prior Fable UI/UX audit: [`docs/archive/design/`](docs/archive/design/) · [`docs/archive/audit/fable-ui-ux-audit/`](docs/archive/audit/fable-ui-ux-audit/) (history only).
