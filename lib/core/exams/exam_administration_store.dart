@@ -276,6 +276,13 @@ class MarksEntryProgress {
       totalCount == 0 ? 1.0 : (enteredCount / totalCount).clamp(0.0, 1.0);
 
   String get classLabel => '$grade-$sectionName';
+
+  /// EXM-6 — true when the deadline has passed ([asOf] is after it) and marks
+  /// are still pending. Drives the "Overdue" flag on the progress board.
+  bool isOverdue(DateTime asOf) {
+    final deadline = marksEntryDeadline;
+    return deadline != null && pending > 0 && deadline.isBefore(asOf);
+  }
 }
 
 /// EXM-1 — outcome of a bulk marks save: the persisted rows and the per-row

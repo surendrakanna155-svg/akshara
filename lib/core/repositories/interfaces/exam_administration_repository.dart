@@ -69,6 +69,13 @@ abstract class ExamAdministrationRepository {
     required RepositoryQuery query,
   });
 
+  /// EXM-6 — remind teachers about exams whose marks-entry deadline has passed
+  /// with marks still pending. Returns the number of overdue exams the reminder
+  /// covered (0 = nothing overdue, no reminder raised).
+  Future<int> remindPendingMarks({
+    required RepositoryQuery query,
+  });
+
   Future<List<PublishedExamResult>> listPublishedResultsForStudent({
     required RepositoryQuery query,
     required String sisStudentId,

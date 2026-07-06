@@ -71,5 +71,34 @@ void main() {
         findsNothing,
       );
     });
+
+    testWidgets(
+        'EXM-6: a principal sees Remind teachers and tapping it shows a snackbar',
+        (tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      final button = find.byKey(QaTestKeys.examRemindPendingMarksButton);
+      expect(button, findsOneWidget);
+
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(QaTestKeys.examRemindPendingMarksSnackbar),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('EXM-6: a role without manage-exams sees no Remind action',
+        (tester) async {
+      await tester.pumpWidget(buildApp(role: ErpRole.parent));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(QaTestKeys.examRemindPendingMarksButton),
+        findsNothing,
+      );
+    });
   });
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/error_text.dart';
 import '../../../core/exams/exam_administration_store.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/security/rbac_service.dart';
@@ -24,9 +25,21 @@ class ExamMarksProgressScreen extends ConsumerWidget {
     final rbac = ref.watch(rbacServiceProvider);
     final allowed = rbac.hasPermission(Permission.viewExams) ||
         rbac.hasPermission(Permission.verifyExamResults);
+    final canRemind = rbac.hasPermission(Permission.manageExams);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Marks entry progress')),
+      appBar: AppBar(
+        title: const Text('Marks entry progress'),
+        actions: [
+          if (allowed && canRemind)
+            TextButton.icon(
+              key: QaTestKeys.examRemindPendingMarksButton,
+              onPressed: () => _remindTeachers(context, ref),
+              icon: const Icon(Icons.notifications_active_outlined),
+              label: const Text('Remind teachers'),
+            ),
+        ],
+      ),
       body: !allowed
           ? const AksharaEmptyState(
               message:
@@ -60,6 +73,32 @@ class ExamMarksProgressScreen extends ConsumerWidget {
               ),
     );
   }
+
+  Future<void> _remindTeachers(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final count = await ref
+          .read(examMarksMutationProvider.notifier)
+          .remindPendingMarks();
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          key: QaTestKeys.examRemindPendingMarksSnackbar,
+          content: Text(
+            count == 0
+                ? 'No exams are past their deadline — no reminder sent.'
+                : 'Reminder sent to teachers for $count overdue '
+                    '${count == 1 ? 'exam' : 'exams'}.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(aksharaErrorMessage(error))),
+      );
+    }
+  }
 }
 
 class _ProgressCard extends StatelessWidget {
@@ -72,6 +111,8 @@ class _ProgressCard extends StatelessWidget {
     final text = context.aksharaText;
     final colors = context.colors;
     final complete = progress.pending == 0;
+    final overdue = progress.isOverdue(DateTime.now());
+    final deadline = progress.marksEntryDeadline;
 
     return Card(
       key: QaTestKeys.examMarksProgressCard(progress.examId),
@@ -93,6 +134,13 @@ class _ProgressCard extends StatelessWidget {
                   Expanded(
                     child: Text(progress.title, style: text.titleMedium),
                   ),
+                  if (overdue) ...[
+                    const AksharaStatusChip(
+                      label: 'Overdue',
+                      tone: KpiAccent.error,
+                    ),
+                    const SizedBox(width: AksharaSpacing.s2),
+                  ],
                   AksharaStatusChip(
                     label: complete ? 'Complete' : '${progress.pending} pending',
                     tone: complete ? KpiAccent.success : KpiAccent.warning,
@@ -104,6 +152,15 @@ class _ProgressCard extends StatelessWidget {
                 'Class ${progress.classLabel} · ${progress.subject}',
                 style: text.bodyMedium,
               ),
+              if (deadline != null) ...[
+                const SizedBox(height: AksharaSpacing.s1),
+                Text(
+                  'Deadline ${_formatDeadline(deadline)}',
+                  style: text.bodySmall.copyWith(
+                    color: overdue ? colors.error : colors.onSurfaceVariant,
+                  ),
+                ),
+              ],
               const SizedBox(height: AksharaSpacing.s3),
               ClipRRect(
                 borderRadius: BorderRadius.circular(AksharaSpacing.s1),
@@ -124,4 +181,13 @@ class _ProgressCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// EXM-6 — the marks-entry deadline as a plain local `yyyy-MM-dd` day.
+String _formatDeadline(DateTime deadline) {
+  final local = deadline.toLocal();
+  final y = local.year.toString().padLeft(4, '0');
+  final m = local.month.toString().padLeft(2, '0');
+  final d = local.day.toString().padLeft(2, '0');
+  return '$y-$m-$d';
 }

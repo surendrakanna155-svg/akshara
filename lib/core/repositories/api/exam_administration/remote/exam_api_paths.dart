@@ -16,6 +16,9 @@ abstract final class ExamApiPaths {
   /// EXM-2 — marks-entry progress board (exams awaiting marks for the school).
   static const String progress = '$base/progress';
 
+  /// EXM-6 — remind teachers about marks-entry past deadline (rides XCT-2).
+  static const String remindMarks = '$base/marks/remind';
+
   static String markEntry(String markEntryId) => '$base/marks/$markEntryId';
 
   static String process(String examId) => '$base/$examId/process';

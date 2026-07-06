@@ -250,6 +250,17 @@ class ExamRemoteDataSource {
     return _mapper.toProgressList(_listData(_responseMap(response)));
   }
 
+  /// EXM-6 — POST the remind trigger; returns the overdue-exam count covered.
+  Future<int> remindPendingMarks({required RepositoryQuery query}) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      ExamApiPaths.remindMarks,
+      queryParameters: _queryParams(query),
+      data: const <String, dynamic>{},
+    );
+    final reminded = _requireData(response)['reminded'];
+    return reminded is num ? reminded.toInt() : 0;
+  }
+
   Future<List<PublishedExamResult>> fetchPublishedResultsForStudent({
     required RepositoryQuery query,
     required String sisStudentId,

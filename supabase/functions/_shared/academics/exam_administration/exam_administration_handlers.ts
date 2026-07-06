@@ -12,6 +12,7 @@ import { TenantDbNotConfiguredError, withTenantContext } from "../../tenant_db.t
 import { tenantDbNotConfiguredResponse } from "../../tenant_handlers.ts";
 import { findApprovedByEntity } from "../../approval/approval_repository.ts";
 import { emitMutationAudit, examAudit } from "../../audit/mutation_audit_catalog.ts";
+import { scheduleReminder } from "../../reminders/reminders_service.ts";
 import { isSmsConfigured, sendTransactionalSms, type SmsConfig } from "../../sms_provider.ts";
 import {
   createExamSession,
@@ -42,6 +43,8 @@ import {
   listExamRemarks,
   listExamSessions,
   listMarksEntryProgress,
+  listOverdueMarksEntry,
+  type OverdueMarksEntryRow,
   listPublishedResultsForStudent,
   loadDatesheet,
   loadExamDistribution,
@@ -304,6 +307,90 @@ export async function handleMarksEntryProgress(
       return rows.map(marksEntryProgressToApi);
     },
   );
+}
+
+/** EXM-6 — class label for a mark-entry row (`grade-section` or bare `grade`). */
+function overdueClassLabel(row: OverdueMarksEntryRow): string {
+  return row.section_name ? `${row.grade}-${row.section_name}` : row.grade;
+}
+
+/**
+ * EXM-6 — build the teacher reminder from the overdue exams. Pure: returns null
+ * when nothing is overdue (so the caller schedules nothing), else a title + a
+ * per-exam digest body (subject · class · pending count · due date) that lets a
+ * teacher self-identify from the `all_teachers` in-app reminder.
+ */
+export function buildMarksReminder(
+  exams: OverdueMarksEntryRow[],
+): { title: string; body: string } | null {
+  if (exams.length === 0) return null;
+  const lines = exams.map((e) => {
+    const pending = Math.max(0, e.total_count - e.entered_count);
+    const due = e.marks_entry_deadline.slice(0, 10);
+    return `• ${e.subject} (Class ${overdueClassLabel(e)}) — ${pending} pending, due ${due}`;
+  });
+  const title = exams.length === 1
+    ? "Marks entry overdue"
+    : `Marks entry overdue — ${exams.length} exams`;
+  const body =
+    `Marks entry is past its deadline for the following. Please enter the pending marks:\n${
+      lines.join("\n")
+    }`;
+  return { title, body };
+}
+
+/**
+ * EXM-6 — remind teachers about exams whose marks-entry deadline has passed with
+ * marks still pending. Checks pending AT trigger time (so it never fires a false
+ * reminder), then schedules ONE in-app `all_teachers` reminder on the shared
+ * XCT-2 rail (fires via the scheduled-broadcast runner into teacher inboxes).
+ * No new notification channel — it rides the one reminder rail. manageExams.
+ */
+export async function handleRemindPendingMarks(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  return await withAuth(req, config, "manageExams", async (claims) => {
+    const { organizationId, schoolId } = tenantIds(claims);
+    const asOf = new Date().toISOString();
+    return await withTenantContext(config, claims, async (db) => {
+      const overdue = await listOverdueMarksEntry(db, organizationId, schoolId, asOf);
+      const reminder = buildMarksReminder(overdue);
+      if (!reminder) {
+        return { reminded: 0, exams: [] as Record<string, unknown>[] };
+      }
+      const scheduled = await scheduleReminder(
+        db,
+        claims,
+        {
+          audience: "all_teachers",
+          title: reminder.title,
+          body: reminder.body,
+          // Fire on the next scheduled-broadcast run pass (i.e. promptly).
+          remindAt: asOf,
+        },
+        req,
+      );
+      const reminderId = (scheduled.id as string | undefined) ?? asOf;
+      await emitMutationAudit(
+        db,
+        claims,
+        examAudit.marksReminderSent(reminderId, overdue.length),
+        req,
+      );
+      return {
+        reminded: overdue.length,
+        reminderId,
+        exams: overdue.map((e) => ({
+          examId: e.exam_id,
+          subject: e.subject,
+          classLabel: overdueClassLabel(e),
+          pending: Math.max(0, e.total_count - e.entered_count),
+          marksEntryDeadline: e.marks_entry_deadline,
+        })),
+      };
+    });
+  });
 }
 
 export async function handleGetExam(

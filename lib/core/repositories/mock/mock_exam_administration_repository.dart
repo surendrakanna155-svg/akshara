@@ -135,6 +135,17 @@ class MockExamAdministrationRepository implements ExamAdministrationRepository {
   }
 
   @override
+  Future<int> remindPendingMarks({required RepositoryQuery query}) async {
+    // EXM-6: overdue = deadline in the past AND marks still pending (mirrors
+    // the backend `listOverdueMarksEntry` filter). No money/side effect here.
+    final now = DateTime.now();
+    return _store.marksEntryProgress().where((p) {
+      final deadline = p.marksEntryDeadline;
+      return deadline != null && p.pending > 0 && deadline.isBefore(now);
+    }).length;
+  }
+
+  @override
   Future<List<PublishedExamResult>> listPublishedResultsForStudent({
     required RepositoryQuery query,
     required String sisStudentId,

@@ -286,6 +286,34 @@ class ExamMarksMutationNotifier extends AsyncNotifier<void> {
     if (state.hasError) throw state.error!;
     return count;
   }
+
+  /// EXM-6 — remind teachers about exams past their marks-entry deadline with
+  /// marks still pending (rides the shared XCT-2 reminder rail, in-app). Returns
+  /// the count of overdue exams the reminder covered (0 = nothing overdue).
+  Future<int> remindPendingMarks() async {
+    final rbac = ref.read(rbacServiceProvider);
+    if (!rbac.hasPermission(Permission.manageExams)) {
+      throw ApiFailureException(
+        const ApiFailure(
+          type: ApiFailureType.forbidden,
+          message: 'You do not have permission to remind teachers.',
+          code: 'RBAC_MANAGEEXAMS',
+        ),
+      );
+    }
+    if (state.isLoading) throw mutationInProgressFailure();
+    state = const AsyncLoading();
+    late int count;
+    state = await AsyncValue.guard(() async {
+      count =
+          await ref.read(examAdministrationRepositoryProvider).remindPendingMarks(
+                query: ref.read(repositoryQueryProvider),
+              );
+      ref.read(examAdminRefreshTickProvider.notifier).state++;
+    });
+    if (state.hasError) throw state.error!;
+    return count;
+  }
 }
 
 /// EXM-2 — marks-entry progress board: exams currently awaiting marks for the

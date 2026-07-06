@@ -691,6 +691,74 @@ export function marksEntryProgressToApi(
   };
 }
 
+export interface OverdueMarksEntryRow {
+  exam_id: string;
+  title: string;
+  subject: string;
+  grade: string;
+  section_name: string;
+  marks_entry_deadline: string;
+  entered_count: number;
+  total_count: number;
+}
+
+/**
+ * EXM-6 — exams still in the `marks_entry` phase whose `marks_entry_deadline`
+ * has PASSED (`< asOfIso`) and that still have unentered marks. This is the set
+ * a teacher reminder is raised for; an exam with no deadline, no pending marks,
+ * or a future deadline is excluded. Ordered oldest-overdue first.
+ */
+export async function listOverdueMarksEntry(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  asOfIso: string,
+): Promise<OverdueMarksEntryRow[]> {
+  const rows = await db.queryObject<{
+    exam_id: string;
+    title: string;
+    subject: string;
+    grade: string;
+    section_name: string;
+    marks_entry_deadline: string;
+    entered_count: string;
+    total_count: string;
+  }>(
+    `SELECT es.id AS exam_id,
+            es.title AS title,
+            es.subject AS subject,
+            es.grade AS grade,
+            es.section_name AS section_name,
+            es.marks_entry_deadline AS marks_entry_deadline,
+            count(m.id) FILTER (WHERE m.marks_entered = true)::text AS entered_count,
+            count(m.id)::text AS total_count
+       FROM exam_sessions es
+       LEFT JOIN exam_mark_entries m
+         ON m.organization_id = es.organization_id
+        AND m.school_id = es.school_id
+        AND m.exam_id = es.id
+      WHERE es.organization_id = $1
+        AND es.school_id = $2
+        AND es.phase = 'marks_entry'
+        AND es.marks_entry_deadline IS NOT NULL
+        AND es.marks_entry_deadline < $3::timestamptz
+      GROUP BY es.id, es.title, es.subject, es.grade, es.section_name, es.marks_entry_deadline
+      HAVING count(m.id) > count(m.id) FILTER (WHERE m.marks_entered = true)
+      ORDER BY es.marks_entry_deadline ASC`,
+    [organizationId, schoolId, asOfIso],
+  );
+  return rows.map((row) => ({
+    exam_id: row.exam_id,
+    title: row.title,
+    subject: row.subject,
+    grade: row.grade,
+    section_name: row.section_name,
+    marks_entry_deadline: row.marks_entry_deadline,
+    entered_count: parseInt(row.entered_count ?? "0", 10),
+    total_count: parseInt(row.total_count ?? "0", 10),
+  }));
+}
+
 /**
  * EXM-1 — outcome of applying one entry inside a bulk save. A row that is
  * rejected (published, not found, out of bounds, bad status, or a concurrency

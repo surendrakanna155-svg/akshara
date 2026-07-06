@@ -937,6 +937,26 @@ export const examAudit = {
       idempotencyKey: `exam.results.published:${examId}`,
     },
   }),
+  /**
+   * EXM-6 — a marks-entry-overdue reminder was raised to teachers on the shared
+   * XCT-2 rail. Keyed on the scheduled reminder id so the trigger is recorded
+   * once per reminder (a later re-trigger mints a new reminder → new row).
+   */
+  marksReminderSent: (
+    reminderId: string,
+    examCount: number,
+  ): MutationAuditSpec => ({
+    ...workflow("examMarksReminderSent", "scheduled_broadcast", reminderId, {
+      reminderId,
+      examCount,
+    }),
+    domain: {
+      eventType: "exam.marks_reminder.sent",
+      payload: { reminderId, examCount },
+      sourceModule: "exam",
+      idempotencyKey: `exam.marks_reminder.sent:${reminderId}`,
+    },
+  }),
 };
 
 // ─── Education (v8.5–v8.8) ──────────────────────────────────────────────────

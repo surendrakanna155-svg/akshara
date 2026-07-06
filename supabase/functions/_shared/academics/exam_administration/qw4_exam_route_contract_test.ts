@@ -97,6 +97,20 @@ Deno.test("QA-B-034: POST /academics/exams persists with manageExams (passes gat
   assertEquals(res?.status, 503);
 });
 
+Deno.test("EXM-6: POST /academics/exams/marks/remind is denied without manageExams (403)", async () => {
+  // A viewExams-only reader cannot trigger the teacher reminder.
+  const res = await call("POST", "/academics/exams/marks/remind", ["viewExams"], {});
+  assertEquals(res?.status, 403);
+  const env = await res!.json();
+  assertEquals(env.error.code, "FORBIDDEN");
+});
+
+Deno.test("EXM-6: POST /academics/exams/marks/remind passes the gate with manageExams (→ 503)", async () => {
+  const res = await call("POST", "/academics/exams/marks/remind", ["manageExams"], {});
+  // Gate passed → reached the (unconfigured) tenant DB where the overdue query runs.
+  assertEquals(res?.status, 503);
+});
+
 Deno.test("QA-B-034: POST /academics/exams rejects a missing title (422) before the DB", async () => {
   const res = await call("POST", "/academics/exams", ["manageExams"], {
     subject: "Mathematics",

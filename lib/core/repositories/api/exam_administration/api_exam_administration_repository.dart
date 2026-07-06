@@ -105,6 +105,10 @@ class ApiExamAdministrationRepository implements ExamAdministrationRepository {
       _remote.fetchMarksEntryProgress(query: query);
 
   @override
+  Future<int> remindPendingMarks({required RepositoryQuery query}) =>
+      _remote.remindPendingMarks(query: query);
+
+  @override
   Future<List<PublishedExamResult>> listPublishedResultsForStudent({
     required RepositoryQuery query,
     required String sisStudentId,

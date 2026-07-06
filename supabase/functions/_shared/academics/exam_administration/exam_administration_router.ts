@@ -19,6 +19,7 @@ import {
   handleMarksEntryProgress,
   handleMeritList,
   handleOpenMarksEntry,
+  handleRemindPendingMarks,
   handleProcessExamResults,
   handlePublishExamResults,
   handleReportCards,
@@ -47,6 +48,11 @@ export function matchExamAdministrationRoute(
   // /academics/exams/{examId} GET so "progress" is not mistaken for an examId.
   if (path === "/academics/exams/progress" && method === "GET") {
     return { handler: handleMarksEntryProgress, args: [] };
+  }
+  // EXM-6 — remind teachers about marks-entry past deadline. Specific literal
+  // before the generic /academics/exams/marks/{id} PATCH matcher (different verb).
+  if (path === "/academics/exams/marks/remind" && method === "POST") {
+    return { handler: handleRemindPendingMarks, args: [] };
   }
 
   // EXM-3/4b/7 — class + term scoped read reports. Matched BEFORE the generic

@@ -262,6 +262,11 @@ abstract final class QaTestKeys {
       ValueKey<String>('exam_marks_progress_button');
   static ValueKey<String> examMarksProgressCard(String examId) =>
       ValueKey<String>('exam_marks_progress_card_$examId');
+  // EXM-6 — remind teachers about marks-entry past deadline.
+  static const examRemindPendingMarksButton =
+      ValueKey<String>('exam_remind_pending_marks_button');
+  static const examRemindPendingMarksSnackbar =
+      ValueKey<String>('exam_remind_pending_marks_snackbar');
 
   // EXM-3/4/5/7 — Exam Reports area (tabulation / merit+toppers /
   // pass-fail+distribution / datesheet), each with CSV + PDF export.
