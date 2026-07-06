@@ -440,6 +440,45 @@ final reconcileOfflinePaymentProvider = AsyncNotifierProvider<
   ReconcileOfflinePaymentNotifier.new,
 );
 
+/// FIN-R7: mark a pending instrument (cheque/DD/PDC) as bounced/dishonoured.
+/// Tracking-only — no money is reversed (Finance = sole payment engine), so it
+/// invalidates the offline-payments list but NOT collections/accounts/invoices.
+class BounceOfflinePaymentNotifier
+    extends AsyncNotifier<OfflinePaymentRecord?> {
+  @override
+  FutureOr<OfflinePaymentRecord?> build() => null;
+
+  Future<OfflinePaymentRecord?> execute({
+    required String offlinePaymentId,
+    BounceOfflinePaymentRequest request = const BounceOfflinePaymentRequest(),
+  }) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertManageFinance(ref),
+        auditAction: 'bounceOfflinePayment',
+        auditType: AuditEventType.offlinePaymentBounced,
+        entityId: offlinePaymentId,
+        entityIdForAudit: (record) => record.id,
+        invalidateOfflinePayments: true,
+        action: () => ref.read(financeRepositoryProvider).bounceOfflinePayment(
+              query: ref.read(repositoryQueryProvider),
+              offlinePaymentId: offlinePaymentId,
+              request: request,
+            ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final bounceOfflinePaymentProvider = AsyncNotifierProvider<
+    BounceOfflinePaymentNotifier, OfflinePaymentRecord?>(
+  BounceOfflinePaymentNotifier.new,
+);
+
 class CreateQrPaymentSessionNotifier extends AsyncNotifier<QrPaymentSession?> {
   @override
   FutureOr<QrPaymentSession?> build() => null;

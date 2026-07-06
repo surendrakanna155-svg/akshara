@@ -180,6 +180,18 @@ class HybridFinanceRepository implements FinanceRepository {
       );
 
   @override
+  Future<OfflinePaymentRecord> bounceOfflinePayment({
+    required RepositoryQuery query,
+    required String offlinePaymentId,
+    required BounceOfflinePaymentRequest request,
+  }) =>
+      _api.bounceOfflinePayment(
+        query: query,
+        offlinePaymentId: offlinePaymentId,
+        request: request,
+      );
+
+  @override
   Future<DefaultersDashboardData> getDefaultersDashboard({
     required RepositoryQuery query,
   }) =>
@@ -439,4 +451,11 @@ class HybridFinanceRepository implements FinanceRepository {
     required RepositoryQuery query,
   }) =>
       _api.getCallQueue(query: query);
+
+  @override
+  Future<RecoveryDashboardData> setCollectionTarget({
+    required RepositoryQuery query,
+    required SetCollectionTargetRequest request,
+  }) =>
+      _api.setCollectionTarget(query: query, request: request);
 }

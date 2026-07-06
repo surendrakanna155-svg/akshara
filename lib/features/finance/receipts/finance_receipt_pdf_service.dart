@@ -245,17 +245,12 @@ class FinanceReceiptPdfService {
     );
   }
 
-  String _formatInr(int amount) {
-    final digits = amount.abs().toString();
-    final buffer = StringBuffer(amount < 0 ? '-INR ' : 'INR ');
-    for (var i = 0; i < digits.length; i++) {
-      if (i > 0 && (digits.length - i) % 3 == 0) {
-        buffer.write(',');
-      }
-      buffer.write(digits[i]);
-    }
-    return buffer.toString();
-  }
+  /// Indian-format money for the receipt (FIN-3) — Lakh/Crore grouping via the
+  /// shared [indianDigitGroups] helper, consistent with the amount-in-words
+  /// line. "INR " prefix (not "₹") because the bundled PDF font lacks the rupee
+  /// glyph.
+  String _formatInr(int amount) =>
+      '${amount < 0 ? '-INR ' : 'INR '}${indianDigitGroups(amount.abs())}';
 }
 
 class ReceiptPdfLineItem {

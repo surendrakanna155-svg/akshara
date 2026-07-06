@@ -309,6 +309,20 @@ class ApiFinanceRepository implements FinanceRepository {
   }
 
   @override
+  Future<OfflinePaymentRecord> bounceOfflinePayment({
+    required RepositoryQuery query,
+    required String offlinePaymentId,
+    required BounceOfflinePaymentRequest request,
+  }) async {
+    final dto = await _remote.bounceOfflinePayment(
+      query: query,
+      offlinePaymentId: offlinePaymentId,
+      request: request,
+    );
+    return _mapper.toOfflinePayment(dto);
+  }
+
+  @override
   Future<DefaultersDashboardData> getDefaultersDashboard({
     required RepositoryQuery query,
   }) async {
@@ -647,5 +661,16 @@ class ApiFinanceRepository implements FinanceRepository {
   }) async {
     final dto = await _remote.fetchCallQueue(query: query);
     return _mapper.toCallQueue(dto);
+  }
+
+  @override
+  Future<RecoveryDashboardData> setCollectionTarget({
+    required RepositoryQuery query,
+    required SetCollectionTargetRequest request,
+  }) async {
+    await _remote.setCollectionTarget(query: query, request: request);
+    // Re-fetch so attainment reflects the just-set target.
+    final dto = await _remote.fetchRecoveryDashboard(query: query);
+    return _mapper.toRecoveryDashboard(dto);
   }
 }

@@ -271,6 +271,11 @@ class FinanceMapper {
       ),
       collectionId:
           raw['collectionId'] as String? ?? raw['collection_id'] as String?,
+      instrumentDate: raw['instrumentDate'] as String? ??
+          raw['instrument_date'] as String?,
+      bankName: raw['bankName'] as String? ?? raw['bank_name'] as String?,
+      bouncedReason: raw['bouncedReason'] as String? ??
+          raw['bounced_reason'] as String?,
     );
   }
 
@@ -445,6 +450,8 @@ class FinanceMapper {
               collectionsCount:
                   (item['collectionsCount'] as num?)?.toInt() ?? 0,
               amountRecovered: item['amountRecovered']?.toString() ?? '',
+              target: item['target']?.toString(),
+              attainmentPct: (item['attainmentPct'] as num?)?.toInt(),
             ),
       ],
     );

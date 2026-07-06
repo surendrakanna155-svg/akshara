@@ -5,6 +5,7 @@ import '../../../core/errors/error_text.dart';
 import '../../../core/repositories/paginated_result.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/forms/akshara_date_field.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -35,6 +36,7 @@ class FinanceOfflinePaymentsScreen extends ConsumerWidget {
             segments: const [
               ButtonSegment<int>(value: 0, label: Text('Pending')),
               ButtonSegment<int>(value: 1, label: Text('Reconciled')),
+              ButtonSegment<int>(value: 2, label: Text('Bounced')),
             ],
             selected: {selectedTab},
             onSelectionChanged: (selection) {
@@ -46,18 +48,14 @@ class FinanceOfflinePaymentsScreen extends ConsumerWidget {
           FinanceAsyncBody<PaginatedResult<OfflinePaymentRecord>>(
             state: state,
             loadingLabel: 'Loading offline payments',
-            emptyMessage: selectedTab == 0
-                ? 'No pending offline payments.'
-                : 'No reconciled offline payments.',
+            emptyMessage: _emptyMessage(selectedTab),
             emptyIcon: Icons.receipt_long_outlined,
             onRetry: () =>
                 retryFinanceFuture(ref, offlinePaymentsFutureProvider),
             builder: (_) {
               if (payments.isEmpty) {
                 return AksharaEmptyState(
-                  message: selectedTab == 0
-                      ? 'No pending offline payments.'
-                      : 'No reconciled offline payments.',
+                  message: _emptyMessage(selectedTab),
                   icon: Icons.receipt_long_outlined,
                 );
               }
@@ -131,52 +129,7 @@ class _OfflinePaymentsTable extends ConsumerWidget {
             DataCell(Text(payment.referenceNumber)),
             DataCell(Text(payment.recordedAt)),
             DataCell(_StatusChip(status: payment.status)),
-            DataCell(
-              payment.status == OfflinePaymentStatus.pendingReconciliation
-                  ? AksharaManageAction(
-                      permission: Permission.manageFinance,
-                      child: TextButton(
-                        key: QaTestKeys.financeReconcileOfflinePaymentButton(
-                          payment.id,
-                        ),
-                        onPressed: () async {
-                          final notifier = ref.read(
-                            reconcileOfflinePaymentProvider.notifier,
-                          );
-                          final result = await notifier.execute(
-                            offlinePaymentId: payment.id,
-                          );
-                          if (!context.mounted) return;
-                          // RT-26: surface a failed reconcile instead of
-                          // silently returning (it returns null on error).
-                          if (result == null) {
-                            final failure = ref
-                                .read(reconcileOfflinePaymentProvider)
-                                .error;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  failure != null
-                                      ? aksharaErrorMessage(failure)
-                                      : 'Could not reconcile this payment. Please try again.',
-                                ),
-                              ),
-                            );
-                            return;
-                          }
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              key: QaTestKeys
-                                  .financeOfflinePaymentReconcileSuccessSnackbar,
-                              content: Text('Offline payment reconciled.'),
-                            ),
-                          );
-                        },
-                        child: const Text('Reconcile'),
-                      ),
-                    )
-                  : Text(payment.collectionId ?? '—'),
-            ),
+            DataCell(_OfflinePaymentActions(payment: payment)),
           ],
         );
       },
@@ -209,36 +162,34 @@ class _OfflinePaymentCard extends ConsumerWidget {
               '${payment.amount} • ${_paymentMethodLabel(payment.method)} • ${payment.recordedAt}',
               style: text.bodySmall,
             ),
-            const SizedBox(height: AksharaSpacing.s2),
-            _StatusChip(status: payment.status),
-            if (payment.status == OfflinePaymentStatus.pendingReconciliation)
-              Align(
-                alignment: Alignment.centerRight,
-                child: AksharaManageAction(
-                  permission: Permission.manageFinance,
-                  child: TextButton(
-                    key: QaTestKeys.financeReconcileOfflinePaymentButton(
-                      payment.id,
-                    ),
-                    onPressed: () async {
-                      final notifier =
-                          ref.read(reconcileOfflinePaymentProvider.notifier);
-                      final result = await notifier.execute(
-                        offlinePaymentId: payment.id,
-                      );
-                      if (!context.mounted || result == null) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          key: QaTestKeys
-                              .financeOfflinePaymentReconcileSuccessSnackbar,
-                          content: Text('Offline payment reconciled.'),
-                        ),
-                      );
-                    },
-                    child: const Text('Reconcile'),
-                  ),
+            if (_isInstrumentMethod(payment.method) &&
+                (payment.instrumentDate != null || payment.bankName != null))
+              Padding(
+                padding: const EdgeInsets.only(top: AksharaSpacing.s1),
+                child: Text(
+                  [
+                    if (payment.bankName != null) payment.bankName!,
+                    if (payment.instrumentDate != null)
+                      'dated ${payment.instrumentDate}',
+                  ].join(' • '),
+                  style: text.bodySmall,
                 ),
               ),
+            if (payment.status == OfflinePaymentStatus.bounced &&
+                payment.bouncedReason != null)
+              Padding(
+                padding: const EdgeInsets.only(top: AksharaSpacing.s1),
+                child: Text(
+                  'Bounced: ${payment.bouncedReason}',
+                  style: text.bodySmall.copyWith(color: colors.error),
+                ),
+              ),
+            const SizedBox(height: AksharaSpacing.s2),
+            _StatusChip(status: payment.status),
+            Align(
+              alignment: Alignment.centerRight,
+              child: _OfflinePaymentActions(payment: payment),
+            ),
           ],
         ),
       ),
@@ -259,9 +210,148 @@ class _StatusChip extends StatelessWidget {
           KpiAccent.warning
         ),
       OfflinePaymentStatus.reconciled => ('Reconciled', KpiAccent.success),
+      OfflinePaymentStatus.bounced => ('Bounced', KpiAccent.error),
     };
     return AksharaStatusChip(label: label, tone: tone);
   }
+}
+
+/// Row of actions for one offline payment. Pending rows can be reconciled and
+/// (for cheque/DD/PDC instruments) marked bounced; settled rows show their
+/// outcome (collection id / '—').
+class _OfflinePaymentActions extends ConsumerWidget {
+  const _OfflinePaymentActions({required this.payment});
+
+  final OfflinePaymentRecord payment;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (payment.status != OfflinePaymentStatus.pendingReconciliation) {
+      return Text(payment.collectionId ?? '—');
+    }
+    return AksharaManageAction(
+      permission: Permission.manageFinance,
+      child: Wrap(
+        spacing: AksharaSpacing.s2,
+        children: [
+          TextButton(
+            key: QaTestKeys.financeReconcileOfflinePaymentButton(payment.id),
+            onPressed: () => _reconcile(context, ref),
+            child: const Text('Reconcile'),
+          ),
+          // FIN-R7: only instrument methods (cheque/DD/PDC) can bounce.
+          if (_isInstrumentMethod(payment.method))
+            TextButton(
+              key: QaTestKeys.financeBounceOfflinePaymentButton(payment.id),
+              onPressed: () => _bounce(context, ref),
+              child: const Text('Mark bounced'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _reconcile(BuildContext context, WidgetRef ref) async {
+    final notifier = ref.read(reconcileOfflinePaymentProvider.notifier);
+    final result = await notifier.execute(offlinePaymentId: payment.id);
+    if (!context.mounted) return;
+    // RT-26: surface a failed reconcile instead of silently returning null.
+    if (result == null) {
+      final failure = ref.read(reconcileOfflinePaymentProvider).error;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            failure != null
+                ? aksharaErrorMessage(failure)
+                : 'Could not reconcile this payment. Please try again.',
+          ),
+        ),
+      );
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        key: QaTestKeys.financeOfflinePaymentReconcileSuccessSnackbar,
+        content: Text('Offline payment reconciled.'),
+      ),
+    );
+  }
+
+  Future<void> _bounce(BuildContext context, WidgetRef ref) async {
+    final reason = await _showBounceReasonDialog(context);
+    if (reason == null || !context.mounted) return;
+    final notifier = ref.read(bounceOfflinePaymentProvider.notifier);
+    final result = await notifier.execute(
+      offlinePaymentId: payment.id,
+      request: BounceOfflinePaymentRequest(
+        reason: reason.isEmpty ? null : reason,
+      ),
+    );
+    if (!context.mounted) return;
+    if (result == null) {
+      final failure = ref.read(bounceOfflinePaymentProvider).error;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            failure != null
+                ? aksharaErrorMessage(failure)
+                : 'Could not mark this instrument bounced. Please try again.',
+          ),
+        ),
+      );
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        key: QaTestKeys.financeOfflinePaymentBounceSuccessSnackbar,
+        content: Text('Instrument marked bounced.'),
+      ),
+    );
+  }
+}
+
+/// Captures an optional dishonour reason. Returns the reason (possibly empty) on
+/// confirm, or null if cancelled.
+Future<String?> _showBounceReasonDialog(BuildContext context) {
+  final reasonController = TextEditingController();
+  return showDialog<String>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text('Mark instrument bounced'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'This records the cheque/DD/PDC as dishonoured. No money is '
+              'reversed — settle any refund separately in Finance.',
+            ),
+            const SizedBox(height: AksharaSpacing.s3),
+            TextField(
+              key: QaTestKeys.financeOfflinePaymentBounceReasonField,
+              controller: reasonController,
+              decoration: const InputDecoration(
+                labelText: 'Reason (optional)',
+                hintText: 'e.g. Insufficient funds',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: QaTestKeys.financeOfflinePaymentBounceConfirmButton,
+            onPressed: () =>
+                Navigator.of(context).pop(reasonController.text.trim()),
+            child: const Text('Mark bounced'),
+          ),
+        ],
+      );
+    },
+  );
 }
 
 Future<void> _showRecordOfflinePaymentDialog(
@@ -272,6 +362,8 @@ Future<void> _showRecordOfflinePaymentDialog(
   final studentController = TextEditingController();
   final amountController = TextEditingController();
   final referenceController = TextEditingController();
+  final instrumentDateController = TextEditingController();
+  final bankController = TextEditingController();
   var method = OfflinePaymentMethod.cash;
 
   await showDialog<void>(
@@ -320,6 +412,10 @@ Future<void> _showRecordOfflinePaymentDialog(
                         value: OfflinePaymentMethod.dd,
                         child: Text('Demand Draft'),
                       ),
+                      DropdownMenuItem(
+                        value: OfflinePaymentMethod.pdc,
+                        child: Text('Post-Dated Cheque (PDC)'),
+                      ),
                     ],
                     onChanged: (value) {
                       if (value == null) return;
@@ -334,6 +430,23 @@ Future<void> _showRecordOfflinePaymentDialog(
                     decoration:
                         const InputDecoration(labelText: 'Reference number'),
                   ),
+                  // FIN-R7: instrument date + bank apply to cheque/DD/PDC only.
+                  if (_isInstrumentMethod(method)) ...[
+                    const SizedBox(height: AksharaSpacing.s3),
+                    AksharaDateField(
+                      controller: instrumentDateController,
+                      labelText: method == OfflinePaymentMethod.pdc
+                          ? 'Cheque date (PDC maturity)'
+                          : 'Instrument date',
+                    ),
+                    const SizedBox(height: AksharaSpacing.s3),
+                    TextField(
+                      key: QaTestKeys.financeOfflinePaymentBankField,
+                      controller: bankController,
+                      decoration:
+                          const InputDecoration(labelText: 'Bank name'),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -355,6 +468,14 @@ Future<void> _showRecordOfflinePaymentDialog(
                       method: method,
                       referenceNumber: referenceController.text.trim(),
                       recordedAt: DateTime.now().toIso8601String(),
+                      instrumentDate: _isInstrumentMethod(method) &&
+                              instrumentDateController.text.trim().isNotEmpty
+                          ? instrumentDateController.text.trim()
+                          : null,
+                      bankName: _isInstrumentMethod(method) &&
+                              bankController.text.trim().isNotEmpty
+                          ? bankController.text.trim()
+                          : null,
                     ),
                   );
                   if (!context.mounted) return;
@@ -397,4 +518,16 @@ String _paymentMethodLabel(OfflinePaymentMethod method) => switch (method) {
       OfflinePaymentMethod.cash => 'Cash',
       OfflinePaymentMethod.cheque => 'Cheque',
       OfflinePaymentMethod.dd => 'DD',
+      OfflinePaymentMethod.pdc => 'PDC',
     };
+
+String _emptyMessage(int tab) => switch (tab) {
+      1 => 'No reconciled offline payments.',
+      2 => 'No bounced instruments.',
+      _ => 'No pending offline payments.',
+    };
+
+/// FIN-R7: methods that carry a physical instrument (a cheque leaf / DD) — for
+/// these the instrument date + bank are relevant and a bounce is possible.
+bool _isInstrumentMethod(OfflinePaymentMethod method) =>
+    method != OfflinePaymentMethod.cash;

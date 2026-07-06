@@ -44,4 +44,29 @@ void main() {
       expect(rupeesInWords(-500), 'Minus Rupees Five Hundred Only');
     });
   });
+
+  group('indianDigitGroups (Indian grouping, FIN-3)', () {
+    test('three digits or fewer are ungrouped', () {
+      expect(indianDigitGroups(0), '0');
+      expect(indianDigitGroups(7), '7');
+      expect(indianDigitGroups(500), '500');
+    });
+
+    test('thousands group the last three then in pairs', () {
+      expect(indianDigitGroups(4200), '4,200');
+      expect(indianDigitGroups(12500), '12,500');
+      expect(indianDigitGroups(123456), '1,23,456');
+    });
+
+    test('lakh and crore follow the Indian (not Western) pattern', () {
+      expect(indianDigitGroups(100000), '1,00,000');
+      expect(indianDigitGroups(1234567), '12,34,567');
+      expect(indianDigitGroups(10000000), '1,00,00,000');
+      expect(indianDigitGroups(12345678), '1,23,45,678');
+    });
+
+    test('grouping uses the magnitude, ignoring sign', () {
+      expect(indianDigitGroups(-1234567), '12,34,567');
+    });
+  });
 }

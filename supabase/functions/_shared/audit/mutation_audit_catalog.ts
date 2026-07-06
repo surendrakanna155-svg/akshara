@@ -529,6 +529,19 @@ export const financeAudit = {
       idempotencyKey: `finance.offline_payment.reconciled:${offlinePaymentId}`,
     },
   }),
+  // FIN-R7: instrument (cheque / DD / PDC) dishonoured. Tracking-only — no money
+  // is reversed (this ledger never posts to finance_collections).
+  offlinePaymentBounced: (offlinePaymentId: string): MutationAuditSpec => ({
+    ...workflow("offlinePaymentBounced", "finance_offline_payment", offlinePaymentId, {
+      offlinePaymentId,
+    }),
+    domain: {
+      eventType: "finance.offline_payment.bounced",
+      payload: { offlinePaymentId },
+      sourceModule: "finance",
+      idempotencyKey: `finance.offline_payment.bounced:${offlinePaymentId}`,
+    },
+  }),
   qrSessionCreated: (sessionId: string): MutationAuditSpec => ({
     ...workflow("qrSessionCreated", "finance_qr_session", sessionId, { sessionId }),
     domain: {

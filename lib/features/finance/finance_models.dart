@@ -51,9 +51,12 @@ enum QrPaymentSessionStatus { pending, confirmed, expired }
 
 enum InstallmentPlanType { quarterly, termly, monthly, annual }
 
-enum OfflinePaymentMethod { cash, cheque, dd }
+// FIN-R7: pdc = post-dated cheque (instrumentDate carries the cheque date).
+enum OfflinePaymentMethod { cash, cheque, dd, pdc }
 
-enum OfflinePaymentStatus { pendingReconciliation, reconciled }
+// FIN-R7: bounced = terminal state for a dishonoured instrument (tracking-only,
+// no money reversed — Finance is the sole payment engine).
+enum OfflinePaymentStatus { pendingReconciliation, reconciled, bounced }
 
 @immutable
 class FinanceKpi {
@@ -342,6 +345,9 @@ class OfflinePaymentRecord {
     required this.recordedAt,
     required this.status,
     this.collectionId,
+    this.instrumentDate,
+    this.bankName,
+    this.bouncedReason,
   });
 
   final String id;
@@ -353,6 +359,13 @@ class OfflinePaymentRecord {
   final String recordedAt;
   final OfflinePaymentStatus status;
   final String? collectionId;
+
+  /// FIN-R7: cheque/DD/PDC date (for a PDC, the future maturity date).
+  final String? instrumentDate;
+  final String? bankName;
+
+  /// FIN-R7: reason recorded when [status] is [OfflinePaymentStatus.bounced].
+  final String? bouncedReason;
 }
 
 @immutable
@@ -784,6 +797,8 @@ class CollectorPerformance {
     required this.promisesObtained,
     required this.collectionsCount,
     required this.amountRecovered,
+    this.target,
+    this.attainmentPct,
   });
 
   final String collectorId;
@@ -792,6 +807,12 @@ class CollectorPerformance {
   final int promisesObtained;
   final int collectionsCount;
   final String amountRecovered;
+
+  /// FIN-R6: this month's collection target for the collector (null = unset).
+  final String? target;
+
+  /// FIN-R6: recovered ÷ target as a whole percent (null when no target set).
+  final int? attainmentPct;
 }
 
 /// FIN-R2 — one entry in the telecaller call queue: a defaulter to call,

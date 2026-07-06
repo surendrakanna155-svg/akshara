@@ -555,10 +555,34 @@ abstract final class QaTestKeys {
       ValueKey<String>('finance_offline_payment_success_snackbar');
   static const financeOfflinePaymentReconcileSuccessSnackbar =
       ValueKey<String>('finance_offline_payment_reconcile_success_snackbar');
+  // FIN-R7: instrument metadata + bounce.
+  static const financeOfflinePaymentBankField =
+      ValueKey<String>('finance_offline_payment_bank_field');
+  static const financeOfflinePaymentBounceReasonField =
+      ValueKey<String>('finance_offline_payment_bounce_reason_field');
+  static const financeOfflinePaymentBounceConfirmButton =
+      ValueKey<String>('finance_offline_payment_bounce_confirm_button');
+  static const financeOfflinePaymentBounceSuccessSnackbar =
+      ValueKey<String>('finance_offline_payment_bounce_success_snackbar');
 
   static ValueKey<String> financeReconcileOfflinePaymentButton(
           String paymentId) =>
       ValueKey<String>('finance_reconcile_offline_payment_$paymentId');
+
+  static ValueKey<String> financeBounceOfflinePaymentButton(String paymentId) =>
+      ValueKey<String>('finance_bounce_offline_payment_$paymentId');
+
+  // FIN-R6: collection targets.
+  static const financeCollectionTargetField =
+      ValueKey<String>('finance_collection_target_field');
+  static const financeCollectionTargetSaveButton =
+      ValueKey<String>('finance_collection_target_save_button');
+  static const financeSetCollectionTargetSuccessSnackbar =
+      ValueKey<String>('finance_set_collection_target_success_snackbar');
+
+  static ValueKey<String> financeSetCollectionTargetButton(
+          String collectorId) =>
+      ValueKey<String>('finance_set_collection_target_$collectorId');
 
   static const financeQrPayButton = ValueKey<String>('finance_qr_pay_button');
   static const financeQrInvoiceField =

@@ -35,6 +35,8 @@ abstract final class FinanceApiPaths {
   static String collectionCancel(String id) => '${collectionDetail(id)}/cancel';
   static String offlinePaymentReconcile(String id) =>
       '$offlinePayments/$id/reconcile';
+  static String offlinePaymentBounce(String id) =>
+      '$offlinePayments/$id/bounce';
   static String qrPaymentSession(String id) => '$qrPayments/$id';
   static String qrPaymentConfirm(String id) =>
       '${qrPaymentSession(id)}/confirm';
@@ -72,6 +74,8 @@ abstract final class FinanceApiPaths {
   static const String recoveryPromises = '$recovery/promises';
   static const String recoveryDashboard = '$recovery/dashboard';
   static const String recoveryCallQueue = '$recovery/call-queue';
+  // FIN-R6 — collection targets (principal sets; collectors see own attainment).
+  static const String recoveryTargets = '$recovery/targets';
 
   static String recoveryContactsForStudent(String studentId) =>
       '$recoveryContacts/$studentId';

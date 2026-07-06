@@ -139,6 +139,8 @@ class RecordOfflinePaymentRequest {
     required this.method,
     required this.referenceNumber,
     required this.recordedAt,
+    this.instrumentDate,
+    this.bankName,
   });
 
   final String invoiceId;
@@ -147,6 +149,10 @@ class RecordOfflinePaymentRequest {
   final OfflinePaymentMethod method;
   final String referenceNumber;
   final String recordedAt;
+
+  /// FIN-R7: cheque/DD/PDC date (a PDC's future maturity date). ISO-8601 date.
+  final String? instrumentDate;
+  final String? bankName;
 }
 
 /// Domain request to reconcile a pending offline payment into collections.
@@ -158,6 +164,15 @@ class ReconcileOfflinePaymentRequest {
 
   final String? reconciledAt;
   final String? notes;
+}
+
+/// FIN-R7: domain request to mark a pending instrument (cheque/DD/PDC) as
+/// bounced/dishonoured. Tracking-only — reverses no money.
+class BounceOfflinePaymentRequest {
+  const BounceOfflinePaymentRequest({this.reason, this.bouncedAt});
+
+  final String? reason;
+  final String? bouncedAt;
 }
 
 /// Domain request to create a UPI QR payment session for an invoice.
@@ -270,6 +285,20 @@ class UpdateDiscountRuleRequest {
   final String? discountPercent;
   final String? appliesTo;
   final DiscountApprovalStatus? status;
+}
+
+/// FIN-R6 — set a collector's monthly collection target. [periodMonth] is
+/// `YYYY-MM`; [target] is a whole-rupee amount string. Principal-only action.
+class SetCollectionTargetRequest {
+  const SetCollectionTargetRequest({
+    required this.collectorUserId,
+    required this.periodMonth,
+    required this.target,
+  });
+
+  final String collectorUserId;
+  final String periodMonth;
+  final String target;
 }
 
 /// FIN-R4 — log a recovery contact attempt against a defaulter.

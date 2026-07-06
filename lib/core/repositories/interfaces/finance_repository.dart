@@ -105,6 +105,13 @@ abstract class FinanceRepository {
     required ReconcileOfflinePaymentRequest request,
   });
 
+  /// FIN-R7: mark a pending instrument (cheque/DD/PDC) as bounced. Tracking-only.
+  Future<OfflinePaymentRecord> bounceOfflinePayment({
+    required RepositoryQuery query,
+    required String offlinePaymentId,
+    required BounceOfflinePaymentRequest request,
+  });
+
   Future<DefaultersDashboardData> getDefaultersDashboard(
       {required RepositoryQuery query});
   Future<PaginatedResult<RefundRequest>> getRefundRequests(
@@ -264,5 +271,12 @@ abstract class FinanceRepository {
   /// the order they should be called.
   Future<List<CallQueueEntry>> getCallQueue({
     required RepositoryQuery query,
+  });
+
+  /// FIN-R6 — set a collector's monthly collection target (principal action).
+  /// Returns the refreshed recovery dashboard so attainment reflects the change.
+  Future<RecoveryDashboardData> setCollectionTarget({
+    required RepositoryQuery query,
+    required SetCollectionTargetRequest request,
   });
 }

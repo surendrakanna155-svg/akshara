@@ -22,6 +22,14 @@ class RecordOfflinePaymentRequestDto {
         'paymentMethod': method,
         'reference_number': request.referenceNumber,
         'referenceNumber': request.referenceNumber,
+        if (request.instrumentDate != null) ...{
+          'instrument_date': request.instrumentDate,
+          'instrumentDate': request.instrumentDate,
+        },
+        if (request.bankName != null) ...{
+          'bank_name': request.bankName,
+          'bankName': request.bankName,
+        },
         'recorded_at': request.recordedAt,
         'recordedAt': request.recordedAt,
       },

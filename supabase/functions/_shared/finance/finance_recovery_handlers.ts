@@ -319,14 +319,24 @@ export async function handleRecoveryDashboard(
   const schoolId = schoolIdFromClaims(auth.claims)!;
   const monthStart = monthStartIso();
 
+  const period = monthStart.slice(0, 7);
   try {
-    const [agg, collectors] = await withTenantContext(config, auth.claims, async (db) => {
+    const [agg, collectors, targets] = await withTenantContext(config, auth.claims, async (db) => {
       const a = await recoveryAggregates(db, orgId, schoolId, monthStart);
       const c = await collectorPerformanceForMonth(db, orgId, schoolId, monthStart);
-      return [a, c] as const;
+      // FIN-R6: this month's per-collector targets, to compute attainment.
+      const t = await listRecoveryTargets(db, orgId, schoolId, period);
+      return [a, c, t] as const;
     });
+    // FIN-R6: collector_user_id → target_minor for this period.
+    const targetByCollector = new Map<string, number>();
+    for (const t of targets) {
+      if (t.collector_user_id) {
+        targetByCollector.set(t.collector_user_id, parseInt(t.target_minor, 10) || 0);
+      }
+    }
     return jsonResponse(envelope({
-      period: monthStart.slice(0, 7),
+      period,
       ptpPending: parseInt(agg.ptp_pending, 10),
       ptpDueToday: parseInt(agg.ptp_due_today, 10),
       ptpOverdue: parseInt(agg.ptp_overdue, 10),
@@ -334,14 +344,23 @@ export async function handleRecoveryDashboard(
       ptpBroken: parseInt(agg.ptp_broken, 10),
       contactsThisMonth: parseInt(agg.contacts_this_month, 10),
       recoveredThisMonth: minorToRupees(agg.recovered_this_month_minor),
-      collectorPerformance: collectors.map((c) => ({
-        collectorId: c.collector_id,
-        collectorName: c.collector_name,
-        contactsMade: parseInt(c.contacts_made, 10),
-        promisesObtained: parseInt(c.promises_obtained, 10),
-        collectionsCount: parseInt(c.collections_count, 10),
-        amountRecovered: minorToRupees(c.amount_recovered_minor),
-      })),
+      collectorPerformance: collectors.map((c) => {
+        const recoveredMinor = parseInt(c.amount_recovered_minor, 10) || 0;
+        const targetMinor = targetByCollector.get(c.collector_id) ?? 0;
+        return {
+          collectorId: c.collector_id,
+          collectorName: c.collector_name,
+          contactsMade: parseInt(c.contacts_made, 10),
+          promisesObtained: parseInt(c.promises_obtained, 10),
+          collectionsCount: parseInt(c.collections_count, 10),
+          amountRecovered: minorToRupees(c.amount_recovered_minor),
+          // FIN-R6: target + attainment (null target when unset → no % yet).
+          target: targetMinor > 0 ? minorToRupees(`${targetMinor}`) : null,
+          attainmentPct: targetMinor > 0
+            ? Math.round((recoveredMinor / targetMinor) * 100)
+            : null,
+        };
+      }),
     }));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);

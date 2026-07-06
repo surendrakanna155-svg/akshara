@@ -60,6 +60,26 @@ String rupeesInWords(int amount) {
   return '${negative ? 'Minus ' : ''}Rupees $words Only';
 }
 
+/// Groups a non-negative integer's digits in the Indian numbering system:
+/// the last three digits together, then every two digits (thousand → lakh →
+/// crore). 500 → "500", 4200 → "4,200", 100000 → "1,00,000",
+/// 1234567 → "12,34,567". Display-only — callers add the "₹" / "INR " prefix
+/// and any sign. This matches the Indian amount-in-words above (Lakh/Crore),
+/// which the older Western 3-digit grouping (1,234,567) contradicted on
+/// receipts (FIN-3).
+String indianDigitGroups(int amount) {
+  final digits = amount.abs().toString();
+  if (digits.length <= 3) return digits;
+  final last3 = digits.substring(digits.length - 3);
+  final rest = digits.substring(0, digits.length - 3);
+  final buffer = StringBuffer();
+  for (var i = 0; i < rest.length; i++) {
+    if (i > 0 && (rest.length - i) % 2 == 0) buffer.write(',');
+    buffer.write(rest[i]);
+  }
+  return '$buffer,$last3';
+}
+
 /// Bare number-in-words (no "Rupees…Only" wrapper) for the crore group and any
 /// other caller that just needs the digits spelled out. Handles arbitrarily
 /// large crore counts recursively.

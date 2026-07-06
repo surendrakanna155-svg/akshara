@@ -49,6 +49,8 @@ class FinanceEnumCodec {
         'cash' => OfflinePaymentMethod.cash,
         'cheque' || 'check' => OfflinePaymentMethod.cheque,
         'dd' || 'demand_draft' || 'demandDraft' => OfflinePaymentMethod.dd,
+        'pdc' || 'post_dated_cheque' || 'postDatedCheque' =>
+          OfflinePaymentMethod.pdc,
         _ => OfflinePaymentMethod.cash,
       };
 
@@ -57,6 +59,7 @@ class FinanceEnumCodec {
         OfflinePaymentMethod.cash => 'cash',
         OfflinePaymentMethod.cheque => 'cheque',
         OfflinePaymentMethod.dd => 'dd',
+        OfflinePaymentMethod.pdc => 'pdc',
       };
 
   static OfflinePaymentStatus parseOfflinePaymentStatus(String? raw) =>
@@ -65,6 +68,7 @@ class FinanceEnumCodec {
         'pendingReconciliation' =>
           OfflinePaymentStatus.pendingReconciliation,
         'reconciled' => OfflinePaymentStatus.reconciled,
+        'bounced' => OfflinePaymentStatus.bounced,
         _ => OfflinePaymentStatus.pendingReconciliation,
       };
 
@@ -72,6 +76,7 @@ class FinanceEnumCodec {
       switch (status) {
         OfflinePaymentStatus.pendingReconciliation => 'pending_reconciliation',
         OfflinePaymentStatus.reconciled => 'reconciled',
+        OfflinePaymentStatus.bounced => 'bounced',
       };
 
   static InstallmentPlanType parseInstallmentPlanType(String? raw) =>

@@ -76,6 +76,7 @@ abstract final class AuditSecurityCategorizer {
       case AuditEventType.leaveRequestApproved:
       case AuditEventType.leaveRequestRejected:
       case AuditEventType.receiptPdfExported:
+      case AuditEventType.offlinePaymentBounced:
       case AuditEventType.examMarkUpdated:
       case AuditEventType.examResultsSubmittedForVerification:
       case AuditEventType.examResultsCoordinatorVerified:

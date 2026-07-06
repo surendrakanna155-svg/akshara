@@ -12,12 +12,15 @@ import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { emitMutationAudit, financeAudit } from "../audit/mutation_audit_catalog.ts";
 import { listEnvelope } from "./finance_mapper.ts";
 import {
+  bounceOfflinePayment,
   createOfflinePayment,
   isOfflinePaymentMethod,
   listOfflinePayments,
   type OfflinePaymentMethod,
+  OfflinePaymentBouncedError,
   offlinePaymentToApi,
   OfflinePaymentNotFoundError,
+  OfflinePaymentReconciledError,
   reconcileOfflinePayment,
 } from "./finance_offline_payments_repository.ts";
 
@@ -78,6 +81,8 @@ export async function handleRecordOfflinePayment(
   const studentName = optionalStr(body, "student_name", "studentName") ?? "";
   const rawMethod = optionalStr(body, "payment_method", "paymentMethod") ?? "cash";
   const referenceNumber = optionalStr(body, "reference_number", "referenceNumber") ?? "";
+  const instrumentDate = optionalStr(body, "instrument_date", "instrumentDate");
+  const bankName = optionalStr(body, "bank_name", "bankName");
   const recordedAt = optionalStr(body, "recorded_at", "recordedAt");
   const invoiceId = optionalStr(body, "invoice_id", "invoiceId");
   const amount = parseAmount(body.amount);
@@ -100,6 +105,8 @@ export async function handleRecordOfflinePayment(
         amount,
         method: rawMethod as OfflinePaymentMethod,
         referenceNumber,
+        instrumentDate,
+        bankName,
         recordedAt,
         recordedBy: auth.claims.sub,
       });
@@ -196,6 +203,61 @@ export async function handleReconcileOfflinePayment(
     }
     if (error instanceof OfflinePaymentNotFoundError) {
       return errorEnvelope("NOT_FOUND", error.message, 404);
+    }
+    if (error instanceof OfflinePaymentBouncedError) {
+      return errorEnvelope("CONFLICT", error.message, 409);
+    }
+    throw error;
+  }
+}
+
+/**
+ * FIN-R7: mark a pending instrument (cheque / DD / PDC) as bounced/dishonoured.
+ * Tracking-only — posts/reverses no money (Finance = sole payment engine).
+ */
+export async function handleBounceOfflinePayment(
+  req: Request,
+  config: AppConfig,
+  offlinePaymentId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requireFinanceWrite(auth.claims);
+  if (denied) return denied;
+
+  const body = (await readJson<Record<string, unknown>>(req)) ?? {};
+  const bouncedAt = optionalStr(body, "bounced_at", "bouncedAt");
+  const reason = optionalStr(body, "reason", "reason");
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const updated = await withTenantContext(config, auth.claims, async (db) => {
+      const row = await bounceOfflinePayment(db, orgId, schoolId, offlinePaymentId, {
+        bouncedAt,
+        reason,
+        bouncedBy: auth.claims.sub,
+      });
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        financeAudit.offlinePaymentBounced(row.id),
+        req,
+      );
+      return row;
+    });
+    return jsonResponse(envelope(offlinePaymentToApi(updated)));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse();
+    }
+    if (error instanceof OfflinePaymentNotFoundError) {
+      return errorEnvelope("NOT_FOUND", error.message, 404);
+    }
+    if (error instanceof OfflinePaymentReconciledError) {
+      return errorEnvelope("CONFLICT", error.message, 409);
     }
     throw error;
   }

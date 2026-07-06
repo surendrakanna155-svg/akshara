@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/errors/error_text.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../core/widgets/whatsapp_contact_button.dart';
@@ -17,6 +18,7 @@ import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../finance_async_state.dart';
 import '../finance_models.dart';
+import '../finance_requests.dart';
 import '../recovery/finance_recovery_actions.dart';
 import '../recovery/finance_recovery_provider.dart';
 import '../widgets/finance_kpi_row.dart';
@@ -341,39 +343,173 @@ class _RecoverySection extends ConsumerWidget {
             icon: Icons.groups_outlined,
           )
         else
-          Semantics(
-            container: true,
-            label:
-                'Collector performance, ${data.collectorPerformance.length} collectors',
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                headingRowHeight: 44,
-                dataRowMinHeight: 44,
-                dataRowMaxHeight: 56,
-                columns: const [
-                  DataColumn(label: Text('Collector')),
-                  DataColumn(label: Text('Contacts')),
-                  DataColumn(label: Text('Promises')),
-                  DataColumn(label: Text('Collections')),
-                  DataColumn(label: Text('Recovered')),
-                ],
-                rows: [
-                  for (final c in data.collectorPerformance)
-                    DataRow(cells: [
-                      DataCell(Text(c.collectorName)),
-                      DataCell(Text('${c.contactsMade}')),
-                      DataCell(Text('${c.promisesObtained}')),
-                      DataCell(Text('${c.collectionsCount}')),
-                      DataCell(Text('₹${c.amountRecovered}')),
-                    ]),
-                ],
-              ),
-            ),
-          ),
+          _CollectorPerformanceTable(data: data),
       ],
     );
   }
+}
+
+/// FIN-R5/R6 — per-collector performance with monthly collection targets +
+/// attainment. A principal (manageFinance) can set each collector's target;
+/// every viewer sees the target and how close each collector is to it.
+class _CollectorPerformanceTable extends ConsumerWidget {
+  const _CollectorPerformanceTable({required this.data});
+
+  final RecoveryDashboardData data;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Semantics(
+      container: true,
+      label:
+          'Collector performance, ${data.collectorPerformance.length} collectors',
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          headingRowHeight: 44,
+          dataRowMinHeight: 44,
+          dataRowMaxHeight: 56,
+          columns: const [
+            DataColumn(label: Text('Collector')),
+            DataColumn(label: Text('Contacts')),
+            DataColumn(label: Text('Promises')),
+            DataColumn(label: Text('Collections')),
+            DataColumn(label: Text('Recovered')),
+            DataColumn(label: Text('Target')),
+            DataColumn(label: Text('Attainment')),
+            DataColumn(label: Text('')),
+          ],
+          rows: [
+            for (final c in data.collectorPerformance)
+              DataRow(cells: [
+                DataCell(Text(c.collectorName)),
+                DataCell(Text('${c.contactsMade}')),
+                DataCell(Text('${c.promisesObtained}')),
+                DataCell(Text('${c.collectionsCount}')),
+                DataCell(Text('₹${c.amountRecovered}')),
+                DataCell(Text(c.target != null ? '₹${c.target}' : '—')),
+                DataCell(_AttainmentChip(pct: c.attainmentPct)),
+                DataCell(
+                  AksharaManageAction(
+                    permission: Permission.manageFinance,
+                    child: TextButton(
+                      key: QaTestKeys.financeSetCollectionTargetButton(
+                        c.collectorId,
+                      ),
+                      onPressed: () => _setTarget(context, ref, c),
+                      child: Text(c.target != null ? 'Edit target' : 'Set target'),
+                    ),
+                  ),
+                ),
+              ]),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _setTarget(
+    BuildContext context,
+    WidgetRef ref,
+    CollectorPerformance collector,
+  ) async {
+    final amount = await _showSetTargetDialog(context, collector);
+    if (amount == null || !context.mounted) return;
+    final result =
+        await ref.read(setCollectionTargetProvider.notifier).execute(
+              SetCollectionTargetRequest(
+                collectorUserId: collector.collectorId,
+                periodMonth: data.period,
+                target: amount,
+              ),
+            );
+    if (!context.mounted) return;
+    if (result == null) {
+      final failure = ref.read(setCollectionTargetProvider).error;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            failure != null
+                ? aksharaErrorMessage(failure)
+                : 'Could not set the target. Please try again.',
+          ),
+        ),
+      );
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        key: QaTestKeys.financeSetCollectionTargetSuccessSnackbar,
+        content: Text('Collection target saved.'),
+      ),
+    );
+  }
+}
+
+/// Attainment% as a tone-coded chip: ≥100 success, ≥60 warning, else error;
+/// '—' when no target is set.
+class _AttainmentChip extends StatelessWidget {
+  const _AttainmentChip({required this.pct});
+
+  final int? pct;
+
+  @override
+  Widget build(BuildContext context) {
+    if (pct == null) return const Text('—');
+    final tone = pct! >= 100
+        ? KpiAccent.success
+        : (pct! >= 60 ? KpiAccent.warning : KpiAccent.error);
+    return AksharaStatusChip(label: '$pct%', tone: tone);
+  }
+}
+
+Future<String?> _showSetTargetDialog(
+  BuildContext context,
+  CollectorPerformance collector,
+) {
+  final controller = TextEditingController(text: collector.target ?? '');
+  return showDialog<String>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: Text('Target · ${collector.collectorName}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Monthly collection target. Recovered so far: '
+              '₹${collector.amountRecovered}.',
+            ),
+            const SizedBox(height: AksharaSpacing.s3),
+            TextField(
+              key: QaTestKeys.financeCollectionTargetField,
+              controller: controller,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Target amount (₹)',
+                hintText: 'e.g. 100000',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: QaTestKeys.financeCollectionTargetSaveButton,
+            onPressed: () {
+              final value = controller.text.trim();
+              if (value.isEmpty) return;
+              Navigator.of(context).pop(value);
+            },
+            child: const Text('Save target'),
+          ),
+        ],
+      );
+    },
+  );
 }
 
 /// FIN-R2 — the telecaller call queue: defaulters in server-ranked call order,

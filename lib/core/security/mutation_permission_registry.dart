@@ -117,6 +117,12 @@ class MutationPermissionRegistry {
     ),
     MutationPermissionEntry(
       moduleId: 'finance',
+      mutationId: 'bounceOfflinePayment',
+      permission: Permission.manageFinance,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'finance',
       mutationId: 'createQrPaymentSession',
       permission: Permission.manageFinance,
       kind: 'manage',

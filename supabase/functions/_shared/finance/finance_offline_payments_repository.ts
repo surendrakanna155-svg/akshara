@@ -1,9 +1,17 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
 
-export type OfflinePaymentMethod = "cash" | "cheque" | "dd";
-export type OfflinePaymentStatus = "pending_reconciliation" | "reconciled";
+// FIN-R7: 'pdc' = post-dated cheque (a cheque dated in the future; instrument_date
+// carries that date). 'bounced' = terminal tracking status for a returned/
+// dishonoured instrument — it posts NO money (this ledger never touches
+// finance_collections), so a bounce reverses nothing; it only records that the
+// instrument failed. Finance stays the sole payment engine.
+export type OfflinePaymentMethod = "cash" | "cheque" | "dd" | "pdc";
+export type OfflinePaymentStatus =
+  | "pending_reconciliation"
+  | "reconciled"
+  | "bounced";
 
-const METHODS: readonly OfflinePaymentMethod[] = ["cash", "cheque", "dd"];
+const METHODS: readonly OfflinePaymentMethod[] = ["cash", "cheque", "dd", "pdc"];
 
 export interface FinanceOfflinePaymentRow {
   id: string;
@@ -14,11 +22,16 @@ export interface FinanceOfflinePaymentRow {
   amount: string;
   payment_method: OfflinePaymentMethod;
   reference_number: string;
+  instrument_date: string | null;
+  bank_name: string | null;
   recorded_at: string;
   status: OfflinePaymentStatus;
   collection_id: string | null;
   reconciled_at: string | null;
   reconciled_by: string | null;
+  bounced_at: string | null;
+  bounced_reason: string | null;
+  bounced_by: string | null;
   notes: string | null;
   recorded_by: string | null;
   created_at: string;
@@ -31,6 +44,8 @@ export interface CreateOfflinePaymentInput {
   amount: number;
   method: OfflinePaymentMethod;
   referenceNumber: string;
+  instrumentDate?: string;
+  bankName?: string;
   recordedAt?: string;
   recordedBy: string;
 }
@@ -41,10 +56,32 @@ export interface ReconcileOfflinePaymentInput {
   reconciledBy: string;
 }
 
+export interface BounceOfflinePaymentInput {
+  bouncedAt?: string;
+  reason?: string;
+  bouncedBy: string;
+}
+
 export class OfflinePaymentNotFoundError extends Error {
   constructor(id: string) {
     super(`Offline payment not found: ${id}`);
     this.name = "OfflinePaymentNotFoundError";
+  }
+}
+
+/** A reconciled (cleared) instrument cannot be bounced. */
+export class OfflinePaymentReconciledError extends Error {
+  constructor(id: string) {
+    super(`Offline payment already reconciled, cannot bounce: ${id}`);
+    this.name = "OfflinePaymentReconciledError";
+  }
+}
+
+/** A bounced (dishonoured) instrument cannot be reconciled. */
+export class OfflinePaymentBouncedError extends Error {
+  constructor(id: string) {
+    super(`Offline payment already bounced, cannot reconcile: ${id}`);
+    this.name = "OfflinePaymentBouncedError";
   }
 }
 
@@ -67,9 +104,13 @@ export function offlinePaymentToApi(row: FinanceOfflinePaymentRow): Record<strin
     amount: formatAmount(row.amount),
     method: row.payment_method,
     referenceNumber: row.reference_number,
+    instrumentDate: row.instrument_date,
+    bankName: row.bank_name,
     recordedAt: row.recorded_at,
     status: row.status,
     collectionId: row.collection_id,
+    bouncedAt: row.bounced_at,
+    bouncedReason: row.bounced_reason,
   };
 }
 
@@ -82,11 +123,12 @@ export async function createOfflinePayment(
   const rows = await db.queryObject<FinanceOfflinePaymentRow>(
     `INSERT INTO finance_offline_payments (
       organization_id, school_id, invoice_id, student_name, amount,
-      payment_method, reference_number, recorded_at, status, recorded_by
+      payment_method, reference_number, instrument_date, bank_name,
+      recorded_at, status, recorded_by
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7,
-      COALESCE($8::timestamptz, timezone('utc', now())),
-      'pending_reconciliation', $9
+      $1, $2, $3, $4, $5, $6, $7, $8::date, $9,
+      COALESCE($10::timestamptz, timezone('utc', now())),
+      'pending_reconciliation', $11
     )
     RETURNING *`,
     [
@@ -97,6 +139,8 @@ export async function createOfflinePayment(
       input.amount,
       input.method,
       input.referenceNumber,
+      input.instrumentDate ?? null,
+      input.bankName ?? null,
       input.recordedAt ?? null,
       input.recordedBy,
     ],
@@ -167,6 +211,10 @@ export async function reconcileOfflinePayment(
   if (!existing) {
     throw new OfflinePaymentNotFoundError(id);
   }
+  // A dishonoured instrument is a terminal state — it cannot be reconciled.
+  if (existing.status === "bounced") {
+    throw new OfflinePaymentBouncedError(id);
+  }
 
   const rows = await db.queryObject<FinanceOfflinePaymentRow>(
     `UPDATE finance_offline_payments
@@ -176,6 +224,7 @@ export async function reconcileOfflinePayment(
          notes = COALESCE($6, notes),
          updated_at = timezone('utc', now())
      WHERE id = $1 AND organization_id = $2 AND school_id = $3
+       AND status <> 'bounced'
      RETURNING *`,
     [
       id,
@@ -186,5 +235,55 @@ export async function reconcileOfflinePayment(
       input.notes ?? null,
     ],
   );
+  return rows[0]!;
+}
+
+/**
+ * FIN-R7: mark a pending instrument (cheque / DD / PDC) as bounced/dishonoured.
+ * Terminal, match-once, money-safe: this ledger never posts to
+ * finance_collections, so a bounce reverses NO money — it only records the
+ * failure. Only reachable from 'pending_reconciliation'; a reconciled (cleared)
+ * instrument cannot be bounced; bouncing an already-bounced row is an idempotent
+ * no-op. Any refund of money already collected against the instrument stays a
+ * separate manual Finance action (Finance = sole payment engine).
+ */
+export async function bounceOfflinePayment(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  id: string,
+  input: BounceOfflinePaymentInput,
+): Promise<FinanceOfflinePaymentRow> {
+  const existing = await getOfflinePayment(db, organizationId, schoolId, id);
+  if (!existing) {
+    throw new OfflinePaymentNotFoundError(id);
+  }
+  if (existing.status === "reconciled") {
+    throw new OfflinePaymentReconciledError(id);
+  }
+
+  const rows = await db.queryObject<FinanceOfflinePaymentRow>(
+    `UPDATE finance_offline_payments
+     SET status = 'bounced',
+         bounced_at = COALESCE($4::timestamptz, timezone('utc', now())),
+         bounced_by = $5,
+         bounced_reason = COALESCE($6, bounced_reason),
+         updated_at = timezone('utc', now())
+     WHERE id = $1 AND organization_id = $2 AND school_id = $3
+       AND status IN ('pending_reconciliation', 'bounced')
+     RETURNING *`,
+    [
+      id,
+      organizationId,
+      schoolId,
+      input.bouncedAt ?? null,
+      input.bouncedBy,
+      input.reason ?? null,
+    ],
+  );
+  // Empty only on a concurrent reconcile between the read and the guarded write.
+  if (rows.length === 0) {
+    throw new OfflinePaymentReconciledError(id);
+  }
   return rows[0]!;
 }

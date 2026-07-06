@@ -150,6 +150,7 @@ const routes: RouteCase[] = [
   { method: "POST", path: "/finance/payments/offline", holder: ["manageFinance"], other: ["viewFinance"] },
   { method: "GET", path: "/finance/payments/offline", holder: ["viewFinance"], other: ["viewInventory"] },
   { method: "POST", path: `/finance/payments/offline/${ID}/reconcile`, holder: ["manageFinance"], other: ["viewFinance"] },
+  { method: "POST", path: `/finance/payments/offline/${ID}/bounce`, holder: ["manageFinance"], other: ["viewFinance"] },
   // QR / UPI sessions
   { method: "POST", path: "/finance/payments/qr", holder: ["manageFinance"], other: ["viewFinance"] },
   { method: "POST", path: `/finance/payments/qr/${ID}/confirm`, holder: ["manageFinance"], other: ["viewFinance"] },

@@ -68,6 +68,7 @@ import {
   handleUpdateDiscountRule,
 } from "./finance_discounts_handlers.ts";
 import {
+  handleBounceOfflinePayment,
   handleListOfflinePayments,
   handleReconcileOfflinePayment,
   handleRecordOfflinePayment,
@@ -319,6 +320,13 @@ export function matchFinanceRoute(
   );
   if (offlineReconcileMatch && method === "POST") {
     return { handler: handleReconcileOfflinePayment, args: [offlineReconcileMatch[1]!] };
+  }
+  // FIN-R7: instrument dishonoured (cheque / DD / PDC bounce) — tracking-only.
+  const offlineBounceMatch = path.match(
+    /^\/finance\/payments\/offline\/([^/]+)\/bounce$/,
+  );
+  if (offlineBounceMatch && method === "POST") {
+    return { handler: handleBounceOfflinePayment, args: [offlineBounceMatch[1]!] };
   }
 
   // ─── STF-2: QR / UPI payment sessions ──────────────────────────────────────

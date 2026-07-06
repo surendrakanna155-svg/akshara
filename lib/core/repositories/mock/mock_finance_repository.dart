@@ -54,6 +54,9 @@ class MockFinanceRepository implements FinanceRepository {
     ),
   ];
 
+  // FIN-R6: collectorId → monthly target (whole-rupee string). Demo-mode store.
+  final Map<String, String> _recoveryTargets = {};
+
   final Map<String, List<RecoveryContact>> _contacts = {
     'def_1': <RecoveryContact>[
       const RecoveryContact(
@@ -877,6 +880,8 @@ class MockFinanceRepository implements FinanceRepository {
       referenceNumber: request.referenceNumber,
       recordedAt: request.recordedAt,
       status: OfflinePaymentStatus.pendingReconciliation,
+      instrumentDate: request.instrumentDate,
+      bankName: request.bankName,
     );
     _store.offlinePayments.insert(0, record);
     _store.pendingOfflinePaymentQueue.add(record.id);
@@ -908,6 +913,10 @@ class MockFinanceRepository implements FinanceRepository {
     if (current.status == OfflinePaymentStatus.reconciled) {
       return current;
     }
+    // FIN-R7: a bounced (dishonoured) instrument is terminal — cannot reconcile.
+    if (current.status == OfflinePaymentStatus.bounced) {
+      throw StateError('Offline payment already bounced: $offlinePaymentId');
+    }
 
     final collection = await _createCollectionForOfflinePayment(
       query: query,
@@ -924,10 +933,50 @@ class MockFinanceRepository implements FinanceRepository {
       recordedAt: request.reconciledAt ?? current.recordedAt,
       status: OfflinePaymentStatus.reconciled,
       collectionId: collection.collectionId,
+      instrumentDate: current.instrumentDate,
+      bankName: current.bankName,
     );
     _store.offlinePayments[index] = reconciled;
     _store.pendingOfflinePaymentQueue.remove(offlinePaymentId);
     return reconciled;
+  }
+
+  @override
+  Future<OfflinePaymentRecord> bounceOfflinePayment({
+    required RepositoryQuery query,
+    required String offlinePaymentId,
+    required BounceOfflinePaymentRequest request,
+  }) async {
+    final index = _store.offlinePayments
+        .indexWhere((item) => item.id == offlinePaymentId);
+    if (index < 0) {
+      throw StateError('Offline payment not found: $offlinePaymentId');
+    }
+    final current = _store.offlinePayments[index];
+    // A cleared instrument cannot be bounced; an already-bounced one is a no-op.
+    if (current.status == OfflinePaymentStatus.reconciled) {
+      throw StateError('Offline payment already reconciled: $offlinePaymentId');
+    }
+    if (current.status == OfflinePaymentStatus.bounced) {
+      return current;
+    }
+    // Tracking-only: NO collection is created — a bounce reverses no money.
+    final bounced = OfflinePaymentRecord(
+      id: current.id,
+      invoiceId: current.invoiceId,
+      studentName: current.studentName,
+      amount: current.amount,
+      method: current.method,
+      referenceNumber: current.referenceNumber,
+      recordedAt: current.recordedAt,
+      status: OfflinePaymentStatus.bounced,
+      instrumentDate: current.instrumentDate,
+      bankName: current.bankName,
+      bouncedReason: request.reason,
+    );
+    _store.offlinePayments[index] = bounced;
+    _store.pendingOfflinePaymentQueue.remove(offlinePaymentId);
+    return bounced;
   }
 
   Future<FinanceCollectionResult> _createCollectionForOfflinePayment({
@@ -944,6 +993,7 @@ class MockFinanceRepository implements FinanceRepository {
           OfflinePaymentMethod.cash => 'Cash',
           OfflinePaymentMethod.cheque => 'Cheque',
           OfflinePaymentMethod.dd => 'Demand Draft',
+          OfflinePaymentMethod.pdc => 'Post-Dated Cheque',
         },
         referenceNumber: record.referenceNumber,
         notes: request.notes,
@@ -1943,8 +1993,8 @@ class MockFinanceRepository implements FinanceRepository {
       ptpBroken: broken,
       contactsThisMonth: contactsCount,
       recoveredThisMonth: '71667.00',
-      collectorPerformance: const [
-        CollectorPerformance(
+      collectorPerformance: [
+        _collectorWithTarget(
           collectorId: 'user_finance_1',
           collectorName: 'Finance Admin',
           contactsMade: 12,
@@ -1952,7 +2002,7 @@ class MockFinanceRepository implements FinanceRepository {
           collectionsCount: 3,
           amountRecovered: '95000.00',
         ),
-        CollectorPerformance(
+        _collectorWithTarget(
           collectorId: 'user_finance_2',
           collectorName: 'Recovery Officer',
           contactsMade: 8,
@@ -1962,6 +2012,42 @@ class MockFinanceRepository implements FinanceRepository {
         ),
       ],
     );
+  }
+
+  /// FIN-R6: build a collector row, layering in any target set for them and the
+  /// resulting attainment%.
+  CollectorPerformance _collectorWithTarget({
+    required String collectorId,
+    required String collectorName,
+    required int contactsMade,
+    required int promisesObtained,
+    required int collectionsCount,
+    required String amountRecovered,
+  }) {
+    final target = _recoveryTargets[collectorId];
+    final targetVal = double.tryParse(target ?? '');
+    final recoveredVal = double.tryParse(amountRecovered) ?? 0;
+    return CollectorPerformance(
+      collectorId: collectorId,
+      collectorName: collectorName,
+      contactsMade: contactsMade,
+      promisesObtained: promisesObtained,
+      collectionsCount: collectionsCount,
+      amountRecovered: amountRecovered,
+      target: target,
+      attainmentPct: (targetVal != null && targetVal > 0)
+          ? (recoveredVal / targetVal * 100).round()
+          : null,
+    );
+  }
+
+  @override
+  Future<RecoveryDashboardData> setCollectionTarget({
+    required RepositoryQuery query,
+    required SetCollectionTargetRequest request,
+  }) async {
+    _recoveryTargets[request.collectorUserId] = request.target;
+    return getRecoveryDashboard(query: query);
   }
 
   @override

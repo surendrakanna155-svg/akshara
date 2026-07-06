@@ -29,6 +29,7 @@ class FinanceAuditRegisterService {
     AuditEventType.feeAssignmentCancelled,
     AuditEventType.financeHandoffSent,
     AuditEventType.receiptPdfExported,
+    AuditEventType.offlinePaymentBounced,
   };
 
   List<AuditEvent> filterFinanceEvents(List<AuditEvent> events) {

@@ -84,11 +84,21 @@ final reconciledOfflinePaymentsProvider =
       .toList(growable: false);
 });
 
+// FIN-R7: dishonoured instruments (cheque/DD/PDC bounces).
+final bouncedOfflinePaymentsProvider =
+    Provider<List<OfflinePaymentRecord>>((ref) {
+  return ref
+      .watch(offlinePaymentsProvider)
+      .where((item) => item.status == OfflinePaymentStatus.bounced)
+      .toList(growable: false);
+});
+
 final selectedOfflinePaymentsProvider =
     Provider<List<OfflinePaymentRecord>>((ref) {
   final tab = ref.watch(offlinePaymentsTabProvider);
-  if (tab == 1) {
-    return ref.watch(reconciledOfflinePaymentsProvider);
-  }
-  return ref.watch(pendingOfflinePaymentsProvider);
+  return switch (tab) {
+    1 => ref.watch(reconciledOfflinePaymentsProvider),
+    2 => ref.watch(bouncedOfflinePaymentsProvider),
+    _ => ref.watch(pendingOfflinePaymentsProvider),
+  };
 });

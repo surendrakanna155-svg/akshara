@@ -142,6 +142,67 @@ void main() {
       expect(reconciled.collectionId, isNotEmpty);
     });
 
+    test('FIN-R7: bounce a PDC — terminal, money-safe, carries instrument data',
+        () async {
+      final recorded = await mockRepo.recordOfflinePayment(
+        query: kQuery,
+        request: const RecordOfflinePaymentRequest(
+          invoiceId: 'inv_1',
+          studentName: 'PDC Student',
+          amount: '5000',
+          method: OfflinePaymentMethod.pdc,
+          referenceNumber: 'CHQ-77120',
+          recordedAt: '2026-06-12',
+          instrumentDate: '2026-08-15',
+          bankName: 'State Bank',
+        ),
+      );
+      expect(recorded.method, OfflinePaymentMethod.pdc);
+      expect(recorded.instrumentDate, '2026-08-15');
+      expect(recorded.bankName, 'State Bank');
+
+      final bounced = await mockRepo.bounceOfflinePayment(
+        query: kQuery,
+        offlinePaymentId: recorded.id,
+        request: const BounceOfflinePaymentRequest(reason: 'Insufficient funds'),
+      );
+      expect(bounced.status, OfflinePaymentStatus.bounced);
+      expect(bounced.bouncedReason, 'Insufficient funds');
+      // Money-safe: a bounce spawns NO collection — it reverses nothing.
+      expect(bounced.collectionId, isNull);
+
+      // A bounced (dishonoured) instrument is terminal — cannot be reconciled.
+      await expectLater(
+        mockRepo.reconcileOfflinePayment(
+          query: kQuery,
+          offlinePaymentId: recorded.id,
+          request: const ReconcileOfflinePaymentRequest(),
+        ),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('FIN-R6: setting a collection target computes attainment', () async {
+      final before = await mockRepo.getRecoveryDashboard(query: kQuery);
+      final collector = before.collectorPerformance.first;
+      expect(collector.target, isNull);
+      expect(collector.attainmentPct, isNull);
+
+      // Recovered is 95000; a 100000 target → 95% attainment.
+      final after = await mockRepo.setCollectionTarget(
+        query: kQuery,
+        request: SetCollectionTargetRequest(
+          collectorUserId: collector.collectorId,
+          periodMonth: before.period,
+          target: '100000',
+        ),
+      );
+      final updated = after.collectorPerformance
+          .firstWhere((c) => c.collectorId == collector.collectorId);
+      expect(updated.target, '100000');
+      expect(updated.attainmentPct, 95);
+    });
+
     test('qr payment session DTO maps to domain model', () {
       final mapped = const FinanceMapper().toQrPaymentSession(
         QrPaymentSessionDto.fromJson(

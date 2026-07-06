@@ -197,3 +197,39 @@ final resolvePromiseToPayProvider =
     AsyncNotifierProvider<ResolvePromiseToPayNotifier, PromiseToPay?>(
   ResolvePromiseToPayNotifier.new,
 );
+
+/// FIN-R6 — set a collector's monthly collection target (principal action,
+/// manageFinance-gated). Returns the refreshed dashboard so attainment updates.
+class SetCollectionTargetNotifier
+    extends AsyncNotifier<RecoveryDashboardData?> {
+  @override
+  FutureOr<RecoveryDashboardData?> build() => null;
+
+  Future<RecoveryDashboardData?> execute(
+      SetCollectionTargetRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageFinance(ref);
+      try {
+        // Backend audits authoritatively (finance.recovery.target_set); the
+        // recovery notifiers don't duplicate that client-side.
+        final dashboard =
+            await ref.read(financeRepositoryProvider).setCollectionTarget(
+                  query: ref.read(repositoryQueryProvider),
+                  request: request,
+                );
+        _invalidateRecoveryReads(ref);
+        return dashboard;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final setCollectionTargetProvider =
+    AsyncNotifierProvider<SetCollectionTargetNotifier, RecoveryDashboardData?>(
+  SetCollectionTargetNotifier.new,
+);

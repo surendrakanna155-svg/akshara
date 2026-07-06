@@ -396,6 +396,23 @@ class FinanceRemoteDataSource {
     return OfflinePaymentDto.fromJson(_requireData(response));
   }
 
+  Future<OfflinePaymentDto> bounceOfflinePayment({
+    required RepositoryQuery query,
+    required String offlinePaymentId,
+    required BounceOfflinePaymentRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      FinanceApiPaths.offlinePaymentBounce(offlinePaymentId),
+      queryParameters: _queryParams(query),
+      data: {
+        if (request.reason != null) 'reason': request.reason,
+        if (request.bouncedAt != null) 'bounced_at': request.bouncedAt,
+        if (request.bouncedAt != null) 'bouncedAt': request.bouncedAt,
+      },
+    );
+    return OfflinePaymentDto.fromJson(_requireData(response));
+  }
+
   Future<DefaultersDashboardDto> fetchDefaultersDashboard({
     required RepositoryQuery query,
   }) async {
@@ -779,6 +796,24 @@ class FinanceRemoteDataSource {
       queryParameters: _queryParams(query),
     );
     return CallQueueResponseDto.fromJson(_responseMap(response));
+  }
+
+  // FIN-R6: set a collector's monthly target (principal-only, manageFinance).
+  Future<void> setCollectionTarget({
+    required RepositoryQuery query,
+    required SetCollectionTargetRequest request,
+  }) async {
+    await _dio.post<Map<String, dynamic>>(
+      FinanceApiPaths.recoveryTargets,
+      queryParameters: _queryParams(query),
+      data: {
+        'collector_user_id': request.collectorUserId,
+        'collectorUserId': request.collectorUserId,
+        'period_month': request.periodMonth,
+        'periodMonth': request.periodMonth,
+        'target': request.target,
+      },
+    );
   }
 
   Map<String, dynamic> _queryParams(RepositoryQuery query) {

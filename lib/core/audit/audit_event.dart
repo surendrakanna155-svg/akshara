@@ -84,6 +84,8 @@ enum AuditEventType {
   leaveRequestApproved,
   leaveRequestRejected,
   receiptPdfExported,
+  // FIN-R7: instrument (cheque/DD/PDC) dishonoured — tracking-only, no money.
+  offlinePaymentBounced,
 
   // Phase A M-A5 — Exam results governance
   examMarkUpdated,
