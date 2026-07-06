@@ -11,10 +11,10 @@
 | Field | Value |
 |---|---|
 | **Current Phase** | **P1 — Remaining Backend & Code Fixes** 🟠 (P0 code/security ✅ 14/19; 5 live-lane tasks ⏳ owner-deferred) |
-| **Current Wave** | **P1-PROD-10 — C12 · Finance productivity & receipting (FIN-3/4/5/9, FIN-R6/R7)** — 🔵 next up (FIN-R6 needs FIN-D6 👤). **C3 defers** (GA-1 live); **C6 defers** (HWK-1 schema); **C4/C5/C7/C8/C9/C10/C11 ✅**. **P2-UX-1 ∥-eligible**. P1-CODE-4 stays 👤-gated. |
-| **Wave Status** | **P1-CODE-1/2/3/5 ✅ + P1-PROD-0 ✅ + C1/C2/C4/C5/C7/C8/C9/C10/C11 ✅** — through Finance CRM/Reports, Exams, Academic Registers/Certs, HR Payroll, Transport, Inventory/Library/Communication, Principal Approval batch (money-SoD fix), and Admissions productivity. P0: 14/19 ✅; 5 live-lane ⏳ owner-deferred. |
+| **Current Wave** | **P1-PROD-11 — C13 · Academic-work productivity, Exams half (EXM-4/5/6/7)** — 🔵 next up. **Homework half (HWK-3..8) defers** with C6 (HWK-1 schema). **C3 defers** (GA-1 live); **C4/C5/C7/C8/C9/C10/C11/C12 ✅**. **P2-UX-1 ∥-eligible**. P1-CODE-4 stays 👤-gated. |
+| **Wave Status** | **P1-CODE-1/2/3/5 ✅ + P1-PROD-0 ✅ + C1/C2/C4/C5/C7/C8/C9/C10/C11/C12 ✅** — through Finance CRM/Reports, Exams, Academic Registers/Certs, HR Payroll, Transport, Inventory/Library/Communication, Principal Approval batch (money-SoD fix), Admissions productivity, and Finance productivity & receipting (FIN-3 Indian receipt + FIN-R7 instrument/bounce + FIN-R6 targets). P0: 14/19 ✅; 5 live-lane ⏳ owner-deferred. |
 | **Planning** | 🔒 FROZEN 2026-07-04 → **AUTONOMOUS EXECUTION UNDER WAY** (P1 code + PROD waves; live lane deferred) |
-| **Last commit-gated wave** | **P1-PROD-9** (`10f8461`) — C11 Admissions productivity: ADM-2/3/4/5 verified built (auto-log, bulk actions, follow-ups inline, real lead picker; admission approval SoD-gated). Closed ADM-1 PDF export gap (`shareGridPdf` wired; CSV+PDF, compact icon buttons). full suite 3618 pass (0 new) · admissions 110/0 |
+| **Last commit-gated wave** | **P1-PROD-10** (`2bd7ecd`) — C12 Finance productivity & receipting: FIN-4/5/9 verified built; closed FIN-3 (Indian lakh/crore receipt grouping); built FIN-R7 cheque/DD/PDC + bounce (money-safe tracking ledger, never posts to finance_collections) and FIN-R6 collection targets+attainment (FIN-D6 resolved: principal sets, collectors see own). analyze 0 · deno finance+audit 172/0 · +13 tests · suite no-new-fail (2 known UX-7) |
 
 ## 2. Wave arithmetic
 
@@ -98,7 +98,7 @@ Hard gates: P0 gates P4/P6/P7/P8 · P1-CODE-1 → P2-UX-2 · P3-AI-1 → P3-AI-2
 |---|---:|---:|---:|---:|---|
 | Planning | — | 🔒 FROZEN + reviewed | — | — | audit + final review |
 | P0 — Truth/Docs/Live-Verify | 3 (19 tasks; **14 ✅**) | **2** (W1 ✅ · W2 non-blocked legs ✅) | 0 | 1 (W3 + INFRA-1/3 — ⏳ live-lane) | EOS per task |
-| P1 — Backend & Code Fixes | 35 | 14 (CODE-1/2/3/5, PROD-0, C1, C2, C4✓, C5, C7, C8✓, C9, C10, C11) | 0 | 21 (next: C12 Finance productivity — C3+C6 defer; CODE-4 👤) | EOS per wave |
+| P1 — Backend & Code Fixes | 35 | 15 (CODE-1/2/3/5, PROD-0, C1, C2, C4✓, C5, C7, C8✓, C9, C10, C11, C12) | 0 | 20 (next: C13 Exams half — C3+C6+C13-HW defer; CODE-4 👤) | EOS per wave |
 | P2 — UI/UX | 5 | 0 | 0 | 5 | EOS UX per wave |
 | P3 — Adaptive AI | 15 sub-waves | 0 | 0 | 15 | EOS AI per sub-wave |
 | P4 — Red Team | 2 | 0 | 0 | 2 | RED-TEAM verdict |
@@ -111,7 +111,7 @@ Hard gates: P0 gates P4/P6/P7/P8 · P1-CODE-1 → P2-UX-2 · P3-AI-1 → P3-AI-2
 ## 8. EOS Status
 
 - **Gate protocol:** every wave ends with `/eos <scope>`; **commit only on PASS**; CONDITIONAL PASS only with P1s tracked *and* roadmap permission; BLOCKED = fix and re-run, never advance. Verdicts append to `docs/engineering/eos/EOS_RUN_LEDGER.md` + the journal.
-- **Implementation EOS runs so far:** **22** — P0·W1 DOCS · P0·W2 legs · P1-CODE-1/2/3/5 · P1-PROD-0 FOUNDATION · P1-PROD-1 FEATURE (C1 Recovery CRM) · P1-PROD-2 FEATURE (C2 / FIN-6 aging) · P1-PROD-3 (C4 Exams) VERIFIED · P1-PROD-4 (C5 Registers & Certs) · P1-PROD-5 (C7 HR Payroll) · P1-PROD-6 (C8 Transport) VERIFIED · P1-PROD-7 (C9 Inv/Lib/Comm) · P1-PROD-8 (C10 Approval money-SoD fix) · **P1-PROD-9 (C11 Admissions productivity) PASS (2026-07-04, latest)**. See `docs/engineering/eos/EOS_RUN_LEDGER.md`.
+- **Implementation EOS runs so far:** **23** — P0·W1 DOCS · P0·W2 legs · P1-CODE-1/2/3/5 · P1-PROD-0 FOUNDATION · P1-PROD-1 FEATURE (C1 Recovery CRM) · P1-PROD-2 FEATURE (C2 / FIN-6 aging) · P1-PROD-3 (C4 Exams) VERIFIED · P1-PROD-4 (C5 Registers & Certs) · P1-PROD-5 (C7 HR Payroll) · P1-PROD-6 (C8 Transport) VERIFIED · P1-PROD-7 (C9 Inv/Lib/Comm) · P1-PROD-8 (C10 Approval money-SoD fix) · P1-PROD-9 (C11 Admissions productivity) · **P1-PROD-10 (C12 Finance productivity & receipting: FIN-3 receipt grouping + FIN-R7 instrument/bounce money-safe + FIN-R6 targets) PASS (2026-07-06, latest)**. See `docs/engineering/eos/EOS_RUN_LEDGER.md`.
 - **Open P0 findings:** none known at baseline (audit P0s are scheduled tasks, not open gate failures).
 - **Automatic-failure tripwires** (instant BLOCKED): data loss · security breach · escalation · tenant-isolation failure · critical crash · duplicate financial transaction · broken auth/sync · critical regression · failed backup verification · production blocker.
 - **Pre-execution baseline (verified live 2026-07-03, do NOT redo):** RLS isolation PASS · edge = `erp_tenant` NOBYPASSRLS · entitlement ON · encrypted backups + monthly restore drill green · watchdog green · AI live via OpenRouter · live DB password rotated · `flutter analyze` 0.
@@ -126,9 +126,9 @@ Hard gates: P0 gates P4/P6/P7/P8 · P1-CODE-1 → P2-UX-2 · P3-AI-1 → P3-AI-2
 
 ## 10. Current Focus
 
-> **P1 lane through P1-PROD-1 ✅ (2026-07-04).** Done since planning freeze: P0·W1 docs truth + W2 non-blocked legs (14/19 P0) · P1-CODE-1/2 (reliability platform REL-1..9) · P1-CODE-3 (backend hardening) · P1-CODE-5 (HR payroll engine) · P1-PROD-0 (XCT foundations `83bc267`: shared PDF-table primitive, reminder/scheduling rail, date pickers) · **P1-PROD-1 (C1 Finance Fee-Recovery CRM `c1b9feb`: discovery-first — FIN-R1/R3/R5 verified existing; built FIN-R2 telecaller call queue server-ranked over the same defaulter source `GET /finance/recovery/call-queue` + `_CallQueueSection`, log/PTP re-ranks live; fixed FIN-R4 history sheet → live provider).** analyze 0 · suite 3613 pass (2 known UX-7 → P2-UX) · deno finance 143/0.
+> **P1 lane through P1-PROD-10 ✅ (2026-07-06).** Ten C-waves landed (C1/C2/C4/C5/C7/C8/C9/C10/C11/C12) atop P0·W1+legs, P1-CODE-1/2/3/5, and P1-PROD-0 (XCT). Latest: **P1-PROD-10 (C12 Finance productivity & receipting `2bd7ecd`)** — discovery-first verified FIN-4/5/9 built; closed **FIN-3** (Indian lakh/crore receipt grouping); built **FIN-R7** cheque/DD/PDC + bounce on the `finance_offline_payments` tracking ledger (**money-safe** — never posts to `finance_collections`, so a bounce reverses no money; test-enforced) and **FIN-R6** collection targets + attainment on the recovery dashboard (**FIN-D6 resolved**: principal sets, collectors see own). analyze 0 · deno finance+audit 172/0 · +13 tests · suite no-new-fail (2 known UX-7).
 >
-> **▶ NEXT: P1-PROD-1 (C1 — Finance Fee Recovery / Collections CRM, FIN-R1..R5)** — discovery-first (a `finance_recovery_crm` migration + actions already exist; verify/expand, don't duplicate). **P2-UX-1 ∥-eligible** under disjoint ownership. Still owner-gated: the identity-decision batch (P1-CODE-4), module-scope 👤s (P1-CODE-6/7/8), and the live lane (`P0-INFRA-1/3`, `P0-TEST-1/2/3` — VPS SSH + tenant Postgres + branch CI; the 7-day cron clock → P7 starts only when P0-TEST-3 runs for real).
+> **▶ NEXT: P1-PROD-11 (C13 — Academic-work productivity, Exams half: EXM-4 merit/topper · EXM-5 pass-fail & grade-distribution · EXM-6 marks-entry deadline reminder [XCT-2] · EXM-7 datesheet PDF)** — discovery-first (C4 built the exams tabulation/register foundation; verify/expand, don't duplicate). Exam-result governance intact (absent/ML/DB excluded). **Homework half (HWK-3..8) defers with C6** (HWK-1 owner migration). **P2-UX-1 ∥-eligible.** Still owner-gated: the identity batch (P1-CODE-4), module-scope 👤s (P1-CODE-6/7/8), and the live lane (`P0-INFRA-1/3`, `P0-TEST-1/2/3`).
 
 ---
 
