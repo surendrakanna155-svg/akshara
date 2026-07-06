@@ -1,0 +1,67 @@
+{
+  "_comment": "Rules for the Download Verification & Recovery Engine. All thresholds are config, never code (pipeline spec Part 16: configuration over hard-coding).",
+  "allowed_extensions": ["pdf", "doc", "docx", "epub", "html", "zip"],
+  "min_size_bytes": {
+    "default": 4096,
+    "pdf": 10240,
+    "doc": 8192,
+    "docx": 8192,
+    "epub": 8192,
+    "zip": 4096,
+    "html": 2048
+  },
+  "filename_pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+  "magic_bytes": {
+    "pdf": "255044462d",
+    "zip_family": "504b0304",
+    "doc_ole": "d0cf11e0a1b11ae1"
+  },
+  "html_error_signatures": [
+    "<!doctype html",
+    "<html",
+    "404 not found",
+    "403 forbidden",
+    "access denied",
+    "file not found",
+    "temporarily unavailable"
+  ],
+  "pdf": {
+    "eof_scan_window_bytes": 2048,
+    "require_eof_marker": true,
+    "require_startxref": true,
+    "min_pages": 1,
+    "parse_sample_pages": 3
+  },
+  "retry_policy": {
+    "max_retries_per_source": 2,
+    "backoff_minutes": [5, 30, 120],
+    "exhausted_status": "MISSING"
+  },
+  "health_score_weights": {
+    "_comment": "score = 100 * (w1*verified/expected + w2*(1-corrupt_rate) + w3*(1-empty_rate) + w4*(1-missing_rate)); rates over expected; N/A when expected=0",
+    "verified_ratio": 0.6,
+    "corruption_cleanliness": 0.15,
+    "empty_cleanliness": 0.1,
+    "missing_cleanliness": 0.15
+  },
+  "metadata_required_fields": [
+    "resource_id",
+    "original_filename",
+    "repository_filename",
+    "board",
+    "class_label",
+    "subject",
+    "document_type",
+    "language",
+    "medium",
+    "source_url",
+    "download_timestamp",
+    "verification_timestamp",
+    "checksum_sha256",
+    "file_size_bytes",
+    "file_format",
+    "storage_path",
+    "document_status",
+    "verification_status"
+  ]
+}

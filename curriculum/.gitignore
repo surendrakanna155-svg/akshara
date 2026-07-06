@@ -1,0 +1,14 @@
+# Curriculum workspace — binary/content trees NEVER enter git (R10 guard).
+# Committed: configs/, scripts/, reports/ (markdown), indexes/ + metadata/ summaries, PM files.
+resources/
+downloads/
+cache/
+temp/
+archives/
+*.pdf
+*.docx
+*.doc
+*.epub
+*.zip
+__pycache__/
+*.pyc
