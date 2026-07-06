@@ -76,6 +76,90 @@ class SisReportExporters {
     );
   }
 
+  // --- SIS-2 class list (compact per-class roster) -----------------------------
+
+  static const List<String> classListHeaders = [
+    'Admission #',
+    'Name',
+    'Class',
+    'Section',
+    'Status',
+  ];
+
+  static List<List<String>> classListRows(List<SisStudent> students) {
+    return [
+      for (final student in students)
+        [
+          student.admissionNumber,
+          student.studentName,
+          student.classLabel,
+          student.section,
+          sisStudentStatusLabel(student.status),
+        ],
+    ];
+  }
+
+  Future<void> shareClassListCsv(List<SisStudent> students) {
+    return _service.shareGridCsv(
+      filename: 'sis_class_list',
+      headers: classListHeaders,
+      rows: classListRows(students),
+    );
+  }
+
+  Future<void> shareClassListPdf(List<SisStudent> students) {
+    return _service.shareGridPdf(
+      filename: 'sis_class_list',
+      reportTitle: 'Class list',
+      moduleLabel: 'SIS · Class List',
+      headers: classListHeaders,
+      rows: classListRows(students),
+      generatedAtLabel: DateTime.now().toIso8601String(),
+    );
+  }
+
+  // --- SIS-2 parent contact sheet (student → guardian contact) ------------------
+
+  static const List<String> contactSheetHeaders = [
+    'Name',
+    'Class',
+    'Section',
+    'Parent name',
+    'Parent phone',
+  ];
+
+  static List<List<String>> contactSheetRows(List<SisStudent> students) {
+    return [
+      for (final student in students)
+        [
+          student.studentName,
+          student.classLabel,
+          student.section,
+          student.guardianName,
+          student.phone,
+        ],
+    ];
+  }
+
+  Future<void> shareContactSheetCsv(List<SisStudent> students) {
+    return _service.shareGridCsv(
+      filename: 'sis_contact_sheet',
+      headers: contactSheetHeaders,
+      rows: contactSheetRows(students),
+    );
+  }
+
+  Future<void> shareContactSheetPdf(List<SisStudent> students) {
+    return _service.shareGridPdf(
+      filename: 'sis_contact_sheet',
+      reportTitle: 'Parent contact sheet',
+      moduleLabel: 'SIS · Parent Contact Sheet',
+      headers: contactSheetHeaders,
+      rows: contactSheetRows(students),
+      generatedAtLabel: DateTime.now().toIso8601String(),
+    );
+  }
+
   // --- SIS-5 transfers / exit log ----------------------------------------------
 
   static const List<String> transfersHeaders = [
@@ -86,6 +170,7 @@ class SisReportExporters {
     'Academic year',
     'Status',
     'Exited at',
+    'Reason',
   ];
 
   static List<List<String>> transfersRows(List<SisTransferRecord> records) {
@@ -99,6 +184,7 @@ class SisReportExporters {
           record.academicYear,
           sisStudentStatusLabel(record.status),
           _dateOnly(record.exitedAt),
+          record.reason ?? '',
         ],
     ];
   }

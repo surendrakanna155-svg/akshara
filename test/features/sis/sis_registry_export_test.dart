@@ -124,6 +124,87 @@ void main() {
     });
   });
 
+  group('SIS-2 class list export grid (compact roster)', () {
+    const student = SisStudent(
+      id: 'stu-1',
+      studentName: 'Arjun Patel',
+      admissionNumber: 'ADM-2026-0138',
+      publicStudentId: 'DPSKKP-0001',
+      classLabel: '10',
+      section: 'A',
+      academicYear: '2026–27',
+      status: SisStudentStatus.active,
+      gender: 'Male',
+      dateOfBirth: '14 Jun 2011',
+      guardianName: 'Kiran Patel',
+      phone: '+91 98765 11111',
+      email: 'kiran.patel@email.com',
+      enrolledAt: 'Jan 2026',
+    );
+
+    test('headers form the compact 5-column roster grid', () {
+      expect(SisReportExporters.classListHeaders, const [
+        'Admission #',
+        'Name',
+        'Class',
+        'Section',
+        'Status',
+      ]);
+    });
+
+    test('rows carry admission, name, class, section and status', () {
+      final rows = SisReportExporters.classListRows(const [student]);
+      expect(rows, hasLength(1));
+      expect(rows.single, const [
+        'ADM-2026-0138',
+        'Arjun Patel',
+        '10',
+        'A',
+        'Active',
+      ]);
+    });
+  });
+
+  group('SIS-2 parent contact sheet export grid', () {
+    const student = SisStudent(
+      id: 'stu-1',
+      studentName: 'Arjun Patel',
+      admissionNumber: 'ADM-2026-0138',
+      classLabel: '10',
+      section: 'A',
+      academicYear: '2026–27',
+      status: SisStudentStatus.active,
+      gender: 'Male',
+      dateOfBirth: '14 Jun 2011',
+      guardianName: 'Kiran Patel',
+      phone: '+91 98765 11111',
+      email: 'kiran.patel@email.com',
+      enrolledAt: 'Jan 2026',
+    );
+
+    test('headers form the 5-column student -> guardian contact grid', () {
+      expect(SisReportExporters.contactSheetHeaders, const [
+        'Name',
+        'Class',
+        'Section',
+        'Parent name',
+        'Parent phone',
+      ]);
+    });
+
+    test('rows carry name, class, section, parent name and phone', () {
+      final rows = SisReportExporters.contactSheetRows(const [student]);
+      expect(rows, hasLength(1));
+      expect(rows.single, const [
+        'Arjun Patel',
+        '10',
+        'A',
+        'Kiran Patel',
+        '+91 98765 11111',
+      ]);
+    });
+  });
+
   group('SIS-2 registry screen export controls', () {
     testWidgets('shows enabled CSV and PDF export buttons', (tester) async {
       await _pumpRegistry(tester);
@@ -136,6 +217,21 @@ void main() {
       );
       expect(csvButton.enabled, isTrue);
       expect(pdfButton.enabled, isTrue);
+    });
+
+    testWidgets('shows enabled class-list and contact-sheet export buttons',
+        (tester) async {
+      await _pumpRegistry(tester);
+
+      for (final key in [
+        QaTestKeys.sisClassListExportCsvButton,
+        QaTestKeys.sisClassListExportPdfButton,
+        QaTestKeys.sisContactSheetExportCsvButton,
+        QaTestKeys.sisContactSheetExportPdfButton,
+      ]) {
+        final button = tester.widget<OutlinedButton>(find.byKey(key));
+        expect(button.enabled, isTrue, reason: '$key should be enabled');
+      }
     });
 
     testWidgets('mobile card subtitle shows the primary guardian contact',

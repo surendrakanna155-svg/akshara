@@ -383,6 +383,10 @@ class SisMapper {
           raw['transitioned_at'] as String? ??
           raw['exitedAt'] as String? ??
           '',
+      // SIS-5 — latest Transfer Certificate reason (blank/absent -> null).
+      reason: _nullableString(
+        raw['exitReason'] ?? raw['exit_reason'] ?? raw['reason'],
+      ),
     );
   }
 

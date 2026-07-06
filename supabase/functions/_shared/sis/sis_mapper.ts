@@ -63,6 +63,8 @@ export function studentTransferItemToApi(row: StudentTransferRow): Record<string
     rollNumber: row.roll_number ?? "",
     transitionedAt: row.transitioned_at,
     createdAt: row.created_at,
+    // SIS-5 — latest Transfer Certificate reason ("" when none was issued).
+    exitReason: row.exit_reason ?? "",
   };
 }
 

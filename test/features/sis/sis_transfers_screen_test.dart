@@ -114,7 +114,7 @@ void main() {
       exitedAt: '2026-03-14T09:30:00.000Z',
     );
 
-    test('headers form the 7-column exit-log grid', () {
+    test('headers form the 8-column exit-log grid incl. reason', () {
       expect(SisReportExporters.transfersHeaders, const [
         'Student',
         'Admission #',
@@ -123,12 +123,14 @@ void main() {
         'Academic year',
         'Status',
         'Exited at',
+        'Reason',
       ]);
     });
 
     test('rows map record fields incl. status label and exit date', () {
       final rows = SisReportExporters.transfersRows(const [record]);
       expect(rows, hasLength(1));
+      // No TC reason on this record -> blank Reason cell.
       expect(rows.single, const [
         'Rahul Verma',
         'ADM-2024-0031',
@@ -137,7 +139,24 @@ void main() {
         '2025–26',
         'Transferred',
         '2026-03-14',
+        '',
       ]);
+    });
+
+    test('SIS-5 reason column carries the latest TC reason when present', () {
+      const withReason = SisTransferRecord(
+        studentId: 'stu-2',
+        studentName: 'Sneha Gupta',
+        admissionNumber: 'ADM-2023-0009',
+        classLabel: '10',
+        section: 'A',
+        academicYear: '2024–25',
+        status: SisStudentStatus.alumni,
+        exitedAt: '2025-04-30T00:00:00.000Z',
+        reason: 'Relocation to another city',
+      );
+      final rows = SisReportExporters.transfersRows(const [withReason]);
+      expect(rows.single.last, 'Relocation to another city');
     });
 
     test('grid CSV renders one header row + one row per record', () {

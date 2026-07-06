@@ -148,6 +148,20 @@ abstract final class QaTestKeys {
   static const sisRegistryExportSuccessSnackbar =
       ValueKey<String>('sis_registry_export_success_snackbar');
 
+  // SIS-2 — dedicated class-list + parent contact-sheet exports.
+  static const sisClassListExportCsvButton =
+      ValueKey<String>('sis_class_list_export_csv_button');
+  static const sisClassListExportPdfButton =
+      ValueKey<String>('sis_class_list_export_pdf_button');
+  static const sisClassListExportSuccessSnackbar =
+      ValueKey<String>('sis_class_list_export_success_snackbar');
+  static const sisContactSheetExportCsvButton =
+      ValueKey<String>('sis_contact_sheet_export_csv_button');
+  static const sisContactSheetExportPdfButton =
+      ValueKey<String>('sis_contact_sheet_export_pdf_button');
+  static const sisContactSheetExportSuccessSnackbar =
+      ValueKey<String>('sis_contact_sheet_export_success_snackbar');
+
   static const sisProfilePublicId =
       ValueKey<String>('sis_profile_public_id');
   static const sisEditProfileButton =

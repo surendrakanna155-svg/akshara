@@ -425,6 +425,7 @@ export function applyLeaveDecision(
   leaveRequestId: string,
   status: "approved" | "rejected",
   comment: string,
+  actorUserId = "",
 ): { next: Record<string, unknown>; updated: Record<string, unknown> } {
   const requests = Array.isArray(current.requests)
     ? current.requests as Array<Record<string, unknown>>
@@ -432,6 +433,19 @@ export function applyLeaveDecision(
   const index = requests.findIndex((r) => String(r.id ?? "") === leaveRequestId);
   if (index < 0) {
     throw new WriteNotFoundError(`Leave request not found: ${leaveRequestId}`);
+  }
+  // HR-3 SoD (owner decision 2026-07-06): the person who FILED a leave request
+  // (`createdBy` = the acting user) cannot approve/reject it — approver ≠
+  // requester, mirroring the C10 money maker-checker. Same identity space
+  // (auth `sub`), so no id mapping is needed. Legacy rows without `createdBy`
+  // (or an empty actor) are unaffected.
+  const filedBy = String(requests[index]!.createdBy ?? "");
+  if (actorUserId !== "" && filedBy === actorUserId) {
+    throw new WriteValidationError(
+      "You cannot approve or reject a leave request you filed",
+      403,
+      "LEAVE_SELF_APPROVE_DENIED",
+    );
   }
   const currentStatus = String(requests[index]!.status ?? "");
   if (currentStatus !== "pending") {
@@ -467,6 +481,7 @@ export function applyBatchLeaveDecision(
   leaveRequestIds: string[],
   status: "approved" | "rejected",
   comment: string,
+  actorUserId = "",
 ): {
   next: Record<string, unknown>;
   decided: Array<Record<string, unknown>>;
@@ -486,7 +501,9 @@ export function applyBatchLeaveDecision(
     }
     seen.add(id);
     try {
-      const result = applyLeaveDecision(snapshot, id, status, comment);
+      // HR-3 SoD: a request the actor filed themselves raises 403 and is
+      // SKIPPED (partial success) — the rest of the batch still decides.
+      const result = applyLeaveDecision(snapshot, id, status, comment, actorUserId);
       snapshot = result.next;
       decided.push(result.updated);
     } catch (error) {
@@ -543,7 +560,13 @@ export async function handleBatchDecideLeave(req: Request, config: AppConfig): P
       schoolId,
       "snapshot_leave",
       (currentSnap) => {
-        const result = applyBatchLeaveDecision(currentSnap, ids, status, comment);
+        const result = applyBatchLeaveDecision(
+          currentSnap,
+          ids,
+          status,
+          comment,
+          claims.sub ?? "",
+        );
         decided = result.decided;
         skipped = result.skipped;
         return result.next;
@@ -595,7 +618,13 @@ async function decideLeaveRequest(
       "snapshot_leave",
       (current) => {
         try {
-          const result = applyLeaveDecision(current, leaveRequestId, status, comment);
+          const result = applyLeaveDecision(
+            current,
+            leaveRequestId,
+            status,
+            comment,
+            claims.sub ?? "",
+          );
           updated = result.updated;
           return result.next;
         } catch (error) {

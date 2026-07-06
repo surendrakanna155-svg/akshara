@@ -55,6 +55,9 @@ export interface StudentTransferRow {
   roll_number: string | null;
   transitioned_at: string;
   created_at: string;
+  // SIS-5 — reason from the latest Transfer Certificate for this student
+  // (read-only correlated sub-select). Null when no TC was ever issued.
+  exit_reason: string | null;
 }
 
 export interface StudentCoreRow {
@@ -439,7 +442,17 @@ export async function listStudentTransfers(
         se.section_name,
         se.roll_number,
         s.updated_at AS transitioned_at,
-        s.created_at
+        s.created_at,
+        (
+          SELECT tc.reason
+          FROM sis_certificate_issues tc
+          WHERE tc.student_id = s.id
+            AND tc.organization_id = s.organization_id
+            AND tc.school_id = s.school_id
+            AND tc.certificate_type = 'transfer'
+          ORDER BY tc.issued_at DESC
+          LIMIT 1
+        ) AS exit_reason
      ${transferFromSql()}
      ${transferWhereSql()}
      ORDER BY s.updated_at DESC, s.display_name ASC

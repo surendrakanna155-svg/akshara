@@ -88,6 +88,56 @@ class _SisRegistryScreenState extends ConsumerState<SisRegistryScreen> {
     );
   }
 
+  // SIS-2: compact per-class roster export (a cleaner subset of the registry).
+  Future<void> _exportClassList(
+    List<SisStudent> students, {
+    required bool pdf,
+  }) async {
+    final exporters = SisReportExporters(
+      ref.read(aksharaReportExportServiceProvider),
+    );
+    if (pdf) {
+      await exporters.shareClassListPdf(students);
+    } else {
+      await exporters.shareClassListCsv(students);
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.sisClassListExportSuccessSnackbar,
+        content: Text(
+          'Class list ${pdf ? 'PDF' : 'CSV'} ready '
+          '(${students.length} students)',
+        ),
+      ),
+    );
+  }
+
+  // SIS-2: student -> guardian parent contact sheet export.
+  Future<void> _exportContactSheet(
+    List<SisStudent> students, {
+    required bool pdf,
+  }) async {
+    final exporters = SisReportExporters(
+      ref.read(aksharaReportExportServiceProvider),
+    );
+    if (pdf) {
+      await exporters.shareContactSheetPdf(students);
+    } else {
+      await exporters.shareContactSheetCsv(students);
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.sisContactSheetExportSuccessSnackbar,
+        content: Text(
+          'Parent contact sheet ${pdf ? 'PDF' : 'CSV'} ready '
+          '(${students.length} students)',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final viewState = ref.watch(sisRegistryViewStateProvider);
@@ -105,10 +155,14 @@ class _SisRegistryScreenState extends ConsumerState<SisRegistryScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // SIS-2: true multi-column grid export (XCT-1) incl. primary
-          // guardian contact — CSV and PDF ride the shared grid primitive.
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+          // SIS-2: true multi-column grid exports (XCT-1) — the full registry
+          // incl. primary guardian contact, plus a compact class-list roster
+          // and a parent contact sheet. All ride the shared grid primitive and
+          // gate on a non-empty student list, like the registry export.
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: AksharaSpacing.s2,
+            runSpacing: AksharaSpacing.s2,
             children: [
               OutlinedButton.icon(
                 key: QaTestKeys.sisRegistryExportButton,
@@ -118,7 +172,6 @@ class _SisRegistryScreenState extends ConsumerState<SisRegistryScreen> {
                 icon: const Icon(Icons.download_outlined),
                 label: const Text('Export CSV'),
               ),
-              const SizedBox(width: AksharaSpacing.s2),
               OutlinedButton.icon(
                 key: QaTestKeys.sisRegistryExportPdfButton,
                 onPressed: students.isEmpty
@@ -126,6 +179,38 @@ class _SisRegistryScreenState extends ConsumerState<SisRegistryScreen> {
                     : () => _exportRegistry(students, pdf: true),
                 icon: const Icon(Icons.picture_as_pdf_outlined),
                 label: const Text('Export PDF'),
+              ),
+              OutlinedButton.icon(
+                key: QaTestKeys.sisClassListExportCsvButton,
+                onPressed: students.isEmpty
+                    ? null
+                    : () => _exportClassList(students, pdf: false),
+                icon: const Icon(Icons.list_alt_outlined),
+                label: const Text('Class list CSV'),
+              ),
+              OutlinedButton.icon(
+                key: QaTestKeys.sisClassListExportPdfButton,
+                onPressed: students.isEmpty
+                    ? null
+                    : () => _exportClassList(students, pdf: true),
+                icon: const Icon(Icons.list_alt_outlined),
+                label: const Text('Class list PDF'),
+              ),
+              OutlinedButton.icon(
+                key: QaTestKeys.sisContactSheetExportCsvButton,
+                onPressed: students.isEmpty
+                    ? null
+                    : () => _exportContactSheet(students, pdf: false),
+                icon: const Icon(Icons.contacts_outlined),
+                label: const Text('Contacts CSV'),
+              ),
+              OutlinedButton.icon(
+                key: QaTestKeys.sisContactSheetExportPdfButton,
+                onPressed: students.isEmpty
+                    ? null
+                    : () => _exportContactSheet(students, pdf: true),
+                icon: const Icon(Icons.contacts_outlined),
+                label: const Text('Contacts PDF'),
               ),
             ],
           ),

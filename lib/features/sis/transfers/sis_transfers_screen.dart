@@ -202,6 +202,15 @@ class _TransferRow extends StatelessWidget {
                     style: text.bodySmall
                         .copyWith(color: colors.onSurfaceVariant),
                   ),
+                  // SIS-5: exit reason from the latest Transfer Certificate.
+                  if (record.reason != null && record.reason!.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      'Reason: ${record.reason}',
+                      style: text.bodySmall
+                          .copyWith(color: colors.onSurfaceVariant),
+                    ),
+                  ],
                 ],
               ),
             ),

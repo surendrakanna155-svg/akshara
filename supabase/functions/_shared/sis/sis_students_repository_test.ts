@@ -166,6 +166,38 @@ class MockSisStudentsDb {
       email: "staging.parent@aksharaerp.com",
     },
   ];
+  // SIS-5 — transfer certificates for the exit-reason join. STUDENT_TRANSFERRED
+  // has a TC (with a reason); STUDENT_ALUMNI has none (exit_reason -> null).
+  certificates: Row[] = [
+    {
+      id: "tc-1",
+      student_id: STUDENT_TRANSFERRED,
+      organization_id: ORG,
+      school_id: SCHOOL_A,
+      certificate_type: "transfer",
+      reason: "Family relocation",
+      issued_at: "2026-05-15T00:00:00.000Z",
+    },
+    {
+      id: "tc-1-older",
+      student_id: STUDENT_TRANSFERRED,
+      organization_id: ORG,
+      school_id: SCHOOL_A,
+      certificate_type: "transfer",
+      reason: "Superseded older reason",
+      issued_at: "2026-01-01T00:00:00.000Z",
+    },
+  ];
+
+  // Latest transfer-certificate reason for a student, or null when none.
+  latestTransferReason(studentId: unknown): string | null {
+    const tcs = this.certificates
+      .filter((c) =>
+        c.student_id === studentId && c.certificate_type === "transfer"
+      )
+      .sort((a, b) => String(b.issued_at).localeCompare(String(a.issued_at)));
+    return (tcs[0]?.reason as string | undefined) ?? null;
+  }
 
   async queryCount(sql: string, args: unknown[] = []): Promise<number> {
     if (sql.includes("status = ANY($3::text[])")) {
@@ -213,6 +245,7 @@ class MockSisStudentsDb {
           roll_number: enrollment?.roll_number ?? null,
           transitioned_at: student.updated_at,
           created_at: student.created_at,
+          exit_reason: this.latestTransferReason(student.id),
         };
       })
       .sort((a, b) => String(b.transitioned_at).localeCompare(String(a.transitioned_at)));
@@ -517,6 +550,23 @@ Deno.test("SIS-5 transfers graduated status filter maps to alumni via handler", 
   }, { page: 1, pageSize: 20 });
   assertEquals(result.total, 1);
   assertEquals(result.items[0]?.student_id, STUDENT_ALUMNI);
+});
+
+// SIS-5 — the exit log joins the latest transfer-certificate reason (read-only).
+Deno.test("SIS-5 transfers surface latest TC reason and null when none", async () => {
+  const db = new MockSisStudentsDb() as unknown as TenantQueryClient;
+  const result = await listStudentTransfers(db, ORG, SCHOOL_A, {}, {
+    page: 1,
+    pageSize: 20,
+  });
+  const transferred = result.items.find((r) => r.student_id === STUDENT_TRANSFERRED)!;
+  const alumni = result.items.find((r) => r.student_id === STUDENT_ALUMNI)!;
+  // Latest of two TCs wins; alumni never had a TC -> null.
+  assertEquals(transferred.exit_reason, "Family relocation");
+  assertEquals(alumni.exit_reason, null);
+  // Mapper exposes it as exitReason ("" when null).
+  assertEquals(studentTransferItemToApi(transferred).exitReason, "Family relocation");
+  assertEquals(studentTransferItemToApi(alumni).exitReason, "");
 });
 
 Deno.test("studentDetailToApi nests student profile enrollment guardians", async () => {

@@ -75,6 +75,28 @@ Deno.test("HR-3 batch: a duplicate id in the request is skipped after its first 
   assertEquals(skipped[0]!.reason.includes("Duplicate"), true);
 });
 
+Deno.test("HR-3 SoD batch: a request the actor filed is SKIPPED; the rest still decide", () => {
+  // lv_1 was filed by the acting approver → self-approval, skipped; lv_3 decides.
+  const snap: Record<string, unknown> = {
+    requests: [
+      { id: "lv_1", employeeId: EMP_A, status: "pending", days: 2, createdBy: "user_hr_1" },
+      { id: "lv_3", employeeId: EMP_B, status: "pending", days: 1, createdBy: "user_hr_9" },
+    ],
+    pendingCount: 2,
+  };
+  const { decided, skipped } = applyBatchLeaveDecision(
+    snap,
+    ["lv_1", "lv_3"],
+    "approved",
+    "bulk",
+    "user_hr_1",
+  );
+  assertEquals(decided.map((r) => r.id), ["lv_3"]);
+  assertEquals(skipped.length, 1);
+  assertEquals(skipped[0]!.id, "lv_1");
+  assertEquals(skipped[0]!.reason.includes("you filed"), true);
+});
+
 // ── HR-D3 · leave-on-behalf over-balance check ────────────────────────────────
 
 function leaveHistory(days: number, status = "approved"): Record<string, unknown> {

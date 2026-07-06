@@ -269,6 +269,7 @@ class SisTransferRecord {
     required this.academicYear,
     required this.status,
     required this.exitedAt,
+    this.reason,
   });
 
   final String studentId;
@@ -283,6 +284,10 @@ class SisTransferRecord {
 
   /// ISO timestamp (or date) of the exit transition.
   final String exitedAt;
+
+  /// SIS-5 — reason from the latest Transfer Certificate issued for this
+  /// student (read-only join). Null when no TC was ever issued.
+  final String? reason;
 }
 
 @immutable

@@ -191,3 +191,47 @@ Deno.test("leave: re-deciding a REJECTED request is rejected → 409 LEAVE_ALREA
   assertEquals(err.status, 409);
   assertEquals(err.code, "LEAVE_ALREADY_DECIDED");
 });
+
+// HR-3 SoD — a snapshot whose pending request records who filed it (`createdBy`).
+function leaveSnapFiledBy(filedBy: string): Record<string, unknown> {
+  return {
+    requests: [
+      { id: "lv_1", employeeId: EMP_A, status: "pending", days: 3, createdBy: filedBy },
+    ],
+    pendingCount: 1,
+  };
+}
+
+Deno.test("leave SoD: the actor who FILED a request cannot approve it → 403 LEAVE_SELF_APPROVE_DENIED", () => {
+  const err = assertThrows(
+    () => applyLeaveDecision(leaveSnapFiledBy("user_hr_1"), "lv_1", "approved", "", "user_hr_1"),
+    WriteValidationError,
+  );
+  assertEquals(err.status, 403);
+  assertEquals(err.code, "LEAVE_SELF_APPROVE_DENIED");
+});
+
+Deno.test("leave SoD: the actor who filed a request cannot REJECT it either → 403", () => {
+  const err = assertThrows(
+    () => applyLeaveDecision(leaveSnapFiledBy("user_hr_1"), "lv_1", "rejected", "", "user_hr_1"),
+    WriteValidationError,
+  );
+  assertEquals(err.status, 403);
+  assertEquals(err.code, "LEAVE_SELF_APPROVE_DENIED");
+});
+
+Deno.test("leave SoD: a DIFFERENT approver may decide a request someone else filed", () => {
+  const { updated } = applyLeaveDecision(
+    leaveSnapFiledBy("user_hr_1"),
+    "lv_1",
+    "approved",
+    "ok",
+    "user_hr_2",
+  );
+  assertEquals(updated.status, "approved");
+});
+
+Deno.test("leave SoD: with no actor (legacy/unset) the self-approve guard does not fire", () => {
+  const { updated } = applyLeaveDecision(leaveSnapFiledBy("user_hr_1"), "lv_1", "approved", "ok");
+  assertEquals(updated.status, "approved");
+});
