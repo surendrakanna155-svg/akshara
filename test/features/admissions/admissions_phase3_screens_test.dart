@@ -1,5 +1,6 @@
 import 'package:akshara_erp/core/repositories/mock/mock_admissions_repository.dart';
 import 'package:akshara_erp/core/repositories/repository_providers.dart';
+import 'package:akshara_erp/core/testing/qa_test_keys.dart';
 import 'package:akshara_erp/features/admissions/approval/admissions_approval_provider.dart';
 import 'package:akshara_erp/features/admissions/approval/admissions_approval_screen.dart';
 import 'package:akshara_erp/features/admissions/fee_handoff/admissions_fee_handoff_screen.dart';
@@ -82,7 +83,11 @@ void main() {
       await pumpScreen(tester, const AdmissionsReportsScreen());
 
       expect(find.text('Conversion funnel'), findsOneWidget);
-      expect(find.text('Export'), findsOneWidget);
+      // ADM-1: both CSV and PDF export affordances (shared pipeline).
+      expect(find.byKey(QaTestKeys.admissionsReportExportCsvButton),
+          findsOneWidget);
+      expect(find.byKey(QaTestKeys.admissionsReportExportPdfButton),
+          findsOneWidget);
     });
 
     testWidgets('AdmissionsSettingsScreen renders configuration', (

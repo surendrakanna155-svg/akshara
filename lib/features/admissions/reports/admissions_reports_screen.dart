@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/reports/akshara_report_export_service.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../admissions_async_state.dart';
@@ -35,10 +36,24 @@ class AdmissionsReportsScreen extends ConsumerWidget {
       onFilterSelected: (index) => ref
           .read(admissionsReportsTabProvider.notifier)
           .state = AdmissionsReportTab.values[index],
-      filterTrailing: OutlinedButton.icon(
-        onPressed: () => _exportSelectedTab(context, ref, tab),
-        icon: const Icon(Icons.download_outlined, size: 18),
-        label: const Text('Export'),
+      // Compact icon actions so both export formats fit the filter bar without
+      // overflowing on narrow widths.
+      filterTrailing: Wrap(
+        spacing: AksharaSpacing.s1,
+        children: [
+          IconButton(
+            key: QaTestKeys.admissionsReportExportCsvButton,
+            tooltip: 'Export CSV',
+            onPressed: () => _export(context, ref, tab, pdf: false),
+            icon: const Icon(Icons.table_chart_outlined),
+          ),
+          IconButton(
+            key: QaTestKeys.admissionsReportExportPdfButton,
+            tooltip: 'Export PDF',
+            onPressed: () => _export(context, ref, tab, pdf: true),
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+          ),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -57,13 +72,74 @@ class AdmissionsReportsScreen extends ConsumerWidget {
     );
   }
 
-  /// AD-09 export (XCT-1) — the currently-selected report tab as a real
-  /// multi-column grid CSV (mirrors the on-screen table columns exactly).
-  Future<void> _exportSelectedTab(
+  /// The currently-selected report tab as a (title, headers, rows) grid —
+  /// shared by the CSV and PDF exports so both mirror the on-screen columns.
+  (String, List<String>, List<List<String>>) _gridForTab(
+    AdmissionsReportsData data,
+    AdmissionsReportTab tab,
+  ) {
+    switch (tab) {
+      case AdmissionsReportTab.funnel:
+        return (
+          'Admissions Funnel',
+          const ['Stage', 'Count'],
+          [
+            for (final s in data.funnelSegments) [s.label, '${s.value}'],
+            // ADM-D1: append the lost-reasons rollup so the funnel export is
+            // complete (mirrors the on-screen lost-reasons card).
+            for (final r in data.lostReasons)
+              ['Lost · ${r.reason.label}', '${r.count}'],
+          ],
+        );
+      case AdmissionsReportTab.sources:
+        return (
+          'Lead Sources',
+          const ['Source', 'Leads', 'Converted', 'Conversion %'],
+          [
+            for (final r in data.sourceAnalysis)
+              [
+                r.source.label,
+                '${r.leads}',
+                '${r.converted}',
+                '${r.conversionRate.toStringAsFixed(1)}%',
+              ],
+          ],
+        );
+      case AdmissionsReportTab.counselors:
+        return (
+          'Counselor Performance',
+          const ['Counselor', 'Leads', 'Applications', 'Approved', 'Conversion %'],
+          [
+            for (final r in data.counselorPerformance)
+              [
+                r.counselor,
+                '${r.leads}',
+                '${r.applications}',
+                '${r.approved}',
+                '${r.conversionRate.toStringAsFixed(1)}%',
+              ],
+          ],
+        );
+      case AdmissionsReportTab.applications:
+        return (
+          'Application Status',
+          const ['Status', 'Count', 'Share %'],
+          [
+            for (final r in data.applicationStatus)
+              [r.status.label, '${r.count}', '${r.percent.toStringAsFixed(1)}%'],
+          ],
+        );
+    }
+  }
+
+  /// AD-09 / ADM-1 export (XCT-1) — the selected report tab as a real
+  /// multi-column grid, CSV or PDF, both through the shared export service.
+  Future<void> _export(
     BuildContext context,
     WidgetRef ref,
-    AdmissionsReportTab tab,
-  ) async {
+    AdmissionsReportTab tab, {
+    required bool pdf,
+  }) async {
     final data = ref.read(admissionsReportsFutureProvider).valueOrNull;
     if (data == null) {
       showAksharaExportQueuedSnackBar(
@@ -73,76 +149,36 @@ class AdmissionsReportsScreen extends ConsumerWidget {
       return;
     }
 
-    final String title;
-    final List<String> headers;
-    final List<List<String>> rows;
-    switch (tab) {
-      case AdmissionsReportTab.funnel:
-        title = 'Admissions Funnel';
-        headers = const ['Stage', 'Count'];
-        rows = [
-          for (final s in data.funnelSegments) [s.label, '${s.value}'],
-          // ADM-D1: append the lost-reasons rollup so the funnel export is
-          // complete (mirrors the on-screen lost-reasons card).
-          for (final r in data.lostReasons)
-            ['Lost · ${r.reason.label}', '${r.count}'],
-        ];
-      case AdmissionsReportTab.sources:
-        title = 'Lead Sources';
-        headers = const ['Source', 'Leads', 'Converted', 'Conversion %'];
-        rows = [
-          for (final r in data.sourceAnalysis)
-            [
-              r.source.label,
-              '${r.leads}',
-              '${r.converted}',
-              '${r.conversionRate.toStringAsFixed(1)}%',
-            ],
-        ];
-      case AdmissionsReportTab.counselors:
-        title = 'Counselor Performance';
-        headers = const [
-          'Counselor',
-          'Leads',
-          'Applications',
-          'Approved',
-          'Conversion %',
-        ];
-        rows = [
-          for (final r in data.counselorPerformance)
-            [
-              r.counselor,
-              '${r.leads}',
-              '${r.applications}',
-              '${r.approved}',
-              '${r.conversionRate.toStringAsFixed(1)}%',
-            ],
-        ];
-      case AdmissionsReportTab.applications:
-        title = 'Application Status';
-        headers = const ['Status', 'Count', 'Share %'];
-        rows = [
-          for (final r in data.applicationStatus)
-            [r.status.label, '${r.count}', '${r.percent.toStringAsFixed(1)}%'],
-        ];
-    }
-
+    final (title, headers, rows) = _gridForTab(data, tab);
     if (rows.isEmpty) {
-      showAksharaExportQueuedSnackBar(
-        context,
-        label: 'No $title rows to export.',
-      );
+      showAksharaExportQueuedSnackBar(context, label: 'No $title rows to export.');
       return;
     }
 
-    await ref.read(aksharaReportExportServiceProvider).shareGridCsv(
-          filename: 'admissions_${tab.name}.csv',
-          headers: headers,
-          rows: rows,
-        );
+    final service = ref.read(aksharaReportExportServiceProvider);
+    if (pdf) {
+      await service.shareGridPdf(
+        filename: 'admissions_${tab.name}',
+        reportTitle: title,
+        moduleLabel: 'Admissions · Reports',
+        headers: headers,
+        rows: rows,
+        rightAlignFrom: 1,
+      );
+    } else {
+      await service.shareGridCsv(
+        filename: 'admissions_${tab.name}.csv',
+        headers: headers,
+        rows: rows,
+      );
+    }
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$title CSV ready (${rows.length} rows)')),
+      SnackBar(
+        content: Text(
+          '$title ${pdf ? 'PDF' : 'CSV'} ready (${rows.length} rows)',
+        ),
+      ),
     );
   }
 

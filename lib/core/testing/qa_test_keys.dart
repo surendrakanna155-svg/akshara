@@ -62,6 +62,12 @@ abstract final class QaTestKeys {
   static const admissionsCreateApplicationButton =
       ValueKey<String>('admissions_create_application_button');
 
+  // ADM-1 — admissions reports export (CSV + PDF via the shared pipeline).
+  static const admissionsReportExportCsvButton =
+      ValueKey<String>('admissions_report_export_csv_button');
+  static const admissionsReportExportPdfButton =
+      ValueKey<String>('admissions_report_export_pdf_button');
+
   static const admissionsApplicationSubmittedSnackbar =
       ValueKey<String>('admissions_application_submitted_snackbar');
 
