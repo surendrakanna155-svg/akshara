@@ -32,25 +32,15 @@ class AksharaExecutiveKpiCard extends StatelessWidget {
   final double width;
   final VoidCallback? onTap;
 
-  /// Decorative sparkline from a numeric seed when live series is unavailable.
-  static List<double> decorativeSparkline(String seed, {int points = 8}) {
-    var hash = 0;
-    for (final codeUnit in seed.codeUnits) {
-      hash = (hash * 31 + codeUnit) & 0x7fffffff;
-    }
-    return List<double>.generate(points, (i) {
-      final wave = ((hash >> (i % 12)) & 0xf) / 15;
-      return 0.35 + wave * 0.55 + (i / points) * 0.1;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = context.aksharaText;
     final accentColors = accent.resolve(context);
     final resolvedIcon = icon ?? Icons.insights_outlined;
-    final points = sparklinePoints ?? decorativeSparkline('$label$value');
+    // A6 (feel & trust): show the REAL series or nothing — never a fabricated
+    // decorative one. A KPI card without a live series simply omits the chart.
+    final points = sparklinePoints;
     final showTrend = trendLabel != null && trendLabel!.isNotEmpty;
 
     final card = Semantics(
@@ -122,12 +112,14 @@ class AksharaExecutiveKpiCard extends StatelessWidget {
                         ),
                   ),
                 ],
-                const SizedBox(height: AksharaSpacing.s2),
-                AksharaSparkline(
-                  points: points,
-                  height: 26,
-                  color: accentColors.foreground,
-                ),
+                if (points != null && points.isNotEmpty) ...[
+                  const SizedBox(height: AksharaSpacing.s2),
+                  AksharaSparkline(
+                    points: points,
+                    height: 26,
+                    color: accentColors.foreground,
+                  ),
+                ],
               ],
             ),
           ),

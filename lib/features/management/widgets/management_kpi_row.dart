@@ -51,8 +51,6 @@ class ManagementKpiRow extends StatelessWidget {
                       AksharaKpiPresentation.isTrendDetail(kpi.detail)
                   ? AksharaKpiPresentation.inferTrendDirection(kpi.detail!)
                   : null,
-              sparklinePoints:
-                  AksharaExecutiveKpiCard.decorativeSparkline(kpi.id),
               onTap: managementKpiIsDrillable(kpi)
                   ? () => navigateManagementKpiDrill(context, kpi)
                   : null,

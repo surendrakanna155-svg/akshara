@@ -325,9 +325,6 @@ class _PaymentSuccessView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final result = ref.watch(parentPaymentSuccessResultProvider);
-    final colors = context.colors;
-    final text = context.aksharaText;
-    final ext = context.akshara;
 
     if (result == null) {
       return const AksharaEmptyState(
@@ -336,50 +333,17 @@ class _PaymentSuccessView extends ConsumerWidget {
       );
     }
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AksharaSpacing.s6),
-        child: Semantics(
-          container: true,
-          label: 'Payment successful',
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.check_circle, size: 64, color: ext.success),
-              const SizedBox(height: AksharaSpacing.s4),
-              Text(
-                'Payment successful',
-                style: text.titleLarge.copyWith(color: colors.onSurface),
-              ),
-              const SizedBox(height: AksharaSpacing.s2),
-              Text(
-                formatInr(result.paidAmount),
-                style: text.headlineSmall.copyWith(color: colors.primary),
-              ),
-              const SizedBox(height: AksharaSpacing.s1),
-              Text(
-                'Receipt ${result.receiptNumber}',
-                style: text.bodyMedium.copyWith(color: colors.onSurfaceVariant),
-              ),
-              Text(
-                '${result.paymentMethod.label} · ${result.paidAtLabel}',
-                style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AksharaSpacing.s4),
-              FilledButton(
-                onPressed: () => onViewReceipt?.call(result.receiptId),
-                child: const Text('View receipt'),
-              ),
-              const SizedBox(height: AksharaSpacing.s2),
-              TextButton(
-                onPressed: onBackToFees,
-                child: const Text('Back to fees'),
-              ),
-            ],
-          ),
-        ),
-      ),
+    // P2-UX-1 — the shared success ceremony (adds the success haptic by
+    // construction). Layout matches the former bespoke view exactly.
+    return AksharaSuccessView(
+      title: 'Payment successful',
+      highlight: formatInr(result.paidAmount),
+      subtitle: 'Receipt ${result.receiptNumber}',
+      caption: '${result.paymentMethod.label} · ${result.paidAtLabel}',
+      primaryLabel: 'View receipt',
+      onPrimary: () => onViewReceipt?.call(result.receiptId),
+      secondaryLabel: 'Back to fees',
+      onSecondary: onBackToFees,
     );
   }
 }
