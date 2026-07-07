@@ -50,6 +50,7 @@ class TeacherDashboardScreen extends ConsumerWidget {
         hasError: hasError,
         isEmpty: isEmpty,
         onRetry: () => ref.invalidate(teacherDashboardFutureProvider),
+        skeleton: AksharaSkeleton.dashboard(),
         builder: (context) => LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;

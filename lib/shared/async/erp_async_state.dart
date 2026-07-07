@@ -85,6 +85,7 @@ class ErpAsyncBody<T> extends StatelessWidget {
     this.emptyIcon = Icons.inbox_outlined,
     this.emptyActionLabel,
     this.onEmptyAction,
+    this.skeleton,
   });
 
   final ErpViewState<T> state;
@@ -96,9 +97,17 @@ class ErpAsyncBody<T> extends StatelessWidget {
   final String? emptyActionLabel;
   final VoidCallback? onEmptyAction;
 
+  /// Optional content-shaped loading placeholder (see [AksharaSkeleton]);
+  /// falls back to the centered spinner when null.
+  final Widget? skeleton;
+
   @override
   Widget build(BuildContext context) {
     if (state.isLoading) {
+      final skeleton = this.skeleton;
+      if (skeleton != null) {
+        return AksharaLoadingState(semanticLabel: loadingLabel, skeleton: skeleton);
+      }
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: AksharaSpacing.s6),
         child: AksharaLoadingState(semanticLabel: loadingLabel),

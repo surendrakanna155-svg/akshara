@@ -6,16 +6,36 @@ import '../../theme/theme_extensions.dart';
 import 'akshara_motion.dart';
 
 /// Full-area centered loading indicator for screen bodies.
+///
+/// Supply [skeleton] to render a content-shaped placeholder (see
+/// [AksharaSkeleton]) instead of the centered spinner — the widget stays the
+/// canonical "loading" surface (same type + `Loading` semantics) either way.
 class AksharaLoadingState extends StatelessWidget {
   const AksharaLoadingState({
     super.key,
     this.semanticLabel = 'Loading',
+    this.skeleton,
   });
 
   final String semanticLabel;
 
+  /// Optional skeleton placeholder rendered instead of the centered spinner.
+  final Widget? skeleton;
+
   @override
   Widget build(BuildContext context) {
+    final skeleton = this.skeleton;
+    if (skeleton != null) {
+      return AksharaMotionAppear(
+        scale: false,
+        child: Semantics(
+          label: semanticLabel,
+          container: true,
+          child: ExcludeSemantics(child: skeleton),
+        ),
+      );
+    }
+
     final colors = context.colors;
     final showCaption = semanticLabel.trim().isNotEmpty &&
         semanticLabel.toLowerCase() != 'loading';

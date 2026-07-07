@@ -17,6 +17,7 @@ class MobileAsyncBody extends StatelessWidget {
     this.errorMessage = 'Unable to load dashboard right now.',
     this.emptyMessage = 'Nothing to show yet.',
     this.emptyIcon = Icons.dashboard_outlined,
+    this.skeleton,
   });
 
   final bool isLoading;
@@ -29,10 +30,17 @@ class MobileAsyncBody extends StatelessWidget {
   final String emptyMessage;
   final IconData emptyIcon;
 
+  /// Optional content-shaped loading placeholder (see [AksharaSkeleton]);
+  /// falls back to the centered spinner when null.
+  final Widget? skeleton;
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return AksharaLoadingState(semanticLabel: loadingLabel ?? 'Loading');
+      return AksharaLoadingState(
+        semanticLabel: loadingLabel ?? 'Loading',
+        skeleton: skeleton,
+      );
     }
     if (hasError) {
       return AksharaErrorState(message: errorMessage, onRetry: onRetry);

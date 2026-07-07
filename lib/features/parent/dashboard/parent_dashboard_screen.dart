@@ -65,6 +65,7 @@ class ParentDashboardScreen extends ConsumerWidget {
         hasError: hasError,
         isEmpty: isEmpty,
         onRetry: () => ref.invalidate(parentDashboardFutureProvider),
+        skeleton: AksharaSkeleton.dashboard(),
         builder: (context) => LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;

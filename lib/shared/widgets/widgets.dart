@@ -33,6 +33,7 @@ export 'akshara_period_pill.dart';
 export 'akshara_quick_action_card.dart';
 export 'akshara_section_empty.dart';
 export 'akshara_section_header.dart';
+export 'akshara_skeleton.dart';
 export 'akshara_status_chip.dart';
 export 'akshara_warning_banner.dart';
 export 'premium/premium.dart';

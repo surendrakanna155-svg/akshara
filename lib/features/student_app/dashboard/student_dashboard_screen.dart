@@ -70,6 +70,7 @@ class StudentDashboardScreen extends ConsumerWidget {
           ref.read(studentDashboardErrorProvider.notifier).state = false;
           ref.invalidate(studentDashboardFutureProvider);
         },
+        skeleton: AksharaSkeleton.dashboard(),
         builder: (context) => LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
