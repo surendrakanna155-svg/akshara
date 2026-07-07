@@ -46,7 +46,12 @@
 
 ## Sprint S9 — Sync & handoff
 - **Code:** CI-C9 (3–4d): continuous-sync v1 + impact report; **CI-E1** (2–3d): dormant Phase-2 schema seed; **EOS gates**.
-- Program close: final coverage/quality reports, `MILESTONE_TRACKER` close-out, handoff note to v3.0 Phase 2.
+- Program close (baseline scope): final coverage/quality reports, `MILESTONE_TRACKER` close-out, handoff note to v3.0 Phase 2.
+
+## Sprint S10 — Asset factories *(Amendment A1; owner-timed at the v3.0 Phase-1→2 boundary — A1-O1)*
+- **Code:** CI-C10 (6–8d): Item Models + Question Families + Distractor Library + offline batch generation through `GENERATED → AI_VALIDATED → TEACHER_VALIDATED → CERTIFIED`; **EOS gate**.
+- **Code:** CI-C11 (6–8d): diagram spec → programmatic SVG generation → Certified Diagram Library; PDF v2 embed; **EOS gate**.
+- Scoped red-team playbook re-run over both new AI surfaces (per integration review §5 rule).
 
 ---
 
@@ -55,7 +60,8 @@
 | Lane | Effort | Elapsed (concurrent) |
 |---|---|---|
 | Data lane | ~39–61 dev-days | S0–S8 |
-| Code lane | ~33–45 dev-days | S1–S9 |
-| **Program** | ~72–106 dev-days | ≈ 9–12 execution blocks (data lane is the long pole — see [`CRITICAL_PATH_ANALYSIS.md`](CRITICAL_PATH_ANALYSIS.md)) |
+| Code lane (baseline) | ~33–45 dev-days | S1–S9 |
+| Code lane (A1 factories) | ~12–16 dev-days | S10 (post-E1b window) |
+| **Program** | ~84–122 dev-days | ≈ 10–13 execution blocks (data lane is still the long pole to G2 — see [`CRITICAL_PATH_ANALYSIS.md`](CRITICAL_PATH_ANALYSIS.md); S10 runs beyond G2) |
 
 **Standing rules:** every code sprint ends in exactly one EOS-gated commit; a sprint that misses its exit gate does not roll scope forward silently — it re-plans; data sprints checkpoint daily (spec Part 02 resume discipline) so interruption costs nothing.

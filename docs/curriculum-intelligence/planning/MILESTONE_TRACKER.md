@@ -12,7 +12,7 @@
 | **Program state** | 🟢 **APPROVED — 🔒 PROGRAM BASELINE v1.0 (owner, 2026-07-07)**. Implementation authorized per [`../OPUS_IMPLEMENTATION_HANDOFF.md`](../OPUS_IMPLEMENTATION_HANDOFF.md); Claude Opus 4.8 executes from this baseline. Baseline changes require owner approval |
 | **Current milestone** | **M0 ✅ complete** → next: **M1** (CI-A0 remainder + CI-A1 CBSE acquisition) ∥ schedule **P1-CI-0** before P4-RT-0 |
 | **Owner decisions** | ✅ **D-1..D-6 resolved 2026-07-07** — decision record: [`../audits/GAP_ANALYSIS.md`](../audits/GAP_ANALYSIS.md) §3 (integration · `curriculum/` location · three-layer question model, production = Certified Bank only · board order CBSE→AP→TS→CISCE · Repository Certification stage · Question Trust Lifecycle RAW→…→CERTIFIED) |
-| **Last update** | 2026-07-07 — Baseline v1.0 frozen; D-1..D-6 applied to planning docs (board order, CI-C5→C6 dependency, D-5 certification at CI-A6, D-6 lifecycle) |
+| **Last update** | 2026-07-07 — **Amendment A1 (AIMS sync)** merged across the planning suite: delta record [`../audits/GAP_ANALYSIS.md`](../audits/GAP_ANALYSIS.md) §6; new waves CI-C10/C11 appended post-E1b; scope extensions to CI-B4/C4/C5/C7; no re-sequencing of baseline waves |
 
 ## Milestones
 
@@ -27,6 +27,7 @@
 | **M6** | Exam Profile Engine + capability gating + outcome/competency tagging | CI-C7, CI-C4 (+CI-B2) | Profile validation tests; gating default-allow proof | ⚪ |
 | **M7** | Knowledge close-out: PYQ/pattern store, knowledge objects, concept seed; paper↔exam link + explainability | CI-B4, CI-C8 | Reviewed concept seed; link live; selection reasons on papers | ⚪ |
 | **M8** | Continuous sync v1 + dormant Phase-2 schema seed → **handoff to v3.0 Phase 2** | CI-C9, CI-E1 | Seeded-change proof; dormant migrations applied; handoff note | ⚪ |
+| **M9** *(A1)* | Asset factories: Question Factory (Item Models/families/distractors) + Certified Diagram Library | CI-C10, CI-C11 | AT-C10/AT-C11 green; EOS PASSes; scoped red-team re-run | ⚪ (owner-timed A1-O1, v3.0 Phase-1→2 boundary) |
 
 ## Wave ledger (append a row per completed wave)
 
@@ -34,6 +35,7 @@
 |---|---|---|---|---|
 | CI-A0 (partial) | Data-tooling tests 13/13 + CLI smoke + audit-gate proof | `curriculum/scripts/verification/` · [`ACCEPTANCE_TEST_PLAN.md`](ACCEPTANCE_TEST_PLAN.md) §0 AT-V1..V10 | 2026-07-07 | **Download Verification & Recovery Engine** delivered under direct owner instruction (pre-approval exception; data-lane tooling only, zero app surface) |
 | M0 close | Owner approval | **🔒 Program Baseline v1.0** — D-1..D-6 recorded ([`../audits/GAP_ANALYSIS.md`](../audits/GAP_ANALYSIS.md) §3) and applied across the planning suite | 2026-07-07 | Program approved; implementation handed to Opus 4.8 via [`../OPUS_IMPLEMENTATION_HANDOFF.md`](../OPUS_IMPLEMENTATION_HANDOFF.md) |
+| **Amendment A1** | Planning-package sync (no gate — doc-only) | AIMS ([`../spec/ASSESSMENT_INTELLIGENCE_MASTER_SPECIFICATION.md`](../spec/ASSESSMENT_INTELLIGENCE_MASTER_SPECIFICATION.md)) merged; delta record §6 of the gap analysis; waves CI-C10/C11 + milestone M9 appended; B11–B14, R15/R16, TD-CI-17/18, AT-C10/C11 added | 2026-07-07 | Baseline waves, G1/G2, P1-CI-0 scope and red-team position unchanged; new owner items A1-O1..O3 batched (non-blocking) |
 
 ## Update rules
 

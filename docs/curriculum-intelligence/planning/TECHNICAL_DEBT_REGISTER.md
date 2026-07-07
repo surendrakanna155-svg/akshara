@@ -29,6 +29,8 @@
 | **TD-CI-14** | Dormant schema (CI-E1) ships unused tables | Owner-locked v3.0 §5.3 rationale: data cannot be backfilled | Activated by v3.0 Phase 2 |
 | **TD-CI-15** | DOCX/HTML export may ship after PDF v2 + JSON if CI-C3 overruns | PDF + JSON cover print + machine needs; DOCX is convenience | Post-M5 backlog item |
 | **TD-CI-16** | Live-cert extensions staged locally while the live lane is owner-deferred | Same posture as the rest of the frozen roadmap (R13) | Live lane opening |
+| **TD-CI-17** *(A1)* | Legacy certified bank rows grandfathered under the AIMS metadata-completeness mandate (missing concept ID, family, quality score, license fields) | Blocking would delist the pilot's working bank; completeness is enforced for **new** certifications only (A1-9/A1-O3) | Backfill via CI-C4 tagging + Phase-2 concept mapping |
+| **TD-CI-18** *(A1)* | Post-CERTIFIED lifecycle states (`ACTIVE → CONTINUOUS_REVIEW → RETIRED`) + evolving quality score recorded as schema/mapping only; the automation loop is not built | Needs the response spine + usage signals (v3.0 Phase 2, E1a seed) — building it now would violate D11 | v3.0 Phase-2 trust pipeline |
 
 ## Rules
 

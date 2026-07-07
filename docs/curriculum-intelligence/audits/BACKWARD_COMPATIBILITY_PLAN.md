@@ -32,6 +32,10 @@
 | B8 | `edu_exam_paper_links` | id-space mismatch (TEXT exam_id vs UUID paper_id) | Link table exactly as specified in v3.0 §5.2 (exam_id TEXT matching `exam_mark_entries.exam_id`); no changes to either parent table |
 | B9 | Data lane (curriculum repository) | None to the app — no app code touched | Storage isolation per D-2; `.gitignore` guard so binaries can never enter the app repo accidentally |
 | B10 | PDF v2 / export formats | Schools' existing paper PDFs change appearance | Keep v1 renderer until v2 passes review; version flag on export |
+| B11 *(A1)* | Concept-ID / question-family / extended metadata columns on bank items (AIMS A1-1/5/9) | Bank list/filter APIs; certification gate could delist working legacy rows | Additive nullable columns; **metadata-completeness gate applies to NEW certifications only** — existing `active ∧ approved` rows stay CERTIFIED with defaults (grandfathered, TD-CI-17); generation never requires the new fields on legacy rows |
+| B12 *(A1)* | New asset tables: `edu_question_templates` (Item Models), `edu_question_families`, `edu_distractors`, `edu_diagrams` (CI-C10/C11) | None — greenfield tables | Certified RLS shape; nullable FKs to existing tables; factory/diagram outputs enter as **candidates only** through the D-6 lifecycle (I3/I4 verbatim) — nothing auto-certifies |
+| B13 *(A1)* | Curriculum Boundary Engine v2 (Bloom/difficulty/outcome/competency dimensions) | Stricter validation could reject requests that pass today | Chapter-level 422 behaviour byte-identical for legacy requests; new dimensions validate **only when the request/item carries the new metadata**; boundary module extended in place, never forked |
+| B14 *(A1)* | Certified Diagram Library attachment to questions/papers | Paper rendering/export changes | Diagram reference is optional; papers without diagrams render exactly as today; PDF embeds SVG only when a certified diagram is attached; diagram feature behind flag |
 
 ## 3. Migration strategy
 
@@ -50,3 +54,7 @@
 - No rebuild/replacement of the certified solver, boundary, governance, or exam-administration workflows.
 - No third curriculum representation (template JSONB + materialised rows are the two; the knowledge base maps onto them).
 - Nothing in this program authorizes touching the frozen FINAL_EXECUTION_MASTER_ROADMAP waves; sequencing per owner decision D-1.
+- *(A1)* No copied/raster educational diagrams — ever: no textbook screenshots, no copyrighted illustrations; programmatic vector originals only (AIMS Rule 14 + P12 diagram anti-patterns).
+- *(A1)* No runtime AI paper generation: the CI-C10 factory is offline/batch only; runtime assembly stays deterministic over certified assets (AIMS Rule 3/Pattern 6 — already the certified engine's behaviour).
+- *(A1)* Post-CERTIFIED continuous-review automation (ACTIVE→CONTINUOUS_REVIEW→RETIRED loop, evolving quality score, teacher-feedback aggregation, student analytics) stays v3.0 Phase 2 — this program ships schema/mapping only.
+- *(A1)* AIMS Part 10 (future vision) items create no scope in this program.

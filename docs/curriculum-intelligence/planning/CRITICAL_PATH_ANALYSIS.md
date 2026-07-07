@@ -11,6 +11,8 @@ Two distinct "done" definitions, with different critical paths:
 - **G1 — Board-compliant generation live:** every generated paper conforms to a governed blueprint template (v3.0 §18 Phase-1 KPI).
 - **G2 — Full program exit:** repository complete (4 boards), knowledge datasets delivered, engine complete (CI-C1..C9), dormant Phase-2 seed landed → handoff to v3.0 Phase 2.
 
+*(Amendment A1: the asset-factory waves CI-C10/C11 sit **beyond G2** at the v3.0 Phase-1→2 boundary — they move neither goal line and add no pre-G2 dependencies.)*
+
 ## 2. Critical path to G1 (shortest path to user value)
 
 ```
@@ -49,6 +51,7 @@ D-1/D-2 ─► CI-A0 (1–2d) ─► CI-A1 CBSE (8–12d) ─► CI-A2 AP (6–1
 | CI-C9 (sync) | Medium | Needs CI-A6; last-mile |
 | CI-B1/B2 for boards 2–4 | Medium | Pipelined; only CBSE increment gates CI-C2's first slice |
 | CI-A2..A4 | **Zero (G2)** | Board-sequential mandate makes acquisition strictly serial |
+| CI-C10/C11 *(A1)* | **High** | Post-G2 factories; gated by CI-C5 + E1b/B4, off both goal lines; owner-timed (A1-O1) |
 
 ## 5. Bottlenecks & mitigations
 

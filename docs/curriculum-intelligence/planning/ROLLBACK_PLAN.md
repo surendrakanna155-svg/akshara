@@ -28,6 +28,8 @@
 | CI-C8 | Link table read-only to exam flow; drop usage from client | link rows harmless |
 | CI-C9 | Sync is an external job over the workspace; stop the job | none in-app |
 | CI-E1 | Dormant by definition — nothing to roll back (tables empty, zero surface) | — |
+| CI-C10 *(A1)* | Factory is an offline, feature-flagged batch job: halt the job; staged `GENERATED` candidates bulk-rejected via the existing moderation queue (same lever as CI-C6); certified bank untouched | template/family/distractor tables dormant |
+| CI-C11 *(A1)* | Diagram attachment is optional + flagged: disable the flag → papers render without diagrams exactly as today (B14) | diagram library rows dormant |
 
 **Universal levers (in order):** 1) per-module client flag (`educationApiEnabled` pattern / new sub-flags) → 2) omit the new optional input (template/profile/set) → 3) `git revert` the single wave commit (waves are one commit unit by rule) → 4) leave additive schema in place (never down-migrate a deployed table on the pilot; document as dormant).
 

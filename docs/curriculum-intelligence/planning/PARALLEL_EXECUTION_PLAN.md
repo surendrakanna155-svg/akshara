@@ -22,6 +22,7 @@
 | CI-C1 golden-test pinning → solver refactor | Tests must pin certified behaviour before any change (B1 mitigation) |
 | CI-C1 → CI-C3 / CI-C5 / CI-C7 | All three modify or consume solver/template contracts |
 | CI-C5 → CI-C6 | Owner D-6 lifecycle: AI_VALIDATED must precede TEACHER_VALIDATED for extracted questions |
+| CI-C5 + CI-E1b → CI-C10 · CI-C5 + CI-B4 → CI-C11 *(A1)* | Factory outputs must enter at GENERATED and pass CI-C5; C10 needs the live concept read-path (AIMS Rule 2) |
 | CI-C2 migration → CI-C9 sync | Sync targets the versioned catalogue |
 | Any two waves touching `education_repository.ts` / `education_handlers.ts` | Shared-file rule — single owner at a time |
 | Board acquisition CI-A1→A2→A3→A4 | Spec Part 02 mandate (one board completely before the next) |

@@ -87,9 +87,28 @@ Spec: [`../spec/DOWNLOAD_VERIFICATION_AND_RECOVERY_ENGINE.md`](../spec/DOWNLOAD_
 ### CI-E1 — Dormant seed
 - **AT-E1.1** Migrations apply cleanly; tables empty + RLS-correct; zero UI/API surface; existing suites all green (dormancy proof).
 
-## 3. Program-level acceptance (bootstrap Step 7 / spec Part 15)
+### CI-C10 — Question Factory *(Amendment A1)*
+- **AT-C10.1** An Item Model with numeric/context variables generates N distinct candidates — all boundary-clean, metadata-complete, concept-linked, family-assigned; every one enters at `GENERATED` and routes through CI-C5.
+- **AT-C10.2** An out-of-boundary generation attempt (higher-grade concept, or Bloom above the concept's allowed range) is rejected **before persistence** — nothing stored (AIMS: never store boundary violations).
+- **AT-C10.3** MCQ generation reuses a library distractor with matching concept + misconception category; provenance recorded on the item.
+- **AT-C10.4** A candidate with incomplete mandatory metadata cannot be promoted past `AI_VALIDATED` (completeness gate proof).
+- **AT-C10.5** No runtime path invokes the factory: route/static audit proves paper assembly never calls generation (offline-AI pattern).
+- **AT-C10.6** Foundation-profile generation raises Bloom/reasoning only — chapter/topic scope identical to the base profile (depth-not-scope proof).
+
+### CI-C11 — Diagram Intelligence *(Amendment A1)*
+- **AT-C11.1** A concept-linked diagram generates as valid SVG (parses, renders, labels present), stored with full metadata (type, method, license, version).
+- **AT-C11.2** Teacher rejection keeps the diagram out of the library; approval certifies + versions it; revision creates a new version (original preserved).
+- **AT-C11.3** Two questions reference the same certified diagram (reuse proof); the paper PDF embeds it; a diagram-absent paper renders byte-identical to today (B14).
+- **AT-C11.4** Raster upload / copied-image ingestion paths are rejected — vector-only + originality gate (Rule 14).
+
+## 3. Program-level acceptance (bootstrap Step 7 / spec Part 15 / AIMS Part 4 safeguards + Part 9 gates)
 
 - All wave gates passed; invariants I1–I8 verified in the final EOS run.
 - Owner-decision conformance (Baseline v1.0): Repository Certification precedes all KB work (D-5); production generation draws exclusively from the Certified Question Bank by default (D-3/D-6); L2 PYQ-intelligence content never appears in L3.
+- **AIMS production safeguard gate (A1-12)** — once the corresponding wave is live, every production question satisfies all of: repository-certified source trace · curriculum boundary verified · concept verified (post-E1b) · metadata complete · answer verified · diagram verified where applicable · AI validated · teacher approved · trust status CERTIFIED · copyright safe · quality score above threshold. Any safeguard failure ⇒ the question never enters production. (Subordinate to EOS — this is a content gate, not a second engineering gate.)
 - v3.0 §18 Phase-1 KPIs: 100% template-conformant papers · past-paper ingestion <1 day, ≥80% auto-extracted.
 - Final reports: coverage, quality, license, missing-resources, program summary — complete and honest about limitations (Part 15 final-handoff rule).
+
+## 4. Standing metrics (AIMS Part 9 — reported with wave evidence, dashboarded when the ops lane opens)
+
+Repository health · knowledge/concept coverage · question/diagram coverage · teacher approval rate · question/diagram quality scores · curriculum coverage · duplicate rate · validation failure rate · runtime performance (paper generation latency, zero runtime-AI calls) · certified-asset reuse rate.

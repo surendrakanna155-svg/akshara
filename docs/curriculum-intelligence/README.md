@@ -1,6 +1,6 @@
 # Curriculum Intelligence Program — Index
 
-**Created:** 2026-07-06 · **Status:** 🟢 **APPROVED — 🔒 PROGRAM BASELINE v1.0 (owner, 2026-07-07).** This documentation set is frozen as the implementation baseline for Claude Opus 4.8; changes require owner approval. Zero production code written to date (verification engine = approved data-lane tooling).
+**Created:** 2026-07-06 · **Status:** 🟢 **APPROVED — 🔒 PROGRAM BASELINE v1.0 + Amendment A1 (owner spec drop, synchronized 2026-07-07).** This documentation set is frozen as the implementation baseline for Claude Opus 4.8; changes require owner approval. Zero production code written to date (verification engine = approved data-lane tooling). **A1** merges the canonical [`ASSESSMENT_INTELLIGENCE_MASTER_SPECIFICATION.md`](spec/ASSESSMENT_INTELLIGENCE_MASTER_SPECIFICATION.md) into this package — delta record: [`audits/GAP_ANALYSIS.md`](audits/GAP_ANALYSIS.md) §6; no baseline wave re-sequenced.
 
 ## 🔒 Owner decision record (Baseline v1.0 — full text in [`audits/GAP_ANALYSIS.md`](audits/GAP_ANALYSIS.md) §3)
 
@@ -18,8 +18,8 @@ The Curriculum Intelligence Pipeline: build a verified official-curriculum repos
 ## Governing authorities (in order)
 
 1. [`docs/engineering/AKSHARA_ENGINEERING_CONSTITUTION.md`](../engineering/AKSHARA_ENGINEERING_CONSTITUTION.md) + EOS gate — engineering law.
-2. 🔒 [`docs/Vision/design/Assessment-Intelligence-Platform.md`](../Vision/design/Assessment-Intelligence-Platform.md) (Master Plan v3.0, locked D1–D11) — the domain's forward architecture. **Where the pipeline spec and v3.0 disagree, v3.0 governs unless the owner rules otherwise** (conflict register: [`audits/GAP_ANALYSIS.md`](audits/GAP_ANALYSIS.md) §2).
-3. The canonical program spec (below).
+2. 🔒 [`docs/Vision/design/Assessment-Intelligence-Platform.md`](../Vision/design/Assessment-Intelligence-Platform.md) (Master Plan v3.0, locked D1–D11) — the domain's forward architecture. **Where any program spec and v3.0 disagree, v3.0 governs unless the owner rules otherwise** (conflict register: [`audits/GAP_ANALYSIS.md`](audits/GAP_ANALYSIS.md) §2).
+3. The canonical program specs (below): the MCIP (data pipeline) + the **AIMS** (assessment-intelligence layer, Amendment A1). AIMS declares itself an *extension* of the Program Baseline, never a replacement (its Part 1).
 
 ## Documents
 
@@ -27,10 +27,11 @@ The Curriculum Intelligence Pipeline: build a verified official-curriculum repos
 - [`INTEGRATION_AND_READINESS_REVIEW.md`](INTEGRATION_AND_READINESS_REVIEW.md) — repository-verified deliverable audit, consistency review, **roadmap integration (CI-DATA parallel track + P1-CI-0 pre-red-team wave + v3.0 Phase-1 mapping)**, Red-Team position, readiness assessment.
 - [`OPUS_IMPLEMENTATION_HANDOFF.md`](OPUS_IMPLEMENTATION_HANDOFF.md) — the complete implementation handoff package (governing law, status, order, standards, recommendations).
 
-### `spec/` — canonical specification (moved here 2026-07-06; content unmodified)
+### `spec/` — canonical specifications (owner drops; content unmodified)
 - [`PROJECT_BOOTSTRAP.md`](spec/PROJECT_BOOTSTRAP.md) — the process contract (understand → audit → plan → **wait for approval**).
-- [`MASTER_CURRICULUM_INTELLIGENCE_PIPELINE.md`](spec/MASTER_CURRICULUM_INTELLIGENCE_PIPELINE.md) — Parts 01–16.
+- [`MASTER_CURRICULUM_INTELLIGENCE_PIPELINE.md`](spec/MASTER_CURRICULUM_INTELLIGENCE_PIPELINE.md) — Parts 01–16 (curriculum data pipeline).
 - [`DOWNLOAD_VERIFICATION_AND_RECOVERY_ENGINE.md`](spec/DOWNLOAD_VERIFICATION_AND_RECOVERY_ENGINE.md) — owner addendum (2026-07-07): checks V1–V11, recovery loop, health report, final repository audit. **⚙ Implemented** at `curriculum/scripts/verification/` (13/13 tests; AT-V1..V10).
+- [`ASSESSMENT_INTELLIGENCE_MASTER_SPECIFICATION.md`](spec/ASSESSMENT_INTELLIGENCE_MASTER_SPECIFICATION.md) — **AIMS, Parts 1–12** (owner drop 2026-07-07): concept graph, curriculum boundary engine, item models/question families, certified question bank intelligence, diagram intelligence, golden rules, data model, pipelines, service map, QA standards, design patterns + anti-patterns. Supersedes the earlier architectural enhancement notes; merged into this package as **Amendment A1** ([`audits/GAP_ANALYSIS.md`](audits/GAP_ANALYSIS.md) §6).
 
 ### `audits/` — code-verified audit (read first)
 - [`EXAM_ARCHITECTURE_AUDIT.md`](audits/EXAM_ARCHITECTURE_AUDIT.md) — what exists (certified engine inventory), missing features M1–M15, architecture gaps, duplicate logic, risks.
@@ -68,4 +69,5 @@ The Curriculum Intelligence Pipeline: build a verified official-curriculum repos
 - Certified invariants I1–I8 are inviolable; every code wave is one EOS-gated commit.
 - Locked v3.0 decisions (esp. **D2** no answer-sheet OMR, **D8** original-content-first) bound every wave; the spec's Part-10 extraction runs under the D-3 two-lane ruling.
 - Data lane never touches app trees; binaries never enter git.
+- *(A1)* AIMS golden rules (Part 5) + anti-patterns (Part 12) bind every wave: concept-first once the graph is live, generate→validate→certify with no shortcut, offline AI / deterministic runtime, complete metadata, original vector diagrams only, teacher authority final.
 - This README + `planning/MILESTONE_TRACKER.md` are refreshed at every wave boundary.

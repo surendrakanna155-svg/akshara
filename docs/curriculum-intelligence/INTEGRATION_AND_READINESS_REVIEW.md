@@ -124,3 +124,15 @@ NOW ─────────────────────────�
 | **Testing** | 🟡 **Partially Ready** | Engine 13/13 green; golden/AT catalogs written; live-cert extensions must stage locally while the live lane stays owner-deferred (R13) |
 | **Deployment** | 🟡 **Partially Ready** | Established `/deploy` recipe + additive-only migrations + per-wave rollback levers documented; **Blocked** for live verification on the owner live lane |
 | **Overall program** | 🟡 **Partially Ready — blocked exclusively on owner decisions D-1..D-4** | No technical blocker exists; the data lane can start the day D-1/D-2 are approved |
+
+---
+
+## 8. Amendment A1 addendum (2026-07-07) — AIMS synchronization
+
+*(Appended after Baseline v1.0; §§1–7 above are the historical pre-approval record and are left unmodified.)*
+
+- The owner dropped a second canonical spec, [`spec/ASSESSMENT_INTELLIGENCE_MASTER_SPECIFICATION.md`](spec/ASSESSMENT_INTELLIGENCE_MASTER_SPECIFICATION.md) (**AIMS**, Parts 1–12), superseding the earlier architectural enhancement notes. Per its own Part 1 it extends — never replaces — the Program Baseline; v3.0 still governs on conflict.
+- **Synchronization performed 2026-07-07:** deltas identified and merged across the existing suite (no document regenerated, no parallel architecture created). Full delta record: [`audits/GAP_ANALYSIS.md`](audits/GAP_ANALYSIS.md) §6 (items A1-1..A1-16 + owner items A1-O1..O3).
+- **Docking (extends §4, changes nothing in it):** most AIMS content lands as scope extensions inside existing waves (CI-B4 concept graph · CI-C4/C5 boundary-v2 + metadata gate · CI-C7 profile enrichment + foundation depth-not-scope). Two genuinely new capabilities append as post-E1b waves — **CI-C10** Question Factory (item models, families, distractor library, offline batch generation) and **CI-C11** Diagram Intelligence (Certified Diagram Library) — at the v3.0 Phase-1→2 boundary. **P1-CI-0 scope is untouched; nothing new lands before P4.**
+- **Red-Team position (§5) unchanged:** CI-C10/C11 simply join CI-C5/C6/C7 in the scoped post-ship playbook re-run set.
+- **Goal lines unchanged:** G1/G2 definitions and critical paths hold; the factories sit beyond G2 (see CRITICAL_PATH_ANALYSIS).

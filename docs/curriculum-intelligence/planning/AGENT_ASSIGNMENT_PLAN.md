@@ -43,6 +43,8 @@
 | CI-C8 | — | — | ● link table | ● link handlers | — | ● tests |
 | CI-C9 | ● detector over repo | — | — | ○ impact-report surface | — | ● seeded-change proof |
 | CI-E1 | ○ concept seed | — | ● dormant migrations | — | — | ● applied-dormant check |
+| CI-C10 *(A1)* | ○ concept-graph handoff | — | ● template/family/distractor schema | ● factory pipeline | ○ moderation queue reuse | ● boundary/metadata gates + goldens |
+| CI-C11 *(A1)* | — | — | ● diagram schema | ● generation/validation service | ● diagram review UI | ● SVG validity + originality checks |
 
 ● = owner/primary · ○ = supporting/handoff · — = not involved
 

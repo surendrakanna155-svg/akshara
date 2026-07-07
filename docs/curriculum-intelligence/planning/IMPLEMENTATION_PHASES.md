@@ -41,9 +41,19 @@ Waves CI-C1 → CI-C8 (EOS-gated). The certified engine becomes a board-complian
 
 ## CI-P4 — Synchronization & Handoff (spec Part 15 + v3.0 §5.3)
 
-Waves CI-C9 + CI-E1. Continuous-sync v1 over the repository; dormant Phase-2 schema seed (response spine, trust status, item statistics, canonical concepts).
+Waves CI-C9 + CI-E1. Continuous-sync v1 over the repository; dormant Phase-2 schema seed (response spine, trust status, item statistics, canonical concepts — E1a early in P1-CI-0, E1b after CI-B4).
 
 - **Exit:** change-detection proven end-to-end; dormant migrations applied; program hands off to 🔒 v3.0 **Phase 2** (marks-grid, item statistics, trust pipeline) which remains owner-scheduled outside this program.
+
+## CI-P5 — Asset Factories (Amendment A1; AIMS Parts 2–3 · owner-timed A1-O1)
+
+Waves CI-C10 + CI-C11, at the v3.0 Phase-1→2 boundary (both need CI-C5; C10 additionally needs the E1b concept read-path, C11 the B4 concept IDs).
+
+1. CI-C10 Question Factory: Item Models (`edu_question_templates`), Question Families, Distractor Library, offline batch generation through the full D-6 lifecycle (`GENERATED → AI_VALIDATED → TEACHER_VALIDATED → CERTIFIED`).
+2. CI-C11 Diagram Intelligence: spec-driven programmatic SVG generation → Certified Diagram Library; vector-only, original-only (Rule 14).
+
+- **Exit:** AT-C10/AT-C11 green; factory outputs 100% boundary-clean + metadata-complete; zero runtime AI; scoped red-team playbook re-run over the new AI surfaces (same rule as C5/C6/C7).
+- **Constraint:** neither wave may activate Phase-2-reserved features (evolving quality score loop, teacher-feedback aggregation, student analytics) — those consume these assets later.
 
 ---
 

@@ -1,7 +1,7 @@
 # Curriculum Intelligence — Gap Analysis
 
-**Compares:** [`MASTER_CURRICULUM_INTELLIGENCE_PIPELINE.md`](../spec/MASTER_CURRICULUM_INTELLIGENCE_PIPELINE.md) (Parts 01–16) **vs** the verified as-built system.
-**Date:** 2026-07-06 · Every verdict below is code-verified (see [`EXAM_ARCHITECTURE_AUDIT.md`](EXAM_ARCHITECTURE_AUDIT.md) for evidence).
+**Compares:** [`MASTER_CURRICULUM_INTELLIGENCE_PIPELINE.md`](../spec/MASTER_CURRICULUM_INTELLIGENCE_PIPELINE.md) (Parts 01–16) **vs** the verified as-built system · **§6** adds the delta record for the [`ASSESSMENT_INTELLIGENCE_MASTER_SPECIFICATION.md`](../spec/ASSESSMENT_INTELLIGENCE_MASTER_SPECIFICATION.md) (AIMS) owner drop.
+**Date:** 2026-07-06 · Amendment A1 (AIMS sync) 2026-07-07 · Every verdict below is code-verified (see [`EXAM_ARCHITECTURE_AUDIT.md`](EXAM_ARCHITECTURE_AUDIT.md) for evidence).
 **Classification:** ✅ Already Implemented · 🟡 Partially Implemented · ❌ Missing · ⚠️ Conflicting · 🗑 Deprecated
 
 ---
@@ -88,3 +88,40 @@ These are **not buildable as written** without an owner ruling. Recommended reso
 3. **Version columns on `subject_templates`** (+ `curriculum_version_id` pattern from v3.0 §8.2) before expanding it, so Part-15 continuous sync has something to sync against.
 4. **Ship the dormant Phase-2 schema seed** (v3.0 §5.3: `edu_exam_paper_links`, `edu_student_item_responses`, trust columns) at the end of the code lane's first phase — data cannot be backfilled.
 5. **Selection-reason logging** (spec Part 16 explainability) as a solver output field — cheap now, impossible to retrofit onto historical papers.
+
+---
+
+## 6. AIMS delta record — Amendment A1 (2026-07-07)
+
+**Source:** [`../spec/ASSESSMENT_INTELLIGENCE_MASTER_SPECIFICATION.md`](../spec/ASSESSMENT_INTELLIGENCE_MASTER_SPECIFICATION.md) (AIMS, Parts 1–12, owner canonical drop). AIMS states its own charter: *extend the Program Baseline, never replace it* (Part 1). Most of AIMS restates Baseline v1.0 law (three-layer model, D-5/D-6 gates, copyright rules, offline-AI/runtime split, config-over-hardcode, EOS, no parallel architectures) — restatements carry **no planning change** and are not listed. The table below records only the genuine deltas and where each was merged.
+
+| # | AIMS addition (Part) | Verdict vs Baseline v1.0 | Merged into |
+|---|---|---|---|
+| **A1-1** | **Concept Graph + permanent Concept IDs** (e.g. `SCI_G06_PHY_FORCE_001`); every question/diagram ultimately references Concept IDs; relationships incl. prerequisites, misconceptions, confused-concepts, teaching sequence (P2/P6) | 🟡 Extends the CI-B4 concept-seed proposal + v3.0 §8 canonical concepts; **activation timing unchanged** (concept tables land at CI-E1b; Phase-2 features stay Phase 2 per D11) | CI-B4 scope extended to the full Concept Graph dataset + ID scheme; CI-E1b seeds it |
+| **A1-2** | **Curriculum Boundary Engine v2** — pre-generation validation beyond chapters: Bloom level, difficulty, learning outcome, competency, cognitive depth (P2) | 🟡 Extends `education_syllabus_boundary.ts` (invariant I2) — same module, more dimensions; never a second engine. New dimensions validate only where metadata exists (B13) | CI-C4 (outcome/competency fields) + CI-C5 (generated-content boundary check) + CI-C10 (generation-time) |
+| **A1-3** | **Foundation depth-not-scope rule** — foundation profiles raise reasoning/Bloom/complexity, never curriculum scope, unless explicitly configured (P2/P5 Rule 6) | ❌ New validation rule | CI-C7 profile validation |
+| **A1-4** | **Automatic Item Generation** — reusable Item Models (`edu_question_templates` entity, parameter variation) + offline batch question factory building the Certified Bank (P2/P6/P7 Pipeline 4) | ❌ New capability — no baseline wave existed | **New wave CI-C10** (Question Factory) |
+| **A1-5** | **Question Families** — every question belongs to a family grouping its type-variants under one concept (P2/P6, Rule 15) | ❌ New grouping entity + metadata | CI-C10 schema (+ CI-C4 tagging columns) |
+| **A1-6** | **Trust-lifecycle extension** — `GENERATED` entry state + post-CERTIFIED `ACTIVE → CONTINUOUS_REVIEW → RETIRED` (P3) | 🟡 Composes with D-6 + v3.0 §10.2 — mapping below; **no conflict** | D-6 mapping note (below); backcompat B5 |
+| **A1-7** | **Evolving Quality Score + Teacher Feedback Intelligence** — multi-factor score updated by usage/teacher/student signals (P3, Pipelines 8/9) | 🟡 Score-at-validation = CI-C5 (already planned); the *evolution loop* needs the response spine → v3.0 Phase 2 (E1a seed) | CI-C5 persists the score columns; evolution deferred to Phase 2 (TD-CI-18) |
+| **A1-8** | **Distractor Intelligence / Distractor Library** — distractors as first-class concept-linked assets with misconception categories + reuse (P3/P6) | ❌ New entity | CI-C10 schema; selection-rate analytics activate Phase 2 |
+| **A1-9** | **Mandatory question-metadata completeness** — ~30-field set (concept, family, license, confidence, quality, origin, generation method, boundary status, estimated time…); incomplete ⇒ never certified (P3, Rule 8) | 🟡 Extends bank schema + adds a certification-entry gate; **legacy certified rows grandfathered** (TD-CI-17) | Additive columns across CI-C4/C5/C6/C10 + completeness gate in CI-C5 |
+| **A1-10** | **Diagram Intelligence** — requirement detection → spec → programmatic SVG/vector generation → AI+teacher validation → **Certified Diagram Library**; vector-only, original-only (P3/P6/P7 Pipeline 5, Rule 14) | ❌ New module — baseline explicitly deferred diagram rendering (TD-CI-10) | **New wave CI-C11** (Diagram Intelligence) |
+| **A1-11** | **Exam Profile config enrichment** — time allocation, reasoning depth, diagram requirements, question-family distribution per profile (P4/P6) | 🟡 Extends the CI-C7 profile entity's field set | CI-C7 scope |
+| **A1-12** | **11-point production safeguard gate** (P4) + release-gate list + operational metrics (P9) | 🟡 Consolidates existing gates + adds boundary-status/metadata-complete/diagram-verified checks; subordinate to EOS (never a second gate) | ACCEPTANCE_TEST_PLAN §3/§4 |
+| **A1-13** | **Canonical pipelines P1–P12 + pipeline standards** (checkpointing, metrics, audit, validation gates) (P7) | 🟡 P1–P3/P6/P7/P10/P12 map onto existing waves; P4/P5 are the new factories; P8/P9 are Phase 2 | MODULE_DEPENDENCY_GRAPH §5 mapping table |
+| **A1-14** | **Logical service map — 13 services** (P8) | ✅ Mapping exercise only (AIMS: *"do not create these services immediately… first map every responsibility to the existing codebase"*); modular monolith stays | MODULE_DEPENDENCY_GRAPH §6 mapping table |
+| **A1-15** | **Design patterns P1–P18 + anti-pattern catalogue** (P11/P12) | ✅ Binding implementation standards; fully consistent with I1–I8, D-6, D8 | OPUS handoff §7 standards |
+| **A1-16** | **Future vision / evolution stages** (P10) | ✅ Strategic guidance only — AIMS itself forbids roadmap impact from P10 | No action |
+
+**A1-6 lifecycle mapping (extends D-6, no conflict):** entry states — *ingested* items enter as `EXTRACTED` (D-6), *AI-authored* items (gap-fill, CI-C10 factory) enter as `GENERATED`; both then follow `AI_VALIDATED → TEACHER_VALIDATED → CERTIFIED`. Post-CERTIFIED: `ACTIVE` ≙ today's `status='active' ∧ review_status='approved'`; `CONTINUOUS_REVIEW` ≙ the v3.0 §10.2 evidence pipeline (probation→trusted→quarantined — Phase 2); `RETIRED` ≙ v3.0 retirement. Production selection remains CERTIFIED/ACTIVE-only by default — D-3/D-6 behaviour unchanged.
+
+**New owner items surfaced by A1 (non-blocking, batch at the next boundary — standing rule):**
+
+| # | Item | Default recorded in planning |
+|---|---|---|
+| A1-O1 | Timing of CI-C10/CI-C11 inside the post-pilot window | After CI-C5 + CI-E1b, at the v3.0 Phase-1→2 boundary; neither touches P1-CI-0 or the pre-P4 scope |
+| A1-O2 | Diagram generation technology selection (SVG engine/libraries) | Decided at CI-C11 design gate; constraint fixed now: programmatic vector only, no raster, no image-model copying |
+| A1-O3 | Mandatory-metadata subset for legacy-row backfill | Legacy certified rows grandfathered; completeness enforced for new certifications only (TD-CI-17 exit = CI-C4 tagging + Phase-2 concept mapping) |
+
+*Spec-hygiene note:* the AIMS file has a formatting artifact around line 5957 — Part 12 (anti-patterns) begins mid-sentence inside Part 11's closing questions, and Part 11's final question list resumes after Part 12's content. Content treated as authoritative as-is; the owner spec file itself is left unmodified.
