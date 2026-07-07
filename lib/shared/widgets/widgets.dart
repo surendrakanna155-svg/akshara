@@ -7,6 +7,7 @@ export 'akshara_virtualized_data_table.dart';
 export 'akshara_empty_illustration.dart';
 export 'akshara_glass_surface.dart';
 export 'akshara_dialog.dart';
+export 'akshara_draft_chip.dart';
 export 'akshara_motion.dart';
 export 'akshara_navigation.dart';
 export 'akshara_chart.dart';

@@ -69,141 +69,147 @@ class ParentDashboardScreen extends ConsumerWidget {
         builder: (context) => LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
-            return AksharaPremiumBackground(
-              motif: AksharaMotif.graduationCap,
-              child: SingleChildScrollView(
-                padding: MobileDashboardLayout.screenPadding(width),
-                child: ConstrainedBox(
-                  constraints: MobileDashboardLayout.contentConstraints(width),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      AksharaGradientHero(
-                        eyebrow: data.greetingEyebrow,
-                        headline: data.greetingHeadline,
-                        motif: AksharaMotif.graduationCap,
-                        pills: [
-                          for (final chip in data.statusChips)
-                            AksharaHeroPill(
-                              label: chip.label,
-                              tone: _accentForTone(chip.tone),
-                            ),
-                        ],
-                        trailing: _SchoolBadge(schoolName: data.schoolName),
-                      ),
-                      const SizedBox(height: AksharaSpacing.s4),
-                      _ChildSummaryKpiRow(
-                        chips: data.statusChips,
-                        todaySummary: data.todaySummary,
-                      ),
-                      const SizedBox(height: AksharaSpacing.s4),
-                      // PAR-5 — deterministic, multi-type reminder banners from
-                      // real module data (fees/PTM/forms/homework/exams).
-                      ParentReminderBanners(
-                        onActionTap: _navigate,
-                      ),
-                      // PAR-D4 — "what needs my action" inbox entry point.
-                      AksharaSurfaceListTile(
-                        icon: Icons.checklist_outlined,
-                        title: 'Action Needed',
-                        subtitle:
-                            'Fees, meetings, forms & homework that need you',
-                        onTap: () => _navigate('action_inbox'),
-                      ),
-                      // PAR-D2 — family view (multi-child parents only).
-                      if (isMultiChild) ...[
-                        const SizedBox(height: AksharaSpacing.s3),
-                        AksharaSurfaceListTile(
-                          icon: Icons.family_restroom_outlined,
-                          title: 'My Children',
-                          subtitle:
-                              'A snapshot of all your children in one place',
-                          onTap: () => _navigate('family_view'),
+            return RefreshIndicator(
+              onRefresh: () async =>
+                  ref.invalidate(parentDashboardFutureProvider),
+              child: AksharaPremiumBackground(
+                motif: AksharaMotif.graduationCap,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: MobileDashboardLayout.screenPadding(width),
+                  child: ConstrainedBox(
+                    constraints:
+                        MobileDashboardLayout.contentConstraints(width),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        AksharaGradientHero(
+                          eyebrow: data.greetingEyebrow,
+                          headline: data.greetingHeadline,
+                          motif: AksharaMotif.graduationCap,
+                          pills: [
+                            for (final chip in data.statusChips)
+                              AksharaHeroPill(
+                                label: chip.label,
+                                tone: _accentForTone(chip.tone),
+                              ),
+                          ],
+                          trailing: _SchoolBadge(schoolName: data.schoolName),
                         ),
-                      ],
-                      const SizedBox(height: AksharaSpacing.s3),
-                      academic.when(
-                        loading: () => const SizedBox.shrink(),
-                        error: (_, __) => AksharaSectionError(
-                          message: 'Academic summary unavailable.',
-                          onRetry: () => ref.invalidate(
-                            parentAcademicSummaryProvider,
+                        const SizedBox(height: AksharaSpacing.s4),
+                        _ChildSummaryKpiRow(
+                          chips: data.statusChips,
+                          todaySummary: data.todaySummary,
+                        ),
+                        const SizedBox(height: AksharaSpacing.s4),
+                        // PAR-5 — deterministic, multi-type reminder banners from
+                        // real module data (fees/PTM/forms/homework/exams).
+                        ParentReminderBanners(
+                          onActionTap: _navigate,
+                        ),
+                        // PAR-D4 — "what needs my action" inbox entry point.
+                        AksharaSurfaceListTile(
+                          icon: Icons.checklist_outlined,
+                          title: 'Action Needed',
+                          subtitle:
+                              'Fees, meetings, forms & homework that need you',
+                          onTap: () => _navigate('action_inbox'),
+                        ),
+                        // PAR-D2 — family view (multi-child parents only).
+                        if (isMultiChild) ...[
+                          const SizedBox(height: AksharaSpacing.s3),
+                          AksharaSurfaceListTile(
+                            icon: Icons.family_restroom_outlined,
+                            title: 'My Children',
+                            subtitle:
+                                'A snapshot of all your children in one place',
+                            onTap: () => _navigate('family_view'),
+                          ),
+                        ],
+                        const SizedBox(height: AksharaSpacing.s3),
+                        academic.when(
+                          loading: () => const SizedBox.shrink(),
+                          error: (_, __) => AksharaSectionError(
+                            message: 'Academic summary unavailable.',
+                            onRetry: () => ref.invalidate(
+                              parentAcademicSummaryProvider,
+                            ),
+                          ),
+                          data: (summary) => _AcademicHeroCard(
+                            summary: summary,
+                            onViewReport: () => _navigate('academic_report'),
                           ),
                         ),
-                        data: (summary) => _AcademicHeroCard(
-                          summary: summary,
-                          onViewReport: () => _navigate('academic_report'),
-                        ),
-                      ),
-                      const SizedBox(height: AksharaSpacing.s4),
-                      AksharaSurfaceListTile(
-                        icon: Icons.hub_outlined,
-                        title: 'Parent Experience Hub',
-                        subtitle:
-                            'Homework status, exam readiness & structured insights',
-                        onTap: () => _navigate('experience_hub'),
-                      ),
-                      const SizedBox(height: AksharaSpacing.s3),
-                      AksharaSurfaceListTile(
-                        icon: Icons.auto_awesome_outlined,
-                        title: 'Parent Insights',
-                        subtitle:
-                            'AI summaries of your child\'s progress, in your language',
-                        onTap: () => _navigate('parent_insights'),
-                      ),
-                      if (data.aiInsight.message.isNotEmpty) ...[
                         const SizedBox(height: AksharaSpacing.s4),
-                        AksharaAiSuggestionBar(
-                          message: data.aiInsight.message,
-                          actionLabel: data.aiInsight.actionLabel,
-                          onAction: () => _navigate('experience_hub'),
+                        AksharaSurfaceListTile(
+                          icon: Icons.hub_outlined,
+                          title: 'Parent Experience Hub',
+                          subtitle:
+                              'Homework status, exam readiness & structured insights',
+                          onTap: () => _navigate('experience_hub'),
+                        ),
+                        const SizedBox(height: AksharaSpacing.s3),
+                        AksharaSurfaceListTile(
+                          icon: Icons.auto_awesome_outlined,
+                          title: 'Parent Insights',
+                          subtitle:
+                              'AI summaries of your child\'s progress, in your language',
+                          onTap: () => _navigate('parent_insights'),
+                        ),
+                        if (data.aiInsight.message.isNotEmpty) ...[
+                          const SizedBox(height: AksharaSpacing.s4),
+                          AksharaAiSuggestionBar(
+                            message: data.aiInsight.message,
+                            actionLabel: data.aiInsight.actionLabel,
+                            onAction: () => _navigate('experience_hub'),
+                          ),
+                        ],
+                        const SizedBox(height: AksharaSpacing.s4),
+                        AksharaQuickActionGrid(
+                          mobileItemSpacing: AksharaSpacing.s3,
+                          children: [
+                            for (final action in data.quickActions)
+                              AksharaQuickActionCard(
+                                key: QaTestKeys.parentDashboardQuickAction(
+                                  action.id,
+                                ),
+                                icon: action.icon,
+                                label: action.label,
+                                onTap: () => _navigate(action.id),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: AksharaSpacing.s4),
+                        _TodaySummarySection(
+                          items: data.todaySummary,
+                          onSeeAll: () => _navigate('today_see_all'),
+                          onItemTap: (id) => _navigate(id),
+                        ),
+                        const SizedBox(height: AksharaSpacing.s4),
+                        AksharaSectionHeader(
+                          title: 'School Notices',
+                          trailingLabel: 'See all',
+                          onTrailingTap: () => _navigate('notices'),
+                        ),
+                        const SizedBox(height: AksharaSpacing.s3),
+                        NoticeCarousel(
+                          notices: data.notices,
+                          onNoticeTap: (notice) =>
+                              _navigate('notice_${notice.id}'),
+                        ),
+                        const SizedBox(height: AksharaSpacing.s4),
+                        AksharaSectionHeader(
+                          title: 'Upcoming Events',
+                          trailingLabel: 'See all',
+                          onTrailingTap: () => _navigate('events'),
+                        ),
+                        const SizedBox(height: AksharaSpacing.s3),
+                        EventCardList(
+                          events: data.events,
+                          onEventTap: (event) => _navigate('event_${event.id}'),
                         ),
                       ],
-                      const SizedBox(height: AksharaSpacing.s4),
-                      AksharaQuickActionGrid(
-                        mobileItemSpacing: AksharaSpacing.s3,
-                        children: [
-                          for (final action in data.quickActions)
-                            AksharaQuickActionCard(
-                              key: QaTestKeys.parentDashboardQuickAction(
-                                action.id,
-                              ),
-                              icon: action.icon,
-                              label: action.label,
-                              onTap: () => _navigate(action.id),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: AksharaSpacing.s4),
-                      _TodaySummarySection(
-                        items: data.todaySummary,
-                        onSeeAll: () => _navigate('today_see_all'),
-                        onItemTap: (id) => _navigate(id),
-                      ),
-                      const SizedBox(height: AksharaSpacing.s4),
-                      AksharaSectionHeader(
-                        title: 'School Notices',
-                        trailingLabel: 'See all',
-                        onTrailingTap: () => _navigate('notices'),
-                      ),
-                      const SizedBox(height: AksharaSpacing.s3),
-                      NoticeCarousel(
-                        notices: data.notices,
-                        onNoticeTap: (notice) =>
-                            _navigate('notice_${notice.id}'),
-                      ),
-                      const SizedBox(height: AksharaSpacing.s4),
-                      AksharaSectionHeader(
-                        title: 'Upcoming Events',
-                        trailingLabel: 'See all',
-                        onTrailingTap: () => _navigate('events'),
-                      ),
-                      const SizedBox(height: AksharaSpacing.s3),
-                      EventCardList(
-                        events: data.events,
-                        onEventTap: (event) => _navigate('event_${event.id}'),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -276,10 +282,8 @@ class _ChildSummaryKpiRow extends StatelessWidget {
         .where((c) => c.label.toLowerCase().contains('fee'))
         .map((c) => c.label)
         .firstOrNull;
-    final homeworkCount = todaySummary
-        .where((t) => t.id.contains('homework'))
-        .length
-        .toString();
+    final homeworkCount =
+        todaySummary.where((t) => t.id.contains('homework')).length.toString();
 
     return Builder(
       builder: (context) {

@@ -56,42 +56,49 @@ class TeacherDashboardScreen extends ConsumerWidget {
             final width = constraints.maxWidth;
             final isTablet = MobileDashboardLayout.isTablet(width);
 
-            return AksharaPremiumBackground(
-              motif: AksharaMotif.book,
-              child: SingleChildScrollView(
-                padding: MobileDashboardLayout.screenPadding(width),
-                child: ConstrainedBox(
-                  constraints: MobileDashboardLayout.contentConstraints(width),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      AksharaGradientHero(
-                        eyebrow: data.greetingEyebrow,
-                        headline: data.greetingHeadline,
-                        motif: AksharaMotif.book,
-                      ),
-                      const SizedBox(height: AksharaSpacing.s4),
-                      AttendanceSummaryCard(
-                        checkIn: data.checkIn,
-                        summary: data.attendanceSummary,
-                        onCheckInTap: () => _navigate('staff_check_in'),
-                        onCheckInNowTap: () => _navigate('staff_check_in_now'),
-                        onMarkAttendanceTap: () => _navigate(
-                          'mark_attendance_${data.attendanceSummary.pendingClassId}',
+            return RefreshIndicator(
+              onRefresh: () async =>
+                  ref.invalidate(teacherDashboardFutureProvider),
+              child: AksharaPremiumBackground(
+                motif: AksharaMotif.book,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: MobileDashboardLayout.screenPadding(width),
+                  child: ConstrainedBox(
+                    constraints:
+                        MobileDashboardLayout.contentConstraints(width),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        AksharaGradientHero(
+                          eyebrow: data.greetingEyebrow,
+                          headline: data.greetingHeadline,
+                          motif: AksharaMotif.book,
                         ),
-                      ),
-                      const SizedBox(height: AksharaSpacing.s4),
-                      if (isTablet)
-                        _TabletSplitBody(
-                          data: data,
-                          onNavigate: _navigate,
-                        )
-                      else
-                        _MobileBody(
-                          data: data,
-                          onNavigate: _navigate,
+                        const SizedBox(height: AksharaSpacing.s4),
+                        AttendanceSummaryCard(
+                          checkIn: data.checkIn,
+                          summary: data.attendanceSummary,
+                          onCheckInTap: () => _navigate('staff_check_in'),
+                          onCheckInNowTap: () =>
+                              _navigate('staff_check_in_now'),
+                          onMarkAttendanceTap: () => _navigate(
+                            'mark_attendance_${data.attendanceSummary.pendingClassId}',
+                          ),
                         ),
-                    ],
+                        const SizedBox(height: AksharaSpacing.s4),
+                        if (isTablet)
+                          _TabletSplitBody(
+                            data: data,
+                            onNavigate: _navigate,
+                          )
+                        else
+                          _MobileBody(
+                            data: data,
+                            onNavigate: _navigate,
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),

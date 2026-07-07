@@ -31,8 +31,7 @@ class StudentDashboardScreen extends ConsumerWidget {
     final data = ref.watch(studentDashboardProvider);
     final isLoading =
         ref.watch(studentDashboardLoadingProvider) || async.isLoading;
-    final hasError =
-        ref.watch(studentDashboardErrorProvider) || async.hasError;
+    final hasError = ref.watch(studentDashboardErrorProvider) || async.hasError;
     final isEmpty = ref.watch(studentDashboardEmptyProvider);
     final overdueCount = data.homeworkDue
         .where((h) => h.status == HomeworkStatus.overdue)
@@ -76,119 +75,127 @@ class StudentDashboardScreen extends ConsumerWidget {
             final width = constraints.maxWidth;
             final isTablet = MobileDashboardLayout.isTablet(width);
 
-            return AksharaPremiumBackground(
-              motif: AksharaMotif.growth,
-              child: SingleChildScrollView(
-                padding: MobileDashboardLayout.screenPadding(width),
-                child: ConstrainedBox(
-                  constraints: MobileDashboardLayout.contentConstraints(width),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      AksharaGradientHero(
-                        eyebrow: data.greetingSubtitle,
-                        headline: data.greetingHeadline,
-                        motif: AksharaMotif.growth,
-                      ),
-                      const SizedBox(height: AksharaSpacing.s4),
-                      DailyScheduleStrip(
-                        periods: data.todaySchedule,
-                        largeMobileBreakpoint: _largeMobileBreakpoint,
-                        onFullScheduleTap: () =>
-                            _navigate(onNavigate, 'full_schedule'),
-                        onPeriodTap: (period) =>
-                            _navigate(onNavigate, 'period_${period.id}'),
-                      ),
-                      const SizedBox(height: AksharaSpacing.s4),
-                      AksharaQuickActionRow(
-                        largeMobileBreakpoint: _largeMobileBreakpoint,
-                        children: [
-                          for (final action
-                              in data.quickActions.where((a) => a.isVisible))
-                            AksharaQuickActionCard(
-                              key: QaTestKeys.studentDashboardQuickAction(
-                                action.id,
-                              ),
-                              icon: action.icon,
-                              label: action.label,
-                              emphasis: action.emphasis,
-                              labelFontWeight: FontWeight.w600,
-                              horizontalPadding: AksharaSpacing.s3,
-                              verticalPadding: AksharaSpacing.s4,
-                              onTap: () => _navigate(onNavigate, action.id),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: AksharaSpacing.s4),
-                      _StatusKpiRow(
-                        attendanceKpi: data.attendanceKpi,
-                        homeworkCount: dueCount,
-                        homeworkLabel: overdueCount > 0
-                            ? 'HW due · $overdueCount overdue'
-                            : 'HW due',
-                        largeMobileBreakpoint: _largeMobileBreakpoint,
-                        onAttendanceTap: () =>
-                            _navigate(onNavigate, 'attendance'),
-                        onHomeworkKpiTap: () =>
-                            _navigate(onNavigate, 'homework_list'),
-                      ),
-                      const SizedBox(height: AksharaSpacing.s4),
-                      ExamReminderCard(
-                        reminder: data.examReminder,
-                        onTap: () => _navigate(
-                          onNavigate,
-                          'exam_${data.examReminder.id}',
-                        ),
-                      ),
-                      const SizedBox(height: AksharaSpacing.s4),
-                      if (isTablet)
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: HomeworkDueList(
-                                items: data.homeworkDue,
-                                onSeeAllTap: () => _navigate(
-                                  onNavigate,
-                                  'homework_list',
-                                ),
-                                onItemTap: (item) => _navigate(
-                                  onNavigate,
-                                  'homework_${item.id}',
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: AksharaSpacing.s4),
-                            Expanded(
-                              child: AksharaAiSuggestionBar(
-                                message: data.aiInsight.message,
-                                actionLabel: data.aiInsight.actionLabel,
-                                semanticLabelPrefix: 'AI study insight',
-                                onAction: () => _navigate(
-                                  onNavigate,
-                                  'ai_quiz',
-                                ),
-                              ),
-                            ),
-                          ],
-                        )
-                      else ...[
-                        HomeworkDueList(
-                          items: data.homeworkDue,
-                          onSeeAllTap: () =>
-                              _navigate(onNavigate, 'homework_list'),
-                          onItemTap: (item) =>
-                              _navigate(onNavigate, 'homework_${item.id}'),
+            return RefreshIndicator(
+              onRefresh: () async {
+                ref.read(studentDashboardErrorProvider.notifier).state = false;
+                ref.invalidate(studentDashboardFutureProvider);
+              },
+              child: AksharaPremiumBackground(
+                motif: AksharaMotif.growth,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: MobileDashboardLayout.screenPadding(width),
+                  child: ConstrainedBox(
+                    constraints:
+                        MobileDashboardLayout.contentConstraints(width),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        AksharaGradientHero(
+                          eyebrow: data.greetingSubtitle,
+                          headline: data.greetingHeadline,
+                          motif: AksharaMotif.growth,
                         ),
                         const SizedBox(height: AksharaSpacing.s4),
-                        AksharaAiSuggestionBar(
-                          message: data.aiInsight.message,
-                          actionLabel: data.aiInsight.actionLabel,
-                          semanticLabelPrefix: 'AI study insight',
-                          onAction: () => _navigate(onNavigate, 'ai_quiz'),
+                        DailyScheduleStrip(
+                          periods: data.todaySchedule,
+                          largeMobileBreakpoint: _largeMobileBreakpoint,
+                          onFullScheduleTap: () =>
+                              _navigate(onNavigate, 'full_schedule'),
+                          onPeriodTap: (period) =>
+                              _navigate(onNavigate, 'period_${period.id}'),
                         ),
+                        const SizedBox(height: AksharaSpacing.s4),
+                        AksharaQuickActionRow(
+                          largeMobileBreakpoint: _largeMobileBreakpoint,
+                          children: [
+                            for (final action
+                                in data.quickActions.where((a) => a.isVisible))
+                              AksharaQuickActionCard(
+                                key: QaTestKeys.studentDashboardQuickAction(
+                                  action.id,
+                                ),
+                                icon: action.icon,
+                                label: action.label,
+                                emphasis: action.emphasis,
+                                labelFontWeight: FontWeight.w600,
+                                horizontalPadding: AksharaSpacing.s3,
+                                verticalPadding: AksharaSpacing.s4,
+                                onTap: () => _navigate(onNavigate, action.id),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: AksharaSpacing.s4),
+                        _StatusKpiRow(
+                          attendanceKpi: data.attendanceKpi,
+                          homeworkCount: dueCount,
+                          homeworkLabel: overdueCount > 0
+                              ? 'HW due · $overdueCount overdue'
+                              : 'HW due',
+                          largeMobileBreakpoint: _largeMobileBreakpoint,
+                          onAttendanceTap: () =>
+                              _navigate(onNavigate, 'attendance'),
+                          onHomeworkKpiTap: () =>
+                              _navigate(onNavigate, 'homework_list'),
+                        ),
+                        const SizedBox(height: AksharaSpacing.s4),
+                        ExamReminderCard(
+                          reminder: data.examReminder,
+                          onTap: () => _navigate(
+                            onNavigate,
+                            'exam_${data.examReminder.id}',
+                          ),
+                        ),
+                        const SizedBox(height: AksharaSpacing.s4),
+                        if (isTablet)
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: HomeworkDueList(
+                                  items: data.homeworkDue,
+                                  onSeeAllTap: () => _navigate(
+                                    onNavigate,
+                                    'homework_list',
+                                  ),
+                                  onItemTap: (item) => _navigate(
+                                    onNavigate,
+                                    'homework_${item.id}',
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: AksharaSpacing.s4),
+                              Expanded(
+                                child: AksharaAiSuggestionBar(
+                                  message: data.aiInsight.message,
+                                  actionLabel: data.aiInsight.actionLabel,
+                                  semanticLabelPrefix: 'AI study insight',
+                                  onAction: () => _navigate(
+                                    onNavigate,
+                                    'ai_quiz',
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        else ...[
+                          HomeworkDueList(
+                            items: data.homeworkDue,
+                            onSeeAllTap: () =>
+                                _navigate(onNavigate, 'homework_list'),
+                            onItemTap: (item) =>
+                                _navigate(onNavigate, 'homework_${item.id}'),
+                          ),
+                          const SizedBox(height: AksharaSpacing.s4),
+                          AksharaAiSuggestionBar(
+                            message: data.aiInsight.message,
+                            actionLabel: data.aiInsight.actionLabel,
+                            semanticLabelPrefix: 'AI study insight',
+                            onAction: () => _navigate(onNavigate, 'ai_quiz'),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
               ),

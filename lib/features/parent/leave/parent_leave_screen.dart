@@ -88,6 +88,9 @@ class _ParentLeaveScreenState extends ConsumerState<ParentLeaveScreen>
     final isLoading = ref.watch(parentLeaveLoadingProvider);
     final hasError = ref.watch(parentLeaveErrorProvider);
     final isSubmitting = ref.watch(parentLeaveSubmittingProvider);
+    // A "Draft saved" chip makes the form's autosave (REL-3) visible so the
+    // parent can see an in-progress application is safe before submitting.
+    final hasDraft = !ref.watch(leaveApplyDraftProvider).isEmpty;
 
     return Scaffold(
       backgroundColor: context.colors.surfaceContainerLow,
@@ -133,6 +136,13 @@ class _ParentLeaveScreenState extends ConsumerState<ParentLeaveScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
+                              if (hasDraft) ...[
+                                const Align(
+                                  alignment: Alignment.centerRight,
+                                  child: AksharaDraftChip(),
+                                ),
+                                const SizedBox(height: AksharaSpacing.s2),
+                              ],
                               _LeaveKpiRow(data: data),
                               const SizedBox(height: AksharaSpacing.s4),
                               _LeaveSectionControl(
