@@ -4,6 +4,7 @@ import '../../theme/motion.dart';
 import '../../theme/radius.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
+import '../../theme/typography.dart';
 import 'akshara_interactive_surface.dart';
 
 /// Layout variants for [AksharaKpiCard].
@@ -360,7 +361,7 @@ class _StripKpiCard extends StatelessWidget {
                         color: colors.onSurface,
                         fontWeight: FontWeight.w600,
                         height: 1.05,
-                      ),
+                      ).tabularFigures,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -436,7 +437,7 @@ class _FilledKpiTile extends StatelessWidget {
           final valueStyle = (dense ? text.titleLarge : text.kpiValue).copyWith(
             color: colors.onSurface,
             height: 1.05,
-          );
+          ).tabularFigures;
 
           return Padding(
             padding: padding,
@@ -595,7 +596,7 @@ class _StatusKpiCard extends StatelessWidget {
                         color: accentColors.foreground,
                         fontWeight: FontWeight.w600,
                         height: 1.05,
-                      ),
+                      ).tabularFigures,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -716,7 +717,7 @@ class _CountKpiCard extends StatelessWidget {
                         color: accentColors.foreground,
                         fontWeight: FontWeight.w600,
                         height: 1.05,
-                      ),
+                      ).tabularFigures,
                     ),
                     if (detail.isNotEmpty) ...[
                       const SizedBox(height: AksharaSpacing.s1),

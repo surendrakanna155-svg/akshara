@@ -367,3 +367,20 @@ class AksharaTextStyles extends ThemeExtension<AksharaTextStyles> {
     );
   }
 }
+
+/// A3 (Product Excellence Master Plan §Band A) — tabular (fixed-advance) figures
+/// for aligned numeric display on KPIs, tables, and receipts. Digits share one
+/// advance width so columns line up and a changing value never jitters — the
+/// cheapest "feels professional" fix in a money product.
+extension AksharaTabularFigures on TextStyle {
+  static const List<FontFeature> _tabular = [FontFeature.tabularFigures()];
+
+  /// Returns this style with tabular figures enabled (preserving any other
+  /// [fontFeatures] already set).
+  TextStyle get tabularFigures => copyWith(
+        fontFeatures: [
+          ...?fontFeatures,
+          ..._tabular,
+        ],
+      );
+}

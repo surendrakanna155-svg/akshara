@@ -55,6 +55,11 @@ class FinanceCollectionsScreen extends ConsumerWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const Align(
+            alignment: Alignment.centerRight,
+            child: AksharaFreshnessChip(),
+          ),
+          const SizedBox(height: AksharaSpacing.s2),
           FinanceKpiRow(
             desktopColumns: 4,
             cardHeight: 100,

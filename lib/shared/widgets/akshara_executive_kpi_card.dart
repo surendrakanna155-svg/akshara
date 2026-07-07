@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../theme/radius.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
+import '../../theme/typography.dart';
 import 'akshara_glass_surface.dart';
 import 'akshara_kpi_card.dart';
 import 'akshara_sparkline.dart';
@@ -98,7 +99,7 @@ class AksharaExecutiveKpiCard extends StatelessWidget {
                   style: text.kpiValue.copyWith(
                     color: colors.onSurface,
                     height: 1.05,
-                  ),
+                  ).tabularFigures,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),

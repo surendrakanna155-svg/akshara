@@ -1,4 +1,5 @@
 import 'package:akshara_erp/core/auth/auth_security_providers.dart';
+import 'package:akshara_erp/shared/widgets/akshara_freshness_chip.dart';
 import 'package:akshara_erp/core/config/environment.dart';
 import 'package:akshara_erp/features/auth/auth_token_provider.dart';
 import 'package:akshara_erp/features/auth/token_storage.dart';
@@ -53,6 +54,10 @@ List<Override> providerTestOverrides([List<Override> extra = const []]) {
     // (their override wins, being appended after this base).
     parentRepositoryQueryProvider.overrideWith((ref) => RepositoryQuery.demo),
     parentActiveChildProvider.overrideWithValue(null),
+    // A2 freshness chip: default to "online" so surfaces that render it don't
+    // instantiate the live connectivity/sync graph (which leaves a pending
+    // timer under pumpAndSettle). Tests that need offline override it explicitly.
+    aksharaFreshnessOnlineProvider.overrideWith((ref) => true),
   ];
   if (_testPrefs != null) {
     base.insert(0, sharedPreferencesProvider.overrideWithValue(_testPrefs!));

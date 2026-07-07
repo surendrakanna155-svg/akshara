@@ -8,6 +8,7 @@ import '../../../core/testing/qa_test_keys.dart';
 import '../../../core/tenant/tenant_provider.dart';
 import '../../../shared/widgets/akshara_empty_state.dart';
 import '../../../shared/widgets/akshara_error_state.dart';
+import '../../../shared/widgets/akshara_freshness_chip.dart';
 import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../core/errors/api_failure_mapper.dart';
@@ -109,6 +110,12 @@ class OfficeAttendanceScreen extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Office attendance'),
+          actions: const [
+            Padding(
+              padding: EdgeInsets.only(right: AksharaSpacing.s4),
+              child: Center(child: AksharaFreshnessChip()),
+            ),
+          ],
           bottom: TabBar(
             isScrollable: true,
             tabs: [

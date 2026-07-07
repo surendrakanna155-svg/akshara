@@ -24,6 +24,7 @@ export 'mobile_async_body.dart';
 export 'akshara_context_chip.dart';
 export 'akshara_empty_state.dart';
 export 'akshara_error_state.dart';
+export 'akshara_freshness_chip.dart';
 export 'akshara_insight_card.dart';
 export 'akshara_interactive_surface.dart';
 export 'akshara_key_value_card.dart';
