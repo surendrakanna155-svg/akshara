@@ -12,6 +12,7 @@ import '../dto/sis_academic_assignment_dto.dart';
 import '../dto/sis_conversion_dto.dart';
 import '../dto/sis_dashboard_dto.dart';
 import '../dto/sis_enum_codec.dart';
+import '../dto/sis_siblings_dto.dart';
 import '../dto/sis_student_profile_dto.dart';
 import '../dto/sis_students_dto.dart';
 import '../dto/sis_transfers_dto.dart';
@@ -78,6 +79,20 @@ class SisRemoteDataSource {
       queryParameters: _queryParams(query),
     );
     return SisStudentProfileDto.fromJson(_responseMap(response));
+  }
+
+  /// SIS-4 — GET /sis/students/{id}/siblings. Read-only shared-guardian family
+  /// list, self-excluded, scoped to the caller's school.
+  Future<List<SisSibling>> listStudentSiblings({
+    required RepositoryQuery query,
+    required String studentId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      SisApiPaths.studentSiblings(studentId),
+      queryParameters: _queryParams(query),
+    );
+    final dto = SisSiblingsResponseDto.fromJson(_responseMap(response));
+    return [for (final item in dto.items) _mapper.toSibling(item.raw)];
   }
 
   Future<SisAcademicAssignmentDto> fetchAcademicAssignment({

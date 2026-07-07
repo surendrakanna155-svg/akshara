@@ -211,6 +211,12 @@ abstract final class QaTestKeys {
   static const sisDocumentVerifySuccessSnackbar =
       ValueKey<String>('sis_document_verify_success_snackbar');
 
+  // SIS-4 — siblings / family section.
+  static const sisSiblingsSection =
+      ValueKey<String>('sis_siblings_section');
+  static ValueKey<String> sisSiblingRow(String studentId) =>
+      ValueKey<String>('sis_sibling_row_$studentId');
+
   // SIS-5 — transfers / exit log.
   static const sisTransfersDateRangeButton =
       ValueKey<String>('sis_transfers_date_range_button');

@@ -31,6 +31,8 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "POST", path: "/sis/students", permission: "manageSis", scope: "school", module: "sis" },
   { method: "GET", path: "/sis/transfers", permission: "viewSis", scope: "school", module: "sis" },
   { method: "PATCH", path: "/sis/students/:id/documents/:docId/verify", permission: "manageSis", scope: "school", module: "sis" },
+  // SIS-4 — read-only siblings / family list for a student (clerk view).
+  { method: "GET", path: "/sis/students/:id/siblings", permission: "viewSis", scope: "school", module: "sis" },
   // SIS-1 certificate issuance register + SIS-D1 transfer-certificate (TC) engine.
   { method: "GET", path: "/sis/students/:id/certificates", permission: "viewSis", scope: "school", module: "sis" },
   { method: "POST", path: "/sis/students/:id/certificates", permission: "manageSis", scope: "school", module: "sis" },

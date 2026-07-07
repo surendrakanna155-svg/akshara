@@ -46,6 +46,23 @@ Deno.test("sis router: document verify does not collide with documents list", ()
   assertEquals(wrongVerb, null);
 });
 
+Deno.test("sis router matches GET /sis/students/:id/siblings (SIS-4)", () => {
+  const studentId = "a4000000-0000-4000-8000-000000000001";
+  const match = matchSisRoute("GET", `/sis/students/${studentId}/siblings`);
+  assertEquals(match?.args, [studentId]);
+  assertEquals(match?.handler.name, "handleListStudentSiblings");
+});
+
+Deno.test("sis router: siblings does not collide with the generic student route", () => {
+  const studentId = "a4000000-0000-4000-8000-000000000001";
+  // The plain student GET must still resolve to handleGetStudent.
+  const studentGet = matchSisRoute("GET", `/sis/students/${studentId}`);
+  assertEquals(studentGet?.handler.name, "handleGetStudent");
+  // Siblings is read-only (GET only) — a POST to the siblings path must not resolve.
+  const wrongVerb = matchSisRoute("POST", `/sis/students/${studentId}/siblings`);
+  assertEquals(wrongVerb, null);
+});
+
 Deno.test("sis router matches GET /sis/students/:id", () => {
   const studentId = "a4000000-0000-4000-8000-000000000001";
   const match = matchSisRoute("GET", `/sis/students/${studentId}`);
@@ -95,6 +112,16 @@ Deno.test("sis router matches POST /sis/admissions-conversion", () => {
 Deno.test("SIS-5 GET /sis/transfers is registered as viewSis school route", () => {
   const rule = RBAC_ROUTE_INVENTORY.find(
     (r) => r.method === "GET" && r.path === "/sis/transfers",
+  );
+  assertExists(rule);
+  assertEquals(rule!.permission, "viewSis");
+  assertEquals(rule!.scope, "school");
+  assertEquals(rule!.module, "sis");
+});
+
+Deno.test("SIS-4 GET /sis/students/:id/siblings is registered as viewSis school route", () => {
+  const rule = RBAC_ROUTE_INVENTORY.find(
+    (r) => r.method === "GET" && r.path === "/sis/students/:id/siblings",
   );
   assertExists(rule);
   assertEquals(rule!.permission, "viewSis");

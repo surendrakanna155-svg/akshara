@@ -491,6 +491,52 @@ class MockSisRepository implements SisRepository {
   }
 
   @override
+  Future<List<SisSibling>> listStudentSiblings({
+    required RepositoryQuery query,
+    required String studentId,
+  }) async {
+    // Read-only sibling view: other in-scope students who share a guardian with
+    // the subject, self-excluded. The mock stands in for the backend's shared
+    // guardian_user_id join by keying on the guardian name + phone.
+    final students = (await getStudents(query: query)).items;
+    SisStudent? subject;
+    for (final student in students) {
+      if (student.id == studentId) {
+        subject = student;
+        break;
+      }
+    }
+    if (subject == null) return const [];
+
+    final key = _guardianKey(subject);
+    if (key == null) return const [];
+
+    final siblings = <SisSibling>[
+      for (final student in students)
+        if (student.id != subject.id && _guardianKey(student) == key)
+          SisSibling(
+            studentId: student.id,
+            studentName: student.studentName,
+            admissionNumber: student.admissionNumber,
+            classLabel: student.classLabel,
+            section: student.section,
+            status: student.status,
+          ),
+    ];
+    siblings.sort((a, b) => a.studentName.compareTo(b.studentName));
+    return siblings;
+  }
+
+  /// Mock shared-guardian identity: the guardian's name + phone. Null when the
+  /// student has no guardian name on record (e.g. placeholder students), so
+  /// contact-less students are never grouped as siblings.
+  static String? _guardianKey(SisStudent student) {
+    final name = student.guardianName.trim().toLowerCase();
+    if (name.isEmpty) return null;
+    return '$name|${student.phone.trim()}';
+  }
+
+  @override
   Future<SisAcademicAssignmentData> getAcademicAssignment({
     required RepositoryQuery query,
   }) async {

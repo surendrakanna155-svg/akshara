@@ -1,6 +1,7 @@
 import type {
   StudentDetailData,
   StudentDirectoryRow,
+  StudentSiblingRow,
   StudentTransferRow,
 } from "./sis_students_repository.ts";
 import type { AdmissionsConversionResult } from "./sis_conversion_repository.ts";
@@ -65,6 +66,21 @@ export function studentTransferItemToApi(row: StudentTransferRow): Record<string
     createdAt: row.created_at,
     // SIS-5 — latest Transfer Certificate reason ("" when none was issued).
     exitReason: row.exit_reason ?? "",
+  };
+}
+
+// SIS-4: sibling summary row → API. Same camelCase field convention as the
+// directory row, trimmed to the read-only summary the family section renders.
+export function studentSiblingItemToApi(row: StudentSiblingRow): Record<string, unknown> {
+  return {
+    studentId: row.student_id,
+    studentCode: row.student_code,
+    displayName: row.display_name,
+    status: statusFromDb(row.status),
+    admissionNumber: row.admission_number ?? "",
+    publicStudentId: row.public_student_id ?? "",
+    className: row.class_name ?? "",
+    sectionName: row.section_name ?? "",
   };
 }
 

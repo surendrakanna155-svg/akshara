@@ -60,6 +60,21 @@ export interface StudentTransferRow {
   exit_reason: string | null;
 }
 
+// SIS-4 — one sibling summary row: another student in the SAME school who
+// shares an active guardian with the subject. Read-only, no new PII beyond what
+// the registry/profile already surface (name, admission number, class/section,
+// status).
+export interface StudentSiblingRow {
+  student_id: string;
+  student_code: string;
+  display_name: string;
+  status: string;
+  admission_number: string | null;
+  public_student_id: string | null;
+  class_name: string | null;
+  section_name: string | null;
+}
+
 export interface StudentCoreRow {
   id: string;
   organization_id: string;
@@ -525,6 +540,65 @@ export async function getStudent(
     currentEnrollment: enrollmentRows[0] ?? null,
     guardians: guardianRows,
   };
+}
+
+/**
+ * SIS-4 — read-only list of a student's siblings: other students in the SAME
+ * org + school who share an ACTIVE guardian with {@link studentId}. The subject
+ * student is self-excluded and results are ORDER BY display_name. Returns `[]`
+ * when the student has no active guardian or no other student shares one.
+ *
+ * Cross-school isolation is structural: both sides of the shared-guardian join
+ * (`sib`/`subj`) are pinned to the SAME organization_id + school_id, and the
+ * outer `students s` row is pinned to the caller's org/school ($1/$2). A guardian
+ * shared with a student in another school/tenant therefore never surfaces.
+ */
+export async function listStudentSiblings(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  studentId: string,
+): Promise<StudentSiblingRow[]> {
+  return await db.queryObject<StudentSiblingRow>(
+    `SELECT
+        s.id AS student_id,
+        s.student_code,
+        s.display_name,
+        s.status,
+        sp.admission_number,
+        sp.public_student_id,
+        se.class_name,
+        se.section_name
+     FROM students s
+     LEFT JOIN student_profiles sp
+       ON sp.student_id = s.id
+      AND sp.organization_id = s.organization_id
+      AND sp.school_id = s.school_id
+     LEFT JOIN sis_student_enrollments se
+       ON se.student_id = s.id
+      AND se.organization_id = s.organization_id
+      AND se.school_id = s.school_id
+      AND se.is_current = true
+     WHERE s.organization_id = $1
+       AND s.school_id = $2
+       AND s.id <> $3
+       AND EXISTS (
+         SELECT 1
+         FROM student_guardians sib
+         JOIN student_guardians subj
+           ON subj.guardian_user_id = sib.guardian_user_id
+          AND subj.organization_id = sib.organization_id
+          AND subj.school_id = sib.school_id
+         WHERE sib.student_id = s.id
+           AND sib.organization_id = s.organization_id
+           AND sib.school_id = s.school_id
+           AND sib.status = 'active'
+           AND subj.student_id = $3
+           AND subj.status = 'active'
+       )
+     ORDER BY s.display_name ASC`,
+    [organizationId, schoolId, studentId],
+  );
 }
 
 async function admissionNumberExists(

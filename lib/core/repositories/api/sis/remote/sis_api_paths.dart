@@ -21,6 +21,10 @@ abstract final class SisApiPaths {
   static String studentDocuments(String studentId) =>
       '$base/students/$studentId/documents';
 
+  /// SIS-4 — GET a student's siblings / family (read-only).
+  static String studentSiblings(String studentId) =>
+      '$base/students/$studentId/siblings';
+
   /// SIS-3 — PATCH verify/reject a student document.
   static String studentDocumentVerify(String studentId, String documentId) =>
       '$base/students/$studentId/documents/$documentId/verify';

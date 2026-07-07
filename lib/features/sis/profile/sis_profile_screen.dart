@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/security/permissions.dart';
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../router/route_names.dart';
 import '../../../router/student360_navigation.dart';
 import '../../../shared/widgets/akshara_manage_action.dart';
 import '../../../shared/widgets/akshara_view_action.dart';
@@ -252,6 +254,15 @@ class SisStudentProfileScreen extends ConsumerWidget {
             ],
           ),
         const SizedBox(height: AksharaSpacing.s6),
+        // SIS-4 — read-only siblings / family (other students in this school
+        // sharing an active guardian). viewSis-gated; hidden entirely without it.
+        AksharaViewAction(
+          permission: Permission.viewSis,
+          child: _DetailSection(
+            title: 'Siblings / Family',
+            child: _SiblingsSection(studentId: student.id),
+          ),
+        ),
         _DetailSection(
           title: 'Certificates',
           child: _CertificateRegister(studentId: student.id),
@@ -524,6 +535,105 @@ class _DocumentRow extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// SIS-4 — the read-only "Siblings / Family" section: other students in the
+/// same school who share an active guardian with this student, self-excluded.
+/// Reads from [sisStudentSiblingsProvider]; each sibling links to their profile.
+class _SiblingsSection extends ConsumerWidget {
+  const _SiblingsSection({required this.studentId});
+
+  final String studentId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final text = context.aksharaText;
+    final siblings = ref.watch(sisStudentSiblingsProvider(studentId));
+
+    return Material(
+      key: QaTestKeys.sisSiblingsSection,
+      child: siblings.when(
+        loading: () => const Padding(
+          padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s3),
+          child: LinearProgressIndicator(),
+        ),
+        error: (_, __) => Text(
+          'Could not load siblings.',
+          style: text.bodySmall,
+        ),
+        data: (items) {
+          if (items.isEmpty) {
+            return Text(
+              'No siblings on record in this school.',
+              style: text.bodyMedium,
+            );
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final sibling in items) _SiblingRow(sibling: sibling),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// SIS-4 — one sibling row: name + admission / class context and a status chip.
+/// Tapping navigates to that sibling's SIS profile.
+class _SiblingRow extends StatelessWidget {
+  const _SiblingRow({required this.sibling});
+
+  final SisSibling sibling;
+
+  (String, KpiAccent) get _statusChip => switch (sibling.status) {
+        SisStudentStatus.active => ('Active', KpiAccent.success),
+        SisStudentStatus.prospect => ('Prospect', KpiAccent.warning),
+        SisStudentStatus.transferred => ('Transferred', KpiAccent.neutral),
+        SisStudentStatus.exited => ('Exited', KpiAccent.neutral),
+        SisStudentStatus.alumni => ('Alumni', KpiAccent.neutral),
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.aksharaText;
+    final (statusLabel, statusTone) = _statusChip;
+
+    final classLabel = (sibling.classLabel.isEmpty && sibling.section.isEmpty)
+        ? null
+        : 'Class ${sibling.classLabel}'
+            '${sibling.section.isEmpty ? '' : '-${sibling.section}'}';
+    final subtitle = [
+      if (sibling.admissionNumber.isNotEmpty) sibling.admissionNumber,
+      if (classLabel != null) classLabel,
+    ].join(' · ');
+
+    return InkWell(
+      key: QaTestKeys.sisSiblingRow(sibling.studentId),
+      onTap: () => context.go(RouteNames.sisStudentDetail(sibling.studentId)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AksharaSpacing.s2),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(sibling.studentName, style: text.titleSmall),
+                  if (subtitle.isNotEmpty)
+                    Text(subtitle, style: text.bodySmall),
+                ],
+              ),
+            ),
+            AksharaStatusChip(label: statusLabel, tone: statusTone),
+            const SizedBox(width: AksharaSpacing.s2),
+            const Icon(Icons.chevron_right, size: 18),
+          ],
+        ),
       ),
     );
   }

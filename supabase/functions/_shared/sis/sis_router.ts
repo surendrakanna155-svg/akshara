@@ -29,6 +29,7 @@ import {
   handleGetStudent360Profile,
   handleGetStudentTimeline,
 } from "./sis_student_360_handlers.ts";
+import { handleListStudentSiblings } from "./sis_sibling_handlers.ts";
 
 const UUID_SEGMENT =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -114,6 +115,13 @@ export function matchSisRoute(
     if (method === "POST") {
       return { handler: handleIssueCertificate, args: [certificatesMatch[1]!] };
     }
+  }
+
+  // SIS-4 — read-only siblings / family list. More specific than the generic
+  // /sis/students/:id GET, so matched before it.
+  const siblingsMatch = path.match(/^\/sis\/students\/([^/]+)\/siblings$/);
+  if (siblingsMatch && method === "GET") {
+    return { handler: handleListStudentSiblings, args: [siblingsMatch[1]!] };
   }
 
   const profile360Match = path.match(/^\/sis\/students\/([^/]+)\/360$/);

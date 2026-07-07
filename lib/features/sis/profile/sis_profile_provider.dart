@@ -19,6 +19,17 @@ final sisStudentProfileFutureProvider =
       );
 });
 
+/// SIS-4 — a student's siblings / family (other students in the same school
+/// sharing an active guardian), self-excluded. Read-only, viewSis-gated at the
+/// screen; resolves against whichever SIS repo (mock or API) is active.
+final sisStudentSiblingsProvider =
+    FutureProvider.family<List<SisSibling>, String>((ref, studentId) async {
+  return ref.read(sisRepositoryProvider).listStudentSiblings(
+        query: ref.watch(repositoryQueryProvider),
+        studentId: studentId,
+      );
+});
+
 final sisStudentProfileViewStateProvider =
     Provider.family<SisViewState<SisStudentProfile>, String>((ref, studentId) {
   return resolveSisAsync(

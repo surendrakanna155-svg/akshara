@@ -290,6 +290,30 @@ class SisTransferRecord {
   final String? reason;
 }
 
+/// SIS-4 — one sibling in a student's "Siblings / Family" section: another
+/// student in the SAME school who shares an active guardian with the subject.
+/// Read-only summary; no PII beyond what the registry/profile already show.
+@immutable
+class SisSibling {
+  const SisSibling({
+    required this.studentId,
+    required this.studentName,
+    required this.admissionNumber,
+    required this.classLabel,
+    required this.section,
+    required this.status,
+  });
+
+  final String studentId;
+  final String studentName;
+
+  /// May be empty when the sibling has no admission number on record.
+  final String admissionNumber;
+  final String classLabel;
+  final String section;
+  final SisStudentStatus status;
+}
+
 @immutable
 class SisTimelineEvent {
   const SisTimelineEvent({

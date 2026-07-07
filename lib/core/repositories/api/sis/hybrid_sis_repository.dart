@@ -86,6 +86,13 @@ class HybridSisRepository implements SisRepository {
       );
 
   @override
+  Future<List<SisSibling>> listStudentSiblings({
+    required RepositoryQuery query,
+    required String studentId,
+  }) =>
+      _api.listStudentSiblings(query: query, studentId: studentId);
+
+  @override
   Future<PaginatedResult<SisTransferRecord>> listStudentTransfers({
     required RepositoryQuery query,
     String? fromDate,

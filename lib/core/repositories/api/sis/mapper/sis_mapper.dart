@@ -390,6 +390,30 @@ class SisMapper {
     );
   }
 
+  /// SIS-4 — maps one GET /sis/students/:id/siblings row to a sibling summary.
+  SisSibling toSibling(Map<String, dynamic> raw) {
+    return SisSibling(
+      studentId:
+          raw['studentId'] as String? ?? raw['student_id'] as String? ?? '',
+      studentName: raw['displayName'] as String? ??
+          raw['display_name'] as String? ??
+          raw['studentName'] as String? ??
+          '',
+      admissionNumber: raw['admissionNumber'] as String? ??
+          raw['admission_number'] as String? ??
+          '',
+      classLabel: raw['className'] as String? ??
+          raw['class_name'] as String? ??
+          raw['classLabel'] as String? ??
+          '',
+      section: raw['sectionName'] as String? ??
+          raw['section_name'] as String? ??
+          raw['section'] as String? ??
+          '',
+      status: SisEnumCodec.parseStudentStatus(raw['status'] as String?),
+    );
+  }
+
   SisStudentProfile toStudentProfile(SisStudentProfileDto dto) {
     final raw = dto.raw;
     if (raw.containsKey('student') && raw['student'] is Map<String, dynamic>) {

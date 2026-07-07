@@ -49,6 +49,15 @@ abstract class SisRepository {
     required VerifyStudentDocumentRequest request,
   });
 
+  /// SIS-4 — read-only list of a student's siblings: other students in the
+  /// SAME school who share an active guardian with [studentId], self-excluded
+  /// (viewSis). Returns an empty list when the student has no shared-guardian
+  /// siblings.
+  Future<List<SisSibling>> listStudentSiblings({
+    required RepositoryQuery query,
+    required String studentId,
+  });
+
   /// SIS-5 — date-ranged, exportable list of exited students (transferred /
   /// alumni) with last-enrollment context (viewSis). Page/pageSize ride on
   /// [query]; [fromDate]/[toDate] are ISO dates; [status] narrows to
