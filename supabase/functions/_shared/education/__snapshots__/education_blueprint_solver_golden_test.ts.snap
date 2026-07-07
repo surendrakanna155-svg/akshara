@@ -1,0 +1,504 @@
+export const snapshot = {};
+
+snapshot[`planSlots absent total=7 1`] = `
+[
+  {
+    chapter: "Algebra",
+    difficulty: "easy",
+    index: 0,
+    marks: 2,
+    questionType: "mcq",
+  },
+  {
+    chapter: "Geometry",
+    difficulty: "medium",
+    index: 1,
+    marks: 2,
+    questionType: "fill_blank",
+  },
+  {
+    chapter: "Algebra",
+    difficulty: "medium",
+    index: 2,
+    marks: 2,
+    questionType: "short_answer",
+  },
+  {
+    chapter: "Geometry",
+    difficulty: "hard",
+    index: 3,
+    marks: 1,
+    questionType: "long_answer",
+  },
+]
+`;
+
+snapshot[`planSlots absent total=20 1`] = `
+[
+  {
+    chapter: "Algebra",
+    difficulty: "easy",
+    index: 0,
+    marks: 5,
+    questionType: "mcq",
+  },
+  {
+    chapter: "Geometry",
+    difficulty: "medium",
+    index: 1,
+    marks: 5,
+    questionType: "fill_blank",
+  },
+  {
+    chapter: "Algebra",
+    difficulty: "medium",
+    index: 2,
+    marks: 5,
+    questionType: "short_answer",
+  },
+  {
+    chapter: "Geometry",
+    difficulty: "hard",
+    index: 3,
+    marks: 5,
+    questionType: "long_answer",
+  },
+]
+`;
+
+snapshot[`planSlots absent total=33 1`] = `
+[
+  {
+    chapter: "Algebra",
+    difficulty: "easy",
+    index: 0,
+    marks: 5,
+    questionType: "mcq",
+  },
+  {
+    chapter: "Geometry",
+    difficulty: "easy",
+    index: 1,
+    marks: 5,
+    questionType: "fill_blank",
+  },
+  {
+    chapter: "Algebra",
+    difficulty: "medium",
+    index: 2,
+    marks: 5,
+    questionType: "short_answer",
+  },
+  {
+    chapter: "Geometry",
+    difficulty: "medium",
+    index: 3,
+    marks: 5,
+    questionType: "long_answer",
+  },
+  {
+    chapter: "Algebra",
+    difficulty: "medium",
+    index: 4,
+    marks: 5,
+    questionType: "mcq",
+  },
+  {
+    chapter: "Geometry",
+    difficulty: "medium",
+    index: 5,
+    marks: 4,
+    questionType: "fill_blank",
+  },
+  {
+    chapter: "Algebra",
+    difficulty: "hard",
+    index: 6,
+    marks: 4,
+    questionType: "short_answer",
+  },
+]
+`;
+
+snapshot[`planSlots absent total=50 1`] = `
+[
+  {
+    chapter: "Algebra",
+    difficulty: "easy",
+    index: 0,
+    marks: 5,
+    questionType: "mcq",
+  },
+  {
+    chapter: "Geometry",
+    difficulty: "easy",
+    index: 1,
+    marks: 5,
+    questionType: "fill_blank",
+  },
+  {
+    chapter: "Algebra",
+    difficulty: "easy",
+    index: 2,
+    marks: 5,
+    questionType: "short_answer",
+  },
+  {
+    chapter: "Geometry",
+    difficulty: "medium",
+    index: 3,
+    marks: 5,
+    questionType: "long_answer",
+  },
+  {
+    chapter: "Algebra",
+    difficulty: "medium",
+    index: 4,
+    marks: 5,
+    questionType: "mcq",
+  },
+  {
+    chapter: "Geometry",
+    difficulty: "medium",
+    index: 5,
+    marks: 5,
+    questionType: "fill_blank",
+  },
+  {
+    chapter: "Algebra",
+    difficulty: "medium",
+    index: 6,
+    marks: 5,
+    questionType: "short_answer",
+  },
+  {
+    chapter: "Geometry",
+    difficulty: "medium",
+    index: 7,
+    marks: 5,
+    questionType: "long_answer",
+  },
+  {
+    chapter: "Algebra",
+    difficulty: "hard",
+    index: 8,
+    marks: 5,
+    questionType: "mcq",
+  },
+  {
+    chapter: "Geometry",
+    difficulty: "hard",
+    index: 9,
+    marks: 5,
+    questionType: "fill_blank",
+  },
+]
+`;
+
+snapshot[`planSlots absent total=100 1`] = `
+[
+  {
+    chapter: "Algebra",
+    difficulty: "easy",
+    index: 0,
+    marks: 5,
+    questionType: "mcq",
+  },
+  {
+    chapter: "Geometry",
+    difficulty: "easy",
+    index: 1,
+    marks: 5,
+    questionType: "fill_blank",
+  },
+  {
+    chapter: "Algebra",
+    difficulty: "easy",
+    index: 2,
+    marks: 5,
+    questionType: "short_answer",
+  },
+  {
+    chapter: "Geometry",
+    difficulty: "easy",
+    index: 3,
+    marks: 5,
+    questionType: "long_answer",
+  },
+  {
+    chapter: "Algebra",
+    difficulty: "easy",
+    index: 4,
+    marks: 5,
+    questionType: "mcq",
+  },
+  {
+    chapter: "Geometry",
+    difficulty: "easy",
+    index: 5,
+    marks: 5,
+    questionType: "fill_blank",
+  },
+  {
+    chapter: "Algebra",
+    difficulty: "medium",
+    index: 6,
+    marks: 5,
+    questionType: "short_answer",
+  },
+  {
+    chapter: "Geometry",
+    difficulty: "medium",
+    index: 7,
+    marks: 5,
+    questionType: "long_answer",
+  },
+  {
+    chapter: "Algebra",
+    difficulty: "medium",
+    index: 8,
+    marks: 5,
+    questionType: "mcq",
+  },
+  {
+    chapter: "Geometry",
+    difficulty: "medium",
+    index: 9,
+    marks: 5,
+    questionType: "fill_blank",
+  },
+  {
+    chapter: "Algebra",
+    difficulty: "medium",
+    index: 10,
+    marks: 5,
+    questionType: "short_answer",
+  },
+  {
+    chapter: "Geometry",
+    difficulty: "medium",
+    index: 11,
+    marks: 5,
+    questionType: "long_answer",
+  },
+  {
+    chapter: "Algebra",
+    difficulty: "medium",
+    index: 12,
+    marks: 5,
+    questionType: "mcq",
+  },
+  {
+    chapter: "Geometry",
+    difficulty: "medium",
+    index: 13,
+    marks: 5,
+    questionType: "fill_blank",
+  },
+  {
+    chapter: "Algebra",
+    difficulty: "medium",
+    index: 14,
+    marks: 5,
+    questionType: "short_answer",
+  },
+  {
+    chapter: "Geometry",
+    difficulty: "medium",
+    index: 15,
+    marks: 5,
+    questionType: "long_answer",
+  },
+  {
+    chapter: "Algebra",
+    difficulty: "hard",
+    index: 16,
+    marks: 5,
+    questionType: "mcq",
+  },
+  {
+    chapter: "Geometry",
+    difficulty: "hard",
+    index: 17,
+    marks: 5,
+    questionType: "fill_blank",
+  },
+  {
+    chapter: "Algebra",
+    difficulty: "hard",
+    index: 18,
+    marks: 5,
+    questionType: "short_answer",
+  },
+  {
+    chapter: "Geometry",
+    difficulty: "hard",
+    index: 19,
+    marks: 5,
+    questionType: "long_answer",
+  },
+]
+`;
+
+snapshot[`CI-0a golden: explicit questionTypeMix planSlots is byte-stable 1`] = `
+[
+  {
+    chapter: "Algebra",
+    difficulty: "medium",
+    index: 0,
+    marks: 6,
+    questionType: "mcq",
+  },
+  {
+    chapter: "Algebra",
+    difficulty: "medium",
+    index: 1,
+    marks: 6,
+    questionType: "mcq",
+  },
+  {
+    chapter: "Algebra",
+    difficulty: "medium",
+    index: 2,
+    marks: 6,
+    questionType: "mcq",
+  },
+  {
+    chapter: "Algebra",
+    difficulty: "medium",
+    index: 3,
+    marks: 6,
+    questionType: "short_answer",
+  },
+  {
+    chapter: "Algebra",
+    difficulty: "medium",
+    index: 4,
+    marks: 6,
+    questionType: "short_answer",
+  },
+]
+`;
+
+snapshot[`CI-0a golden: solveBlueprint selection (match/fallback/dedup/gap) is byte-stable 1`] = `
+{
+  gaps: [
+    {
+      chapter: "Algebra",
+      difficulty: "medium",
+      index: 2,
+      marks: 5,
+      questionType: "short_answer",
+    },
+  ],
+  selected: [
+    {
+      bankItem: {
+        answer_text: "A",
+        chapter: "Algebra",
+        cognitive_level: null,
+        created_at: "t",
+        created_by: null,
+        difficulty: "medium",
+        fingerprint: "fp-mcq-1",
+        id: "a",
+        jee_question_type: null,
+        learning_outcome: null,
+        marks: 5,
+        options: [
+          "A",
+          "B",
+          "C",
+          "D",
+        ],
+        organization_id: "org",
+        program_track: "board",
+        question_text: "A",
+        question_type: "mcq",
+        review_status: "approved",
+        school_id: "school",
+        source: "teacher",
+        source_reference: null,
+        status: "active",
+        subject_name: "Mathematics",
+        syllabus_chapter_id: null,
+        syllabus_topic_id: null,
+        topic: "",
+        updated_at: "t",
+      },
+      slot: {
+        chapter: "Algebra",
+        difficulty: "medium",
+        index: 0,
+        marks: 5,
+        questionType: "mcq",
+      },
+    },
+    {
+      bankItem: {
+        answer_text: "A",
+        chapter: "Geometry",
+        cognitive_level: null,
+        created_at: "t",
+        created_by: null,
+        difficulty: "medium",
+        fingerprint: "fp-mcq-2",
+        id: "c",
+        jee_question_type: null,
+        learning_outcome: null,
+        marks: 5,
+        options: [
+          "A",
+          "B",
+          "C",
+          "D",
+        ],
+        organization_id: "org",
+        program_track: "board",
+        question_text: "C",
+        question_type: "mcq",
+        review_status: "approved",
+        school_id: "school",
+        source: "teacher",
+        source_reference: null,
+        status: "active",
+        subject_name: "Mathematics",
+        syllabus_chapter_id: null,
+        syllabus_topic_id: null,
+        topic: "",
+        updated_at: "t",
+      },
+      slot: {
+        chapter: "Algebra",
+        difficulty: "medium",
+        index: 1,
+        marks: 5,
+        questionType: "mcq",
+      },
+    },
+  ],
+  slots: [
+    {
+      chapter: "Algebra",
+      difficulty: "medium",
+      index: 0,
+      marks: 5,
+      questionType: "mcq",
+    },
+    {
+      chapter: "Algebra",
+      difficulty: "medium",
+      index: 1,
+      marks: 5,
+      questionType: "mcq",
+    },
+    {
+      chapter: "Algebra",
+      difficulty: "medium",
+      index: 2,
+      marks: 5,
+      questionType: "short_answer",
+    },
+  ],
+}
+`;

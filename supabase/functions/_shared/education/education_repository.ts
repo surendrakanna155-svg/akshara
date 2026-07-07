@@ -1223,3 +1223,65 @@ export async function publishReportRemark(
   );
   return result[0] ?? null;
 }
+
+// ── CI-0b — exam ↔ paper link (v3.0 §5.2) ───────────────────────────────────
+// Additive seam over the edu_exam_paper_links table (migration 20260852000000).
+// NOT yet wired into the publish path (that lands with the multi-set wave), so
+// these change no existing behaviour — they only let a caller persist/read the
+// mapping. RLS scopes every row to the caller's school.
+
+export interface EduExamPaperLinkRow {
+  id: string;
+  organization_id: string;
+  school_id: string;
+  exam_id: string;
+  paper_id: string | null;
+  set_code: string;
+  created_at: string;
+}
+
+export interface LinkExamToPaperInput {
+  examId: string;
+  paperId: string;
+  setCode?: string;
+}
+
+/**
+ * Link an exam (TEXT exam_id) to a generated question paper (UUID paper_id) for
+ * a set (default 'A'). Idempotent per (org, school, exam, set): re-linking (e.g.
+ * after regenerating the paper) re-points the existing row via upsert.
+ */
+export async function linkExamToPaper(
+  client: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  input: LinkExamToPaperInput,
+): Promise<EduExamPaperLinkRow> {
+  const setCode = input.setCode ?? "A";
+  const rows = await client.queryObject<EduExamPaperLinkRow>(
+    `INSERT INTO edu_exam_paper_links (organization_id, school_id, exam_id, paper_id, set_code)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (organization_id, school_id, exam_id, set_code)
+       DO UPDATE SET paper_id = EXCLUDED.paper_id
+     RETURNING *`,
+    [organizationId, schoolId, input.examId, input.paperId, setCode],
+  );
+  return rows[0]!;
+}
+
+/** Read the paper linked to an exam for a set; null when unlinked. */
+export async function getExamPaperLink(
+  client: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  examId: string,
+  setCode = "A",
+): Promise<EduExamPaperLinkRow | null> {
+  const rows = await client.queryObject<EduExamPaperLinkRow>(
+    `SELECT * FROM edu_exam_paper_links
+      WHERE organization_id = $1 AND school_id = $2 AND exam_id = $3 AND set_code = $4
+      LIMIT 1`,
+    [organizationId, schoolId, examId, setCode],
+  );
+  return rows[0] ?? null;
+}
