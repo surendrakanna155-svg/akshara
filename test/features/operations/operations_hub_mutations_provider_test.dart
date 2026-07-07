@@ -1,3 +1,4 @@
+import 'package:akshara_erp/core/errors/api_failure.dart';
 import 'package:akshara_erp/core/security/erp_role.dart';
 import 'package:akshara_erp/core/security/rbac_service.dart';
 import 'package:akshara_erp/core/security/user_permissions.dart';
@@ -46,6 +47,48 @@ void main() {
           .execute('inv-pending');
 
       expect(container.read(completeOperationsActionProvider).hasError, isTrue);
+    });
+  });
+
+  // PRI-3 — "Daily school report" export (Operations Hub snapshot → PDF, rides
+  // XCT-1). The export path shipped in C18; these close the verified
+  // test-coverage gap on its RBAC guard (assertViewOperationsHub) and that it
+  // produces real PDF bytes from the snapshot a viewer can already see.
+  group('PRI-3 daily school report export', () {
+    test('export produces PDF bytes for a hub viewer', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.superAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final bytes = await container
+          .read(exportOperationsHubReportProvider.notifier)
+          .execute();
+
+      expect(bytes, isNotNull);
+      expect(bytes!.isNotEmpty, isTrue);
+    });
+
+    test('export is denied without viewOperationsHub permission', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.parent),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await expectLater(
+        container.read(exportOperationsHubReportProvider.notifier).execute(),
+        throwsA(isA<ApiFailureException>()),
+      );
     });
   });
 }
