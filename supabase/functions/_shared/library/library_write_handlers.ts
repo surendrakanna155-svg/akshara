@@ -10,7 +10,8 @@ import {
 } from "../entity_write/module_write_handlers.ts";
 import { createEntityWriteStore } from "../entity_write/entity_write_store.ts";
 import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
-import { sendBroadcastMessage } from "../communication/communication_service.ts";
+import { scheduleReminder } from "../reminders/reminders_service.ts";
+import type { AccessTokenClaims } from "../jwt.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 import {
   FINE_PER_DAY,
@@ -23,6 +24,16 @@ const writeStore = createEntityWriteStore("library_entities", "Library");
 const { runWrite } = createModuleWriteHandlers("manageLibrary");
 
 const LOAN_DAYS = 14;
+
+/**
+ * LIB-5 — overdue reminders fan out to the whole parent body on the shared XCT-2
+ * rail. The broadcast audience model resolves recipients at FIRE time and has no
+ * "these specific borrowers" token, so — exactly like TRN-8 (`all_staff`
+ * doc-expiry digest) and INV-7 (`storekeepers` low-stock digest) — LIB-5
+ * schedules ONE `all_parents` digest rather than inventing a per-borrower
+ * targeting path outside the rail.
+ */
+export const LIBRARY_OVERDUE_AUDIENCE = "all_parents";
 
 /** Library member roles a caller may enrol. */
 const MEMBER_TYPES = new Set(["student", "staff", "teacher"]);
@@ -860,11 +871,73 @@ export async function handleRenewLoan(
 }
 
 /**
- * POST /library/reminders/overdue — LIB-5: enqueue an IN-APP / push overdue
- * reminder to the affected cohort via the proven Communication broadcast rail
- * (XCT-2). External SMS/WhatsApp stays gated behind Communication's own config;
- * this only queues push deliveries out of the request cycle. Mirrors
- * transport_write_handlers.handleNotifyRouteDelay.
+ * LIB-5 core (exported so tests drive it with a fake db, mirroring TRN-8's
+ * `runDocumentExpiryReminder`): scan the open loans at trigger time. Nothing
+ * overdue → schedule nothing, `{recipientCount: 0}`. Otherwise schedule ONE
+ * `all_parents` digest on the shared XCT-2 reminder rail ({@link scheduleReminder},
+ * remindAt = now so it fires on the next runner pass into parents' in-app inboxes;
+ * external SMS/WhatsApp stays owner-gated inside the rail) and audit the run with
+ * the count + reminderId.
+ *
+ * Previously this fired an IMMEDIATE `sendBroadcastMessage` to `audience:"parents"`
+ * with a body that read "You have N overdue item(s)" — misleading when blasted to
+ * every parent, and off the ONE reminder rail every other module rides. Re-pointed
+ * onto {@link scheduleReminder} so library overdue reminders can never diverge from
+ * TRN-8 / INV-7 / EXM-6, with copy corrected for a broadcast audience.
+ */
+export async function runOverdueReminder(
+  db: TenantQueryClient,
+  claims: AccessTokenClaims,
+  organizationId: string,
+  schoolId: string,
+  request?: Request,
+): Promise<Record<string, unknown>> {
+  const now = new Date();
+  const issues = await listAllEntities(db, organizationId, schoolId, "issue");
+  const overdue = overdueOpenLoans(issues, now);
+  const recipientCount = overdue.length;
+
+  let reminderId = "";
+  if (recipientCount > 0) {
+    const titles = [
+      ...new Set(overdue.map((l) => String(l.issue.bookTitle ?? "")).filter((t) => t.length > 0)),
+    ].slice(0, 5);
+    const title = "Library — overdue book reminder";
+    const body =
+      `${recipientCount} library item(s) are overdue and not yet returned. If your child has ` +
+      `borrowed a library book, please return it promptly to avoid further fines.` +
+      (titles.length > 0 ? ` Overdue titles include: ${titles.join(", ")}.` : "");
+    const scheduled = await scheduleReminder(
+      db,
+      claims,
+      {
+        audience: LIBRARY_OVERDUE_AUDIENCE,
+        title,
+        body,
+        // Fire on the next scheduled-broadcast runner pass (i.e. promptly).
+        remindAt: now.toISOString(),
+      },
+      request,
+    );
+    reminderId = String(scheduled.broadcastId ?? "");
+  }
+
+  await emitMutationAudit(
+    db,
+    claims,
+    moduleEntityAudit("library.overdue.reminded", "library_reminder", schoolId, {
+      recipientCount,
+      reminderId,
+    }),
+    request,
+  );
+  return { recipientCount, reminderId };
+}
+
+/**
+ * POST /library/reminders/overdue — LIB-5: schedule an IN-APP overdue reminder to
+ * the parent body on the shared XCT-2 rail. Thin wrapper over
+ * {@link runOverdueReminder}, which holds the testable core.
  */
 export async function handleSendOverdueReminders(
   req: Request,
@@ -872,35 +945,8 @@ export async function handleSendOverdueReminders(
 ): Promise<Response> {
   return await runWrite(req, config, async (ctx) => {
     const { db, organizationId, schoolId, claims, req: request } = ctx;
-    const issues = await listAllEntities(db, organizationId, schoolId, "issue");
-    const overdue = overdueOpenLoans(issues);
-    const recipientCount = overdue.length;
-
-    if (recipientCount > 0) {
-      const titles = [
-        ...new Set(overdue.map((l) => String(l.issue.bookTitle ?? "")).filter((t) => t.length > 0)),
-      ].slice(0, 5);
-      const title = "Library — overdue book reminder";
-      const body =
-        `You have ${recipientCount} overdue library item(s). Please return them to avoid further fines.` +
-        (titles.length > 0 ? ` Titles: ${titles.join(", ")}.` : "");
-      await sendBroadcastMessage(
-        db,
-        claims,
-        { audience: "parents", title, body },
-        request,
-      );
-    }
-
-    await emitMutationAudit(
-      db,
-      claims,
-      moduleEntityAudit("library.overdue.reminded", "library_reminder", schoolId, {
-        recipientCount,
-      }),
-      request,
-    );
-    return { payload: { recipientCount }, status: 200 };
+    const payload = await runOverdueReminder(db, claims, organizationId, schoolId, request);
+    return { payload, status: 200 };
   });
 }
 

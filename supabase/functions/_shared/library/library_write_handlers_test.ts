@@ -9,12 +9,16 @@ import {
   buildReturnFinePayload,
   DEFAULT_LIBRARY_SETTINGS,
   intFromString,
+  LIBRARY_OVERDUE_AUDIENCE,
   type LibrarySettings,
   normalizeResourceUrl,
   normalizeSettings,
   planImportRow,
+  runOverdueReminder,
 } from "./library_write_handlers.ts";
 import { computeFines } from "./library_aggregations.ts";
+import type { TenantQueryClient } from "../tenant_db.ts";
+import type { AccessTokenClaims } from "../jwt.ts";
 
 const NOW = new Date("2026-06-26T10:00:00.000Z");
 
@@ -367,4 +371,121 @@ Deno.test("planImportRow: a duplicate ISBN (already seen) is rejected", () => {
     ),
     { ok: false, reason: "A book with this ISBN already exists" },
   );
+});
+
+// ── LIB-5 overdue reminder rides the XCT-2 rail (runOverdueReminder) ──────────
+//
+// Capturing fake TenantQueryClient (same pattern as
+// reminders/reminders_service_test.ts): the open-loans SELECT returns the
+// seeded issue rows; the scheduled-broadcast INSERT echoes a row back so
+// scheduleReminder resolves a broadcastId. Proves LIB-5 now SCHEDULES ONE
+// all_parents digest on the ONE rail (persisted 'scheduled', not an immediate
+// send) instead of the old blast-all-parents sendBroadcastMessage.
+
+const OVERDUE_ORG = "org-1";
+const OVERDUE_SCHOOL = "school-1";
+
+function overdueClaims(): AccessTokenClaims {
+  return {
+    sub: "u-lib",
+    tenant_id: OVERDUE_ORG,
+    organization_id: OVERDUE_ORG,
+    school_id: OVERDUE_SCHOOL,
+    role: "principal",
+    role_slugs: ["principal"],
+    primary_role: "principal",
+    permissions: ["sendBroadcast", "viewCommunications", "manageLibrary"],
+    permissions_version: 1,
+    scope: "school",
+    school_group_id: null,
+    student_id: null,
+    child_ids: [],
+    session_id: "s1",
+  } as unknown as AccessTokenClaims;
+}
+
+function overdueFakeDb(
+  issues: Record<string, unknown>[],
+): { db: TenantQueryClient; calls: Array<{ sql: string; args: unknown[] }> } {
+  const calls: Array<{ sql: string; args: unknown[] }> = [];
+  const db = {
+    // deno-lint-ignore no-explicit-any
+    queryObject(sql: string, args: unknown[] = []): Promise<any[]> {
+      calls.push({ sql, args });
+      if (/FROM library_entities/.test(sql)) {
+        return Promise.resolve(issues.map((payload) => ({ payload })));
+      }
+      if (/INSERT INTO comm_broadcasts/.test(sql)) {
+        // Echo the scheduled row the way createScheduledBroadcast RETURNINGs it.
+        return Promise.resolve([{
+          id: "rem-lib5",
+          organization_id: args[0],
+          school_id: args[1],
+          audience: args[2],
+          status: "scheduled",
+          scheduled_at: args[8],
+        }]);
+      }
+      return Promise.resolve([]);
+    },
+  } as unknown as TenantQueryClient;
+  return { db, calls };
+}
+
+/** A loan overdue regardless of the wall clock (dueDate far in the past). */
+function overdueLoan(over: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    id: "iss-od",
+    memberName: "Arjun",
+    isbn: "111",
+    bookTitle: "Algebra",
+    status: "active",
+    dueDate: "2000-01-01",
+    ...over,
+  };
+}
+
+Deno.test("LIB-5: overdue loans schedule ONE all_parents reminder on the XCT-2 rail + audit", async () => {
+  const { db, calls } = overdueFakeDb([
+    overdueLoan({ id: "a", bookTitle: "Algebra" }),
+    overdueLoan({ id: "b", bookTitle: "Physics" }),
+  ]);
+
+  const result = await runOverdueReminder(db, overdueClaims(), OVERDUE_ORG, OVERDUE_SCHOOL);
+
+  assertEquals(result.recipientCount, 2);
+  assertEquals(result.reminderId, "rem-lib5");
+
+  // ONE scheduled reminder rides the rail — persisted 'scheduled', not sent now.
+  const inserts = calls.filter((c) => /INSERT INTO comm_broadcasts/.test(c.sql));
+  assertEquals(inserts.length, 1);
+  assertEquals(inserts[0].sql.includes("'scheduled'"), true);
+  // Fired to the valid, role-scoped parent audience (not the old alias "parents").
+  assertEquals(inserts[0].args[2], "all_parents");
+  assertEquals(inserts[0].args[2], LIBRARY_OVERDUE_AUDIENCE);
+  // Copy is broadcast-appropriate (not the old misleading "You have N ...").
+  assertEquals(String(inserts[0].args[7]).includes("If your child has"), true);
+  assertEquals(String(inserts[0].args[7]).includes("Algebra"), true);
+
+  // The run is audited (library.overdue.reminded carries count + reminderId).
+  const audits = calls.filter((c) => /INSERT INTO audit_events/.test(c.sql));
+  assertEquals(audits.length >= 1, true);
+  assertEquals(
+    audits.some((c) => c.args.some((a) => String(a).includes("library.overdue.reminded"))),
+    true,
+  );
+});
+
+Deno.test("LIB-5: no overdue loans → nothing rides the rail, recipientCount 0", async () => {
+  const { db, calls } = overdueFakeDb([
+    overdueLoan({ id: "future", dueDate: "2999-01-01" }), // not yet due
+    overdueLoan({ id: "returned", status: "returned" }), // returned → excluded
+  ]);
+
+  const result = await runOverdueReminder(db, overdueClaims(), OVERDUE_ORG, OVERDUE_SCHOOL);
+
+  assertEquals(result.recipientCount, 0);
+  assertEquals(result.reminderId, "");
+  // Check-at-trigger-time: nothing overdue → NOTHING is scheduled on the rail.
+  assertEquals(calls.some((c) => /INSERT INTO comm_broadcasts/.test(c.sql)), false);
 });
