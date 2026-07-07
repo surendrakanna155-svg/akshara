@@ -53,6 +53,7 @@ class ControlCenterDashboardScreen extends ConsumerWidget {
         emptyIcon: Icons.hub_outlined,
         onRetry: () =>
             retryErpFuture(ref, controlCenterDashboardFutureProvider),
+        skeleton: AksharaSkeleton.dashboard(),
         builder: (data) => _buildDashboardContent(context, data),
       ),
     );

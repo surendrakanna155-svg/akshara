@@ -49,6 +49,7 @@ class AlumniDashboardScreen extends ConsumerWidget {
         emptyMessage: 'No alumni data for the selected batch.',
         emptyIcon: Icons.school_outlined,
         onRetry: () => retryErpFuture(ref, alumniDashboardFutureProvider),
+        skeleton: AksharaSkeleton.dashboard(),
         builder: (data) => _buildDashboardContent(context, data),
       ),
     );

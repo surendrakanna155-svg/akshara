@@ -51,6 +51,7 @@ class InventoryDashboardScreen extends ConsumerWidget {
         emptyMessage: 'No inventory data for the selected department.',
         emptyIcon: Icons.inventory_2_outlined,
         onRetry: () => retryErpFuture(ref, inventoryDashboardFutureProvider),
+        skeleton: AksharaSkeleton.dashboard(),
         builder: (data) => _buildDashboardContent(context, data),
       ),
     );

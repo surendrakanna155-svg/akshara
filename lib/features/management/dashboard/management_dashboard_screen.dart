@@ -111,6 +111,7 @@ class ManagementDashboardScreen extends ConsumerWidget {
         emptyMessage: 'No management data for the selected filters.',
         emptyIcon: Icons.dashboard_outlined,
         onRetry: () => retryErpFuture(ref, managementDashboardFutureProvider),
+        skeleton: AksharaSkeleton.dashboard(),
         builder: (data) =>
             _buildDashboardContent(context, ref, data, filterIndex),
       ),

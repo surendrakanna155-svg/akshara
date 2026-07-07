@@ -66,6 +66,7 @@ class LibraryDashboardScreen extends ConsumerWidget {
         emptyMessage: 'No library data for the selected period.',
         emptyIcon: Icons.menu_book_outlined,
         onRetry: () => retryErpFuture(ref, libraryDashboardFutureProvider),
+        skeleton: AksharaSkeleton.dashboard(),
         builder: (data) => _buildDashboardContent(context, data),
       ),
     );

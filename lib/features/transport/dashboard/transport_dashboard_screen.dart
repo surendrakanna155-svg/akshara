@@ -49,6 +49,7 @@ class TransportDashboardScreen extends ConsumerWidget {
         emptyMessage: 'No transport data for the selected shift.',
         emptyIcon: Icons.directions_bus_outlined,
         onRetry: () => retryErpFuture(ref, transportDashboardFutureProvider),
+        skeleton: AksharaSkeleton.dashboard(),
         builder: (data) => _buildDashboardContent(context, data),
       ),
     );

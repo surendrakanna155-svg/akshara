@@ -49,6 +49,7 @@ class HostelDashboardScreen extends ConsumerWidget {
         emptyMessage: 'No hostel data for the selected block.',
         emptyIcon: Icons.hotel_outlined,
         onRetry: () => retryErpFuture(ref, hostelDashboardFutureProvider),
+        skeleton: AksharaSkeleton.dashboard(),
         builder: (data) => _buildDashboardContent(context, data),
       ),
     );

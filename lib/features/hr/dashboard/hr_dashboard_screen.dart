@@ -50,6 +50,7 @@ class HrDashboardScreen extends ConsumerWidget {
         emptyMessage: 'No HR data for the selected department.',
         emptyIcon: Icons.groups_outlined,
         onRetry: () => retryErpFuture(ref, hrDashboardFutureProvider),
+        skeleton: AksharaSkeleton.dashboard(),
         builder: (data) => _buildDashboardContent(context, data),
       ),
     );
