@@ -13,6 +13,7 @@ import '../../../core/exams/exam_administration_store.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/security/rbac_service.dart';
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/feedback/akshara_haptics.dart';
 import '../../../shared/widgets/akshara_view_action.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
@@ -299,6 +300,8 @@ class _MarksEntryBodyState extends ConsumerState<_MarksEntryBody>
       _resumedDraftValues.clear();
       unawaited(discardDraftOnSubmit(_draftKey));
       if (!mounted) return;
+      // Success beat on a completed marks save-all (P2-UX-2 §2.2).
+      AksharaHaptics.success();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(

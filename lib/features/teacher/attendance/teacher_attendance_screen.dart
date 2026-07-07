@@ -7,6 +7,7 @@ import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/akshara_view_action.dart';
+import '../../../shared/feedback/akshara_haptics.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -378,6 +379,8 @@ class _AttendanceBodyState extends ConsumerState<_AttendanceBody>
                     final classId = data.selectedClassId;
                     final ok = await submitAttendance(ref);
                     if (ok) {
+                      // Success beat on a completed submit (P2-UX-2 §2.1).
+                      AksharaHaptics.success();
                       // Submitted (or safely queued) — drop the local draft.
                       await discardDraftOnSubmit(_draftKeyFor(classId));
                     }

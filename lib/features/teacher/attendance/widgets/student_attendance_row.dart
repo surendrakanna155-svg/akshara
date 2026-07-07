@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/testing/qa_test_keys.dart';
+import '../../../../shared/feedback/akshara_haptics.dart';
 import '../../../../shared/widgets/akshara_status_chip.dart';
 import '../../../../theme/spacing.dart';
 import '../../../../theme/theme_extensions.dart';
@@ -145,7 +146,14 @@ class _MarkChip extends StatelessWidget {
       label: label,
       child: InkWell(
         key: markKey,
-        onTap: onTap,
+        // Haptic tick per state change (P2-UX-2 §2.1 — physical feedback on the
+        // highest-frequency daily task). Additive; the mark write is unchanged.
+        onTap: onTap == null
+            ? null
+            : () {
+                AksharaHaptics.tick();
+                onTap!();
+              },
         borderRadius: BorderRadius.circular(AksharaSpacing.s2),
         child: Opacity(
           opacity: onTap == null ? 0.45 : 1,

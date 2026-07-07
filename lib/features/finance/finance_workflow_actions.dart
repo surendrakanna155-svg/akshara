@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/config/finance_approval_config.dart';
 import '../../core/errors/api_failure.dart';
+import '../../shared/feedback/akshara_haptics.dart';
 import '../../core/errors/api_failure_mapper.dart';
 import '../../core/reliability/drafts/draft_autosave.dart';
 import '../../core/reliability/drafts/draft_model.dart';
@@ -795,6 +796,8 @@ Future<void> showRecordCollectionDialog(
         ),
       );
     } else {
+      // Success beat on a completed fee collection (P2-UX-2 §2.4).
+      AksharaHaptics.success();
       ref.read(financeLastReceiptNumberProvider.notifier).state =
           result.receiptNumber;
       ScaffoldMessenger.of(context).showSnackBar(
