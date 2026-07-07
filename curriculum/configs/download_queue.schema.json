@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DOWNLOAD_QUEUE.json — expected-resource records",
+  "description": "DOWNLOAD_QUEUE.json is an ARRAY of expected-resource records. Each record is what the downloader fetches and what the verification engine (verify_resource) consumes as `expected`. The engine's required keys are: resource_id, expected_filename, document_type, board, class_label, subject, source_url, destination. Discovery (build_catalogue.py) emits these; the downloader routes every fetched file through the verification engine keyed on `expected_filename`.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["resource_id", "expected_filename", "document_type", "board", "class_label", "subject", "destination", "priority", "status"],
+    "properties": {
+      "resource_id":       { "type": "string", "description": "folder_rules.resource_id_format" },
+      "expected_filename": { "type": "string", "description": "naming_standard; must match verification_rules.filename_pattern" },
+      "original_filename": { "type": "string" },
+      "title":             { "type": "string" },
+      "document_type":     { "type": "string", "description": "metadata_schema.allowed_document_types" },
+      "resource_category": { "type": "string", "description": "download_rules.document_type_to_category value" },
+      "board":             { "type": "string" },
+      "class_label":       { "type": "string" },
+      "subject":           { "type": "string" },
+      "priority":          { "type": "string", "enum": ["A", "B", "C"] },
+      "source_portal":     { "type": "string", "description": "official portal the resource is expected on (boards.official_sources)" },
+      "source_url":        { "type": ["string", "null"], "description": "resolved direct URL; null until a networked discovery run resolves it" },
+      "source_website":    { "type": "string" },
+      "publisher":         { "type": "string" },
+      "academic_year":     { "type": "string" },
+      "language":          { "type": "string", "default": "English" },
+      "medium":            { "type": "string", "default": "English" },
+      "license_status":    { "type": "string", "default": "PENDING_VERIFICATION" },
+      "destination":       { "type": "string", "description": "path under resources_dir where the verified file lands" },
+      "alternative_sources": { "type": "array", "items": { "type": "string" } },
+      "search_locations":  { "type": "array", "items": { "type": "string" } },
+      "discovery_status":  { "type": "string", "enum": ["PENDING_DISCOVERY", "DISCOVERED", "URL_RESOLVED"] },
+      "status":            { "type": "string", "enum": ["PENDING", "QUEUED", "DOWNLOADING", "DOWNLOADED", "VERIFIED", "FAILED", "RETRY_PENDING", "SKIPPED", "NOT_PUBLICLY_AVAILABLE"] },
+      "retry_count":       { "type": "integer", "default": 0 },
+      "last_attempt":      { "type": ["string", "null"] },
+      "download_timestamp": { "type": "string" },
+      "http_status":       { "type": ["integer", "null"] }
+    },
+    "additionalProperties": true
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "_comment": "Coverage priority matrix, quality-score components, and the D-5 Repository Certification policy (spec Part 07 + owner decision D-5). The certification gate (repository_audit.py --certify) reads targets + policy from here; it is the SOLE authority for REPOSITORY_READY_FOR_KNOWLEDGE_BASE_GENERATION and defaults to NOT certified until real coverage exists.",
+
+  "priority_categories": {
+    "A": ["syllabus", "textbook", "teacher_guide", "learning_outcomes", "academic_standards", "blueprint", "question_bank", "sample_paper"],
+    "B": ["worksheet", "activity_book", "lab_manual", "reference", "previous_paper"],
+    "C": ["circular", "notification", "supplementary"]
+  },
+
+  "coverage_targets": {
+    "A": 1.0,
+    "B": 0.95,
+    "C": null
+  },
+
+  "resource_states": [
+    "DISCOVERED", "DOWNLOADING", "DOWNLOADED", "VERIFIED", "FAILED",
+    "RETRY_PENDING", "NOT_PUBLICLY_AVAILABLE", "RESTRICTED",
+    "SUPERSEDED", "DEPRECATED", "PENDING_MANUAL_REVIEW"
+  ],
+  "documented_gap_states": ["NOT_PUBLICLY_AVAILABLE", "RESTRICTED", "SUPERSEDED", "DEPRECATED"],
+
+  "quality_score_weights": {
+    "_comment": "Repository quality score (0-100). Components sum to 1.0.",
+    "coverage_completeness": 0.35,
+    "download_success_rate": 0.15,
+    "verification_success_rate": 0.15,
+    "metadata_completeness": 0.15,
+    "official_source_ratio": 0.10,
+    "documentation_completeness": 0.10
+  },
+
+  "certification_policy": {
+    "_comment": "D-5. certified=true ONLY when ALL of these hold. Default (empty/partial repo) => NOT certified. A single dry-run file cannot certify because per-board Priority-A coverage will be far below target.",
+    "require_structural_audit_pass": true,
+    "require_nonempty_repository": true,
+    "require_all_in_scope_boards_priority_a_complete": true,
+    "priority_a_target": 1.0,
+    "count_documented_gaps_as_covered": true,
+    "in_scope_source": "boards.json:boards[*].in_scope"
+  }
+}

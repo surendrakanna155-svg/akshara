@@ -10,5 +10,9 @@ archives/
 *.doc
 *.epub
 *.zip
+# Runtime engineering logs are seeded on disk (Part-04 logs/) but are
+# machine-local artifacts — keep them out of git; the tracked logs/.gitkeep
+# preserves the directory.
+logs/*.log
 __pycache__/
 *.pyc

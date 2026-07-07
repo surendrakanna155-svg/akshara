@@ -1,0 +1,157 @@
+{
+  "_comment": "The Part-04 repository directory standard, encoded as data so scaffolding + directory validation are config-driven (change layout here, not in code). Binary/content trees (resources, downloads, cache, temp, archives) are gitignored (R10 guard); scaffolding drops a .gitkeep in gitignore-tracked-but-empty trees so the shape is reproducible without committing binaries.",
+
+  "top_level_dirs": [
+    "resources",
+    "metadata",
+    "indexes",
+    "logs",
+    "reports",
+    "downloads",
+    "cache",
+    "scripts",
+    "configs",
+    "discovery",
+    "archives",
+    "temp"
+  ],
+
+  "gitkept_dirs": [
+    "resources",
+    "downloads/incoming",
+    "downloads/verified",
+    "downloads/failed",
+    "downloads/duplicates",
+    "cache/search_results",
+    "cache/url_cache",
+    "cache/metadata_cache",
+    "cache/checksum_cache",
+    "cache/temporary_indexes",
+    "archives/old_versions",
+    "archives/deprecated",
+    "archives/historical",
+    "temp",
+    "logs"
+  ],
+
+  "resources_subtree": {
+    "categories": [
+      "curriculum",
+      "reference",
+      "foundation",
+      "question_papers",
+      "teacher_resources",
+      "worksheets",
+      "blueprints",
+      "assessment",
+      "supplementary"
+    ],
+    "curriculum_board_folders_source": "boards.json:board_folder",
+    "curriculum_class_folders_source": "classes.json:class_label",
+    "subject_category_folders": [
+      "Syllabus",
+      "Textbooks",
+      "Teacher_Guides",
+      "Learning_Outcomes",
+      "Academic_Standards",
+      "Blueprints",
+      "Question_Banks",
+      "Sample_Papers",
+      "Previous_Papers",
+      "Worksheets",
+      "Activity_Books",
+      "Lab_Manuals",
+      "Assessment",
+      "Reference",
+      "Circulars",
+      "Notifications",
+      "Archive"
+    ],
+    "foundation_folders": [
+      "JEE", "NEET", "NTSE", "Olympiad", "Mental_Ability",
+      "Logical_Reasoning", "HOTS", "Competency"
+    ]
+  },
+
+  "metadata_subdirs": ["boards", "subjects", "classes", "resources", "downloads"],
+  "downloads_subdirs": ["incoming", "verified", "failed", "duplicates"],
+  "cache_subdirs": ["search_results", "url_cache", "metadata_cache", "checksum_cache", "temporary_indexes"],
+  "archives_subdirs": ["old_versions", "deprecated", "historical"],
+
+  "scripts_subdirs": [
+    "common", "discovery", "download", "verification",
+    "organization", "metadata", "reports", "utilities", "maintenance", "tests"
+  ],
+
+  "directory_standard": {
+    "_comment": "The Part-04 storage standard as validation data. maintenance/validate_structure.py asserts every entry here and exits non-zero on any violation. required_top_level_dirs = the canonical 11 (spec ~1167-1194); `discovery` is a documented additional top-level dir the acquisition lane needs (source ladder + per-board catalogues) and is therefore allowed, not 'unexpected'. Report/index/log/pm keys resolve to filenames through paths.json so names live in one place.",
+    "required_top_level_dirs": [
+      "resources", "metadata", "indexes", "logs", "reports",
+      "downloads", "cache", "scripts", "configs", "archives", "temp"
+    ],
+    "allowed_additional_top_level_dirs": ["discovery"],
+    "required_subdirs": {
+      "metadata": ["boards", "subjects", "classes", "resources", "downloads"],
+      "downloads": ["incoming", "verified", "failed", "duplicates"],
+      "cache": ["search_results", "url_cache", "metadata_cache", "checksum_cache", "temporary_indexes"],
+      "archives": ["old_versions", "deprecated", "historical"],
+      "scripts": ["common", "discovery", "download", "verification",
+                  "organization", "metadata", "reports", "utilities", "maintenance", "tests"]
+    },
+    "required_index_keys": ["master", "board", "class", "subject", "resource", "download", "metadata", "search"],
+    "required_report_keys": [
+      "download_report", "resource_map", "resource_coverage", "board_coverage",
+      "subject_coverage", "quality_report", "quality_score", "license_report",
+      "source_list", "missing_resources", "parsing_report", "extraction_report"
+    ],
+    "required_log_keys": ["download", "verification", "metadata", "errors", "session", "retry", "processing"],
+    "required_pm_keys": ["todo", "progress", "session_log", "checkpoints",
+                         "download_queue", "failed_downloads", "completed_downloads", "project_status"],
+    "storage_invariants": [
+      "one_file", "one_metadata_record", "one_unique_identifier", "one_source_record",
+      "one_checksum", "one_index_entry", "one_repository_location"
+    ]
+  },
+
+  "naming_standard": {
+    "_comment": "Board_Class_Subject_ResourceType_Year_Version_Language. Underscores only, no spaces. Must satisfy verification_rules.json:filename_pattern.",
+    "format": "{board}_{class_label}_{subject}_{resource_type}_{year}_{version}_{language}.{ext}",
+    "example": "CBSE_Class08_Science_Textbook_2026_v1_English.pdf",
+    "separator": "_",
+    "forbid_spaces": true
+  },
+
+  "resource_id_format": {
+    "_comment": "Permanent internal identifier; stable even if filename/folder/version change (spec Part 08).",
+    "format": "AKS-{BOARD_CODE}-{CLASS_CODE}-{SUBJECT_CODE}-{TYPE_CODE}-{YEAR}-{SEQ6}",
+    "example": "AKS-CBSE-08-SCI-TEXT-2026-000001",
+    "seq_width": 6,
+    "type_codes": {
+      "syllabus": "SYLL",
+      "textbook": "TEXT",
+      "teacher_guide": "TGDE",
+      "learning_outcomes": "LOUT",
+      "academic_standards": "ASTD",
+      "blueprint": "BLUE",
+      "question_bank": "QBNK",
+      "sample_paper": "SAMP",
+      "previous_paper": "PREV",
+      "worksheet": "WKST",
+      "activity_book": "ACTB",
+      "lab_manual": "LABM",
+      "assessment": "ASMT",
+      "reference": "REFR",
+      "circular": "CIRC",
+      "notification": "NOTF",
+      "supplementary": "SUPP"
+    }
+  },
+
+  "directory_validation": {
+    "check_missing_required_folders": true,
+    "check_files_outside_standard_tree": true,
+    "check_invalid_filenames": true,
+    "check_spaces_in_filenames": true,
+    "warn_on_empty_required_folders": false
+  }
+}

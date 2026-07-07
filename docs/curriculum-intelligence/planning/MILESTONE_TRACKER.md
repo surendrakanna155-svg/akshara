@@ -10,9 +10,9 @@
 | Field | Value |
 |---|---|
 | **Program state** | 🟢 **APPROVED — 🔒 PROGRAM BASELINE v1.0 (owner, 2026-07-07)**. Implementation authorized per [`../OPUS_IMPLEMENTATION_HANDOFF.md`](../OPUS_IMPLEMENTATION_HANDOFF.md); Claude Opus 4.8 executes from this baseline. Baseline changes require owner approval |
-| **Current milestone** | **M0 ✅ complete** → next: **M1** (CI-A0 remainder + CI-A1 CBSE acquisition) ∥ schedule **P1-CI-0** before P4-RT-0 |
+| **Current milestone** | **M0 ✅ · CI-A0 remainder ✅ COMPLETE (2026-07-07)** → **M1** now awaits **CI-A1 CBSE acquisition (⏳ owner/network-gated** — needs a networked env + licence review, Risk R1); **P1-CI-0** (network-free code wave) schedulable in the app lane before P4-RT-0 |
 | **Owner decisions** | ✅ **D-1..D-6 resolved 2026-07-07** — decision record: [`../audits/GAP_ANALYSIS.md`](../audits/GAP_ANALYSIS.md) §3 (integration · `curriculum/` location · three-layer question model, production = Certified Bank only · board order CBSE→AP→TS→CISCE · Repository Certification stage · Question Trust Lifecycle RAW→…→CERTIFIED) |
-| **Last update** | 2026-07-07 — **Amendment A1 (AIMS sync)** merged across the planning suite: delta record [`../audits/GAP_ANALYSIS.md`](../audits/GAP_ANALYSIS.md) §6; new waves CI-C10/C11 appended post-E1b; scope extensions to CI-B4/C4/C5/C7; no re-sequencing of baseline waves |
+| **Last update** | 2026-07-07 — **CI-A0 remainder COMPLETE** (full Part-04 dir standard + 8 PM files + dry-run cycle + D-5 gate honest + 22/22 tests; committed on the `curriculum/` data lane). Earlier: **Amendment A1 (AIMS sync)** merged (delta record [`../audits/GAP_ANALYSIS.md`](../audits/GAP_ANALYSIS.md) §6; CI-C10/C11 + M9 appended) |
 
 ## Milestones
 
@@ -36,6 +36,7 @@
 | CI-A0 (partial) | Data-tooling tests 13/13 + CLI smoke + audit-gate proof | `curriculum/scripts/verification/` · [`ACCEPTANCE_TEST_PLAN.md`](ACCEPTANCE_TEST_PLAN.md) §0 AT-V1..V10 | 2026-07-07 | **Download Verification & Recovery Engine** delivered under direct owner instruction (pre-approval exception; data-lane tooling only, zero app surface) |
 | M0 close | Owner approval | **🔒 Program Baseline v1.0** — D-1..D-6 recorded ([`../audits/GAP_ANALYSIS.md`](../audits/GAP_ANALYSIS.md) §3) and applied across the planning suite | 2026-07-07 | Program approved; implementation handed to Opus 4.8 via [`../OPUS_IMPLEMENTATION_HANDOFF.md`](../OPUS_IMPLEMENTATION_HANDOFF.md) |
 | **Amendment A1** | Planning-package sync (no gate — doc-only) | AIMS ([`../spec/ASSESSMENT_INTELLIGENCE_MASTER_SPECIFICATION.md`](../spec/ASSESSMENT_INTELLIGENCE_MASTER_SPECIFICATION.md)) merged; delta record §6 of the gap analysis; waves CI-C10/C11 + milestone M9 appended; B11–B14, R15/R16, TD-CI-17/18, AT-C10/C11 added | 2026-07-07 | Baseline waves, G1/G2, P1-CI-0 scope and red-team position unchanged; new owner items A1-O1..O3 batched (non-blocking) |
+| **CI-A0 (complete)** | Data-quality gate PASS: dir-standard validator PASS · dry-run cycle proven · D-5 certify NOT-CERTIFIED (empty repo, exit 1) · tests **22/22** (13 verification + 9 new) | `curriculum/` — full MCIP Part-04 dir standard (11 top-level + subdirs), 8 Part-02 PM files, 11 index JSONs + 14 reports + 7 logs, `scripts/maintenance/{validate_structure,dry_run}.py` + `utilities/pm_bootstrap.py`; committed (curriculum data lane) | 2026-07-07 | Scaffolding + a synthetic-fixture dry-run only — **zero content acquired, zero app surface, no network** (Risk R1). Next CI-DATA wave **CI-A1 CBSE acquisition ⏳ owner/network-gated**; `downloader.py` https path guarded behind `--allow-network`; catalogues emit `PENDING_DISCOVERY` until a networked discovery run |
 
 ## Update rules
 

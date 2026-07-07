@@ -1,0 +1,97 @@
+{
+  "_comment": "Target boards + per-board × per-class subject lists (spec Parts 01/03/05/06). board_order is fixed by owner decision D-4: CBSE -> AP -> Telangana -> CISCE. in_scope=true means the board is a program target (all four are, per D-4) — certification (D-5) requires Priority-A completion for every in_scope board. acquisition_status tracks the board's own progress (DISCOVERY_PENDING until its CI-A wave runs). subjects_by_class is a config-driven SEED to refine against the official curriculum during discovery. official_sources drives the discovery source ladder (Part 05).",
+  "board_order": ["cbse", "ap", "telangana", "icse"],
+  "boards": {
+    "cbse": {
+      "code": "CBSE",
+      "name": "Central Board of Secondary Education",
+      "content_authority": "NCERT",
+      "board_folder": "cbse",
+      "wave": "CI-A1",
+      "sequence": 1,
+      "in_scope": true,
+      "acquisition_status": "DISCOVERY_PENDING",
+      "medium": ["English"],
+      "official_sources": [
+        "https://www.cbse.gov.in",
+        "https://ncert.nic.in",
+        "https://ncert.nic.in/textbook.php",
+        "https://epathshala.nic.in",
+        "https://diksha.gov.in"
+      ],
+      "subjects_by_class": {
+        "6":  ["mathematics", "science", "social_science", "english"],
+        "7":  ["mathematics", "science", "social_science", "english"],
+        "8":  ["mathematics", "science", "social_science", "english"],
+        "9":  ["mathematics", "science", "social_science", "english", "computer_science"],
+        "10": ["mathematics", "science", "social_science", "english", "computer_science"]
+      }
+    },
+    "ap": {
+      "code": "APSCERT",
+      "name": "Andhra Pradesh State Council of Educational Research and Training",
+      "content_authority": "AP SCERT",
+      "board_folder": "ap",
+      "wave": "CI-A2",
+      "sequence": 2,
+      "in_scope": true,
+      "acquisition_status": "DISCOVERY_PENDING",
+      "medium": ["English"],
+      "official_sources": [
+        "https://scert.ap.gov.in",
+        "https://apscert.gov.in",
+        "https://diksha.gov.in"
+      ],
+      "subjects_by_class": {
+        "6":  ["mathematics", "science", "social_science", "english"],
+        "7":  ["mathematics", "science", "social_science", "english"],
+        "8":  ["mathematics", "science", "social_science", "english"],
+        "9":  ["mathematics", "science", "social_science", "english"],
+        "10": ["mathematics", "science", "social_science", "english"]
+      }
+    },
+    "telangana": {
+      "code": "TSSCERT",
+      "name": "Telangana State Council of Educational Research and Training",
+      "content_authority": "SCERT Telangana",
+      "board_folder": "telangana",
+      "wave": "CI-A3",
+      "sequence": 3,
+      "in_scope": true,
+      "acquisition_status": "DISCOVERY_PENDING",
+      "medium": ["English"],
+      "official_sources": [
+        "https://scert.telangana.gov.in",
+        "https://diksha.gov.in"
+      ],
+      "subjects_by_class": {
+        "6":  ["mathematics", "science", "social_science", "english"],
+        "7":  ["mathematics", "science", "social_science", "english"],
+        "8":  ["mathematics", "science", "social_science", "english"],
+        "9":  ["mathematics", "science", "social_science", "english"],
+        "10": ["mathematics", "science", "social_science", "english"]
+      }
+    },
+    "icse": {
+      "code": "CISCE",
+      "name": "Council for the Indian School Certificate Examinations (ICSE)",
+      "content_authority": "CISCE",
+      "board_folder": "icse",
+      "wave": "CI-A4",
+      "sequence": 4,
+      "in_scope": true,
+      "acquisition_status": "DISCOVERY_PENDING",
+      "medium": ["English"],
+      "official_sources": [
+        "https://cisce.org"
+      ],
+      "subjects_by_class": {
+        "6":  ["mathematics", "science", "social_science", "english"],
+        "7":  ["mathematics", "science", "social_science", "english"],
+        "8":  ["mathematics", "science", "social_science", "english"],
+        "9":  ["mathematics", "physics", "chemistry", "biology", "history", "geography", "civics", "english", "computer_science"],
+        "10": ["mathematics", "physics", "chemistry", "biology", "history", "geography", "civics", "english", "computer_science"]
+      }
+    }
+  }
+}

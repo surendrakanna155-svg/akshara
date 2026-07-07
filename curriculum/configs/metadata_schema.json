@@ -1,0 +1,79 @@
+{
+  "_comment": "Canonical metadata schema (spec Part 08). One metadata record per resource; the verification engine (V9) enforces the 'required' subset via verification_rules.json:metadata_required_fields — THOSE MUST STAY IN SYNC WITH THIS FILE. This schema is the fuller documentation used by the metadata tooling + validation, and it declares the KB-preparation placeholder fields (left PENDING_EXTRACTION during acquisition; populated only in the Knowledge-Base phase).",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Curriculum Resource Metadata",
+  "type": "object",
+  "required": [
+    "resource_id", "original_filename", "repository_filename", "board",
+    "class_label", "subject", "document_type", "language", "medium",
+    "source_url", "download_timestamp", "verification_timestamp",
+    "checksum_sha256", "file_size_bytes", "file_format", "storage_path",
+    "document_status", "verification_status"
+  ],
+  "properties": {
+    "resource_id":          { "type": "string", "description": "Permanent internal ID (folder_rules.resource_id_format)" },
+    "original_filename":    { "type": "string", "description": "Filename as downloaded from source (traceability)" },
+    "repository_filename":  { "type": "string", "description": "Normalized filename in the repository (naming_standard)" },
+    "board":                { "type": "string" },
+    "class_label":          { "type": "string" },
+    "subject":              { "type": "string" },
+    "academic_year":        { "type": "string" },
+    "publication_year":     { "type": "string" },
+    "version":              { "type": "string" },
+    "language":             { "type": "string", "default": "English" },
+    "medium":               { "type": "string", "default": "English" },
+    "publisher":            { "type": "string" },
+    "document_type":        { "type": "string", "description": "One of allowed_document_types" },
+    "resource_category":    { "type": "string", "description": "download_rules.document_type_to_category value" },
+    "edition":              { "type": "string" },
+    "official":             { "type": "boolean", "default": true },
+    "source_website":       { "type": "string" },
+    "source_url":           { "type": "string" },
+    "discovery_method":     { "type": "string" },
+    "download_timestamp":   { "type": "string" },
+    "verification_timestamp": { "type": "string" },
+    "checksum_sha256":      { "type": "string" },
+    "file_size_bytes":      { "type": "integer" },
+    "file_format":          { "type": "string" },
+    "mime_type":            { "type": "string" },
+    "storage_path":         { "type": "string" },
+    "license_status":       { "type": "string", "default": "PENDING_VERIFICATION", "description": "MANDATORY provenance per R1; must be resolved before certification" },
+    "document_status":      { "type": "string", "enum": ["AVAILABLE", "DOWNLOADED", "VERIFIED", "RESTRICTED", "SUPERSEDED", "DEPRECATED", "PENDING_VERIFICATION"] },
+    "verification_status":  { "type": "string", "enum": ["VERIFIED", "FAILED_VERIFICATION", "PENDING_VERIFICATION"] },
+    "processing_status":    { "type": "string", "enum": ["DOWNLOADED", "VERIFIED", "INDEXED", "READY_FOR_EXTRACTION", "PENDING_EXTRACTION", "FAILED_VERIFICATION", "REQUIRES_MANUAL_REVIEW"] },
+    "remarks":              { "type": "string" },
+    "relationships": {
+      "type": "object",
+      "description": "Only clearly identifiable relationships (Part 08 'do not infer').",
+      "properties": {
+        "related_resource_ids": { "type": "array", "items": { "type": "string" } },
+        "previous_edition":     { "type": "string" },
+        "next_edition":         { "type": "string" },
+        "companion_workbook":   { "type": "string" },
+        "teacher_guide":        { "type": "string" },
+        "blueprint":            { "type": "string" },
+        "question_bank":        { "type": "string" }
+      }
+    },
+    "knowledge_base_prep": {
+      "type": "object",
+      "description": "Placeholders for the future KB phase — left PENDING_EXTRACTION during acquisition.",
+      "properties": {
+        "chapters":          { "type": "string", "default": "PENDING_EXTRACTION" },
+        "topics":            { "type": "string", "default": "PENDING_EXTRACTION" },
+        "learning_outcomes": { "type": "string", "default": "PENDING_EXTRACTION" },
+        "bloom_classification": { "type": "string", "default": "PENDING_EXTRACTION" },
+        "competency_mapping": { "type": "string", "default": "PENDING_EXTRACTION" }
+      }
+    }
+  },
+  "allowed_document_types": [
+    "Curriculum", "Syllabus", "Textbook", "Workbook", "Teacher Guide",
+    "Teacher Handbook", "Learning Outcomes", "Academic Standards", "Blueprint",
+    "Assessment Framework", "Assessment Guidelines", "Competency Framework",
+    "Question Bank", "Worksheet", "Model Paper", "Sample Paper", "Marking Scheme",
+    "Previous Paper", "Reference Material", "Circular", "Notification",
+    "Activity Book", "Lab Manual", "Practical Manual", "Supplementary Resource",
+    "Foundation Material", "Training Material", "Other"
+  ]
+}

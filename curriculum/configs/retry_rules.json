@@ -1,0 +1,17 @@
+{
+  "_comment": "Download-lane retry policy (spec Parts 02/03 failure handling). Kept intentionally consistent with verification_rules.json:retry_policy so the two lanes never disagree: the VERIFICATION engine's recovery ladder uses verification_rules.retry_policy; the DOWNLOADER's network-level attempts use this file. Same max/backoff values on both sides.",
+  "max_retries_per_source": 2,
+  "backoff_minutes": [5, 30, 120],
+  "exhausted_status": "MISSING",
+  "network_attempts": {
+    "_comment": "HTTP-level retry for a single fetch attempt before it is handed to the verification recovery ladder.",
+    "max_attempts_per_fetch": 3,
+    "backoff_seconds": [2, 8, 30],
+    "retry_on_http_status": [408, 425, 429, 500, 502, 503, 504]
+  },
+  "alternative_source_policy": {
+    "try_alternatives_after_source_exhausted": true,
+    "reset_retry_count_on_new_source": true
+  },
+  "on_exhaustion": "record_missing"
+}

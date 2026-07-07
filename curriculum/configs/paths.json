@@ -1,5 +1,5 @@
 {
-  "_comment": "Single source of truth for workspace layout. workspace_root is resolved relative to the curriculum/ directory (the parent of configs/). Change workspace_root alone to relocate all content trees (owner decision D-2).",
+  "_comment": "Single source of truth for workspace layout. workspace_root is resolved relative to the curriculum/ directory (the parent of configs/). Change workspace_root alone to relocate all content trees (owner decision D-2). Keys are additive: the verification engine reads a fixed subset (resources_dir, metadata_resources_dir, downloads_*, indexes_dir, reports_dir, and the master/download/checksum/duplicates index + download_verification/repository_audit report + pm_files entries). New keys below serve the data-lane scripts (discovery/download/organization/metadata/reports/certification).",
   "workspace_root": ".",
   "resources_dir": "resources",
   "foundation_dir": "resources/foundation",
@@ -8,25 +8,78 @@
   "downloads_failed": "downloads/failed",
   "downloads_duplicates": "downloads/duplicates",
   "metadata_resources_dir": "metadata/resources",
+  "metadata_boards_dir": "metadata/boards",
+  "metadata_subjects_dir": "metadata/subjects",
+  "metadata_classes_dir": "metadata/classes",
+  "metadata_downloads_dir": "metadata/downloads",
   "indexes_dir": "indexes",
   "reports_dir": "reports",
   "logs_dir": "logs",
+  "cache_dir": "cache",
+  "archives_dir": "archives",
+  "discovery_dir": "discovery",
   "temp_dir": "temp",
   "pm_files": {
     "download_queue": "DOWNLOAD_QUEUE.json",
     "failed_downloads": "FAILED_DOWNLOADS.json",
     "completed_downloads": "COMPLETED_DOWNLOADS.json",
     "project_status": "PROJECT_STATUS.json",
-    "missing_resources": "MISSING_RESOURCES.md"
+    "missing_resources": "MISSING_RESOURCES.md",
+    "todo": "TODO.md",
+    "progress": "PROGRESS.md",
+    "session_log": "SESSION_LOG.md",
+    "checkpoints": "CHECKPOINTS.md"
   },
   "index_files": {
     "master": "master_index.json",
     "download": "download_index.json",
     "checksum": "checksum_index.json",
-    "duplicates": "duplicate_map.json"
+    "duplicates": "duplicate_map.json",
+    "board": "board_index.json",
+    "class": "class_index.json",
+    "subject": "subject_index.json",
+    "resource": "resource_index.json",
+    "metadata": "metadata_index.json",
+    "document_type": "document_type_index.json",
+    "search": "search_index.json"
   },
   "report_files": {
     "download_verification": "DOWNLOAD_VERIFICATION_REPORT.md",
-    "repository_audit": "REPOSITORY_AUDIT_REPORT.md"
+    "repository_audit": "REPOSITORY_AUDIT_REPORT.md",
+    "repository_certification": "CURRICULUM_REPOSITORY_CERTIFICATION.md",
+    "source_list": "SOURCE_LIST.md",
+    "resource_coverage": "RESOURCE_COVERAGE.md",
+    "board_coverage": "BOARD_COVERAGE.md",
+    "subject_coverage": "SUBJECT_COVERAGE.md",
+    "quality_report": "QUALITY_REPORT.md",
+    "quality_score": "QUALITY_SCORE.md",
+    "license_report": "LICENSE_REPORT.md",
+    "download_report": "DOWNLOAD_REPORT.md",
+    "resource_map": "RESOURCE_MAP.md",
+    "missing_resources": "MISSING_RESOURCES.md",
+    "parsing_report": "PARSING_REPORT.md",
+    "extraction_report": "EXTRACTION_REPORT.md"
+  },
+  "log_files": {
+    "download": "download.log",
+    "verification": "verification.log",
+    "metadata": "metadata.log",
+    "errors": "errors.log",
+    "session": "session.log",
+    "retry": "retry.log",
+    "processing": "processing.log"
+  },
+  "config_files": {
+    "paths": "paths.json",
+    "verification_rules": "verification_rules.json",
+    "boards": "boards.json",
+    "subjects": "subjects.json",
+    "classes": "classes.json",
+    "download_rules": "download_rules.json",
+    "folder_rules": "folder_rules.json",
+    "metadata_schema": "metadata_schema.json",
+    "quality_rules": "quality_rules.json",
+    "retry_rules": "retry_rules.json",
+    "download_queue_schema": "download_queue.schema.json"
   }
 }

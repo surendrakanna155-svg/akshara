@@ -1,0 +1,17 @@
+{
+  "_comment": "Canonical subject registry (spec Part 03 'do not hardcode — follow official curriculum'). This file IS the editable curriculum table: refine per board during discovery (CI-A1..A4). key = internal slug; code = short token used in resource IDs; subject_folder = on-disk folder (Part 04). aliases feed the search index. The per-board × per-class subject lists live in boards.json (subjects_by_class); this registry defines each subject once.",
+  "subjects": {
+    "mathematics":     { "code": "MATH", "display": "Mathematics",       "subject_folder": "Mathematics",       "aliases": ["Maths", "Math"] },
+    "science":         { "code": "SCI",  "display": "Science",           "subject_folder": "Science",           "aliases": ["General Science", "EVS Science"] },
+    "physics":         { "code": "PHY",  "display": "Physics",           "subject_folder": "Physics",           "aliases": [] },
+    "chemistry":       { "code": "CHEM", "display": "Chemistry",         "subject_folder": "Chemistry",         "aliases": [] },
+    "biology":         { "code": "BIO",  "display": "Biology",           "subject_folder": "Biology",           "aliases": ["Life Science"] },
+    "social_science":  { "code": "SST",  "display": "Social Science",    "subject_folder": "Social_Science",    "aliases": ["Social Studies", "SST", "EVS Social"] },
+    "history":         { "code": "HIST", "display": "History",           "subject_folder": "History",           "aliases": [] },
+    "geography":       { "code": "GEO",  "display": "Geography",         "subject_folder": "Geography",         "aliases": [] },
+    "civics":          { "code": "CIV",  "display": "Civics",            "subject_folder": "Civics",            "aliases": ["Political Science", "Social & Political Life"] },
+    "economics":       { "code": "ECO",  "display": "Economics",         "subject_folder": "Economics",         "aliases": [] },
+    "english":         { "code": "ENG",  "display": "English",           "subject_folder": "English",           "aliases": ["English Language", "English Literature"] },
+    "computer_science":{ "code": "CS",   "display": "Computer Science",  "subject_folder": "Computer_Science",  "aliases": ["ICT", "Computer Applications", "Information Technology", "Foundation of IT"] }
+  }
+}
