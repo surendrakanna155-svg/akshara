@@ -11,10 +11,10 @@
 | Field | Value |
 |---|---|
 | **Current Phase** | **P1 — Remaining Backend & Code Fixes** 🟠 (P0 code/security ✅ 14/19; 5 live-lane tasks ⏳ owner-deferred) |
-| **Current Wave** | **🎉 Phase-C module program (C0–C21) ✅ COMPLETE (2026-07-07)** — all 22 C-waves landed (minus deferred C3 GA-1-live, C6 HWK-1-schema ⚠basis-stale). **App lane next: P1-CI-0 — curriculum-engine seam** (golden-pin solver + `edu_exam_paper_links` + dormant E1a; network-free; before P4-RT-0) — 🔵 next up. **CI-DATA lane: CI-A0 ✅ done; CI-A1 (CBSE) ⏳ owner/network-gated**. **P2-UX-1 ∥-eligible**. P1-CODE-4/6/7/8 stay 👤-gated. |
+| **Current Wave** | **🎉 Phase-C (C0–C21) ✅ + P1-CI-0 ✅ → P1 NON-GATED LANE COMPLETE (2026-07-07).** All 22 C-waves + the curriculum-engine seam landed (minus deferred C3 GA-1-live, C6 HWK-1-schema ⚠basis-stale). **App lane next: P2-UX-1 — "feel & trust" pack** (opens the P2 UI/UX phase — discovery-first, phase boundary) — 🔵 next up. **Remaining P1 owner-gated: P1-CODE-4/6/7/8.** **CI-DATA lane: CI-A0 ✅ done; CI-A1 (CBSE) ⏳ owner/network-gated**. |
 | **Wave Status** | **P1-CODE-1/2/3/5 ✅ + P1-PROD-0 ✅ + C1/C2/C4/C5/C7/C8/C9/C10/C11/C12/C13-Exams/C14/C15/C16 ✅** — through Finance, Exams, Registers/Certs, HR Payroll, Transport, Inventory/Library/Communication, Approval batch, Admissions, Finance receipting, Exams half, Teacher & Attendance, HR & SIS, and Transport & Inventory productivity (TRN-8 XCT-2 + INV-7 storekeepers + INV-5 GRN export). P0: 14/19 ✅; 5 live-lane ⏳ owner-deferred. |
 | **Planning** | 🔒 FROZEN 2026-07-04 → **AUTONOMOUS EXECUTION UNDER WAY** (P1 code + PROD waves; live lane deferred) |
-| **Last commit-gated wave** | **P1-PROD-19** (`799713f1`) — C21 Records & Parent polish (LAST Phase-C wave): SIS-3 (audited doc verify), HR-5 (headcount-by-dept), PAR-6 (next-PTM hero + action-items) verified built. **Built SIS-4 — clerk family/sibling view** (the one real feature gap): `GET /sis/students/:id/siblings` (viewSis, org+school scoped), shared-active-guardian join, self-excluded, **cross-school isolation structural + tested**; full client stack + profile section. Read-only, no migration. analyze 0 · SIS flutter 126/126 (+5) · deno SIS 150/1 (only tracked ISO-COUNT) · +13 tests. |
+| **Last commit-gated wave** | **P1-CI-0** (`ba47f065`) — Curriculum-engine seam (first CI code wave): **CI-0a** golden-pinned `education_blueprint_solver.ts` byte-stable (new golden test + `.snap`; solver UNTOUCHED → future edits must update the golden), **CI-0b** `edu_exam_paper_links` (v3.0 §5.2) migration + `linkExamToPaper`/`getExamPaperLink` repo (additive seam, NOT wired to publish), **CI-0c** dormant E1a seed migration (response spine + trust columns [existing→'trusted'] + exposure; zero UI). Additive-only; certified invariants I1–I8 intact; ZERO behaviour change. analyze 0 (0 `lib/`) · education deno 47/0 (+8: golden 3 + link 5) · deno check green. |
 
 ## 2. Wave arithmetic
 
@@ -133,12 +133,14 @@ Hard gates: P0 gates P4/P6/P7/P8 · P1-CODE-1 → P2-UX-2 · P3-AI-1 → P3-AI-2
 > **P1-PROD-17 (C19 Parent self-service) ✅ 2026-07-07** (no code) — VERIFIED; all five PAR items built + tested + wired; strong multi-layer parent RLS. deno parent+pilot 31/0 · flutter parent 21/0.
 > **P1-PROD-18 (C20 Teacher & Leadership polish) ✅ 2026-07-07** (`8cd87436`) — verify-mostly; TCH-5/6/7 + DIR-3 built, closed the PRI-4/5 test gaps (+6); found the HWK-1 `due_date` contract already live (roadmap note stale).
 > **P1-PROD-19 (C21 Records & Parent polish) ✅ 2026-07-07** (`799713f1`) — SIS-3/HR-5/PAR-6 verified; **built SIS-4 (clerk family/sibling view)** — the one real feature gap: cross-school-isolated shared-guardian query + profile section. +13 tests.
-> **🎉 Phase-C module program (C0–C21) COMPLETE** — 19 executed C-waves (C1/C2/C4/C5/C7/C8/C9/C10/C11/C12/C13-Exams/C14/C15/C16/C17/C18/C19/C20/C21) atop P0·W1+legs, P1-CODE-1/2/3/5, P1-PROD-0 (XCT). CI-DATA: CI-A0 ✅ (`321dd2fc`); owner planning + AIMS (`8c032e16`).
+> **🎉 Phase-C (C0–C21) COMPLETE** — 19 executed C-waves atop P0·W1+legs, P1-CODE-1/2/3/5, P1-PROD-0. CI-DATA: CI-A0 ✅ (`321dd2fc`); owner planning + AIMS (`8c032e16`).
+> **P1-CI-0 (curriculum-engine seam) ✅ 2026-07-07** (`ba47f065`) — golden-pinned the certified solver byte-stable (untouched) + `edu_exam_paper_links` (v3.0 §5.2 seam) + dormant E1a seed. Additive-only, I1–I8 intact, ZERO behaviour change. **▶ The entire P1 NON-GATED LANE is COMPLETE.**
 >
-> **▶ NEXT:**
-> **(1) App lane: P1-CI-0 — curriculum-engine seam** (golden-pin `education_blueprint_solver.ts` byte-stable BEFORE any edit · `edu_exam_paper_links` v3.0 §5.2 · dormant E1a seed) — network-free, additive-only, one EOS wave, MUST precede P4-RT-0. Golden-first hard rule; certified invariants I1–I8 inviolable.
-> **(2) CI-DATA lane: CI-A1 (CBSE acquisition) ⏳ owner/network-gated** (needs networked env + licence review, Risk R1).
-> **P2-UX-1 ∥-eligible.** **Owner-decision batch:** identity cluster (P1-CODE-4) · PAR3-UPLOAD (medical-cert real storage) · PRI-4/5 scheduled-send · HWK-1-basis re-check (may unblock C6) · CI-A1 network/licence provisioning · module-scope 👤s (P1-CODE-6/7/8) · live lane (`P0-INFRA-1/3`, `P0-TEST-1/2/3`).
+> **▶ NEXT (phase boundary):**
+> **(1) App lane: P2-UX-1 — "feel & trust" pack** (opens the P2 UI/UX phase) — discovery-first; pull scope from the Product Excellence Master Plan §6. ⚠ Confirm with the owner whether to open P2 now or resolve the decision batch first.
+> **(2) Remaining P1 is owner-gated: P1-CODE-4 (Identity) + P1-CODE-6/7/8 (module scope).**
+> **(3) CI-DATA lane: CI-A1 (CBSE acquisition) ⏳ owner/network-gated** (networked env + licence review, Risk R1); next CI code wave CI-C1 needs a hand-transcribed CBSE template (CI-B3).
+> **👤 OWNER-DECISION BATCH (surface now):** identity cluster (P1-CODE-4) · PAR3-UPLOAD (parent medical-cert real file storage vs reference-only) · PRI-4/5 scheduled-send (in-app card vs real XCT-2 push) · HWK-1-basis re-check (`due_date` already live → may unblock C6) · CI-A1 network/licence provisioning · module-scope (P1-CODE-6/7/8) · live lane (`P0-INFRA-1/3`, `P0-TEST-1/2/3`).
 
 ---
 
