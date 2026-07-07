@@ -31,7 +31,7 @@
 |---|---:|---:|---:|---:|---|
 | **Planning** | — | ✅ FROZEN 2026-07-04 | — | — | audit-verified |
 | P0 — Truth/Docs/Live-Verify | 19 | 14 (DOC-1/2/3/4/5, SEC-1/2/3, INFRA-2/4/5/6, CODE-1/2) | 0 | 5 (⏳ live-lane: INFRA-1/3, TEST-1/2/3) | per task |
-| P1 — Backend & Code Fixes | 13 (+22 PROD waves incl. P1-PROD-22 staff-attendance GA track) | 14 (CODE-1/2/3/5, PROD-0, C1, C2, C4✓, C5, C7, C8✓, C9, C10, C11) | 0 | 21 (next: C12 Finance productivity — C3+C6 defer; CODE-4 👤-gated) | per wave |
+| P1 — Backend & Code Fixes | 13 (+22 PROD waves incl. P1-PROD-22 staff-attendance GA track) | 24 (CODE-1/2/3/5, PROD-0, C1–C21 = PROD-1..19) + P1-CI-0 seam ✅ | 0 | 11 (CODE-4/6/7/8, SEC-1, TEST-1/2, INFRA-1 · PROD-22 GA track · C3 ⏳ GA-1-live · C6 👤 HWK-1) | per wave |
 | P2 — UI/UX | 5 | 0 | 0 | 5 | per wave |
 | P3 — Adaptive AI (W1.1–1.5 · W2.0–2.9) | 2 (15 sub-waves) | 0 | 0 | all | per sub-wave |
 | P4 — Red Team Prep | 2 | 0 | 0 | 2 | verdict |
@@ -41,8 +41,8 @@
 | P8 — GA Readiness | 5 | 0 | 0 | 5 | RELEASE |
 
 **Overall:** 🔵 **EXECUTING.** Planning frozen 2026-07-04; **Wave 1 (P0 · W1 — Documentation Truth) ✅ COMPLETE
-(commit `c2b8e27`, EOS DOCS PASS).** The next autonomous wave is defined in
-[`../roadmap/NEXT_ACTIVE_WAVE.md`](../roadmap/NEXT_ACTIVE_WAVE.md) (now **P0 · W2 — Safety Fixes**). Each wave:
+(commit `c2b8e27`, EOS DOCS PASS).** The **P1 non-gated lane is now COMPLETE** (P0 code/security ✅ 14/19 + P1-CODE-1/2/3/5 ✅ + P1-PROD-0 ✅ + Phase-C C0–C21 ✅ + P1-CI-0 ✅). The next autonomous wave is defined in
+[`../roadmap/NEXT_ACTIVE_WAVE.md`](../roadmap/NEXT_ACTIVE_WAVE.md) (now **P2-UX-1 — "feel & trust" pack**, a phase boundary; remaining P1 = owner-gated P1-CODE-4/6/7/8 + P1-PROD-22, plus deferred C3/C6 and the live-lane tail). Each wave:
 implement → validate → `/eos` PASS → commit → append a journal row here.
 
 ---
