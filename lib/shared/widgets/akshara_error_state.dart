@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/errors/api_failure.dart';
+import '../copy/akshara_copy.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
 import 'akshara_empty_illustration.dart';
@@ -17,9 +18,15 @@ class AksharaErrorState extends StatelessWidget {
     this.errorCode,
     this.failure,
     this.compact = false,
+    this.title,
+    this.tone = AksharaEmptyTone.error,
   });
 
   /// Builds a user-friendly error from a standardized [ApiFailure].
+  ///
+  /// A permission / session / offline failure is rendered as its OWN state
+  /// (distinct title + tone, retry suppressed where pointless) rather than the
+  /// generic "Something went wrong" error — see [AksharaFailurePresentation].
   factory AksharaErrorState.fromFailure(
     ApiFailure failure, {
     Key? key,
@@ -37,6 +44,14 @@ class AksharaErrorState extends StatelessWidget {
       retryLabel: retryLabel,
       failure: failure,
       compact: compact,
+      title: failure.type.stateTitle,
+      tone: switch (failure.type.kind) {
+        AksharaFailureKind.permission ||
+        AksharaFailureKind.sessionExpired =>
+          AksharaEmptyTone.info,
+        AksharaFailureKind.offline => AksharaEmptyTone.warning,
+        AksharaFailureKind.error => AksharaEmptyTone.error,
+      },
     );
   }
 
@@ -47,6 +62,12 @@ class AksharaErrorState extends StatelessWidget {
   final String? errorCode;
   final ApiFailure? failure;
   final bool compact;
+
+  /// State heading; defaults to the generic error title when null.
+  final String? title;
+
+  /// Visual tone of the state panel/illustration.
+  final AksharaEmptyTone tone;
 
   static IconData _iconForFailure(ApiFailureType type) => switch (type) {
         ApiFailureType.network || ApiFailureType.timeout => Icons.wifi_off,
@@ -68,13 +89,13 @@ class AksharaErrorState extends StatelessWidget {
 
     final content = AksharaEmptyContent(
       compact: compact,
-      title: compact ? null : 'Something went wrong',
+      title: compact ? null : (title ?? AksharaCopy.errorTitle),
       message: message,
       actionLabel: onRetry != null ? retryLabel : null,
       onAction: onRetry,
       illustration: AksharaEmptyIllustration(
         icon: icon,
-        tone: AksharaEmptyTone.error,
+        tone: tone,
         size: compact
             ? AksharaEmptyIllustrationSize.standard
             : AksharaEmptyIllustrationSize.prominent,
@@ -93,7 +114,7 @@ class AksharaErrorState extends StatelessWidget {
               : ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 380),
                   child: AksharaEmptyPanel(
-                    tone: AksharaEmptyTone.error,
+                    tone: tone,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [

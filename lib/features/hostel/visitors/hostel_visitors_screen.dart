@@ -118,7 +118,11 @@ class _VisitorsTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (visitors.isEmpty) {
-      return const Text('No records');
+      return const AksharaEmptyState(
+        message: 'No visitor records yet.',
+        icon: Icons.badge_outlined,
+        compact: true,
+      );
     }
 
     if (AdminLayout.useCardLayout(context)) {
