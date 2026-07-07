@@ -3,6 +3,11 @@ import 'package:flutter/material.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
 
+/// C2 (Product Excellence Master Plan) — row density as a table PROPERTY, not an
+/// app mode. `compact` (40px rows, tighter header + cell padding) suits the
+/// high-volume clerk persona; `standard` (52px) is the calm default.
+enum AksharaTableDensity { standard, compact }
+
 /// Virtualized table with a fixed [DataTable] header and [ListView.builder] body.
 ///
 /// Use for large ERP lists where building every [DataRow] at once is expensive.
@@ -18,6 +23,7 @@ class AksharaVirtualizedDataTable extends StatelessWidget {
     this.showCheckboxColumn = false,
     this.tableHeight = 480,
     this.semanticLabel,
+    this.density = AksharaTableDensity.standard,
   });
 
   final List<DataColumn> columns;
@@ -29,6 +35,14 @@ class AksharaVirtualizedDataTable extends StatelessWidget {
   final bool showCheckboxColumn;
   final double tableHeight;
   final String? semanticLabel;
+
+  /// Row density; [AksharaTableDensity.compact] overrides the row/header heights
+  /// with the clerk-density 40px preset.
+  final AksharaTableDensity density;
+
+  bool get _compact => density == AksharaTableDensity.compact;
+  double get _rowMinHeight => _compact ? 40 : dataRowMinHeight;
+  double get _headerHeight => _compact ? 40 : headingRowHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +65,7 @@ class AksharaVirtualizedDataTable extends StatelessWidget {
             children: [
               _HeaderRow(
                 columns: columns,
-                height: headingRowHeight,
+                height: _headerHeight,
                 dividerColor: dividerColor,
                 textStyle: headerStyle,
                 showCheckboxColumn: showCheckboxColumn,
@@ -69,7 +83,9 @@ class AksharaVirtualizedDataTable extends StatelessWidget {
                             child: _VirtualDataRow(
                               row: row,
                               columnCount: columns.length,
-                              minHeight: dataRowMinHeight,
+                              minHeight: _rowMinHeight,
+                              cellVerticalPadding:
+                                  _compact ? AksharaSpacing.s1 : AksharaSpacing.s2,
                               dividerColor: dividerColor,
                               showCheckboxColumn: showCheckboxColumn,
                             ),
@@ -140,6 +156,7 @@ class _VirtualDataRow extends StatelessWidget {
     required this.row,
     required this.columnCount,
     required this.minHeight,
+    required this.cellVerticalPadding,
     required this.dividerColor,
     required this.showCheckboxColumn,
   });
@@ -147,6 +164,7 @@ class _VirtualDataRow extends StatelessWidget {
   final DataRow row;
   final int columnCount;
   final double minHeight;
+  final double cellVerticalPadding;
   final Color dividerColor;
   final bool showCheckboxColumn;
 
@@ -179,9 +197,9 @@ class _VirtualDataRow extends StatelessWidget {
                 Expanded(
                   flex: index < cells.length && _isNumericCell(cells[index]) ? 1 : 2,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
+                    padding: EdgeInsets.symmetric(
                       horizontal: AksharaSpacing.s3,
-                      vertical: AksharaSpacing.s2,
+                      vertical: cellVerticalPadding,
                     ),
                     child: index < cells.length ? cells[index].child : const SizedBox.shrink(),
                   ),

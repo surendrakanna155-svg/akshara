@@ -28,6 +28,10 @@ String _registryPsidLabel(String? publicStudentId) =>
         : publicStudentId.trim();
 
 /// SIS-02 — Student Registry.
+/// C2 — session row-density for the SIS clerk registry table (compact vs calm).
+final sisRegistryDensityProvider =
+    StateProvider<AksharaTableDensity>((ref) => AksharaTableDensity.standard);
+
 class SisRegistryScreen extends ConsumerStatefulWidget {
   const SisRegistryScreen({super.key});
 
@@ -145,6 +149,7 @@ class _SisRegistryScreenState extends ConsumerState<SisRegistryScreen> {
     final students = ref.watch(sisFilteredStudentsProvider);
     final filterIndex = ref.watch(sisRegistryEffectiveFilterIndexProvider);
     final filterLabels = ref.watch(sisRegistryFilterLabelsProvider);
+    final density = ref.watch(sisRegistryDensityProvider);
 
     return SisModuleScaffold(
       screen: SisScreen.registry,
@@ -212,6 +217,27 @@ class _SisRegistryScreenState extends ConsumerState<SisRegistryScreen> {
                 icon: const Icon(Icons.contacts_outlined),
                 label: const Text('Contacts PDF'),
               ),
+              // C2 — clerk density toggle (row 52 ⇄ 40) as a table property.
+              OutlinedButton.icon(
+                onPressed: () {
+                  final notifier =
+                      ref.read(sisRegistryDensityProvider.notifier);
+                  notifier.state =
+                      notifier.state == AksharaTableDensity.compact
+                          ? AksharaTableDensity.standard
+                          : AksharaTableDensity.compact;
+                },
+                icon: Icon(
+                  density == AksharaTableDensity.compact
+                      ? Icons.density_medium
+                      : Icons.density_small,
+                ),
+                label: Text(
+                  density == AksharaTableDensity.compact
+                      ? 'Comfortable'
+                      : 'Compact',
+                ),
+              ),
             ],
           ),
           const SizedBox(height: AksharaSpacing.s3),
@@ -269,6 +295,7 @@ class _SisRegistryScreenState extends ConsumerState<SisRegistryScreen> {
                     _StudentRegistryTable(
                       students: students,
                       onReplace: _replacePlaceholder,
+                      density: ref.watch(sisRegistryDensityProvider),
                     ),
                   if (pageResult != null)
                     AksharaPaginationBar<SisStudent>(
@@ -291,10 +318,12 @@ class _StudentRegistryTable extends StatelessWidget {
   const _StudentRegistryTable({
     required this.students,
     required this.onReplace,
+    this.density = AksharaTableDensity.standard,
   });
 
   final List<SisStudent> students;
   final void Function(SisStudent student) onReplace;
+  final AksharaTableDensity density;
 
   static const _columns = [
     DataColumn(label: Text('Student')),
@@ -310,6 +339,7 @@ class _StudentRegistryTable extends StatelessWidget {
   Widget build(BuildContext context) {
     return AksharaVirtualizedDataTable(
       columns: _columns,
+      density: density,
       rowCount: students.length,
       semanticLabel: 'Student registry, ${students.length} students',
       rowBuilder: (index) {
