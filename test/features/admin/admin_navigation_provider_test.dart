@@ -31,7 +31,7 @@ void main() {
       addTearDown(container.dispose);
 
       final destinations = container.read(adminNavDestinationsProvider);
-      expect(destinations, hasLength(15));
+      expect(destinations, hasLength(16));
       expect(
         destinations.map((d) => d.route).toList(),
         [
@@ -40,6 +40,7 @@ void main() {
           RouteNames.growthPlatform, // Marketing engine (B6)
           RouteNames.financeDashboard,
           RouteNames.sisDashboard,
+          RouteNames.examAdministration, // A5 — flagship Exams top-level entry
           RouteNames.hrDashboard,
           RouteNames.employees, // Employee Platform (Journey Wave 4 — MJ-H23)
           RouteNames.managementDashboard,

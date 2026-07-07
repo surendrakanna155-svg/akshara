@@ -167,9 +167,9 @@ class _TeacherEffectivenessScreenState extends ConsumerState<TeacherEffectivenes
         TextField(controller: _studentNameController, decoration: const InputDecoration(labelText: 'Student name')),
         TextField(controller: _classController, decoration: const InputDecoration(labelText: 'Class')),
         AksharaDateField(controller: _meetingDateController, labelText: 'Meeting date'),
-        TextField(controller: _attendanceController, decoration: const InputDecoration(labelText: 'Attendance %')),
-        TextField(controller: _marksController, decoration: const InputDecoration(labelText: 'Recent marks %')),
-        TextField(controller: _homeworkController, decoration: const InputDecoration(labelText: 'Homework %')),
+        TextField(controller: _attendanceController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Attendance %')),
+        TextField(controller: _marksController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Recent marks %')),
+        TextField(controller: _homeworkController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Homework %')),
         TextField(
           controller: _behaviorController,
           decoration: const InputDecoration(labelText: 'Behavior notes'),

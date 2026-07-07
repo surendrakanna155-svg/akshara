@@ -9,6 +9,7 @@ enum AdminModule {
   marketing,
   finance,
   sis,
+  exams,
   hr,
   employee,
   management,

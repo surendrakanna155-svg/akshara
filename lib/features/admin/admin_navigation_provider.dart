@@ -55,6 +55,17 @@ const List<AdminNavDestination> kAllAdminNavDestinations = [
     selectedIcon: Icons.badge,
     requiredPermission: Permission.viewSis,
   ),
+  // A5 — un-bury the flagship Exam Administration module with a first-class
+  // top-level entry (route + screens already exist; it was only reachable via
+  // an in-page shortcut). Adjacent to SIS as an academic surface.
+  AdminNavDestination(
+    module: AdminModule.exams,
+    route: RouteNames.examAdministration,
+    label: 'Exams',
+    icon: Icons.assignment_outlined,
+    selectedIcon: Icons.assignment,
+    requiredPermission: Permission.viewExams,
+  ),
   AdminNavDestination(
     module: AdminModule.hr,
     route: RouteNames.hrDashboard,
@@ -301,6 +312,14 @@ const Map<AdminModule, AdminModuleInfo> kAdminModuleInfo = {
     description:
         'Finance operations (FN-01 → FN-05) — fee structures, accounts, collections.',
     route: RouteNames.financeDashboard,
+  ),
+  AdminModule.exams: AdminModuleInfo(
+    module: AdminModule.exams,
+    title: 'Exams',
+    description:
+        'Exam Administration — schedules, fast marks entry, tabulation, report '
+        'cards, and hall tickets.',
+    route: RouteNames.examAdministration,
   ),
   AdminModule.sis: AdminModuleInfo(
     module: AdminModule.sis,

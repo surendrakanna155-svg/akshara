@@ -97,6 +97,7 @@ Future<void> showCreateProcurementOrderDialog(
                 ),
                 TextField(
                   controller: amountController,
+                  keyboardType: TextInputType.number,
                   decoration: const InputDecoration(labelText: 'Total amount'),
                 ),
               ],
