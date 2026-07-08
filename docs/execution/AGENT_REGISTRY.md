@@ -34,7 +34,8 @@ Reconcile against them FIRST, then continue.
 
 | Agent ID | Model | Task | Scope (files) | State | Recovery |
 |---|---|---|---|---|---|
-| `a43dce4a0f7db7ade` | sonnet | Build acquisition crawler | `curriculum/scripts/crawler/**` + `scripts/tests/` | 🟢 running (5 modules created; crawl.py + tests pending) | monitor; do NOT re-spawn |
+| `a4190c9a1581789d2` | **haiku** | Run acquisition crawl PASS 1 (P0 CBSE+NCERT) | `curriculum/resources/**` + `acquisition/` (no git) | 🟢 running | monitor; resumable (`crawl.py --resume`); do NOT re-spawn |
+| `a781baa7dae2b6259` | **sonnet** | CI-C4-schema (outcome/competency + rule-first classifier) | `supabase/functions/_shared/education/**` + migrations (worktree, based on tip `e73a76a5`) | 🟢 running | monitor; integrate worktree on report; do NOT re-spawn |
 
 ## Terminal this session (2026-07-08) — for provenance / no-duplicate
 
@@ -50,6 +51,7 @@ Reconcile against them FIRST, then continue.
 | `aed86d3e87bdf23e7` | (opus) | AP SCERT acquisition | ⚠ partial | ~20 PDFs on disk, no manifest; crawler re-does as P1 |
 | `ad479eeaf0dbff762` | (opus) | TS SCERT acquisition | ⚠ partial | ~7 PDFs on disk, no manifest; crawler re-does as P2 |
 | `a66ca488dbde617cc` | (opus) | CISCE acquisition | ✅ clean | 42/42 verified + `cisce_manifest.json`; crawler folds in as P3 |
+| `a43dce4a0f7db7ade` | sonnet | Build acquisition crawler | ✅ done | build gate passed (unit 23/23 · dry-run idempotent · live-discovery · V1–V11); committed `e73a76a5` |
 
 ---
 
