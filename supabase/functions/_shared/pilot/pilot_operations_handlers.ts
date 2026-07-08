@@ -22,7 +22,6 @@ import {
   notifyHomeworkNonSubmitters,
   listTeacherHomeworkHistory,
   updateExamMark,
-  listTimetableSlots,
   listGuardianUserIdsForStudent,
   upsertAttendanceSession,
   validateDueDate,
@@ -1000,65 +999,8 @@ export async function handleTeacherExamMarkUpdate(
   }
 }
 
-export async function handleTeacherTimetable(
-  req: Request,
-  config: AppConfig,
-): Promise<Response> {
-  const auth = await authenticateRequest(req, config);
-  if (!auth.ok) return auth.response;
-  if (auth.claims.scope !== "school" || !auth.claims.school_id) {
-    return errorEnvelope("FORBIDDEN", "Teacher scope required", 403);
-  }
-
-  const url = new URL(req.url);
-  const classLabel = url.searchParams.get("class_label") ?? url.searchParams.get("classLabel") ??
-    undefined;
-
-  try {
-    const items = await withTenantContext(config, auth.claims, async (db) =>
-      await listTimetableSlots(
-        db,
-        auth.claims.tenant_id,
-        auth.claims.school_id!,
-        classLabel ?? undefined,
-      )
-    );
-    return jsonResponse(envelope({ items }));
-  } catch (error) {
-    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
-    return errorEnvelope("INTERNAL_ERROR", "Failed to load timetable", 500);
-  }
-}
-
-export async function handleParentTimetable(
-  req: Request,
-  config: AppConfig,
-): Promise<Response> {
-  const auth = await authenticateRequest(req, config);
-  if (!auth.ok) return auth.response;
-  if (auth.claims.scope !== "parent" || !auth.claims.school_id) {
-    return errorEnvelope("FORBIDDEN", "Parent scope required", 403);
-  }
-
-  const url = new URL(req.url);
-  const classLabel = url.searchParams.get("class_label") ?? url.searchParams.get("classLabel") ??
-    undefined;
-  if (!classLabel) {
-    return errorEnvelope("VALIDATION_ERROR", "class_label is required", 422);
-  }
-
-  try {
-    const items = await withTenantContext(config, auth.claims, async (db) =>
-      await listTimetableSlots(
-        db,
-        auth.claims.tenant_id,
-        auth.claims.school_id!,
-        classLabel,
-      )
-    );
-    return jsonResponse(envelope({ items }));
-  } catch (error) {
-    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
-    return errorEnvelope("INTERNAL_ERROR", "Failed to load timetable", 500);
-  }
-}
+// NOTE: handleTeacherTimetable / handleParentTimetable were removed here (gap sweep
+// 2026-07-09): pre-refactor duplicates referenced by no router or test. The live
+// /teacher/timetable and /parent/timetable routes are served by the current
+// handleTimetable in teacher_handlers.ts / parent_handlers.ts. Their only helper,
+// listTimetableSlots, was removed from the repository as dead code too.

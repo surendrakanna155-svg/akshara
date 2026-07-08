@@ -903,38 +903,6 @@ export async function updateExamMark(
   };
 }
 
-export async function listTimetableSlots(
-  db: TenantQueryClient,
-  orgId: string,
-  schoolId: string,
-  classLabel?: string,
-): Promise<Record<string, unknown>[]> {
-  const rows = await db.queryObject<{
-    day_of_week: number;
-    period_number: number;
-    subject_label: string;
-    room_label: string | null;
-    teacher_user_id: string | null;
-    substitute_teacher_user_id: string | null;
-  }>(
-    `SELECT day_of_week, period_number, subject_label, room_label,
-            teacher_user_id, substitute_teacher_user_id
-     FROM timetable_slots
-     WHERE organization_id = $1 AND school_id = $2
-       AND ($3::text IS NULL OR class_label = $3)
-     ORDER BY day_of_week, period_number`,
-    [orgId, schoolId, classLabel ?? null],
-  );
-  return rows.map((row) => ({
-    dayOfWeek: row.day_of_week,
-    periodNumber: row.period_number,
-    subjectLabel: row.subject_label,
-    roomLabel: row.room_label ?? "",
-    teacherUserId: row.teacher_user_id,
-    substituteTeacherUserId: row.substitute_teacher_user_id,
-  }));
-}
-
 // Map a stored mark to the parent/student calendar status (AttendanceDayStatus
 // on the client). excused + half_day now render as their own distinct cells.
 function markToStatus(mark: string): string {
