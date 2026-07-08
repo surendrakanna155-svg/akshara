@@ -23,10 +23,25 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit, urlunsplit
 
 DEFAULT_USER_AGENT = "AksharaCurriculumBot/1.0 (+education-repository; contact: akshara-erp)"
 DEFAULT_RETRY_STATUS = frozenset({408, 425, 429, 500, 502, 503, 504})
+
+
+def normalize_url(url: str) -> str:
+    """Percent-encode a real-world URL so ``urllib`` accepts it.
+
+    Official sites (e.g. CBSE) publish links with UNENCODED spaces / control
+    chars in the path — valid resources, invalid HTTP request-lines. Quote the
+    path + query (idempotent: ``%`` is left safe so already-encoded URLs aren't
+    double-encoded). Malformed-but-fixable → fetchable; genuinely broken → the
+    caller's broad guard records it as a failure rather than crashing the crawl.
+    """
+    parts = urlsplit(url)
+    safe_path = quote(parts.path, safe="/%:@&=+$,;~()*!'")
+    safe_query = quote(parts.query, safe="/%:@&=+$,;~()*!'?")
+    return urlunsplit((parts.scheme, parts.netloc, safe_path, safe_query, parts.fragment))
 
 
 @dataclass
@@ -74,8 +89,9 @@ class Fetcher:
         self._last_request_at[host] = time.monotonic()
 
     def _open(self, url: str, method: str) -> FetchResult:
-        req = urllib.request.Request(url, method=method, headers={"User-Agent": self.user_agent})
         try:
+            safe = normalize_url(url)
+            req = urllib.request.Request(safe, method=method, headers={"User-Agent": self.user_agent})
             with urllib.request.urlopen(req, timeout=self.connect_timeout) as resp:
                 body = resp.read() if method == "GET" else b""
                 return FetchResult(ok=True, url=url, status=resp.status,
@@ -87,6 +103,9 @@ class Fetcher:
             return FetchResult(ok=False, url=url, status=None, reason=str(exc.reason))
         except (TimeoutError, OSError) as exc:
             return FetchResult(ok=False, url=url, status=None, reason=str(exc))
+        except Exception as exc:  # noqa: BLE001 — a single bad URL must NEVER kill the crawl
+            return FetchResult(ok=False, url=url, status=None,
+                                reason=f"unfetchable ({type(exc).__name__}): {exc}")
 
     def _with_retry(self, url: str, method: str) -> FetchResult:
         result = FetchResult(ok=False, url=url, reason="not attempted")

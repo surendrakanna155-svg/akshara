@@ -348,5 +348,25 @@ class CrawlCliDryRunTestCase(unittest.TestCase):
             self.assertEqual(rec["board"], "icse")
 
 
+class TestFetchNormalization(unittest.TestCase):
+    """Regression: official sites publish links with unencoded spaces; urllib
+    rejects them (ValueError) - one bad URL must never crash the crawl."""
+
+    def test_normalize_encodes_spaces_idempotently(self):
+        from fetch import normalize_url
+        bad = ("https://cbseacademic.nic.in/web_material/CurriculumMain20/"
+               "Language-Secondary/Bahasa_Melayu _Sec _2019-20.pdf")
+        n = normalize_url(bad)
+        self.assertNotIn(" ", n)
+        self.assertIn("%20", n)
+        self.assertEqual(normalize_url(n), n)
+
+    def test_open_never_raises_on_malformed_url(self):
+        from fetch import Fetcher
+        r = Fetcher(polite_delay_seconds=0)._open("ht!tp://bad url\x01/x", "HEAD")
+        self.assertFalse(r.ok)
+        self.assertIsNotNone(r.reason)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
