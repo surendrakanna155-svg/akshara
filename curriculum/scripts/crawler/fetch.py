@@ -88,10 +88,24 @@ class Fetcher:
                 time.sleep(remaining)
         self._last_request_at[host] = time.monotonic()
 
+    def _request_headers(self, safe_url: str) -> dict:
+        """Honest browser-standard headers. A same-origin Referer + Accept clears
+        basic hotlink protection (some official dirs 403 a request with neither).
+        The User-Agent stays the honest AksharaCurriculumBot — we do NOT
+        impersonate a browser to bypass a deliberate bot-block; a persistent 403
+        is respected and recorded as unavailable-with-evidence."""
+        parts = urlsplit(safe_url)
+        return {
+            "User-Agent": self.user_agent,
+            "Accept": "text/html,application/xhtml+xml,application/pdf,application/epub+zip,*/*;q=0.8",
+            "Accept-Language": "en-IN,en;q=0.9",
+            "Referer": f"{parts.scheme}://{parts.netloc}/" if parts.netloc else "",
+        }
+
     def _open(self, url: str, method: str) -> FetchResult:
         try:
             safe = normalize_url(url)
-            req = urllib.request.Request(safe, method=method, headers={"User-Agent": self.user_agent})
+            req = urllib.request.Request(safe, method=method, headers=self._request_headers(safe))
             with urllib.request.urlopen(req, timeout=self.connect_timeout) as resp:
                 body = resp.read() if method == "GET" else b""
                 return FetchResult(ok=True, url=url, status=resp.status,
