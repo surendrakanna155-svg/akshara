@@ -67,7 +67,3 @@ supabase/.branches/
 # Firebase service-account secrets — never commit
 *firebase-adminsdk*.json
 FCM_SERVICE_ACCOUNT*.json
-
-# Unrequested local dev tool (progress dashboard) created off-brief by a subagent 2026-07-08.
-# Kept locally, NOT shipped. Remove this line to commit it, or delete the dir to discard.
-tools/progress-dashboard/

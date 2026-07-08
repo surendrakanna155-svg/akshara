@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "chips": [
+    "What are you doing now?",
+    "Which phase are you in?",
+    "Which roadmap item is running?",
+    "How much is completed?",
+    "Show active agents.",
+    "Why are you waiting?",
+    "Why is this blocked?",
+    "What's next?",
+    "ETA?",
+    "Show completed work today.",
+    "Explain current phase.",
+    "Why did progress stop?",
+    "Continue current roadmap.",
+    "Summarize today's work.",
+    "Generate handoff summary.",
+    "Generate implementation report."
+  ],
+  "templates": [
+    {
+      "id": "handoff",
+      "label": "Generate handoff summary",
+      "text": "Generate a concise handoff summary of the current implementation state: current phase, wave, task, what's done today, what's next, and any owner gates or blockers. Base it on tools/progress-dashboard/progress.json and activity.json."
+    },
+    {
+      "id": "report",
+      "label": "Generate implementation report",
+      "text": "Produce an implementation report for today's work: tasks completed, commits, tests, analyze results, and remaining items for the current phase. Use the dashboard JSON as the source of truth."
+    }
+  ],
+  "contextTemplate": "\n\n---\nContext snapshot (from dashboard):\n- Phase: {phase}\n- Wave: {wave}\n- Task: {task} ({status})\n- Next: {next}\n"
+}
