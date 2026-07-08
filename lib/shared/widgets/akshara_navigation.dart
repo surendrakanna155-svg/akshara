@@ -476,6 +476,7 @@ class AksharaAppBarIconButton extends StatelessWidget {
     required this.icon,
     this.onPressed,
     this.tooltip,
+    this.semanticLabel,
     this.child,
     this.size = 40,
   });
@@ -483,6 +484,11 @@ class AksharaAppBarIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onPressed;
   final String? tooltip;
+
+  /// Accessible name announced to screen readers. Falls back to [tooltip];
+  /// give it explicitly when the icon carries a badge (so the count doesn't
+  /// leak into the label) or when there is no tooltip.
+  final String? semanticLabel;
   final Widget? child;
   final double size;
 
@@ -506,13 +512,21 @@ class AksharaAppBarIconButton extends StatelessWidget {
       ),
     );
 
+    // An icon-only button has no text child, so without an explicit name it
+    // announces as an unlabeled button. Give it the tooltip (or override) as
+    // its accessible name — a no-op visually.
+    final label = semanticLabel ?? tooltip;
+    final labelled = label == null
+        ? button
+        : Semantics(button: true, label: label, child: button);
+
     if (tooltip == null) {
-      return button;
+      return labelled;
     }
 
     return Tooltip(
       message: tooltip!,
-      child: button,
+      child: labelled,
     );
   }
 }

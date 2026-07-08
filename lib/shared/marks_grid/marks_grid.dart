@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../theme/accessibility.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
 import '../widgets/akshara_status_chip.dart';
@@ -104,22 +105,31 @@ class MarksEntryField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: width,
-      child: TextField(
-        key: fieldKey,
-        controller: controller,
-        focusNode: focusNode,
-        enabled: enabled,
-        keyboardType: TextInputType.number,
-        textInputAction: TextInputAction.next,
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        decoration: InputDecoration(
-          labelText: label,
-          isDense: true,
-          suffixText: '/$maxMarks',
+    // P2-UX-4 (Polish §7): a dense fixed-width grid cell — cap the inherited text
+    // scale at 1.3× so a very large system font can't overflow the 88px cell or
+    // its `/max` suffix. A no-op at the default 1.0×.
+    final mq = MediaQuery.of(context);
+    return MediaQuery(
+      data: mq.copyWith(
+        textScaler: AksharaAccessibility.clampDenseGridTextScale(mq.textScaler),
+      ),
+      child: SizedBox(
+        width: width,
+        child: TextField(
+          key: fieldKey,
+          controller: controller,
+          focusNode: focusNode,
+          enabled: enabled,
+          keyboardType: TextInputType.number,
+          textInputAction: TextInputAction.next,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          decoration: InputDecoration(
+            labelText: label,
+            isDense: true,
+            suffixText: '/$maxMarks',
+          ),
+          onSubmitted: onSubmitted == null ? null : (_) => onSubmitted!(),
         ),
-        onSubmitted: onSubmitted == null ? null : (_) => onSubmitted!(),
       ),
     );
   }

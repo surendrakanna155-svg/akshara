@@ -14,6 +14,12 @@ abstract final class AksharaAccessibility {
   /// Smallest M15 token size used for labels — do not go below for legibility.
   static const double minLabelFontSize = 11;
 
+  /// P2-UX-4 — the ONLY place a text-scale clamp is permitted (Polish §7): a
+  /// dense grid whose cells are a fixed size (attendance exception grid, marks
+  /// entry cell) caps the inherited text scale here so a very large system
+  /// setting cannot blow a fixed cell. Everywhere else, text scales freely.
+  static const double maxDenseGridTextScale = 1.3;
+
   /// Returns contrast ratio between [foreground] and [background] (1:1 … 21:1).
   static double contrastRatio(Color foreground, Color background) {
     final fg = foreground.computeLuminance();
@@ -29,6 +35,32 @@ abstract final class AksharaAccessibility {
 
   static bool meetsLargeTextContrast(Color foreground, Color background) {
     return contrastRatio(foreground, background) >= minContrastLargeText;
+  }
+
+  /// Black or white, whichever reads with more contrast on [background].
+  ///
+  /// Used for text/glyphs painted on a solid semantic-tone fill (e.g. the
+  /// attendance mark badge). A hardcoded white letter fails WCAG on the light
+  /// tones the dark scheme uses (white on `#4ADE80` ≈ 1.7:1); picking by
+  /// luminance keeps the glyph legible in both schemes.
+  static Color onColorFor(Color background) {
+    return contrastRatio(Colors.white, background) >=
+            contrastRatio(Colors.black, background)
+        ? Colors.white
+        : Colors.black;
+  }
+
+  /// Caps [scaler] at [maxDenseGridTextScale] for a dense fixed-size grid.
+  ///
+  /// Within the cap the platform scaler is returned untouched (so ≤1.3×
+  /// behaves exactly as the system asks); only growth beyond the cap is
+  /// flattened to a linear 1.3×. A no-op at the default 1.0× scale.
+  static TextScaler clampDenseGridTextScale(TextScaler scaler) {
+    final factor = scaler.scale(1);
+    if (factor <= maxDenseGridTextScale) {
+      return scaler;
+    }
+    return const TextScaler.linear(maxDenseGridTextScale);
   }
 
   /// Critical [ColorScheme] pairs validated in M15 certification.

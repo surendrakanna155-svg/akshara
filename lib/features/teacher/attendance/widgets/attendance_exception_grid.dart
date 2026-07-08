@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/testing/qa_test_keys.dart';
 import '../../../../shared/feedback/akshara_haptics.dart';
+import '../../../../theme/accessibility.dart';
 import '../../../../theme/spacing.dart';
 import '../../../../theme/theme_extensions.dart';
 import '../attendance_models.dart';
@@ -40,25 +41,34 @@ class AttendanceExceptionGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
-      padding: padding,
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 210,
-        mainAxisExtent: 68,
-        crossAxisSpacing: AksharaSpacing.s2,
-        mainAxisSpacing: AksharaSpacing.s2,
+    // P2-UX-4 (Polish §7): this is a dense grid with a fixed 68px cell — the one
+    // place a text-scale clamp is allowed. Cap the inherited scale at 1.3× so a
+    // very large system font stays legible without overflowing the cell (a no-op
+    // at the default 1.0×; the roster still grows/scrolls normally).
+    final mq = MediaQuery.of(context);
+    return MediaQuery(
+      data: mq.copyWith(
+        textScaler: AksharaAccessibility.clampDenseGridTextScale(mq.textScaler),
       ),
-      itemCount: students.length,
-      itemBuilder: (context, index) {
-        final student = students[index];
-        return _StudentExceptionTile(
-          student: student,
-          enabled: enabled,
-          onCycle: () =>
-              onMark(student.id, cycle(student.mark)),
-          onPick: (mark) => onMark(student.id, mark),
-        );
-      },
+      child: GridView.builder(
+        padding: padding,
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 210,
+          mainAxisExtent: 68,
+          crossAxisSpacing: AksharaSpacing.s2,
+          mainAxisSpacing: AksharaSpacing.s2,
+        ),
+        itemCount: students.length,
+        itemBuilder: (context, index) {
+          final student = students[index];
+          return _StudentExceptionTile(
+            student: student,
+            enabled: enabled,
+            onCycle: () => onMark(student.id, cycle(student.mark)),
+            onPick: (mark) => onMark(student.id, mark),
+          );
+        },
+      ),
     );
   }
 }
@@ -220,7 +230,10 @@ class _MarkBadge extends StatelessWidget {
       child: Text(
         mark.shortLabel,
         style: context.aksharaText.labelMedium.copyWith(
-          color: Colors.white,
+          // P2-UX-4: the badge fill is a semantic tone that is dark in the light
+          // scheme but bright in the dark scheme — a hardcoded white letter fails
+          // WCAG on the bright tones. Pick the letter colour by contrast.
+          color: AksharaAccessibility.onColorFor(tone.foreground),
           fontWeight: FontWeight.w700,
         ),
       ),

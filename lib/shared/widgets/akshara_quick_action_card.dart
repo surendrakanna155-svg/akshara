@@ -136,7 +136,17 @@ class AksharaQuickActionGrid extends StatelessWidget {
         final isWide = constraints.maxWidth >= tabletBreakpoint;
         final useTwoColumnGrid = isWide || children.length > 3;
         final textScale = MediaQuery.textScalerOf(context).scale(1);
-        final baseAspect = isWide ? 1.35 : 1.5;
+        // UX-7: on the narrowest phones the two-column cell is ~158px wide, and
+        // a quick-action label that wraps to two lines is a fraction of a pixel
+        // taller than the 1.5 aspect allows — the 360×640 RenderFlex overflow.
+        // Give only those narrow two-column cells a slightly taller aspect. The
+        // golden viewports are all ≥390px (cell ≥173px), so none change.
+        const narrowTwoColCellWidth = 162.0;
+        final twoColCellWidth = (constraints.maxWidth - AksharaSpacing.s3) / 2;
+        final isNarrowTwoCol = useTwoColumnGrid &&
+            !isWide &&
+            twoColCellWidth < narrowTwoColCellWidth;
+        final baseAspect = isWide ? 1.35 : (isNarrowTwoCol ? 1.4 : 1.5);
         final aspectRatio = baseAspect / textScale.clamp(1, 2.25);
 
         if (useTwoColumnGrid) {
