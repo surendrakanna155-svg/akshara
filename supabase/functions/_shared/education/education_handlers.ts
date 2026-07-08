@@ -20,6 +20,11 @@ import {
   reportRemarkToApi,
 } from "./education_mapper.ts";
 import { generateQuestionPaper, regeneratePaperItem } from "./education_question_paper_service.ts";
+import {
+  buildPaperDocumentV2,
+  DEFAULT_SET_LABELS,
+  paperV2InputFromStored,
+} from "./education_paper_export.ts";
 import { resolveAiConfig } from "../ai/ai_settings.ts";
 import {
   archiveQuestionBankItem,
@@ -880,6 +885,23 @@ export async function handleExportQuestionPaper(
         "Only a published question paper can be exported",
         409,
       );
+    }
+
+    // CI-C3 — opt-in structured v2 export (multi-set A/B/C + per-set keys).
+    // DORMANT: with neither `format=v2` nor `sets` present, the certified v1
+    // document is returned BYTE-IDENTICALLY. `?sets=A,B,C` (or `?format=v2`)
+    // switches to the structured, deterministic multi-set document.
+    const url = new URL(req.url);
+    const setsParam = url.searchParams.get("sets");
+    if (url.searchParams.get("format") === "v2" || setsParam) {
+      const sets = setsParam
+        ? setsParam.split(",").map((s) => s.trim()).filter((s) => s.length > 0)
+        : [DEFAULT_SET_LABELS[0]];
+      const doc = buildPaperDocumentV2(
+        paperV2InputFromStored(result.paper, result.items),
+        { sets, seed: result.paper.id },
+      );
+      return jsonResponse(envelope(doc));
     }
 
     return jsonResponse(envelope(paperExportDocument(result.paper, result.items)));

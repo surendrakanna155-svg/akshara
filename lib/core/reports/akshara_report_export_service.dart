@@ -832,6 +832,211 @@ class AksharaReportExportService {
     final name = filename.endsWith('.pdf') ? filename : '$filename.pdf';
     await Printing.sharePdf(bytes: bytes, filename: name);
   }
+
+  // --- CI-C3 — Question Paper PDF v2 (multi-set + separated answer key) --------
+  // A section-aware, multi-set (A/B/C) question-paper document with branding, a
+  // general-instructions block, and EACH set's answer key on its OWN page (key
+  // separation). Rides the shared `buildGridTable` primitive for the key grid.
+  // ADDITIVE + opt-in: the legacy `EducationPdfService.printQuestionPaper` (v1)
+  // layout is untouched, so existing callers are byte-unchanged.
+
+  /// Builds the multi-set question-paper PDF. Each set contributes a question
+  /// page-run followed by its answer key on a fresh page.
+  Future<Uint8List> buildQuestionPaperV2Pdf({
+    required QuestionPaperPrintData data,
+    String? generatedAtLabel,
+  }) async {
+    final document = pw.Document();
+    for (final set in data.sets) {
+      document.addPage(_questionPaperSetPage(data, set));
+      document.addPage(_answerKeySetPage(data, set, generatedAtLabel));
+    }
+    return document.save();
+  }
+
+  Future<void> shareQuestionPaperV2Pdf({
+    required QuestionPaperPrintData data,
+    String? generatedAtLabel,
+  }) async {
+    final bytes = await buildQuestionPaperV2Pdf(
+      data: data,
+      generatedAtLabel: generatedAtLabel,
+    );
+    final name = '${data.title}_paper'
+        .replaceAll(RegExp(r'[^A-Za-z0-9_]+'), '_');
+    await Printing.sharePdf(bytes: bytes, filename: '$name.pdf');
+  }
+
+  pw.Widget _paperBrandHeader(
+    QuestionPaperPrintData data,
+    QuestionPaperSetPrintData set,
+    String rightLabel,
+  ) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+      children: [
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Container(
+              width: 90,
+              height: 44,
+              decoration:
+                  pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400)),
+              alignment: pw.Alignment.center,
+              child: pw.Text(
+                (data.schoolLogoText ?? 'LOGO'),
+                style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
+              ),
+            ),
+            pw.SizedBox(width: 12),
+            pw.Expanded(
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    data.schoolName ?? 'Question Paper',
+                    style: pw.TextStyle(
+                        fontSize: 18, fontWeight: pw.FontWeight.bold),
+                  ),
+                  pw.SizedBox(height: 2),
+                  pw.Text(data.title, style: const pw.TextStyle(fontSize: 12)),
+                  if (data.subtitle != null && data.subtitle!.isNotEmpty)
+                    pw.Text(data.subtitle!,
+                        style: const pw.TextStyle(
+                            fontSize: 10, color: PdfColors.grey700)),
+                ],
+              ),
+            ),
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.end,
+              children: [
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 4),
+                  decoration:
+                      const pw.BoxDecoration(color: PdfColors.grey200),
+                  child: pw.Text('Set ${set.label}',
+                      style: pw.TextStyle(
+                          fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                ),
+                pw.SizedBox(height: 4),
+                pw.Text(rightLabel,
+                    style: const pw.TextStyle(fontSize: 10)),
+              ],
+            ),
+          ],
+        ),
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text('Total marks: ${data.totalMarks}',
+                style: const pw.TextStyle(fontSize: 10)),
+            if (data.durationMinutes != null)
+              pw.Text('Time: ${data.durationMinutes} min',
+                  style: const pw.TextStyle(fontSize: 10)),
+          ],
+        ),
+        pw.Divider(color: PdfColors.grey400),
+      ],
+    );
+  }
+
+  pw.Page _questionPaperSetPage(
+    QuestionPaperPrintData data,
+    QuestionPaperSetPrintData set,
+  ) {
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    return pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.all(AksharaSpacing.s6),
+      build: (context) => [
+        _paperBrandHeader(data, set, 'Question Paper'),
+        if (data.generalInstructions.isNotEmpty) ...[
+          pw.SizedBox(height: 6),
+          pw.Text('General Instructions',
+              style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 2),
+          for (final line in data.generalInstructions)
+            pw.Bullet(text: line, style: const pw.TextStyle(fontSize: 10)),
+        ],
+        for (final section in set.sections) ...[
+          pw.SizedBox(height: 12),
+          if ((section.title ?? section.code) != null)
+            pw.Text(
+              section.code != null && section.title != null
+                  ? 'Section ${section.code} — ${section.title}'
+                  : (section.title ?? 'Section ${section.code}'),
+              style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
+            ),
+          for (final line in section.instructions)
+            pw.Text(line,
+                style: const pw.TextStyle(
+                    fontSize: 9, color: PdfColors.grey700)),
+          pw.SizedBox(height: 6),
+          for (final q in section.questions)
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  'Q${q.questionNumber}. (${q.marks} '
+                  '${q.marks == 1 ? 'mark' : 'marks'}) ${q.questionText}',
+                  style: const pw.TextStyle(fontSize: 10),
+                ),
+                for (var i = 0; i < q.options.length; i++)
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.only(left: 12),
+                    child: pw.Text(
+                      '(${i < letters.length ? letters[i] : '?'}) ${q.options[i]}',
+                      style: const pw.TextStyle(fontSize: 10),
+                    ),
+                  ),
+                pw.SizedBox(height: 8),
+              ],
+            ),
+        ],
+      ],
+    );
+  }
+
+  pw.Page _answerKeySetPage(
+    QuestionPaperPrintData data,
+    QuestionPaperSetPrintData set,
+    String? generatedAtLabel,
+  ) {
+    // Key separation: rendered on its OWN page, as a distinct grid (rides the
+    // shared XCT-1 grid primitive), never interleaved with the questions.
+    final rows = <List<String>>[
+      for (final a in set.answerKey)
+        [
+          '${a.questionNumber}',
+          a.answerOption ?? '—',
+          a.answer,
+          '${a.marks}',
+        ],
+    ];
+    return pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.all(AksharaSpacing.s6),
+      build: (context) => [
+        _paperBrandHeader(data, set, 'Answer Key'),
+        pw.SizedBox(height: 6),
+        pw.Text('Answer Key — Set ${set.label}',
+            style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 6),
+        buildGridTable(
+          headers: const ['Q. No', 'Option', 'Answer', 'Marks'],
+          rows: rows,
+          rightAlignFrom: 3,
+        ),
+        if (generatedAtLabel != null) ...[
+          pw.SizedBox(height: 8),
+          pw.Text('Generated: $generatedAtLabel',
+              style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+        ],
+      ],
+    );
+  }
 }
 
 final aksharaReportExportServiceProvider = Provider<AksharaReportExportService>(
@@ -867,4 +1072,92 @@ class HallTicketPrintData {
   final String venueLabel;
   final int maxMarks;
   final List<String> instructions;
+}
+
+/// CI-C3 — a print-ready multi-set question paper. Plain view-models (like
+/// [HallTicketPrintData]) so the export service stays decoupled from the
+/// education domain models; the UI (or a mapper over the backend `akshara-
+/// education-paper-v2` document) maps onto these before printing.
+class QuestionPaperPrintData {
+  const QuestionPaperPrintData({
+    this.schoolName,
+    this.schoolLogoText,
+    required this.title,
+    this.subtitle,
+    required this.totalMarks,
+    this.durationMinutes,
+    this.generalInstructions = const [],
+    required this.sets,
+  });
+
+  final String? schoolName;
+  final String? schoolLogoText;
+  final String title;
+  final String? subtitle;
+  final int totalMarks;
+  final int? durationMinutes;
+  final List<String> generalInstructions;
+  final List<QuestionPaperSetPrintData> sets;
+}
+
+/// One set (A/B/C) of a printed paper: its ordered sections + its OWN answer key.
+class QuestionPaperSetPrintData {
+  const QuestionPaperSetPrintData({
+    required this.label,
+    this.master = false,
+    required this.sections,
+    required this.answerKey,
+  });
+
+  final String label;
+  final bool master;
+  final List<QuestionPaperSectionPrintData> sections;
+  final List<QuestionPaperAnswerPrintData> answerKey;
+}
+
+/// One printed section (questions in this set's within-section order).
+class QuestionPaperSectionPrintData {
+  const QuestionPaperSectionPrintData({
+    this.code,
+    this.title,
+    this.instructions = const [],
+    required this.questions,
+  });
+
+  final String? code;
+  final String? title;
+  final List<String> instructions;
+  final List<QuestionPaperQuestionPrintData> questions;
+}
+
+/// One printed question. No answer here — answers live only in the answer key.
+class QuestionPaperQuestionPrintData {
+  const QuestionPaperQuestionPrintData({
+    required this.questionNumber,
+    required this.marks,
+    required this.questionText,
+    this.options = const [],
+  });
+
+  final int questionNumber;
+  final int marks;
+  final String questionText;
+  final List<String> options;
+}
+
+/// One answer-key entry, aligned to a set's question order.
+class QuestionPaperAnswerPrintData {
+  const QuestionPaperAnswerPrintData({
+    required this.questionNumber,
+    required this.answer,
+    required this.marks,
+    this.answerOption,
+  });
+
+  final int questionNumber;
+  final String answer;
+  final int marks;
+
+  /// The option letter ("A".."Z") for an MCQ whose answer is a verbatim option.
+  final String? answerOption;
 }

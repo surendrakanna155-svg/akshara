@@ -2,9 +2,26 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
+import '../../core/reports/akshara_report_export_service.dart';
 import 'education_models.dart';
 
 class EducationPdfService {
+  /// CI-C3 — prints the opt-in multi-set (A/B/C) question paper v2 (sections,
+  /// general instructions, branding, per-set answer key on its own page). Rides
+  /// the shared XCT-1 export pipeline; the legacy [printQuestionPaper] is left
+  /// untouched so its callers stay byte-identical.
+  static Future<void> printQuestionPaperV2(
+    QuestionPaperPrintData data, {
+    String? generatedAtLabel,
+  }) async {
+    const service = AksharaReportExportService();
+    final bytes = await service.buildQuestionPaperV2Pdf(
+      data: data,
+      generatedAtLabel: generatedAtLabel,
+    );
+    await Printing.layoutPdf(onLayout: (format) async => bytes);
+  }
+
   static Future<void> printQuestionPaper(QuestionPaperDetail detail) async {
     // AI-1 moderation gate: only human-approved items may print onto the
     // student-facing paper — a rejected (disapproved) or still-pending AI
