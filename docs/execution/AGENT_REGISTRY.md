@@ -36,7 +36,6 @@ Reconcile against them FIRST, then continue.
 |---|---|---|---|---|---|
 | `bmmfoe83s` (bg task) | — (bash) | **CONTINUOUS acquisition service** (`run_continuous.sh` → `crawl.py --board all --resume` loop until 3-no-new completion) | `curriculum/resources/**` + `acquisition/` (no git) | 🟢 running (background service) | monitor via manifest + `crawl_continuous.log` READ-ONLY; do NOT interrupt except fatal/owner-stop/completion; resumable |
 | `a001d1b3867b3dea7` | sonnet | **ERP AsyncValue BATCH 2** (worktree, base-verified `17b83117`) — `.when()`→`ErpAsyncBody` in management/control_center/sis/finance/operations/etc. | `lib/features/**` (non-education) | 🟢 running | worktree; disjoint from curriculum agent; integrate via cherry-pick on report |
-| `ac344dba7eaaa20ac` | sonnet | **Curriculum B12 + CI-E1b dormant seeds** (worktree, base-verified `17b83117`) — question-family/template/distractor + canonical-concept tables | `supabase/migrations/**` | 🟢 running | worktree; disjoint from ERP agent; integrate via cherry-pick on report |
 
 
 ## Terminal this session (2026-07-08) — for provenance / no-duplicate
@@ -57,6 +56,7 @@ Reconcile against them FIRST, then continue.
 | `a43dce4a0f7db7ade` | sonnet | Build acquisition crawler | ✅ done | build gate passed; committed `e73a76a5` (+fetch fix `98ac1176`) |
 | `a781baa7dae2b6259` | sonnet | CI-C4-schema (worktree) | ✅ done | base-verified onto tip → clean cherry-pick → `25436314`; worktree removed |
 | `ac081ada6353f100c` | sonnet | ERP AsyncValue re-run (worktree) | ✅ done | base-verified onto tip `cb7fbc82` → 40 sites → clean cherry-pick → `b8a68318`; worktree removed |
+| `ac344dba7eaaa20ac` | sonnet | Curriculum B12 + CI-E1b dormant seeds (worktree) | ✅ done | base-verified onto tip `17b83117` → real-Postgres validated → clean cherry-pick → `f0f1cbc5` (education deno 143/0); worktree removed |
 
 ---
 
