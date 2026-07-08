@@ -96,10 +96,20 @@ void main() {
       expect(find.text('Marks must be between 0 and $maxMarks'), findsOneWidget);
     });
 
-    testWidgets('a non-numeric mark is rejected', (tester) async {
+    testWidgets('the locked number pad blocks non-numeric input',
+        (tester) async {
+      // P2-UX-2 §2.2 — the shared MarksEntryField is a locked number pad, so a
+      // non-numeric mark can no longer be typed in the first place (stronger
+      // than the old post-save "Enter a valid number" rejection).
       await openMarksEntry(tester);
-      await enterMark(tester, 'abc');
-      expect(find.text('Enter a valid number'), findsOneWidget);
+      final field = find.byKey(QaTestKeys.teacherExamMarkField(firstEntryId));
+      await tester.ensureVisible(field);
+      await tester.enterText(field, 'ab12cd');
+      await tester.pump();
+      expect(
+        tester.widget<TextField>(field).controller!.text,
+        '12',
+      );
     });
 
     testWidgets('a valid mark is accepted (no validation error)',
@@ -113,6 +123,27 @@ void main() {
       expect(find.text('Marks must be between 0 and $maxMarks'), findsNothing);
       expect(find.text('Enter a valid number'), findsNothing);
       expect(find.text('Enter marks'), findsNothing);
+    });
+
+    testWidgets('P2-UX-2 §2.2 — spreadsheet-grade: stats footer + Save-all',
+        (tester) async {
+      await openMarksEntry(tester);
+
+      // The shared column-stats footer is present (same component the admin uses).
+      expect(find.byKey(QaTestKeys.marksColumnStats), findsOneWidget);
+
+      // Save-all appears only once a row is dirty (a typed, unsaved value).
+      expect(find.byKey(QaTestKeys.teacherExamSaveAllButton), findsNothing);
+      final field = find.byKey(QaTestKeys.teacherExamMarkField(firstEntryId));
+      await tester.ensureVisible(field);
+      await tester.enterText(field, '40');
+      await tester.pump();
+      expect(find.byKey(QaTestKeys.teacherExamSaveAllButton), findsOneWidget);
+
+      // Saving all clears the dirty state → the Save-all button retires.
+      await tester.tap(find.byKey(QaTestKeys.teacherExamSaveAllButton));
+      await tester.pumpAndSettle();
+      expect(find.byKey(QaTestKeys.teacherExamSaveAllButton), findsNothing);
     });
   });
 }

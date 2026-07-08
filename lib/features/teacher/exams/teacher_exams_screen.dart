@@ -7,6 +7,7 @@ import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../reports/teacher_report_exporters.dart';
 import '../reports/teacher_report_share_sheet.dart';
+import '../../../shared/marks_grid/marks_grid.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
@@ -464,11 +465,17 @@ class _MarksEntryList extends ConsumerStatefulWidget {
 
 class _MarksEntryListState extends ConsumerState<_MarksEntryList> {
   final Map<String, TextEditingController> _controllers = {};
+  // P2-UX-2 §2.2 — one focus node per row so Enter advances down the column,
+  // matching the exam-admin grid's keyboard-first ergonomics.
+  final Map<String, FocusNode> _focusNodes = {};
 
   @override
   void dispose() {
     for (final controller in _controllers.values) {
       controller.dispose();
+    }
+    for (final node in _focusNodes.values) {
+      node.dispose();
     }
     super.dispose();
   }
@@ -478,8 +485,74 @@ class _MarksEntryListState extends ConsumerState<_MarksEntryList> {
       entry.id,
       () => TextEditingController(
         text: entry.marksObtained?.toString() ?? '',
-      ),
+      )..addListener(_onFieldChanged),
     );
+  }
+
+  FocusNode _focusFor(String id) =>
+      _focusNodes.putIfAbsent(id, FocusNode.new);
+
+  // Refresh the per-cell dots + column stats + Save-all visibility as marks are
+  // keyed (a small roster — a plain setState is cheap and keeps the grid live).
+  void _onFieldChanged() {
+    if (mounted) setState(() {});
+  }
+
+  /// The spreadsheet "unsaved cell" state for this row: saved when the typed
+  /// value matches the persisted mark, unsaved while it differs, empty when
+  /// nothing is typed yet.
+  MarksCellState _cellState(ExamMarkEntry entry) {
+    final raw = _controllerFor(entry).text.trim();
+    if (raw.isEmpty) {
+      return entry.marksObtained == null
+          ? MarksCellState.empty
+          : MarksCellState.unsaved;
+    }
+    final parsed = int.tryParse(raw);
+    if (parsed == null) return MarksCellState.unsaved;
+    return parsed == entry.marksObtained
+        ? MarksCellState.saved
+        : MarksCellState.unsaved;
+  }
+
+  bool _isDirty(ExamMarkEntry entry) => _cellState(entry) == MarksCellState.unsaved;
+
+  void _focusNextRow(int fromIndex) {
+    final next = fromIndex + 1;
+    if (next < widget.entries.length) {
+      _focusFor(widget.entries[next].id).requestFocus();
+    } else {
+      FocusScope.of(context).unfocus();
+    }
+  }
+
+  String? _saveOne(ExamMarkEntry entry) {
+    return saveTeacherExamMarkFromInput(
+      ref,
+      entry: entry,
+      raw: _controllerFor(entry).text,
+    );
+  }
+
+  /// P2-UX-2 §2.2 — save every changed row in one action, reusing the SAME
+  /// per-row save path (validation + updateExamMark); no new backend surface.
+  void _saveAll() {
+    var saved = 0;
+    final errors = <String>[];
+    for (final entry in widget.entries) {
+      if (!_isDirty(entry)) continue;
+      final error = _saveOne(entry);
+      if (error != null) {
+        errors.add('${entry.studentName}: $error');
+      } else {
+        saved++;
+      }
+    }
+    if (!mounted) return;
+    final message = errors.isEmpty
+        ? '$saved saved'
+        : '$saved saved, ${errors.length} need attention (${errors.first})';
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _openRemarkDialog(
@@ -543,57 +616,119 @@ class _MarksEntryListState extends ConsumerState<_MarksEntryList> {
         ref.watch(teacherIsClassTeacherForActiveExamProvider);
     final examId = ref.watch(teacherActiveExamIdProvider);
 
+    final entries = widget.entries;
+    final entered = entries.where((e) => e.marksObtained != null).length;
+    final maxMarks = entries.first.maxMarks;
+    final scored = entries.where((e) => e.marksObtained != null).toList();
+    final avg = scored.isEmpty
+        ? null
+        : scored
+                .map((e) => e.maxMarks == 0
+                    ? 0.0
+                    : (e.marksObtained! / e.maxMarks) * 100)
+                .reduce((a, b) => a + b) /
+            scored.length;
+    final dirtyCount = entries.where(_isDirty).length;
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final entry in widget.entries)
-          ListTile(
-            title: Text(entry.studentName),
-            subtitle: Text('Roll ${entry.rollNo}'),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
+        // P2-UX-2 §2.2 — Save-all changed rows in one action (dirty rows only).
+        if (dirtyCount > 0)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.icon(
+                key: QaTestKeys.teacherExamSaveAllButton,
+                onPressed: _saveAll,
+                icon: const Icon(Icons.done_all, size: 18),
+                label: Text('Save all ($dirtyCount)'),
+              ),
+            ),
+          ),
+        for (var index = 0; index < entries.length; index++)
+          _buildRow(context, entries[index], index, isClassTeacher, examId),
+        const SizedBox(height: AksharaSpacing.s3),
+        // Shared inline column-stats footer (same component the admin grid uses).
+        MarksColumnStats(
+          key: QaTestKeys.marksColumnStats,
+          entered: entered,
+          total: entries.length,
+          averagePercent: avg,
+          maxMarks: maxMarks,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRow(
+    BuildContext context,
+    ExamMarkEntry entry,
+    int index,
+    bool isClassTeacher,
+    String? examId,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AksharaSpacing.s1),
+      child: Row(
+        children: [
+          // Shared per-cell save-state dot.
+          MarksCellSaveDot(state: _cellState(entry)),
+          const SizedBox(width: AksharaSpacing.s3),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (isClassTeacher && examId != null)
-                  IconButton(
-                    key: QaTestKeys.teacherExamRemarkButton(entry.id),
-                    tooltip: 'Remark',
-                    icon: const Icon(Icons.rate_review_outlined),
-                    onPressed: () =>
-                        _openRemarkDialog(context, examId, entry),
-                  ),
-                SizedBox(
-                  width: 72,
-                  child: TextField(
-                    key: QaTestKeys.teacherExamMarkField(entry.id),
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      hintText: '/${entry.maxMarks}',
-                      border: const OutlineInputBorder(),
-                      isDense: true,
-                    ),
-                    controller: _controllerFor(entry),
-                  ),
-                ),
-                IconButton(
-                  key: QaTestKeys.teacherExamMarkSaveButton(entry.id),
-                  tooltip: 'Save mark',
-                  onPressed: () {
-                    final error = saveTeacherExamMarkFromInput(
-                      ref,
-                      entry: entry,
-                      raw: _controllerFor(entry).text,
-                    );
-                    if (error != null && context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(error)),
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.save_outlined),
+                Text(entry.studentName, style: context.aksharaText.bodyMedium),
+                Text(
+                  'Roll ${entry.rollNo}',
+                  style: context.aksharaText.bodySmall
+                      .copyWith(color: context.colors.onSurfaceVariant),
                 ),
               ],
             ),
           ),
-      ],
+          if (isClassTeacher && examId != null)
+            IconButton(
+              key: QaTestKeys.teacherExamRemarkButton(entry.id),
+              tooltip: 'Remark',
+              icon: const Icon(Icons.rate_review_outlined),
+              onPressed: () => _openRemarkDialog(context, examId, entry),
+            ),
+          // Shared locked number-pad field, with Enter advancing down the column.
+          MarksEntryField(
+            fieldKey: QaTestKeys.teacherExamMarkField(entry.id),
+            controller: _controllerFor(entry),
+            maxMarks: entry.maxMarks,
+            focusNode: _focusFor(entry.id),
+            width: 96,
+            onSubmitted: () {
+              final error = _saveOne(entry);
+              if (error != null && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(error)),
+                );
+              } else {
+                _focusNextRow(index);
+              }
+            },
+          ),
+          IconButton(
+            key: QaTestKeys.teacherExamMarkSaveButton(entry.id),
+            tooltip: 'Save mark',
+            onPressed: () {
+              final error = _saveOne(entry);
+              if (error != null && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(error)),
+                );
+              }
+            },
+            icon: const Icon(Icons.save_outlined),
+          ),
+        ],
+      ),
     );
   }
 }

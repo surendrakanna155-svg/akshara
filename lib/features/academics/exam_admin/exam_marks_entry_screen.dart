@@ -14,6 +14,7 @@ import '../../../core/security/permissions.dart';
 import '../../../core/security/rbac_service.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/feedback/akshara_haptics.dart';
+import '../../../shared/marks_grid/marks_grid.dart';
 import '../../../shared/widgets/akshara_view_action.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
@@ -339,6 +340,17 @@ class _MarksEntryBodyState extends ConsumerState<_MarksEntryBody>
     final entered = marks
         .where((m) => !m.status.isPresent || m.marksObtained != null)
         .length;
+    // Shared column-stats footer average: mean of the entered present marks.
+    final scored =
+        marks.where((m) => m.status.isPresent && m.marksObtained != null);
+    final avgPercent = scored.isEmpty
+        ? null
+        : scored
+                .map((m) => exam.maxMarks == 0
+                    ? 0.0
+                    : (m.marksObtained! / exam.maxMarks) * 100)
+                .reduce((a, b) => a + b) /
+            scored.length;
     final canEdit = _canEdit;
 
     return Column(
@@ -363,9 +375,15 @@ class _MarksEntryBodyState extends ConsumerState<_MarksEntryBody>
                   ),
                 ],
               ),
-              Text(
-                '$entered / ${marks.length} marks entered · Max ${exam.maxMarks}',
-                style: text.bodyMedium,
+              const SizedBox(height: AksharaSpacing.s2),
+              // Shared spreadsheet-grade column-stats footer (P2-UX-2 §2.2/2.5 —
+              // the SAME component the teacher marks grid renders).
+              MarksColumnStats(
+                key: QaTestKeys.marksColumnStats,
+                entered: entered,
+                total: marks.length,
+                averagePercent: avgPercent,
+                maxMarks: exam.maxMarks,
               ),
               // EXM-6 — surface the marks-entry deadline (if set) as a banner.
               // The automated teacher reminder rides a future reminder-rule

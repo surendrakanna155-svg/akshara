@@ -397,6 +397,13 @@ abstract final class QaTestKeys {
       ValueKey<String>('teacher_exam_mark_field_$markId');
   static ValueKey<String> teacherExamMarkSaveButton(String markId) =>
       ValueKey<String>('teacher_exam_mark_save_$markId');
+  // P2-UX-2 §2.2 — teacher "Save all changed" (batches the dirty rows through
+  // the existing single-save path; no new backend).
+  static const teacherExamSaveAllButton =
+      ValueKey<String>('teacher_exam_save_all_button');
+  // P2-UX-2 §2.2/2.5 — the shared column-stats footer (both marks chains).
+  static const marksColumnStats =
+      ValueKey<String>('marks_column_stats');
   static const teacherExamSelector =
       ValueKey<String>('teacher_exam_selector');
   static ValueKey<String> classTeacherLeaveApprove(String id) =>
