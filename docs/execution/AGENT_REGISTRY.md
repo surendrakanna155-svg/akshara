@@ -35,6 +35,7 @@ Reconcile against them FIRST, then continue.
 | Agent ID | Model | Task | Scope (files) | State | Recovery |
 |---|---|---|---|---|---|
 | `a4190c9a1581789d2` | **haiku** | Run acquisition crawl PASS 1 (P0 CBSE+NCERT) | `curriculum/resources/**` + `acquisition/` (no git) | 🟢 running | monitor; resumable (`crawl.py --resume`); do NOT re-spawn |
+| `ac081ada6353f100c` | **sonnet** | ERP AsyncValue→ErpAsyncBody migration (RE-RUN) | `lib/features/{director,school_completion,parent_meetings,memories}/**` (worktree, base-verify onto tip `cb7fbc82`) | 🟢 running | monitor; integrate worktree on report; do NOT re-spawn |
 
 
 ## Terminal this session (2026-07-08) — for provenance / no-duplicate
