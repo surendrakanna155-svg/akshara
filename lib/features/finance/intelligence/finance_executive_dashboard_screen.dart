@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../router/route_names.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../../theme/spacing.dart';
@@ -25,13 +26,12 @@ class FinanceExecutiveDashboardScreen extends ConsumerWidget {
     return FinanceModuleScaffold(
       screen: FinanceScreen.executiveDashboard,
       showFilterBar: false,
-      body: data.when(
-        loading: () => const AksharaLoadingState(),
-        error: (e, _) => AksharaErrorState(
-          message: '$e',
-          onRetry: () => ref.invalidate(financeExecutiveProvider),
-        ),
-        data: (snapshot) => Column(
+      body: ErpAsyncBody(
+        state: resolveErpAsync(data, isDataEmpty: (_) => false),
+        loadingLabel: 'Loading',
+        emptyMessage: 'No finance executive data available.',
+        onRetry: () => ref.invalidate(financeExecutiveProvider),
+        builder: (snapshot) => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             AksharaAnalyticsFilterBar(

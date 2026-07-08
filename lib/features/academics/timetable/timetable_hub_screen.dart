@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/akshara_empty_state.dart';
 import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -100,13 +100,12 @@ class _TimetableDashboardTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final summaryAsync = ref.watch(timetableSummaryProvider);
-    return summaryAsync.when(
-      loading: () => const AksharaLoadingState(semanticLabel: 'Loading timetable summary'),
-      error: (_, __) => AksharaErrorState(
-        message: 'Unable to load timetable summary.',
-        onRetry: () => invalidateTimetableReads(ref),
-      ),
-      data: (summary) => ListView(
+    return ErpAsyncBody(
+      state: resolveErpAsync(summaryAsync, isDataEmpty: (_) => false),
+      loadingLabel: 'Loading timetable summary',
+      emptyMessage: 'No timetable summary available.',
+      onRetry: () => invalidateTimetableReads(ref),
+      builder: (summary) => ListView(
         padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
           Wrap(
@@ -188,16 +187,16 @@ class _TimetableConflictsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final conflictsAsync = ref.watch(timetableConflictsProvider);
-    return conflictsAsync.when(
-      loading: () => const AksharaLoadingState(semanticLabel: 'Loading conflicts'),
-      error: (_, __) => const AksharaErrorState(message: 'Unable to load timetable conflicts.'),
-      data: (bundle) {
-        if (bundle.conflicts.isEmpty) {
-          return const AksharaEmptyState(
-            message: 'No timetable conflicts detected.',
-            icon: Icons.check_circle_outline,
-          );
-        }
+    return ErpAsyncBody(
+      state: resolveErpAsync(
+        conflictsAsync,
+        isDataEmpty: (bundle) => bundle.conflicts.isEmpty,
+      ),
+      loadingLabel: 'Loading conflicts',
+      emptyMessage: 'No timetable conflicts detected.',
+      emptyIcon: Icons.check_circle_outline,
+      onRetry: () => ref.invalidate(timetableConflictsProvider),
+      builder: (bundle) {
         return ListView(
           padding: const EdgeInsets.all(AksharaSpacing.s4),
           children: [
@@ -235,13 +234,12 @@ class _TimetableWorkloadTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final rollupAsync = ref.watch(timetableWorkloadRollupProvider);
-    return rollupAsync.when(
-      loading: () => const AksharaLoadingState(semanticLabel: 'Loading teacher workload'),
-      error: (_, __) => AksharaErrorState(
-        message: 'Unable to load teacher workload.',
-        onRetry: () => ref.invalidate(timetableWorkloadRollupProvider),
-      ),
-      data: (rollup) => TimetableWorkloadDashboard(
+    return ErpAsyncBody(
+      state: resolveErpAsync(rollupAsync, isDataEmpty: (_) => false),
+      loadingLabel: 'Loading teacher workload',
+      emptyMessage: 'No teacher workload data available.',
+      onRetry: () => ref.invalidate(timetableWorkloadRollupProvider),
+      builder: (rollup) => TimetableWorkloadDashboard(
         rollup: rollup,
         onExport: () => TimetableWorkloadExporter(
           ref.read(aksharaReportExportServiceProvider),
@@ -508,10 +506,12 @@ class _TimetablePublishTab extends ConsumerWidget {
     final canPublish = ref.watch(timetableCanPublishProvider);
     final mutation = ref.watch(timetableMutationsProvider);
 
-    return listAsync.when(
-      loading: () => const AksharaLoadingState(semanticLabel: 'Loading timetables'),
-      error: (_, __) => const AksharaErrorState(message: 'Unable to load timetables.'),
-      data: (entries) {
+    return ErpAsyncBody(
+      state: resolveErpAsync(listAsync, isDataEmpty: (_) => false),
+      loadingLabel: 'Loading timetables',
+      emptyMessage: 'No timetables available.',
+      onRetry: () => ref.invalidate(timetableListProvider),
+      builder: (entries) {
         final validated = entries.where((e) => e.status == TimetableStatus.validated).toList();
         if (validated.isEmpty) {
           return const AksharaEmptyState(

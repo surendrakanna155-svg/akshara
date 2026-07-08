@@ -6,12 +6,9 @@ import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../core/tenant/tenant_provider.dart';
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/akshara_freshness_chip.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../core/errors/api_failure_mapper.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -282,20 +279,14 @@ class _RegisterTab extends ConsumerWidget {
             title: 'Register · $classLabel · ${_dateLabel(date)}',
           ),
           const SizedBox(height: AksharaSpacing.s2),
-          async.when(
-            loading: () => const AksharaLoadingState(),
-            error: (e, _) => AksharaErrorState.fromFailure(
-              apiFailureMapper.fromException(e),
-              onRetry: () => ref.invalidate(officeRegisterProvider),
-            ),
-            data: (rows) {
-              if (rows.isEmpty) {
-                return const AksharaEmptyState(
-                  message:
-                      'No submitted attendance for this class and date yet.',
-                  icon: Icons.event_busy_outlined,
-                );
-              }
+          ErpAsyncBody(
+            state: resolveErpAsync(async, isDataEmpty: (rows) => rows.isEmpty),
+            loadingLabel: 'Loading',
+            emptyMessage:
+                'No submitted attendance for this class and date yet.',
+            emptyIcon: Icons.event_busy_outlined,
+            onRetry: () => ref.invalidate(officeRegisterProvider),
+            builder: (rows) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -480,19 +471,16 @@ class _MonthlyTab extends ConsumerWidget {
           const SizedBox(height: AksharaSpacing.s4),
           AksharaSectionHeader(title: 'Monthly register · $classLabel · $month'),
           const SizedBox(height: AksharaSpacing.s2),
-          async.when(
-            loading: () => const AksharaLoadingState(),
-            error: (e, _) => AksharaErrorState.fromFailure(
-              apiFailureMapper.fromException(e),
-              onRetry: () => ref.invalidate(officeMonthlyRegisterProvider),
+          ErpAsyncBody(
+            state: resolveErpAsync(
+              async,
+              isDataEmpty: (register) => register.students.isEmpty,
             ),
-            data: (register) {
-              if (register.students.isEmpty) {
-                return const AksharaEmptyState(
-                  message: 'No submitted attendance for this class this month.',
-                  icon: Icons.calendar_month_outlined,
-                );
-              }
+            loadingLabel: 'Loading',
+            emptyMessage: 'No submitted attendance for this class this month.',
+            emptyIcon: Icons.calendar_month_outlined,
+            onRetry: () => ref.invalidate(officeMonthlyRegisterProvider),
+            builder: (register) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -609,19 +597,13 @@ class _PendingTab extends ConsumerWidget {
             title: 'Attendance pending · ${_dateLabel(date)}',
           ),
           const SizedBox(height: AksharaSpacing.s2),
-          async.when(
-            loading: () => const AksharaLoadingState(),
-            error: (e, _) => AksharaErrorState.fromFailure(
-              apiFailureMapper.fromException(e),
-              onRetry: () => ref.invalidate(officePendingProvider),
-            ),
-            data: (rows) {
-              if (rows.isEmpty) {
-                return const AksharaEmptyState(
-                  message: 'All classes have submitted attendance. Nice.',
-                  icon: Icons.check_circle_outline,
-                );
-              }
+          ErpAsyncBody(
+            state: resolveErpAsync(async, isDataEmpty: (rows) => rows.isEmpty),
+            loadingLabel: 'Loading',
+            emptyMessage: 'All classes have submitted attendance. Nice.',
+            emptyIcon: Icons.check_circle_outline,
+            onRetry: () => ref.invalidate(officePendingProvider),
+            builder: (rows) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -752,19 +734,13 @@ class _ConsecutiveAbsenceSection extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: AksharaSpacing.s2),
-        async.when(
-          loading: () => const AksharaLoadingState(),
-          error: (e, _) => AksharaErrorState.fromFailure(
-            apiFailureMapper.fromException(e),
-            onRetry: () => ref.invalidate(officeConsecutiveAbsenceProvider),
-          ),
-          data: (rows) {
-            if (rows.isEmpty) {
-              return const AksharaEmptyState(
-                message: 'No students with consecutive absences.',
-                icon: Icons.sentiment_satisfied_outlined,
-              );
-            }
+        ErpAsyncBody(
+          state: resolveErpAsync(async, isDataEmpty: (rows) => rows.isEmpty),
+          loadingLabel: 'Loading',
+          emptyMessage: 'No students with consecutive absences.',
+          emptyIcon: Icons.sentiment_satisfied_outlined,
+          onRetry: () => ref.invalidate(officeConsecutiveAbsenceProvider),
+          builder: (rows) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -857,13 +833,12 @@ class _ShortAttendanceSection extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: AksharaSpacing.s2),
-        async.when(
-          loading: () => const AksharaLoadingState(),
-          error: (e, _) => AksharaErrorState.fromFailure(
-            apiFailureMapper.fromException(e),
-            onRetry: () => ref.invalidate(officeShortAttendanceProvider),
-          ),
-          data: (rows) {
+        ErpAsyncBody(
+          state: resolveErpAsync(async, isDataEmpty: (_) => false),
+          loadingLabel: 'Loading',
+          emptyMessage: 'No students below $threshold%.',
+          onRetry: () => ref.invalidate(officeShortAttendanceProvider),
+          builder: (rows) {
             if (rows.isEmpty) {
               return Text(
                 'No students below $threshold%.',

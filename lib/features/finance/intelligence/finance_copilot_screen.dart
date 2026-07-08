@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../widgets/finance_module_scaffold.dart';
 import '../finance_models.dart';
 import 'fee_collection_intelligence.dart';
 import 'fee_collection_intelligence_provider.dart';
 import 'finance_intelligence_provider.dart';
-import '../../../core/errors/api_failure_mapper.dart';
 import '../../../theme/spacing.dart';
 
 /// Finance Copilot — forecasting, defaulter prediction, trend analytics.
@@ -22,10 +22,12 @@ class FinanceCopilotScreen extends ConsumerWidget {
     return FinanceModuleScaffold(
       screen: FinanceScreen.intelligence,
       showFilterBar: false,
-      body: data.when(
-        loading: () => const AksharaLoadingState(),
-        error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
-        data: (snapshot) => ListView(
+      body: ErpAsyncBody(
+        state: resolveErpAsync(data, isDataEmpty: (_) => false),
+        loadingLabel: 'Loading',
+        emptyMessage: 'No finance intelligence available.',
+        onRetry: () => ref.invalidate(financeCopilotProvider),
+        builder: (snapshot) => ListView(
           padding: const EdgeInsets.all(AksharaSpacing.s4),
           children: [
             _metric('Fee collection forecast', '₹${snapshot.feeCollectionForecast}'),

@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/errors/api_failure_mapper.dart';
 import '../../../core/repositories/repository_providers.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../phase5/phase5_models.dart';
 import '../../phase5/phase5_providers.dart';
@@ -104,8 +102,12 @@ class _ParentExperienceHubScreenState extends ConsumerState<ParentExperienceHubS
           ],
         ),
       ),
-      body: hub.when(
-        data: (h) => TabBarView(
+      body: ErpAsyncBody(
+        state: resolveErpAsync(hub, isDataEmpty: (_) => false),
+        loadingLabel: 'Loading',
+        emptyMessage: 'No experience hub data available.',
+        onRetry: () => ref.invalidate(parentExperienceHubProvider(_studentId)),
+        builder: (h) => TabBarView(
           controller: _tabs,
           children: [
             _OverviewTab(h: h, onOpenInventory: () => _tabs.animateTo(3)),
@@ -119,11 +121,6 @@ class _ParentExperienceHubScreenState extends ConsumerState<ParentExperienceHubS
             _CommunicationTab(h: h),
             _GuidanceTab(h: h),
           ],
-        ),
-        loading: () => const AksharaLoadingState(),
-        error: (e, _) => AksharaErrorState.fromFailure(
-          apiFailureMapper.fromException(e),
-          onRetry: () => ref.invalidate(parentExperienceHubProvider(_studentId)),
         ),
       ),
     );

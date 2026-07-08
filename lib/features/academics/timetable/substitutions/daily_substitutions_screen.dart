@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/testing/qa_test_keys.dart';
 import '../../../../core/timetable/timetable_generation_inputs.dart';
+import '../../../../shared/async/erp_async_state.dart';
 import '../../../../shared/widgets/widgets.dart';
 import '../../../../theme/radius.dart';
 import '../../../../theme/spacing.dart';
@@ -45,15 +46,12 @@ class DailySubstitutionsScreen extends ConsumerWidget {
         children: [
           _DateStrip(date: date),
           Expanded(
-            child: bundleAsync.when(
-              loading: () => const AksharaLoadingState(
-                semanticLabel: 'Loading cover for the day',
-              ),
-              error: (_, __) => AksharaErrorState(
-                message: 'Unable to load the day\'s cover.',
-                onRetry: () => ref.invalidate(dailySubstitutionsProvider),
-              ),
-              data: (bundle) => _DayBody(
+            child: ErpAsyncBody(
+              state: resolveErpAsync(bundleAsync, isDataEmpty: (_) => false),
+              loadingLabel: 'Loading cover for the day',
+              emptyMessage: 'No cover data available for this day.',
+              onRetry: () => ref.invalidate(dailySubstitutionsProvider),
+              builder: (bundle) => _DayBody(
                 bundle: bundle,
                 canManage: canManage,
                 teacherName: teacherName,
@@ -276,15 +274,13 @@ class _AddCoverSheetState extends ConsumerState<_AddCoverSheet> {
         top: AksharaSpacing.s4,
         bottom: MediaQuery.of(context).viewInsets.bottom + AksharaSpacing.s4,
       ),
-      child: detailAsync.when(
-        loading: () => const Padding(
-          padding: EdgeInsets.all(AksharaSpacing.s4),
-          child: AksharaLoadingState(semanticLabel: 'Loading periods'),
-        ),
-        error: (_, __) => const AksharaErrorState(
-          message: 'Unable to load periods to cover.',
-        ),
-        data: (detail) => _form(context, detail.periods),
+      child: ErpAsyncBody(
+        state: resolveErpAsync(detailAsync, isDataEmpty: (_) => false),
+        loadingLabel: 'Loading periods',
+        emptyMessage: 'No periods available to cover.',
+        onRetry: () =>
+            ref.invalidate(timetableEditorDetailProvider(selectedTimetableId)),
+        builder: (detail) => _form(context, detail.periods),
       ),
     );
   }

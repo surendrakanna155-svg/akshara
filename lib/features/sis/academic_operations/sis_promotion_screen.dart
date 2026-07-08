@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/errors/api_failure_mapper.dart';
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/forms/forms.dart';
-import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../sis_models.dart';
@@ -130,8 +129,12 @@ class _SisPromotionScreenState extends ConsumerState<SisPromotionScreen> {
   }
 
   Widget _buildMappingStep(AsyncValue<List<ClassMappingRule>> suggested) {
-    return suggested.when(
-      data: (_) => Column(
+    return ErpAsyncBody(
+      state: resolveErpAsync(suggested, isDataEmpty: (_) => false),
+      loadingLabel: 'Loading',
+      emptyMessage: 'No suggested class mappings available.',
+      onRetry: () => ref.invalidate(suggestedMappingsFutureProvider),
+      builder: (_) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text('Confirm class mapping rules',
@@ -163,11 +166,6 @@ class _SisPromotionScreenState extends ConsumerState<SisPromotionScreen> {
               },
             ),
         ],
-      ),
-      loading: () => const AksharaLoadingState(),
-      error: (error, _) => AksharaErrorState.fromFailure(
-        apiFailureMapper.fromException(error),
-        onRetry: () => ref.invalidate(suggestedMappingsFutureProvider),
       ),
     );
   }

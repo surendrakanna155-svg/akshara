@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/errors/api_failure_mapper.dart';
 import '../../router/phase5_navigation.dart';
-import '../../shared/widgets/akshara_error_state.dart';
-import '../../shared/widgets/akshara_loading_state.dart';
+import '../../shared/async/erp_async_state.dart';
 import '../../theme/theme_extensions.dart';
 import '../phase4/phase4_providers.dart';
 import '../../theme/spacing.dart';
@@ -23,8 +21,12 @@ class EmployeePlatformScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
-          dashboard.when(
-            data: (d) => Column(
+          ErpAsyncBody(
+            state: resolveErpAsync(dashboard, isDataEmpty: (_) => false),
+            loadingLabel: 'Loading dashboard',
+            emptyMessage: 'No employee dashboard data available.',
+            onRetry: () => ref.invalidate(employeeDashboardProvider),
+            builder: (d) => Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 ListTile(title: const Text('Total employees'), trailing: Text('${d.totalEmployees}')),
@@ -32,16 +34,15 @@ class EmployeePlatformScreen extends ConsumerWidget {
                 ListTile(title: const Text('Workload index'), trailing: Text('${d.workloadIndex}')),
               ],
             ),
-            loading: () => const AksharaLoadingState(semanticLabel: 'Loading dashboard'),
-            error: (e, _) => AksharaErrorState.fromFailure(
-              apiFailureMapper.fromException(e),
-              onRetry: () => ref.invalidate(employeeDashboardProvider),
-            ),
           ),
           const SizedBox(height: 16),
           Text('Employees', style: context.aksharaText.titleMedium),
-          employees.when(
-            data: (items) => Column(
+          ErpAsyncBody(
+            state: resolveErpAsync(employees, isDataEmpty: (_) => false),
+            loadingLabel: 'Loading employees',
+            emptyMessage: 'No employees found.',
+            onRetry: () => ref.invalidate(employeesListProvider),
+            builder: (items) => Column(
               children: items
                   .map(
                     (e) => ListTile(
@@ -52,11 +53,6 @@ class EmployeePlatformScreen extends ConsumerWidget {
                     ),
                   )
                   .toList(),
-            ),
-            loading: () => const AksharaLoadingState(semanticLabel: 'Loading employees'),
-            error: (e, _) => AksharaErrorState.fromFailure(
-              apiFailureMapper.fromException(e),
-              onRetry: () => ref.invalidate(employeesListProvider),
             ),
           ),
         ],

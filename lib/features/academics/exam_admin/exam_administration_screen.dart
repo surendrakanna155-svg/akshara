@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/exams/exam_administration_store.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -85,14 +86,16 @@ class ExamAdministrationScreen extends ConsumerWidget {
             ),
           ),
           Expanded(
-            child: examsAsync.when(
-              data: (exams) {
-                if (exams.isEmpty) {
-                  return const AksharaEmptyState(
-                    message: 'No exams match this filter.',
-                    icon: Icons.assignment_outlined,
-                  );
-                }
+            child: ErpAsyncBody(
+              state: resolveErpAsync(
+                examsAsync,
+                isDataEmpty: (exams) => exams.isEmpty,
+              ),
+              loadingLabel: 'Loading exams',
+              emptyMessage: 'No exams match this filter.',
+              emptyIcon: Icons.assignment_outlined,
+              onRetry: () => refreshExamAdminList(ref),
+              builder: (exams) {
                 return ListView.separated(
                   padding: const EdgeInsets.all(AksharaSpacing.s4),
                   itemCount: exams.length,
@@ -102,13 +105,6 @@ class ExamAdministrationScreen extends ConsumerWidget {
                       _ExamSessionCard(exam: exams[index]),
                 );
               },
-              loading: () => const AksharaLoadingState(
-                semanticLabel: 'Loading exams',
-              ),
-              error: (error, _) => AksharaErrorState(
-                message: 'Unable to load exams.',
-                onRetry: () => refreshExamAdminList(ref),
-              ),
             ),
           ),
         ],

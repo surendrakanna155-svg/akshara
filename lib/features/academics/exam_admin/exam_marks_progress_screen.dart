@@ -6,6 +6,7 @@ import '../../../core/exams/exam_administration_store.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/security/rbac_service.dart';
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -46,31 +47,26 @@ class ExamMarksProgressScreen extends ConsumerWidget {
                   'You do not have permission to view marks-entry progress.',
               icon: Icons.lock_outline,
             )
-          : ref.watch(examMarksEntryProgressProvider).when(
-                loading: () => const AksharaLoadingState(
-                  semanticLabel: 'Loading marks progress',
-                ),
-                error: (_, __) => AksharaErrorState(
-                  message: 'Unable to load marks progress.',
-                  onRetry: () => refreshExamAdminList(ref),
-                ),
-                data: (rows) {
-                  if (rows.isEmpty) {
-                    return const AksharaEmptyState(
-                      message: 'No exams are awaiting marks.',
-                      icon: Icons.checklist_rtl_outlined,
-                    );
-                  }
-                  return ListView.separated(
-                    padding: const EdgeInsets.all(AksharaSpacing.s4),
-                    itemCount: rows.length,
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(height: AksharaSpacing.s3),
-                    itemBuilder: (context, index) =>
-                        _ProgressCard(progress: rows[index]),
-                  );
-                },
+          : ErpAsyncBody(
+              state: resolveErpAsync(
+                ref.watch(examMarksEntryProgressProvider),
+                isDataEmpty: (rows) => rows.isEmpty,
               ),
+              loadingLabel: 'Loading marks progress',
+              emptyMessage: 'No exams are awaiting marks.',
+              emptyIcon: Icons.checklist_rtl_outlined,
+              onRetry: () => refreshExamAdminList(ref),
+              builder: (rows) {
+                return ListView.separated(
+                  padding: const EdgeInsets.all(AksharaSpacing.s4),
+                  itemCount: rows.length,
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(height: AksharaSpacing.s3),
+                  itemBuilder: (context, index) =>
+                      _ProgressCard(progress: rows[index]),
+                );
+              },
+            ),
     );
   }
 

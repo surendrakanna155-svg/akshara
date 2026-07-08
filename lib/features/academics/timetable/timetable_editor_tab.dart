@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/timetable/timetable_generation_inputs.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import 'timetable_models.dart';
@@ -38,13 +39,12 @@ class _TimetableEditorTabState extends ConsumerState<TimetableEditorTab> {
     final detailAsync = ref.watch(timetableEditorDetailProvider(selectedId));
     final canManage = ref.watch(timetableCanManageProvider);
 
-    return detailAsync.when(
-      loading: () => const AksharaLoadingState(semanticLabel: 'Loading timetable editor'),
-      error: (_, __) => AksharaErrorState(
-        message: 'Unable to load timetable for editing.',
-        onRetry: () => ref.invalidate(timetableEditorDetailProvider(selectedId)),
-      ),
-      data: (detail) {
+    return ErpAsyncBody(
+      state: resolveErpAsync(detailAsync, isDataEmpty: (_) => false),
+      loadingLabel: 'Loading timetable editor',
+      emptyMessage: 'No periods to edit.',
+      onRetry: () => ref.invalidate(timetableEditorDetailProvider(selectedId)),
+      builder: (detail) {
         _periods ??= List<TimetablePeriod>.from(detail.periods);
         final periods = _periods!;
         final periodsPerDay = detail.timetable.periodsPerDay;

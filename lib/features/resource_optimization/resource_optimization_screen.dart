@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/testing/qa_test_keys.dart';
-import '../../shared/widgets/widgets.dart';
+import '../../shared/async/erp_async_state.dart';
 import 'resource_optimization_models.dart';
 import 'resource_optimization_mutations_provider.dart';
 import 'resource_optimization_providers.dart';
@@ -85,19 +85,16 @@ class _DomainRecommendationsList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state =
         ref.watch(resourceOptimizationRecommendationsProvider(domain));
-    return state.when(
-      loading: () => const AksharaLoadingState(),
-      error: (error, _) => AksharaErrorState(
-        message: 'Unable to load recommendations',
-        onRetry: () =>
-            ref.invalidate(resourceOptimizationRecommendationsProvider(domain)),
+    return ErpAsyncBody(
+      state: resolveErpAsync(
+        state,
+        isDataEmpty: (recommendations) => recommendations.isEmpty,
       ),
-      data: (recommendations) {
-        if (recommendations.isEmpty) {
-          return const AksharaEmptyState(
-            message: 'No recommendations right now for this domain.',
-          );
-        }
+      loadingLabel: 'Loading',
+      emptyMessage: 'No recommendations right now for this domain.',
+      onRetry: () =>
+          ref.invalidate(resourceOptimizationRecommendationsProvider(domain)),
+      builder: (recommendations) {
         return ListView.separated(
           padding: const EdgeInsets.all(AksharaSpacing.s4),
           itemCount: recommendations.length,

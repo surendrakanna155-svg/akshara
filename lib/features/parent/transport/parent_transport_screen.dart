@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../parent_active_child_provider.dart';
 import 'parent_transport_provider.dart';
-import '../../../core/errors/api_failure_mapper.dart';
 
 /// Parent mobile transport — route allocation and telemetry-first ETA (PA-12).
 class ParentTransportScreen extends ConsumerWidget {
@@ -32,16 +32,14 @@ class ParentTransportScreen extends ConsumerWidget {
         showAi: false,
         onNotificationsTap: onNotificationsTap,
       ),
-      body: allocationAsync.when(
-        loading: () => const AksharaLoadingState(),
-        error: (error, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(error)),
-        data: (allocation) {
-          if (allocation == null) {
-            return const AksharaEmptyState(
-              message: 'No transport allocation on file for this student.',
-              icon: Icons.directions_bus_outlined,
-            );
-          }
+      body: ErpAsyncBody(
+        state: resolveErpAsync(allocationAsync, isDataEmpty: (_) => false),
+        loadingLabel: 'Loading',
+        emptyMessage: 'No transport allocation on file for this student.',
+        emptyIcon: Icons.directions_bus_outlined,
+        onRetry: () => ref.invalidate(parentTransportAllocationProvider),
+        builder: (allocationOrNull) {
+          final allocation = allocationOrNull!;
           return ListView(
             padding: const EdgeInsets.all(AksharaSpacing.s4),
             children: [

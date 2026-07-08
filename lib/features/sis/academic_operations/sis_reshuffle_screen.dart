@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/errors/api_failure_mapper.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../sis_models.dart';
@@ -55,10 +53,14 @@ class SisReshuffleScreen extends ConsumerWidget {
                 },
               ),
               const SizedBox(height: AksharaSpacing.s3),
-              preview.when(
-                data: (plan) => SizedBox(
-                  height: 320,
-                  child: ListView(
+              SizedBox(
+                height: 320,
+                child: ErpAsyncBody(
+                  state: resolveErpAsync(preview, isDataEmpty: (_) => false),
+                  loadingLabel: 'Loading',
+                  emptyMessage: 'No reshuffle preview available.',
+                  onRetry: () => ref.invalidate(reshufflePreviewFutureProvider),
+                  builder: (plan) => ListView(
                     children: [
                       for (final row in plan.previewRows)
                         ListTile(
@@ -69,16 +71,6 @@ class SisReshuffleScreen extends ConsumerWidget {
                           ),
                         ),
                     ],
-                  ),
-                ),
-                loading: () =>
-                    const SizedBox(height: 320, child: AksharaLoadingState()),
-                error: (error, _) => SizedBox(
-                  height: 320,
-                  child: AksharaErrorState.fromFailure(
-                    apiFailureMapper.fromException(error),
-                    onRetry: () =>
-                        ref.invalidate(reshufflePreviewFutureProvider),
                   ),
                 ),
               ),

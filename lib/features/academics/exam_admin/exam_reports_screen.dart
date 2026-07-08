@@ -8,6 +8,7 @@ import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/security/rbac_service.dart';
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -566,48 +567,46 @@ class _TabulationView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ref.watch(examTabulationProvider).when(
-          loading: () =>
-              const AksharaLoadingState(semanticLabel: 'Loading tabulation'),
-          error: (_, __) =>
-              const AksharaErrorState(message: 'Unable to load tabulation.'),
-          data: (reg) {
-            if (reg.students.isEmpty) {
-              return const AksharaEmptyState(
-                message: 'No results for this class and term yet.',
-                icon: Icons.grid_on_outlined,
-              );
-            }
-            return SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(AksharaSpacing.s4),
-                child: DataTable(
-                  columns: [
-                    const DataColumn(label: Text('Roll')),
-                    const DataColumn(label: Text('Student')),
-                    for (final s in reg.subjects) DataColumn(label: Text(s)),
-                    const DataColumn(label: Text('Total')),
-                    const DataColumn(label: Text('%')),
-                    const DataColumn(label: Text('Rank')),
-                  ],
-                  rows: [
-                    for (final s in reg.students)
-                      DataRow(cells: [
-                        DataCell(Text(s.rollNo ?? '')),
-                        DataCell(Text(s.studentName)),
-                        for (final subj in reg.subjects)
-                          DataCell(Text(s.cellsBySubject[subj]?.display ?? '—')),
-                        DataCell(Text('${s.total}/${s.totalMax}')),
-                        DataCell(Text('${s.percent.toStringAsFixed(1)}%')),
-                        DataCell(Text(s.rank?.toString() ?? '—')),
-                      ]),
-                  ],
-                ),
-              ),
-            );
-          },
+    return ErpAsyncBody(
+      state: resolveErpAsync(
+        ref.watch(examTabulationProvider),
+        isDataEmpty: (reg) => reg.students.isEmpty,
+      ),
+      loadingLabel: 'Loading tabulation',
+      emptyMessage: 'No results for this class and term yet.',
+      emptyIcon: Icons.grid_on_outlined,
+      onRetry: () => ref.invalidate(examTabulationProvider),
+      builder: (reg) {
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(AksharaSpacing.s4),
+            child: DataTable(
+              columns: [
+                const DataColumn(label: Text('Roll')),
+                const DataColumn(label: Text('Student')),
+                for (final s in reg.subjects) DataColumn(label: Text(s)),
+                const DataColumn(label: Text('Total')),
+                const DataColumn(label: Text('%')),
+                const DataColumn(label: Text('Rank')),
+              ],
+              rows: [
+                for (final s in reg.students)
+                  DataRow(cells: [
+                    DataCell(Text(s.rollNo ?? '')),
+                    DataCell(Text(s.studentName)),
+                    for (final subj in reg.subjects)
+                      DataCell(Text(s.cellsBySubject[subj]?.display ?? '—')),
+                    DataCell(Text('${s.total}/${s.totalMax}')),
+                    DataCell(Text('${s.percent.toStringAsFixed(1)}%')),
+                    DataCell(Text(s.rank?.toString() ?? '—')),
+                  ]),
+              ],
+            ),
+          ),
         );
+      },
+    );
   }
 }
 
@@ -625,58 +624,50 @@ class _MeritToppersView extends ConsumerWidget {
       children: [
         Text('Subject toppers', style: text.titleMedium),
         const SizedBox(height: AksharaSpacing.s2),
-        toppers.when(
-          loading: () =>
-              const AksharaLoadingState(semanticLabel: 'Loading toppers'),
-          error: (_, __) =>
-              const AksharaErrorState(message: 'Unable to load toppers.'),
-          data: (rows) => rows.isEmpty
-              ? const AksharaEmptyState(
-                  message: 'No published marks for this exam yet.',
-                  icon: Icons.emoji_events_outlined,
-                )
-              : Column(
-                  children: [
-                    for (final t in rows)
-                      ListTile(
-                        dense: true,
-                        leading: CircleAvatar(child: Text('${t.rank}')),
-                        title: Text(t.studentName),
-                        trailing: Text(
-                          '${t.marks}/${t.maxMarks} · ${t.percent.toStringAsFixed(1)}%',
-                          style: text.bodyMedium,
-                        ),
-                      ),
-                  ],
+        ErpAsyncBody(
+          state: resolveErpAsync(toppers, isDataEmpty: (rows) => rows.isEmpty),
+          loadingLabel: 'Loading toppers',
+          emptyMessage: 'No published marks for this exam yet.',
+          emptyIcon: Icons.emoji_events_outlined,
+          onRetry: () => ref.invalidate(examToppersProvider),
+          builder: (rows) => Column(
+            children: [
+              for (final t in rows)
+                ListTile(
+                  dense: true,
+                  leading: CircleAvatar(child: Text('${t.rank}')),
+                  title: Text(t.studentName),
+                  trailing: Text(
+                    '${t.marks}/${t.maxMarks} · ${t.percent.toStringAsFixed(1)}%',
+                    style: text.bodyMedium,
+                  ),
                 ),
+            ],
+          ),
         ),
         const SizedBox(height: AksharaSpacing.s5),
         Text('Merit list (term total)', style: text.titleMedium),
         const SizedBox(height: AksharaSpacing.s2),
-        merit.when(
-          loading: () =>
-              const AksharaLoadingState(semanticLabel: 'Loading merit list'),
-          error: (_, __) =>
-              const AksharaErrorState(message: 'Unable to load merit list.'),
-          data: (rows) => rows.isEmpty
-              ? const AksharaEmptyState(
-                  message: 'No ranked students for this class and term yet.',
-                  icon: Icons.leaderboard_outlined,
-                )
-              : Column(
-                  children: [
-                    for (final m in rows)
-                      ListTile(
-                        dense: true,
-                        leading: CircleAvatar(child: Text('${m.rank}')),
-                        title: Text(m.studentName),
-                        trailing: Text(
-                          '${m.total}/${m.totalMax} · ${m.percent.toStringAsFixed(1)}%',
-                          style: text.bodyMedium,
-                        ),
-                      ),
-                  ],
+        ErpAsyncBody(
+          state: resolveErpAsync(merit, isDataEmpty: (rows) => rows.isEmpty),
+          loadingLabel: 'Loading merit list',
+          emptyMessage: 'No ranked students for this class and term yet.',
+          emptyIcon: Icons.leaderboard_outlined,
+          onRetry: () => ref.invalidate(examMeritProvider),
+          builder: (rows) => Column(
+            children: [
+              for (final m in rows)
+                ListTile(
+                  dense: true,
+                  leading: CircleAvatar(child: Text('${m.rank}')),
+                  title: Text(m.studentName),
+                  trailing: Text(
+                    '${m.total}/${m.totalMax} · ${m.percent.toStringAsFixed(1)}%',
+                    style: text.bodyMedium,
+                  ),
                 ),
+            ],
+          ),
         ),
       ],
     );
@@ -689,60 +680,63 @@ class _DistributionView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final text = context.aksharaText;
-    return ref.watch(examDistributionProvider).when(
-          loading: () =>
-              const AksharaLoadingState(semanticLabel: 'Loading distribution'),
-          error: (_, __) =>
-              const AksharaErrorState(message: 'Unable to load distribution.'),
-          data: (dist) {
-            if (dist == null || dist.presentCount == 0) {
-              return const AksharaEmptyState(
-                message: 'No published marks for this exam yet.',
-                icon: Icons.pie_chart_outline,
-              );
-            }
-            return ListView(
-              padding: const EdgeInsets.all(AksharaSpacing.s4),
+    return ErpAsyncBody(
+      state: resolveErpAsync(
+        ref.watch(examDistributionProvider),
+        isDataEmpty: (_) => false,
+      ),
+      loadingLabel: 'Loading distribution',
+      emptyMessage: 'No published marks for this exam yet.',
+      onRetry: () => ref.invalidate(examDistributionProvider),
+      builder: (dist) {
+        if (dist == null || dist.presentCount == 0) {
+          return const AksharaEmptyState(
+            message: 'No published marks for this exam yet.',
+            icon: Icons.pie_chart_outline,
+          );
+        }
+        return ListView(
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
+          children: [
+            Row(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _StatCard(
-                        label: 'Passed',
-                        value: '${dist.passCount}',
-                        tone: KpiAccent.success,
-                      ),
-                    ),
-                    const SizedBox(width: AksharaSpacing.s3),
-                    Expanded(
-                      child: _StatCard(
-                        label: 'Failed',
-                        value: '${dist.failCount}',
-                        tone: KpiAccent.error,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AksharaSpacing.s3),
-                Text(
-                  'Pass mark ${dist.passMarkPercent}% (${dist.passMarkSource}) · '
-                  '${dist.presentCount} evaluated · '
-                  '${dist.excludedCount} excluded (AB/ML/DB)',
-                  style: text.bodySmall,
-                ),
-                const SizedBox(height: AksharaSpacing.s4),
-                Text('Grade distribution', style: text.titleMedium),
-                const SizedBox(height: AksharaSpacing.s2),
-                for (final g in dist.gradeBreakdown)
-                  ListTile(
-                    dense: true,
-                    title: Text('Grade ${g.grade}'),
-                    trailing: Text('${g.count}', style: text.bodyMedium),
+                Expanded(
+                  child: _StatCard(
+                    label: 'Passed',
+                    value: '${dist.passCount}',
+                    tone: KpiAccent.success,
                   ),
+                ),
+                const SizedBox(width: AksharaSpacing.s3),
+                Expanded(
+                  child: _StatCard(
+                    label: 'Failed',
+                    value: '${dist.failCount}',
+                    tone: KpiAccent.error,
+                  ),
+                ),
               ],
-            );
-          },
+            ),
+            const SizedBox(height: AksharaSpacing.s3),
+            Text(
+              'Pass mark ${dist.passMarkPercent}% (${dist.passMarkSource}) · '
+              '${dist.presentCount} evaluated · '
+              '${dist.excludedCount} excluded (AB/ML/DB)',
+              style: text.bodySmall,
+            ),
+            const SizedBox(height: AksharaSpacing.s4),
+            Text('Grade distribution', style: text.titleMedium),
+            const SizedBox(height: AksharaSpacing.s2),
+            for (final g in dist.gradeBreakdown)
+              ListTile(
+                dense: true,
+                title: Text('Grade ${g.grade}'),
+                trailing: Text('${g.count}', style: text.bodyMedium),
+              ),
+          ],
         );
+      },
+    );
   }
 }
 
@@ -784,40 +778,38 @@ class _DatesheetView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final text = context.aksharaText;
-    return ref.watch(examDatesheetProvider).when(
-          loading: () =>
-              const AksharaLoadingState(semanticLabel: 'Loading datesheet'),
-          error: (_, __) =>
-              const AksharaErrorState(message: 'Unable to load datesheet.'),
-          data: (rows) {
-            if (rows.isEmpty) {
-              return const AksharaEmptyState(
-                message: 'No exams scheduled for this class and term.',
-                icon: Icons.event_note_outlined,
-              );
-            }
-            return ListView.separated(
-              padding: const EdgeInsets.all(AksharaSpacing.s4),
-              itemCount: rows.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: AksharaSpacing.s2),
-              itemBuilder: (context, index) {
-                final r = rows[index];
-                return Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AksharaSpacing.s3),
-                    side: BorderSide(color: context.colors.outlineVariant),
-                  ),
-                  child: ListTile(
-                    title: Text(r.subject, style: text.titleSmall),
-                    subtitle: Text('${r.dateLabel} · ${r.timeLabel} · ${r.venueLabel}'),
-                    trailing: Text('${r.maxMarks} marks', style: text.bodySmall),
-                  ),
-                );
-              },
+    return ErpAsyncBody(
+      state: resolveErpAsync(
+        ref.watch(examDatesheetProvider),
+        isDataEmpty: (rows) => rows.isEmpty,
+      ),
+      loadingLabel: 'Loading datesheet',
+      emptyMessage: 'No exams scheduled for this class and term.',
+      emptyIcon: Icons.event_note_outlined,
+      onRetry: () => ref.invalidate(examDatesheetProvider),
+      builder: (rows) {
+        return ListView.separated(
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
+          itemCount: rows.length,
+          separatorBuilder: (_, __) =>
+              const SizedBox(height: AksharaSpacing.s2),
+          itemBuilder: (context, index) {
+            final r = rows[index];
+            return Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AksharaSpacing.s3),
+                side: BorderSide(color: context.colors.outlineVariant),
+              ),
+              child: ListTile(
+                title: Text(r.subject, style: text.titleSmall),
+                subtitle: Text('${r.dateLabel} · ${r.timeLabel} · ${r.venueLabel}'),
+                trailing: Text('${r.maxMarks} marks', style: text.bodySmall),
+              ),
             );
           },
         );
+      },
+    );
   }
 }

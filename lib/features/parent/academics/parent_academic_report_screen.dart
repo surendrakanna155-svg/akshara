@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/api_failure_mapper.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -39,13 +40,12 @@ class ParentAcademicReportScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: summary.when(
-        loading: () => const AksharaLoadingState(),
-        error: (e, _) => AksharaErrorState.fromFailure(
-          apiFailureMapper.fromException(e),
-          onRetry: () => ref.invalidate(parentAcademicSummaryProvider),
-        ),
-        data: (data) => ListView(
+      body: ErpAsyncBody(
+        state: resolveErpAsync(summary, isDataEmpty: (_) => false),
+        loadingLabel: 'Loading',
+        emptyMessage: 'No academic report available.',
+        onRetry: () => ref.invalidate(parentAcademicSummaryProvider),
+        builder: (data) => ListView(
           padding: const EdgeInsets.all(AksharaSpacing.s4),
           children: [
             _section('Attendance', data.attendanceSummary),

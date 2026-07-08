@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/errors/api_failure_mapper.dart';
 import '../../../core/errors/error_text.dart';
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -37,18 +37,16 @@ class ParentPtmScreen extends ConsumerWidget {
         showAi: false,
         onNotificationsTap: onNotificationsTap,
       ),
-      body: meetingsAsync.when(
-        loading: () => const AksharaLoadingState(),
-        error: (error, _) =>
-            AksharaErrorState.fromFailure(apiFailureMapper.fromException(error)),
-        data: (meetings) {
-          if (meetings.isEmpty) {
-            return const AksharaEmptyState(
-              message:
-                  'No scheduled meetings. Check school notices for PTM dates.',
-              icon: Icons.groups_outlined,
-            );
-          }
+      body: ErpAsyncBody(
+        state: resolveErpAsync(
+          meetingsAsync,
+          isDataEmpty: (meetings) => meetings.isEmpty,
+        ),
+        loadingLabel: 'Loading',
+        emptyMessage: 'No scheduled meetings. Check school notices for PTM dates.',
+        emptyIcon: Icons.groups_outlined,
+        onRetry: () => ref.invalidate(parentChildMeetingsProvider),
+        builder: (meetings) {
           return ListView(
             padding: const EdgeInsets.all(AksharaSpacing.s4),
             children: [

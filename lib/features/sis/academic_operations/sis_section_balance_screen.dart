@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/api_failure_mapper.dart';
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/akshara_error_state.dart';
 import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../theme/spacing.dart';
@@ -101,8 +102,12 @@ class _SectionPlanTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return plan.when(
-      data: (data) => Column(
+    return ErpAsyncBody(
+      state: resolveErpAsync(plan, isDataEmpty: (_) => false),
+      loadingLabel: 'Loading',
+      emptyMessage: 'No section balance plan available.',
+      onRetry: () => ref.invalidate(sectionBalancePreviewFutureProvider),
+      builder: (data) => Column(
         children: [
           Text('Target section size: ${data.targetSectionSize}'),
           const SizedBox(height: AksharaSpacing.s2),
@@ -126,9 +131,6 @@ class _SectionPlanTab extends ConsumerWidget {
           ),
         ],
       ),
-      loading: () => const AksharaLoadingState(),
-      error: (error, _) =>
-          AksharaErrorState.fromFailure(apiFailureMapper.fromException(error)),
     );
   }
 }
@@ -160,8 +162,13 @@ class _QuarterlyPlanTab extends ConsumerWidget {
         ),
         SizedBox(
           height: 280,
-          child: plan.when(
-            data: (data) => ListView(
+          child: ErpAsyncBody(
+            state: resolveErpAsync(plan, isDataEmpty: (_) => false),
+            loadingLabel: 'Loading',
+            emptyMessage: 'No quarterly reshuffle plan available.',
+            onRetry: () =>
+                ref.invalidate(quarterlyReshufflePreviewFutureProvider),
+            builder: (data) => ListView(
               children: [
                 for (final row in data.previewRows)
                   ListTile(
@@ -170,10 +177,6 @@ class _QuarterlyPlanTab extends ConsumerWidget {
                     subtitle: Text('${row.fromSection} -> ${row.toSection}'),
                   ),
               ],
-            ),
-            loading: () => const AksharaLoadingState(),
-            error: (error, _) => AksharaErrorState.fromFailure(
-              apiFailureMapper.fromException(error),
             ),
           ),
         ),

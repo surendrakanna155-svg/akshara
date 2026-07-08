@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/errors/api_failure_mapper.dart';
-import '../../shared/widgets/akshara_error_state.dart';
-import '../../shared/widgets/akshara_loading_state.dart';
+import '../../shared/async/erp_async_state.dart';
 import '../../theme/theme_extensions.dart';
 import '../phase5/phase5_providers.dart';
 import '../../theme/spacing.dart';
@@ -20,8 +18,12 @@ class Employee360Screen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Employee 360')),
-      body: profile.when(
-        data: (p) {
+      body: ErpAsyncBody(
+        state: resolveErpAsync(profile, isDataEmpty: (_) => false),
+        loadingLabel: 'Loading profile',
+        emptyMessage: 'No employee profile available.',
+        onRetry: () => ref.invalidate(employee360Provider(employeeId)),
+        builder: (p) {
           return ListView(
             padding: const EdgeInsets.all(AksharaSpacing.s4),
             children: [
@@ -71,11 +73,6 @@ class Employee360Screen extends ConsumerWidget {
             ],
           );
         },
-        loading: () => const AksharaLoadingState(semanticLabel: 'Loading profile'),
-        error: (e, _) => AksharaErrorState.fromFailure(
-          apiFailureMapper.fromException(e),
-          onRetry: () => ref.invalidate(employee360Provider(employeeId)),
-        ),
       ),
     );
   }

@@ -3,14 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/attendance/attendance_correction_models.dart';
-import '../../../core/errors/api_failure_mapper.dart';
 import '../../../core/repositories/mock/mock_attendance_sync_store.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
 import '../../../router/route_names.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 
@@ -47,13 +45,12 @@ class AttendanceCorrectionsAdminScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: requestsAsync.when(
-        loading: () => const AksharaLoadingState(),
-        error: (e, _) => AksharaErrorState.fromFailure(
-          apiFailureMapper.fromException(e),
-          onRetry: () => ref.invalidate(attendanceCorrectionsAdminProvider),
-        ),
-        data: (requests) => ListView(
+      body: ErpAsyncBody(
+        state: resolveErpAsync(requestsAsync, isDataEmpty: (_) => false),
+        loadingLabel: 'Loading',
+        emptyMessage: 'No attendance correction requests.',
+        onRetry: () => ref.invalidate(attendanceCorrectionsAdminProvider),
+        builder: (requests) => ListView(
         padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
           Card(
