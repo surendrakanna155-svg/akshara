@@ -5,11 +5,11 @@ import 'package:go_router/go_router.dart';
 import '../../core/repositories/academic/academic_catalog_provider.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../router/route_names.dart';
+import '../../shared/async/erp_async_state.dart';
 import '../../shared/widgets/widgets.dart';
 import 'school_completion_mutations_provider.dart';
 import 'school_completion_models.dart';
 import 'school_completion_providers.dart';
-import '../../core/errors/api_failure_mapper.dart';
 import '../../theme/spacing.dart';
 
 class TimetableOptimizationScreen extends ConsumerStatefulWidget {
@@ -56,18 +56,22 @@ class _TimetableOptimizationScreenState
     final applying = mutationState.isLoading;
     return Scaffold(
       appBar: AppBar(title: const Text('Timetable Optimization')),
-      body: catalog.when(
-        loading: () => const AksharaLoadingState(),
-        error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
-        data: (data) {
+      body: ErpAsyncBody(
+        state: resolveErpAsync(catalog, isDataEmpty: (_) => false),
+        loadingLabel: 'Loading',
+        emptyMessage: 'No academic catalog available.',
+        onRetry: () => ref.invalidate(academicCatalogFutureProvider),
+        builder: (data) {
           _selectedAcademicYearId ??=
               data.years.isNotEmpty ? data.years.first.yearId : 'year_1';
           final yearId = _selectedAcademicYearId!;
           final optimization = ref.watch(timetableOptimizationProvider(yearId));
-          return optimization.when(
-            loading: () => const AksharaLoadingState(),
-            error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
-            data: (result) {
+          return ErpAsyncBody(
+            state: resolveErpAsync(optimization, isDataEmpty: (_) => false),
+            loadingLabel: 'Loading',
+            emptyMessage: 'No timetable optimization data available.',
+            onRetry: () => ref.invalidate(timetableOptimizationProvider(yearId)),
+            builder: (result) {
               final actionableRecommendations = result.recommendations
                   .where(
                     (recommendation) =>

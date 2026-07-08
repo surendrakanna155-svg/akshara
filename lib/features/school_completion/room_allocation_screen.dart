@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/repositories/repository_providers.dart';
 import '../../core/repositories/academic/academic_catalog_provider.dart';
+import '../../shared/async/erp_async_state.dart';
 import '../../shared/widgets/widgets.dart';
 import 'school_completion_providers.dart';
-import '../../core/errors/api_failure_mapper.dart';
 import '../../theme/spacing.dart';
 
 /// v15.3 — Room and lab allocation for timetables.
@@ -38,10 +38,12 @@ class RoomAllocationScreen extends ConsumerWidget {
         icon: const Icon(Icons.meeting_room_outlined),
         label: const Text('Auto-allocate'),
       ),
-      body: rooms.when(
-        loading: () => const AksharaLoadingState(),
-        error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
-        data: (items) => ListView(
+      body: ErpAsyncBody(
+        state: resolveErpAsync(rooms, isDataEmpty: (_) => false),
+        loadingLabel: 'Loading',
+        emptyMessage: 'No rooms available.',
+        onRetry: () => ref.invalidate(academicRoomsProvider),
+        builder: (items) => ListView(
           padding: const EdgeInsets.all(AksharaSpacing.s4),
           children: [
             const AksharaSectionHeader(title: 'Classrooms'),

@@ -3,9 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/security/permissions.dart';
 import '../../core/testing/qa_test_keys.dart';
+import '../../shared/async/erp_async_state.dart';
 import '../../shared/widgets/akshara_empty_state.dart';
-import '../../shared/widgets/akshara_error_state.dart';
-import '../../shared/widgets/akshara_loading_state.dart';
 import '../../shared/widgets/akshara_manage_action.dart';
 import '../phase5/phase5_providers.dart';
 import 'memories_mutations_provider.dart';
@@ -32,8 +31,12 @@ class SchoolMemoriesScreen extends ConsumerWidget {
           label: const Text('Create event'),
         ),
       ),
-      body: events.when(
-        data: (items) {
+      body: ErpAsyncBody(
+        state: resolveErpAsync(events, isDataEmpty: (_) => false),
+        loadingLabel: 'Loading',
+        emptyMessage: 'No memories available.',
+        onRetry: () => ref.invalidate(schoolMemoriesEventsProvider),
+        builder: (items) {
           final filtered = items.where((event) {
             final status = event.status.toLowerCase();
             return selectedTab == 0 ? status == 'draft' : status == 'published';
@@ -90,11 +93,6 @@ class SchoolMemoriesScreen extends ConsumerWidget {
             ],
           );
         },
-        loading: () => const AksharaLoadingState(),
-        error: (e, _) => AksharaErrorState(
-          message: 'Could not load memories: $e',
-          onRetry: () => ref.invalidate(schoolMemoriesEventsProvider),
-        ),
       ),
     );
   }

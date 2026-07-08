@@ -7,9 +7,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../core/security/permissions.dart';
 import '../../core/testing/qa_test_keys.dart';
+import '../../shared/async/erp_async_state.dart';
 import '../../shared/widgets/akshara_empty_state.dart';
-import '../../shared/widgets/akshara_error_state.dart';
-import '../../shared/widgets/akshara_loading_state.dart';
 import '../../shared/widgets/akshara_manage_action.dart';
 import '../../theme/theme_extensions.dart';
 import '../phase5/phase5_models.dart';
@@ -146,8 +145,12 @@ class _SchoolMemoryEventScreenState
           ],
         ],
       ),
-      body: eventAsync.when(
-        data: (event) {
+      body: ErpAsyncBody(
+        state: resolveErpAsync(eventAsync, isDataEmpty: (_) => false),
+        loadingLabel: 'Loading',
+        emptyMessage: 'No event available.',
+        onRetry: () => ref.invalidate(schoolMemoryEventProvider(widget.eventId)),
+        builder: (event) {
           return ListView(
             padding: const EdgeInsets.all(AksharaSpacing.s4),
             children: [
@@ -287,12 +290,6 @@ class _SchoolMemoryEventScreenState
             ],
           );
         },
-        loading: () => const AksharaLoadingState(),
-        error: (e, _) => AksharaErrorState(
-          message: 'Could not load event: $e',
-          onRetry: () =>
-              ref.invalidate(schoolMemoryEventProvider(widget.eventId)),
-        ),
       ),
     );
   }

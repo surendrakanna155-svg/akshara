@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/errors/api_failure_mapper.dart';
 import '../../core/testing/qa_test_keys.dart';
+import '../../shared/async/erp_async_state.dart';
 import '../../shared/widgets/widgets.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
@@ -33,18 +33,15 @@ class DirectorComplianceScreen extends ConsumerWidget {
         filterTrailing: const DirectorAiAssistantLink(
           screenLabel: 'Director Compliance Monitoring',
         ),
-        body: state.when(
-          loading: () => const AksharaLoadingState(),
-          error: (error, _) => AksharaErrorState.fromFailure(
-            apiFailureMapper.fromException(error),
-            onRetry: () => ref.invalidate(directorComplianceProvider),
+        body: ErpAsyncBody<List<DirectorComplianceItem>>(
+          state: resolveErpAsync(
+            state,
+            isDataEmpty: (items) => items.isEmpty,
           ),
-          data: (items) {
-            if (items.isEmpty) {
-              return const AksharaEmptyState(
-                message: 'No compliance actions pending.',
-              );
-            }
+          loadingLabel: 'Loading',
+          emptyMessage: 'No compliance actions pending.',
+          onRetry: () => ref.invalidate(directorComplianceProvider),
+          builder: (items) {
             // Phones + portrait tablets collapse the 7-column table into stacked
             // cards; landscape/desktop keep the data table. Both paths share the
             // same acknowledge action so the QA key + snackbar are identical.

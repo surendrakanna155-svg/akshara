@@ -3,9 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/repositories/academic/academic_catalog_provider.dart';
 import '../../core/repositories/repository_providers.dart';
-import '../../shared/widgets/widgets.dart';
+import '../../shared/async/erp_async_state.dart';
 import 'school_completion_providers.dart';
-import '../../core/errors/api_failure_mapper.dart';
 import '../../theme/spacing.dart';
 
 /// v12.7 — Subject templates, auto generation, and year cloning.
@@ -41,10 +40,12 @@ class _SyllabusAutomationScreenState extends ConsumerState<SyllabusAutomationScr
         ),
         body: TabBarView(
           children: [
-            templates.when(
-              loading: () => const AksharaLoadingState(),
-              error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
-              data: (items) => ListView.builder(
+            ErpAsyncBody(
+              state: resolveErpAsync(templates, isDataEmpty: (_) => false),
+              loadingLabel: 'Loading',
+              emptyMessage: 'No subject templates available.',
+              onRetry: () => ref.invalidate(subjectTemplatesProvider),
+              builder: (items) => ListView.builder(
                 padding: const EdgeInsets.all(AksharaSpacing.s4),
                 itemCount: items.length,
                 itemBuilder: (context, index) {
@@ -64,10 +65,12 @@ class _SyllabusAutomationScreenState extends ConsumerState<SyllabusAutomationScr
                 },
               ),
             ),
-            chapters.when(
-              loading: () => const AksharaLoadingState(),
-              error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
-              data: (items) => Column(
+            ErpAsyncBody(
+              state: resolveErpAsync(chapters, isDataEmpty: (_) => false),
+              loadingLabel: 'Loading',
+              emptyMessage: 'No syllabus chapters available.',
+              onRetry: () => ref.invalidate(syllabusChaptersProvider(null)),
+              builder: (items) => Column(
                 children: [
                   Padding(
                     padding: const EdgeInsets.all(AksharaSpacing.s4),
@@ -103,15 +106,15 @@ class _SyllabusAutomationScreenState extends ConsumerState<SyllabusAutomationScr
                 ],
               ),
             ),
-            catalog.when(
-              loading: () => const AksharaLoadingState(),
-              error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
-              data: (data) {
-                if (data.years.length < 2) {
-                  return const AksharaEmptyState(
-                    message: 'Add at least two academic years to clone syllabus.',
-                  );
-                }
+            ErpAsyncBody(
+              state: resolveErpAsync(
+                catalog,
+                isDataEmpty: (data) => data.years.length < 2,
+              ),
+              loadingLabel: 'Loading',
+              emptyMessage: 'Add at least two academic years to clone syllabus.',
+              onRetry: () => ref.invalidate(academicCatalogFutureProvider),
+              builder: (data) {
                 final from = data.years.first.yearId;
                 final to = data.years[1].yearId;
                 return Center(

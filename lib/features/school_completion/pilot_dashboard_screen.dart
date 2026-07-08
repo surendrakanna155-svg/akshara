@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../shared/widgets/widgets.dart';
+import '../../shared/async/erp_async_state.dart';
 import '../../theme/theme_extensions.dart';
 import 'school_completion_providers.dart';
-import '../../core/errors/api_failure_mapper.dart';
 import '../../theme/spacing.dart';
 
 class PilotDashboardScreen extends ConsumerWidget {
@@ -16,10 +15,12 @@ class PilotDashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Real School Pilot Toolkit')),
-      body: dashboard.when(
-        loading: () => const AksharaLoadingState(),
-        error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
-        data: (data) => ListView(
+      body: ErpAsyncBody(
+        state: resolveErpAsync(dashboard, isDataEmpty: (_) => false),
+        loadingLabel: 'Loading',
+        emptyMessage: 'No pilot dashboard data available.',
+        onRetry: () => ref.invalidate(pilotDashboardProvider),
+        builder: (data) => ListView(
           padding: const EdgeInsets.all(AksharaSpacing.s4),
           children: [
             ListTile(

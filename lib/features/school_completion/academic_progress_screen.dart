@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../shared/async/erp_async_state.dart';
 import '../../shared/widgets/widgets.dart';
 import 'school_completion_providers.dart';
-import '../../core/errors/api_failure_mapper.dart';
 import '../../theme/spacing.dart';
 
 /// v12.8 — Lesson log linkage, topic/chapter completion, pending alerts.
@@ -29,10 +29,12 @@ class AcademicProgressScreen extends ConsumerWidget {
         ),
         body: TabBarView(
           children: [
-            teacher.when(
-              loading: () => const AksharaLoadingState(),
-              error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
-              data: (data) => ListView(
+            ErpAsyncBody(
+              state: resolveErpAsync(teacher, isDataEmpty: (_) => false),
+              loadingLabel: 'Loading',
+              emptyMessage: 'No teacher progress data available.',
+              onRetry: () => ref.invalidate(teacherProgressProvider),
+              builder: (data) => ListView(
                 padding: const EdgeInsets.all(AksharaSpacing.s4),
                 children: [
                   _metric('Coverage', '${data.coveragePercent}%'),
@@ -49,10 +51,12 @@ class AcademicProgressScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            principal.when(
-              loading: () => const AksharaLoadingState(),
-              error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
-              data: (data) => ListView(
+            ErpAsyncBody(
+              state: resolveErpAsync(principal, isDataEmpty: (_) => false),
+              loadingLabel: 'Loading',
+              emptyMessage: 'No principal progress data available.',
+              onRetry: () => ref.invalidate(principalAcademicProgressProvider),
+              builder: (data) => ListView(
                 padding: const EdgeInsets.all(AksharaSpacing.s4),
                 children: [
                   _metric('Overall coverage', '${data.overallCoveragePercent}%'),

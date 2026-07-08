@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../shared/async/erp_async_state.dart';
 import '../../shared/widgets/widgets.dart';
 import 'school_completion_providers.dart';
-import '../../core/errors/api_failure_mapper.dart';
 import '../../theme/spacing.dart';
 
 class LessonAnalyticsScreen extends ConsumerWidget {
@@ -28,10 +28,12 @@ class LessonAnalyticsScreen extends ConsumerWidget {
         ),
         body: TabBarView(
           children: [
-            teacher.when(
-              loading: () => const AksharaLoadingState(),
-              error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
-              data: (data) => ListView(
+            ErpAsyncBody(
+              state: resolveErpAsync(teacher, isDataEmpty: (_) => false),
+              loadingLabel: 'Loading',
+              emptyMessage: 'No lesson analytics available.',
+              onRetry: () => ref.invalidate(teacherLessonAnalyticsProvider),
+              builder: (data) => ListView(
                 padding: const EdgeInsets.all(AksharaSpacing.s4),
                 children: [
                   _metricTile('Coverage', '${data.coveragePercent}%'),
@@ -45,10 +47,12 @@ class LessonAnalyticsScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            principal.when(
-              loading: () => const AksharaLoadingState(),
-              error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
-              data: (items) => ListView.builder(
+            ErpAsyncBody(
+              state: resolveErpAsync(principal, isDataEmpty: (_) => false),
+              loadingLabel: 'Loading',
+              emptyMessage: 'No principal lesson analytics available.',
+              onRetry: () => ref.invalidate(principalLessonAnalyticsProvider),
+              builder: (items) => ListView.builder(
                 itemCount: items.length,
                 itemBuilder: (context, index) {
                   final item = items[index];

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/errors/api_failure_mapper.dart';
 import '../../core/repositories/academic/academic_catalog_provider.dart';
 import '../../core/repositories/academic/academic_models.dart';
 import '../../core/repositories/repository_providers.dart';
+import '../../shared/async/erp_async_state.dart';
 import '../../shared/widgets/widgets.dart';
 import '../../theme/theme_extensions.dart';
 import 'school_completion_models.dart';
@@ -52,13 +52,12 @@ class _SubjectAssignmentScreenState extends ConsumerState<SubjectAssignmentScree
           ],
         ),
       ),
-      body: catalog.when(
-        loading: () => const AksharaLoadingState(),
-        error: (e, _) => AksharaErrorState.fromFailure(
-          apiFailureMapper.fromException(e),
-          onRetry: () => ref.invalidate(academicCatalogFutureProvider),
-        ),
-        data: (data) {
+      body: ErpAsyncBody(
+        state: resolveErpAsync(catalog, isDataEmpty: (_) => false),
+        loadingLabel: 'Loading',
+        emptyMessage: 'No academic catalog available.',
+        onRetry: () => ref.invalidate(academicCatalogFutureProvider),
+        builder: (data) {
           final yearId = data.years.isNotEmpty ? data.years.first.yearId : 'year_1';
           return TabBarView(
             controller: _tabs,

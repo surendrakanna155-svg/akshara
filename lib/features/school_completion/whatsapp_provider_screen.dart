@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../router/route_names.dart';
+import '../../shared/async/erp_async_state.dart';
 import '../../shared/widgets/widgets.dart';
 import 'school_completion_providers.dart';
 import '../../theme/spacing.dart';
@@ -18,8 +19,12 @@ class WhatsAppProviderScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('WhatsApp Status')),
-      body: config.when(
-        data: (data) => ListView(
+      body: ErpAsyncBody(
+        state: resolveErpAsync(config, isDataEmpty: (_) => false),
+        loadingLabel: 'Loading WhatsApp config',
+        emptyMessage: 'No WhatsApp provider config available.',
+        onRetry: () => ref.invalidate(whatsAppProviderConfigProvider),
+        builder: (data) => ListView(
           padding: const EdgeInsets.all(AksharaSpacing.s4),
           children: [
             const AksharaWarningBanner(
@@ -44,11 +49,6 @@ class WhatsAppProviderScreen extends ConsumerWidget {
               onTap: () => context.push(RouteNames.communicationDelivery),
             ),
           ],
-        ),
-        loading: () => const AksharaLoadingState(semanticLabel: 'Loading WhatsApp config'),
-        error: (e, _) => AksharaErrorState(
-          message: '$e',
-          onRetry: () => ref.invalidate(whatsAppProviderConfigProvider),
         ),
       ),
     );

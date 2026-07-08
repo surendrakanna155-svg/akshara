@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/errors/api_failure_mapper.dart';
 import '../../core/testing/qa_test_keys.dart';
+import '../../shared/async/erp_async_state.dart';
 import '../../shared/widgets/widgets.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
@@ -33,15 +33,14 @@ class DirectorDashboardScreen extends ConsumerWidget {
         ),
         body: KeyedSubtree(
           key: QaTestKeys.directorDashboardScreen,
-          child: state.when(
-            loading: () => const AksharaLoadingState(),
-            error: (error, _) => AksharaErrorState.fromFailure(
-              apiFailureMapper.fromException(error),
-              onRetry: () => ref.invalidate(directorExecutiveDashboardProvider),
+          child: ErpAsyncBody<DirectorDashboardData>(
+            state: resolveErpAsync(state, isDataEmpty: (_) => false),
+            loadingLabel: 'Loading',
+            emptyMessage: 'No dashboard data available.',
+            onRetry: () => ref.invalidate(directorExecutiveDashboardProvider),
+            builder: (data) => SingleChildScrollView(
+              child: _DashboardBody(data: data),
             ),
-            data: (data) => SingleChildScrollView(
-            child: _DashboardBody(data: data),
-          ),
           ),
         ),
       ),

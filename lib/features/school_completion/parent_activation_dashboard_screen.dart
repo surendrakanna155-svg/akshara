@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../shared/widgets/widgets.dart';
+import '../../shared/async/erp_async_state.dart';
 import 'school_completion_providers.dart';
 import '../../theme/spacing.dart';
 
@@ -15,13 +15,12 @@ class ParentActivationDashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Parent Activation')),
-      body: stats.when(
-        loading: () => const AksharaLoadingState(),
-        error: (e, _) => AksharaErrorState(
-          message: '$e',
-          onRetry: () => ref.invalidate(parentActivationDashboardProvider),
-        ),
-        data: (data) => ListView(
+      body: ErpAsyncBody(
+        state: resolveErpAsync(stats, isDataEmpty: (_) => false),
+        loadingLabel: 'Loading',
+        emptyMessage: 'No parent activation data available.',
+        onRetry: () => ref.invalidate(parentActivationDashboardProvider),
+        builder: (data) => ListView(
           padding: const EdgeInsets.all(AksharaSpacing.s4),
           children: [
             _metricCard('Activation rate', '${data.activationRate}%'),

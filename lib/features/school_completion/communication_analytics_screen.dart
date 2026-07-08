@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../shared/widgets/widgets.dart';
+import '../../shared/async/erp_async_state.dart';
 import 'school_completion_providers.dart';
-import '../../core/errors/api_failure_mapper.dart';
 import '../../theme/spacing.dart';
 
 class CommunicationAnalyticsScreen extends ConsumerWidget {
@@ -15,10 +14,12 @@ class CommunicationAnalyticsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Communication Analytics')),
-      body: analytics.when(
-        loading: () => const AksharaLoadingState(),
-        error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
-        data: (data) => ListView(
+      body: ErpAsyncBody(
+        state: resolveErpAsync(analytics, isDataEmpty: (_) => false),
+        loadingLabel: 'Loading',
+        emptyMessage: 'No communication analytics available.',
+        onRetry: () => ref.invalidate(communicationAnalyticsProvider),
+        builder: (data) => ListView(
           padding: const EdgeInsets.all(AksharaSpacing.s4),
           children: [
             _sectionTitle('Campaign analytics'),

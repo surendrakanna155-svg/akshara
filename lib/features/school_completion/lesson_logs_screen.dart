@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/repositories/repository_providers.dart';
-import '../../shared/widgets/widgets.dart';
+import '../../shared/async/erp_async_state.dart';
 import 'school_completion_providers.dart';
 
 class LessonLogsScreen extends ConsumerWidget {
@@ -19,40 +19,37 @@ class LessonLogsScreen extends ConsumerWidget {
         icon: const Icon(Icons.add),
         label: const Text('Log lesson'),
       ),
-      body: logs.when(
-        data: (items) => items.isEmpty
-            ? const AksharaEmptyState(message: 'No lesson logs yet.')
-            : ListView.builder(
-                itemCount: items.length,
-                itemBuilder: (context, index) {
-                  final log = items[index];
-                  return ListTile(
-                    title: Text(log.topic),
-                    subtitle: Text('${log.className} · ${log.recordedOn}'),
-                    trailing: PopupMenuButton<String>(
-                      onSelected: (value) async {
-                        if (value == 'complete') {
-                          await ref.read(schoolCompletionRepositoryProvider).completeTopic(
-                                query: ref.read(schoolCompletionQueryProvider),
-                                topicId: 'topic_${log.id}',
-                                lessonLogId: log.id,
-                              );
-                          ref.invalidate(lessonLogsProvider(null));
-                          ref.invalidate(teacherProgressProvider);
-                        }
-                      },
-                      itemBuilder: (_) => const [
-                        PopupMenuItem(value: 'complete', child: Text('Mark topic complete')),
-                      ],
-                      child: Chip(label: Text(log.outcome)),
-                    ),
-                  );
+      body: ErpAsyncBody(
+        state: resolveErpAsync(logs, isDataEmpty: (items) => items.isEmpty),
+        loadingLabel: 'Loading lesson logs',
+        emptyMessage: 'No lesson logs yet.',
+        onRetry: () => ref.invalidate(lessonLogsProvider(null)),
+        builder: (items) => ListView.builder(
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final log = items[index];
+            return ListTile(
+              title: Text(log.topic),
+              subtitle: Text('${log.className} · ${log.recordedOn}'),
+              trailing: PopupMenuButton<String>(
+                onSelected: (value) async {
+                  if (value == 'complete') {
+                    await ref.read(schoolCompletionRepositoryProvider).completeTopic(
+                          query: ref.read(schoolCompletionQueryProvider),
+                          topicId: 'topic_${log.id}',
+                          lessonLogId: log.id,
+                        );
+                    ref.invalidate(lessonLogsProvider(null));
+                    ref.invalidate(teacherProgressProvider);
+                  }
                 },
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'complete', child: Text('Mark topic complete')),
+                ],
+                child: Chip(label: Text(log.outcome)),
               ),
-        loading: () => const AksharaLoadingState(semanticLabel: 'Loading lesson logs'),
-        error: (e, _) => AksharaErrorState(
-          message: '$e',
-          onRetry: () => ref.invalidate(lessonLogsProvider(null)),
+            );
+          },
         ),
       ),
     );

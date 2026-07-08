@@ -5,6 +5,7 @@ import '../../core/reports/akshara_report_export_service.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../core/tenant/tenant_provider.dart';
+import '../../shared/async/erp_async_state.dart';
 import '../../shared/widgets/widgets.dart';
 import '../../theme/spacing.dart';
 import '../admin/admin_layout.dart';
@@ -15,7 +16,6 @@ import 'director_navigation.dart';
 import 'director_providers.dart';
 import 'widgets/director_module_scaffold.dart';
 import 'widgets/director_shared_widgets.dart';
-import '../../core/errors/api_failure_mapper.dart';
 
 class DirectorReportsScreen extends ConsumerStatefulWidget {
   const DirectorReportsScreen({super.key});
@@ -46,10 +46,12 @@ class _DirectorReportsScreenState extends ConsumerState<DirectorReportsScreen> {
           screenLabel: 'Director Strategic Reports',
           buttonKey: QaTestKeys.directorCopilotLinkButton,
         ),
-        body: reportsState.when(
-          loading: () => const AksharaLoadingState(),
-          error: (error, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(error)),
-          data: (reports) => Column(
+        body: ErpAsyncBody<List<DirectorReportItem>>(
+          state: resolveErpAsync(reportsState, isDataEmpty: (_) => false),
+          loadingLabel: 'Loading',
+          emptyMessage: 'No strategic reports available.',
+          onRetry: () => ref.invalidate(directorReportsProvider),
+          builder: (reports) => Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const AksharaSectionHeader(title: 'Strategic report catalog'),

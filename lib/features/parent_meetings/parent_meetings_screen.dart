@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/errors/api_failure_mapper.dart';
 import '../../core/testing/qa_test_keys.dart';
-import '../../shared/widgets/widgets.dart';
+import '../../shared/async/erp_async_state.dart';
 import 'parent_meetings_mutations_provider.dart';
 import 'parent_meetings_providers.dart';
 import 'parent_meeting_detail_screen.dart';
@@ -45,16 +44,15 @@ class _ParentMeetingsScreenState extends ConsumerState<ParentMeetingsScreen> {
         icon: const Icon(Icons.add),
         label: const Text('Create Meeting'),
       ),
-      body: meetingsState.when(
-        loading: () => const AksharaLoadingState(),
-        error: (error, _) => AksharaErrorState.fromFailure(
-          apiFailureMapper.fromException(error),
-          onRetry: () => ref.invalidate(parentMeetingsFutureProvider),
+      body: ErpAsyncBody(
+        state: resolveErpAsync(
+          meetingsState,
+          isDataEmpty: (meetings) => meetings.isEmpty,
         ),
-        data: (meetings) {
-          if (meetings.isEmpty) {
-            return const AksharaEmptyState(message: 'No parent meetings yet');
-          }
+        loadingLabel: 'Loading',
+        emptyMessage: 'No parent meetings yet',
+        onRetry: () => ref.invalidate(parentMeetingsFutureProvider),
+        builder: (meetings) {
           return ListView.separated(
             padding: const EdgeInsets.all(AksharaSpacing.s4),
             itemBuilder: (context, index) {

@@ -3,10 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/repositories/academic/academic_catalog_provider.dart';
 import '../../core/repositories/repository_providers.dart';
+import '../../shared/async/erp_async_state.dart';
 import '../../shared/widgets/widgets.dart';
 import 'school_completion_models.dart';
 import 'school_completion_providers.dart';
-import '../../core/errors/api_failure_mapper.dart';
 import '../../theme/spacing.dart';
 
 /// v13.1 — Room/lab allocation, exam timetable, optimization scoring.
@@ -35,19 +35,23 @@ class _TimetableIntelligenceScreenState extends ConsumerState<TimetableIntellige
 
     return Scaffold(
       appBar: AppBar(title: const Text('Timetable Intelligence')),
-      body: catalog.when(
-        loading: () => const AksharaLoadingState(),
-        error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
-        data: (data) {
+      body: ErpAsyncBody(
+        state: resolveErpAsync(catalog, isDataEmpty: (_) => false),
+        loadingLabel: 'Loading',
+        emptyMessage: 'No academic catalog available.',
+        onRetry: () => ref.invalidate(academicCatalogFutureProvider),
+        builder: (data) {
           final yearId = data.years.isNotEmpty ? data.years.first.yearId : 'year_1';
           final intelligence = ref.watch(timetableIntelligenceProvider(yearId));
           return ListView(
             padding: const EdgeInsets.all(AksharaSpacing.s4),
             children: [
-              intelligence.when(
-                loading: () => const AksharaLoadingState(),
-                error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
-                data: (result) => _IntelligencePanel(result: result),
+              ErpAsyncBody(
+                state: resolveErpAsync(intelligence, isDataEmpty: (_) => false),
+                loadingLabel: 'Loading',
+                emptyMessage: 'No timetable intelligence available.',
+                onRetry: () => ref.invalidate(timetableIntelligenceProvider(yearId)),
+                builder: (result) => _IntelligencePanel(result: result),
               ),
               const Divider(height: 32),
               const Text('Rooms & labs', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -67,10 +71,12 @@ class _TimetableIntelligenceScreenState extends ConsumerState<TimetableIntellige
                   ),
                 ],
               ),
-              rooms.when(
-                loading: () => const AksharaLoadingState(),
-                error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
-                data: (items) => Column(
+              ErpAsyncBody(
+                state: resolveErpAsync(rooms, isDataEmpty: (_) => false),
+                loadingLabel: 'Loading',
+                emptyMessage: 'No rooms available.',
+                onRetry: () => ref.invalidate(academicRoomsProvider),
+                builder: (items) => Column(
                   children: items
                       .map(
                         (r) => ListTile(

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/reports/akshara_report_export_service.dart';
 import '../../core/testing/qa_test_keys.dart';
+import '../../shared/async/erp_async_state.dart';
 import '../../shared/widgets/widgets.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
@@ -15,7 +16,6 @@ import 'reports/director_report_exporters.dart';
 import 'widgets/director_metric_input_editor.dart';
 import 'widgets/director_module_scaffold.dart';
 import 'widgets/director_shared_widgets.dart';
-import '../../core/errors/api_failure_mapper.dart';
 
 class DirectorRevenueScreen extends ConsumerWidget {
   const DirectorRevenueScreen({super.key});
@@ -34,10 +34,12 @@ class DirectorRevenueScreen extends ConsumerWidget {
         filterTrailing: const DirectorAiAssistantLink(
           screenLabel: 'Director Revenue Overview',
         ),
-        body: state.when(
-          loading: () => const AksharaLoadingState(),
-          error: (error, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(error)),
-          data: (revenue) => Column(
+        body: ErpAsyncBody<DirectorRevenueSnapshot>(
+          state: resolveErpAsync(state, isDataEmpty: (_) => false),
+          loadingLabel: 'Loading',
+          emptyMessage: 'No revenue data available.',
+          onRetry: () => ref.invalidate(directorRevenueProvider),
+          builder: (revenue) => Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Wrap(
@@ -103,11 +105,12 @@ class _CollectionReportSection extends ConsumerWidget {
       children: [
         const AksharaSectionHeader(title: 'Consolidated Collection Report'),
         const SizedBox(height: AksharaSpacing.s3),
-        state.when(
-          loading: () => const AksharaLoadingState(),
-          error: (error, _) => AksharaErrorState.fromFailure(
-              apiFailureMapper.fromException(error)),
-          data: (report) => _CollectionReportBody(report: report),
+        ErpAsyncBody<DirectorCollectionReport>(
+          state: resolveErpAsync(state, isDataEmpty: (_) => false),
+          loadingLabel: 'Loading',
+          emptyMessage: 'No collection report available.',
+          onRetry: () => ref.invalidate(directorCollectionReportProvider),
+          builder: (report) => _CollectionReportBody(report: report),
         ),
       ],
     );

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/errors/api_failure_mapper.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../router/route_names.dart';
+import '../../shared/async/erp_async_state.dart';
 import '../../shared/widgets/widgets.dart';
 import '../../theme/mesh_background.dart';
 import '../../theme/spacing.dart';
@@ -60,15 +60,14 @@ class DirectorSchoolSnapshotScreen extends ConsumerWidget {
                   semanticLabel: 'Director privacy notice',
                 ),
                 const SizedBox(height: AksharaSpacing.s4),
-                state.when(
-                  loading: () => const AksharaLoadingState(),
-                  error: (error, _) => AksharaErrorState.fromFailure(
-                    apiFailureMapper.fromException(error),
-                    onRetry: () => ref.invalidate(
-                      directorSchoolSnapshotProvider(schoolId),
-                    ),
+                ErpAsyncBody<DirectorSchoolSnapshot>(
+                  state: resolveErpAsync(state, isDataEmpty: (_) => false),
+                  loadingLabel: 'Loading',
+                  emptyMessage: 'No school snapshot available.',
+                  onRetry: () => ref.invalidate(
+                    directorSchoolSnapshotProvider(schoolId),
                   ),
-                  data: (snapshot) => _SnapshotBody(snapshot: snapshot),
+                  builder: (snapshot) => _SnapshotBody(snapshot: snapshot),
                 ),
               ],
             ),

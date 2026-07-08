@@ -3,14 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../router/route_names.dart';
+import '../../shared/async/erp_async_state.dart';
 import '../../shared/widgets/widgets.dart';
 import '../../theme/spacing.dart';
 import '../copilot/copilot_context_provider.dart';
+import 'director_models.dart';
 import 'director_navigation.dart';
 import 'director_providers.dart';
 import 'widgets/director_module_scaffold.dart';
 import 'widgets/director_shared_widgets.dart';
-import '../../core/errors/api_failure_mapper.dart';
 
 class DirectorPortfolioScreen extends ConsumerWidget {
   const DirectorPortfolioScreen({super.key});
@@ -29,10 +30,12 @@ class DirectorPortfolioScreen extends ConsumerWidget {
         filterTrailing: const DirectorAiAssistantLink(
           screenLabel: 'Director Portfolio Analytics',
         ),
-        body: state.when(
-          loading: () => const AksharaLoadingState(),
-          error: (error, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(error)),
-          data: (portfolio) => Column(
+        body: ErpAsyncBody<DirectorGrowthSnapshot>(
+          state: resolveErpAsync(state, isDataEmpty: (_) => false),
+          loadingLabel: 'Loading',
+          emptyMessage: 'No portfolio data available.',
+          onRetry: () => ref.invalidate(directorPortfolioProvider),
+          builder: (portfolio) => Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Wrap(

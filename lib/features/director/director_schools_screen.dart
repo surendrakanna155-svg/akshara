@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/reports/akshara_report_export_service.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../router/route_names.dart';
+import '../../shared/async/erp_async_state.dart';
 import '../../shared/widgets/widgets.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
@@ -16,7 +17,6 @@ import 'director_providers.dart';
 import 'reports/director_report_exporters.dart';
 import 'widgets/director_module_scaffold.dart';
 import 'widgets/director_shared_widgets.dart';
-import '../../core/errors/api_failure_mapper.dart';
 
 /// DIR-1 — the metric a director can rank the league table by. Every option is
 /// already present on [DirectorSchoolRow] (no backend call needed to sort).
@@ -84,16 +84,15 @@ class _DirectorSchoolsScreenState extends ConsumerState<DirectorSchoolsScreen> {
         // replaced by a real sort-by selector + export actions (built into the
         // body), so the scaffold filter bar is hidden.
         showFilterBar: false,
-        body: state.when(
-          loading: () => const AksharaLoadingState(),
-          error: (error, _) => AksharaErrorState.fromFailure(
-              apiFailureMapper.fromException(error)),
-          data: (schools) {
-            if (schools.isEmpty) {
-              return const AksharaEmptyState(
-                message: 'No schools available in this portfolio.',
-              );
-            }
+        body: ErpAsyncBody<List<DirectorSchoolRow>>(
+          state: resolveErpAsync(
+            state,
+            isDataEmpty: (schools) => schools.isEmpty,
+          ),
+          loadingLabel: 'Loading',
+          emptyMessage: 'No schools available in this portfolio.',
+          onRetry: () => ref.invalidate(directorSchoolsProvider),
+          builder: (schools) {
             final ranked = rankDirectorSchools(schools, _sort);
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,

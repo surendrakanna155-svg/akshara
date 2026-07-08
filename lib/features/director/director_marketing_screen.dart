@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../shared/async/erp_async_state.dart';
 import '../../shared/widgets/widgets.dart';
 import '../../theme/spacing.dart';
 import '../copilot/copilot_context_provider.dart';
+import 'director_models.dart';
 import 'director_navigation.dart';
 import 'director_providers.dart';
 import 'widgets/director_module_scaffold.dart';
 import 'widgets/director_shared_widgets.dart';
-import '../../core/errors/api_failure_mapper.dart';
 
 class DirectorMarketingScreen extends ConsumerWidget {
   const DirectorMarketingScreen({super.key});
@@ -27,10 +28,12 @@ class DirectorMarketingScreen extends ConsumerWidget {
         filterTrailing: const DirectorAiAssistantLink(
           screenLabel: 'Director Marketing Performance',
         ),
-        body: state.when(
-          loading: () => const AksharaLoadingState(),
-          error: (error, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(error)),
-          data: (marketing) => Column(
+        body: ErpAsyncBody<DirectorMarketingSnapshot>(
+          state: resolveErpAsync(state, isDataEmpty: (_) => false),
+          loadingLabel: 'Loading',
+          emptyMessage: 'No marketing data available.',
+          onRetry: () => ref.invalidate(directorMarketingProvider),
+          builder: (marketing) => Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Wrap(

@@ -3,12 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../director_models.dart';
 import '../director_mutations_provider.dart';
 import '../director_providers.dart';
-import '../../../core/errors/api_failure_mapper.dart';
 
 /// Opens the metric-input editor. These three per-school figures (marketing
 /// spend, operating expense, capacity) have no operational source, so the chain
@@ -121,10 +121,12 @@ class _MetricInputEditorSheetState
               'Marketing ROI and Capacity in the dashboards.',
             ),
             const SizedBox(height: AksharaSpacing.s4),
-            schoolsState.when(
-              loading: () => const AksharaLoadingState(),
-              error: (error, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(error)),
-              data: (schools) => DropdownButtonFormField<String>(
+            ErpAsyncBody<List<DirectorSchoolRow>>(
+              state: resolveErpAsync(schoolsState, isDataEmpty: (_) => false),
+              loadingLabel: 'Loading',
+              emptyMessage: 'No schools available.',
+              onRetry: () => ref.invalidate(directorSchoolsProvider),
+              builder: (schools) => DropdownButtonFormField<String>(
                 key: QaTestKeys.directorMetricInputSchoolField,
                 initialValue: _schoolId,
                 // Long school names overflow the narrow bottom-sheet dropdown;

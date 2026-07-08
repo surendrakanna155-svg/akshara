@@ -4,11 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/testing/qa_test_keys.dart';
 import '../../router/route_names.dart';
-import '../../shared/widgets/widgets.dart';
+import '../../shared/async/erp_async_state.dart';
 import 'parent_meeting_models.dart';
 import 'parent_meetings_mutations_provider.dart';
 import 'parent_meetings_providers.dart';
-import '../../core/errors/api_failure_mapper.dart';
 import '../../theme/spacing.dart';
 
 class ParentMeetingDetailScreen extends ConsumerStatefulWidget {
@@ -40,10 +39,12 @@ class _ParentMeetingDetailScreenState
 
     return Scaffold(
       appBar: AppBar(title: const Text('Parent Meeting Details')),
-      body: meetingsState.when(
-        loading: () => const AksharaLoadingState(),
-        error: (error, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(error)),
-        data: (meetings) {
+      body: ErpAsyncBody(
+        state: resolveErpAsync(meetingsState, isDataEmpty: (_) => false),
+        loadingLabel: 'Loading',
+        emptyMessage: 'No parent meetings yet',
+        onRetry: () => ref.invalidate(parentMeetingsFutureProvider),
+        builder: (meetings) {
           ParentMeetingRecord? meeting;
           for (final item in meetings) {
             if (item.id == widget.meetingId) {

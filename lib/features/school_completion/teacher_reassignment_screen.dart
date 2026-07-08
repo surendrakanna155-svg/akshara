@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/testing/qa_test_keys.dart';
+import '../../shared/async/erp_async_state.dart';
 import '../../shared/forms/forms.dart';
 import '../../shared/widgets/widgets.dart';
 import '../../theme/theme_extensions.dart';
@@ -9,7 +10,6 @@ import '../admin/admin_layout.dart';
 import 'school_completion_models.dart';
 import 'school_completion_mutations_provider.dart';
 import 'school_completion_providers.dart';
-import '../../core/errors/api_failure_mapper.dart';
 import '../../theme/spacing.dart';
 
 class TeacherReassignmentScreen extends ConsumerStatefulWidget {
@@ -42,10 +42,16 @@ class _TeacherReassignmentScreenState
 
     return Scaffold(
       appBar: AppBar(title: const Text('Teacher Reassignment Wizard')),
-      body: options.when(
-        loading: () => const AksharaLoadingState(),
-        error: (error, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(error)),
-        data: (data) {
+      body: ErpAsyncBody(
+        state: resolveErpAsync(options, isDataEmpty: (_) => false),
+        loadingLabel: 'Loading',
+        emptyMessage: 'No teacher reassignment options available.',
+        onRetry: () => ref.invalidate(
+          teacherReassignmentOptionsProvider(
+            (academicYearId: _academicYearId, sourceTeacherId: _sourceTeacherId),
+          ),
+        ),
+        builder: (data) {
           if (_sourceTeacherId == null && data.sourceTeacherId.isNotEmpty) {
             _sourceTeacherId = data.sourceTeacherId;
           }
