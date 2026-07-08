@@ -34,7 +34,7 @@ Reconcile against them FIRST, then continue.
 
 | Agent ID | Model | Task | Scope (files) | State | Recovery |
 |---|---|---|---|---|---|
-| `a4190c9a1581789d2` | **haiku** | Run acquisition crawl PASS 1 (P0 CBSE+NCERT) | `curriculum/resources/**` + `acquisition/` (no git) | 🟢 running | monitor; resumable (`crawl.py --resume`); do NOT re-spawn |
+| `bmmfoe83s` (bg task) | — (bash) | **CONTINUOUS acquisition service** (`run_continuous.sh` → `crawl.py --board all --resume` loop until 3-no-new completion) | `curriculum/resources/**` + `acquisition/` (no git) | 🟢 running (background service) | monitor via manifest + `crawl_continuous.log` READ-ONLY; do NOT interrupt except fatal/owner-stop/completion; resumable |
 
 
 ## Terminal this session (2026-07-08) — for provenance / no-duplicate
@@ -50,7 +50,8 @@ Reconcile against them FIRST, then continue.
 | `ad1b8b14b90cf2c74` | (opus) | CBSE+NCERT acquisition | ❌ failed | Anthropic session limit mid-finalization; SUPERSEDED by crawler (do not resume — crawler owns CBSE+NCERT as P0) |
 | `aed86d3e87bdf23e7` | (opus) | AP SCERT acquisition | ⚠ partial | ~20 PDFs on disk, no manifest; crawler re-does as P1 |
 | `ad479eeaf0dbff762` | (opus) | TS SCERT acquisition | ⚠ partial | ~7 PDFs on disk, no manifest; crawler re-does as P2 |
-| `a66ca488dbde617cc` | (opus) | CISCE acquisition | ✅ clean | 42/42 verified + `cisce_manifest.json`; crawler folds in as P3 |
+| `a66ca488dbde617cc` | (opus) | CISCE acquisition | ✅ clean | 42/42 verified; crawler folds in as P3 |
+| `a4190c9a1581789d2` | haiku | Crawl PASS 1+2 (bounded) | ✅ superseded | did PASS 1 (135 ver) + PASS 2 (183 ver); confused reports but downloads worked; replaced by the continuous service `bmmfoe83s` (its leftover --board cbse dup process killed to prevent manifest race) |
 | `a43dce4a0f7db7ade` | sonnet | Build acquisition crawler | ✅ done | build gate passed; committed `e73a76a5` (+fetch fix `98ac1176`) |
 | `a781baa7dae2b6259` | sonnet | CI-C4-schema (worktree) | ✅ done | base-verified onto tip → clean cherry-pick → `25436314`; worktree removed |
 | `ac081ada6353f100c` | sonnet | ERP AsyncValue re-run (worktree) | ✅ done | base-verified onto tip `cb7fbc82` → 40 sites → clean cherry-pick → `b8a68318`; worktree removed |
