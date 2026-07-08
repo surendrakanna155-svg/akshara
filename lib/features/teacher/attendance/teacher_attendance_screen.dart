@@ -18,7 +18,7 @@ import 'attendance_models.dart';
 import 'teacher_attendance_provider.dart';
 import 'teacher_attendance_workflow.dart';
 import 'widgets/class_selector_strip.dart';
-import 'widgets/student_attendance_row.dart';
+import 'widgets/attendance_exception_grid.dart';
 import '../../../theme/breakpoints.dart';
 
 /// Teacher attendance marking — TA-02.
@@ -249,7 +249,6 @@ class _AttendanceBodyState extends ConsumerState<_AttendanceBody>
                             .state = id,
                       ),
                       const SizedBox(height: AksharaSpacing.s3),
-                      _AttendanceKpiRow(data: data),
                       if (data.draftSavedAt != null) ...[
                         const SizedBox(height: AksharaSpacing.s2),
                         AksharaWarningBanner(
@@ -348,32 +347,29 @@ class _AttendanceBodyState extends ConsumerState<_AttendanceBody>
                             ),
                           ),
                         )
-                      : ListView.separated(
+                      // P2-UX-2 §2.1 — exception-first: a dense grid so the class
+                      // fits with minimal scrolling; mark all present, tap only
+                      // the exceptions. Same marking workflow as the row.
+                      : AttendanceExceptionGrid(
+                          students: visibleStudents,
+                          enabled: !data.isSubmitted,
                           padding: EdgeInsets.symmetric(
-                              horizontal: horizontalPadding),
-                          itemCount: visibleStudents.length,
-                          separatorBuilder: (_, __) => Divider(
-                            height: 1,
-                            color: context.colors.outlineVariant,
+                            horizontal: horizontalPadding,
                           ),
-                          itemBuilder: (context, index) {
-                            final student = visibleStudents[index];
-                            return StudentAttendanceRow(
-                              student: student,
-                              enabled: !data.isSubmitted,
-                              onMarkChanged: (mark) => updateStudentMark(
-                                ref,
-                                studentId: student.id,
-                                mark: mark,
-                              ),
-                            );
-                          },
+                          onMark: (studentId, mark) => updateStudentMark(
+                            ref,
+                            studentId: studentId,
+                            mark: mark,
+                          ),
                         ),
                 ),
                 _AttendanceActionBar(
                   horizontalPadding: horizontalPadding,
                   canSubmit: data.unmarkedCount == 0 && !data.isSubmitted,
                   unmarkedCount: data.unmarkedCount,
+                  presentCount: data.presentCount,
+                  absentCount: data.absentCount,
+                  lateCount: data.lateCount,
                   onSaveDraft: () => saveAttendanceDraft(ref),
                   onSubmit: () async {
                     final classId = data.selectedClassId;
@@ -403,87 +399,14 @@ class _AttendanceBodyState extends ConsumerState<_AttendanceBody>
   }
 }
 
-class _AttendanceKpiRow extends StatelessWidget {
-  const _AttendanceKpiRow({required this.data});
-
-  final TeacherAttendanceData data;
-
-  @override
-  Widget build(BuildContext context) {
-    // Half-day / excused only earn a card once at least one student carries
-    // them, so a plain P/A/L class keeps its clean three-card row.
-    final showSecondaryRow = data.halfDayCount > 0 || data.excusedCount > 0;
-    return Column(
-      children: [
-        SizedBox(
-          height: 88,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: AksharaKpiCard(
-                  value: '${data.presentCount}',
-                  subtitle: 'Present',
-                  accent: KpiAccent.success,
-                ),
-              ),
-              const SizedBox(width: AksharaSpacing.s2),
-              Expanded(
-                child: AksharaKpiCard(
-                  value: '${data.absentCount}',
-                  subtitle: 'Absent',
-                  accent: KpiAccent.error,
-                ),
-              ),
-              const SizedBox(width: AksharaSpacing.s2),
-              Expanded(
-                child: AksharaKpiCard(
-                  value: '${data.lateCount}',
-                  subtitle: 'Late',
-                  accent: KpiAccent.warning,
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (showSecondaryRow) ...[
-          const SizedBox(height: AksharaSpacing.s2),
-          SizedBox(
-            height: 88,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: AksharaKpiCard(
-                    key: QaTestKeys.teacherAttendanceHalfDayKpi,
-                    value: '${data.halfDayCount}',
-                    subtitle: 'Half-day',
-                    accent: KpiAccent.indigo,
-                  ),
-                ),
-                const SizedBox(width: AksharaSpacing.s2),
-                Expanded(
-                  child: AksharaKpiCard(
-                    key: QaTestKeys.teacherAttendanceExcusedKpi,
-                    value: '${data.excusedCount}',
-                    subtitle: 'Excused',
-                    accent: KpiAccent.tertiary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
 class _AttendanceActionBar extends StatelessWidget {
   const _AttendanceActionBar({
     required this.horizontalPadding,
     required this.canSubmit,
     required this.unmarkedCount,
+    required this.presentCount,
+    required this.absentCount,
+    required this.lateCount,
     required this.onSaveDraft,
     required this.onSubmit,
   });
@@ -491,12 +414,16 @@ class _AttendanceActionBar extends StatelessWidget {
   final double horizontalPadding;
   final bool canSubmit;
   final int unmarkedCount;
+  final int presentCount;
+  final int absentCount;
+  final int lateCount;
   final VoidCallback onSaveDraft;
   final VoidCallback onSubmit;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final text = context.aksharaText;
 
     return Material(
       color: colors.surface,
@@ -509,25 +436,56 @@ class _AttendanceActionBar extends StatelessWidget {
             horizontalPadding,
             AksharaSpacing.s3,
           ),
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: onSaveDraft,
-                  child: const Text('Save draft'),
+              // P2-UX-2 §2.1 — the single sticky live tally, right above Submit:
+              // "N present · M absent · K late" (never says "unmarked" — that
+              // stays the submit CTA's job so the gate reads in one place).
+              Padding(
+                key: QaTestKeys.teacherAttendanceSummaryBar,
+                padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.fact_check_outlined,
+                      size: 18,
+                      color: colors.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: AksharaSpacing.s2),
+                    Expanded(
+                      child: Text(
+                        '$presentCount present · $absentCount absent · '
+                        '$lateCount late',
+                        style: text.bodyMedium.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: AksharaSpacing.s3),
-              Expanded(
-                child: FilledButton(
-                  key: QaTestKeys.teacherAttendanceSubmitButton,
-                  onPressed: canSubmit ? onSubmit : null,
-                  child: Text(
-                    unmarkedCount > 0
-                        ? '$unmarkedCount unmarked'
-                        : 'Submit',
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: onSaveDraft,
+                      child: const Text('Save draft'),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: AksharaSpacing.s3),
+                  Expanded(
+                    child: FilledButton(
+                      key: QaTestKeys.teacherAttendanceSubmitButton,
+                      onPressed: canSubmit ? onSubmit : null,
+                      child: Text(
+                        unmarkedCount > 0
+                            ? '$unmarkedCount unmarked'
+                            : 'Submit',
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

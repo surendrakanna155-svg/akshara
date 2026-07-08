@@ -510,6 +510,21 @@ abstract final class QaTestKeys {
   ) =>
       ValueKey<String>('teacher_attendance_mark_${mark}_$studentId');
 
+  // P2-UX-2 §2.1 — exception-grid tile (tap cycles the mark; long-press picks).
+  static ValueKey<String> teacherAttendanceExceptionTile(String studentId) =>
+      ValueKey<String>('teacher_attendance_tile_$studentId');
+
+  // P2-UX-2 §2.1 — full mark option in the tile's long-press picker.
+  static ValueKey<String> teacherAttendancePickMark(
+    String studentId,
+    String mark,
+  ) =>
+      ValueKey<String>('teacher_attendance_pick_${mark}_$studentId');
+
+  // P2-UX-2 §2.1 — the single sticky live present/absent/late summary bar.
+  static const teacherAttendanceSummaryBar =
+      ValueKey<String>('teacher_attendance_summary_bar');
+
   // TCH-9 — My Attendance (read-only staff self-service).
   static const teacherMyAttendanceScreen =
       ValueKey<String>('teacher_my_attendance_screen');
