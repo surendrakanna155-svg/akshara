@@ -85,6 +85,8 @@ export interface CreateQuestionBankInput {
   syllabusChapterId?: string;
   syllabusTopicId?: string;
   learningOutcome?: string;
+  /** CI-C4-schema — teacher-confirmed competency tag (mirrors learningOutcome). */
+  competency?: string;
   reviewStatus?: EduReviewStatus;
   createdBy: string;
 }
@@ -194,10 +196,10 @@ export async function createQuestionBankItem(
        difficulty, question_type, marks, question_text, answer_text, options,
        source, source_reference, program_track, jee_question_type, cognitive_level,
        syllabus_chapter_id, syllabus_topic_id, learning_outcome, fingerprint,
-       review_status, created_by
+       review_status, created_by, competency
      ) VALUES (
        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb,
-       $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22
+       $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23
      )
      RETURNING *`,
     [
@@ -223,6 +225,9 @@ export async function createQuestionBankItem(
       fingerprint,
       input.reviewStatus ?? "approved",
       input.createdBy,
+      // CI-C4-schema — appended at the end so every existing param index
+      // ($1..$22) is unchanged (byte-stable for existing callers/tests).
+      input.competency ?? null,
     ],
   );
   return result[0]!;
@@ -302,6 +307,13 @@ export interface UpdateQuestionBankInput {
   syllabusTopicId?: string | null;
   learningOutcome?: string | null;
   sourceReference?: string | null;
+  /**
+   * CI-C4-schema — teacher-confirmed competency tag. This is the "teacher
+   * confirm persists" step (AT-C4.1): a Tier-1 suggestion from
+   * `suggestClassification` (education_question_classifier.ts) is passed here
+   * only after a teacher reviews/edits it — never written automatically.
+   */
+  competency?: string | null;
 }
 
 /**
@@ -351,6 +363,7 @@ export async function updateQuestionBankItem(
        learning_outcome = $15,
        source_reference = $16,
        fingerprint = $17,
+       competency = $18,
        updated_at = now()
      WHERE id = $1
      RETURNING *`,
@@ -372,6 +385,9 @@ export async function updateQuestionBankItem(
       input.learningOutcome === undefined ? existing.learning_outcome : input.learningOutcome,
       input.sourceReference === undefined ? existing.source_reference : input.sourceReference,
       fingerprint,
+      // CI-C4-schema — appended at $18, after the certified $1..$17 positions
+      // (byte-stable for existing callers/tests).
+      input.competency === undefined ? existing.competency : input.competency,
     ],
   );
   return rows[0] ?? null;

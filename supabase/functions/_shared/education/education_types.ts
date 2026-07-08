@@ -145,6 +145,28 @@ export interface QuestionBankItemRow {
    */
   times_used?: number | null;
   last_used_at?: string | null;
+  /**
+   * CI-C4-schema (GAP_ANALYSIS A1-2) — free-text competency tag, mirroring
+   * `learning_outcome` exactly (same column added dormant by migration
+   * 20260857000000). Teacher-confirmed only: the Tier-1 rule-first classifier
+   * (`education_question_classifier.ts`) only ever suggests a value — it never
+   * writes it. Optional: absent/undefined on every row created before the
+   * migration, same "never tagged" convention as `learning_outcome` (I1).
+   */
+  competency?: string | null;
+  /**
+   * CI-C4-schema (GAP_ANALYSIS A1-5) — forward-reference placeholder for the
+   * question-family entity CI-C10 (`edu_question_families`, B12) will
+   * introduce. Plain UUID, no FK yet (the referenced table does not exist in
+   * this wave); no code path writes it today. Optional/nullable (I1).
+   */
+  question_family_id?: string | null;
+  /**
+   * CI-C4-schema (GAP_ANALYSIS A1-5) — forward-reference placeholder for the
+   * canonical concept graph CI-E1b will introduce. Plain UUID, no FK yet; no
+   * code path writes it today. Optional/nullable (I1).
+   */
+  concept_id?: string | null;
 }
 
 export interface QuestionPaperRow {
