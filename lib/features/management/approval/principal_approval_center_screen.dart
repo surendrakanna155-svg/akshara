@@ -37,7 +37,7 @@ class PrincipalApprovalCenterScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isLoading = ref.watch(approvalCenterLoadingProvider);
     final isError = ref.watch(approvalCenterErrorProvider);
-    final items = ref.watch(approvalCenterFilteredListProvider);
+    final items = ref.watch(approvalCenterQueueProvider);
     final allItems = ref.watch(approvalCenterListProvider);
     final statusIndex = ref.watch(approvalCenterStatusFilterProvider);
     final selected = ref.watch(approvalCenterSelectedProvider);

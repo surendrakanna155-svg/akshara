@@ -24,6 +24,7 @@ class ApprovalRequest {
     this.decisionComment,
     this.tenantId,
     this.schoolId,
+    this.sodBlocked = false,
   });
 
   final String id;
@@ -44,6 +45,12 @@ class ApprovalRequest {
   final String? tenantId;
   final String? schoolId;
 
+  /// Server-owned maker-checker hint (P2-UX-2 §2.3): true when the signed-in
+  /// viewer raised this value-gating request and so cannot approve their own
+  /// (separation of duties). The Approval Center renders a badge + disables
+  /// Approve from THIS flag — it never re-derives the SoD type set client-side.
+  final bool sodBlocked;
+
   bool get isPending => status == ApprovalStatus.pending;
 
   ApprovalRequest copyWith({
@@ -52,6 +59,7 @@ class ApprovalRequest {
     String? decidedById,
     String? decidedByName,
     String? decisionComment,
+    bool? sodBlocked,
   }) {
     return ApprovalRequest(
       id: id,
@@ -71,6 +79,7 @@ class ApprovalRequest {
       decisionComment: decisionComment ?? this.decisionComment,
       tenantId: tenantId,
       schoolId: schoolId,
+      sodBlocked: sodBlocked ?? this.sodBlocked,
     );
   }
 }

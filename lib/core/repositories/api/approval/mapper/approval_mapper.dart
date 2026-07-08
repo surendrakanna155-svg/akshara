@@ -28,6 +28,7 @@ class ApprovalMapper {
       decisionComment: dto.decisionComment,
       tenantId: dto.tenantId,
       schoolId: dto.schoolId,
+      sodBlocked: dto.sodBlocked,
     );
   }
 

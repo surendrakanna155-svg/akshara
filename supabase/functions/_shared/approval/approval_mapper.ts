@@ -1,6 +1,9 @@
 import type { ApprovalAuditRow, ApprovalRequestRow } from "./approval_types.ts";
 
-export function approvalRequestToApi(row: ApprovalRequestRow): Record<string, unknown> {
+export function approvalRequestToApi(
+  row: ApprovalRequestRow,
+  extra?: { sodBlocked?: boolean },
+): Record<string, unknown> {
   return {
     id: row.id,
     type: row.type,
@@ -19,6 +22,11 @@ export function approvalRequestToApi(row: ApprovalRequestRow): Record<string, un
     decisionComment: row.decision_comment,
     tenantId: row.organization_id,
     schoolId: row.school_id,
+    // Server-owned maker-checker hint: true when the VIEWER raised this
+    // value-gating request and so cannot approve their own (see
+    // isSelfApproveDeniedType). The client renders a badge + disables Approve
+    // from this flag — it never re-derives the SoD type set.
+    sodBlocked: extra?.sodBlocked ?? false,
   };
 }
 

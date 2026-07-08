@@ -18,6 +18,7 @@ class ApprovalRequestDto {
     this.decisionComment,
     this.tenantId,
     this.schoolId,
+    this.sodBlocked = false,
   });
 
   factory ApprovalRequestDto.fromJson(Map<String, dynamic> json) {
@@ -41,6 +42,7 @@ class ApprovalRequestDto {
           json['decisionComment'] as String? ?? json['decision_comment'] as String?,
       tenantId: json['tenantId'] as String? ?? json['organization_id'] as String?,
       schoolId: json['schoolId'] as String? ?? json['school_id'] as String?,
+      sodBlocked: (json['sodBlocked'] ?? json['sod_blocked']) as bool? ?? false,
     );
   }
 
@@ -61,6 +63,7 @@ class ApprovalRequestDto {
   final String? decisionComment;
   final String? tenantId;
   final String? schoolId;
+  final bool sodBlocked;
 
   static Map<String, Object?> _payload(Object? raw) {
     if (raw is Map<String, dynamic>) {

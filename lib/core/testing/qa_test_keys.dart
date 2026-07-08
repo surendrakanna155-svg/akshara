@@ -1284,6 +1284,14 @@ abstract final class QaTestKeys {
   static ValueKey<String> approvalRejectButton(String approvalId) =>
       ValueKey<String>('approval_reject_$approvalId');
 
+  /// P2-UX-2 §2.3 — server-flagged maker-checker badge ("you raised this").
+  static ValueKey<String> approvalMakerCheckerBadge(String approvalId) =>
+      ValueKey<String>('approval_maker_checker_$approvalId');
+
+  /// P2-UX-2 §2.3 — per-type group header in the approval queue.
+  static ValueKey<String> approvalGroupHeader(String typeName) =>
+      ValueKey<String>('approval_group_$typeName');
+
   /// Teacher exam submit for approval (M-D3).
   static const examSubmitApprovalButton =
       ValueKey<String>('exam_submit_approval_button');

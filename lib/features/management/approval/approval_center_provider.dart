@@ -110,6 +110,46 @@ final approvalCenterFilteredListProvider =
   }).toList(growable: false);
 });
 
+/// P2-UX-2 §2.3 — a distinct rank per approval type so the queue GROUPS by type
+/// (same types stay contiguous) with the most business-critical groups —
+/// money-out / waivers / value commitments — floated to the top. Pure
+/// presentation ordering; it changes no decision authority.
+int _approvalTypeRank(ApprovalRequestType type) => switch (type) {
+      ApprovalRequestType.refund => 0,
+      ApprovalRequestType.feeConcession => 1,
+      ApprovalRequestType.feeStructure => 2,
+      ApprovalRequestType.inventoryPo => 3,
+      ApprovalRequestType.expense => 4,
+      ApprovalRequestType.budget => 5,
+      ApprovalRequestType.payroll => 6,
+      ApprovalRequestType.vendor => 7,
+      ApprovalRequestType.examResults => 8,
+      ApprovalRequestType.admission => 9,
+      ApprovalRequestType.attendanceCorrection => 10,
+      ApprovalRequestType.staffLeave => 11,
+      ApprovalRequestType.studentLeave => 12,
+      ApprovalRequestType.marketing => 13,
+    };
+
+/// P2-UX-2 §2.3 — the queue as rendered: the filtered list ordered so it groups
+/// by type (critical groups first), and within each group surfaces actionable
+/// (pending) then newest requests first. One order serves both the desktop
+/// table (contiguous rows) and the grouped mobile cards.
+final approvalCenterQueueProvider = Provider<List<ApprovalRequest>>((ref) {
+  final items = [...ref.watch(approvalCenterFilteredListProvider)];
+  items.sort((a, b) {
+    final rank = _approvalTypeRank(a.type).compareTo(_approvalTypeRank(b.type));
+    if (rank != 0) return rank;
+    // Pending (still actionable) ahead of already-decided within a group.
+    final pending =
+        (b.isPending ? 1 : 0).compareTo(a.isPending ? 1 : 0);
+    if (pending != 0) return pending;
+    // Newest first.
+    return b.createdAt.compareTo(a.createdAt);
+  });
+  return List<ApprovalRequest>.unmodifiable(items);
+});
+
 final approvalCenterPendingCountProvider = Provider<int>((ref) {
   final items = ref.watch(approvalCenterListProvider);
   return items.where((a) => a.status == ApprovalStatus.pending).length;

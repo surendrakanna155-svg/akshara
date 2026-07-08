@@ -332,6 +332,17 @@ const SELF_APPROVE_DENIED_TYPES = new Set<string>([
   "feeStructure",
 ]);
 
+/**
+ * The SINGLE, server-owned source of the self-approve-denied rule. The Approval
+ * Center reads a per-item `sodBlocked` flag derived from THIS predicate (see
+ * {@link approvalRequestToApi}) so the client never re-implements — and cannot
+ * drift from — the maker-checker type set. Enforcement still lives in
+ * {@link decideApproval}; the flag is only the UI hint reflecting it.
+ */
+export function isSelfApproveDeniedType(type: string): boolean {
+  return SELF_APPROVE_DENIED_TYPES.has(type);
+}
+
 export async function decideApproval(
   db: TenantQueryClient,
   organizationId: string,

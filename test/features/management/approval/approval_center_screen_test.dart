@@ -96,7 +96,9 @@ void main() {
 
       expect(find.text('Approval history'), findsOneWidget);
       expect(find.textContaining('Submitted'), findsWidgets);
-      expect(find.textContaining('Half-yearly exam'), findsOneWidget);
+      // P2-UX-2 §2.3 — the summary is now an on-card decision fact too, so it
+      // appears both on the queue row and in the opened detail panel.
+      expect(find.textContaining('Half-yearly exam'), findsWidgets);
     });
 
     testWidgets('RBAC hides approve actions for teacher role', (tester) async {

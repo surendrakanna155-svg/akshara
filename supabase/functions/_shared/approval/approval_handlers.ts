@@ -25,6 +25,7 @@ import {
   findPendingByEntity,
   getApprovalById,
   insertAuditEntry,
+  isSelfApproveDeniedType,
   listApprovals,
   listAuditEntries,
   listPendingApprovals,
@@ -210,7 +211,13 @@ export async function handleListApprovals(
           url.searchParams.get("entity_id") ?? undefined,
       })
     );
-    return jsonResponse(envelope(listEnvelope(rows.map(approvalRequestToApi))));
+    const viewerId = auth.claims.sub;
+    return jsonResponse(envelope(listEnvelope(rows.map((row) =>
+      approvalRequestToApi(row, {
+        sodBlocked: isSelfApproveDeniedType(row.type) &&
+          row.requester_id === viewerId,
+      })
+    ))));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
       return tenantDbNotConfiguredResponse();
@@ -237,7 +244,13 @@ export async function handleListPendingApprovals(
     const rows = await runTenant(config, auth.claims, (db) =>
       listPendingApprovals(db, orgId, schoolId)
     );
-    return jsonResponse(envelope(listEnvelope(rows.map(approvalRequestToApi))));
+    const viewerId = auth.claims.sub;
+    return jsonResponse(envelope(listEnvelope(rows.map((row) =>
+      approvalRequestToApi(row, {
+        sodBlocked: isSelfApproveDeniedType(row.type) &&
+          row.requester_id === viewerId,
+      })
+    ))));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
       return tenantDbNotConfiguredResponse();
@@ -268,7 +281,10 @@ export async function handleGetApproval(
     if (!row) {
       return errorEnvelope("NOT_FOUND", `Approval not found: ${approvalId}`, 404);
     }
-    return jsonResponse(envelope(approvalRequestToApi(row)));
+    return jsonResponse(envelope(approvalRequestToApi(row, {
+      sodBlocked: isSelfApproveDeniedType(row.type) &&
+        row.requester_id === auth.claims.sub,
+    })));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
       return tenantDbNotConfiguredResponse();
