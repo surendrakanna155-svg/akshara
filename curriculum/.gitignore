@@ -32,3 +32,6 @@ COMPLETED_DOWNLOADS.json
 FAILED_DOWNLOADS.json
 PROJECT_STATUS.json
 SESSION_LOG.md
+
+# Crawler runtime frontier state (local-only; manifest committed separately once the real crawl runs)
+acquisition/crawler_state.json
