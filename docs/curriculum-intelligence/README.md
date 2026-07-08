@@ -47,6 +47,7 @@ The Curriculum Intelligence Pipeline: build a verified official-curriculum repos
 | Doc | Concern |
 |---|---|
 | [`IMPLEMENTATION_SEQUENCE.md`](planning/IMPLEMENTATION_SEQUENCE.md) | **Master ordering** — two-lane model, waves CI-A0..E1 |
+| [`CONTENT_DEPENDENCY_MAP.md`](planning/CONTENT_DEPENDENCY_MAP.md) | **🟢 Runnable-now vs 🔴 content-blocked** (owner 2026-07-08) — only acquisition is network-gated; the deterministic engine/schema/APIs/tests/docs run now on fixtures |
 | [`MODULE_DEPENDENCY_GRAPH.md`](planning/MODULE_DEPENDENCY_GRAPH.md) | Layer + wave dependency graphs; reused-module matrix |
 | [`IMPLEMENTATION_PHASES.md`](planning/IMPLEMENTATION_PHASES.md) | Phases CI-P0..P4 + boundary rules |
 | [`CRITICAL_PATH_ANALYSIS.md`](planning/CRITICAL_PATH_ANALYSIS.md) | Goal lines G1/G2, critical paths, slack |

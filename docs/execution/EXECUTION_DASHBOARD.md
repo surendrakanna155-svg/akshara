@@ -146,7 +146,7 @@ Hard gates: P0 gates P4/P6/P7/P8 · P1-CODE-1 → P2-UX-2 · P3-AI-1 → P3-AI-2
 >
 > **▶ NEXT (both lanes run in parallel — owner policy 2026-07-08; open each wave with an execution plan):**
 > **(1) ERP lane: P2-UX-5 — dark-theme user toggle** (Light/Dark/Follow-system, default Light; dark contrast pass incl. the carried `tertiary` item; deliberate dark golden re-baseline). **LAST P2 sub-wave. ⏸ owner-confirm to open.**
-> **(2) Curriculum lane: 🟡 A2 pending owner ratification** (per-student DPP engine — D-7/I9 approved; spec-merge pending). **CI implementation has NO runnable headless work** until owner opens network+licence for CI-A1 (CI-C1+ post-pilot + need CI-B3).
+> **(2) Curriculum lane: NOT fully blocked** (owner directive 2026-07-08 · `curriculum-intelligence/planning/CONTENT_DEPENDENCY_MAP.md`). Only content-acquisition (CI-A1..A6 + CI-B datasets) is network/licence-gated. **Deterministic engine + schema + APIs + tests + docs are RUNNABLE NOW** on fixtures: CI-C8 (zero-dep) → CI-C1 (keystone solver) → CI-C3 ∥ CI-C7 + B12 family schema + E1b dormant seed. Disjoint tree (`education/**`) → true parallel with ERP. **⚠ Reverses frozen Option A (engine pre-pilot) — owner confirm.** AI waves (C5/C6/C10/C11) gated on P3-AI-1 + concepts. 🟡 A2 pending ratification.
 > **(3) Remaining P1 owner-gated: P1-CODE-4 (Identity) + P1-CODE-6/7/8 (module scope).**
 > **👤 OWNER-DECISION BATCH (surface now):** identity cluster (P1-CODE-4) · PAR3-UPLOAD (parent medical-cert real file storage vs reference-only) · PRI-4/5 scheduled-send (in-app card vs real XCT-2 push) · HWK-1-basis re-check (`due_date` already live → may unblock C6) · CI-A1 network/licence provisioning · module-scope (P1-CODE-6/7/8) · live lane (`P0-INFRA-1/3`, `P0-TEST-1/2/3`).
 
