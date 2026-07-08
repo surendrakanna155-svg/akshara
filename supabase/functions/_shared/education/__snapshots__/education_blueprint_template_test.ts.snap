@@ -1,0 +1,312 @@
+export const snapshot = {};
+
+snapshot[`CI-C1 golden: planTemplateSlots is byte-stable (sections, choice pools, weightage, quotas) 1`] = `
+[
+  {
+    chapter: "Algebra",
+    difficulty: "easy",
+    index: 0,
+    marks: 1,
+    questionType: "mcq",
+    scored: true,
+    sectionCode: "A",
+  },
+  {
+    chapter: "Geometry",
+    difficulty: "easy",
+    index: 1,
+    marks: 1,
+    questionType: "mcq",
+    scored: true,
+    sectionCode: "A",
+  },
+  {
+    chapter: "Algebra",
+    difficulty: "easy",
+    index: 2,
+    marks: 1,
+    questionType: "mcq",
+    scored: true,
+    sectionCode: "A",
+  },
+  {
+    chapter: "Geometry",
+    cognitiveExclude: [
+      "remember",
+      "understand",
+    ],
+    difficulty: "easy",
+    index: 3,
+    marks: 1,
+    questionType: "mcq",
+    scored: true,
+    sectionCode: "A",
+  },
+  {
+    chapter: "Algebra",
+    cognitiveExclude: [
+      "remember",
+      "understand",
+    ],
+    difficulty: "easy",
+    index: 4,
+    marks: 1,
+    questionType: "mcq",
+    scored: true,
+    sectionCode: "A",
+  },
+  {
+    chapter: "Geometry",
+    cognitiveExclude: [
+      "remember",
+      "understand",
+    ],
+    difficulty: "easy",
+    index: 5,
+    marks: 1,
+    questionType: "mcq",
+    scored: true,
+    sectionCode: "A",
+  },
+  {
+    chapter: "Algebra",
+    difficulty: "medium",
+    index: 6,
+    marks: 3,
+    questionType: "short_answer",
+    scored: true,
+    sectionCode: "B",
+  },
+  {
+    chapter: "Geometry",
+    difficulty: "medium",
+    index: 7,
+    marks: 3,
+    questionType: "short_answer",
+    scored: true,
+    sectionCode: "B",
+  },
+  {
+    chapter: "Algebra",
+    difficulty: "medium",
+    index: 8,
+    marks: 3,
+    questionType: "short_answer",
+    scored: true,
+    sectionCode: "B",
+  },
+  {
+    chapter: "Geometry",
+    difficulty: "medium",
+    index: 9,
+    marks: 3,
+    questionType: "short_answer",
+    scored: true,
+    sectionCode: "B",
+  },
+  {
+    chapter: "Algebra",
+    difficulty: "medium",
+    index: 10,
+    marks: 3,
+    questionType: "short_answer",
+    scored: false,
+    sectionCode: "B",
+  },
+  {
+    chapter: "Geometry",
+    difficulty: "medium",
+    index: 11,
+    marks: 3,
+    questionType: "short_answer",
+    scored: false,
+    sectionCode: "B",
+  },
+  {
+    chapter: "Algebra",
+    cognitiveRequire: "hots",
+    difficulty: "hard",
+    index: 12,
+    marks: 5,
+    questionType: "long_answer",
+    scored: true,
+    sectionCode: "C",
+  },
+  {
+    chapter: "Geometry",
+    cognitiveRequire: "hots",
+    difficulty: "hard",
+    index: 13,
+    marks: 5,
+    questionType: "long_answer",
+    scored: true,
+    sectionCode: "C",
+  },
+  {
+    chapter: "Algebra",
+    difficulty: "hard",
+    index: 14,
+    marks: 5,
+    questionType: "long_answer",
+    scored: true,
+    sectionCode: "C",
+  },
+  {
+    chapter: "Geometry",
+    difficulty: "hard",
+    index: 15,
+    marks: 5,
+    questionType: "long_answer",
+    scored: true,
+    sectionCode: "C",
+  },
+]
+`;
+
+snapshot[`CI-C1 golden: solveTemplateBlueprint selection + report is byte-stable 1`] = `
+{
+  durationMinutes: 90,
+  generalInstructions: [
+    "All questions are compulsory unless a choice is indicated.",
+  ],
+  report: {
+    chapterWeightage: {
+      planned: {
+        Algebra: 19,
+        Geometry: 19,
+      },
+      satisfied: true,
+      target: {
+        Algebra: 19,
+        Geometry: 19,
+      },
+    },
+    cognitive: [
+      {
+        hotsMin: undefined,
+        hotsSelected: 0,
+        rememberUnderstandMax: 3,
+        rememberUnderstandSelected: 0,
+        satisfied: true,
+        sectionCode: "A",
+      },
+      {
+        hotsMin: undefined,
+        hotsSelected: 0,
+        rememberUnderstandMax: undefined,
+        rememberUnderstandSelected: 0,
+        satisfied: true,
+        sectionCode: "B",
+      },
+      {
+        hotsMin: 2,
+        hotsSelected: 2,
+        rememberUnderstandMax: undefined,
+        rememberUnderstandSelected: 0,
+        satisfied: true,
+        sectionCode: "C",
+      },
+    ],
+    marksBalanced: true,
+    scoredMarks: 38,
+    templateTotalMarks: 38,
+  },
+  sections: [
+    {
+      answerCount: 6,
+      code: "A",
+      gaps: [],
+      poolCount: 6,
+      questionType: "mcq",
+      scoredMarks: 6,
+      selected: [
+        [
+          0,
+          "a0",
+        ],
+        [
+          1,
+          "a1",
+        ],
+        [
+          2,
+          "a2",
+        ],
+        [
+          3,
+          "a3",
+        ],
+        [
+          4,
+          "a4",
+        ],
+        [
+          5,
+          "a5",
+        ],
+      ],
+    },
+    {
+      answerCount: 4,
+      code: "B",
+      gaps: [],
+      poolCount: 6,
+      questionType: "short_answer",
+      scoredMarks: 12,
+      selected: [
+        [
+          6,
+          "b0",
+        ],
+        [
+          7,
+          "b1",
+        ],
+        [
+          8,
+          "b2",
+        ],
+        [
+          9,
+          "b3",
+        ],
+        [
+          10,
+          "b4",
+        ],
+        [
+          11,
+          "b5",
+        ],
+      ],
+    },
+    {
+      answerCount: 4,
+      code: "C",
+      gaps: [],
+      poolCount: 4,
+      questionType: "long_answer",
+      scoredMarks: 20,
+      selected: [
+        [
+          12,
+          "c0",
+        ],
+        [
+          13,
+          "c1",
+        ],
+        [
+          14,
+          "c2",
+        ],
+        [
+          15,
+          "c3",
+        ],
+      ],
+    },
+  ],
+  totalMarks: 38,
+}
+`;

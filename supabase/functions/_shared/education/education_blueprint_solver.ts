@@ -13,6 +13,7 @@
 import { balanceDifficultyMix } from "./education_generator.ts";
 import { computeQuestionFingerprint } from "./education_fingerprint.ts";
 import type {
+  EduCognitiveLevel,
   EduDifficulty,
   EduQuestionType,
   QuestionBankItemRow,
@@ -32,6 +33,15 @@ export interface SolverSpec {
   difficulty: EduDifficulty;
   chapters: string[];
   questionTypeMix?: Partial<Record<EduQuestionType, number>>;
+  /**
+   * CI-C1 (v3.0 §9.1): a governed blueprint template. When present, the request
+   * CONFORMS to the template (sections / internal-choice pools / chapter-weightage
+   * + cognitive & difficulty quotas as HARD constraints) instead of the flat,
+   * request-computed plan. ADDITIVE + gated: when ABSENT the solver is
+   * byte-identical to the certified path (invariant I1 / mitigation B1). Legacy
+   * callers never set this. See `BlueprintTemplate` + `solveTemplateBlueprint`.
+   */
+  template?: BlueprintTemplate;
 }
 
 export interface SolvedSlot {
@@ -43,6 +53,12 @@ export interface BlueprintSolution {
   slots: BlueprintSlot[];
   selected: SolvedSlot[];
   gaps: BlueprintSlot[];
+  /**
+   * Present ONLY on the template path (CI-C1) — the section-aware solution +
+   * constraint report. Undefined (absent key) on the legacy path, so the
+   * certified `{ slots, selected, gaps }` shape is byte-unchanged (golden-stable).
+   */
+  template?: TemplateBlueprintSolution;
 }
 
 const DEFAULT_TYPE_MIX: EduQuestionType[] = [
@@ -173,6 +189,24 @@ export function solveBlueprint(
   spec: SolverSpec,
   bankItems: QuestionBankItemRow[],
 ): BlueprintSolution {
+  // ── CI-C1 template seam (ADDITIVE, gated) ──────────────────────────────────
+  // A governed blueprint template inverts the flow: the request CONFORMS to the
+  // template — sections, internal-choice pools, chapter-weightage + cognitive &
+  // difficulty quotas as HARD constraints — drawn from the FULL eligible bank
+  // (no 100-item cap). Activates ONLY when `spec.template` is present. Every
+  // legacy caller — and the golden — leaves it undefined and falls straight
+  // through to the certified path below, BYTE-IDENTICALLY (invariant I1 / B1).
+  if (spec.template) {
+    const solved = solveTemplateBlueprint(spec.template, spec, bankItems);
+    return {
+      slots: solved.slots,
+      selected: solved.selected,
+      gaps: solved.gaps,
+      template: solved,
+    };
+  }
+
+  // ── Legacy certified path (UNCHANGED) ──────────────────────────────────────
   const slots = planSlots(spec);
   const usedIds = new Set<string>();
   const usedFingerprints = new Set<string>();
@@ -198,4 +232,443 @@ export function solveBlueprint(
   }
 
   return { slots, selected, gaps };
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// CI-C1 — Template-aware solver (v3.0 §9.1 / §9.2), ADDITIVE + template-gated.
+//
+// A governed blueprint template makes a paper request CONFORM to a versioned
+// structure instead of a flat, request-computed plan. The solver stays PURE and
+// DETERMINISTIC (no Date / random / DB / network) — templates are INPUTS, never
+// side effects (invariant I1). It activates only through `spec.template`; with no
+// template the certified path above runs byte-identically (mitigation B1).
+//
+// Honoured as HARD constraints — a slot that cannot be filled WITHOUT violating
+// the template fails HONESTLY into a gap (for the constrained-AI step to offer as
+// a moderation candidate; never silently violated, invariants I3/I4):
+//   • slot groups / sections (per-section question type + marks-per-question)
+//   • internal-choice pools ("any {answer} of {pool}" — print pool, score answer)
+//   • chapter weightage (explicit per-chapter scored-marks target)
+//   • cognitive quotas (remember/understand cap, HOTS minimum)
+//   • per-section / difficulty-curve difficulty
+// Selection draws from the FULL eligible bank (removes the legacy 100-item cap —
+// the caller passes the whole approved bank; the solver imposes no cap).
+// ═════════════════════════════════════════════════════════════════════════════
+
+/** One section of a governed blueprint template (v3.0 §9.1 `structure.sections`). */
+export interface BlueprintTemplateSection {
+  code: string;
+  title?: string;
+  questionType: EduQuestionType;
+  marksPerQuestion: number;
+  /** Number of questions the student must ANSWER (contributes to scored marks). */
+  count: number;
+  /** Fixed section difficulty; omit to derive from the template difficultyCurve. */
+  difficulty?: Exclude<EduDifficulty, "mixed">;
+  /** "any {answer} of {pool}" — pool ≥ answer questions printed, answer scored. */
+  internalChoice?: { pool: number; answer: number };
+  /** Cognitive-level quota, enforced as a hard constraint at selection. */
+  cognitiveQuota?: {
+    /** At most this % of the section's answered questions may be remember/understand. */
+    remember_understand_max_pct?: number;
+    /** At least this many answered questions must be HOTS. */
+    hots_min_count?: number;
+  };
+}
+
+/** A governed blueprint template (v3.0 §9.1 `structure` JSONB). */
+export interface BlueprintTemplate {
+  totalMarks: number;
+  durationMinutes?: number;
+  generalInstructions?: string[];
+  sections: BlueprintTemplateSection[];
+  /** Explicit per-chapter scored-marks target (hard constraint). */
+  chapterWeightage?: { mode: "explicit"; marks: Record<string, number> };
+  /** Whole-paper difficulty weights, applied when a section omits `difficulty`. */
+  difficultyCurve?: Partial<Record<Exclude<EduDifficulty, "mixed">, number>>;
+  /** CBSE-style competency mandate — carried through for reporting (Phase-2 enforces). */
+  competencyQuota?: { competency_based_min_pct?: number };
+}
+
+/** A planned template slot: a BlueprintSlot plus section + choice/cognitive metadata. */
+export interface TemplateSlot extends BlueprintSlot {
+  sectionCode: string;
+  /** true = scored slot (counts toward marks); false = extra internal-choice option. */
+  scored: boolean;
+  /** Slot must be filled by an item of exactly this cognitive level (hard). */
+  cognitiveRequire?: EduCognitiveLevel;
+  /** Slot must NOT be filled by an item of any of these cognitive levels (hard). */
+  cognitiveExclude?: EduCognitiveLevel[];
+}
+
+export interface TemplateSolvedSlot {
+  slot: TemplateSlot;
+  bankItem: QuestionBankItemRow;
+}
+
+export interface TemplateSolvedSection {
+  code: string;
+  title?: string;
+  questionType: EduQuestionType;
+  marksPerQuestion: number;
+  /** Questions to answer (scored). */
+  answerCount: number;
+  /** Questions to print (pool ≥ answerCount when internal choice is offered). */
+  poolCount: number;
+  /** answerCount × marksPerQuestion. */
+  scoredMarks: number;
+  slots: TemplateSlot[];
+  selected: TemplateSolvedSlot[];
+  gaps: TemplateSlot[];
+}
+
+export interface TemplateBlueprintSolution {
+  totalMarks: number;
+  durationMinutes?: number;
+  generalInstructions: string[];
+  sections: TemplateSolvedSection[];
+  /** Flattened, in section + slot order. */
+  slots: TemplateSlot[];
+  selected: TemplateSolvedSlot[];
+  gaps: TemplateSlot[];
+  report: {
+    scoredMarks: number;
+    templateTotalMarks: number;
+    /** scoredMarks === template.totalMarks (a well-formed template balances). */
+    marksBalanced: boolean;
+    chapterWeightage?: {
+      target: Record<string, number>;
+      planned: Record<string, number>;
+      satisfied: boolean;
+    };
+    cognitive: Array<{
+      sectionCode: string;
+      hotsMin?: number;
+      hotsSelected: number;
+      rememberUnderstandMax?: number;
+      rememberUnderstandSelected: number;
+      satisfied: boolean;
+    }>;
+  };
+}
+
+const DIFFICULTY_ORDER: Array<Exclude<EduDifficulty, "mixed">> = ["easy", "medium", "hard"];
+const RU_LEVELS: EduCognitiveLevel[] = ["remember", "understand"];
+
+/** Split `count` items into buckets by non-negative weights (largest-remainder, deterministic). */
+function allocateCount(count: number, weights: number[]): number[] {
+  if (count <= 0) return weights.map(() => 0);
+  const total = weights.reduce((a, b) => a + b, 0);
+  if (total <= 0) {
+    // No curve → put everything on 'medium' (index 1) to match the neutral default.
+    return weights.map((_, i) => (i === 1 ? count : 0));
+  }
+  const raw = weights.map((w) => (w / total) * count);
+  const result = raw.map((r) => Math.floor(r));
+  let used = result.reduce((a, b) => a + b, 0);
+  const order = raw
+    .map((r, i) => ({ i, frac: r - Math.floor(r) }))
+    .sort((a, b) => (b.frac - a.frac) || (a.i - b.i));
+  let k = 0;
+  while (used < count) {
+    result[order[k % order.length]!.i]!++;
+    used++;
+    k++;
+  }
+  return result;
+}
+
+/** Deterministic per-section difficulty sequence for the scored slots. */
+function sectionDifficulties(
+  section: BlueprintTemplateSection,
+  answerCount: number,
+  curve?: BlueprintTemplate["difficultyCurve"],
+): EduDifficulty[] {
+  if (section.difficulty) {
+    return Array.from({ length: answerCount }, () => section.difficulty!);
+  }
+  if (curve) {
+    const weights = DIFFICULTY_ORDER.map((d) => curve[d] ?? 0);
+    const alloc = allocateCount(answerCount, weights);
+    const sequence: EduDifficulty[] = [];
+    DIFFICULTY_ORDER.forEach((d, i) => {
+      for (let j = 0; j < alloc[i]!; j++) sequence.push(d);
+    });
+    return sequence;
+  }
+  return Array.from({ length: answerCount }, () => "medium" as EduDifficulty);
+}
+
+interface PlannedSection {
+  code: string;
+  title?: string;
+  questionType: EduQuestionType;
+  marksPerQuestion: number;
+  answerCount: number;
+  poolCount: number;
+  scoredMarks: number;
+  slots: TemplateSlot[];
+}
+
+/**
+ * Build the deterministic slot plan for a template: one PlannedSection per
+ * template section with `poolCount` slots (the first `answerCount` scored), each
+ * carrying its type, marks, difficulty and cognitive constraints. Chapters are
+ * assigned across the whole plan to honour chapter weightage. Pure.
+ */
+export function planTemplateSlots(
+  template: BlueprintTemplate,
+  fallbackChapters: string[],
+): { sections: PlannedSection[]; slots: TemplateSlot[] } {
+  const sections: PlannedSection[] = [];
+  let index = 0;
+
+  for (const section of template.sections) {
+    const answerCount = Math.max(0, section.internalChoice?.answer ?? section.count);
+    const poolCount = Math.max(answerCount, section.internalChoice?.pool ?? answerCount);
+    const mpq = section.marksPerQuestion;
+    const difficulties = sectionDifficulties(section, answerCount, template.difficultyCurve);
+
+    const cq = section.cognitiveQuota;
+    const hotsMin = cq?.hots_min_count ?? 0;
+    const ruMax = cq?.remember_understand_max_pct !== undefined
+      ? Math.floor((answerCount * cq.remember_understand_max_pct) / 100)
+      : undefined;
+    const ruExcludeCount = ruMax !== undefined ? Math.max(0, answerCount - ruMax) : 0;
+
+    const slots: TemplateSlot[] = [];
+    for (let p = 0; p < poolCount; p++) {
+      const scored = p < answerCount;
+      const slot: TemplateSlot = {
+        index: index++,
+        sectionCode: section.code,
+        questionType: section.questionType,
+        marks: mpq,
+        difficulty: scored ? (difficulties[p] ?? "medium") : (section.difficulty ?? "medium"),
+        chapter: "General",
+        scored,
+      };
+      if (scored) {
+        // HOTS minimum → the first `hotsMin` scored slots MUST be HOTS.
+        // Remember/Understand cap → the last `ruExcludeCount` scored slots MUST
+        // NOT be R/U, so at most `ruMax` scored slots can be R/U. A HOTS-required
+        // slot already satisfies the R/U exclusion, so the two never conflict.
+        if (p < hotsMin) {
+          slot.cognitiveRequire = "hots";
+        } else if (p >= answerCount - ruExcludeCount) {
+          slot.cognitiveExclude = [...RU_LEVELS];
+        }
+      }
+      slots.push(slot);
+    }
+
+    sections.push({
+      code: section.code,
+      title: section.title,
+      questionType: section.questionType,
+      marksPerQuestion: mpq,
+      answerCount,
+      poolCount,
+      scoredMarks: answerCount * mpq,
+      slots,
+    });
+  }
+
+  const allSlots = sections.flatMap((s) => s.slots);
+  assignTemplateChapters(allSlots, template.chapterWeightage, fallbackChapters);
+  return { sections, slots: allSlots };
+}
+
+/** Deterministically assign a chapter to every slot, honouring explicit weightage. */
+function assignTemplateChapters(
+  slots: TemplateSlot[],
+  weightage: BlueprintTemplate["chapterWeightage"],
+  fallbackChapters: string[],
+): void {
+  const fallback = fallbackChapters.length > 0 ? fallbackChapters : ["General"];
+
+  if (!weightage || weightage.mode !== "explicit") {
+    slots.forEach((slot, i) => {
+      slot.chapter = fallback[i % fallback.length]!;
+    });
+    return;
+  }
+
+  const chapters = Object.keys(weightage.marks).sort();
+  if (chapters.length === 0) {
+    slots.forEach((slot, i) => {
+      slot.chapter = fallback[i % fallback.length]!;
+    });
+    return;
+  }
+
+  const remaining: Record<string, number> = { ...weightage.marks };
+  // Scored slots consume the weightage budget (largest-remaining-first, exact for
+  // a well-formed template). Extra internal-choice slots don't count toward
+  // weightage — assign them round-robin so they still carry a valid chapter.
+  for (const slot of slots) {
+    if (!slot.scored) continue;
+    let best: string | null = null;
+    for (const ch of chapters) {
+      if ((remaining[ch] ?? 0) >= slot.marks) {
+        if (best === null || remaining[ch]! > remaining[best]!) best = ch;
+      }
+    }
+    if (best === null) {
+      best = chapters.reduce(
+        (a, b) => ((remaining[b] ?? 0) > (remaining[a] ?? 0) ? b : a),
+        chapters[0]!,
+      );
+    }
+    slot.chapter = best;
+    remaining[best] = (remaining[best] ?? 0) - slot.marks;
+  }
+  let extra = 0;
+  for (const slot of slots) {
+    if (slot.scored) continue;
+    slot.chapter = chapters[extra % chapters.length]!;
+    extra++;
+  }
+}
+
+/** Template-mode eligibility: the certified match + cognitive-quota constraints. */
+function matchesSlotTemplate(item: QuestionBankItemRow, slot: TemplateSlot): boolean {
+  if (item.status !== "active") return false;
+  if (item.review_status !== "approved") return false;
+  if (item.question_type !== slot.questionType) return false;
+  if (item.marks !== slot.marks) return false;
+  if (slot.difficulty !== "mixed" && item.difficulty !== slot.difficulty) return false;
+  if (slot.cognitiveRequire && item.cognitive_level !== slot.cognitiveRequire) return false;
+  if (
+    slot.cognitiveExclude &&
+    item.cognitive_level !== null &&
+    slot.cognitiveExclude.includes(item.cognitive_level as EduCognitiveLevel)
+  ) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Solve a governed blueprint template bank-first over the FULL eligible bank.
+ * Pure + deterministic given a stable `bankItems` order (caller sorts). For each
+ * slot the first eligible, unused, non-duplicate item wins (preferring a chapter
+ * match). Slots no such item can fill WITHOUT breaking the template become honest
+ * gaps — never silently violated.
+ */
+export function solveTemplateBlueprint(
+  template: BlueprintTemplate,
+  spec: SolverSpec,
+  bankItems: QuestionBankItemRow[],
+): TemplateBlueprintSolution {
+  const fallbackChapters = spec.chapters.length > 0 ? spec.chapters : ["General"];
+  const planned = planTemplateSlots(template, fallbackChapters);
+
+  const usedIds = new Set<string>();
+  const usedFingerprints = new Set<string>();
+  const sectionsOut: TemplateSolvedSection[] = [];
+  const selectedAll: TemplateSolvedSlot[] = [];
+  const gapsAll: TemplateSlot[] = [];
+
+  for (const psec of planned.sections) {
+    const selected: TemplateSolvedSlot[] = [];
+    const gaps: TemplateSlot[] = [];
+    for (const slot of psec.slots) {
+      const eligible = bankItems.filter((item) =>
+        !usedIds.has(item.id) &&
+        !usedFingerprints.has(itemFingerprint(item)) &&
+        matchesSlotTemplate(item, slot)
+      );
+      const chosen = eligible.find((item) => item.chapter === slot.chapter) ?? eligible[0];
+      if (chosen) {
+        usedIds.add(chosen.id);
+        usedFingerprints.add(itemFingerprint(chosen));
+        const solvedSlot: TemplateSolvedSlot = { slot, bankItem: chosen };
+        selected.push(solvedSlot);
+        selectedAll.push(solvedSlot);
+      } else {
+        gaps.push(slot);
+        gapsAll.push(slot);
+      }
+    }
+    sectionsOut.push({
+      code: psec.code,
+      title: psec.title,
+      questionType: psec.questionType,
+      marksPerQuestion: psec.marksPerQuestion,
+      answerCount: psec.answerCount,
+      poolCount: psec.poolCount,
+      scoredMarks: psec.scoredMarks,
+      slots: psec.slots,
+      selected,
+      gaps,
+    });
+  }
+
+  // ── Constraint report ──────────────────────────────────────────────────────
+  const scoredMarks = planned.slots
+    .filter((s) => s.scored)
+    .reduce((sum, s) => sum + s.marks, 0);
+
+  let chapterWeightageReport: TemplateBlueprintSolution["report"]["chapterWeightage"];
+  if (template.chapterWeightage?.mode === "explicit") {
+    const target = template.chapterWeightage.marks;
+    const planning: Record<string, number> = {};
+    for (const ch of Object.keys(target)) planning[ch] = 0;
+    for (const slot of planned.slots) {
+      if (!slot.scored) continue;
+      planning[slot.chapter] = (planning[slot.chapter] ?? 0) + slot.marks;
+    }
+    const keys = new Set([...Object.keys(target), ...Object.keys(planning)]);
+    let satisfied = true;
+    for (const k of keys) {
+      if ((target[k] ?? 0) !== (planning[k] ?? 0)) satisfied = false;
+    }
+    chapterWeightageReport = { target: { ...target }, planned: planning, satisfied };
+  }
+
+  const cognitive = sectionsOut.map((sec) => {
+    const templateSection = template.sections.find((s) => s.code === sec.code);
+    const cq = templateSection?.cognitiveQuota;
+    const hotsMin = cq?.hots_min_count;
+    const ruMax = cq?.remember_understand_max_pct !== undefined
+      ? Math.floor((sec.answerCount * cq.remember_understand_max_pct) / 100)
+      : undefined;
+    let hotsSelected = 0;
+    let ruSelected = 0;
+    for (const { slot, bankItem } of sec.selected) {
+      if (!slot.scored) continue;
+      if (bankItem.cognitive_level === "hots") hotsSelected++;
+      if (bankItem.cognitive_level === "remember" || bankItem.cognitive_level === "understand") {
+        ruSelected++;
+      }
+    }
+    const satisfied = (hotsMin === undefined || hotsSelected >= hotsMin) &&
+      (ruMax === undefined || ruSelected <= ruMax);
+    return {
+      sectionCode: sec.code,
+      hotsMin,
+      hotsSelected,
+      rememberUnderstandMax: ruMax,
+      rememberUnderstandSelected: ruSelected,
+      satisfied,
+    };
+  });
+
+  return {
+    totalMarks: template.totalMarks,
+    durationMinutes: template.durationMinutes,
+    generalInstructions: template.generalInstructions ?? [],
+    sections: sectionsOut,
+    slots: planned.slots,
+    selected: selectedAll,
+    gaps: gapsAll,
+    report: {
+      scoredMarks,
+      templateTotalMarks: template.totalMarks,
+      marksBalanced: scoredMarks === template.totalMarks,
+      chapterWeightage: chapterWeightageReport,
+      cognitive,
+    },
+  };
 }
