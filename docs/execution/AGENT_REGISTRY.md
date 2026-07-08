@@ -35,6 +35,8 @@ Reconcile against them FIRST, then continue.
 | Agent ID | Model | Task | Scope (files) | State | Recovery |
 |---|---|---|---|---|---|
 | `bmmfoe83s` (bg task) | — (bash) | **CONTINUOUS acquisition service** (`run_continuous.sh` → `crawl.py --board all --resume` loop until 3-no-new completion) | `curriculum/resources/**` + `acquisition/` (no git) | 🟢 running (background service) | monitor via manifest + `crawl_continuous.log` READ-ONLY; do NOT interrupt except fatal/owner-stop/completion; resumable |
+| `a001d1b3867b3dea7` | sonnet | **ERP AsyncValue BATCH 2** (worktree, base-verified `17b83117`) — `.when()`→`ErpAsyncBody` in management/control_center/sis/finance/operations/etc. | `lib/features/**` (non-education) | 🟢 running | worktree; disjoint from curriculum agent; integrate via cherry-pick on report |
+| `ac344dba7eaaa20ac` | sonnet | **Curriculum B12 + CI-E1b dormant seeds** (worktree, base-verified `17b83117`) — question-family/template/distractor + canonical-concept tables | `supabase/migrations/**` | 🟢 running | worktree; disjoint from ERP agent; integrate via cherry-pick on report |
 
 
 ## Terminal this session (2026-07-08) — for provenance / no-duplicate
