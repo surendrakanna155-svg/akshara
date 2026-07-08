@@ -1,4 +1,4 @@
-import { assert, assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import { assert } from "https://deno.land/std@0.224.0/assert/mod.ts";
 
 const PROBES_PATH = new URL("../tenant_isolation_probes.ts", import.meta.url);
 const probesSource = await Deno.readTextFile(PROBES_PATH);
@@ -49,7 +49,7 @@ function extractProbeNames(source: string): string[] {
   return names;
 }
 
-Deno.test("tenant isolation probe count includes v7.6 probes (220)", () => {
+Deno.test("tenant isolation probe count holds the coverage floor (>=233)", () => {
   const names = extractProbeNames(probesSource);
-  assertEquals(names.length, 220, `probes: ${names.join(", ")}`);
+  assert(names.length >= 233, `probe coverage dropped: ${names.length} < 233`);
 });

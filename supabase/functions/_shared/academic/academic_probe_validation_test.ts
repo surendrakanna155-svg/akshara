@@ -45,7 +45,9 @@ const ACADEMIC_PHASE_5C0B_PROBES = [
   "school_a_cannot_fetch_school_b_teacher_assignment",
 ] as const;
 
-const EXPECTED_PROBE_COUNT = 220;
+// Coverage FLOOR (>=), not exact: probes may only be ADDED; only a DROP signals a
+// removed isolation guard. Was ==220 while the shared registry has grown to 233.
+const MIN_PROBE_COUNT = 233;
 
 function extractProbeNames(source: string): string[] {
   const names: string[] = [];
@@ -101,11 +103,11 @@ Deno.test("Academic probes import operational and API SQL constants", () => {
   assert(probesSource.includes("ACADEMIC_TEACHER_ASSIGNMENT_DETAIL_PROBE_SQL"));
 });
 
-Deno.test("tenant isolation probe count reaches v7.6 target (213)", () => {
+Deno.test("tenant isolation probe count holds the coverage floor (>=233)", () => {
   const names = extractProbeNames(probesSource);
   const duplicates = names.filter((name, index) => names.indexOf(name) !== index);
   assertEquals(duplicates.length, 0, `duplicate probes: ${duplicates.join(", ")}`);
-  assertEquals(names.length, EXPECTED_PROBE_COUNT, `probes: ${names.join(", ")}`);
+  assert(names.length >= MIN_PROBE_COUNT, `probe coverage dropped: ${names.length} < ${MIN_PROBE_COUNT}`);
 });
 
 Deno.test("Academic probes query academic foundation tables", () => {
