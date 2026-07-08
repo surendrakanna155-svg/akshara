@@ -35,7 +35,6 @@ Reconcile against them FIRST, then continue.
 | Agent ID | Model | Task | Scope (files) | State | Recovery |
 |---|---|---|---|---|---|
 | `a4190c9a1581789d2` | **haiku** | Run acquisition crawl PASS 1 (P0 CBSE+NCERT) | `curriculum/resources/**` + `acquisition/` (no git) | 🟢 running | monitor; resumable (`crawl.py --resume`); do NOT re-spawn |
-| `ac081ada6353f100c` | **sonnet** | ERP AsyncValue→ErpAsyncBody migration (RE-RUN) | `lib/features/{director,school_completion,parent_meetings,memories}/**` (worktree, base-verify onto tip `cb7fbc82`) | 🟢 running | monitor; integrate worktree on report; do NOT re-spawn |
 
 
 ## Terminal this session (2026-07-08) — for provenance / no-duplicate
@@ -53,7 +52,8 @@ Reconcile against them FIRST, then continue.
 | `ad479eeaf0dbff762` | (opus) | TS SCERT acquisition | ⚠ partial | ~7 PDFs on disk, no manifest; crawler re-does as P2 |
 | `a66ca488dbde617cc` | (opus) | CISCE acquisition | ✅ clean | 42/42 verified + `cisce_manifest.json`; crawler folds in as P3 |
 | `a43dce4a0f7db7ade` | sonnet | Build acquisition crawler | ✅ done | build gate passed; committed `e73a76a5` (+fetch fix `98ac1176`) |
-| `a781baa7dae2b6259` | sonnet | CI-C4-schema (worktree) | ✅ done | **base-verified onto tip e73a76a5** → clean cherry-pick → `25436314`; worktree removed |
+| `a781baa7dae2b6259` | sonnet | CI-C4-schema (worktree) | ✅ done | base-verified onto tip → clean cherry-pick → `25436314`; worktree removed |
+| `ac081ada6353f100c` | sonnet | ERP AsyncValue re-run (worktree) | ✅ done | base-verified onto tip `cb7fbc82` → 40 sites → clean cherry-pick → `b8a68318`; worktree removed |
 
 ---
 
