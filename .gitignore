@@ -68,9 +68,8 @@ supabase/.branches/
 *firebase-adminsdk*.json
 FCM_SERVICE_ACCOUNT*.json
 
-# Progress-dashboard runtime state — live files stay LOCAL (updated continuously by the
-# executor, so they never create Git noise). The committed *.seed.json are the fresh-clone
-# starting snapshot; app.js reads the live file and falls back to the seed when it's absent.
-# See tools/progress-dashboard/README.md ("Git tracking").
-tools/progress-dashboard/progress.json
-tools/progress-dashboard/activity.json
+# Local progress-dashboard dev tool — LOCAL ONLY on this implementation branch (owner
+# decision 2026-07-08: keep local, do NOT commit here; it gets its own dedicated branch
+# and merges later). A subagent committed it off-brief (6244b3e0/6949fe3d) + relaxed this
+# ignore; restored to a full-dir ignore so nothing dashboard-related is tracked here.
+tools/progress-dashboard/
