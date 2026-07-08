@@ -568,6 +568,9 @@ abstract final class QaTestKeys {
   static const financeCollectionSuccessSnackbar =
       ValueKey<String>('finance_collection_success_snackbar');
 
+  static const financeCollectionSuccessCeremony =
+      ValueKey<String>('finance_collection_success_ceremony');
+
   static const financeRecordOfflinePaymentFab =
       ValueKey<String>('finance_record_offline_payment_fab');
   static const financeOfflinePaymentInvoiceField =

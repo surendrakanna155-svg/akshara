@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/config/finance_approval_config.dart';
 import '../../core/errors/api_failure.dart';
-import '../../shared/feedback/akshara_haptics.dart';
 import '../../core/errors/api_failure_mapper.dart';
 import '../../core/reliability/drafts/draft_autosave.dart';
 import '../../core/reliability/drafts/draft_model.dart';
@@ -18,6 +17,7 @@ import '../../shared/forms/akshara_form_field.dart';
 import '../../shared/forms/akshara_searchable_dropdown.dart';
 import '../../shared/widgets/akshara_dialog.dart';
 import '../../shared/widgets/akshara_motion.dart';
+import '../../shared/widgets/akshara_success_view.dart';
 import 'finance_journey_context_provider.dart';
 import 'fee_assignment/finance_fee_assignment_provider.dart';
 import 'invoices/finance_invoices_provider.dart';
@@ -796,14 +796,26 @@ Future<void> showRecordCollectionDialog(
         ),
       );
     } else {
-      // Success beat on a completed fee collection (P2-UX-2 §2.4).
-      AksharaHaptics.success();
+      // P2-UX-2 §2.4 — the Stripe-grade counter closes with a success ceremony
+      // (shared AksharaSuccessView, which fires the success haptic on show)
+      // instead of a bare snackbar: amount + receipt + method, one "Done".
       ref.read(financeLastReceiptNumberProvider.notifier).state =
           result.receiptNumber;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          key: QaTestKeys.financeCollectionSuccessSnackbar,
-          content: Text('Receipt ${result.receiptNumber} recorded'),
+      await showAksharaDialog<void>(
+        context: context,
+        builder: (ceremonyContext) => Dialog(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: AksharaSuccessView(
+              key: QaTestKeys.financeCollectionSuccessCeremony,
+              title: 'Payment received',
+              highlight: '₹${amount.trim()}',
+              subtitle: 'Receipt ${result.receiptNumber}',
+              caption: paymentMethod,
+              primaryLabel: 'Done',
+              onPrimary: () => Navigator.of(ceremonyContext).pop(),
+            ),
+          ),
         ),
       );
     }

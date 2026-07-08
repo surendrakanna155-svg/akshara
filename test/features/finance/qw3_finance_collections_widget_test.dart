@@ -94,11 +94,13 @@ void main() {
       await tester.tap(find.byKey(QaTestKeys.financeCollectionSubmitButton));
       await tester.pumpAndSettle();
 
-      // The mutation resolved → success snackbar surfaced and the dialog closed.
+      // The mutation resolved → the success CEREMONY (P2-UX-2 §2.4) surfaced and
+      // the collect dialog closed.
       expect(
-        find.byKey(QaTestKeys.financeCollectionSuccessSnackbar),
+        find.byKey(QaTestKeys.financeCollectionSuccessCeremony),
         findsOneWidget,
       );
+      expect(find.text('Payment received'), findsOneWidget);
       expect(
         find.byKey(QaTestKeys.financeCollectionAmountField),
         findsNothing,
