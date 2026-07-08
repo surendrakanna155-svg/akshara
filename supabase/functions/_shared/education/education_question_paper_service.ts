@@ -15,6 +15,12 @@
 
 import { buildPaperBlueprint } from "./education_generator.ts";
 import { solveBlueprint } from "./education_blueprint_solver.ts";
+import {
+  type ExamProfile,
+  orderBankForProfile,
+  type ProfileCompatibilityResult,
+  validateProfileCompatibility,
+} from "./education_exam_profile.ts";
 import { generateAiCandidatesForGaps } from "./education_ai_question_gapfill.ts";
 import { aiApiKey, aiProvider, claudeModel } from "../ai/anthropic_client.ts";
 import type { AiRuntimeConfig } from "../ai/ai_settings.ts";
@@ -70,6 +76,12 @@ export interface PaperGenerationResult {
   /** Blueprint slots left unfilled (bank empty + AI off/declined). */
   unfilledGapCount: number;
   gaps: PaperGap[];
+  /**
+   * CI-C7 (ADDITIVE, opt-in): pre-generation Exam-Profile compatibility result.
+   * Present ONLY when a profile was supplied — surfaces explicit incompatibilities
+   * ("never silently downgrade"). Absent (undefined key) on the certified path.
+   */
+  profileCompatibility?: ProfileCompatibilityResult;
 }
 
 export type RegeneratePaperItemResult =
@@ -156,6 +168,7 @@ export async function generateQuestionPaper(
   client: TenantQueryClient,
   input: GenerateQuestionPaperInput,
   ai?: AiRuntimeConfig,
+  profile?: ExamProfile,
 ): Promise<PaperGenerationResult> {
   const programTrack: EduProgramTrack = input.programTrack ?? "board";
 
@@ -173,6 +186,24 @@ export async function generateQuestionPaper(
   const bankPage = await listQuestionBankItems(client, filters);
   const bank = sortBank(bankPage.items);
 
+  // ── CI-C7 exam-profile seam (ADDITIVE, opt-in, DORMANT) ─────────────────────
+  // A supplied Exam Profile (a) runs a pre-generation compatibility check that
+  // surfaces explicit incompatibilities ("never silently downgrade") and (b)
+  // BIASES bank-first selection by re-ordering the bank the certified solver
+  // walks. When ABSENT — the production path; the handler never supplies one —
+  // this block is skipped, `solveBank === bank`, and generation is BYTE-IDENTICAL
+  // to the certified path (invariant I1 / mitigation B7).
+  let profileCompatibility: ProfileCompatibilityResult | undefined;
+  let solveBank = bank;
+  if (profile) {
+    profileCompatibility = validateProfileCompatibility(
+      profile,
+      { syllabusChapters: input.chapters },
+      bank,
+    );
+    solveBank = orderBankForProfile(profile, bank);
+  }
+
   const solution = solveBlueprint(
     {
       subjectName: input.subjectName,
@@ -181,7 +212,7 @@ export async function generateQuestionPaper(
       chapters: input.chapters,
       questionTypeMix: input.questionTypeMix,
     },
-    bank,
+    solveBank,
   );
 
   // index → item, so the paper reads in blueprint-plan order.
@@ -291,5 +322,8 @@ export async function generateQuestionPaper(
     aiGeneratedCount: aiCandidateCount,
     unfilledGapCount: gaps.length,
     gaps,
+    // Only attach when a profile was supplied; the certified shape is otherwise
+    // unchanged (undefined key ⇒ absent).
+    ...(profileCompatibility ? { profileCompatibility } : {}),
   };
 }
