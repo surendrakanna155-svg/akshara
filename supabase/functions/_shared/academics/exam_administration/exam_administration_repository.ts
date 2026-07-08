@@ -136,6 +136,24 @@ export class ExamApprovalMismatchError extends Error {
   }
 }
 
+/**
+ * Gap-sweep wave 2 · step 2 (security hardening) — raised when a caller asks
+ * to publish results WITHOUT the verify→approve chain (`requireApproval:
+ * false`) but does not hold the dedicated `overridePublishApproval`
+ * permission. Distinct from {@link ExamApprovalRequiredError} (a missing
+ * APPROVAL): this is a missing PERMISSION — skipping governance is a more
+ * privileged action than a normal `publishExamResults` grant, so it is gated
+ * on its own senior-only slug (superAdmin/schoolAdmin/principal).
+ */
+export class ExamPublishOverrideForbiddenError extends Error {
+  constructor() {
+    super(
+      "Publishing without the verify→approve chain requires the overridePublishApproval permission.",
+    );
+    this.name = "ExamPublishOverrideForbiddenError";
+  }
+}
+
 export class ExamMarkNotFoundError extends Error {
   constructor(id: string) {
     super(`Mark entry not found: ${id}`);

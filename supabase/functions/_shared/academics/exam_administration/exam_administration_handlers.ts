@@ -29,6 +29,7 @@ import {
   ExamMarkConflictError,
   ExamMarkNotFoundError,
   ExamNotFoundError,
+  ExamPublishOverrideForbiddenError,
   ExamScopeForbiddenError,
   ExamValidationError,
   examRemarkToApi,
@@ -81,6 +82,16 @@ type ExamClaims = Parameters<typeof requirePermission>[0];
 export function isSubjectTeacherScoped(claims: ExamClaims): boolean {
   return !claims.permissions.includes("verifyExamResults");
 }
+
+/**
+ * Gap-sweep wave 2 · step 2 (security hardening) — the extra permission
+ * required to publish exam results WITHOUT the verify→approve chain
+ * (`requireApproval: false`). Deliberately senior-only (superAdmin /
+ * schoolAdmin / principal — NOT vicePrincipal/management): the override is
+ * MORE privileged than a normal publishExamResults grant because it bypasses
+ * governance entirely. Source of truth for tests + the migration grant.
+ */
+export const EXAM_PUBLISH_OVERRIDE_PERMISSION = "overridePublishApproval";
 
 /** Granular permission required per exam operation (P1). Source of truth for tests. */
 export const EXAM_OPERATION_PERMISSIONS = {
@@ -149,6 +160,9 @@ function mapExamError(error: unknown): Response {
   }
   if (error instanceof ExamApprovalMismatchError) {
     return errorEnvelope("EXAM_APPROVAL_MISMATCH", error.message, 409);
+  }
+  if (error instanceof ExamPublishOverrideForbiddenError) {
+    return errorEnvelope("EXAM_PUBLISH_OVERRIDE_FORBIDDEN", error.message, 403);
   }
   if (error instanceof ExamMarkConflictError) {
     // 409 CONFLICT carrying the current server row in `data` so the Data
@@ -847,6 +861,17 @@ export async function handlePublishExamResults(
       if (approvalId && approved.id !== approvalId) {
         throw new ExamApprovalMismatchError();
       }
+    } else {
+      // Gap-sweep wave 2 · step 2 (security hardening, owner-ratified) — the
+      // caller asked to SKIP the verify→approve chain. Previously any
+      // publishExamResults holder could do this (requireApproval: false was
+      // trusted unconditionally), letting anyone publish unverified marks.
+      // Now the skip-approval path additionally requires the dedicated
+      // overridePublishApproval permission (senior-only). The normal
+      // requireApproval===true path above is untouched.
+      if (!claims.permissions.includes(EXAM_PUBLISH_OVERRIDE_PERMISSION)) {
+        throw new ExamPublishOverrideForbiddenError();
+      }
     }
 
     const publishedCount = await withTenantContext(config, claims, async (db) => {
@@ -860,6 +885,33 @@ export async function handlePublishExamResults(
         examAudit.resultsPublished(examId, count, approvalId ?? null),
         req,
       );
+      // Gap-sweep wave 2 · step 2 — the override path (verify→approve chain
+      // skipped) gets a DISTINCT, additional audit event so who overrode +
+      // which exam is separately queryable/alertable from a normal publish.
+      // Built inline (not added to the shared audit catalog) to keep this
+      // change scoped to the academics module.
+      if (!requireApproval) {
+        await emitMutationAudit(
+          db,
+          claims,
+          {
+            audit: {
+              eventType: "examResultsPublishOverridden",
+              category: "workflow",
+              entityType: "exam_session",
+              entityId: examId,
+              metadata: { examId },
+            },
+            domain: {
+              eventType: "exam.results.publish_override",
+              payload: { examId },
+              sourceModule: "exam",
+              idempotencyKey: `exam.results.publish_override:${examId}`,
+            },
+          },
+          req,
+        );
+      }
       return count;
     });
     await notifyParentsOfResults(config, claims, examId);

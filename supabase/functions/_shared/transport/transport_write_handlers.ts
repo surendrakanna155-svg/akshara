@@ -1233,6 +1233,65 @@ export async function handleDocumentExpiryReminder(
 
 // ─── TRN-9: raise a Finance transport-fee DEMAND (payment-free) ───────────────
 
+// Postgres unique_violation SQLSTATE — the
+// transport_entities_demand_dedupe_key_uniq partial index (gap-sweep wave 2 ·
+// step 2) raises this on a racing double-submit of the SAME demand dedupeKey.
+// Mirrors the admissions enrollment idempotency backstop
+// (admissions_repository.ts) and the homework-submission backstop
+// (pilot_operations_repository.ts).
+const PG_UNIQUE_VIOLATION = "23505";
+
+function isUniqueViolation(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const code = (error as { code?: unknown; fields?: { code?: unknown } }).code ??
+    (error as { fields?: { code?: unknown } }).fields?.code;
+  return code === PG_UNIQUE_VIOLATION;
+}
+
+/**
+ * Gap-sweep wave 2 · step 2 — insert a new transport `demand` row, recovering
+ * from a racing CONCURRENT insert of the identical dedupeKey. The fast-path
+ * dedupe in handleRaiseTransportDemand (a findAll+find read before this call)
+ * already covers the common case; this closes the TOCTOU window between that
+ * read and this write. On a 23505 (transport_entities_demand_dedupe_key_uniq)
+ * we roll back to the savepoint (keeping the surrounding withTenantContext
+ * transaction alive) and RE-READ the winning row, so the racing LOSER's
+ * request still gets a clean idempotent response — never a 500.
+ */
+export async function insertDemandIdempotent(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  dedupeKey: string,
+  demandId: string,
+  demandPayload: Record<string, unknown>,
+): Promise<{ saved: Record<string, unknown>; idempotent: boolean }> {
+  await db.queryObject(`SAVEPOINT transport_demand_insert`);
+  try {
+    const saved = await writeStore.insert(
+      db,
+      organizationId,
+      schoolId,
+      "demand",
+      demandId,
+      demandPayload,
+    );
+    await db.queryObject(`RELEASE SAVEPOINT transport_demand_insert`);
+    return { saved, idempotent: false };
+  } catch (error) {
+    if (!isUniqueViolation(error)) throw error;
+    await db.queryObject(`ROLLBACK TO SAVEPOINT transport_demand_insert`);
+    const existingDemands = await writeStore.findAll(db, organizationId, schoolId, "demand");
+    const winner = existingDemands.find((d) => String(d.dedupeKey ?? "") === dedupeKey);
+    // The unique index guarantees a winning row exists once 23505 fires; if it
+    // is somehow not found (e.g. a same-key row without a dedupeKey — the
+    // partial index's own guard), surface the original error rather than
+    // silently invent a fake success.
+    if (!winner) throw error;
+    return { saved: winner, idempotent: true };
+  }
+}
+
 /**
  * POST /transport/demands — Transport DEFINES a transport fee and RAISES a Finance
  * DEMAND only. It contains ZERO payment/collection logic: it never calls
@@ -1242,7 +1301,11 @@ export async function handleDocumentExpiryReminder(
  * transport invoice coexists with tuition under ONE account. The raised demand is
  * recorded as a transport `demand` entity keyed for idempotency on
  * (sisStudentId, routeId, academicYear, term): a re-raise for the same tuple
- * returns the existing demand and raises nothing new.
+ * returns the existing demand and raises nothing new. The fast-path dedupe
+ * (a read before the insert) is backstopped by insertDemandIdempotent, which
+ * recovers from a racing CONCURRENT double-submit via the
+ * transport_entities_demand_dedupe_key_uniq partial unique index (gap-sweep
+ * wave 2 · step 2) instead of surfacing a 500.
  */
 export async function handleRaiseTransportDemand(
   req: Request,
@@ -1297,7 +1360,25 @@ export async function handleRaiseTransportDemand(
       accountId: result.account.id,
       raisedAt: new Date().toISOString(),
     };
-    const saved = await writeStore.insert(db, organizationId, schoolId, "demand", demandId, demandPayload);
+    // Backstop for the TOCTOU window above: a racing concurrent request for
+    // the SAME dedupeKey may have inserted between the read-check and here.
+    // insertDemandIdempotent catches the resulting 23505 (unique index
+    // transport_entities_demand_dedupe_key_uniq) and returns the WINNING row
+    // idempotently instead of surfacing a 500.
+    const { saved, idempotent } = await insertDemandIdempotent(
+      db,
+      organizationId,
+      schoolId,
+      dedupeKey,
+      demandId,
+      demandPayload,
+    );
+    if (idempotent) {
+      // Same idempotent shape as the fast-path dedupe above — the racing
+      // loser's request is never a 500, and never audited as a fresh raise
+      // (the winner's insert already owns the audit trail).
+      return { payload: { ...saved, idempotent: true }, status: 200 };
+    }
     await emitMutationAudit(
       db,
       claims,
