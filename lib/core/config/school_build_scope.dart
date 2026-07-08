@@ -31,15 +31,13 @@ abstract final class SchoolBuildScope {
     // Experimental / "big-company" extras
     AdminModule.platformOperations,
     AdminModule.dynamicWidgets,
-    // Management executive-dashboard module (MG-01→MG-08) is not yet built — its
-    // primary nav destination routes to an empty placeholder. Hide the entry until
-    // the module ships (owner decision 2026-07-09) so users don't hit a dead screen.
-    // Nav-only (isModuleHidden gates the sidebar, never routes): the real management
-    // surfaces (/management/approvals principal approval center, office attendance)
-    // keep their own routes and remain reachable.
-    AdminModule.management,
     // NOTE: organizationBuilder is no longer hidden here — it is now gated by
     // chain status at runtime (M3, see ChainScope), so real chains can see it.
+    // NOTE: AdminModule.management is DELIBERATELY NOT hidden — it is fully built
+    // (real ManagementDashboardScreen + analytics/finance/approvals/tasks/settings,
+    // wired in management_navigation.dart) and its nav route goes to the live
+    // dashboard. A dead, unused placeholder builder in admin_navigation.dart briefly
+    // caused an audit to misread it as unbuilt (2026-07-09); that builder was removed.
   };
 
   /// Route prefixes blocked in the school build (covers nested sub-routes).

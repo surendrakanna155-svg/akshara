@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 
 import '../features/admin/models/admin_nav_models.dart';
 import '../features/admin/screens/admin_hub_screen.dart';
-import '../features/admin/screens/admin_module_placeholder_screen.dart';
 import '../features/entitlements/entitlement_module_gate.dart';
 import 'alumni_navigation.dart';
 import 'admissions_navigation.dart';
@@ -43,9 +42,13 @@ Widget hrRouteBuilder(BuildContext context, GoRouterState state) {
   );
 }
 
-Widget managementRouteBuilder(BuildContext context, GoRouterState state) {
-  return const AdminModulePlaceholderScreen(module: AdminModule.management);
-}
+// NOTE: there is deliberately NO managementRouteBuilder here. The Management module
+// is fully built — its nav route (/management/dashboard) resolves to the live
+// ManagementDashboardScreen via management_navigation.dart's
+// managementDashboardRouteBuilder (plus analytics/finance/approvals/tasks/settings).
+// A former dead placeholder builder here (returning AdminModulePlaceholderScreen) was
+// referenced nowhere and misled a code audit into reporting the module as unbuilt
+// (2026-07-09) — removed to prevent recurrence. Do not re-add a placeholder route.
 
 Widget transportRouteBuilder(BuildContext context, GoRouterState state) {
   return EntitlementModuleGate(

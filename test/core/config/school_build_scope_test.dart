@@ -41,6 +41,7 @@ void main() {
         AdminModule.finance,
         AdminModule.sis,
         AdminModule.hr,
+        AdminModule.management,
         AdminModule.transport,
         AdminModule.hostel,
         AdminModule.library,
@@ -55,13 +56,6 @@ void main() {
           reason: '$module must stay visible in the school build',
         );
       }
-    });
-
-    test('management executive-dashboard module is hidden until built', () {
-      // Owner decision 2026-07-09: MG-01→MG-08 is unbuilt (its primary nav
-      // destination is an empty placeholder), so the sidebar entry is hidden.
-      // Nav-only — the real /management/approvals surface keeps its own route.
-      expect(SchoolBuildScope.isModuleHidden(AdminModule.management), isTrue);
     });
 
     test('hidden routes (incl. nested sub-routes) are blocked', () {
