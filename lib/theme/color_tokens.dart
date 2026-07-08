@@ -206,7 +206,12 @@ class AksharaColorTokens {
       onSecondaryContainer: AksharaColorPrimitives.slate100,
       tertiary: AksharaColorPrimitives.teal600,
       onTertiary: AksharaColorPrimitives.neutral0,
-      tertiaryContainer: const Color(0xFF134E4A),
+      // P2-UX-5 dark contrast fix: darkened from #134E4A to #0F3D38 so the
+      // `tertiary` tone reads >= 3.0:1 on its container (was ~2.53:1; now
+      // ~3.21:1). Deepening the fill also lifts onSurface / onSurfaceVariant /
+      // onTertiaryContainer contrast on it. See
+      // test/theme/rendered_contrast_audit_test.dart.
+      tertiaryContainer: const Color(0xFF0F3D38),
       onTertiaryContainer: AksharaColorPrimitives.teal100,
       surface: AksharaColorPrimitives.obsidian800,
       surfaceContainerLow: AksharaColorPrimitives.obsidian900,

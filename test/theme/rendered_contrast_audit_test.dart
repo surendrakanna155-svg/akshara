@@ -23,12 +23,12 @@ Future<BuildContext> _themedContext(WidgetTester tester, ThemeData theme) async 
   return ctx;
 }
 
-// The dark-scheme `tertiary` tone chip foreground on its container is ~2.5:1
-// (< 3.0). Refining the dark tonal palette is owned by P2-UX-5 (the dark-theme
-// wave, which carries a dark contrast-validation pass). Pinned here so it stays
-// visible and cannot regress further; every other tone/scheme clears 3.0.
+// Every semantic tone clears the WCAG AA large-text floor (3.0:1) on its own
+// container in BOTH schemes. P2-UX-5 resolved the last shortfall: the dark
+// `tertiary` tone on its container was ~2.53:1 and is now ~3.21:1 after
+// deepening `tertiaryContainer` (#134E4A → #0F3D38). No per-tone exception
+// remains — the standard floor applies uniformly.
 double _minToneForegroundOnContainer(String scheme, KpiAccent accent) {
-  if (scheme == 'dark' && accent == KpiAccent.tertiary) return 2.5;
   return AksharaAccessibility.minContrastLargeText;
 }
 
