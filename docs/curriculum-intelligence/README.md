@@ -75,5 +75,6 @@ The Curriculum Intelligence Pipeline: build a verified official-curriculum repos
 - Certified invariants I1–I8 are inviolable; every code wave is one EOS-gated commit.
 - Locked v3.0 decisions (esp. **D2** no answer-sheet OMR, **D8** original-content-first) bound every wave; the spec's Part-10 extraction runs under the D-3 two-lane ruling.
 - Data lane never touches app trees; binaries never enter git.
+- **🔒 Local-storage lock (owner 2026-07-08, [`planning/CONTENT_DEPENDENCY_MAP.md`](planning/CONTENT_DEPENDENCY_MAP.md) §6):** curriculum data (PDFs + parsed knowledge) stays **local + in Git**; **VPS = application server ONLY**; **no production DB import / VPS storage dependency for curriculum yet**. Engine waves build schema (dormant) + **local test fixtures**, never seed the production DB.
 - *(A1)* AIMS golden rules (Part 5) + anti-patterns (Part 12) bind every wave: concept-first once the graph is live, generate→validate→certify with no shortcut, offline AI / deterministic runtime, complete metadata, original vector diagrams only, teacher authority final.
 - This README + `planning/MILESTONE_TRACKER.md` are refreshed at every wave boundary.
