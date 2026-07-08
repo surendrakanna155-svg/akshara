@@ -1,4 +1,4 @@
-import { assert, assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import { assert } from "https://deno.land/std@0.224.0/assert/mod.ts";
 
 const PROBES_PATH = new URL("../tenant_isolation_probes.ts", import.meta.url);
 const probesSource = await Deno.readTextFile(PROBES_PATH);
@@ -36,6 +36,14 @@ Deno.test("Pilot 7.1 isolation probes are registered", () => {
   }
 });
 
-Deno.test("tenant isolation probe count reaches v7.6 target (220)", () => {
-  assertEquals(extractProbeNames(probesSource).length, 220);
+Deno.test("tenant isolation probe count holds the coverage floor (>=233)", () => {
+  // Coverage FLOOR, not exact: probes may only be ADDED; a drop signals a removed
+  // isolation guard. Was exact ==220 while the shared registry has grown to 233
+  // (same stale-tripwire bug fixed for sis_probe_validation_test). Bump only when
+  // adding probes.
+  const count = extractProbeNames(probesSource).length;
+  assert(
+    count >= 233,
+    `tenant-isolation coverage dropped: ${count} probes < floor 233 — an isolation guard was removed`,
+  );
 });
