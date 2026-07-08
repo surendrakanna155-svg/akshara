@@ -53,6 +53,35 @@ archive (dedup — do not re-fetch).
 - **Resumable + idempotent:** safe to stop/restart; continues until no new official resources appear.
 - **Model:** build with Sonnet (code); run with Haiku (deterministic execution/monitoring).
 
+## Locked execution rules (owner amendment, 2026-07-08)
+
+**Build gate — ALL must pass before the full crawl launches:**
+1. Unit verification (crawler unit tests green).
+2. Dry-run verification (`crawl.py --dry-run` clean on a fixture).
+3. Small live discovery test (one real sitemap → real URLs parsed).
+4. Verification-pipeline validation (V1–V11 proven on a real downloaded PDF).
+
+**Crawl priority (process boards in this order; within each: Discover → Download → Verify →
+Archive → Retry):**
+- **P0 — CBSE, NCERT**
+- **P1 — Andhra Pradesh SCERT**
+- **P2 — Telangana SCERT**
+- **P3 — CISCE / ICSE**
+
+**Completion criteria (crawler NEVER stops after one pass — continue until ALL true):**
+- No new official resources discovered for **3 consecutive** crawl passes.
+- Retry queue is **empty**.
+- **Every** downloaded resource has completed verification.
+- All remaining resources are explicitly recorded **Not Published / Not Available with evidence**.
+
+**Dashboard metrics (always shown, separately):** Resources **Discovered** · **Downloaded** ·
+**Verified** · **Failed** · **Retry Queue** · **Archived** · **Overall Coverage %** · **Per-board
+Coverage %**. Downloaded and Verified are ALWAYS separate counts; **overall progress = Verified**
+(not Downloaded).
+
+**Run model:** launch the full crawl with the **lightweight model** (Haiku). Continue Curriculum
+implementation in parallel — never wait for acquisition to finish, never block it on implementation.
+
 ## Deliverable shape
 `curriculum/scripts/crawler/` — a small package: `frontier.py` (resumable queue + dedup),
 `discovery.py` (sitemap/link/probe/search strategies, per-domain adapters), `fetch.py` (polite
