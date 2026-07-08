@@ -173,13 +173,27 @@ export async function handleRecordDonation(req: Request, config: AppConfig): Pro
       );
       if (campaign !== null) {
         if (campaignName === "") campaignName = str(campaign, "name") ?? "";
+        const updatedCampaign = applyDonationToCampaign(campaign, amount);
         await writeStore.replace(
           db,
           organizationId,
           schoolId,
           "campaign",
           campaignId,
-          applyDonationToCampaign(campaign, amount),
+          updatedCampaign,
+        );
+        // Campaign totals (raisedAmount/donorCount) are money-adjacent state — audit
+        // the change at the campaign level too, not only the donation (gap sweep).
+        await emitMutationAudit(
+          db,
+          claims,
+          moduleEntityAudit("alumni.campaign.donation_applied", "alumni_campaign", campaignId, {
+            donationId: id,
+            amount,
+            raisedAmount: updatedCampaign.raisedAmount,
+            donorCount: updatedCampaign.donorCount,
+          }),
+          request,
         );
       }
     }
