@@ -1,4 +1,5 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
+import { attendancePercentFromCounts } from "../attendance/attendance_percentage.ts";
 
 export const ATTENDANCE_SESSION_PROBE_SQL = `
   SELECT count(*)::text AS count FROM attendance_sessions WHERE id = $1::uuid
@@ -1009,15 +1010,15 @@ export async function overlayAttendanceSnapshotFromRecords(
   let present = 0;
   let absent = 0;
   let late = 0;
+  let halfDay = 0;
+  let excused = 0;
   const recentLogs: Record<string, unknown>[] = [];
   for (const row of rows) {
-    // excused/half_day count on the present side so an authorised leave or a
-    // partial day never reads as an absence in the attendance percentage.
-    if (
-      row.mark === "present" || row.mark === "excused" || row.mark === "half_day"
-    ) present += 1;
+    if (row.mark === "present") present += 1;
     else if (row.mark === "absent") absent += 1;
     else if (row.mark === "late") late += 1;
+    else if (row.mark === "half_day") halfDay += 1;
+    else if (row.mark === "excused") excused += 1;
     const date = row.session_date.slice(0, 10);
     recentLogs.push({
       date,
@@ -1034,8 +1035,16 @@ export async function overlayAttendanceSnapshotFromRecords(
     });
   }
 
-  const total = present + absent + late;
-  const attendancePercent = total > 0 ? Math.round((present / total) * 100) : 0;
+  // CANONICAL attendance-% (2026-07-09, attendance_percentage.ts): attended =
+  // present + late + 0.5×half_day; denominator = marked − excused. NULL (not
+  // 0) when the denominator is 0 — nothing to compute a rate from.
+  const attendancePercent = attendancePercentFromCounts({
+    present,
+    late,
+    halfDay,
+    excused,
+    absent,
+  });
   const kpi = {
     attendancePercent,
     absentDays: absent,

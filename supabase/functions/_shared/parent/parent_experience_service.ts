@@ -17,7 +17,13 @@ export interface ParentExperienceHub {
     homeworkTotal: number;
     recentExams: Array<{ title: string; avgPct: number }>;
   };
-  attendance: { present: number; absent: number; total: number; pct: number };
+  attendance: {
+    present: number;
+    absent: number;
+    total: number;
+    /** CANONICAL attendance % (attendance_percentage.ts); null when nothing to measure against. */
+    pct: number | null;
+  };
   inventory: {
     issued: number;
     pending: number;
@@ -65,7 +71,12 @@ export async function buildParentExperienceHub(
   );
 
   const identity = profile.identity as Record<string, unknown>;
-  const attendance = profile.attendance as Record<string, number>;
+  const attendance = profile.attendance as {
+    present: number;
+    absent: number;
+    total: number;
+    percent: number | null;
+  };
   const homework = profile.homework as Record<string, number>;
   const marksData = profile.marks as {
     exams?: Array<{ exam: string; averagePercent: number }>;
@@ -79,6 +90,10 @@ export async function buildParentExperienceHub(
   const present = Number(attendance.present ?? 0);
   const absent = Number(attendance.absent ?? 0);
   const total = Number(attendance.total ?? 0);
+  // CANONICAL attendance-% (2026-07-09, attendance_percentage.ts): trust the
+  // percentage already computed by buildStudent360Profile — never recompute
+  // present/total locally (that was the divergent formula this fixes).
+  const attendancePct = attendance.percent ?? null;
 
   const paymentPending = await client.queryObject<{ count: number }>(
     `SELECT count(*)::int AS count FROM payment_requests
@@ -167,7 +182,7 @@ export async function buildParentExperienceHub(
       present,
       absent,
       total,
-      pct: total > 0 ? Math.round((present / total) * 100) : 0,
+      pct: attendancePct,
     },
     inventory: {
       issued: issued.length,

@@ -1,4 +1,5 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
+import { attendancePercentSql } from "../attendance/attendance_percentage.ts";
 import { documentToApi, listStudentDocuments } from "./sis_documents_repository.ts";
 import { resolveStudentId } from "./sis_student_resolver.ts";
 import { getStudent, StudentNotFoundError } from "./sis_students_repository.ts";
@@ -90,11 +91,13 @@ export async function buildStudent360Profile(
       present: number;
       absent: number;
       total: number;
+      percent: number | null;
     }>(
       `SELECT
        count(*) FILTER (WHERE mark = 'present')::int AS present,
        count(*) FILTER (WHERE mark = 'absent')::int AS absent,
-       count(*)::int AS total
+       count(*)::int AS total,
+       ${attendancePercentSql()} AS percent
      FROM attendance_records
      WHERE student_id = $1 AND organization_id = $2 AND school_id = $3`,
       [studentId, organizationId, schoolId],
@@ -229,9 +232,10 @@ export async function buildStudent360Profile(
       present: attendance[0]?.present ?? 0,
       absent: attendance[0]?.absent ?? 0,
       total: attendance[0]?.total ?? 0,
-      percent: attendance[0]?.total
-        ? Math.round(((attendance[0].present) / attendance[0].total) * 100)
-        : null,
+      // CANONICAL attendance-% (2026-07-09, attendance_percentage.ts):
+      // present+late+0.5×half_day over (marked − excused); null when the
+      // denominator is 0 — computed in SQL above, never recomputed here.
+      percent: attendance[0]?.percent ?? null,
     },
     marks: {
       exams: marks.map((m) => ({ exam: m.exam_title, averagePercent: m.avg_pct })),

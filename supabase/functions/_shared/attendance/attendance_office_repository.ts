@@ -7,6 +7,13 @@
 // enrollment when one exists, otherwise they are omitted (null).
 
 import type { TenantQueryClient } from "../tenant_db.ts";
+import {
+  type AttendanceMarkCounts,
+  attendancePercentFromCounts,
+  attendancePercentSql,
+  attendedDaysSql,
+  attendedFromCounts,
+} from "./attendance_percentage.ts";
 
 // --- shared row shapes -------------------------------------------------------
 
@@ -23,11 +30,13 @@ export interface MonthlyStudentRow {
   student_name: string;
   roll_number: string | null;
   class_label: string;
-  /** dayOfMonth (1..31) -> single-letter mark code: P/A/L/E (excused). */
+  /** dayOfMonth (1..31) -> single-letter mark code: P/A/L/E (excused)/H (half_day). */
   marks: Record<number, string>;
+  /** Attended days for the % (present + late + 0.5 × half_day) — CANONICAL, may be fractional. */
   present_days: number;
   marked_days: number;
-  percent_present: number;
+  /** CANONICAL attendance % (attended / (marked − excused)); null when the denominator is 0. */
+  percent_present: number | null;
 }
 
 export interface MonthlyRegister {
@@ -59,6 +68,7 @@ export interface ShortAttendanceRow {
   student_name: string;
   roll_number: string | null;
   class_label: string;
+  /** Attended days for the % (present + late + 0.5 × half_day) — CANONICAL, may be fractional. */
   present_days: number;
   marked_days: number;
   percent_present: number;
@@ -137,7 +147,7 @@ function capitalizeMark(mark: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-/** P/A/L/E single-letter code for a full mark string (unknown → '-'). */
+/** P/A/L/E/H code for a full mark string (unknown → '-'). */
 function markCode(mark: string): string {
   switch (mark.trim().toLowerCase()) {
     case "present":
@@ -148,6 +158,8 @@ function markCode(mark: string): string {
       return "L";
     case "excused":
       return "E";
+    case "half_day":
+      return "H";
     default:
       return "-";
   }
@@ -233,6 +245,10 @@ export async function getMonthlyRegister(
 
   const dayCount = daysInMonth(month);
   const byStudent = new Map<string, MonthlyStudentRow>();
+  // CANONICAL attendance-% (2026-07-09): per-student mark tallies, kept
+  // alongside the display row so the % can be computed once via the shared
+  // helper — see attendance_percentage.ts.
+  const counts = new Map<string, AttendanceMarkCounts>();
   for (const r of rows) {
     let entry = byStudent.get(r.student_id);
     if (!entry) {
@@ -247,20 +263,38 @@ export async function getMonthlyRegister(
         percent_present: 0,
       };
       byStudent.set(r.student_id, entry);
+      counts.set(r.student_id, { present: 0, late: 0, halfDay: 0, excused: 0, absent: 0 });
     }
     entry.marks[r.day_of_month] = markCode(r.mark);
     entry.marked_days += 1;
-    const code = markCode(r.mark);
-    // Present and Late both count as attended for the % (Late = came, tardy).
-    if (code === "P" || code === "L") entry.present_days += 1;
+    const tally = counts.get(r.student_id)!;
+    switch (r.mark.trim().toLowerCase()) {
+      case "present":
+        tally.present += 1;
+        break;
+      case "late":
+        tally.late += 1;
+        break;
+      case "half_day":
+        tally.halfDay += 1;
+        break;
+      case "excused":
+        tally.excused += 1;
+        break;
+      case "absent":
+        tally.absent += 1;
+        break;
+    }
   }
 
-  const students = [...byStudent.values()].map((s) => ({
-    ...s,
-    percent_present: s.marked_days === 0
-      ? 0
-      : Math.round((s.present_days / s.marked_days) * 100),
-  }));
+  const students = [...byStudent.values()].map((s) => {
+    const tally = counts.get(s.student_id)!;
+    return {
+      ...s,
+      present_days: attendedFromCounts(tally),
+      percent_present: attendancePercentFromCounts(tally),
+    };
+  });
 
   return {
     class_label: classLabel,
@@ -387,8 +421,11 @@ export async function getShortAttendance(
   threshold: number,
   windowDays: number,
 ): Promise<ShortAttendanceRow[]> {
-  // % present over the last [windowDays] distinct submitted school days. Late
-  // counts as attended (came in, tardy); excused/absent do not count as present.
+  // CANONICAL attendance-% (2026-07-09, attendance_percentage.ts): attended =
+  // present + late + 0.5×half_day; denominator = marked − excused. A student
+  // whose denominator is 0 (nothing marked, or every marked day excused) has
+  // NULL percent_present and is never flagged as "short" (there is nothing to
+  // measure against).
   return await db.queryObject<ShortAttendanceRow>(
     `WITH school_days AS (
        SELECT DISTINCT sess.session_date
@@ -400,8 +437,9 @@ export async function getShortAttendance(
      ),
      student_stats AS (
        SELECT ar.student_id,
-              count(*) FILTER (WHERE ar.mark IN ('present', 'late'))::int AS present_days,
-              count(*)::int AS marked_days
+              ${attendedDaysSql("ar.mark")}::float8 AS present_days,
+              count(*)::int AS marked_days,
+              ${attendancePercentSql("ar.mark")} AS percent_present
        FROM attendance_records ar
        JOIN attendance_sessions sess ON sess.id = ar.session_id
        WHERE ar.organization_id = $1 AND ar.school_id = $2
@@ -423,14 +461,14 @@ export async function getShortAttendance(
             ) AS class_label,
             ss.present_days,
             ss.marked_days,
-            round((ss.present_days::numeric / ss.marked_days) * 100)::int AS percent_present
+            ss.percent_present
      FROM student_stats ss
      JOIN students s ON s.id = ss.student_id
      LEFT JOIN sis_student_enrollments se
        ON se.student_id = ss.student_id
       AND se.organization_id = $1 AND se.school_id = $2 AND se.is_current = true
      WHERE ss.marked_days > 0
-       AND round((ss.present_days::numeric / ss.marked_days) * 100) < $3
+       AND ss.percent_present < $3
      ORDER BY percent_present ASC, s.display_name`,
     [organizationId, schoolId, threshold, windowDays],
   );

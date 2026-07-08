@@ -1,4 +1,5 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
+import { attendancePercentSql } from "../attendance/attendance_percentage.ts";
 
 export interface ParentAcademicSummaryRow {
   id: string;
@@ -19,9 +20,12 @@ export async function generateParentAcademicSummary(
   schoolId: string,
   studentId: string,
 ): Promise<ParentAcademicSummaryRow> {
-  const attendance = await db.queryObject<{ present: string; total: string }>(
+  const attendance = await db.queryObject<
+    { present: string; total: string; percent: number | null }
+  >(
     `SELECT count(*) FILTER (WHERE mark = 'present')::text AS present,
-            count(*)::text AS total
+            count(*)::text AS total,
+            ${attendancePercentSql("ar.mark")} AS percent
      FROM attendance_records ar
      JOIN attendance_sessions s ON s.id = ar.session_id
      WHERE ar.organization_id = $1 AND ar.school_id = $2 AND ar.student_id = $3::uuid
@@ -39,14 +43,21 @@ export async function generateParentAcademicSummary(
 
   const present = Number(attendance[0]?.present ?? 0);
   const totalAtt = Number(attendance[0]?.total ?? 0);
-  const attRate = totalAtt > 0 ? Math.round((present / totalAtt) * 100) : 100;
+  // CANONICAL attendance-% (2026-07-09, attendance_percentage.ts): present +
+  // late + 0.5×half_day over (marked − excused); null when nothing to
+  // measure. The internal `attRate` used by the grade/trend/alert heuristics
+  // below falls back to the pre-existing optimistic default (100 = "assume
+  // fine") only when there is genuinely no signal — the exposed
+  // `ratePercent` stays the true canonical value (null, never 0 or 100).
+  const canonicalPct = attendance[0]?.percent ?? null;
+  const attRate = canonicalPct ?? 100;
 
   const hwSubmitted = Number(homework[0]?.submitted ?? 0);
   const hwTotal = Number(homework[0]?.total ?? 1);
 
   const summary = {
     attendance_summary: {
-      ratePercent: attRate,
+      ratePercent: canonicalPct,
       presentDays: present,
       totalDays: totalAtt,
       alert: attRate < 75 ? "Attendance below 75% — please review" : null,
@@ -186,13 +197,16 @@ export function parentSummaryToApi(row: ParentAcademicSummaryRow) {
 export function buildPrintableReport(summary: ReturnType<typeof parentSummaryToApi>): string {
   const att = summary.attendanceSummary as Record<string, unknown>;
   const perf = summary.performanceSummary as Record<string, unknown>;
+  // Divide-by-zero rule (attendance_percentage.ts): ratePercent is null when
+  // there is nothing to measure — render "—", never "null%" or "0%".
+  const rateDisplay = att.ratePercent == null ? "—" : `${att.ratePercent}%`;
   return [
     "AKSHARA SCHOOL — PARENT ACADEMIC REPORT",
     "========================================",
     `Generated: ${summary.generatedAt}`,
     "",
     "ATTENDANCE",
-    `Rate: ${att.ratePercent}% (${att.presentDays}/${att.totalDays} days)`,
+    `Rate: ${rateDisplay} (${att.presentDays}/${att.totalDays} days)`,
     att.alert ? `Alert: ${att.alert}` : "",
     "",
     "PERFORMANCE",
