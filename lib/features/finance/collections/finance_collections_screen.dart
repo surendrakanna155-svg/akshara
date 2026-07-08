@@ -13,6 +13,7 @@ import '../../school_completion/school_branding_theme_provider.dart';
 import '../finance_mutations_provider.dart';
 import '../finance_workflow_actions.dart';
 import '../finance_journey_context_provider.dart';
+import '../invoices/finance_invoices_provider.dart';
 import '../policy/finance_policy_actions.dart';
 import '../policy/finance_policy_provider.dart';
 import '../receipts/finance_receipt_pdf_service.dart';
@@ -45,6 +46,16 @@ class FinanceCollectionsScreen extends ConsumerWidget {
     final filterIndex = ref.watch(financeCollectionFilterProvider);
     final receiptQuery = ref.watch(financeReceiptSearchProvider);
     final journeyInvoiceId = ref.watch(financeLastInvoiceIdProvider) ?? 'inv_1';
+    // P2-UX-2 §2.4 — QR Pay opens with the journey invoice's REAL outstanding
+    // (not a hardcoded amount) when that invoice is loaded; blank otherwise.
+    final invoices = ref.watch(financeInvoicesProvider);
+    final journeyMatches = invoices
+        .where((inv) => inv.id == journeyInvoiceId)
+        .toList(growable: false);
+    final journeyAmount = journeyMatches.isEmpty
+        ? ''
+        : journeyMatches.first.outstandingAmount
+            .replaceAll(RegExp(r'[^\d.]'), '');
 
     return FinanceModuleScaffold(
       screen: FinanceScreen.collections,
@@ -115,7 +126,7 @@ class FinanceCollectionsScreen extends ConsumerWidget {
                   onPressed: () => navigateToQrPaymentScreen(
                     context,
                     invoiceId: journeyInvoiceId,
-                    amount: '5000',
+                    amount: journeyAmount,
                   ),
                   icon: const Icon(Icons.qr_code_2),
                   label: const Text('QR Pay'),

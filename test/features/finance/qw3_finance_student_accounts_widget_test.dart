@@ -1,3 +1,4 @@
+import 'package:akshara_erp/core/testing/qa_test_keys.dart';
 import 'package:akshara_erp/features/finance/student_accounts/finance_student_accounts_provider.dart';
 import 'package:akshara_erp/features/finance/student_accounts/finance_student_accounts_screen.dart';
 import 'package:akshara_erp/shared/widgets/akshara_empty_state.dart';
@@ -92,6 +93,29 @@ void main() {
       );
 
       expect(find.byType(AksharaEmptyState), findsWidgets);
+    });
+
+    // P2-UX-2 §2.4 — the search doubles as a collection origination point:
+    // a "Collect fee" action on the selected account opens the record-collection
+    // dialog seeded with that student's context.
+    testWidgets('Collect fee originates a collection from the account',
+        (tester) async {
+      await _pump(tester);
+
+      final collectButton =
+          find.byKey(QaTestKeys.financeStudentAccountCollectButton);
+      expect(collectButton, findsOneWidget);
+
+      await tester.ensureVisible(collectButton);
+      await tester.tap(collectButton);
+      await tester.pumpAndSettle();
+
+      // The record-collection dialog opens with the amount field.
+      expect(find.text('Record collection'), findsWidgets);
+      expect(
+        find.byKey(QaTestKeys.financeCollectionAmountField),
+        findsOneWidget,
+      );
     });
   });
 }

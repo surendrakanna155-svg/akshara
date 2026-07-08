@@ -59,11 +59,15 @@ final financeFilteredStudentAccountsProvider =
   final accounts = ref.watch(financeStudentAccountsProvider);
   final query = ref.watch(financeStudentSearchQueryProvider).trim().toLowerCase();
   if (query.isEmpty) return accounts;
+  // P2-UX-2 §2.4 — a front-desk cashier searches by whatever they have to hand:
+  // the student's name, their admission number (the current public identifier),
+  // or their class.
   return accounts
       .where(
         (a) =>
             a.studentName.toLowerCase().contains(query) ||
-            a.admissionNumber.toLowerCase().contains(query),
+            a.admissionNumber.toLowerCase().contains(query) ||
+            a.classLabel.toLowerCase().contains(query),
       )
       .toList(growable: false);
 });

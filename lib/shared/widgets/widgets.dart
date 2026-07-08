@@ -18,6 +18,7 @@ export 'akshara_mesh_background.dart';
 export 'akshara_scene_illustration.dart';
 export 'akshara_sparkline.dart';
 export 'akshara_success_view.dart';
+export 'akshara_queued_view.dart';
 export 'akshara_analytics_panel.dart';
 export 'akshara_app_bar.dart';
 export 'akshara_surface_card.dart';

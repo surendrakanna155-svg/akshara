@@ -571,6 +571,19 @@ abstract final class QaTestKeys {
   static const financeCollectionSuccessCeremony =
       ValueKey<String>('finance_collection_success_ceremony');
 
+  // P2-UX-2 §2.4 — amber "queued receipt" card shown when a collection is
+  // recorded offline (pending sync); never a green success ceremony.
+  static const financeCollectionQueuedCard =
+      ValueKey<String>('finance_collection_queued_card');
+
+  // P2-UX-2 §2.4 — the live dues-breakdown line in the record-collection dialog.
+  static const financeCollectionDuesLine =
+      ValueKey<String>('finance_collection_dues_line');
+
+  // P2-UX-2 §2.4 — "Collect fee" origination from a student fee account.
+  static const financeStudentAccountCollectButton =
+      ValueKey<String>('finance_student_account_collect_button');
+
   static const financeRecordOfflinePaymentFab =
       ValueKey<String>('finance_record_offline_payment_fab');
   static const financeOfflinePaymentInvoiceField =

@@ -17,6 +17,7 @@ import '../../shared/forms/akshara_form_field.dart';
 import '../../shared/forms/akshara_searchable_dropdown.dart';
 import '../../shared/widgets/akshara_dialog.dart';
 import '../../shared/widgets/akshara_motion.dart';
+import '../../shared/widgets/akshara_queued_view.dart';
 import '../../shared/widgets/akshara_success_view.dart';
 import 'finance_journey_context_provider.dart';
 import 'fee_assignment/finance_fee_assignment_provider.dart';
@@ -698,11 +699,20 @@ Future<void> showEditFinanceSettingDialog(
   }
 }
 
+/// Strips currency symbols / grouping so a displayed dues figure (e.g. `₹5,000`)
+/// becomes the plain number (`5000`) the collection request expects.
+String _numericAmount(String raw) {
+  final cleaned = raw.replaceAll(RegExp(r'[^\d.]'), '');
+  return cleaned;
+}
+
 Future<void> showRecordCollectionDialog(
   BuildContext context,
   WidgetRef ref, {
   String defaultInvoiceId = 'inv_1',
-  String defaultAmount = '5000',
+  String? defaultAmount,
+  String? studentLabel,
+  String? duesLabel,
 }) async {
   final journeyInvoice = ref.read(financeLastInvoiceIdProvider);
   final invoices = ref.read(financeInvoicesProvider);
@@ -716,6 +726,19 @@ Future<void> showRecordCollectionDialog(
           '${inv.outstandingAmount} due',
   };
   final idByLabel = {for (final e in labelById.entries) e.value: e.key};
+  // P2-UX-2 §2.4 — real dues source: each invoice's outstanding (and any accrued
+  // late fee) drives both the prefilled amount and the on-dialog breakdown line,
+  // replacing the old hardcoded '5000'.
+  final outstandingById = <String, String>{
+    for (final inv in invoices) inv.id: _numericAmount(inv.outstandingAmount),
+  };
+  final outstandingDisplayById = <String, String>{
+    for (final inv in invoices) inv.id: inv.outstandingAmount,
+  };
+  final lateFeeById = <String, String>{
+    for (final inv in invoices)
+      if (inv.hasLateFee) inv.id: inv.lateFeeAmount,
+  };
   final usePicker = invoices.isNotEmpty;
 
   final preferredId =
@@ -727,12 +750,20 @@ Future<void> showRecordCollectionDialog(
                   ? invoices.first.id
                   : (journeyInvoice ?? defaultInvoiceId)));
 
+  // P2-UX-2 §2.4 — the initial amount is the REAL dues, not a magic number: an
+  // explicit caller-supplied figure (e.g. a student's balance from the accounts
+  // search) wins; otherwise the preferred invoice's outstanding; otherwise blank
+  // (a free-text repo with no invoices — never fabricate an amount).
+  final initialAmount = (defaultAmount != null && defaultAmount.trim().isNotEmpty)
+      ? _numericAmount(defaultAmount)
+      : (usePicker ? (outstandingById[preferredId] ?? '') : '');
+
   // REL-3 — field state + draft autosave/recovery live in a ConsumerStatefulWidget
   // so an interrupted collection (phone-lock / app-switch / kill) is never lost.
   // The form reports the live values back through [onChanged]; the outer flow
   // keeps ownership of the actual money mutation + success/error handling.
   var invoiceId = preferredId;
-  var amount = defaultAmount;
+  var amount = initialAmount;
   var paymentMethod = 'UPI';
 
   final confirmed = await showAksharaDialog<bool>(
@@ -745,8 +776,13 @@ Future<void> showRecordCollectionDialog(
         usePicker: usePicker,
         labelById: labelById,
         idByLabel: idByLabel,
+        outstandingById: outstandingById,
+        outstandingDisplayById: outstandingDisplayById,
+        lateFeeById: lateFeeById,
+        studentLabel: studentLabel,
+        duesLabel: duesLabel,
         initialInvoiceId: preferredId,
-        initialAmount: defaultAmount,
+        initialAmount: initialAmount,
         initialMethod: paymentMethod,
         onChanged: (i, a, m) {
           invoiceId = i;
@@ -784,14 +820,24 @@ Future<void> showRecordCollectionDialog(
     if (!context.mounted || result == null) return;
     if (result.pendingSync) {
       // Refinement R1: an offline-recorded collection is NOT server-confirmed.
-      // Do not finalise a receipt — show "Pending Sync"; the receipt is issued
+      // P2-UX-2 §2.4 — close with the honest amber "queued receipt" ceremony
+      // (AksharaQueuedView, which fires the WARNING haptic) instead of a green
+      // success beat: the money is safely captured but the receipt is issued
       // only after the Sync Center confirms the transaction.
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          key: QaTestKeys.financeCollectionSuccessSnackbar,
-          content: Text(
-            'Payment saved offline — pending sync. The receipt will be '
-            'issued once it syncs.',
+      await showAksharaDialog<void>(
+        context: context,
+        builder: (queuedContext) => Dialog(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: AksharaQueuedView(
+              key: QaTestKeys.financeCollectionQueuedCard,
+              title: 'Payment queued',
+              highlight: '₹${amount.trim()}',
+              subtitle: 'Saved offline — the receipt is issued once it syncs.',
+              caption: '$paymentMethod · pending sync',
+              primaryLabel: 'Done',
+              onPrimary: () => Navigator.of(queuedContext).pop(),
+            ),
           ),
         ),
       );
@@ -842,6 +888,11 @@ class _RecordCollectionForm extends ConsumerStatefulWidget {
     required this.usePicker,
     required this.labelById,
     required this.idByLabel,
+    required this.outstandingById,
+    required this.outstandingDisplayById,
+    required this.lateFeeById,
+    required this.studentLabel,
+    required this.duesLabel,
     required this.initialInvoiceId,
     required this.initialAmount,
     required this.initialMethod,
@@ -851,6 +902,23 @@ class _RecordCollectionForm extends ConsumerStatefulWidget {
   final bool usePicker;
   final Map<String, String> labelById;
   final Map<String, String> idByLabel;
+
+  /// invoice id → numeric outstanding (drives the amount prefill + auto-follow).
+  final Map<String, String> outstandingById;
+
+  /// invoice id → display outstanding (e.g. `₹5,000`) for the breakdown line.
+  final Map<String, String> outstandingDisplayById;
+
+  /// invoice id → accrued late fee display (only ids that have one).
+  final Map<String, String> lateFeeById;
+
+  /// Optional student context header (name · admission) when the collection was
+  /// originated from the student-accounts search.
+  final String? studentLabel;
+
+  /// Optional dues summary (e.g. `Balance ₹12,500`) for the context header.
+  final String? duesLabel;
+
   final String initialInvoiceId;
   final String initialAmount;
   final String initialMethod;
@@ -958,6 +1026,7 @@ class _RecordCollectionFormState extends ConsumerState<_RecordCollectionForm>
     return AksharaDialogFormBody(
       children: [
         if (_recoverable != null) _buildResumePrompt(context),
+        if (widget.studentLabel != null) _buildStudentHeader(context),
         if (widget.usePicker)
           AksharaSearchableDropdown(
             key: QaTestKeys.financeCollectionInvoiceField,
@@ -968,7 +1037,16 @@ class _RecordCollectionFormState extends ConsumerState<_RecordCollectionForm>
             onChanged: (label) {
               final id = widget.idByLabel[label];
               if (id != null) {
-                setState(() => _selectedInvoiceId = id);
+                setState(() {
+                  _selectedInvoiceId = id;
+                  // P2-UX-2 §2.4 — switching invoice re-seeds the amount with the
+                  // newly-selected invoice's real outstanding (the cashier can
+                  // still edit down for a partial payment).
+                  final outstanding = widget.outstandingById[id];
+                  if (outstanding != null && outstanding.isNotEmpty) {
+                    _amountController.text = outstanding;
+                  }
+                });
                 _notify();
               }
             },
@@ -979,6 +1057,7 @@ class _RecordCollectionFormState extends ConsumerState<_RecordCollectionForm>
             label: 'Invoice ID',
             controller: _invoiceController,
           ),
+        if (widget.usePicker) _buildDuesLine(context),
         AksharaFormField(
           key: QaTestKeys.financeCollectionAmountField,
           label: 'Amount collected',
@@ -1043,6 +1122,72 @@ class _RecordCollectionFormState extends ConsumerState<_RecordCollectionForm>
                 child: const Text('Resume'),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// P2-UX-2 §2.4 — student context header when the collection was originated
+  /// from the PSID/name/class accounts search: who is paying, and their dues.
+  Widget _buildStudentHeader(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Icon(Icons.person_outline,
+              size: 18, color: theme.colorScheme.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.studentLabel!,
+                  style: theme.textTheme.titleSmall,
+                ),
+                if (widget.duesLabel != null)
+                  Text(
+                    widget.duesLabel!,
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// P2-UX-2 §2.4 — the live dues breakdown for the selected invoice: its real
+  /// outstanding (and any accrued late fee), so the cashier sees exactly what is
+  /// owed before confirming — no more guessing behind a hardcoded amount.
+  Widget _buildDuesLine(BuildContext context) {
+    final theme = Theme.of(context);
+    final outstanding = widget.outstandingDisplayById[_selectedInvoiceId];
+    if (outstanding == null || outstanding.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final lateFee = widget.lateFeeById[_selectedInvoiceId];
+    final duesText = (lateFee != null && lateFee.isNotEmpty)
+        ? 'Outstanding $outstanding · incl. late fee $lateFee'
+        : 'Outstanding $outstanding';
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        key: QaTestKeys.financeCollectionDuesLine,
+        children: [
+          Icon(Icons.account_balance_wallet_outlined,
+              size: 16, color: theme.colorScheme.onSurfaceVariant),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              duesText,
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            ),
           ),
         ],
       ),

@@ -5,6 +5,7 @@ import '../../../core/errors/api_failure.dart';
 import '../../../core/errors/api_failure_mapper.dart';
 import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../core/repositories/paginated_result.dart';
+import '../../../core/security/permissions.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
@@ -13,6 +14,7 @@ import '../../admin/admin_layout.dart';
 import '../../school_completion/school_branding_theme_provider.dart';
 import '../finance_async_state.dart';
 import '../finance_models.dart';
+import '../finance_workflow_actions.dart';
 import '../policy/finance_policy_provider.dart';
 import '../widgets/finance_kpi_row.dart';
 import '../widgets/finance_module_scaffold.dart';
@@ -251,14 +253,37 @@ class _AccountSummaryPanel extends ConsumerWidget {
           style: context.aksharaText.bodyMedium,
         ),
         const SizedBox(height: AksharaSpacing.s3),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: OutlinedButton.icon(
-            key: QaTestKeys.financeExportStatementButton,
-            onPressed: () => _exportStatement(context, ref),
-            icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
-            label: const Text('Export statement'),
-          ),
+        Wrap(
+          spacing: AksharaSpacing.s3,
+          runSpacing: AksharaSpacing.s2,
+          children: [
+            // P2-UX-2 §2.4 — originate a collection straight from the accounts
+            // search: the student's real balance seeds the dues amount so the
+            // cashier never re-keys it. RBAC-gated to finance managers.
+            AksharaManageAction(
+              permission: Permission.manageFinance,
+              child: FilledButton.icon(
+                key: QaTestKeys.financeStudentAccountCollectButton,
+                onPressed: () => showRecordCollectionDialog(
+                  context,
+                  ref,
+                  defaultAmount: account.balance,
+                  studentLabel:
+                      '${account.studentName} · ${account.admissionNumber}',
+                  duesLabel: 'Balance ${account.balance} · Class '
+                      '${account.classLabel}',
+                ),
+                icon: const Icon(Icons.add_card_outlined, size: 18),
+                label: const Text('Collect fee'),
+              ),
+            ),
+            OutlinedButton.icon(
+              key: QaTestKeys.financeExportStatementButton,
+              onPressed: () => _exportStatement(context, ref),
+              icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+              label: const Text('Export statement'),
+            ),
+          ],
         ),
         const SizedBox(height: AksharaSpacing.s4),
         FinanceKpiRow(
