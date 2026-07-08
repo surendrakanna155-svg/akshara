@@ -27,6 +27,7 @@ just less useful for coverage reporting until classification improves.
 
 from __future__ import annotations
 
+import hashlib
 import re
 import sys
 from datetime import datetime, timezone
@@ -156,6 +157,17 @@ def build_expected(ws: Workspace, classification: dict, url: str, ext: str, seq:
 
     filename = ws.repo_filename(c["board"], c["class_label"], subject_folder_name,
                                  resource_type_label, year, "v1", language, ext)
+    # CRITICAL: the category-derived filename is IDENTICAL for every URL that
+    # classifies into the same (board/class/subject/category) bucket. Open-web
+    # discovery routinely finds dozens of distinct PDFs per bucket, so without a
+    # per-URL discriminator they all resolve to one path and overwrite each other
+    # (verified-but-destroyed → false coverage + data loss). Inject a short,
+    # deterministic, resume-stable slug derived from the SOURCE URL so distinct
+    # resources land on distinct files. (repo_filename stays untouched — the
+    # catalogue-driven lane, which has real per-resource slots, is unaffected.)
+    url_slug = hashlib.sha256(url.encode("utf-8")).hexdigest()[:10]
+    stem, dot, extn = filename.rpartition(".")
+    filename = f"{stem}_{url_slug}.{extn}" if dot else f"{filename}_{url_slug}"
     destination = str(Path("curriculum") / c["board_folder"] / c["class_label"] /
                        subject_folder_name / category_folder)
 

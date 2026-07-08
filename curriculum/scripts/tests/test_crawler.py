@@ -300,6 +300,27 @@ class VerifyGateTestCase(unittest.TestCase):
         self.assertEqual(s["downloaded"], 1)
         self.assertEqual(s["verified"], 0)
 
+    def test_distinct_urls_in_same_bucket_get_distinct_files(self):
+        """REGRESSION (collision bug): open-web discovery finds many distinct
+        PDFs that classify into ONE (board/class/subject/category) bucket. The
+        category-derived filename is identical for the whole bucket, so without
+        a per-URL discriminator every resource resolved to one path and silently
+        overwrote its predecessor (verified-but-destroyed: 1192 distinct contents
+        collapsed onto 20 files in a live run). Distinct URLs MUST get distinct
+        files; the slug MUST be deterministic (resume-stable)."""
+        url_a = "https://ncert.nic.in/pdf/publication/AlphaClass6EnglishSupplementary.pdf"
+        url_b = "https://ncert.nic.in/pdf/publication/BetaClass6EnglishSupplementary.pdf"
+        ca, cb = verify.classify(url_a, "cbse"), verify.classify(url_b, "cbse")
+        bucket = lambda c: (c["board"], c["class_label"], c["subject"], c["category"])
+        self.assertEqual(bucket(ca), bucket(cb))  # same bucket → same base filename
+        ea = verify.build_expected(self.ws, ca, url_a, "pdf", seq=1, year="2026")
+        eb = verify.build_expected(self.ws, cb, url_b, "pdf", seq=1, year="2026")
+        self.assertNotEqual(ea["expected_filename"], eb["expected_filename"],
+                            "distinct URLs must not share a filename (no overwrite)")
+        # deterministic: same URL → same filename regardless of frontier-assigned seq
+        ea_again = verify.build_expected(self.ws, ca, url_a, "pdf", seq=99, year="2026")
+        self.assertEqual(ea["expected_filename"], ea_again["expected_filename"])
+
 
 class CrawlCliDryRunTestCase(unittest.TestCase):
     """Exercises crawl.run() end to end with network disabled — proves the
