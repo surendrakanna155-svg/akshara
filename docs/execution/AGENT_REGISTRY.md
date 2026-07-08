@@ -34,7 +34,7 @@ Reconcile against them FIRST, then continue.
 
 | Agent ID | Model | Task | Scope (files) | State | Recovery |
 |---|---|---|---|---|---|
-| `bmmfoe83s` (bg task) | — (bash) | **CONTINUOUS acquisition service** (`run_continuous.sh` → `crawl.py --board all --resume` loop until 3-no-new completion) | `curriculum/resources/**` + `acquisition/` (no git) | 🟢 running (background service) | monitor via manifest + `crawl_continuous.log` READ-ONLY; do NOT interrupt except fatal/owner-stop/completion; resumable |
+| `btor0cbhu` (bg task) | — (bash) | **CONTINUOUS acquisition service — RE-CRAWL on fixed crawler** (`09f6285d`: URL-unique filenames + Status-field completion + frontier-drain guard); fresh state after collision-bug backup | `curriculum/resources/**` + `acquisition/` (no git) | 🟢 running (background service) | monitor via manifest + `crawl_continuous.log` READ-ONLY; do NOT interrupt except fatal/owner-stop/completion; resumable |
 | `a001d1b3867b3dea7` | sonnet | **ERP AsyncValue BATCH 2** (worktree, base-verified `17b83117`) — `.when()`→`ErpAsyncBody` in management/control_center/sis/finance/operations/etc. | `lib/features/**` (non-education) | 🟢 running | worktree; disjoint from curriculum agent; integrate via cherry-pick on report |
 
 
@@ -57,6 +57,7 @@ Reconcile against them FIRST, then continue.
 | `a781baa7dae2b6259` | sonnet | CI-C4-schema (worktree) | ✅ done | base-verified onto tip → clean cherry-pick → `25436314`; worktree removed |
 | `ac081ada6353f100c` | sonnet | ERP AsyncValue re-run (worktree) | ✅ done | base-verified onto tip `cb7fbc82` → 40 sites → clean cherry-pick → `b8a68318`; worktree removed |
 | `ac344dba7eaaa20ac` | sonnet | Curriculum B12 + CI-E1b dormant seeds (worktree) | ✅ done | base-verified onto tip `17b83117` → real-Postgres validated → clean cherry-pick → `f0f1cbc5` (education deno 143/0); worktree removed |
+| `bmmfoe83s` (bg task) | (bash) | Continuous acquisition service v1 | ❌ false-completion | stopped on cycle 3 via a completion-detector bug (lowercase `status` read → 0); ALSO surfaced a filename-collision data-loss bug (1192 distinct PDFs → 20 files). Both fixed `09f6285d`; corrupt archive backed up to `curriculum/archives/pre-collision-fix-*`; re-crawl = `btor0cbhu` |
 
 ---
 
