@@ -59,10 +59,19 @@ function fmtDuration(ms) {
 /* ============================================================
    DATA LOADING
    ============================================================ */
-async function fetchJSON(name) {
-  const res = await fetch(`${name}?t=${Date.now()}`, { cache: 'no-store' });
-  if (!res.ok) throw new Error(`${name}: HTTP ${res.status}`);
-  return res.json();
+async function fetchJSON(name, fallback) {
+  try {
+    const res = await fetch(`${name}?t=${Date.now()}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`${name}: HTTP ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    // Live runtime files (progress/activity) are gitignored and may be absent on a fresh
+    // clone — fall back to the committed *.seed.json starting snapshot.
+    if (!fallback) throw err;
+    const res = await fetch(`${fallback}?t=${Date.now()}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`${name} & ${fallback}: HTTP ${res.status}`);
+    return await res.json();
+  }
 }
 
 async function loadData(manual) {
@@ -70,8 +79,8 @@ async function loadData(manual) {
   setRefreshState('loading…');
   try {
     const [progress, activity, prompts] = await Promise.all([
-      fetchJSON('progress.json'),
-      fetchJSON('activity.json'),
+      fetchJSON('progress.json', 'progress.seed.json'),
+      fetchJSON('activity.json', 'activity.seed.json'),
       fetchJSON('prompts.json'),
     ]);
     DATA = { progress, activity, prompts };

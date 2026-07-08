@@ -67,3 +67,10 @@ supabase/.branches/
 # Firebase service-account secrets — never commit
 *firebase-adminsdk*.json
 FCM_SERVICE_ACCOUNT*.json
+
+# Progress-dashboard runtime state — live files stay LOCAL (updated continuously by the
+# executor, so they never create Git noise). The committed *.seed.json are the fresh-clone
+# starting snapshot; app.js reads the live file and falls back to the seed when it's absent.
+# See tools/progress-dashboard/README.md ("Git tracking").
+tools/progress-dashboard/progress.json
+tools/progress-dashboard/activity.json

@@ -36,13 +36,28 @@ only the three JSON files change as work progresses. There's a manual **⟳** re
 | `index.html` | Static structure (header, cards, chat panel) | **Never** after setup |
 | `styles.css` | Dark-first theme, responsive layout | **Never** after setup |
 | `app.js` | Loads JSON, renders, auto-refresh, prompt builder | **Never** after setup |
-| `progress.json` | **Current** implementation state (the live snapshot) | Updated continuously |
-| `activity.json` | **Append-only** historical activity log (newest kept ≤100) | Appended, never rewritten |
-| `prompts.json` | Suggested prompt chips + templates for the chat panel | Rarely |
-| `README.md` | This file | Rarely |
+| `progress.json` | **Current** implementation state (the live snapshot) | Updated continuously · **git-ignored** |
+| `activity.json` | **Append-only** historical activity log (newest kept ≤100) | Appended, never rewritten · **git-ignored** |
+| `progress.seed.json` · `activity.seed.json` | Fresh-clone starting snapshots | Committed · updated rarely |
+| `prompts.json` | Suggested prompt chips + templates for the chat panel | Committed · rarely |
+| `README.md` | This file | Committed · rarely |
 
 **Golden rule:** after initial setup, implementation work updates **only the JSON files**.
 Never rewrite history in `activity.json` — only append.
+
+### Git tracking (no-noise live updates)
+
+`progress.json` and `activity.json` are **runtime state** — they change on every task/agent/commit
+event. To keep those live updates out of Git entirely, they are **git-ignored**, so editing them
+never shows up in `git status` and never lands in a commit.
+
+- The committed **`*.seed.json`** files are the point-in-time **starting snapshot** for a fresh clone.
+- `app.js` reads the live file first and **falls back to the seed** when the live file is absent
+  (e.g. right after `git clone`). On a working machine the live file exists, so you always see live data.
+- To capture a durable snapshot (e.g. for a handoff), copy the live file over its seed and commit that:
+  `cp progress.json progress.seed.json && git add tools/progress-dashboard/progress.seed.json`.
+
+So: **live updates = zero Git noise**; **snapshots = an explicit, deliberate commit of the seed.**
 
 ---
 
