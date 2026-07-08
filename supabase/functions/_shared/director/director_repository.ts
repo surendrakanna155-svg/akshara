@@ -12,6 +12,7 @@
 // RLS — not application code — remains the isolation boundary.
 
 import type { TenantQueryClient } from "../tenant_db.ts";
+import { attendanceDenominatorSql, attendedDaysSql } from "../attendance/attendance_percentage.ts";
 
 const CRORE = 10_000_000; // 1 Cr = 1e7
 const LAKH = 100_000; // 1 L = 1e5
@@ -123,10 +124,14 @@ export async function getSchoolRows(
      GROUP BY school_id`,
     [orgId],
   );
-  const attendanceRows = await db.queryObject<{ school_id: string; present: number; total: number }>(
+  // CANONICAL attendance-% (2026-07-09): attended = present + late + 0.5×half_day,
+  // denom = total_marked − excused — see attendance/attendance_percentage.ts. This
+  // used to count anything non-'absent' as fully present and included excused
+  // days in the denominator, diverging from every other attendance-% surface.
+  const attendanceRows = await db.queryObject<{ school_id: string; attended: number; denom: number }>(
     `SELECT school_id,
-            count(*) FILTER (WHERE mark <> 'absent')::int AS present,
-            count(*)::int AS total
+            ${attendedDaysSql("mark")}::float8 AS attended,
+            ${attendanceDenominatorSql("mark")}::int AS denom
      FROM attendance_records WHERE organization_id = $1 GROUP BY school_id`,
     [orgId],
   );
@@ -161,7 +166,7 @@ export async function getSchoolRows(
     // Health is a weighted index of the signals that actually have data.
     const parts: { v: number; w: number }[] = [];
     if (bill && bill.billed > 0) parts.push({ v: feePct, w: 0.4 });
-    if (att && att.total > 0) parts.push({ v: pct(att.present, att.total), w: 0.3 });
+    if (att && att.denom > 0) parts.push({ v: pct(att.attended, att.denom), w: 0.3 });
     if (acad && acad.total > 0) parts.push({ v: pct(acad.pass, acad.total), w: 0.3 });
     const weight = parts.reduce((sum, p) => sum + p.w, 0);
     const healthScore = weight > 0
@@ -711,9 +716,11 @@ export async function getSchoolSnapshot(
        AND invoice_status IN ('issued', 'partially_paid', 'paid')`,
     [orgId, schoolId],
   );
-  const [attendance] = await db.queryObject<{ present: number; total: number }>(
-    `SELECT count(*) FILTER (WHERE mark <> 'absent')::int AS present,
-            count(*)::int AS total
+  // CANONICAL attendance-% (2026-07-09) — same divergent present<>'absent'/total
+  // formula as getSchoolRows above, now routed through the shared fragments.
+  const [attendance] = await db.queryObject<{ attended: number; denom: number }>(
+    `SELECT ${attendedDaysSql("mark")}::float8 AS attended,
+            ${attendanceDenominatorSql("mark")}::int AS denom
      FROM attendance_records WHERE organization_id = $1 AND school_id = $2`,
     [orgId, schoolId],
   );
@@ -742,7 +749,7 @@ export async function getSchoolSnapshot(
   const collected = Math.round(billing?.collected ?? 0);
   const outstandingInr = Math.max(0, billed - collected);
   const feeCollectionPercent = pct(collected, billed);
-  const attendancePercent = pct(attendance?.present ?? 0, attendance?.total ?? 0);
+  const attendancePercent = pct(attendance?.attended ?? 0, attendance?.denom ?? 0);
   const passPercent = pct(academic?.pass ?? 0, academic?.total ?? 0);
   const inquiries = funnel?.inquiries ?? 0;
   const enrolled = funnel?.enrolled ?? 0;
@@ -750,7 +757,7 @@ export async function getSchoolSnapshot(
   // Health mirrors getSchoolRows: a weighted index of the signals with data.
   const parts: { v: number; w: number }[] = [];
   if (billed > 0) parts.push({ v: feeCollectionPercent, w: 0.4 });
-  if ((attendance?.total ?? 0) > 0) parts.push({ v: attendancePercent, w: 0.3 });
+  if ((attendance?.denom ?? 0) > 0) parts.push({ v: attendancePercent, w: 0.3 });
   if ((academic?.total ?? 0) > 0) parts.push({ v: passPercent, w: 0.3 });
   const weight = parts.reduce((sum, p) => sum + p.w, 0);
   const healthScore = weight > 0

@@ -1,5 +1,6 @@
 import { assert, assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
+import { attendancePercentSql } from "../attendance/attendance_percentage.ts";
 import {
   INTEL_RISK_API_PROBE_SQL,
   INTEL_RISK_PROBE_SCHOOL_A,
@@ -13,11 +14,18 @@ const SCHOOL = "a2000000-0000-4000-8000-000000000001";
 
 // Mock DB that captures the signals SQL and returns a fixed student row. The
 // `feeRow` fields let each test control whether the fee LATERAL returns a real
-// balance or is absent (undefined → the mapper's honest 0 default).
+// balance or is absent (undefined → the mapper's honest 0 default). The
+// `attendanceRow` fields let attendance-specific tests override absent_count /
+// attendance_percent (CANONICAL — computed by the shared attendancePercentSql()
+// fragment now, not derived here) while every other test keeps the default
+// "20 marked, 0 absent, fully present" fixture (100% under either formula).
 class SignalsMockDb {
   lastSql = "";
   lastArgs: unknown[] = [];
-  constructor(private feeRow: Record<string, unknown>) {}
+  constructor(
+    private feeRow: Record<string, unknown>,
+    private attendanceRow: Record<string, unknown> = { absent_count: 0, attendance_percent: 100 },
+  ) {}
   // deno-lint-ignore require-await
   async queryObject<T>(sql: string, args: unknown[] = []): Promise<T[]> {
     this.lastSql = sql;
@@ -27,12 +35,11 @@ class SignalsMockDb {
       student_name: "Asha",
       class_name: "Grade 5",
       section_name: "A",
-      absent_count: 0,
-      total_attendance: 20,
       hw_submitted: 10,
       hw_total: 10,
       avg_marks_pct: 80,
       behavior_incidents: 0,
+      ...this.attendanceRow,
       ...this.feeRow,
     }] as T[];
   }
@@ -99,4 +106,39 @@ Deno.test("loadStudentSignals defaults fee balance to 0 when no account exists",
   assertEquals(signals.length, 1);
   assertEquals(signals[0].fee_outstanding_amount, 0);
   assertEquals(signals[0].fee_overdue_days, 0);
+});
+
+// ─── CANONICAL attendance-% (2026-07-09) ────────────────────────────────────
+// loadStudentSignals used to derive attendance_percent downstream from
+// (total_count − absent_count) / total_count, which counted late/excused/
+// half_day marks as full presence and included excused days in the
+// denominator. It now selects the shared attendancePercentSql() fragment
+// directly, so the SQL layer (not this file) owns the arithmetic.
+
+Deno.test("loadStudentSignals routes attendance through the shared canonical SQL fragment", async () => {
+  const db = new SignalsMockDb({});
+  await loadStudentSignals(db as unknown as TenantQueryClient, ORG, SCHOOL);
+  assert(db.lastSql.includes(attendancePercentSql("ar.mark")));
+});
+
+Deno.test("loadStudentSignals: canonical attendance treats late as present and excludes excused from the denominator", async () => {
+  // A 25-day window: 15 present, 3 late, 2 excused, 1 half_day, 4 absent.
+  // OLD formula ((total-absent)/total): (25-4)/25 = 84%.
+  // CANONICAL: attended = 15 + 3 + 0.5×1 = 18.5; denom = 25 - 2 excused = 23
+  //   -> round(18.5/23*100) = 80%. The SQL layer computes this; the mock
+  // supplies the value the canonical fragment would have returned.
+  const db = new SignalsMockDb({}, { absent_count: 4, attendance_percent: 80 });
+  const signals = await loadStudentSignals(db as unknown as TenantQueryClient, ORG, SCHOOL);
+  assertEquals(signals[0].attendance_percent, 80); // CANONICAL — was 84 under the old formula
+});
+
+Deno.test("loadStudentSignals: no usable attendance data defaults to 92, not 0 or null", async () => {
+  // attendancePercentSql() returns SQL NULL when the denominator is 0 (no
+  // marked days at all, or every marked day was excused). The risk engine
+  // consumes attendance_percent as a plain number, so the mapper falls back
+  // to 92 — the SAME default the old total_attendance===0 branch used —
+  // so risk scores do not shift for students with no/no-usable data.
+  const db = new SignalsMockDb({}, { absent_count: 0, attendance_percent: null });
+  const signals = await loadStudentSignals(db as unknown as TenantQueryClient, ORG, SCHOOL);
+  assertEquals(signals[0].attendance_percent, 92);
 });

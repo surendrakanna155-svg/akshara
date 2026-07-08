@@ -1,4 +1,5 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
+import { attendancePercentSql } from "../attendance/attendance_percentage.ts";
 import { computeStudentRisk } from "./student_risk_engine.ts";
 import type { StudentRiskSnapshotRow, StudentSignalRow } from "./intelligence_types.ts";
 
@@ -26,7 +27,7 @@ export async function loadStudentSignals(
     class_name: string;
     section_name: string | null;
     absent_count: number;
-    total_attendance: number;
+    attendance_percent: number | null;
     hw_submitted: number;
     hw_total: number;
     avg_marks_pct: number;
@@ -40,7 +41,7 @@ export async function loadStudentSignals(
        coalesce(e.class_name, 'Unassigned') AS class_name,
        e.section_name,
        coalesce(att.absent_count, 0)::int AS absent_count,
-       coalesce(att.total_count, 0)::int AS total_attendance,
+       att.attendance_percent,
        coalesce(hw.submitted, 0)::int AS hw_submitted,
        coalesce(hw.total, 0)::int AS hw_total,
        coalesce(marks.avg_pct, 70)::int AS avg_marks_pct,
@@ -55,9 +56,17 @@ export async function loadStudentSignals(
        LIMIT 1
      ) e ON true
      LEFT JOIN LATERAL (
+       -- attendance_percent: CANONICAL (2026-07-09) — present+late+0.5×half_day
+       -- over total_marked−excused, via the shared attendance_percentage.ts
+       -- fragments. This used to derive attendance_percent downstream as
+       -- (total-absent_count)/total, which counted late/excused/half_day as
+       -- full presence and included excused in the denominator — divergent
+       -- from every other attendance-% surface. absent_count itself is kept
+       -- as-is: it only feeds the timetable_missed_sessions coarse proxy
+       -- below, not the attendance percentage.
        SELECT
          count(*) FILTER (WHERE ar.mark = 'absent')::int AS absent_count,
-         count(*)::int AS total_count
+         ${attendancePercentSql("ar.mark")} AS attendance_percent
        FROM attendance_records ar
        WHERE ar.student_id = s.id AND ar.organization_id = $1 AND ar.school_id = $2
      ) att ON true
@@ -127,9 +136,12 @@ export async function loadStudentSignals(
   );
 
   return rows.map((row) => {
-    const attendancePercent = row.total_attendance > 0
-      ? Math.round(((row.total_attendance - row.absent_count) / row.total_attendance) * 100)
-      : 92;
+    // CANONICAL — attendance_percent is NULL from SQL only when nothing is
+    // marked yet (or every marked day was excused). The risk engine treats
+    // attendance_percent as a plain number, so this falls back to 92 — the
+    // same "no records" default the old total_attendance===0 branch used —
+    // rather than shifting risk scores for students with no/no-usable data.
+    const attendancePercent = row.attendance_percent ?? 92;
     const homeworkCompletionRate = row.hw_total > 0
       ? Math.round((row.hw_submitted / row.hw_total) * 100)
       : 85;

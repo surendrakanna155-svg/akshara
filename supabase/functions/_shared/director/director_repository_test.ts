@@ -49,7 +49,10 @@ class MockDirectorDb {
       return [{ school_id: SCHOOL_A, cnt: 18 }] as T[];
     }
     if (has("FROM attendance_records", "GROUP BY school_id")) {
-      return [{ school_id: SCHOOL_A, present: 90, total: 100 }] as T[]; // 90%
+      // CANONICAL shape: attended (present+late+0.5×half_day) / denom
+      // (total_marked−excused) — 90/100 has no late/excused/half_day mix so
+      // canonical agrees with the old present<>'absent'/total formula: 90%.
+      return [{ school_id: SCHOOL_A, attended: 90, denom: 100 }] as T[]; // 90%
     }
     if (has("FROM exam_mark_entries", "GROUP BY school_id")) {
       return [{ school_id: SCHOOL_A, pass: 80, total: 100 }] as T[]; // 80%
@@ -288,7 +291,8 @@ class SnapshotDb {
     }
     if (has("FROM attendance_records", "AND school_id = $2")) {
       this.ranAggregate = true;
-      return [{ present: 90, total: 100 }] as T[];
+      // CANONICAL shape (attended/denom) — see MockDirectorDb above.
+      return [{ attended: 90, denom: 100 }] as T[];
     }
     if (has("FROM exam_mark_entries", "AND school_id = $2")) {
       this.ranAggregate = true;
