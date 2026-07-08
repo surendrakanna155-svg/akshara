@@ -57,8 +57,11 @@ const ACADEMIC_PHASE_5C_PROBE_COUNT = 20;
 const ACADEMIC_PHASE_5C0B_PROBE_COUNT = 16;
 
 const BASELINE_PROBE_COUNT = 53;
-// Align with global tenant probe target (v7.1 communication + payment probes).
-const EXPECTED_PROBE_COUNT = 220;
+// Coverage FLOOR, not an exact target: tenant-isolation probes may only be ADDED
+// (more coverage). A count BELOW this floor means an isolation guard was removed —
+// that is what this tripwire must catch. Using >= (was exact ==220, which broke on
+// every legitimate addition: 213 -> 220 -> 233). Bump the floor only when adding probes.
+const MIN_PROBE_COUNT = 233;
 
 function extractProbeNames(source: string): string[] {
   const names: string[] = [];
@@ -134,9 +137,12 @@ Deno.test("SIS 5B dashboard probes are registered", () => {
   }
 });
 
-Deno.test("tenant isolation probe count reaches v7.6 target (213)", () => {
+Deno.test("tenant isolation probe count holds the coverage floor (>=233)", () => {
   const names = extractProbeNames(probesSource);
-  assertEquals(names.length, EXPECTED_PROBE_COUNT, `probes: ${names.join(", ")}`);
+  assert(
+    names.length >= MIN_PROBE_COUNT,
+    `tenant-isolation coverage dropped: ${names.length} probes < floor ${MIN_PROBE_COUNT} — an isolation guard was removed. Probes: ${names.join(", ")}`,
+  );
 });
 
 Deno.test("SIS 5A0 probes query operational tables only", () => {
