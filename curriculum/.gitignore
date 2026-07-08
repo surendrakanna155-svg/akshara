@@ -16,3 +16,19 @@ archives/
 logs/*.log
 __pycache__/
 *.pyc
+
+# --- Owner local-storage lock (2026-07-08) --------------------------------
+# Derived / AI-generated knowledge is LOCAL ONLY — NOT committed until the
+# repository-scale decision. Commit only schemas / engine / manifests / tests /
+# code. PROVENANCE_MANIFEST.json (sha256 + source-URL provenance) is the ONE
+# committed manifest; the parsed blueprints, populated indexes/metadata/reports,
+# and acquisition state stay on local disk.
+knowledge/
+indexes/*.json
+metadata/resources/
+reports/*.md
+DOWNLOAD_QUEUE.json
+COMPLETED_DOWNLOADS.json
+FAILED_DOWNLOADS.json
+PROJECT_STATUS.json
+SESSION_LOG.md
