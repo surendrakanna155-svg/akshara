@@ -112,23 +112,23 @@ solver/assembly; cross-lane ERP∥Curriculum is fully parallel.
 
 ---
 
-## 6. 🔒 LOCKED infra decision (owner, 2026-07-08) — curriculum data stays LOCAL
+## 6. 🔒 LOCKED infra decision (owner, 2026-07-08, refined same day) — curriculum data stays LOCAL
 
-- **Download / verify / parse curriculum content as planned** — but **store everything LOCALLY**
-  (downloaded PDFs on local disk under `curriculum/`; all parsed/structured knowledge — catalogue,
-  blueprint JSONs, metadata, indexes, license report — under the local repo).
-- **Commit the derived knowledge to Git.** *(Raw copyrighted PDF binaries stay on local disk;
-  commit a sha256 + provenance manifest rather than the binaries — honours frozen D-2 "binaries
-  gitignored" + D-8 no-republishing. Owner may override to commit the actual PDFs.)*
-- **Do NOT import parsed curriculum data into the VPS or production database yet.**
-- **Do NOT create VPS storage dependencies for curriculum data. Do NOT implement production
-  curriculum import yet.** **VPS = application server ONLY.** Curriculum deploy/import happens
-  later when the final production infra is ready.
-- **Consequence for CI-C1 + every curriculum engine wave:** build the SCHEMA (additive, **dormant**
-  migrations) + ENGINE code + **LOCAL test fixtures** from the parsed blueprint. **Do NOT seed the
-  production DB** with curriculum data and **do NOT wire a production import path.** The parsed
-  blueprint lives as a local `curriculum/` artifact + a test fixture; the engine is exercised
-  against the fixture. Matches the additive-only / template-absent⇒legacy doctrine.
+- **Raw PDFs → local only + gitignored** (under `curriculum/`).
+- **Derived / AI-generated knowledge (parsed blueprint JSONs, catalogue, metadata, indexes, license
+  report) → LOCAL repository only; do NOT commit to Git yet.** Repository-scale knowledge-commit
+  decision comes LATER.
+- **Git commit ONLY: schemas · engine · manifests · tests · code.** A *manifest* = a small sha256 +
+  source-URL + verification-status provenance record (committable); the bulk parsed knowledge is not.
+- **Do NOT import parsed curriculum data into the VPS or production database yet. Do NOT create VPS
+  storage dependencies for curriculum data. Do NOT implement production curriculum import yet.**
+  **VPS = application server ONLY.** Deploy/import happens later when the final production infra is ready.
+- **Consequence for CI-C1 + every curriculum engine wave:** COMMIT = SCHEMA (additive, **dormant**
+  migrations) + ENGINE code + a **hand-authored GENERIC representative blueprint test fixture**
+  (test code) + tests + a provenance manifest. The **AI-extracted CBSE blueprint dataset stays
+  local-only** (validation/reference), NOT committed. **Do NOT seed the production DB** with
+  curriculum data and **do NOT wire a production import path.** Matches the additive-only /
+  template-absent⇒legacy doctrine.
 
 ---
 
