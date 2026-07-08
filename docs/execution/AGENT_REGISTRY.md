@@ -15,6 +15,19 @@ tip → clean integrate; the ERP AsyncValue agent used `main` → un-integrable 
 (downloads/verify/monitor/dashboard/manifest/deterministic) · sonnet (additive impl / mechanical
 refactor / analysis) · opus (deep/complex/architecture/debug).
 
+**Agent Context Preservation (owner 2026-07-08):** when an agent finishes successfully, do NOT
+immediately destroy its execution context. Keep it available until (a) its work is integrated,
+(b) verification is complete, and (c) no follow-up is required. If a completed agent can answer
+questions about its own work (or fix a review finding) more efficiently than spawning a new one,
+**reuse it** (SendMessage its ID). Destroy/clean up (e.g. `git worktree remove`) only after it is
+no longer useful.
+
+**Resume From Existing State (owner 2026-07-08):** on every resume, NEVER rebuild state from
+memory alone. Inspect and treat as source of truth: this Registry · the acquisition dashboard/
+manifests (`curriculum/acquisition/*`) · progress/activity artifacts · existing worktrees
+(`git worktree list`) · local artifacts (`curriculum/resources/**`) · previous agent reports.
+Reconcile against them FIRST, then continue.
+
 ---
 
 ## Active / recoverable
