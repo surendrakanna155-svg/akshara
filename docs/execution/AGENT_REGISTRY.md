@@ -34,7 +34,8 @@ Reconcile against them FIRST, then continue.
 
 | Agent ID | Model | Task | Scope (files) | State | Recovery |
 |---|---|---|---|---|---|
-| `btor0cbhu` (bg task) | — (bash) | **CONTINUOUS acquisition service — RE-CRAWL on fixed crawler** (`09f6285d`: URL-unique filenames + Status-field completion + frontier-drain guard); fresh state after collision-bug backup | `curriculum/resources/**` + `acquisition/` (no git) | 🟢 running (background service) | monitor via manifest + `crawl_continuous.log` READ-ONLY; do NOT interrupt except fatal/owner-stop/completion; resumable |
+| `buewnbpvb` (bg task) | — (bash) | **CONTINUOUS acquisition service — clean re-crawl** (fixed crawler `09f6285d` + FULL store reset via `reset_archive.sh`) | `curriculum/resources/**` + `acquisition/` (no git) | 🟢 running (background service) | monitor via manifest + `crawl_continuous.log` READ-ONLY; do NOT interrupt except fatal/owner-stop/completion; resumable |
+| `bd622y70h` (bg task) | — (bash) | crawl-fix VALIDATOR (waits ≥60 verified → checks disk-vs-manifest for dedup data loss) | read-only | 🟢 running | one-shot; reports PASS/FAIL then exits |
 
 
 ## Terminal this session (2026-07-08) — for provenance / no-duplicate
@@ -58,6 +59,7 @@ Reconcile against them FIRST, then continue.
 | `ac344dba7eaaa20ac` | sonnet | Curriculum B12 + CI-E1b dormant seeds (worktree) | ✅ done | base-verified onto tip `17b83117` → real-Postgres validated → clean cherry-pick → `f0f1cbc5` (education deno 143/0); worktree removed |
 | `bmmfoe83s` (bg task) | (bash) | Continuous acquisition service v1 | ❌ false-completion | stopped on cycle 3 via a completion-detector bug (lowercase `status` read → 0); ALSO surfaced a filename-collision data-loss bug (1192 distinct PDFs → 20 files). Both fixed `09f6285d`; corrupt archive backed up to `curriculum/archives/pre-collision-fix-*`; re-crawl = `btor0cbhu` |
 | `a001d1b3867b3dea7` | sonnet | ERP AsyncValue BATCH 2 (worktree) | ✅ done | base-verified onto tip `17b83117` → 34 sites/20 files → clean cherry-pick → `ec71f8c8` (flutter analyze 0, golden 70/0, broad 1726/0, 0 regen); worktree removed. Residual `.when()` = ~13 bespoke/blocked sites (case-by-case) |
+| `btor0cbhu` (bg task) | (bash) | Re-crawl v2 (filename fix only) | ❌ tainted-reset | filename fix worked (72/72 distinct on disk, 0 overwrite) BUT deduped 136 distinct PDFs against the STALE engine `checksum_index.json` I forgot to reset → verified-but-not-saved. Fixed by `reset_archive.sh` (resets ALL stores); superseded by `buewnbpvb` |
 
 ---
 
