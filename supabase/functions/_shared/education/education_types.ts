@@ -136,6 +136,15 @@ export interface QuestionBankItemRow {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  /**
+   * CI-C8 (v3.0 §10.1) — DORMANT item-exposure counters, mirroring the columns
+   * added dormant by migration 20260853000000 (E1a). Optional: only populated
+   * when a caller SELECTs them; absent on every certified path today. Read by the
+   * pure rotation helper (`education_item_rotation.ts`) to rest / de-prioritise
+   * recently-used items. Never required — undefined ⇒ "never used" (invariant I1).
+   */
+  times_used?: number | null;
+  last_used_at?: string | null;
 }
 
 export interface QuestionPaperRow {
