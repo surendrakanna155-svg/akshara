@@ -44,6 +44,7 @@ export interface PurchaseOrderRow {
   total_amount: number;
   currency: string;
   created_at: string;
+  requested_by: string;
 }
 
 export class PurchaseOrderNotFoundError extends Error {
@@ -57,6 +58,14 @@ export class InvalidPurchaseOrderStateError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "InvalidPurchaseOrderStateError";
+  }
+}
+
+/** Separation of duties: the PO requester cannot also approve their own request. */
+export class PurchaseOrderSelfApproveDeniedError extends Error {
+  constructor(public readonly id: string) {
+    super(`Purchase order requester cannot approve their own request: ${id}`);
+    this.name = "PurchaseOrderSelfApproveDeniedError";
   }
 }
 
@@ -172,7 +181,7 @@ export async function getPurchaseOrder(
   purchaseOrderId: string,
 ): Promise<PurchaseOrderRow | null> {
   const rows = await db.queryObject<PurchaseOrderRow>(
-    `SELECT id, po_number, vendor_id, status, total_amount, currency, created_at
+    `SELECT id, po_number, vendor_id, status, total_amount, currency, created_at, requested_by
      FROM purchase_orders
      WHERE id = $1 AND organization_id = $2 AND school_id = $3`,
     [purchaseOrderId, organizationId, schoolId],
@@ -195,6 +204,13 @@ export async function approvePurchaseOrder(
   if (!po) throw new PurchaseOrderNotFoundError(purchaseOrderId);
   if (po.status !== "draft") {
     throw new InvalidPurchaseOrderStateError(`Cannot approve PO in status ${po.status}`);
+  }
+
+  // Maker-checker: the approver must not be the requester. Only enforced when
+  // the requester id is known (legacy rows with a null requester are skipped
+  // rather than blocked). This runs before any state mutation below.
+  if (po.requested_by && po.requested_by === approvedBy) {
+    throw new PurchaseOrderSelfApproveDeniedError(purchaseOrderId);
   }
 
   await db.queryObject(

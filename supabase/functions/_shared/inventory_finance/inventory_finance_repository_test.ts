@@ -1,4 +1,10 @@
-import { assertEquals } from "jsr:@std/assert@1";
+import { assertEquals, assertRejects } from "jsr:@std/assert@1";
+import type { TenantQueryClient } from "../tenant_db.ts";
+import {
+  approvePurchaseOrder,
+  type PurchaseOrderRow,
+  PurchaseOrderSelfApproveDeniedError,
+} from "./inventory_finance_repository.ts";
 
 Deno.test("weighted average cost formula", () => {
   const oldQty = 10;
@@ -129,4 +135,83 @@ Deno.test("stock migration: valuations RLS gets WITH CHECK; ledger is insert-onl
   assertEquals(withCheckCount >= 6, true, `expected >=6 WITH CHECK clauses, saw ${withCheckCount}`);
   // SoD backstop: checker can never be the maker at the DB level.
   assertEquals(sql.includes("stock_adjustment_checker_not_maker"), true);
+});
+
+// ─── Gap-sweep FIX 1: Purchase-order maker-checker (P0 self-approval hole) ───
+//
+// approvePurchaseOrder had NO maker != checker check, so a single user with
+// manageInventory + approvePurchaseOrder (both commonly granted to the same
+// role, e.g. schoolAdmin) could create a PO and approve their own request.
+// Mirrors the stock domain's StockSelfApproveDeniedError (see
+// "maker-checker: self-approve is blocked (409)" above) and the refund
+// domain's RefundSelfApprovalError.
+
+const PO_ORG = "e1000000-0000-4000-8000-000000000001";
+const PO_SCHOOL = "e2000000-0000-4000-8000-000000000001";
+const PO_MAKER = "e3000000-0000-4000-8000-000000000001";
+const PO_CHECKER = "e3000000-0000-4000-8000-000000000002";
+const PO_ID = "e4000000-0000-4000-8000-000000000001";
+
+/** Stateful in-memory model of the purchase-order approval flow. */
+class FakePoDb {
+  po: PurchaseOrderRow = {
+    id: PO_ID,
+    po_number: "PO-1001",
+    vendor_id: "vendor-1",
+    status: "draft",
+    total_amount: 5000,
+    currency: "INR",
+    created_at: "2026-07-08T00:00:00.000Z",
+    requested_by: PO_MAKER,
+  };
+
+  // deno-lint-ignore no-explicit-any
+  async queryObject<T>(sql: string, args: any[] = []): Promise<T[]> {
+    if (sql.includes("FROM purchase_orders") && sql.includes("SELECT id, po_number")) {
+      return (this.po.id === args[0] ? [{ ...this.po }] : []) as T[];
+    }
+    if (sql.includes("UPDATE purchase_orders") && sql.includes("SET status = 'approved'")) {
+      this.po = { ...this.po, status: "approved" };
+      return [] as T[];
+    }
+    if (sql.includes("INSERT INTO finance_ap_commitments")) {
+      return [{ id: "ap-commitment-1" }] as T[];
+    }
+    if (sql.includes("INSERT INTO inventory_finance_postings")) {
+      return [{ id: "posting-1" }] as T[];
+    }
+    if (sql.includes("INSERT INTO procurement_finance_links")) {
+      return [] as T[];
+    }
+    throw new Error(`Unhandled SQL in FakePoDb: ${sql.slice(0, 80)}`);
+  }
+}
+
+function poDb(fake: FakePoDb): TenantQueryClient {
+  return fake as unknown as TenantQueryClient;
+}
+
+Deno.test("PO maker-checker: self-approve is blocked (PurchaseOrderSelfApproveDeniedError)", async () => {
+  const fake = new FakePoDb();
+  await assertRejects(
+    () => approvePurchaseOrder(poDb(fake), PO_ORG, PO_SCHOOL, PO_ID, PO_MAKER),
+    PurchaseOrderSelfApproveDeniedError,
+  );
+  assertEquals(fake.po.status, "draft", "PO must stay draft on a blocked self-approve");
+});
+
+Deno.test("PO maker-checker: approve by a different user succeeds (finance-integrated)", async () => {
+  const fake = new FakePoDb();
+  const result = await approvePurchaseOrder(poDb(fake), PO_ORG, PO_SCHOOL, PO_ID, PO_CHECKER);
+  assertEquals(result.purchaseOrder.status, "approved");
+  assertEquals(result.apCommitmentId, "ap-commitment-1");
+  assertEquals(fake.po.status, "approved");
+});
+
+Deno.test("PO maker-checker: legacy PO with no requested_by is not blocked (defensive skip)", async () => {
+  const fake = new FakePoDb();
+  // deno-lint-ignore no-explicit-any
+  (fake.po as any).requested_by = null;
+  const result = await approvePurchaseOrder(poDb(fake), PO_ORG, PO_SCHOOL, PO_ID, PO_MAKER);
+  assertEquals(result.purchaseOrder.status, "approved");
 });

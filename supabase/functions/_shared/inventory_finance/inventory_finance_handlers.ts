@@ -21,6 +21,7 @@ import {
   listStockValuations,
   listVendors,
   PurchaseOrderNotFoundError,
+  PurchaseOrderSelfApproveDeniedError,
   receiveGoods,
 } from "./inventory_finance_repository.ts";
 
@@ -295,6 +296,9 @@ export async function handleApprovePurchaseOrder(
     }
     if (error instanceof InvalidPurchaseOrderStateError) {
       return errorEnvelope("VALIDATION_ERROR", error.message, 422);
+    }
+    if (error instanceof PurchaseOrderSelfApproveDeniedError) {
+      return errorEnvelope("SELF_APPROVE_DENIED", error.message, 409);
     }
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
     return errorEnvelope("INTERNAL_ERROR", "Failed to approve purchase order", 500);

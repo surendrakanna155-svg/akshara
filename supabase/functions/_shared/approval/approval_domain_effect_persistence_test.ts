@@ -9,13 +9,18 @@
 // to the audit effect. The actual persisted row after a live decision is the
 // Track-B live leg (needs ERP_TENANT_DATABASE_URL / RLS).
 
-import { assert, assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import {
+  assert,
+  assertEquals,
+  assertRejects,
+} from "https://deno.land/std@0.224.0/assert/mod.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 import { applyApprovalTypeHandler } from "./approval_type_handlers.ts";
 import { flipLeaveDecision } from "./leave_decision_effect.ts";
 import { isF2ApprovalType } from "./approval_types.ts";
 import { approvalPermissionForType } from "./approval_permissions.ts";
 import type { ApprovalRequestRow } from "./approval_types.ts";
+import { PurchaseOrderSelfApproveDeniedError } from "../inventory_finance/inventory_finance_repository.ts";
 
 const ORG = "a1000000-0000-4000-8000-000000000001";
 const SCHOOL = "a2000000-0000-4000-8000-000000000001";
@@ -49,6 +54,7 @@ interface SpyOpts {
   mobileHit?: boolean; // UPDATE mobile_leave_requests returns a row
   snapshotLeaveId?: string; // lockSnapshot returns a snapshot holding this leave id
   poStatus?: string | null; // getPurchaseOrder result status (null = absent)
+  poRequestedBy?: string; // getPurchaseOrder result requested_by (maker-checker)
 }
 
 class SpyDb {
@@ -75,6 +81,7 @@ class SpyDb {
         total_amount: 1000,
         currency: "INR",
         created_at: "2026-07-01T00:00:00Z",
+        requested_by: this.opts.poRequestedBy ?? null,
       }] as unknown as T[]);
     }
     if (sql.includes("finance_fee_structures")) {
@@ -205,6 +212,31 @@ Deno.test("applyApprovalTypeHandler inventoryPo approve on a non-draft PO → au
   );
   assertEquals(payload.poRowUpdated, false);
   assert(typeof payload.poNote === "string");
+});
+
+// Gap-sweep FIX 1 backstop: the repo-level maker-checker guard inside
+// approvePurchaseOrder must NOT be swallowed by this case's catch block (which
+// only absorbs PurchaseOrderNotFoundError / InvalidPurchaseOrderStateError as
+// "row not re-applied"). A self-approve is a security denial, not a no-op —
+// it must propagate so the caller (decideOne in approval_handlers.ts) can map
+// it to a 403, never silently succeed with poRowUpdated:false.
+Deno.test("applyApprovalTypeHandler inventoryPo approve → self-approve PROPAGATES (not swallowed), PO row untouched", async () => {
+  const spy = new SpyDb({ poStatus: "draft", poRequestedBy: ACTOR });
+  await assertRejects(
+    () =>
+      applyApprovalTypeHandler(
+        db(spy),
+        ORG,
+        SCHOOL,
+        approval({ type: "inventoryPo", entity_type: "purchase_order", entity_id: "po_1" }),
+        "approved",
+        undefined,
+        ACTOR, // actor === the PO's own requested_by
+      ),
+    PurchaseOrderSelfApproveDeniedError,
+  );
+  assertEquals(spy.captured("UPDATE purchase_orders").length, 0, "PO must not be mutated on a blocked self-approve");
+  assertEquals(spy.captured("finance_ap_commitments").length, 0, "no AP commitment on a blocked self-approve");
 });
 
 Deno.test("feeStructure is now a recognised approval type with an approve permission", () => {

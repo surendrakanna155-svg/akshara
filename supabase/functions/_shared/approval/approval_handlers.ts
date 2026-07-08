@@ -9,6 +9,7 @@ import {
 } from "../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
+import { PurchaseOrderSelfApproveDeniedError } from "../inventory_finance/inventory_finance_repository.ts";
 import { approvalPermissionForType } from "./approval_permissions.ts";
 import { isClassTeacherForClass } from "../academic/teacher_assignments_repository.ts";
 import {
@@ -166,9 +167,15 @@ export async function decideOne(
     // Self-approve (inventoryPo) + SoD (examResults verifier) are enforced
     // inside decideApproval; reject-without-comment + not-pending too. Turn each
     // into a structured outcome so the batch can skip rather than abort.
+    // PurchaseOrderSelfApproveDeniedError is the repo-level backstop inside
+    // approvePurchaseOrder (applyApprovalTypeHandler's inventoryPo case) — it can
+    // fire even when decideApproval's own requester_id check passes (e.g. the
+    // approval row's requester_id drifted from the PO's own requested_by), so it
+    // is mapped the same way here: a per-item denial, never a 500.
     if (
       error instanceof ApprovalSelfApproveDeniedError ||
-      error instanceof ApprovalSeparationOfDutiesError
+      error instanceof ApprovalSeparationOfDutiesError ||
+      error instanceof PurchaseOrderSelfApproveDeniedError
     ) {
       return { kind: "denied", message: error.message };
     }
@@ -353,12 +360,18 @@ export async function handleSubmitApproval(
   const type = optionalStr(body, "type", "type");
   const title = optionalStr(body, "title", "title");
   const summary = optionalStr(body, "summary", "summary");
-  const requesterId = optionalStr(body, "requester_id", "requesterId");
+  // SECURITY: the requester identity MUST be the authenticated caller, never a
+  // client-supplied field — decideApproval's self-approve/SoD guard (see
+  // SELF_APPROVE_DENIED_TYPES) compares the stored requester_id to the actor
+  // deciding it. A body-sourced requester_id let a caller submit under a bogus
+  // identity and then approve their own request. A client-supplied
+  // requester_id is now silently ignored.
+  const requesterId = auth.claims.sub;
   const requesterName = optionalStr(body, "requester_name", "requesterName");
   const entityType = optionalStr(body, "entity_type", "entityType");
   const entityId = optionalStr(body, "entity_id", "entityId");
 
-  if (!type || !title || !summary || !requesterId || !requesterName || !entityType || !entityId) {
+  if (!type || !title || !summary || !requesterName || !entityType || !entityId) {
     return errorEnvelope("VALIDATION_ERROR", "Missing required approval fields", 422);
   }
 

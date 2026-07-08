@@ -1039,12 +1039,18 @@ export async function handleUpdateApplication(
 
   try {
     const app = await runTenant(config, auth.claims, async (db) => {
+      // SECURITY: `status` is intentionally NOT accepted here. This generic
+      // endpoint is gated only on manageAdmissions, so forwarding a
+      // client-supplied status would let a counselor self-approve an
+      // application, bypassing the dedicated approve path (handleApproveAdmission
+      // → setApprovalDecision), which requires approveAdmissions and enforces
+      // the maker != checker SoD guard (AdmissionsSelfApproveDeniedError).
+      // 'approved'/'rejected' may ONLY be set via that dedicated path.
       const updated = await updateApplication(db, orgId, schoolId, applicationId, {
         studentName: optionalSnakeStr(body, "student_name"),
         classLabel: optionalSnakeStr(body, "class_label"),
         parentName: optionalSnakeStr(body, "parent_name"),
         counselor: optionalSnakeStr(body, "counselor"),
-        status: optionalSnakeStr(body, "status"),
       });
       if (!updated) return null;
       await emitMutationAudit(db, auth.claims, admissionsAudit.applicationUpdated(applicationId), req);
