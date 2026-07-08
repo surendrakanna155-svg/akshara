@@ -10,6 +10,7 @@
 - **D-4** Board order: **CBSE → Andhra Pradesh → Telangana → CISCE**.
 - **D-5** Mandatory **Repository Certification**: `Downloaded → Verified → Repository Certified → Knowledge Base`; KB never starts before certification.
 - **D-6** **Question Trust Lifecycle:** `RAW → EXTRACTED → AI_VALIDATED → TEACHER_VALIDATED → CERTIFIED`; only CERTIFIED questions feed production generation by default (existing approved bank rows ≙ CERTIFIED; composes with the v3.0 evidence trust pipeline downstream).
+- **D-7** 🟡 *proposed — owner-approved 2026-07-08, ratification pending:* **certification at the Question *Family* level** (parameterized families) so the deterministic engine mints unlimited per-student instances with **zero runtime AI (proposed invariant I9)**. Tracked in [`proposals/`](proposals/README.md) (Amendment **A2**); **not yet merged** into the frozen specs — sequencing unchanged.
 
 ## What this is
 
@@ -22,6 +23,10 @@ The Curriculum Intelligence Pipeline: build a verified official-curriculum repos
 3. The canonical program specs (below): the MCIP (data pipeline) + the **AIMS** (assessment-intelligence layer, Amendment A1). AIMS declares itself an *extension* of the Program Baseline, never a replacement (its Part 1).
 
 ## Documents
+
+### `proposals/` — tracked planning proposals (🟡 pending owner ratification; not merged)
+- [`proposals/README.md`](proposals/README.md) — **Proposals Register** (the canonical index; a proposal is tracked here from draft → ratified/withdrawn).
+- [`proposals/AMENDMENT_A2_PER_STUDENT_PRACTICE_GENERATION.md`](proposals/AMENDMENT_A2_PER_STUDENT_PRACTICE_GENERATION.md) — **Amendment A2** (🟡 Pending Owner Ratification; direction + D-7 + I9 + §12 owner-approved 2026-07-08): deterministic per-student practice & DPP generation engine (family-level certification, zero runtime AI). Integrates onto CI-C10/C1/C3/C8 + v3.0 §13; **no sequencing change until ratified.**
 
 ### Integration & handoff (2026-07-07 — read these first)
 - [`INTEGRATION_AND_READINESS_REVIEW.md`](INTEGRATION_AND_READINESS_REVIEW.md) — repository-verified deliverable audit, consistency review, **roadmap integration (CI-DATA parallel track + P1-CI-0 pre-red-team wave + v3.0 Phase-1 mapping)**, Red-Team position, readiness assessment.

@@ -5,6 +5,8 @@
 
 > **Owner decisions binding every wave (full record: [`audits/GAP_ANALYSIS.md`](audits/GAP_ANALYSIS.md) §3):**
 > **D-1** certified engine stays the production engine — extend, never replace/redesign · **D-2** `curriculum/` workspace, binaries gitignored · **D-3** three-layer model — L1 official corpus / L2 PYQ Intelligence (analysis only) / **L3 Certified Question Bank = the only default production source** · **D-4** boards CBSE → AP → TS → CISCE · **D-5** `Downloaded → Verified → Repository Certified → Knowledge Base` (KB never before certification) · **D-6** question lifecycle `RAW → EXTRACTED → AI_VALIDATED → TEACHER_VALIDATED → CERTIFIED`; only CERTIFIED generates by default.
+>
+> 🟡 **Pending proposal (owner-approved direction, ratification pending — does NOT change this handoff's sequencing):** **Amendment A2** — *Deterministic Per-Student Practice & DPP Generation Engine* ([`proposals/AMENDMENT_A2_PER_STUDENT_PRACTICE_GENERATION.md`](proposals/AMENDMENT_A2_PER_STUDENT_PRACTICE_GENERATION.md); register [`proposals/README.md`](proposals/README.md)). Adds **D-7** (Question-*Family*-level certification) + **I9** (zero-runtime-AI invariant) so the deterministic engine mints unlimited per-student instances (100 students → 100 unique papers; N sets · daily DPP · unlimited practice), exam-agnostic. Reconciles with I1 (extended) and I3 (untouched — runtime AI-free). On ratification it **extends** CI-C10/C1/C3/C8 + v3.0 §13 post-pilot; **no wave re-ordered, no spec merged, no implementation until ratified.**
 
 ---
 

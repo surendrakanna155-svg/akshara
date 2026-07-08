@@ -4,6 +4,14 @@
 **Derived from:** [`../audits/GAP_ANALYSIS.md`](../audits/GAP_ANALYSIS.md) (verdicts + owner decisions D-1..D-4) · 🔒 v3.0 D1–D11 · [`../spec/ASSESSMENT_INTELLIGENCE_MASTER_SPECIFICATION.md`](../spec/ASSESSMENT_INTELLIGENCE_MASTER_SPECIFICATION.md) (AIMS, Amendment A1) · the certified as-built engine.
 **This is the master ordering document.** All other planning docs reference the wave IDs defined here.
 
+> 🟡 **Pending planning proposal (does NOT change this sequence):** Amendment **A2** — *Deterministic
+> Per-Student Practice & DPP Generation Engine* ([`../proposals/AMENDMENT_A2_PER_STUDENT_PRACTICE_GENERATION.md`](../proposals/AMENDMENT_A2_PER_STUDENT_PRACTICE_GENERATION.md);
+> direction + D-7 + I9 owner-approved 2026-07-08, ratification pending). On ratification it would
+> **extend** — never reorder — waves **CI-C10** (family-level certification), **CI-C1** (deterministic
+> runtime instantiation), **CI-C3** (generation modes), **CI-C8** (per-student non-repetition), and
+> the v3.0 §13 DPP scheduler. Until ratified, all wave IDs, order, dependencies, and goal lines below
+> are unchanged. Proposals register: [`../proposals/README.md`](../proposals/README.md).
+
 ---
 
 ## 1. Two-lane model (the core sequencing decision)
