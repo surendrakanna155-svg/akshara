@@ -181,7 +181,18 @@ export async function waiveLateFee(
   const lateFee = toNumber(invoice.late_fee_amount);
   if (lateFee <= 0) throw new NoLateFeeError(invoiceId);
 
-  const newOutstanding = Math.max(0, toNumber(invoice.outstanding_amount) - lateFee);
+  // FIX (P1-PROD gap sweep): the invoice side is floored at 0 — if a payment
+  // landed between accrual and waive, the invoice may already owe LESS than
+  // the full accrued fee, and only that remainder can genuinely be forgiven.
+  // The account side MUST reverse the exact same delta, or the two diverge:
+  // the invoice under-forgives (correctly) but the account over-forgives,
+  // permanently understating the family's aggregate dues (and feeding bad
+  // numbers into FIX 1's aging). This mirrors every other finance mutation
+  // (e.g. `finance_collections_repository.ts` collect/refund), which always
+  // applies the SAME delta to the invoice and the account.
+  const outstandingBeforeWaive = toNumber(invoice.outstanding_amount);
+  const invoiceDelta = Math.min(lateFee, outstandingBeforeWaive);
+  const newOutstanding = Math.max(0, outstandingBeforeWaive - invoiceDelta);
 
   const updated = await db.queryObject<FinanceInvoiceRow>(
     `UPDATE finance_invoices SET
@@ -199,8 +210,8 @@ export async function waiveLateFee(
        outstanding_amount = GREATEST(0, outstanding_amount - $1),
        updated_at = timezone('utc', now())
      WHERE id = $2 AND organization_id = $3 AND school_id = $4`,
-    [formatNumeric(lateFee), invoice.student_account_id, organizationId, schoolId],
+    [formatNumeric(invoiceDelta), invoice.student_account_id, organizationId, schoolId],
   );
 
-  return { invoice: updated[0]!, waivedAmount: lateFee };
+  return { invoice: updated[0]!, waivedAmount: invoiceDelta };
 }

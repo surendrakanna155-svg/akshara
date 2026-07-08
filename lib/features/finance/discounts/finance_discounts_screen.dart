@@ -50,6 +50,20 @@ class FinanceDiscountsScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // NOT-YET-APPLIED caveat (mirrors FIN-D4 fee concessions): scholarships
+        // and discount rules are recorded here, but no invoice/fee-structure
+        // path reduces a student's payable from them yet — surface this
+        // up-front so "Active" is never mistaken for "already applied".
+        const AksharaWarningBanner(
+          message:
+              'Scholarships and discount rules are recorded here but do not '
+              'yet reduce a student\'s fee — applying them to live invoices '
+              'is a tracked follow-up.',
+          compactMessage: true,
+          semanticLabel:
+              'Scholarships and discount rules do not yet reduce student fees',
+        ),
+        const SizedBox(height: AksharaSpacing.s4),
         FinanceKpiRow(
           desktopColumns: 4,
           cardHeight: 100,

@@ -1,3 +1,13 @@
+// Scholarships — full CRUD (this file) + a live admin screen
+// (`finance_discounts_screen.dart`), but NOT-YET-APPLIED to live payable: no
+// fee-structure/invoice/assignment code path reads `finance_scholarships` to
+// reduce a student's fee. A scholarship marked "active" (and any student
+// assignment against it) only records intent — it does NOT change any
+// invoice/outstanding amount. Same not-yet-applied caveat as FIN-D4 fee
+// concessions (`finance_fee_concessions_repository.ts`); wiring the actual
+// reduction into invoice/assignment totals is a documented, owner-gated
+// follow-up.
+
 import type { TenantQueryClient } from "../tenant_db.ts";
 
 export type ScholarshipType =

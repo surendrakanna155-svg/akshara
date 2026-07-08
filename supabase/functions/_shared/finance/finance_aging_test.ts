@@ -2,7 +2,7 @@
 // +30 due date is removed from the issue transition.
 
 import { assert, assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { overdueDaysSql } from "./finance_aging.ts";
+import { overdueDaysSql, pickEffectiveDueDate } from "./finance_aging.ts";
 import { listCallQueue } from "./finance_recovery_repository.ts";
 import { issueInvoice } from "./finance_invoices_repository.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
@@ -29,11 +29,23 @@ function fakeDb(
   return { db, calls };
 }
 
-Deno.test("FIN-6: overdueDaysSql ages off the earliest installment due date, falling back to invoice.due_date", () => {
+Deno.test("FIN-6: overdueDaysSql ages off the earliest NOT-YET-COVERED installment due date, falling back to invoice.due_date", () => {
   const sql = overdueDaysSql("fsa.student_id", "fsa.organization_id");
   // Uses the installment schedule…
   assert(sql.includes("finance_invoice_installments"));
-  assert(sql.includes("MIN(ii.due_date)"));
+  // …cumulative-summing term amounts in due-date order…
+  assert(sql.includes("SUM(ii.amount_minor) OVER"));
+  assert(sql.includes("ORDER BY ii.due_date, ii.term_no"));
+  // …and picks the first term whose running total exceeds what's actually
+  // been paid on the invoice so far (NOT the raw MIN(due_date) — that was the
+  // FIN-PROD-2 bug: an early-paid term kept pinning aging to term 1 forever).
+  assert(sql.includes("running_total >"));
+  assert(
+    sql.includes(
+      "(fi.total_amount - fi.outstanding_amount + fi.late_fee_amount)",
+    ),
+  );
+  assert(!sql.includes("MIN(ii.due_date)"));
   // …with a COALESCE fallback to the invoice's own due date (single-term /
   // legacy invoices age exactly as before).
   assert(sql.includes("fi.due_date"));
@@ -90,6 +102,52 @@ Deno.test("FIN-6: aging is behaviour-preserving by default (COALESCE to invoice.
   // default term's due date equals the invoice due date, effective_due falls
   // back to fi.due_date — so single-term / un-scheduled invoices age unchanged.
   const sql = overdueDaysSql("x.sid", "x.org").replace(/\s+/g, " ");
-  assert(sql.includes("COALESCE( (SELECT MIN(ii.due_date)"));
-  assert(sql.includes("fi.id), fi.due_date) AS effective_due"));
+  assert(sql.includes("fi.due_date) AS effective_due"));
+  assert(sql.includes("LIMIT 1 ), fi.due_date"));
+});
+
+// --- FIX 1 (P1-PROD gap sweep) --------------------------------------------
+// `pickEffectiveDueDate` is the pure mirror of the SQL predicate above (see
+// its docstring in finance_aging.ts) — it is what actually exercises the
+// cumulative-sum "earliest still-unpaid term" algorithm in these unit tests,
+// since there is no live Postgres in this repo's `deno test` run to execute
+// the window-function SQL against.
+
+Deno.test("FIX 1: single-term (default) invoice ages unchanged — always term 1 / invoice due_date, paid or not", () => {
+  const dueDate = "2026-08-01";
+  const installments = [{ dueDate, amount: 50000, termNo: 1 }];
+  // Unpaid.
+  assertEquals(pickEffectiveDueDate(installments, 0, dueDate), dueDate);
+  // Partially paid — still the same single term/date (byte-identical to the
+  // pre-fix behaviour, which always used the single MIN(due_date)).
+  assertEquals(pickEffectiveDueDate(installments, 20000, dueDate), dueDate);
+});
+
+Deno.test("FIX 1: legacy invoice with no schedule falls back to invoice.due_date", () => {
+  assertEquals(pickEffectiveDueDate([], 0, "2026-08-01"), "2026-08-01");
+});
+
+Deno.test("FIX 1: 2-term invoice, pay covering term 1 → aging reflects term 2 only (not term 1)", () => {
+  const installments = [
+    { dueDate: "2026-06-01", amount: 25000, termNo: 1 },
+    { dueDate: "2026-12-01", amount: 25000, termNo: 2 },
+  ];
+  // Term 1 fully covered by what's been paid so far → the earliest
+  // NOT-yet-covered term is term 2, not the old MIN(due_date) = term 1.
+  assertEquals(
+    pickEffectiveDueDate(installments, 25000, "2026-12-01"),
+    "2026-12-01",
+  );
+  // Nothing paid yet → still pinned to term 1 (the genuinely-earliest unpaid
+  // term).
+  assertEquals(
+    pickEffectiveDueDate(installments, 0, "2026-12-01"),
+    "2026-06-01",
+  );
+  // Everything covered (e.g. paid in full, only an unrelated late fee keeps
+  // the invoice non-"paid") → falls back to the invoice's own due_date.
+  assertEquals(
+    pickEffectiveDueDate(installments, 50000, "2026-12-01"),
+    "2026-12-01",
+  );
 });
