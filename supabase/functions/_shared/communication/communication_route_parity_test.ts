@@ -5,6 +5,7 @@ import {
   handleCreateTemplate,
   handleListTemplates,
   handleParentMessageThreads,
+  handleParentSendMessage,
   handleUpdateTemplate,
 } from "./communication_handlers.ts";
 
@@ -61,6 +62,20 @@ Deno.test("MJ-C3: GET /parent/messages aliases to handleParentMessageThreads", (
   const withThreads = matchCommunicationRoute("GET", "/parent/messages/threads");
   assert(withThreads !== null);
   assertEquals(withThreads!.handler, handleParentMessageThreads);
+});
+
+// GAP-P1-7: the client posts a reply to /parent/messages (ParentApiPaths.messages
+// in parent_remote_datasource.dart's sendMessage); only /parent/messages/send
+// was registered, so a real parent->teacher reply 404'd silently (the client
+// swallows the error). Both paths must resolve to the send handler.
+Deno.test("GAP-P1-7: POST /parent/messages aliases to handleParentSendMessage", () => {
+  const bare = matchCommunicationRoute("POST", "/parent/messages");
+  assert(bare !== null, "POST /parent/messages must resolve (no trailing /send)");
+  assertEquals(bare!.handler, handleParentSendMessage);
+
+  const withSend = matchCommunicationRoute("POST", "/parent/messages/send");
+  assert(withSend !== null);
+  assertEquals(withSend!.handler, handleParentSendMessage);
 });
 
 Deno.test("unknown communication routes still return null (no false match)", () => {

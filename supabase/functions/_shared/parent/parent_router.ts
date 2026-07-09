@@ -25,13 +25,24 @@ import {
   handleTimetable,
 } from "./parent_handlers.ts";
 import {
+  handleAcknowledgeCommunication,
   handleCommunicationInbox,
   handleCommunicationMessage,
   handleListMeetings,
+  handleMarkCommunicationRead,
   handleMeetingRsvp,
 } from "./parent_write_handlers.ts";
 
 type ParentHandler = (req: Request, config: AppConfig) => Promise<Response>;
+
+/** GAP-P1-8: matches `/parent/communication/{id}/read` — captures the id. */
+const COMMUNICATION_READ_PATH = /^\/parent\/communication\/([^/]+)\/read$/;
+
+/** GAP-P1-8: matches `/parent/communication/{id}/acknowledge` — captures the
+ * id. Distinct resource from `/communications/notifications/{id}/acknowledge`
+ * (a communication-delivery-receipt ack), which is owned by the communication
+ * router. */
+const COMMUNICATION_ACK_PATH = /^\/parent\/communication\/([^/]+)\/acknowledge$/;
 
 export function matchParentRoute(
   method: string,
@@ -61,6 +72,22 @@ export function matchParentRoute(
     // child (parent-scoped; RLS restricts to student_guardians-linked children).
     if (path === "/parent/attendance/corrections") {
       return { handler: handleParentCreateAttendanceCorrection };
+    }
+    // GAP-P1-8 — mark a communication read / acknowledge it (consent receipt).
+    // Checked before returning null so a real client call no longer 404s.
+    const readMatch = COMMUNICATION_READ_PATH.exec(path);
+    if (readMatch) {
+      const communicationId = decodeURIComponent(readMatch[1]);
+      return {
+        handler: (req, config) => handleMarkCommunicationRead(req, config, communicationId),
+      };
+    }
+    const ackMatch = COMMUNICATION_ACK_PATH.exec(path);
+    if (ackMatch) {
+      const communicationId = decodeURIComponent(ackMatch[1]);
+      return {
+        handler: (req, config) => handleAcknowledgeCommunication(req, config, communicationId),
+      };
     }
     return null;
   }

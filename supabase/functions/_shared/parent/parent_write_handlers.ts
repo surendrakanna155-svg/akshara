@@ -319,6 +319,172 @@ export async function handleCommunicationMessage(
   }
 }
 
+// ─── GAP-P1-8 — parent communication read/acknowledge ────────────────────────
+// The client posts to /parent/communication/:id/read and /acknowledge with no
+// body (see parent_communication_inbox_provider.dart), so the target child is
+// not named on the request. We resolve it by searching across ALL of the
+// parent's linked children (own-child scope: bounded to `claims.child_ids`,
+// and doubly enforced by the parent_entities_parent_scope RLS policy, which
+// only admits rows for children actively linked via student_guardians).
+
+/** Find a communication_message entity across the parent's linked children. */
+async function findOwnCommunicationEntity(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  childIds: string[],
+  communicationId: string,
+): Promise<{ studentId: string; payload: Record<string, unknown> } | null> {
+  if (childIds.length === 0) return null;
+  const rows = await db.queryObject<{ student_id: string; payload: Record<string, unknown> }>(
+    `SELECT student_id, payload
+       FROM ${PARENT_TABLE}
+      WHERE organization_id = $1
+        AND school_id = $2
+        AND student_id = ANY($3::uuid[])
+        AND entity_type = 'communication_message'
+        AND id = $4`,
+    [organizationId, schoolId, childIds, communicationId],
+  );
+  const row = rows[0];
+  return row ? { studentId: row.student_id, payload: row.payload } : null;
+}
+
+/**
+ * POST /parent/communication/:id/read — persists read state so the item
+ * leaves the parent action inbox (`parentActiveChildActionsProvider` filters
+ * on `isUnread`). Idempotent: re-marking an already-acknowledged message as
+ * read never downgrades its `deliveryStatus` back from "acknowledged", and the
+ * mutation audit only fires on the first (unread -> read) transition.
+ */
+export async function handleMarkCommunicationRead(
+  req: Request,
+  config: AppConfig,
+  communicationId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireParentScope(auth.claims);
+  if (denied) return denied;
+
+  const organizationId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const result = await withTenantContext(config, auth.claims, async (db) => {
+      const found = await findOwnCommunicationEntity(
+        db,
+        organizationId,
+        schoolId,
+        auth.claims.child_ids,
+        communicationId,
+      );
+      if (!found) return null;
+
+      const wasUnread = found.payload.isUnread !== false;
+      const alreadyAcknowledged = found.payload.deliveryStatus === "acknowledged";
+      const next = {
+        ...found.payload,
+        isUnread: false,
+        deliveryStatus: alreadyAcknowledged ? "acknowledged" : "read",
+        readAt: found.payload.readAt ?? nowIso(),
+      };
+      const saved = await replaceParentEntity(
+        db,
+        organizationId,
+        schoolId,
+        found.studentId,
+        "communication_message",
+        communicationId,
+        next,
+      );
+      if (wasUnread) {
+        await emitMutationAudit(
+          db,
+          auth.claims,
+          moduleEntityAudit("parent.communication.read", "parent_communication_message", communicationId),
+          req,
+        );
+      }
+      return toInboxItem(saved ?? next);
+    });
+    if (!result) {
+      return errorEnvelope("NOT_FOUND", `Communication not found: ${communicationId}`, 404);
+    }
+    return jsonResponse(envelope(result));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    console.error("parent communication read error:", error);
+    return errorEnvelope("INTERNAL_ERROR", "Failed to mark communication read", 500);
+  }
+}
+
+/**
+ * POST /parent/communication/:id/acknowledge — persists the parent's consent
+ * acknowledgement (own-child scoped, same lookup as read above). Always sets
+ * the terminal `deliveryStatus`/`isUnread`, and backfills `readAt` too if the
+ * parent acknowledged without an intervening explicit read.
+ */
+export async function handleAcknowledgeCommunication(
+  req: Request,
+  config: AppConfig,
+  communicationId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireParentScope(auth.claims);
+  if (denied) return denied;
+
+  const organizationId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const result = await withTenantContext(config, auth.claims, async (db) => {
+      const found = await findOwnCommunicationEntity(
+        db,
+        organizationId,
+        schoolId,
+        auth.claims.child_ids,
+        communicationId,
+      );
+      if (!found) return null;
+
+      const now = nowIso();
+      const next = {
+        ...found.payload,
+        isUnread: false,
+        deliveryStatus: "acknowledged",
+        readAt: found.payload.readAt ?? now,
+        acknowledgedAt: now,
+      };
+      const saved = await replaceParentEntity(
+        db,
+        organizationId,
+        schoolId,
+        found.studentId,
+        "communication_message",
+        communicationId,
+        next,
+      );
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        moduleEntityAudit("parent.communication.acknowledge", "parent_communication_message", communicationId),
+        req,
+      );
+      return toInboxItem(saved ?? next);
+    });
+    if (!result) {
+      return errorEnvelope("NOT_FOUND", `Communication not found: ${communicationId}`, 404);
+    }
+    return jsonResponse(envelope(result));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    console.error("parent communication acknowledge error:", error);
+    return errorEnvelope("INTERNAL_ERROR", "Failed to acknowledge communication", 500);
+  }
+}
+
 // ─── MJ-C4 — parent meetings / PTM ───────────────────────────────────────────
 
 /** Default empty arrays so the Flutter PTM mapper never NPEs on a fresh meeting. */

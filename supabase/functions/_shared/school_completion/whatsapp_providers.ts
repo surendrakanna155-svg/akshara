@@ -31,10 +31,15 @@ export async function sendWhatsAppMessage(
 
   switch (config.provider) {
     case "stub":
+      // GAP-P1-9: "stub" is the fallback for a school that has never configured
+      // a real WhatsApp provider (see whatsAppConfigToRuntime's default). It
+      // used to report success:true, which fabricated 100% delivery on every
+      // dashboard for a school that never sent a single real message. Report
+      // the truth instead: nothing was actually sent.
       return {
-        success: true,
-        providerRef: `wa_stub_${crypto.randomUUID().slice(0, 8)}`,
-        error: null,
+        success: false,
+        providerRef: null,
+        error: "WhatsApp provider is not configured for this school",
       };
     case "msg91":
       return await sendViaMsg91(config, payload);

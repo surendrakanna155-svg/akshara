@@ -148,7 +148,14 @@ export function matchCommunicationRoute(
   ) {
     return { handler: handleParentMessageThreads };
   }
-  if (method === "POST" && path === "/parent/messages/send") {
+  // GAP-P1-7: the client posts to /parent/messages to send a reply (mirrors the
+  // GET thread-list alias above); only /parent/messages/send was registered, so
+  // a real parent->teacher reply 404'd silently. Alias both paths to the same
+  // send handler.
+  if (
+    method === "POST" &&
+    (path === "/parent/messages/send" || path === "/parent/messages")
+  ) {
     return { handler: handleParentSendMessage };
   }
   if (method === "GET" && path === "/student/notifications") {

@@ -37,6 +37,33 @@ Deno.test("inbox is not shadowed by the dynamic communication route", () => {
   assertEquals(match?.handler.name, "handleCommunicationInbox");
 });
 
+// GAP-P1-8 — parent communication read/acknowledge (consent can never be
+// acknowledged without these; the client posts here — see
+// parent_communication_inbox_provider.dart's markParentCommunicationRead /
+// acknowledgeParentCommunication — but no route matched before this fix).
+
+Deno.test("GAP-P1-8: parent router matches POST /parent/communication/:id/read", () => {
+  const match = matchParentRoute("POST", "/parent/communication/comm-123/read");
+  assertEquals(typeof match?.handler, "function");
+});
+
+Deno.test("GAP-P1-8: parent router matches POST /parent/communication/:id/acknowledge", () => {
+  const match = matchParentRoute("POST", "/parent/communication/comm-123/acknowledge");
+  assertEquals(typeof match?.handler, "function");
+});
+
+Deno.test("GAP-P1-8: read/acknowledge do not shadow other communication paths", () => {
+  // A bare id (no /read or /acknowledge suffix) is a GET-only resource, so a
+  // POST to it must NOT match either handler.
+  assertEquals(matchParentRoute("POST", "/parent/communication/comm-123"), null);
+  // Distinct resource from the communication-delivery-receipt ack, which the
+  // communication router owns at /communications/notifications/:id/acknowledge.
+  assertEquals(
+    matchParentRoute("POST", "/communications/notifications/comm-123/acknowledge"),
+    null,
+  );
+});
+
 // ─── MJ-C4 — parent meetings / PTM ───────────────────────────────────────────
 
 Deno.test("parent router matches GET /parent/meetings", () => {

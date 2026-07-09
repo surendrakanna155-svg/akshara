@@ -67,7 +67,11 @@ export async function upsertWhatsAppProviderConfig(
 
 export function whatsAppConfigToApi(row: WhatsAppConfigRow | null): WhatsAppProviderConfig & { id?: string } {
   if (!row) {
-    return { provider: "stub", senderId: null, apiKeyRef: null, templateNamespace: null, isActive: true };
+    // GAP-P1-9: no row means no admin has ever configured a real provider for
+    // this school. Reporting isActive:true here (the prior default) told the
+    // school-admin status screen ("Status: Active") that WhatsApp was live when
+    // it was actually a placeholder that never sends anything.
+    return { provider: "stub", senderId: null, apiKeyRef: null, templateNamespace: null, isActive: false };
   }
   return {
     id: row.id,
@@ -81,6 +85,11 @@ export function whatsAppConfigToApi(row: WhatsAppConfigRow | null): WhatsAppProv
 
 export function whatsAppConfigToRuntime(row: WhatsAppConfigRow | null): WhatsAppProviderConfig {
   if (!row) {
+    // isActive:true (deliberately, unlike whatsAppConfigToApi's default above)
+    // so an unconfigured school's send attempt reaches sendWhatsAppMessage's
+    // "stub" branch and returns its specific "not configured" error, instead
+    // of short-circuiting on the generic "provider is inactive" guard. Either
+    // way the result is success:false — never a fabricated "sent".
     return { provider: "stub", senderId: null, apiKeyRef: null, templateNamespace: null, isActive: true };
   }
   return {
