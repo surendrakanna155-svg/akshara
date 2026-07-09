@@ -1,7 +1,8 @@
 // QW4 · QA-B-011 + QA-B-046 — school_completion ROUTE/RBAC contract (DB-free).
 //
-// `routeSchoolCompletion` owns ~40 routes across four handler files
-// (school_completion_handlers, phase9, phase10, phase15). This file is
+// `routeSchoolCompletion` owns ~45 routes across five handler files
+// (school_completion_handlers, phase9, phase10, phase15, timetable_workforce_
+// handlers — added P0-2 gap-remediation wave). This file is
 // table-driven: for every registered route we map the EXACT permission slug
 // (grepped from each handler's requirePermission/requireAnyPermission call) and
 // assert BOTH legs DB-free:
@@ -100,6 +101,16 @@ const ROUTES: Row[] = [
   // optimize reads academicYearId from the QUERY string → include it so the
   // holder leg passes validation and reaches the DB boundary (503).
   { method: "GET", path: "/school/timetables/optimize?academicYearId=ay-1", slug: "viewTimetableOptimization" },
+  // P0-2 (gap-remediation wave) — 5 endpoints SubstituteManagerScreen /
+  // TeacherReassignmentScreen / TimetableOptimizationScreen call, backed by
+  // timetable_workforce_handlers + applyTimetableOptimization. Reads gate on
+  // viewTimetableOptimization, writes on manageAcademicTimetable (route_guards.
+  // dart: RouteNames.substituteManager/teacherReassignment → manageAcademicTimetable).
+  { method: "POST", path: "/school/timetables/optimize/apply", slug: "manageAcademicTimetable", body: { academicYearId: "ay-1", applyAll: true } },
+  { method: "GET", path: "/school/timetables/substitute/coverage?academicYearId=ay-1", slug: "viewTimetableOptimization" },
+  { method: "POST", path: "/school/timetables/substitute/assign", slug: "manageAcademicTimetable", body: { slotId: "p1:2026-07-13", substituteTeacherId: "t-1" } },
+  { method: "GET", path: "/school/timetables/reassign/options?academicYearId=ay-1", slug: "viewTimetableOptimization" },
+  { method: "POST", path: "/school/timetables/reassign", slug: "manageAcademicTimetable", body: { academicYearId: "ay-1", sourceTeacherId: "t-1", targetTeacherId: "t-2", slotIds: ["p1"] } },
   { method: "GET", path: "/school/communications/delivery-analytics", slug: "viewCommunicationDelivery" },
   { method: "POST", path: "/school/communications/send-template", slug: "manageCommunicationTemplates", body: { templateCode: "tpl", recipientUserId: "u-9" } },
   { method: "GET", path: "/school/pilot/dashboard", slug: "viewPilotDashboard" },

@@ -51,6 +51,13 @@ import {
   handleGetParentActivationDashboard,
   handleGetParentEngagementAnalytics,
 } from "./phase15_handlers.ts";
+import {
+  handleApplyTimetableOptimization,
+  handleAssignSubstitute,
+  handleGetSubstituteCoverage,
+  handleGetTeacherReassignmentOptions,
+  handleReassignTeacher,
+} from "./timetable_workforce_handlers.ts";
 
 export async function routeSchoolCompletion(
   req: Request,
@@ -119,6 +126,23 @@ export async function routeSchoolCompletion(
 
   if (path === "/school/timetables/optimize" && method === "GET") {
     return handleGetTimetableOptimization(req, config);
+  }
+  // P0-2 (gap-remediation wave) — SubstituteManagerScreen / TeacherReassignmentScreen
+  // / TimetableOptimizationScreen call these 5; they never had a backend route.
+  if (path === "/school/timetables/optimize/apply" && method === "POST") {
+    return handleApplyTimetableOptimization(req, config);
+  }
+  if (path === "/school/timetables/substitute/coverage" && method === "GET") {
+    return handleGetSubstituteCoverage(req, config);
+  }
+  if (path === "/school/timetables/substitute/assign" && method === "POST") {
+    return handleAssignSubstitute(req, config);
+  }
+  if (path === "/school/timetables/reassign/options" && method === "GET") {
+    return handleGetTeacherReassignmentOptions(req, config);
+  }
+  if (path === "/school/timetables/reassign" && method === "POST") {
+    return handleReassignTeacher(req, config);
   }
 
   if (path === "/school/communications/analytics/summary" && method === "GET") {
