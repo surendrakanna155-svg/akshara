@@ -1281,6 +1281,213 @@ export function buildDefaultParentSnapshot(
   }
 }
 
+// ─── P0-1 — student-scope default-snapshot fallback ──────────────────────────
+//
+// The student app must NOT 404 for a real student who has no seeded
+// `student_entities` row (only the 2-UUID demo seed carries one). Mirrors the
+// parent fallback (loadStudentParentSnapshotContext / buildDefaultParentSnapshot
+// above): build a default from real `students` + `sis_student_enrollments`
+// rows, shaped to the EXACT keys `lib/core/repositories/api/student/mapper/
+// student_mapper.dart` reads (verified against that file) — this also fixes the
+// pre-existing seed-contract mismatch (seed shipped `rollNumber`/`guardianName`,
+// the client reads `rollNo`; seed never carried `attendanceKpi`/`homeworkDue`/
+// `examReminder`/`todaySchedule`/`quickActions`/`admissionNo`/`dateOfBirth`/
+// `bloodGroup`/`parentContacts`/`academicSummary` at all).
+//
+// KNOWN LIMITATION (out of this fix's file-ownership — entity_read/pilot only):
+// `student_profiles` and `student_guardians` currently carry NO student-scope
+// RLS read policy (only 'school' / 'parent' branches — see
+// 20260613000000_sis_slice0_foundation.sql and 20260609100000_phase2_rls_scope.sql).
+// The queries below are written to pick these fields up correctly the moment
+// that follow-up RLS grant lands; until then `admissionNo`/`dateOfBirth`/
+// `bloodGroup`/`parentContacts` gracefully read back empty (evidenced-missing,
+// not fabricated) rather than erroring — `students` + `sis_student_enrollments`
+// already grant student-scope self-read (20260703100000_parent_student_exam_read_rls.sql),
+// so `studentName`/`classLabel`/`rollNo` DO populate for a real student today.
+
+export interface StudentSnapshotContext {
+  studentName: string;
+  classLabel: string;
+  rollNo: string;
+  admissionNo: string;
+  dateOfBirth: string;
+  bloodGroup: string;
+  schoolName: string;
+  parentContacts: Array<
+    { name: string; relation: string; phoneLabel: string; email: string }
+  >;
+}
+
+export async function loadStudentSnapshotContext(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  studentId: string,
+): Promise<StudentSnapshotContext> {
+  const rows = await db.queryObject<{
+    display_name: string;
+    class_name: string | null;
+    section_name: string | null;
+    roll_number: string | null;
+    admission_number: string | null;
+    date_of_birth: string | null;
+    blood_group: string | null;
+  }>(
+    `SELECT s.display_name,
+            e.class_name, e.section_name, e.roll_number,
+            sp.admission_number,
+            sp.date_of_birth::text AS date_of_birth,
+            sp.blood_group
+     FROM students s
+     LEFT JOIN sis_student_enrollments e
+       ON e.student_id = s.id
+      AND e.organization_id = s.organization_id
+      AND e.school_id = s.school_id
+      AND e.is_current = true
+     LEFT JOIN student_profiles sp
+       ON sp.student_id = s.id
+      AND sp.organization_id = s.organization_id
+      AND sp.school_id = s.school_id
+     WHERE s.organization_id = $1 AND s.school_id = $2 AND s.id = $3
+     LIMIT 1`,
+    [orgId, schoolId, studentId],
+  );
+
+  const schoolRows = await db.queryObject<{ name: string }>(
+    `SELECT name FROM schools WHERE id = $1 LIMIT 1`,
+    [schoolId],
+  );
+  const schoolName = schoolRows[0]?.name ?? "Akshara Public School";
+
+  const guardianRows = await db.queryObject<{
+    name: string;
+    relation: string;
+    phone: string | null;
+    email: string | null;
+  }>(
+    `SELECT u.display_name AS name, sg.relationship AS relation, u.phone, u.email
+     FROM student_guardians sg
+     JOIN users u ON u.id = sg.guardian_user_id
+     WHERE sg.organization_id = $1 AND sg.school_id = $2 AND sg.student_id = $3
+       AND sg.status = 'active'
+     ORDER BY sg.is_primary DESC`,
+    [orgId, schoolId, studentId],
+  );
+  const parentContacts = guardianRows.map((g) => ({
+    name: g.name,
+    relation: g.relation,
+    phoneLabel: g.phone ?? "",
+    email: g.email ?? "",
+  }));
+
+  const row = rows[0];
+  if (!row) {
+    return {
+      studentName: "Student",
+      classLabel: "",
+      rollNo: "",
+      admissionNo: "",
+      dateOfBirth: "",
+      bloodGroup: "",
+      schoolName,
+      parentContacts,
+    };
+  }
+  const className = row.class_name ?? "";
+  const sectionName = row.section_name ?? "";
+  const classLabel = className
+    ? sectionName
+      ? `${className}-${sectionName}`
+      : className
+    : "";
+  return {
+    studentName: row.display_name,
+    classLabel,
+    rollNo: row.roll_number ?? "",
+    admissionNo: row.admission_number ?? "",
+    dateOfBirth: row.date_of_birth ?? "",
+    bloodGroup: row.blood_group ?? "",
+    schoolName,
+    parentContacts,
+  };
+}
+
+export function buildDefaultStudentSnapshot(
+  entityType: string,
+  context: StudentSnapshotContext,
+): Record<string, unknown> {
+  const base = {
+    studentName: context.studentName,
+    classLabel: context.classLabel,
+    // Mirrors the parent/attendance/timetable overlay naming convention
+    // (childName/childClass) so overlayAttendanceSnapshotFromRecords /
+    // overlayTimetableSnapshotFromSlots — which read `childClass ?? classLabel`
+    // — resolve the real class label either way.
+    childName: context.studentName,
+    childClass: context.classLabel,
+    unreadNotifications: 0,
+  };
+  switch (entityType) {
+    case "snapshot_dashboard":
+      return {
+        ...base,
+        greetingHeadline: context.studentName
+          ? `Welcome, ${context.studentName}`
+          : "Welcome",
+        greetingSubtitle: "",
+        todaySchedule: [],
+        attendanceKpi: {
+          label: "Attendance",
+          value: "--",
+          detail: "No attendance recorded yet",
+          tone: "neutral",
+        },
+        homeworkDue: [],
+        examReminder: { id: "", title: "", subject: "", dateLabel: "", daysUntil: 0 },
+        quickActions: [],
+        aiInsight: { message: "", actionLabel: "" },
+      };
+    case "snapshot_attendance":
+      return {
+        ...base,
+        month: new Date().toISOString().slice(0, 7),
+        kpi: { attendancePercent: 0, absentDays: 0, lateDays: 0 },
+        calendarDays: [],
+        recentLogs: [],
+      };
+    case "snapshot_exams":
+      return {
+        ...base,
+        averagePercent: 0,
+        upcomingExams: [],
+        examResults: [],
+        subjectScores: [],
+      };
+    case "snapshot_timetable":
+      return {
+        ...base,
+        weekRangeLabel: weekRangeLabel(),
+        totalPeriodsThisWeek: 0,
+        completedPeriodsToday: 0,
+        upcomingPeriodsToday: 0,
+        days: [],
+      };
+    case "snapshot_profile":
+      return {
+        ...base,
+        rollNo: context.rollNo,
+        admissionNo: context.admissionNo,
+        dateOfBirth: context.dateOfBirth,
+        bloodGroup: context.bloodGroup,
+        schoolName: context.schoolName,
+        parentContacts: context.parentContacts,
+        academicSummary: [],
+      };
+    default:
+      return base;
+  }
+}
+
 export async function overlayFeesSnapshotFromFinance(
   db: TenantQueryClient,
   orgId: string,

@@ -547,6 +547,38 @@ export function createParentScopedReadHandlers(
   };
 }
 
+// P0-1 — student scope must NOT 404 for a real student with no seeded
+// `student_entities` row (only the 2-UUID demo seed carries one). Mirrors
+// resolveParentSnapshot above: on SnapshotNotFoundError, build a default from
+// real `students`/`sis_student_enrollments` (+ best-effort `student_profiles`/
+// `student_guardians`) rows, shaped to the exact keys student_mapper.dart reads
+// (buildDefaultStudentSnapshot / loadStudentSnapshotContext in
+// pilot_operations_repository.ts). Exported (rather than a closure-private
+// helper like resolveParentSnapshot) so it is directly unit-testable against a
+// mock TenantQueryClient without a live tenant DB connection.
+export async function resolveStudentSnapshot(
+  store: StudentScopedEntityReadStore,
+  db: Parameters<StudentScopedEntityReadStore["getSnapshot"]>[0],
+  orgId: string,
+  schoolId: string,
+  studentId: string,
+  entityType: string,
+): Promise<Record<string, unknown>> {
+  try {
+    return await store.getSnapshot(db, orgId, schoolId, studentId, entityType);
+  } catch (error) {
+    if (!(error instanceof store.SnapshotNotFoundError)) {
+      throw error;
+    }
+    const {
+      buildDefaultStudentSnapshot,
+      loadStudentSnapshotContext,
+    } = await import("../pilot/pilot_operations_repository.ts");
+    const context = await loadStudentSnapshotContext(db, orgId, schoolId, studentId);
+    return buildDefaultStudentSnapshot(entityType, context);
+  }
+}
+
 export function createStudentScopedReadHandlers(
   store: StudentScopedEntityReadStore,
 ) {
@@ -579,7 +611,14 @@ export function createStudentScopedReadHandlers(
 
     try {
       const snapshot = await runTenant(config, auth.claims, async (db) => {
-        const resolved = await store.getSnapshot(db, orgId, schoolId, studentId, entityType);
+        const resolved = await resolveStudentSnapshot(
+          store,
+          db,
+          orgId,
+          schoolId,
+          studentId,
+          entityType,
+        );
         if (entityType === "snapshot_exams") {
           const { overlayExamsSnapshotFromResults } = await import(
             "../pilot/pilot_operations_repository.ts"
@@ -637,7 +676,8 @@ export function createStudentScopedReadHandlers(
 
     try {
       const payload = await runTenant(config, auth.claims, async (db) => {
-        const snapshot = await store.getSnapshot(
+        const snapshot = await resolveStudentSnapshot(
+          store,
           db,
           orgId,
           schoolId,
@@ -686,7 +726,8 @@ export function createStudentScopedReadHandlers(
 
     try {
       const payload = await runTenant(config, auth.claims, async (db) => {
-        const snapshot = await store.getSnapshot(
+        const snapshot = await resolveStudentSnapshot(
+          store,
           db,
           orgId,
           schoolId,
