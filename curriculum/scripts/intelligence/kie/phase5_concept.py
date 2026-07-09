@@ -33,13 +33,15 @@ _NOISE = re.compile(
     r"sample\s+(?:test\s+)?paper|test\s+paper|question\s+paper|mock\s+test|answer\s+key|solution|"
     r"national testing agency|batch|advertisement|directors team|kotacrack|achiever|academy|"
     r"institute|toppers|rank\s+booster|coaching|enrol|registration|"
-    r"section\s+[a-e]\b|part\s+[a-e]\b",
+    r"section\s+[a-e]\b|part\s+[a-e]\b|"
+    r"space\s+for|rough work|do not write|for office use|instructions? to|answer\s*key",
     re.I,
 )
 # bare subject / organizational markers are structure, not concepts
 _SUBJECT_MARKER = {
     "physics", "chemistry", "biology", "botany", "zoology", "mathematics", "maths",
     "science", "general knowledge", "reasoning", "aptitude",
+    "answers", "answer", "solutions", "solution", "hints", "questions", "question",
 }
 # equation-ish symbols, or alphanumeric-garble tokens (e.g. 12dBk, AkB0dt, 0lim) that
 # leak in when heading detection fires on math fragments in exam papers.
@@ -203,9 +205,12 @@ def run(conn, limit: Optional[int] = None, force: bool = False) -> dict:
     # them from scratch so stale candidates from an earlier heuristic don't linger.
     if force and not limit:
         with store.txn(conn):
-            # delete concept-dependent derived tables first (FK order); the graph
-            # (Phase 6) must be rebuilt after a concept-layer rebuild anyway.
-            for tbl in ("concept_edges", "concept_board_mappings", "formulas", "concepts"):
+            # A forced concept-layer rebuild invalidates the whole derived subtree
+            # (graph + question intelligence). Clear it children-first (FK order);
+            # Phases 6-7 rebuild it.
+            for tbl in ("generated_items", "distractors", "question_templates",
+                        "question_families", "question_patterns", "formulas",
+                        "concept_board_mappings", "concept_edges", "concepts"):
                 conn.execute(f"DELETE FROM {tbl}")
     rows = conn.execute(
         "SELECT DISTINCT s.* FROM source_documents s "
