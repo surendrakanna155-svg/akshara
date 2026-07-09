@@ -10,4 +10,7 @@ class OnboardingApiPaths {
   static String importJob(String jobId) => '$imports/$jobId';
   static String commitImport(String jobId) => '$imports/$jobId/commit';
   static String rollbackImport(String jobId) => '$imports/$jobId/rollback';
+
+  /// #10 — confirm-sent, called only after a real WhatsApp launch.
+  static String markInviteSent(String inviteId) => '$invites/$inviteId/mark-sent';
 }

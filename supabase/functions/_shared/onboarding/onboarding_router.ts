@@ -7,6 +7,7 @@ import {
   handleGetImportJob,
   handleListImportJobs,
   handleListInvites,
+  handleMarkInviteSent,
   handleOnboardingDashboard,
   handleRollbackImportJob,
   handleStudentImportPreview,
@@ -55,6 +56,12 @@ function matchOnboardingRoute(
   }
   if (path === "/onboarding/invites" && method === "POST") {
     return { handler: handleCreateInvite, args: [] };
+  }
+
+  // #10 — confirm-sent (only after a real client-side WhatsApp launch).
+  const inviteMarkSentMatch = path.match(/^\/onboarding\/invites\/([^/]+)\/mark-sent$/);
+  if (inviteMarkSentMatch && method === "POST") {
+    return { handler: handleMarkInviteSent, args: [inviteMarkSentMatch[1]!] };
   }
 
   const jobMatch = path.match(/^\/onboarding\/imports\/([^/]+)$/);

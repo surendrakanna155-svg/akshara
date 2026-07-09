@@ -120,4 +120,16 @@ class OnboardingRemoteDataSource {
     );
     return OnboardingInviteDto.fromJson(_responseMap(response));
   }
+
+  /// #10 — confirm-sent, called only after a real WhatsApp launch.
+  Future<OnboardingInviteDto> markInviteSent({
+    required RepositoryQuery query,
+    required String inviteId,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      OnboardingApiPaths.markInviteSent(inviteId),
+      queryParameters: _queryParams(query),
+    );
+    return OnboardingInviteDto.fromJson(_responseMap(response));
+  }
 }

@@ -710,17 +710,31 @@ export async function createInvite(
   };
 }
 
+/**
+ * Gap-remediation #10 — flips a 'pending' invite to 'sent'. Callers must only
+ * invoke this after a REAL send attempt (confirmed WhatsApp launch on the
+ * client — see whatsapp_launcher.dart's onSent pattern), never at creation
+ * time; createInvite alone must never claim "sent". Scoped by org+school
+ * (never trust a bare id) and the `status = 'pending'` guard makes the
+ * transition a one-way, idempotent-safe confirmation: a foreign invite, an
+ * unknown id, or one already sent/opened/accepted/expired/failed all return
+ * null instead of silently no-op'ing or double-confirming.
+ */
 export async function markInviteSent(
   db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
   inviteId: string,
-): Promise<void> {
-  await db.queryObject(
+): Promise<Record<string, unknown> | null> {
+  const rows = await db.queryObject<Record<string, unknown>>(
     `UPDATE onboarding_invites
      SET status = 'sent', sent_at = timezone('utc', now()),
          updated_at = timezone('utc', now())
-     WHERE id = $1`,
-    [inviteId],
+     WHERE id = $1 AND organization_id = $2 AND school_id = $3 AND status = 'pending'
+     RETURNING *`,
+    [inviteId, organizationId, schoolId],
   );
+  return rows[0] ?? null;
 }
 
 export async function listInvites(

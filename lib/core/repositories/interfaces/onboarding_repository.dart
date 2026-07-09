@@ -46,4 +46,13 @@ abstract class OnboardingRepository {
   });
 
   Future<List<OnboardingInvite>> listInvites({required RepositoryQuery query});
+
+  /// Gap-remediation #10 — confirms a REAL send attempt happened (e.g. the
+  /// WhatsApp deep link was actually launched via `whatsapp_launcher.dart`),
+  /// flipping the invite from 'pending' to 'sent'. Never call this at
+  /// creation time — `createInvite` alone must not claim "sent".
+  Future<OnboardingInvite> markInviteSent({
+    required RepositoryQuery query,
+    required String inviteId,
+  });
 }

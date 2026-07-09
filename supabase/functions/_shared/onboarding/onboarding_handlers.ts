@@ -342,6 +342,14 @@ export async function handleCreateInvite(req: Request, config: AppConfig): Promi
   const schoolId = schoolIdFromClaims(auth.claims)!;
 
   try {
+    // Gap-remediation #10 — creating the invite row does NOT mean anything was
+    // delivered: no markInviteSent here. The row is born 'pending' (see
+    // createInvite's INSERT) and stays that way — carrying the deepLink /
+    // whatsappLink for the client to actually launch — until the client
+    // confirms a real send via POST /onboarding/invites/{id}/mark-sent
+    // (handleMarkInviteSent below). Previously this handler flipped the row to
+    // 'sent' unconditionally right after INSERT, so every invite claimed
+    // "sent" even though nothing was dispatched.
     const invite = await withTenantContext(config, auth.claims, async (db) => {
       const created = await createInvite(db, orgId, schoolId, auth.claims.sub, {
         inviteType: body.inviteType as "parent" | "teacher" | "student",
@@ -350,25 +358,75 @@ export async function handleCreateInvite(req: Request, config: AppConfig): Promi
         studentId: body.studentId ?? null,
         channel: (body.channel as "sms" | "whatsapp") ?? "whatsapp",
       });
-      await markInviteSent(db, String(created.id));
       await recordMutationAudit(db, auth.claims, {
-        eventType: "onboardingInviteSent",
+        eventType: "onboardingInviteCreated",
         category: "onboarding",
         entityType: "onboarding_invite",
         entityId: String(created.id),
         metadata: { channel: body.channel ?? "whatsapp" },
       }, {
-        eventType: "onboarding.invite.sent",
+        eventType: "onboarding.invite.created",
         sourceModule: "onboarding",
         payload: { inviteType: body.inviteType },
-        idempotencyKey: `onboarding.invite:${created.id}`,
+        idempotencyKey: `onboarding.invite.created:${created.id}`,
       }, req);
       return created;
     });
-    return jsonResponse(envelope(invite));
+    return jsonResponse(envelope(invite), { status: 201 });
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
     return errorEnvelope("INTERNAL_ERROR", "Invite creation failed", 500);
+  }
+}
+
+/**
+ * Gap-remediation #10 — POST /onboarding/invites/{id}/mark-sent. The client
+ * calls this ONLY after WhatsAppLauncher confirms the chat actually opened
+ * (the whatsapp_launcher.dart / WhatsAppContactButton `onSent` pattern), so
+ * 'sent' means a real send attempt happened, not "a row was created".
+ */
+export async function handleMarkInviteSent(
+  req: Request,
+  config: AppConfig,
+  inviteId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireOnboardingManage(auth.claims);
+  if (denied) return denied;
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims)!;
+
+  try {
+    const updated = await withTenantContext(config, auth.claims, async (db) => {
+      const invite = await markInviteSent(db, orgId, schoolId, inviteId);
+      if (!invite) return null;
+      await recordMutationAudit(db, auth.claims, {
+        eventType: "onboardingInviteSent",
+        category: "onboarding",
+        entityType: "onboarding_invite",
+        entityId: inviteId,
+        metadata: {},
+      }, {
+        eventType: "onboarding.invite.sent",
+        sourceModule: "onboarding",
+        payload: { inviteId },
+        idempotencyKey: `onboarding.invite.sent:${inviteId}`,
+      }, req);
+      return invite;
+    });
+    if (!updated) {
+      return errorEnvelope(
+        "NOT_FOUND",
+        "Invite not found, not pending, or already sent",
+        404,
+      );
+    }
+    return jsonResponse(envelope(updated));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    return errorEnvelope("INTERNAL_ERROR", "Failed to confirm invite sent", 500);
   }
 }
 

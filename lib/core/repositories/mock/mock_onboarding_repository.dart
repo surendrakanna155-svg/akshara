@@ -174,12 +174,15 @@ class MockOnboardingRepository implements OnboardingRepository {
     String? studentId,
     String channel = 'whatsapp',
   }) async {
+    // Gap-remediation #10 — honest status: creating the row is NOT a send.
+    // Stays 'pending' (mirrors the server) until markInviteSent confirms a
+    // real WhatsApp launch.
     final invite = OnboardingInvite(
       id: 'inv_${_invites.length + 1}',
       inviteType: inviteType,
       recipientPhone: recipientPhone,
       recipientLabel: recipientLabel,
-      status: 'sent',
+      status: 'pending',
       channel: channel,
       deepLink: 'https://app.akshara.test/invite/mock',
       whatsappLink: 'https://wa.me/?text=Welcome',
@@ -191,5 +194,30 @@ class MockOnboardingRepository implements OnboardingRepository {
   @override
   Future<List<OnboardingInvite>> listInvites({required RepositoryQuery query}) async {
     return List<OnboardingInvite>.from(_invites);
+  }
+
+  @override
+  Future<OnboardingInvite> markInviteSent({
+    required RepositoryQuery query,
+    required String inviteId,
+  }) async {
+    final index = _invites.indexWhere((i) => i.id == inviteId);
+    if (index < 0) throw StateError('invite not found');
+    final current = _invites[index];
+    if (current.status != 'pending') {
+      throw StateError('invite is not pending (status: ${current.status})');
+    }
+    final updated = OnboardingInvite(
+      id: current.id,
+      inviteType: current.inviteType,
+      recipientPhone: current.recipientPhone,
+      recipientLabel: current.recipientLabel,
+      status: 'sent',
+      channel: current.channel,
+      deepLink: current.deepLink,
+      whatsappLink: current.whatsappLink,
+    );
+    _invites[index] = updated;
+    return updated;
   }
 }

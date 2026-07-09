@@ -111,4 +111,13 @@ class ApiOnboardingRepository implements OnboardingRepository {
     final dto = await _remote.fetchInvites(query: query);
     return _mapper.toInvites(dto);
   }
+
+  @override
+  Future<OnboardingInvite> markInviteSent({
+    required RepositoryQuery query,
+    required String inviteId,
+  }) async {
+    final dto = await _remote.markInviteSent(query: query, inviteId: inviteId);
+    return _mapper.toInvite(dto);
+  }
 }

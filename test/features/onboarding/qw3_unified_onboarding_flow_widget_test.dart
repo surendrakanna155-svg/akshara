@@ -3,11 +3,13 @@ import 'package:akshara_erp/core/testing/qa_test_keys.dart';
 import 'package:akshara_erp/features/onboarding/unified_onboarding_flow_screen.dart';
 import 'package:akshara_erp/features/onboarding/unified_onboarding_models.dart';
 import 'package:akshara_erp/features/onboarding/unified_onboarding_provider.dart';
+import 'package:akshara_erp/router/route_names.dart';
 import 'package:akshara_erp/shared/forms/forms.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../test_helpers.dart';
 
@@ -34,6 +36,19 @@ Future<void> _pump(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+/// Scrolls [target] into view within the wizard's ListView before acting on
+/// it. The #10 gap-remediation "Ongoing onboarding" card added real height
+/// above the Continue/Back/Go-Live row, pushing it beyond the initial
+/// viewport + list cache extent on a mobile-sized test surface.
+Future<void> _scrollTo(WidgetTester tester, Finder target) async {
+  await tester.scrollUntilVisible(
+    target,
+    300,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.pumpAndSettle();
+}
+
 void main() {
   // The store is a process-wide singleton; reset the demo tenant so each test
   // starts from a clean School Profile step.
@@ -52,7 +67,9 @@ void main() {
         find.byKey(QaTestKeys.unifiedOnboardingSchoolNameField),
         findsOneWidget,
       );
-      // Continue is shown on step 1; Back is not.
+      // Continue is shown on step 1; Back is not. (Scroll past the #10
+      // "Ongoing onboarding" card — the Continue row sits below it.)
+      await _scrollTo(tester, find.byKey(QaTestKeys.unifiedOnboardingContinueButton));
       expect(
         find.byKey(QaTestKeys.unifiedOnboardingContinueButton),
         findsOneWidget,
@@ -72,6 +89,7 @@ void main() {
       await settleRiverpodFutures(tester);
       await tester.pumpAndSettle();
 
+      await _scrollTo(tester, find.byKey(QaTestKeys.unifiedOnboardingContinueButton));
       await tester.tap(find.byKey(QaTestKeys.unifiedOnboardingContinueButton));
       await settleRiverpodFutures(tester);
       await tester.pumpAndSettle();
@@ -81,6 +99,7 @@ void main() {
       expect(find.text('Board / curriculum'), findsWidgets);
 
       // Back returns to School Profile.
+      await _scrollTo(tester, find.widgetWithText(OutlinedButton, 'Back'));
       await tester.tap(find.widgetWithText(OutlinedButton, 'Back'));
       await settleRiverpodFutures(tester);
       await tester.pumpAndSettle();
@@ -115,6 +134,7 @@ void main() {
       expect(find.text('School setup · Review'), findsOneWidget);
 
       // Go Live → save + goLive resolve → land on the Go Live step.
+      await _scrollTo(tester, find.byKey(QaTestKeys.unifiedOnboardingGoLiveButton));
       await tester.tap(find.byKey(QaTestKeys.unifiedOnboardingGoLiveButton));
       await settleRiverpodFutures(tester);
       await tester.pumpAndSettle();
@@ -181,6 +201,72 @@ void main() {
       expect(state.schoolName, 'Sunrise Vidyalaya');
       expect(state.classes, contains('Grade 1'));
       expect(state.classes, contains('Grade 5'));
+    });
+  });
+
+  group('#10 gap-remediation · ongoing onboarding actions are reachable', () {
+    // OnboardingHubScreen (/sis/onboarding, invites + student import) and
+    // StudentOnboardingScreen (/admin/onboarding/students) were registered
+    // routes with NO nav entry anywhere in the app. This wizard is the one
+    // screen with a real, live entry point (Settings → "Guided school
+    // onboarding"), so its "Ongoing onboarding" card is where the fix wires a
+    // real path to both — proven here via a minimal real GoRouter.
+    testWidgets(
+        'the Ongoing onboarding card is visible on step 1 and routes to both targets',
+        (tester) async {
+      TenantOnboardingStore.instance.reset(_demoTenant);
+      addTearDown(() => TenantOnboardingStore.instance.reset(_demoTenant));
+
+      final router = GoRouter(
+        initialLocation: '/',
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) => const UnifiedOnboardingFlowScreen(),
+          ),
+          GoRoute(
+            path: RouteNames.onboardingHub,
+            builder: (context, state) =>
+                const Scaffold(body: Text('Onboarding hub reached')),
+          ),
+          GoRoute(
+            path: RouteNames.studentOnboarding,
+            builder: (context, state) =>
+                const Scaffold(body: Text('Student onboarding reached')),
+          ),
+        ],
+      );
+
+      useMobileViewport(tester);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: erpWidgetTestOverrides(),
+          child: MaterialApp.router(
+            theme: AksharaAppTheme.light(),
+            routerConfig: router,
+          ),
+        ),
+      );
+      await settleRiverpodFutures(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ongoing onboarding'), findsOneWidget);
+      expect(
+        find.text('Invite parents, teachers & students'),
+        findsOneWidget,
+      );
+      expect(find.text('Import / add students'), findsOneWidget);
+
+      await tester.tap(find.text('Invite parents, teachers & students'));
+      await tester.pumpAndSettle();
+      expect(find.text('Onboarding hub reached'), findsOneWidget);
+
+      router.pop();
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Import / add students'));
+      await tester.pumpAndSettle();
+      expect(find.text('Student onboarding reached'), findsOneWidget);
     });
   });
 }

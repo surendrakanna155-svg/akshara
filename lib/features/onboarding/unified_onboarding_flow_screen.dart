@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/i18n/supported_languages.dart';
 import '../../core/testing/qa_test_keys.dart';
+import '../../router/route_names.dart';
 import '../../shared/forms/forms.dart';
 import '../../shared/widgets/widgets.dart';
 import '../../theme/spacing.dart';
@@ -44,6 +46,8 @@ class _UnifiedOnboardingFlowScreenState
             const SizedBox(height: AksharaSpacing.s2),
             const LinearProgressIndicator(),
           ],
+          const SizedBox(height: AksharaSpacing.s4),
+          const _OngoingOnboardingActionsCard(),
           const SizedBox(height: AksharaSpacing.s4),
           _AiQuickSetupCard(notifier: notifier, isBusy: state.isLoading),
           const SizedBox(height: AksharaSpacing.s4),
@@ -317,6 +321,53 @@ class _StepBody extends StatelessWidget {
           ),
         ),
     };
+  }
+}
+
+/// Gap-remediation #10 — `OnboardingHubScreen` (`/sis/onboarding`, invites +
+/// student import) and `StudentOnboardingScreen` (`/admin/onboarding/students`)
+/// are registered routes with NO menu/drawer entry point anywhere in the app —
+/// reachable only by typing the URL. Neither is superseded by this wizard
+/// (this screen is a one-time school-setup flow: profile/curriculum/fees/
+/// branding/modules/go-live; it has no per-person invite or per-student import
+/// UI), so they are genuinely needed, ongoing tools, not orphaned duplicates.
+/// This card — shown on every step, since this screen (reached from Settings
+/// → "Guided school onboarding") is itself the one place in the app that is
+/// actually wired to a real nav entry — gives them a real, reachable path.
+class _OngoingOnboardingActionsCard extends StatelessWidget {
+  const _OngoingOnboardingActionsCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return AksharaSurfaceCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Ongoing onboarding', style: context.aksharaText.titleMedium),
+          const SizedBox(height: AksharaSpacing.s2),
+          Text(
+            'Invite people and bring in student data any time — these are not '
+            'one-time setup steps.',
+            style: context.aksharaText.bodyMedium,
+          ),
+          const SizedBox(height: AksharaSpacing.s2),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.person_add_alt_outlined),
+            title: const Text('Invite parents, teachers & students'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(RouteNames.onboardingHub),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.upload_file_outlined),
+            title: const Text('Import / add students'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(RouteNames.studentOnboarding),
+          ),
+        ],
+      ),
+    );
   }
 }
 

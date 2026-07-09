@@ -76,6 +76,9 @@ Deno.test("QA-B-035: the registered onboarding routes match the router", async (
   assertEquals((await call("POST", "/onboarding/invites", MANAGE, {
     inviteType: "teacher", recipientPhone: "+910000000000", recipientLabel: "T",
   })).status, 503);
+  // #10 — confirm-sent route (gap-remediation): matches the router and gates
+  // on manageOnboarding + school scope before ever reaching the DB.
+  assertEquals((await call("POST", "/onboarding/invites/invite-1/mark-sent", MANAGE)).status, 503);
   assertEquals((await call("POST", "/onboarding/imports/job-1/commit", MANAGE)).status, 503);
   // The AI-prefill route itself matches and is manageOnboarding-gated → 503 for a holder.
   assertEquals((await call("POST", "/onboarding/startup/ai-prefill", MANAGE, { schoolName: "X" })).status, 503);
@@ -102,6 +105,21 @@ Deno.test("QA-B-035: onboarding RBAC — a write route is denied without manageO
 Deno.test("QA-B-035: ai-prefill requires manageOnboarding (403 for a view-only caller)", async () => {
   const res = await call("POST", "/onboarding/startup/ai-prefill", VIEW, { schoolName: "X" });
   assertEquals(res.status, 403);
+});
+
+Deno.test("#10: invite mark-sent requires manageOnboarding (403 for a view-only caller)", async () => {
+  const res = await call("POST", "/onboarding/invites/invite-1/mark-sent", VIEW);
+  assertEquals(res.status, 403);
+});
+
+Deno.test("#10: an unauthenticated caller is rejected on mark-sent (401)", async () => {
+  const res = await routeOnboarding(
+    new Request("https://x/onboarding/invites/invite-1/mark-sent", { method: "POST" }),
+    config,
+    "POST",
+    "/onboarding/invites/invite-1/mark-sent",
+  );
+  assertEquals(res?.status, 401);
 });
 
 // ─── entitlement: feature.ai_school_builder gates ai-prefill ONLY ───────────────
