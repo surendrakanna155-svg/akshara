@@ -7,11 +7,18 @@ Local work is COMPLETE and regression-green. The gap-remediation wave (3 P0 + 7 
 
 Done this session: (1) ✅ full flutter confirmed green after DS fix · (2) ✅ `docs/GAP_SWEEP_CERTIFICATION.md` (EOS gate PASS) · (3) ✅ P2 — new RLS migration `20260866` (student-scope read on `student_profiles`/`student_guardians`), report-card real school-name, education-only vertical-pack gate, orphaned `DynamicDashboardScreen` removed; verify-first KEPT 6 reachable/no-UI "dead code" candidates · (4) ✅ baseline updated · (7) ✅ `docs/PILOT_READINESS_REPORT.md`.
 
-## 1. Resume here — steps 5 & 6 are BLOCKED on ONE owner action
-**Open the authenticated SSH ControlMaster socket** (`~/.ssh/akshara-cm.sock`). Verified 2026-07-09: VPS is reachable but `ssh root@46.28.44.46` → `Permission denied (publickey)`, no master socket. Until then, no live deploy / live cert / activation can run. Once open, execute the staged, one-command-ready recipe:
-- **Step 5 — live deploy:** `docs/engineering/eos/GAP_SWEEP_DEPLOY_AND_LIVECERT_CHECKLIST.md` **Part B** — apply migrations `20260863`→`20260866` to `akshara_db`, deploy edge to `akshara-edge`, health smoke. (COM-4 cron + off-site R2 stay owner-gated on token + creds.)
-- **Step 6 — live cert:** checklist **Part C** — `finance_fee_reductions` on `akshara_tenant_test` (RLS/CHECK/partial-unique/FOR-UPDATE + concurrent approve/reverse/clamp), rolled back; then write `docs/FINANCE_FEE_REDUCTIONS_LIVE_CERTIFICATION.md` + re-affirm RLS/backup.
-- Then the pilot run (representative-pass) → GA gate.
+## 1. Resume here — PROD DEPLOY is the one remaining action (owner-go-gated)
+**Socket was opened 2026-07-09; the test-tenant rehearsal + live cert are DONE. Prod is intentionally PAUSED (owner chose test-tenant-first).**
+
+What happened this session on the live lane:
+- **Scope correction:** prod `akshara_db` + edge are **44 migrations / 8 days behind HEAD** (`20260818` / `bcebbf12`), so the deploy is the **full backlog** (`20260819…20260866`), not just this session's 4.
+- **Deploy blocker caught + FIXED:** `20260838` dropped `'all_staff'` from `comm_broadcasts_audience_check` (violated by existing prod rows → halts a sequential run). Fixed in `ab11db99`. Full backlog then applied cleanly on `akshara_tenant_test` (now at `20260866`, a faithful mirror).
+- **`finance_fee_reductions` DB-level live cert PASSED** on `akshara_tenant_test` (non-destructive, rolled back): RLS school-scope + all CHECK + partial-unique enforce live. See `docs/FINANCE_FEE_REDUCTIONS_LIVE_CERTIFICATION.md` + harness `scripts/qa/live_cert_fee_reductions.sql`.
+- **PROD untouched** (still `20260818`, no fee_reductions table; edge still `bcebbf12`).
+
+Remaining (needs owner GO for prod, socket may need reopening):
+- **Prod deploy** — `GAP_SWEEP_DEPLOY_AND_LIVECERT_CHECKLIST.md` Part B: apply the full backlog to `akshara_db` (a predeploy backup is taken), copy `supabase/functions` → `/opt/akshara/functions`, restart `akshara-edge`, health smoke (version==HEAD). The tenant_test rehearsal already de-risks this.
+- **Post-deploy:** app-level E2E of fee-reductions approve/reverse/clamp through the live edge (the one cert item DB-level can't cover); COM-4 cron + off-site R2 activation (owner token + creds); Face ID on-device cert; then pilot run → GA.
 
 ## 2. STANDING RULES (do not violate)
 - **Curriculum lane = SEPARATE session — HANDS-OFF.** Never touch `curriculum/` or `scripts/acquisition/run_acquisition.py`. It owns that working state (leaving `curriculum/*` uncommitted is expected). Wording: **"Acquisition engine complete. Curriculum repository still incomplete"** (matrix 10.1%, 74/736 — authoritative in `curriculum/reports/COVERAGE_MATRIX.md`). When committing, `git add` SPECIFIC ERP files only — never `-A` (it would stage the curriculum lane's state).
