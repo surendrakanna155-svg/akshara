@@ -17,13 +17,10 @@ The **only** success criterion for "acquisition complete" is the canonical cover
 Board  →  Class  →  Subject  →  Document Type
 ```
 
-Acquisition is complete **only when that matrix is filled**. It is not, today:
-- **Board coverage skewed:** CBSE ~2,225 verified; **AP 81, TS 17 (thin); CISCE 0 (missing entirely).**
-- **Per-cell completeness unverified:** class × subject × document-type cells are not all covered.
-- 346 download-failures (NCERT 403s, retry-exhausted) = unavailable-with-evidence, not covered.
+Acquisition is complete **only when that matrix is filled**. **Authoritative status (`curriculum/reports/COVERAGE_MATRIX.md`): 10.1% — 74 / 736 verified cells.** By board: CBSE 14.8% (26/176), TS 12.5% (20/160), AP 6.9% (11/160), CISCE 7.1% (17/240). **653 cells UNRESOLVED** (no source resolved yet — NOT yet "Missing"). The lane has **CONVERGED at 10.1%** on currently-resolved sources; raising coverage needs source-ladder expansion (official→mirror→third-party) for the unresolved cells, then a fresh lane pass. *(The retired broad crawler's PDF counts — CBSE 2225 etc. — are NOT the metric; the Coverage Matrix is.)*
 
 ## In progress (separate curriculum lane — do NOT interfere)
-A **deterministic, matrix-driven acquisition service** (`scripts/acquisition/run_acquisition.py`) is running to fill the matrix — it builds a queue of matrix cells (~139) and acquires toward per-cell coverage. This lane owns `curriculum/` acquisition state; other lanes must not touch it. Repository completeness is judged by that lane's matrix-coverage report, not by the crawler's `1728 verified` engine count.
+A **deterministic, matrix-driven acquisition service** (`scripts/acquisition/run_acquisition.py`) fills the matrix — it builds a queue of matrix cells and acquires toward per-cell coverage. It has **CONVERGED at 10.1%** on currently-resolved sources (stopped; no actionable work left). Further coverage = expand the source ladder for the 653 unresolved cells → fresh lane pass. This lane owns `curriculum/` acquisition state; other lanes must not touch it (do not interrupt/replace/spawn-another). Repository completeness is judged by that lane's matrix-coverage report, not by the retired crawler's `1728 verified` engine count.
 
 ## Reporting rule
 Wherever acquisition status is shown (roadmap, dashboard, registry, memory): say **"Acquisition engine complete; curriculum repository still incomplete (matrix coverage pending)."** Never "acquisition complete".

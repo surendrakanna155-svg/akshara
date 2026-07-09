@@ -8,16 +8,16 @@
 
 ## 0. Completion summary (at-a-glance)
 
-*Estimates — honest, qualified; the autonomous acquisition lane's matrix report is authoritative for Curriculum Repository.*
+*Only **Curriculum Repository** has an authoritative quantitative metric — the **Coverage Matrix** (verified cells ÷ 736 expected), owned by the acquisition lane (`curriculum/reports/COVERAGE_MATRIX.md`). Every other track uses a **qualitative status label** (High / Medium / Early / Pending) derived from measurable roadmap-wave completion — deliberately NOT a subjective percentage, so this baseline does not go stale. Replace a label with a derived % only when a track exposes a real completion metric.*
 
-| Track | Progress | % |
-|---|---|---:|
-| **ERP** (functionally feature-complete for Pilot) | `██████████████████░░` | **92%** |
-| **Curriculum Engine** (deterministic done; AI-engine waves P3-gated) | `██████████████████░░` | **90%** |
-| **Curriculum Repository** (736-cell matrix; CBSE-heavy, AP/TS thin, CISCE 0) | `████░░░░░░░░░░░░░░░░` | **~20%** |
-| **Assessment** (schema seeded; platform post-pilot / P3-gated) | `██░░░░░░░░░░░░░░░░░░` | **~10%** |
-| **Infrastructure** (RLS✅ backup✅; off-site/COM-4 staged, deploy + 7-day cron pending) | `██████████████░░░░░░` | **70%** |
-| **Production Readiness** (RLS+backup cleared; matrix/Face-ID/deploy/cert/pilot remain) | `████████░░░░░░░░░░░░` | **40%** |
+| Track | Status | Basis (measurable) |
+|---|---|---|
+| **ERP** | **High** — functionally feature-complete for Pilot | Phase-C C0–C21 + P1-non-gated + P2 (5 waves) + gap-sweep 1–2 all closed & regression-green; remaining = owner-gated P1-CODE + deploy/cert |
+| **Curriculum Engine** | **High** — deterministic engine complete | CI-C1/C3/C7/C8/C4-schema + B12/E1b done; AI-engine waves (C5/C6/C10/C11) P3-gated (future) |
+| **Curriculum Repository** | **Coverage Matrix = 10.1% (74 / 736 verified cells)** — AUTHORITATIVE | `COVERAGE_MATRIX.md` SSOT. By board: CBSE 14.8%, TS 12.5%, AP 6.9%, CISCE 7.1%. **Lane CONVERGED at 10.1%** — 653 cells UNRESOLVED (no source resolved yet; need source-ladder expansion, NOT yet "Missing") |
+| **Assessment** | **Early** — schema dormant-seeded only | B12/E1b tables exist; platform (Question Factory / Diagram / adaptive) post-pilot + P3-gated |
+| **Infrastructure** | **Medium** — live RLS ✅ + backup ✅; activation/deploy pending | off-site R2 + COM-4 cron staged (not activated); new backend not deployed; 7-day cron pending |
+| **Production Readiness** | **Early** — 2 of 6 blockers cleared (RLS, backup) | matrix convergence + deploy + live-cert + Face-ID + pilot remain (see §5) |
 
 ---
 
@@ -44,7 +44,7 @@
 ## 2. Curriculum — **engine complete; repository INCOMPLETE**
 
 - **Acquisition ENGINE complete (proven):** crawler ran clean, integrity proven; the deterministic Board→Class→Subject→DocType pipeline (`scripts/acquisition/run_acquisition.py`) is the canonical acquirer (broad crawler retired). See `docs/curriculum-intelligence/ACQUISITION_STATUS.md`.
-- **Repository INCOMPLETE:** success = the **736-cell coverage matrix** (CBSE 176 + AP 160 + TS 160 + CISCE 240) filled with **verified** cells. Today CBSE-heavy, AP/TS thin, **CISCE 0**. The matrix lane runs autonomously to convergence — **do not interrupt/replace/spawn-another**.
+- **Repository INCOMPLETE — authoritative Coverage Matrix = 10.1% (74 / 736 verified cells)** (`curriculum/reports/COVERAGE_MATRIX.md` SSOT). By board: CBSE 14.8% (26/176), TS 12.5% (20/160), AP 6.9% (11/160), CISCE 7.1% (17/240). The lane has **CONVERGED at 10.1%** (stopped — no actionable work left with currently-resolved sources); **653 cells are UNRESOLVED** (expected, no source resolved yet — NOT yet "Missing"). Raising coverage now requires **source-ladder expansion** (resolve more official→mirror→third-party sources for the unresolved cells), then a fresh lane pass — the lane's own domain; **do not interrupt/replace/spawn-another**.
 - **Deterministic ENGINE layer complete (pre-pilot):** CI-C1 (template solver) · CI-C3 (multi-set export) · CI-C7 (exam profiles) · CI-C8 (item rotation) · CI-C4-schema · B12 Question-Factory + CI-E1b concept-graph dormant seeds. Additive/dormant, invariants I1–I8 intact.
 - **AI-dependent curriculum waves GATED** (CI-C5/C6/C9/C10/C11) — depend on P3 Adaptive AI + canonical concepts (content).
 
@@ -71,7 +71,7 @@
 
 *(Live RLS isolation + nightly backup already **cleared** this session.)*
 
-1. **Curriculum repository convergence** — the 736-cell `Board→Class→Subject→DocType` matrix filled with verified cells (autonomous lane, in progress).
+1. **Curriculum repository convergence** — the 736-cell `Board→Class→Subject→DocType` matrix filled with verified cells. **Currently 10.1% (74/736); the lane has CONVERGED on currently-resolved sources.** Next: source-ladder expansion for the 653 unresolved cells → fresh lane pass (lane's domain).
 2. **Remaining live deployment** — deploy this session's new backend to `akshara-edge` (fee-reductions migration + COM-4 cron-token path); **activate COM-4 cron** (set `INTERNAL_CRON_TOKEN` + install cron); **activate off-site backup** (supply R2 credentials, 3-2-1); sustain the **7-day cron green** (scheduled-broadcast/reminder + monitoring). All runbooks staged.
 3. **Live certification** — apply + cert `finance_fee_reductions` on the live tenant DB (RLS/CHECK/partial-unique/FOR-UPDATE + concurrent approve/reverse/clamp; currently pattern-matched, not live-run) + any deploy-time re-cert of the new endpoints.
 4. **Staff Face ID attendance certification** (GPS geofence + anti-mock + live camera face; separate Must-Before-GA track).
