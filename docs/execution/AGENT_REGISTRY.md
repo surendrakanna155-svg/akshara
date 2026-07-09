@@ -34,7 +34,9 @@ Reconcile against them FIRST, then continue.
 
 | Agent ID | Model | Task | Scope (files) | State | Recovery |
 |---|---|---|---|---|---|
-| _(none active)_ | | | | | |
+| `a25f56dfb0697f62b` | sonnet | **Gap-sweep STEP 3 wiring** (worktree, base `d8482029`) — #5 SIS-conversion GET build · #4 timetable reassign-teacher route · #6 finance archive/cancel UI wiring · #1 mgmt-resolve trace→reuse/remove | `{academics,sis,finance,management}` backend+client | 🟢 running | verify-first per item; integrate via cherry-pick on report |
+| `a81a916cac05d1c0e` | sonnet | **VPS Track-B RLS live cross-tenant probes** (worktree, base `d8482029`) — rolled-back-txn isolation for QA-B cluster (hr/hostel/finance/parent/control-center/… P0s) against `akshara-postgres` | `docs/engineering/eos/TRACK_B_RLS_LIVE_EVIDENCE.md` + probe tests · VPS read-only/rolled-back | 🟢 running | PROD-SAFE (Akshara-only, non-destructive); ControlMaster socket; flags leaks LOUD; main flips tracker rows |
+| `a3845fd85b7d35e44` | sonnet | **VPS Track-B backup + reminder cron** (worktree, base `d8482029`) — verify nightly pg_dump (~24h RPO) + COM-4 scheduled-broadcast cron; additive-only fixes | `docs/engineering/eos/TRACK_B_INFRA_EVIDENCE.md` + Akshara-namespaced scripts · VPS diagnose-first | 🟢 running | PROD-SAFE (additive/Akshara-only; no existing-config edits; no secrets in repo); ControlMaster socket |
 
 
 ## Terminal this session (2026-07-08) — for provenance / no-duplicate
