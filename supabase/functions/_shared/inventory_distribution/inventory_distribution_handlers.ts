@@ -12,10 +12,16 @@ import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { emitMutationAudit, inventoryDistributionAudit } from "../audit/mutation_audit_catalog.ts";
 import {
+  approveReplacementRequest,
   buildDistributionDashboard,
   createDistribution,
+  fulfillReplacementRequest,
   listCatalogItems,
+  listReplacementRequests,
   listStudentDistributions,
+  rejectReplacementRequest,
+  ReplacementRequestInvalidStateError,
+  ReplacementRequestNotFoundError,
   requestReplacement,
   transitionDistributionStatus,
   buildDistributionReports,
@@ -63,6 +69,48 @@ function mapDistribution(row: {
     acknowledgedAt: row.acknowledged_at,
     paymentRequestId: row.payment_request_id,
   };
+}
+
+/// FV-12 — maps a distribution row carrying a replacement sub-state to the
+/// shape the client's `InvReplacementRequest` model expects. `id` and
+/// `distributionId` are intentionally the same value: the distribution row
+/// itself IS the replacement request (see inventory_distribution_repository.ts).
+function mapReplacementRequest(row: {
+  id: string;
+  student_id: string;
+  quantity: number;
+  notes: string | null;
+  replacement_status?: string | null;
+  replacement_requested_at?: string | null;
+  replacement_resolved_at?: string | null;
+  replacement_rejection_reason?: string | null;
+  itemName?: string;
+  category?: string;
+}) {
+  return {
+    id: row.id,
+    distributionId: row.id,
+    studentId: row.student_id,
+    itemName: row.itemName,
+    category: row.category,
+    quantity: row.quantity,
+    status: row.replacement_status,
+    notes: row.notes,
+    requestedAt: row.replacement_requested_at,
+    resolvedAt: row.replacement_resolved_at,
+    rejectionReason: row.replacement_rejection_reason,
+  };
+}
+
+/** Maps replacement-workflow repository errors to their HTTP envelope. */
+function mapReplacementRepositoryError(error: unknown): Response | null {
+  if (error instanceof ReplacementRequestNotFoundError) {
+    return errorEnvelope("NOT_FOUND", error.message, 404);
+  }
+  if (error instanceof ReplacementRequestInvalidStateError) {
+    return errorEnvelope("INVALID_STATE", error.message, 409);
+  }
+  return null;
 }
 
 export async function handleDistributionDashboard(
@@ -272,6 +320,136 @@ export async function handleRequestReplacement(
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
     const message = error instanceof Error ? error.message : "Replacement request failed";
+    return errorEnvelope("INVENTORY_DISTRIBUTION_ERROR", message, 500);
+  }
+}
+
+/// FV-12 replacement workflow — GET /inventory/distribution/replacements.
+/// Staff-only list of distributions currently carrying (or having carried) a
+/// replacement sub-state, optionally filtered by ?status=pending|approved|
+/// fulfilled|rejected. Same read gate as every other distribution list route.
+export async function handleListReplacementRequests(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireDistRead(auth.claims);
+  if (denied) return denied;
+
+  const status = new URL(req.url).searchParams.get("status") ?? undefined;
+  try {
+    const items = await runTenant(config, auth.claims, (db) => listReplacementRequests(db, status));
+    return jsonResponse(envelope({ items: items.map(mapReplacementRequest) }));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    return errorEnvelope("INVENTORY_DISTRIBUTION_ERROR", "List replacement requests failed", 500);
+  }
+}
+
+/// POST /inventory/distribution/replacements/:id/approve — staff decision
+/// moving a `pending` request to `approved`. Write-gated like every other
+/// distribution mutation (no parent bypass — approval is staff-only).
+export async function handleApproveReplacementRequest(
+  req: Request,
+  config: AppConfig,
+  requestId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireDistWrite(auth.claims);
+  if (denied) return denied;
+
+  try {
+    const updated = await runTenant(config, auth.claims, async (db) => {
+      const row = await approveReplacementRequest(db, requestId);
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        inventoryDistributionAudit.replacementApproved(requestId),
+        req,
+      );
+      return row;
+    });
+    return jsonResponse(envelope(mapReplacementRequest(updated)));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    const mapped = mapReplacementRepositoryError(error);
+    if (mapped) return mapped;
+    const message = error instanceof Error ? error.message : "Approve replacement failed";
+    return errorEnvelope("INVENTORY_DISTRIBUTION_ERROR", message, 500);
+  }
+}
+
+/// POST /inventory/distribution/replacements/:id/fulfill — issues the actual
+/// replacement item (reuses createDistribution's stock-decrement path) and
+/// marks the request `fulfilled`. Only valid from `approved`.
+export async function handleFulfillReplacementRequest(
+  req: Request,
+  config: AppConfig,
+  requestId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireDistWrite(auth.claims);
+  if (denied) return denied;
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const updated = await runTenant(config, auth.claims, async (db) => {
+      const row = await fulfillReplacementRequest(db, orgId, schoolId, requestId, auth.claims.sub);
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        inventoryDistributionAudit.replacementFulfilled(requestId),
+        req,
+      );
+      return row;
+    });
+    return jsonResponse(envelope(mapReplacementRequest(updated)));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    const mapped = mapReplacementRepositoryError(error);
+    if (mapped) return mapped;
+    const message = error instanceof Error ? error.message : "Fulfill replacement failed";
+    return errorEnvelope("INVENTORY_DISTRIBUTION_ERROR", message, 500);
+  }
+}
+
+/// POST /inventory/distribution/replacements/:id/reject — staff decision
+/// moving a `pending` or `approved` request to `rejected`, with an optional
+/// reason surfaced back to the requester.
+export async function handleRejectReplacementRequest(
+  req: Request,
+  config: AppConfig,
+  requestId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireDistWrite(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<{ reason?: string }>(req);
+
+  try {
+    const updated = await runTenant(config, auth.claims, async (db) => {
+      const row = await rejectReplacementRequest(db, requestId, body?.reason);
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        inventoryDistributionAudit.replacementRejected(requestId, body?.reason),
+        req,
+      );
+      return row;
+    });
+    return jsonResponse(envelope(mapReplacementRequest(updated)));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    const mapped = mapReplacementRepositoryError(error);
+    if (mapped) return mapped;
+    const message = error instanceof Error ? error.message : "Reject replacement failed";
     return errorEnvelope("INVENTORY_DISTRIBUTION_ERROR", message, 500);
   }
 }

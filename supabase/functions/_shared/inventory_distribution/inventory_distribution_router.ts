@@ -1,11 +1,15 @@
 import type { AppConfig } from "../config.ts";
 import { errorEnvelope } from "../http.ts";
 import {
+  handleApproveReplacementRequest,
   handleCreateDistribution,
   handleDistributionDashboard,
   handleDistributionReports,
+  handleFulfillReplacementRequest,
   handleListCatalogItems,
   handleListDistributions,
+  handleListReplacementRequests,
+  handleRejectReplacementRequest,
   handleRequestReplacement,
   handleTransitionDistribution,
 } from "./inventory_distribution_handlers.ts";
@@ -44,6 +48,25 @@ export function matchInventoryDistributionRoute(
   const replaceMatch = path.match(/^\/inventory\/distribution\/items\/([^/]+)\/replacement$/);
   if (replaceMatch && method === "POST" && UUID.test(replaceMatch[1]!)) {
     return { handler: handleRequestReplacement, args: [replaceMatch[1]!] };
+  }
+
+  if (path === "/inventory/distribution/replacements" && method === "GET") {
+    return { handler: handleListReplacementRequests, args: [] };
+  }
+
+  const approveMatch = path.match(/^\/inventory\/distribution\/replacements\/([^/]+)\/approve$/);
+  if (approveMatch && method === "POST" && UUID.test(approveMatch[1]!)) {
+    return { handler: handleApproveReplacementRequest, args: [approveMatch[1]!] };
+  }
+
+  const fulfillMatch = path.match(/^\/inventory\/distribution\/replacements\/([^/]+)\/fulfill$/);
+  if (fulfillMatch && method === "POST" && UUID.test(fulfillMatch[1]!)) {
+    return { handler: handleFulfillReplacementRequest, args: [fulfillMatch[1]!] };
+  }
+
+  const rejectMatch = path.match(/^\/inventory\/distribution\/replacements\/([^/]+)\/reject$/);
+  if (rejectMatch && method === "POST" && UUID.test(rejectMatch[1]!)) {
+    return { handler: handleRejectReplacementRequest, args: [rejectMatch[1]!] };
   }
 
   return null;

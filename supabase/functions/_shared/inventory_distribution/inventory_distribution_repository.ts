@@ -23,6 +23,28 @@ export interface DistributionRow {
   replacement_of_id: string | null;
   notes: string | null;
   created_at: string;
+  /// RMA-style approval sub-state for the replacements workflow (FV-12):
+  /// pending -> approved -> fulfilled, or -> rejected. Independent of `status`.
+  replacement_status?: string | null;
+  replacement_requested_at?: string | null;
+  replacement_resolved_at?: string | null;
+  replacement_rejection_reason?: string | null;
+}
+
+/** A replacement request could not be found (wrong id, or not a replacement at all). */
+export class ReplacementRequestNotFoundError extends Error {
+  constructor(public readonly id: string) {
+    super(`Replacement request not found: ${id}`);
+    this.name = "ReplacementRequestNotFoundError";
+  }
+}
+
+/** The request exists but isn't in the right sub-state for the attempted action. */
+export class ReplacementRequestInvalidStateError extends Error {
+  constructor(public readonly id: string, public readonly status: string | null | undefined) {
+    super(`Replacement request ${id} is not in a valid state for this action (status=${status ?? "none"})`);
+    this.name = "ReplacementRequestInvalidStateError";
+  }
 }
 
 export interface DistributionDashboard {
@@ -88,13 +110,16 @@ export async function createDistribution(
     catalogItemId: string;
     quantity: number;
     createdBy: string | null;
+    /// Set when this distribution is the physical item reissued to fulfil a
+    /// replacement request — links back to the original row.
+    replacementOfId?: string | null;
   },
 ): Promise<DistributionRow> {
   const rows = await client.queryObject<DistributionRow>(
     `INSERT INTO inv_student_distributions (
        organization_id, school_id, student_id, catalog_item_id,
-       quantity, status, created_by
-     ) VALUES ($1, $2, $3, $4, $5, 'available', $6)
+       quantity, status, created_by, replacement_of_id
+     ) VALUES ($1, $2, $3, $4, $5, 'available', $6, $7)
      RETURNING *`,
     [
       organizationId,
@@ -103,6 +128,7 @@ export async function createDistribution(
       input.catalogItemId,
       input.quantity,
       input.createdBy,
+      input.replacementOfId ?? null,
     ],
   );
   await client.queryObject(
@@ -172,7 +198,8 @@ export async function requestReplacement(
 
   const updated = await client.queryObject<DistributionRow>(
     `UPDATE inv_student_distributions
-     SET status = $1, payment_request_id = $2, notes = coalesce($3, notes)
+     SET status = $1, payment_request_id = $2, notes = coalesce($3, notes),
+         replacement_status = 'pending', replacement_requested_at = timezone('utc', now())
      WHERE id = $4
      RETURNING *`,
     [
@@ -184,6 +211,128 @@ export async function requestReplacement(
   );
 
   return { distribution: updated[0]!, paymentRequestId };
+}
+
+/**
+ * FV-12 replacement workflow — lists distributions currently carrying an open
+ * (or resolved) replacement sub-state, optionally filtered by that sub-state.
+ * Reuses `inv_student_distributions`/`requestReplacement` rather than a
+ * parallel "replacement requests" table: the distribution row IS the request.
+ */
+export async function listReplacementRequests(
+  client: TenantQueryClient,
+  status?: string,
+): Promise<Array<DistributionRow & { itemName: string; category: string }>> {
+  const conditions = ["d.replacement_status IS NOT NULL"];
+  const params: unknown[] = [];
+  if (status) {
+    conditions.push("d.replacement_status = $1");
+    params.push(status);
+  }
+  return await client.queryObject<DistributionRow & { itemName: string; category: string }>(
+    `SELECT d.*, c.name AS "itemName", c.category
+     FROM inv_student_distributions d
+     JOIN inv_catalog_items c ON c.id = d.catalog_item_id
+     WHERE ${conditions.join(" AND ")}
+     ORDER BY d.replacement_requested_at DESC NULLS LAST, d.created_at DESC`,
+    params,
+  );
+}
+
+async function loadReplacementRequest(
+  client: TenantQueryClient,
+  requestId: string,
+): Promise<DistributionRow> {
+  const rows = await client.queryObject<DistributionRow>(
+    `SELECT * FROM inv_student_distributions WHERE id = $1 AND replacement_status IS NOT NULL`,
+    [requestId],
+  );
+  const row = rows[0];
+  if (!row) throw new ReplacementRequestNotFoundError(requestId);
+  return row;
+}
+
+export async function approveReplacementRequest(
+  client: TenantQueryClient,
+  requestId: string,
+): Promise<DistributionRow & { itemName: string; category: string }> {
+  const current = await loadReplacementRequest(client, requestId);
+  if (current.replacement_status !== "pending") {
+    throw new ReplacementRequestInvalidStateError(requestId, current.replacement_status);
+  }
+  const rows = await client.queryObject<DistributionRow & { itemName: string; category: string }>(
+    `UPDATE inv_student_distributions d
+     SET replacement_status = 'approved'
+     FROM inv_catalog_items c
+     WHERE d.id = $1 AND c.id = d.catalog_item_id
+     RETURNING d.*, c.name AS "itemName", c.category`,
+    [requestId],
+  );
+  return rows[0]!;
+}
+
+export async function rejectReplacementRequest(
+  client: TenantQueryClient,
+  requestId: string,
+  reason?: string,
+): Promise<DistributionRow & { itemName: string; category: string }> {
+  const current = await loadReplacementRequest(client, requestId);
+  if (current.replacement_status !== "pending" && current.replacement_status !== "approved") {
+    throw new ReplacementRequestInvalidStateError(requestId, current.replacement_status);
+  }
+  const rows = await client.queryObject<DistributionRow & { itemName: string; category: string }>(
+    `UPDATE inv_student_distributions d
+     SET replacement_status = 'rejected',
+         replacement_resolved_at = timezone('utc', now()),
+         replacement_rejection_reason = $2
+     FROM inv_catalog_items c
+     WHERE d.id = $1 AND c.id = d.catalog_item_id
+     RETURNING d.*, c.name AS "itemName", c.category`,
+    [requestId, reason ?? null],
+  );
+  return rows[0]!;
+}
+
+/**
+ * Fulfils an approved replacement: issues a brand-new physical item via the
+ * same `createDistribution` path used for any other distribution (so stock
+ * is decremented exactly once, the same as every other issuance), linked
+ * back with `replacement_of_id`. The original row is marked `fulfilled` and
+ * its overall lifecycle `status` moves to `reissued` — a bucket the
+ * dashboard/reports already count (see buildDistributionReports) but that,
+ * before this workflow, no code path ever produced.
+ */
+export async function fulfillReplacementRequest(
+  client: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  requestId: string,
+  createdBy: string | null,
+): Promise<DistributionRow & { itemName: string; category: string }> {
+  const current = await loadReplacementRequest(client, requestId);
+  if (current.replacement_status !== "approved") {
+    throw new ReplacementRequestInvalidStateError(requestId, current.replacement_status);
+  }
+
+  await createDistribution(client, organizationId, schoolId, {
+    studentId: current.student_id,
+    catalogItemId: current.catalog_item_id,
+    quantity: current.quantity,
+    createdBy,
+    replacementOfId: current.id,
+  });
+
+  const rows = await client.queryObject<DistributionRow & { itemName: string; category: string }>(
+    `UPDATE inv_student_distributions d
+     SET replacement_status = 'fulfilled',
+         replacement_resolved_at = timezone('utc', now()),
+         status = 'reissued'
+     FROM inv_catalog_items c
+     WHERE d.id = $1 AND c.id = d.catalog_item_id
+     RETURNING d.*, c.name AS "itemName", c.category`,
+    [requestId],
+  );
+  return rows[0]!;
 }
 
 export async function buildDistributionDashboard(

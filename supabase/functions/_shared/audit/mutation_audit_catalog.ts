@@ -1252,6 +1252,40 @@ export const inventoryDistributionAudit = {
       idempotencyKey: `inventory.distribution.replacement:${distributionId}`,
     },
   }),
+  replacementApproved: (distributionId: string): MutationAuditSpec => ({
+    ...workflow("inventoryReplacementApproved", "inv_student_distribution", distributionId, {
+      distributionId,
+    }),
+    domain: {
+      eventType: "inventory.distribution.replacement_approved",
+      payload: { distributionId },
+      sourceModule: "inventory",
+      idempotencyKey: `inventory.distribution.replacement.approve:${distributionId}`,
+    },
+  }),
+  replacementFulfilled: (distributionId: string): MutationAuditSpec => ({
+    ...workflow("inventoryReplacementFulfilled", "inv_student_distribution", distributionId, {
+      distributionId,
+    }),
+    domain: {
+      eventType: "inventory.distribution.replacement_fulfilled",
+      payload: { distributionId },
+      sourceModule: "inventory",
+      idempotencyKey: `inventory.distribution.replacement.fulfill:${distributionId}`,
+    },
+  }),
+  replacementRejected: (distributionId: string, reason?: string): MutationAuditSpec => ({
+    ...workflow("inventoryReplacementRejected", "inv_student_distribution", distributionId, {
+      distributionId,
+      reason,
+    }),
+    domain: {
+      eventType: "inventory.distribution.replacement_rejected",
+      payload: { distributionId, reason },
+      sourceModule: "inventory",
+      idempotencyKey: `inventory.distribution.replacement.reject:${distributionId}`,
+    },
+  }),
 };
 
 // ─── Inventory Intelligence (v13.4) ──────────────────────────────────────────

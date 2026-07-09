@@ -129,3 +129,96 @@ Deno.test("QA-B-002: unregistered path under the prefix returns 404", async () =
   const res = await call("GET", "/inventory/distribution/nope", ["viewInventory"]);
   assertEquals(res?.status, 404);
 });
+
+// ─── Gap-sweep 2 · Step 4 (#2) — replacements workflow (list/approve/fulfill/reject) ───
+
+const rplId = "11111111-1111-1111-1111-111111111111";
+
+Deno.test("gap-sweep-2/step-4: list replacements is denied for a non-holder (403 FORBIDDEN)", async () => {
+  const res = await call("GET", "/inventory/distribution/replacements", ["viewSis"]);
+  assertEquals(res?.status, 403);
+});
+
+Deno.test("gap-sweep-2/step-4: list replacements passes the gate with viewInventoryDistribution (503)", async () => {
+  const res = await call("GET", "/inventory/distribution/replacements", ["viewInventoryDistribution"]);
+  assertEquals(res?.status, 503);
+});
+
+Deno.test("gap-sweep-2/step-4: OR-fix — broader viewInventory also authorizes the replacements read (503)", async () => {
+  const res = await call("GET", "/inventory/distribution/replacements", ["viewInventory"]);
+  assertEquals(res?.status, 503);
+});
+
+Deno.test("gap-sweep-2/step-4: approve is denied for a non-holder (403 FORBIDDEN)", async () => {
+  const res = await call("POST", `/inventory/distribution/replacements/${rplId}/approve`, ["viewSis"]);
+  assertEquals(res?.status, 403);
+});
+
+Deno.test("gap-sweep-2/step-4: approve passes the gate with manageInventoryDistribution (503)", async () => {
+  const res = await call("POST", `/inventory/distribution/replacements/${rplId}/approve`, [
+    "manageInventoryDistribution",
+  ]);
+  assertEquals(res?.status, 503);
+});
+
+Deno.test("gap-sweep-2/step-4: OR-fix — broader manageInventory also authorizes approve (503)", async () => {
+  const res = await call("POST", `/inventory/distribution/replacements/${rplId}/approve`, ["manageInventory"]);
+  assertEquals(res?.status, 503);
+});
+
+Deno.test("gap-sweep-2/step-4: approve denies a holder of only the READ slug (403)", async () => {
+  const res = await call("POST", `/inventory/distribution/replacements/${rplId}/approve`, [
+    "viewInventoryDistribution",
+  ]);
+  assertEquals(res?.status, 403);
+});
+
+Deno.test("gap-sweep-2/step-4: fulfill is denied for a non-holder (403 FORBIDDEN)", async () => {
+  const res = await call("POST", `/inventory/distribution/replacements/${rplId}/fulfill`, ["viewSis"]);
+  assertEquals(res?.status, 403);
+});
+
+Deno.test("gap-sweep-2/step-4: fulfill passes the gate with manageInventoryDistribution (503)", async () => {
+  const res = await call("POST", `/inventory/distribution/replacements/${rplId}/fulfill`, [
+    "manageInventoryDistribution",
+  ]);
+  assertEquals(res?.status, 503);
+});
+
+Deno.test("gap-sweep-2/step-4: reject is denied for a non-holder (403 FORBIDDEN)", async () => {
+  const res = await call("POST", `/inventory/distribution/replacements/${rplId}/reject`, ["viewSis"], {
+    reason: "damaged beyond repair",
+  });
+  assertEquals(res?.status, 403);
+});
+
+Deno.test("gap-sweep-2/step-4: reject passes the gate with manageInventoryDistribution (503)", async () => {
+  const res = await call(
+    "POST",
+    `/inventory/distribution/replacements/${rplId}/reject`,
+    ["manageInventoryDistribution"],
+    { reason: "damaged beyond repair" },
+  );
+  assertEquals(res?.status, 503);
+});
+
+Deno.test("gap-sweep-2/step-4: unauthenticated approve is rejected (401)", async () => {
+  const req = new Request(`https://x/inventory/distribution/replacements/${rplId}/approve`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+  });
+  const res = await routeInventoryDistribution(
+    req,
+    config,
+    "POST",
+    `/inventory/distribution/replacements/${rplId}/approve`,
+  );
+  assertEquals(res?.status, 401);
+});
+
+Deno.test("gap-sweep-2/step-4: non-UUID replacement id under /approve is unregistered (404)", async () => {
+  const res = await call("POST", "/inventory/distribution/replacements/not-a-uuid/approve", [
+    "manageInventoryDistribution",
+  ]);
+  assertEquals(res?.status, 404);
+});
