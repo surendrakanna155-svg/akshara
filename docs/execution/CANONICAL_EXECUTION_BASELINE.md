@@ -6,7 +6,22 @@
 
 ---
 
-## 1. ERP — **feature-complete for pilot scope + hardened; live-cert + deploy pending**
+## 0. Completion summary (at-a-glance)
+
+*Estimates — honest, qualified; the autonomous acquisition lane's matrix report is authoritative for Curriculum Repository.*
+
+| Track | Progress | % |
+|---|---|---:|
+| **ERP** (functionally feature-complete for Pilot) | `██████████████████░░` | **92%** |
+| **Curriculum Engine** (deterministic done; AI-engine waves P3-gated) | `██████████████████░░` | **90%** |
+| **Curriculum Repository** (736-cell matrix; CBSE-heavy, AP/TS thin, CISCE 0) | `████░░░░░░░░░░░░░░░░` | **~20%** |
+| **Assessment** (schema seeded; platform post-pilot / P3-gated) | `██░░░░░░░░░░░░░░░░░░` | **~10%** |
+| **Infrastructure** (RLS✅ backup✅; off-site/COM-4 staged, deploy + 7-day cron pending) | `██████████████░░░░░░` | **70%** |
+| **Production Readiness** (RLS+backup cleared; matrix/Face-ID/deploy/cert/pilot remain) | `████████░░░░░░░░░░░░` | **40%** |
+
+---
+
+## 1. ERP — **functionally feature-complete for Pilot** (live deployment + certification + pilot still pending)
 
 **Built + tested (local + now partially live-verified):**
 - **Phase-C module program C0–C21 COMPLETE** — Finance, Attendance, Exams, HR, SIS, Transport, Inventory, Library, Communication, Admissions, Parent, Teacher, Principal, Director (build + discovery-first close + tests).
@@ -52,17 +67,16 @@
 
 ---
 
-## 5. Remaining PRODUCTION BLOCKERS (Must-Before-GA)
-1. **Curriculum repository matrix convergence** (in progress, autonomous lane).
-2. **Staff Face ID attendance cert** (GPS geofence + anti-mock + live camera face; separate Must-Before-GA track).
-3. **Live deployment of this session's new backend** — fee-reductions migration + COM-4 cron-token path must be deployed to `akshara-edge`; then:
-   - **Live migration-apply + short cert** for `finance_fee_reductions` (RLS/CHECK/partial-unique/FOR-UPDATE + concurrent approve/reverse/clamp) — currently pattern-matched, not live-run.
-   - **COM-4 cron activation** (deploy + set `INTERNAL_CRON_TOKEN` + install cron) — runbook staged.
-   - **Off-site backup activation** — supply R2 credentials (3-2-1); runbook staged.
-4. **7-day cron green** (scheduled-broadcast/reminder + monitoring) sustained.
-5. **Pilot run** (representative-pass) on the live lane.
+## 5. Remaining PRODUCTION BLOCKERS — in execution priority (Must-Before-GA)
 
-*(Live RLS isolation + nightly backup = **cleared** this session.)*
+*(Live RLS isolation + nightly backup already **cleared** this session.)*
+
+1. **Curriculum repository convergence** — the 736-cell `Board→Class→Subject→DocType` matrix filled with verified cells (autonomous lane, in progress).
+2. **Remaining live deployment** — deploy this session's new backend to `akshara-edge` (fee-reductions migration + COM-4 cron-token path); **activate COM-4 cron** (set `INTERNAL_CRON_TOKEN` + install cron); **activate off-site backup** (supply R2 credentials, 3-2-1); sustain the **7-day cron green** (scheduled-broadcast/reminder + monitoring). All runbooks staged.
+3. **Live certification** — apply + cert `finance_fee_reductions` on the live tenant DB (RLS/CHECK/partial-unique/FOR-UPDATE + concurrent approve/reverse/clamp; currently pattern-matched, not live-run) + any deploy-time re-cert of the new endpoints.
+4. **Staff Face ID attendance certification** (GPS geofence + anti-mock + live camera face; separate Must-Before-GA track).
+5. **Pilot run** (representative-pass) on the live lane.
+6. **General Availability** — the final gate; declared only once blockers 1–5 are cleared and green.
 
 ---
 
