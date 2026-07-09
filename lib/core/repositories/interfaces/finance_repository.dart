@@ -136,6 +136,14 @@ abstract class FinanceRepository {
     required UpdateFeeStructureRequest request,
   });
 
+  /// #6 — PATCH .../fee-structures/:id/archive. Soft-retires a fee structure
+  /// (status → inactive) without deleting it; existing assignments are
+  /// unaffected. manageFinance-gated.
+  Future<FinanceFeeStructure> archiveFeeStructure({
+    required RepositoryQuery query,
+    required String feeStructureId,
+  });
+
   Future<StudentFeeAccount> createStudentAccount({
     required RepositoryQuery query,
     required CreateStudentAccountRequest request,
@@ -150,6 +158,14 @@ abstract class FinanceRepository {
   Future<StudentFeeAccount> assignFeePlan({
     required RepositoryQuery query,
     required AssignFeePlanRequest request,
+  });
+
+  /// #6 — PATCH .../fee-assignments/:id/cancel. Cancels an active fee
+  /// assignment (assignment_status → cancelled) and closes its linked student
+  /// account; returns the updated account. manageFinance-gated.
+  Future<StudentFeeAccount> cancelFeeAssignment({
+    required RepositoryQuery query,
+    required String feeAssignmentId,
   });
 
   Future<RefundRequest> createRefund({

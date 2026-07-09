@@ -210,12 +210,6 @@ class MutationPermissionRegistry {
     // Management
     MutationPermissionEntry(
       moduleId: 'management',
-      mutationId: 'resolveManagementApproval',
-      permission: Permission.manageManagement,
-      kind: 'manage',
-    ),
-    MutationPermissionEntry(
-      moduleId: 'management',
       mutationId: 'resolveExamResultsApproval',
       permission: Permission.approveExamResults,
       kind: 'approve',

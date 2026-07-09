@@ -199,6 +199,7 @@ class StudentFeeAccount {
     required this.status,
     required this.lastPaymentDate,
     required this.installmentPlan,
+    this.feeAssignmentId,
   });
 
   final String id;
@@ -212,6 +213,12 @@ class StudentFeeAccount {
   final FeeAccountStatus status;
   final String lastPaymentDate;
   final String installmentPlan;
+
+  /// #6 — the backing `finance_fee_assignments.id`, distinct from [id] (the
+  /// student account id). Needed to target `PATCH .../fee-assignments/:id/
+  /// cancel`; null when the account wasn't created via a real API assignment
+  /// (e.g. mock/offline data has no separate assignment row).
+  final String? feeAssignmentId;
 }
 
 @immutable
@@ -241,6 +248,7 @@ class GeneratedFeeAccountPreview {
     required this.totalDue,
     required this.installmentSummary,
     required this.addOns,
+    this.feeAssignmentId,
   });
 
   final String accountId;
@@ -250,6 +258,11 @@ class GeneratedFeeAccountPreview {
   final String totalDue;
   final String installmentSummary;
   final List<String> addOns;
+
+  /// #6 — the real backend fee-assignment id from the just-completed
+  /// assignFeePlan call (null only if that call didn't return one, e.g. an
+  /// unconfigured repository); needed to target the cancel action.
+  final String? feeAssignmentId;
 }
 
 @immutable

@@ -495,6 +495,104 @@ export async function moveTimetablePeriod(
   };
 }
 
+/**
+ * #4 — reassign the teacher on a single period (`teacher_id`), leaving day/
+ * period/room untouched. Mirrors moveTimetablePeriod's shape exactly: same
+ * published-timetable guard, same before/after clash re-check against the
+ * whole school grid for the year (a reassignment can double-book the new
+ * teacher just as a move can double-book a room), same not-found semantics.
+ * `teacher_assignment_id` is deliberately left as-is — same as move, which
+ * never touches it either — this is an ad-hoc override, not a re-derivation
+ * of the underlying subject/teacher assignment.
+ */
+export async function reassignTimetablePeriodTeacher(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  input: { periodId: string; teacherId: string },
+): Promise<{
+  id: string;
+  timetableId: string;
+  dayOfWeek: number;
+  periodNumber: number;
+  subjectLabel: string;
+  teacherId: string | null;
+  teacherAssignmentId: string | null;
+  roomLabel: string;
+}> {
+  const currentRows = await db.queryObject<{
+    id: string;
+    timetable_id: string;
+    academic_year_id: string;
+    status: TimetableStatus;
+    section_id: string;
+    day_of_week: number;
+    period_number: number;
+    subject_label: string;
+    teacher_id: string | null;
+    teacher_assignment_id: string | null;
+    room_label: string;
+  }>(
+    `SELECT p.id, p.timetable_id, t.academic_year_id, t.status, t.section_id,
+            p.day_of_week, p.period_number, p.subject_label,
+            p.teacher_id, p.teacher_assignment_id, p.room_label
+     FROM academic_timetable_periods p
+     INNER JOIN academic_timetables t ON t.id = p.timetable_id
+     WHERE p.id = $1 AND p.organization_id = $2 AND p.school_id = $3`,
+    [input.periodId, orgId, schoolId],
+  );
+  const current = currentRows[0];
+  if (!current) throw new Error("Period not found");
+
+  // Belt-and-suspenders with the DB trigger reject_published_period_edit().
+  if (current.status === "published") {
+    throw new TimetablePublishedError();
+  }
+
+  // Clash-recheck: build before/after grids and reject a reassignment that
+  // introduces a NEW teacher double-booking (room/section are unchanged).
+  const before = await loadSchoolPeriodsWithMeta(db, orgId, schoolId, current.academic_year_id);
+  const after = before.map((p) =>
+    p.timetableId === current.timetable_id &&
+      p.dayOfWeek === current.day_of_week &&
+      p.periodNumber === current.period_number
+      ? { ...p, teacherId: input.teacherId }
+      : p
+  );
+  assertNoNewClashes(before, after);
+
+  const rows = await db.queryObject<{
+    id: string;
+    timetable_id: string;
+    day_of_week: number;
+    period_number: number;
+    subject_label: string;
+    teacher_id: string | null;
+    teacher_assignment_id: string | null;
+    room_label: string;
+  }>(
+    `UPDATE academic_timetable_periods
+     SET teacher_id = $4,
+         updated_at = timezone('utc', now())
+     WHERE id = $1 AND organization_id = $2 AND school_id = $3
+     RETURNING id, timetable_id, day_of_week, period_number, subject_label,
+               teacher_id, teacher_assignment_id, room_label`,
+    [input.periodId, orgId, schoolId, input.teacherId],
+  );
+  if (!rows[0]) throw new Error("Period not found");
+  const row = rows[0];
+  return {
+    id: row.id,
+    timetableId: row.timetable_id,
+    dayOfWeek: row.day_of_week,
+    periodNumber: row.period_number,
+    subjectLabel: row.subject_label,
+    teacherId: row.teacher_id,
+    teacherAssignmentId: row.teacher_assignment_id,
+    roomLabel: row.room_label,
+  };
+}
+
 export async function getTimetableSummary(
   db: TenantQueryClient,
   orgId: string,

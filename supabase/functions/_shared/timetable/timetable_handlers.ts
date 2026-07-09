@@ -22,6 +22,7 @@ import {
   listTimetables,
   moveTimetablePeriod,
   publishTimetableById,
+  reassignTimetablePeriodTeacher,
   TimetableClashError,
   TimetableNotFoundError,
   TimetablePublishedError,
@@ -444,6 +445,71 @@ export async function handleMoveTimetablePeriod(req: Request, config: AppConfig)
       return result;
     });
     return jsonResponse(envelope(moved));
+  } catch (error) {
+    if (error instanceof TimetablePublishedError) {
+      return errorEnvelope("TIMETABLE_PUBLISHED", error.message, 409);
+    }
+    if (error instanceof TimetableClashError) {
+      return errorEnvelope("TIMETABLE_CLASH", error.message, 409);
+    }
+    if (error instanceof Error && error.message.includes("not found")) {
+      return errorEnvelope("NOT_FOUND", error.message, 404);
+    }
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    throw error;
+  }
+}
+
+/**
+ * #4 — POST /academic/timetables/periods/reassign-teacher. Real UI: the
+ * timetable editor's per-row "Change teacher" menu (`_reassign` →
+ * `reassignPeriodTeacher`) called this path with no backend route registered
+ * (only periods/move existed), so every reassignment 404'd. Mirrors
+ * handleMoveTimetablePeriod's RBAC (manageAcademicTimetable + school scope),
+ * validation shape, error mapping, and audit pattern — a distinct event name
+ * (`academicTimetablePeriodTeacherReassigned`) so the two mutations are
+ * separately auditable.
+ */
+export async function handleReassignPeriodTeacher(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireTimetableManage(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<{ periodId: string; teacherId: string }>(req);
+  if (!body?.periodId || !body.teacherId) {
+    return errorEnvelope(
+      "VALIDATION_ERROR",
+      "periodId and teacherId required",
+      422,
+    );
+  }
+
+  try {
+    const reassigned = await withTenantContext(config, auth.claims, async (db) => {
+      const result = await reassignTimetablePeriodTeacher(
+        db,
+        organizationIdFromClaims(auth.claims),
+        schoolIdFromClaims(auth.claims),
+        body,
+      );
+      await recordServerAuditEvent(db, auth.claims, {
+        eventType: "academicTimetablePeriodTeacherReassigned",
+        category: "workflow",
+        entityType: "academic_timetable_period",
+        entityId: result.id,
+        metadata: {
+          dayOfWeek: result.dayOfWeek,
+          periodNumber: result.periodNumber,
+          teacherId: result.teacherId,
+        },
+      }, req);
+      return result;
+    });
+    return jsonResponse(envelope(reassigned));
   } catch (error) {
     if (error instanceof TimetablePublishedError) {
       return errorEnvelope("TIMETABLE_PUBLISHED", error.message, 409);

@@ -180,6 +180,29 @@ Deno.test("sis router: transfer-certificate does not resolve to the generic stud
   assertEquals(studentGet?.handler.name, "handleGetStudent");
 });
 
+Deno.test("sis router matches GET /sis/admissions-conversion (#5)", () => {
+  const match = matchSisRoute("GET", "/sis/admissions-conversion");
+  assertEquals(match?.args, []);
+  assertEquals(match?.handler.name, "handleListAdmissionsConversion");
+});
+
+Deno.test("sis router: GET /sis/admissions-conversion is distinct from the POST convert action", () => {
+  const getMatch = matchSisRoute("GET", "/sis/admissions-conversion");
+  assertEquals(getMatch?.handler.name, "handleListAdmissionsConversion");
+  const postMatch = matchSisRoute("POST", "/sis/admissions-conversion");
+  assertEquals(postMatch?.handler.name, "handleAdmissionsConversion");
+});
+
+Deno.test("#5 GET /sis/admissions-conversion is registered as viewSis school route", () => {
+  const rule = RBAC_ROUTE_INVENTORY.find(
+    (r) => r.method === "GET" && r.path === "/sis/admissions-conversion",
+  );
+  assertExists(rule);
+  assertEquals(rule!.permission, "viewSis");
+  assertEquals(rule!.scope, "school");
+  assertEquals(rule!.module, "sis");
+});
+
 Deno.test("SIS-1/D1 certificate routes are registered with correct RBAC", () => {
   const list = RBAC_ROUTE_INVENTORY.find(
     (r) => r.method === "GET" && r.path === "/sis/students/:id/certificates",

@@ -36,15 +36,22 @@ void main() {
       expect(teacher.has(Permission.publishExamResults), isFalse);
     });
 
-    test('QA-J-066 · Teacher submits an attendance correction '
-        '(submitAttendanceCorrection); principal resolves it (manageManagement)',
-        () {
+    test(
+        'QA-J-066 · Teacher submits an attendance correction '
+        '(submitAttendanceCorrection); principal resolves it '
+        '(approveAttendanceCorrection)', () {
       final submit = _gate('teacher', 'submitAttendanceCorrection');
       expect(submit, Permission.submitAttendanceCorrection);
       expect(teacher.has(submit), isTrue);
-      // The approval verb is the principal's, not the submitter's.
-      final resolve = _gate('management', 'resolveManagementApproval');
-      expect(resolve, Permission.manageManagement);
+      // The approval verb is the principal's, not the submitter's. The real
+      // resolve path is the unified Approval Center (resolveApprovalRequestProvider
+      // → /approvals/:id/approve|reject), gated per-type via
+      // approvalPermissionForType(attendanceCorrection) — NOT the
+      // mutation-registry 'resolveManagementApproval' entry this test used to
+      // check, which #1 gap-sweep (2026-07) found was dead client code with no
+      // caller (POST /management/tasks/:id/resolve has no backend route) and
+      // has since been removed.
+      const resolve = Permission.approveAttendanceCorrection;
       expect(principal.has(resolve), isTrue);
       expect(teacher.has(resolve), isFalse);
     });

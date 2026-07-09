@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 
 import '../../../../../features/management/management_requests.dart';
-import '../../admissions/dto/api_envelope_dto.dart';
 import '../../../repository_query.dart';
 import '../dto/management_responses_dto.dart';
 import '../dto/update_management_settings_request_dto.dart';
@@ -105,20 +104,6 @@ class ManagementRemoteDataSource {
       data: UpdateManagementSettingsRequestDto.fromDomain(request).toJson(),
     );
     return ManagementSettingsResponseDto.fromJson(_responseMap(response));
-  }
-
-  Future<ManagementApprovalResponseDto> resolveApproval({
-    required RepositoryQuery query,
-    required String approvalId,
-    required String status,
-  }) async {
-    final response = await _dio.post<Map<String, dynamic>>(
-      ManagementApiPaths.approvalResolve(approvalId),
-      queryParameters: _queryParams(query),
-      data: {'status': status},
-    );
-    final envelope = ApiEnvelopeDto.fromJson(_responseMap(response));
-    return ManagementApprovalResponseDto(raw: envelope.requireData());
   }
 
   Map<String, dynamic> _queryParams(RepositoryQuery query) {

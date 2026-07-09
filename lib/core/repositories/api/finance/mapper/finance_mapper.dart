@@ -356,6 +356,10 @@ class FinanceMapper {
       status: FinanceEnumCodec.parseFeeAccountStatus(raw['status'] as String?),
       lastPaymentDate: raw['lastPaymentDate'] as String? ?? '',
       installmentPlan: raw['installmentPlan'] as String? ?? '',
+      // #6 — carried through so the client can target the cancel endpoint,
+      // which operates on the assignment id, not the account id.
+      feeAssignmentId: raw['feeAssignmentId'] as String? ??
+          raw['fee_assignment_id'] as String?,
     );
   }
 

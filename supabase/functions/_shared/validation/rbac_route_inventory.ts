@@ -30,6 +30,8 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "GET", path: "/sis/dashboard", permission: "viewSis", scope: "school", module: "sis" },
   { method: "POST", path: "/sis/students", permission: "manageSis", scope: "school", module: "sis" },
   { method: "GET", path: "/sis/transfers", permission: "viewSis", scope: "school", module: "sis" },
+  // #5 — admissions-conversion read (the queue the conversion screen loads).
+  { method: "GET", path: "/sis/admissions-conversion", permission: "viewSis", scope: "school", module: "sis" },
   { method: "PATCH", path: "/sis/students/:id/documents/:docId/verify", permission: "manageSis", scope: "school", module: "sis" },
   // SIS-4 — read-only siblings / family list for a student (clerk view).
   { method: "GET", path: "/sis/students/:id/siblings", permission: "viewSis", scope: "school", module: "sis" },

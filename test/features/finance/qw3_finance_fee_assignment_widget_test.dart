@@ -119,5 +119,63 @@ void main() {
 
       expect(find.byType(AksharaLoadingState), findsOneWidget);
     });
+
+    // #6 — the cancel endpoint (`PATCH .../fee-assignments/:id/cancel`) was
+    // already built with zero client callers; this proves the client wiring:
+    // once a fee account is generated, a real Cancel action targets it, gated
+    // behind a destructive confirm dialog. Kept as ONE test (rather than
+    // several independent ones) because MockAdmissionsWriteStore.instance is
+    // a process-wide singleton — a second "generate" call in a later test
+    // would re-select the same now-already-completed handoff instead of
+    // starting from the pending state this test needs.
+    testWidgets(
+        'generate then cancel: Cancel action appears, dismiss keeps it '
+        'assigned, confirm cancels it', (tester) async {
+      await _pump(tester);
+
+      await tester.tap(find.byKey(QaTestKeys.financeAssignFeePlanButton));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(QaTestKeys.financeFeeAccountCreatedSnackbar),
+        findsOneWidget,
+      );
+      // ScaffoldMessenger queues SnackBars rather than replacing them — let
+      // this one's default 4s display duration elapse so the later
+      // cancel-flow snackbars aren't stuck waiting behind it in the queue.
+      await tester.pump(const Duration(seconds: 5));
+
+      // The generated-account panel now offers a real Cancel action.
+      expect(
+        find.byKey(QaTestKeys.financeCancelFeeAssignmentButton),
+        findsOneWidget,
+      );
+
+      // Dismissing the confirm dialog does not cancel the assignment.
+      await tester.tap(find.byKey(QaTestKeys.financeCancelFeeAssignmentButton));
+      await tester.pumpAndSettle();
+      expect(find.text('Cancel fee assignment'), findsOneWidget);
+      await tester.tap(find.text('Keep'));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(QaTestKeys.financeFeeAssignmentCancelledSnackbar),
+        findsNothing,
+      );
+      expect(
+        find.byKey(QaTestKeys.financeCancelFeeAssignmentButton),
+        findsOneWidget,
+      );
+
+      // Confirming actually cancels it.
+      await tester.tap(find.byKey(QaTestKeys.financeCancelFeeAssignmentButton));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(QaTestKeys.financeCancelFeeAssignmentConfirmButton),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(QaTestKeys.financeFeeAssignmentCancelledSnackbar),
+        findsOneWidget,
+      );
+    });
   });
 }

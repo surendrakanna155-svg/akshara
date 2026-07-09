@@ -9,6 +9,7 @@ import {
   handleListTimetables,
   handleMoveTimetablePeriod,
   handlePublishTimetable,
+  handleReassignPeriodTeacher,
   handleSubstitutionCandidates,
   handleTimetableConflicts,
   handleTimetableSummary,
@@ -49,6 +50,11 @@ export function matchTimetableRoute(
   }
   if (path === "/academic/timetables/periods/move" && method === "POST") {
     return { handler: handleMoveTimetablePeriod, args: [] };
+  }
+  // #4 — per-period ad-hoc teacher reassignment (distinct from the move/room
+  // mutation above). Matched as its own literal path so it never collides.
+  if (path === "/academic/timetables/periods/reassign-teacher" && method === "POST") {
+    return { handler: handleReassignPeriodTeacher, args: [] };
   }
   // ─── Substitutions (roadmap gap #8) — matched BEFORE the /:id detail route ──
   if (path === "/academic/timetables/substitutions/candidates" && method === "GET") {

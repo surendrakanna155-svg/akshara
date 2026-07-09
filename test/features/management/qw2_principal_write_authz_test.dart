@@ -44,12 +44,21 @@ void main() {
       expect(principal.has(_gate('communication', 'sendBroadcast')), isTrue);
     });
 
-    test('QA-J-035 · authorized to resolve (reject-with-comment) a management '
-        'approval (resolveManagementApproval → manageManagement)', () {
-      expect(_gate('management', 'resolveManagementApproval'),
+    test(
+        'QA-J-035 · principal holds manageManagement (the executive-approvals '
+        'authority underlying updateManagementSettings and the management '
+        'dashboard)', () {
+      // #1 gap-sweep (2026-07): the mutation this test originally gated on,
+      // resolveManagementApproval (POST /management/tasks/:id/resolve), was
+      // found to be dead client code — no screen ever called it. The real
+      // approve/reject-with-comment flow (incl. for management-sourced
+      // approvals) runs through the unified Approval Center's
+      // resolveApprovalRequestProvider → /approvals/:id/approve|reject
+      // (per-type permission via approvalPermissionForType), asserted
+      // directly below rather than through the now-removed registry entry.
+      expect(principal.has(Permission.manageManagement), isTrue);
+      expect(_gate('management', 'updateManagementSettings'),
           Permission.manageManagement);
-      expect(principal.has(_gate('management', 'resolveManagementApproval')),
-          isTrue);
     });
 
     test('QA-J-036 · RBAC — Control-Center blocked + finance-intelligence '

@@ -503,6 +503,21 @@ class FinanceRemoteDataSource {
     );
   }
 
+  /// #6 — PATCH .../fee-structures/:id/archive. No body; soft-retires the
+  /// structure (status → inactive) and returns the updated structure.
+  Future<FinanceFeeStructure> archiveFeeStructure({
+    required RepositoryQuery query,
+    required String feeStructureId,
+  }) async {
+    final response = await _dio.patch<Map<String, dynamic>>(
+      FinanceApiPaths.feeStructureArchive(feeStructureId),
+      queryParameters: _queryParams(query),
+    );
+    return _mapper.toFeeStructure(
+      FinanceFeeStructureDto.fromJson(_requireData(response)),
+    );
+  }
+
   Future<StudentFeeAccount> createStudentAccount({
     required RepositoryQuery query,
     required CreateStudentAccountRequest request,
@@ -539,6 +554,24 @@ class FinanceRemoteDataSource {
     return _mapper.toStudentAccount(
       StudentFeeAccountDto.fromJson(_requireData(response)),
     );
+  }
+
+  /// #6 — PATCH .../fee-assignments/:id/cancel. No body. The handler's
+  /// response nests the updated account under `data.account` (alongside the
+  /// cancelled assignment); unwrap that sub-object before mapping so this
+  /// reuses the exact same [StudentFeeAccountDto] shape as assignFeePlan's
+  /// flat response.
+  Future<StudentFeeAccount> cancelFeeAssignment({
+    required RepositoryQuery query,
+    required String feeAssignmentId,
+  }) async {
+    final response = await _dio.patch<Map<String, dynamic>>(
+      FinanceApiPaths.feeAssignmentCancel(feeAssignmentId),
+      queryParameters: _queryParams(query),
+    );
+    final data = _requireData(response);
+    final accountRaw = data['account'] as Map<String, dynamic>? ?? data;
+    return _mapper.toStudentAccount(StudentFeeAccountDto.fromJson(accountRaw));
   }
 
   Future<RefundRequest> createRefund({

@@ -320,6 +320,29 @@ class _AssignmentPanelState extends ConsumerState<_AssignmentPanel> {
                   style: context.aksharaText.bodySmall,
                 ),
               ],
+              // #6 — client wiring for the already-built cancel endpoint. Only
+              // offered when the assignment carries a real backend id (the
+              // mock/offline path self-references it; see buildFeeAccountPreview).
+              if (preview.feeAssignmentId != null) ...[
+                const SizedBox(height: AksharaSpacing.s4),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: AksharaManageAction(
+                    permission: Permission.manageFinance,
+                    child: OutlinedButton.icon(
+                      key: QaTestKeys.financeCancelFeeAssignmentButton,
+                      onPressed: () => executeCancelFeeAssignment(
+                        context,
+                        ref,
+                        feeAssignmentId: preview.feeAssignmentId!,
+                        studentName: handoff.studentName,
+                      ),
+                      icon: const Icon(Icons.cancel_outlined, size: 18),
+                      label: const Text('Cancel assignment'),
+                    ),
+                  ),
+                ),
+              ],
             ] else ...[
               Material(
                 child: DropdownMenu<String>(

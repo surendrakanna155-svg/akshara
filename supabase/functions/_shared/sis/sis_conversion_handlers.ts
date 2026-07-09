@@ -19,8 +19,13 @@ import {
   CatalogMismatchError,
   CatalogNotFoundError,
 } from "../academic/academic_catalog_resolver.ts";
-import { admissionsConversionToApi } from "./sis_mapper.ts";
+import { admissionsConversionToApi, listEnvelope } from "./sis_mapper.ts";
 import { StudentNotFoundError } from "./sis_students_repository.ts";
+// #5 — the read side of admissions-conversion reuses the SAME candidate query
+// and API mapping the admissions module already serves at
+// GET /admissions/enrollments/pending, rather than duplicating the SELECT.
+import { listPendingEnrollments } from "../admissions/admissions_repository.ts";
+import { enrollmentToApi } from "../admissions/admissions_mapper.ts";
 
 async function runTenant<T>(
   config: AppConfig,
@@ -33,6 +38,20 @@ async function runTenant<T>(
 function requireSisWrite(claims: Parameters<typeof requirePermission>[0]): Response | null {
   return requirePermission(claims, "manageSis") ??
     requireSchoolOperationalScope(claims);
+}
+
+function requireSisRead(claims: Parameters<typeof requirePermission>[0]): Response | null {
+  return requirePermission(claims, "viewSis") ??
+    requireSchoolOperationalScope(claims);
+}
+
+function parsePagination(url: URL): { page: number; pageSize: number } {
+  const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
+  const pageSize = Math.min(
+    100,
+    Math.max(1, parseInt(url.searchParams.get("pageSize") ?? "20", 10) || 20),
+  );
+  return { page, pageSize };
 }
 
 function optionalBodyStr(
@@ -76,6 +95,59 @@ function mapConversionError(error: unknown): Response | null {
     return errorEnvelope("CATALOG_MISMATCH", error.message, 422);
   }
   return null;
+}
+
+/**
+ * #5 — GET /sis/admissions-conversion. The read side the client's
+ * `SisAdmissionsConversionScreen` actually loads on mount (via
+ * `fetchAdmissionsConversion` → `SisConversionResponseDto`); previously only
+ * the POST convert action was registered, so this 404'd. Returns the same
+ * conversion-candidate rows as `GET /admissions/enrollments/pending`
+ * (`listPendingEnrollments` + `enrollmentToApi`) — reused as-is, not
+ * duplicated, since that query already sources exactly this queue.
+ * Gated on viewSis (matching the other SIS reads), not manageAdmissions —
+ * this is the SIS module's own read of the same underlying data.
+ */
+export async function handleListAdmissionsConversion(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requireSisRead(auth.claims);
+  if (denied) return denied;
+
+  const url = new URL(req.url);
+  const pagination = parsePagination(url);
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const result = await runTenant(config, auth.claims, (db) =>
+      listPendingEnrollments(db, orgId, schoolId, pagination)
+    );
+    return jsonResponse(
+      envelope(
+        listEnvelope(result.items.map(enrollmentToApi), {
+          page: result.page,
+          pageSize: result.pageSize,
+          total: result.total,
+          hasMore: result.hasMore,
+        }),
+      ),
+    );
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    console.error("handleListAdmissionsConversion error:", error);
+    return errorEnvelope(
+      "INTERNAL_ERROR",
+      "Failed to list admissions conversion candidates",
+      500,
+    );
+  }
 }
 
 export async function handleAdmissionsConversion(

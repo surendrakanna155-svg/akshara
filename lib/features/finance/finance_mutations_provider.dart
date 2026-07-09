@@ -218,6 +218,38 @@ final updateFeeStructureProvider =
   UpdateFeeStructureNotifier.new,
 );
 
+// #6 — PATCH .../fee-structures/:id/archive (backend was already built with
+// zero client callers; this is the wiring).
+class ArchiveFeeStructureNotifier extends AsyncNotifier<FinanceFeeStructure?> {
+  @override
+  FutureOr<FinanceFeeStructure?> build() => null;
+
+  Future<FinanceFeeStructure?> execute({required String feeStructureId}) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertManageFinance(ref),
+        auditAction: 'archiveFeeStructure',
+        auditType: AuditEventType.feeStructureArchived,
+        entityId: feeStructureId,
+        invalidateFeeStructures: true,
+        action: () => ref.read(financeRepositoryProvider).archiveFeeStructure(
+              query: ref.read(repositoryQueryProvider),
+              feeStructureId: feeStructureId,
+            ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final archiveFeeStructureProvider =
+    AsyncNotifierProvider<ArchiveFeeStructureNotifier, FinanceFeeStructure?>(
+  ArchiveFeeStructureNotifier.new,
+);
+
 class CreateStudentAccountNotifier extends AsyncNotifier<StudentFeeAccount?> {
   @override
   FutureOr<StudentFeeAccount?> build() => null;
@@ -327,6 +359,39 @@ class AssignFeePlanNotifier extends AsyncNotifier<StudentFeeAccount?> {
 final assignFeePlanProvider =
     AsyncNotifierProvider<AssignFeePlanNotifier, StudentFeeAccount?>(
   AssignFeePlanNotifier.new,
+);
+
+// #6 — PATCH .../fee-assignments/:id/cancel (backend was already built with
+// zero client callers; this is the wiring).
+class CancelFeeAssignmentNotifier extends AsyncNotifier<StudentFeeAccount?> {
+  @override
+  FutureOr<StudentFeeAccount?> build() => null;
+
+  Future<StudentFeeAccount?> execute({required String feeAssignmentId}) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertManageFinance(ref),
+        auditAction: 'cancelFeeAssignment',
+        auditType: AuditEventType.feeAssignmentCancelled,
+        entityId: feeAssignmentId,
+        invalidateStudentAccounts: true,
+        invalidateInvoices: true,
+        action: () => ref.read(financeRepositoryProvider).cancelFeeAssignment(
+              query: ref.read(repositoryQueryProvider),
+              feeAssignmentId: feeAssignmentId,
+            ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final cancelFeeAssignmentProvider =
+    AsyncNotifierProvider<CancelFeeAssignmentNotifier, StudentFeeAccount?>(
+  CancelFeeAssignmentNotifier.new,
 );
 
 class CreateCollectionNotifier extends AsyncNotifier<FinanceCollectionResult?> {

@@ -23,8 +23,4 @@ abstract class ManagementRepository {
     required RepositoryQuery query,
     required UpdateManagementSettingsRequest request,
   });
-  Future<ManagementApprovalItem> resolveManagementApproval({
-    required RepositoryQuery query,
-    required ResolveManagementApprovalRequest request,
-  });
 }

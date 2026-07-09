@@ -1283,6 +1283,21 @@ class MockFinanceRepository implements FinanceRepository {
     return updated;
   }
 
+  // #6 — soft-retire (status → inactive); mirrors updateFeeStructure's store
+  // mutation, same as the real backend's archiveFeeStructure which is itself
+  // just updateFeeStructure({status: 'inactive'}).
+  @override
+  Future<FinanceFeeStructure> archiveFeeStructure({
+    required RepositoryQuery query,
+    required String feeStructureId,
+  }) {
+    return updateFeeStructure(
+      query: query,
+      feeStructureId: feeStructureId,
+      request: const UpdateFeeStructureRequest(status: FeeStructureStatus.inactive),
+    );
+  }
+
   @override
   Future<StudentFeeAccount> createStudentAccount({
     required RepositoryQuery query,
@@ -1294,8 +1309,9 @@ class MockFinanceRepository implements FinanceRepository {
         : _store.planLabel(request.installmentPlanId);
     final totalDue =
         request.totalDue.isNotEmpty ? request.totalDue : structure.totalAnnual;
+    final accountId = _store.nextId('acct_');
     final account = StudentFeeAccount(
-      id: _store.nextId('acct_'),
+      id: accountId,
       studentName: request.studentName,
       admissionNumber: request.admissionNumber,
       classLabel: request.classLabel,
@@ -1306,6 +1322,10 @@ class MockFinanceRepository implements FinanceRepository {
       status: FeeAccountStatus.pending,
       lastPaymentDate: '—',
       installmentPlan: planLabel,
+      // Mock has no separate assignment row — the account IS the assignment
+      // (see _syncInvoiceForFeeAccount's `feeAssignmentId: account.id`), so
+      // self-reference keeps cancelFeeAssignment targetable in mock mode too.
+      feeAssignmentId: accountId,
     );
     _store.studentAccounts.insert(0, account);
     return account;
@@ -1340,6 +1360,7 @@ class MockFinanceRepository implements FinanceRepository {
       status: request.status ?? current.status,
       lastPaymentDate: current.lastPaymentDate,
       installmentPlan: planLabel,
+      feeAssignmentId: current.feeAssignmentId,
     );
     _store.studentAccounts[index] = updated;
     return updated;
@@ -1364,6 +1385,39 @@ class MockFinanceRepository implements FinanceRepository {
     );
     _syncInvoiceForFeeAccount(account);
     return account;
+  }
+
+  // #6 — mirrors the real cancelAssignment: closes the account (mock has no
+  // separate assignment row, so feeAssignmentId == account.id here).
+  @override
+  Future<StudentFeeAccount> cancelFeeAssignment({
+    required RepositoryQuery query,
+    required String feeAssignmentId,
+  }) async {
+    final index = _store.studentAccounts.indexWhere(
+      (item) => item.id == feeAssignmentId ||
+          item.feeAssignmentId == feeAssignmentId,
+    );
+    if (index < 0) {
+      throw StateError('Fee assignment not found: $feeAssignmentId');
+    }
+    final current = _store.studentAccounts[index];
+    final updated = StudentFeeAccount(
+      id: current.id,
+      studentName: current.studentName,
+      admissionNumber: current.admissionNumber,
+      classLabel: current.classLabel,
+      feeStructureName: current.feeStructureName,
+      totalDue: current.totalDue,
+      totalPaid: current.totalPaid,
+      balance: current.balance,
+      status: FeeAccountStatus.closed,
+      lastPaymentDate: current.lastPaymentDate,
+      installmentPlan: current.installmentPlan,
+      feeAssignmentId: current.feeAssignmentId,
+    );
+    _store.studentAccounts[index] = updated;
+    return updated;
   }
 
   void _syncInvoiceForFeeAccount(StudentFeeAccount account) {
@@ -1559,6 +1613,7 @@ class MockFinanceRepository implements FinanceRepository {
         status: account.status,
         lastPaymentDate: account.lastPaymentDate,
         installmentPlan: account.installmentPlan,
+        feeAssignmentId: account.feeAssignmentId,
       );
     }
   }

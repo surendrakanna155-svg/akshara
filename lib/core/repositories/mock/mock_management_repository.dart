@@ -824,38 +824,4 @@ class MockManagementRepository implements ManagementRepository {
     }
     return item;
   }
-
-  @override
-  Future<ManagementApprovalItem> resolveManagementApproval({
-    required RepositoryQuery query,
-    required ResolveManagementApprovalRequest request,
-  }) async {
-    if (request.status == ManagementApprovalStatus.pending) {
-      throw StateError('Cannot resolve approval to pending');
-    }
-
-    final index = _approvals.indexWhere((a) => a.id == request.approvalId);
-    if (index < 0) {
-      throw StateError('Approval not found');
-    }
-
-    final current = _approvals[index];
-    if (current.status != ManagementApprovalStatus.pending) {
-      throw StateError('Only pending approvals can be resolved');
-    }
-
-    final resolved = ManagementApprovalItem(
-      id: current.id,
-      type: current.type,
-      title: current.title,
-      requester: current.requester,
-      amount: current.amount,
-      dateLabel: current.dateLabel,
-      status: request.status,
-      aiRecommendation: current.aiRecommendation,
-      sourceModuleRoute: current.sourceModuleRoute,
-    );
-    _approvals[index] = resolved;
-    return resolved;
-  }
 }

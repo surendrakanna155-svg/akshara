@@ -29,49 +29,6 @@ void assertManageManagement(Ref ref) {
   }
 }
 
-class ResolveManagementApprovalNotifier
-    extends AsyncNotifier<ManagementApprovalItem?> {
-  @override
-  FutureOr<ManagementApprovalItem?> build() => null;
-
-  Future<ManagementApprovalItem?> execute(
-    ResolveManagementApprovalRequest request,
-  ) async {
-    if (state.isLoading) return state.valueOrNull;
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      assertManageManagement(ref);
-      try {
-        final result = await ref
-            .read(managementRepositoryProvider)
-            .resolveManagementApproval(
-              query: ref.read(repositoryQueryProvider),
-              request: request,
-            );
-        await recordManagementAudit(
-          ref,
-          type: AuditEventType.leadUpdated,
-          action: 'resolveManagementApproval',
-          entityId: request.approvalId,
-          metadata: {'status': request.status.name},
-        );
-        ref
-          ..invalidate(managementTasksFutureProvider)
-          ..invalidate(managementDashboardFutureProvider);
-        return result;
-      } catch (error) {
-        throw ApiFailureException(apiFailureMapper.fromException(error));
-      }
-    });
-    return state.valueOrNull;
-  }
-}
-
-final resolveManagementApprovalProvider = AsyncNotifierProvider<
-    ResolveManagementApprovalNotifier, ManagementApprovalItem?>(
-  ResolveManagementApprovalNotifier.new,
-);
-
 class UpdateManagementSettingsNotifier
     extends AsyncNotifier<ManagementSettingsData?> {
   @override

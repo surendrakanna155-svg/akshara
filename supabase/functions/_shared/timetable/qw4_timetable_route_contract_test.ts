@@ -139,6 +139,67 @@ Deno.test("QA-B-030: POST periods/move rejects a missing periodId (422) before t
   assertEquals(res.status, 422);
 });
 
+// ─── #4 — periods/reassign-teacher (real UI wire; was previously unregistered) ──
+Deno.test("#4: POST periods/reassign-teacher matches the router and reaches the DB (503) when authorized", async () => {
+  const res = await call(
+    "POST",
+    "/academic/timetables/periods/reassign-teacher",
+    ["manageAcademicTimetable"],
+    { periodId: "p-1", teacherId: "b0000000-0000-4000-8000-000000000001" },
+  );
+  assertEquals(res.status, 503);
+});
+
+Deno.test("#4: POST periods/reassign-teacher requires manageAcademicTimetable (403 for view-only)", async () => {
+  const res = await call(
+    "POST",
+    "/academic/timetables/periods/reassign-teacher",
+    ["viewAcademicTimetable"],
+    { periodId: "p-1", teacherId: "b0000000-0000-4000-8000-000000000001" },
+  );
+  assertEquals(res.status, 403);
+  assertEquals((await res.json()).error.code, "FORBIDDEN");
+});
+
+Deno.test("#4: POST periods/reassign-teacher rejects a missing teacherId (422) before the DB", async () => {
+  const res = await call("POST", "/academic/timetables/periods/reassign-teacher", ["manageAcademicTimetable"], {
+    periodId: "p-1",
+  });
+  assertEquals(res.status, 422);
+});
+
+Deno.test("#4: POST periods/reassign-teacher rejects a missing periodId (422) before the DB", async () => {
+  const res = await call("POST", "/academic/timetables/periods/reassign-teacher", ["manageAcademicTimetable"], {
+    teacherId: "b0000000-0000-4000-8000-000000000001",
+  });
+  assertEquals(res.status, 422);
+});
+
+Deno.test("#4: an unauthenticated caller is rejected (401) on periods/reassign-teacher", async () => {
+  const res = await routeTimetable(
+    new Request("https://x/academic/timetables/periods/reassign-teacher", { method: "POST" }),
+    config, "POST", "/academic/timetables/periods/reassign-teacher",
+  );
+  assertEquals(res?.status, 401);
+});
+
+Deno.test("#4: periods/reassign-teacher does not collide with periods/move", async () => {
+  const m = ["manageAcademicTimetable"];
+  // Both are distinct literal paths — each reaches the DB independently.
+  assertEquals(
+    (await call("POST", "/academic/timetables/periods/move", m, {
+      periodId: "p-1", targetDayOfWeek: 2, targetPeriodNumber: 3,
+    })).status,
+    503,
+  );
+  assertEquals(
+    (await call("POST", "/academic/timetables/periods/reassign-teacher", m, {
+      periodId: "p-1", teacherId: "b0000000-0000-4000-8000-000000000001",
+    })).status,
+    503,
+  );
+});
+
 // ─── QA-B-048 — timetable manage RBAC ───────────────────────────────────────────
 Deno.test("QA-B-048: generate, validate, and move all require manageAcademicTimetable (403 otherwise)", async () => {
   // The view permission must NOT unlock the mutations.

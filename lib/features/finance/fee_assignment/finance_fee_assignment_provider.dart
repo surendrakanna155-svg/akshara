@@ -52,6 +52,7 @@ GeneratedFeeAccountPreview buildFeeAccountPreview({
   required InstallmentPlan plan,
   required bool includeTransport,
   required bool includeHostel,
+  String? feeAssignmentId,
 }) {
   final addOns = <String>[];
   if (includeTransport) addOns.add('Transport add-on');
@@ -65,5 +66,6 @@ GeneratedFeeAccountPreview buildFeeAccountPreview({
     totalDue: structure.totalAnnual,
     installmentSummary: plan.label,
     addOns: addOns,
+    feeAssignmentId: feeAssignmentId,
   );
 }

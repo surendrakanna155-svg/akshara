@@ -195,17 +195,8 @@ Future<void> executeAssignFeePlan(
   required bool includeHostel,
 }) async {
   final handoff = item.handoff;
-  final preview = buildFeeAccountPreview(
-    handoffId: handoff.id,
-    studentName: handoff.studentName,
-    admissionNumber: handoff.admissionNumber,
-    structure: structure,
-    plan: plan,
-    includeTransport: includeTransport,
-    includeHostel: includeHostel,
-  );
 
-  await ref.read(assignFeePlanProvider.notifier).execute(
+  final account = await ref.read(assignFeePlanProvider.notifier).execute(
         AssignFeePlanRequest(
           handoffId: handoff.id,
           feeStructureId: structure.id,
@@ -218,11 +209,31 @@ Future<void> executeAssignFeePlan(
         ),
       );
 
+  // #6 — carry the real fee-assignment id through so the "Generated fee
+  // account" panel can offer a genuine Cancel action against it.
+  final preview = buildFeeAccountPreview(
+    handoffId: handoff.id,
+    studentName: handoff.studentName,
+    admissionNumber: handoff.admissionNumber,
+    structure: structure,
+    plan: plan,
+    includeTransport: includeTransport,
+    includeHostel: includeHostel,
+    feeAssignmentId: account?.feeAssignmentId,
+  );
+
   completeFinanceHandoffAssignment(
     ref,
     handoffId: handoff.id,
     preview: preview,
   );
+
+  // #6 — pin the selection to the handoff just assigned. Without this, the
+  // screen's fallback selection (`handoffQueue.first` over the PENDING-only
+  // list) jumps to the next pending handoff the instant this one completes,
+  // silently hiding the generated-account panel — and with it, the new
+  // Cancel action — from the person who just created it.
+  ref.read(financeSelectedHandoffIdProvider.notifier).state = handoff.id;
 }
 
 Future<void> showCreateRefundDialog(
@@ -1257,6 +1268,82 @@ Future<void> executeCancelInvoice(
       SnackBar(
         key: QaTestKeys.financeInvoiceCancelledSnackbar,
         content: Text('Invoice ${invoice.invoiceNumber} cancelled'),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showMutationError(context, error);
+  }
+}
+
+/// #6 — client wiring for the already-built `PATCH .../fee-structures/:id/
+/// archive` endpoint (soft-retire; status → inactive). Mirrors
+/// [executeCancelInvoice]'s confirm-then-mutate-then-snackbar shape.
+Future<void> executeArchiveFeeStructure(
+  BuildContext context,
+  WidgetRef ref, {
+  required String feeStructureId,
+  required String feeStructureName,
+}) async {
+  final confirmed = await showAksharaConfirmDialog(
+    context,
+    title: 'Archive fee structure',
+    message:
+        'Archive "$feeStructureName"? It will no longer be offered for new '
+        'fee assignments; existing student accounts are unaffected.',
+    confirmLabel: 'Archive',
+    cancelLabel: 'Keep',
+    destructive: true,
+    confirmKey: QaTestKeys.financeArchiveFeeStructureConfirmButton,
+  );
+  if (!confirmed || !context.mounted) return;
+
+  try {
+    final structure = await ref.read(archiveFeeStructureProvider.notifier).execute(
+          feeStructureId: feeStructureId,
+        );
+    if (!context.mounted || structure == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.financeFeeStructureArchivedSnackbar,
+        content: Text('${structure.name} archived'),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showMutationError(context, error);
+  }
+}
+
+/// #6 — client wiring for the already-built `PATCH .../fee-assignments/:id/
+/// cancel` endpoint (assignment → cancelled, linked account → closed).
+Future<void> executeCancelFeeAssignment(
+  BuildContext context,
+  WidgetRef ref, {
+  required String feeAssignmentId,
+  required String studentName,
+}) async {
+  final confirmed = await showAksharaConfirmDialog(
+    context,
+    title: 'Cancel fee assignment',
+    message: 'Cancel the fee assignment for $studentName? The student fee '
+        'account will be closed. This cannot be undone.',
+    confirmLabel: 'Cancel assignment',
+    cancelLabel: 'Keep',
+    destructive: true,
+    confirmKey: QaTestKeys.financeCancelFeeAssignmentConfirmButton,
+  );
+  if (!confirmed || !context.mounted) return;
+
+  try {
+    final account = await ref.read(cancelFeeAssignmentProvider.notifier).execute(
+          feeAssignmentId: feeAssignmentId,
+        );
+    if (!context.mounted || account == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.financeFeeAssignmentCancelledSnackbar,
+        content: Text('Fee assignment cancelled for ${account.studentName}'),
       ),
     );
   } catch (error) {

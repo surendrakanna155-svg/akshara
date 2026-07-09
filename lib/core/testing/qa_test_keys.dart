@@ -724,6 +724,26 @@ abstract final class QaTestKeys {
   static const financeCancelCollectionConfirmButton =
       ValueKey<String>('finance_cancel_collection_confirm_button');
 
+  // #6 — fee-structure archive + fee-assignment cancel (client wiring for
+  // already-built backend actions).
+  static ValueKey<String> financeArchiveFeeStructureButton(String structureId) =>
+      ValueKey<String>('finance_archive_fee_structure_$structureId');
+
+  static const financeArchiveFeeStructureConfirmButton =
+      ValueKey<String>('finance_archive_fee_structure_confirm_button');
+
+  static const financeFeeStructureArchivedSnackbar =
+      ValueKey<String>('finance_fee_structure_archived_snackbar');
+
+  static const financeCancelFeeAssignmentButton =
+      ValueKey<String>('finance_cancel_fee_assignment_button');
+
+  static const financeCancelFeeAssignmentConfirmButton =
+      ValueKey<String>('finance_cancel_fee_assignment_confirm_button');
+
+  static const financeFeeAssignmentCancelledSnackbar =
+      ValueKey<String>('finance_fee_assignment_cancelled_snackbar');
+
   static const financeReportExportPdfButton =
       ValueKey<String>('finance_report_export_pdf_button');
 

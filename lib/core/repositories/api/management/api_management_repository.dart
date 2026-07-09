@@ -2,7 +2,6 @@ import '../../interfaces/management_repository.dart';
 import '../../repository_query.dart';
 import '../../../../features/management/management_models.dart';
 import '../../../../features/management/management_requests.dart';
-import 'dto/management_enum_codec.dart';
 import 'mapper/management_mapper.dart';
 import 'remote/management_remote_datasource.dart';
 
@@ -85,18 +84,5 @@ class ApiManagementRepository implements ManagementRepository {
   }) async {
     final dto = await _remote.updateSettings(query: query, request: request);
     return _mapper.toSettings(dto);
-  }
-
-  @override
-  Future<ManagementApprovalItem> resolveManagementApproval({
-    required RepositoryQuery query,
-    required ResolveManagementApprovalRequest request,
-  }) async {
-    final dto = await _remote.resolveApproval(
-      query: query,
-      approvalId: request.approvalId,
-      status: ManagementEnumCodec.approvalStatusToApi(request.status),
-    );
-    return _mapper.toApproval(dto);
   }
 }

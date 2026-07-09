@@ -5,6 +5,7 @@ import '../../../core/repositories/academic/academic_catalog_provider.dart';
 import '../../../core/repositories/academic/academic_year_label.dart';
 import '../../../core/repositories/paginated_result.dart';
 import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -173,13 +174,36 @@ class _FeeStructuresTable extends StatelessWidget {
                   DataCell(Text(structure.installmentOptions.join(', '))),
                   DataCell(_StructureStatusChip(status: structure.status)),
                   DataCell(
-                    TextButton(
-                      onPressed: () => showEditFeeStructureDialog(
-                        context,
-                        ref,
-                        structure: structure,
-                      ),
-                      child: const Text('Edit'),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextButton(
+                          onPressed: () => showEditFeeStructureDialog(
+                            context,
+                            ref,
+                            structure: structure,
+                          ),
+                          child: const Text('Edit'),
+                        ),
+                        // #6 — client wiring for the already-built archive
+                        // endpoint; hidden once already inactive/archived.
+                        if (structure.status == FeeStructureStatus.active)
+                          AksharaManageAction(
+                            permission: Permission.manageFinance,
+                            child: TextButton(
+                              key: QaTestKeys.financeArchiveFeeStructureButton(
+                                structure.id,
+                              ),
+                              onPressed: () => executeArchiveFeeStructure(
+                                context,
+                                ref,
+                                feeStructureId: structure.id,
+                                feeStructureName: structure.name,
+                              ),
+                              child: const Text('Archive'),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ],
@@ -237,13 +261,34 @@ class _FeeStructureCard extends StatelessWidget {
             const SizedBox(height: AksharaSpacing.s3),
             Align(
               alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () => showEditFeeStructureDialog(
-                  context,
-                  ref,
-                  structure: structure,
-                ),
-                child: const Text('Edit'),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextButton(
+                    onPressed: () => showEditFeeStructureDialog(
+                      context,
+                      ref,
+                      structure: structure,
+                    ),
+                    child: const Text('Edit'),
+                  ),
+                  if (structure.status == FeeStructureStatus.active)
+                    AksharaManageAction(
+                      permission: Permission.manageFinance,
+                      child: TextButton(
+                        key: QaTestKeys.financeArchiveFeeStructureButton(
+                          structure.id,
+                        ),
+                        onPressed: () => executeArchiveFeeStructure(
+                          context,
+                          ref,
+                          feeStructureId: structure.id,
+                          feeStructureName: structure.name,
+                        ),
+                        child: const Text('Archive'),
+                      ),
+                    ),
+                ],
               ),
             ),
           ],

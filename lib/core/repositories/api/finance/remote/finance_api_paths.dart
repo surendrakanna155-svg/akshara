@@ -41,7 +41,11 @@ abstract final class FinanceApiPaths {
   static String qrPaymentConfirm(String id) =>
       '${qrPaymentSession(id)}/confirm';
   static String feeStructure(String id) => '$feeStructures/$id';
+  // #6 — PATCH .../fee-structures/:id/archive (soft-retire, status=inactive).
+  static String feeStructureArchive(String id) => '${feeStructure(id)}/archive';
   static String feeAssignment(String id) => '$feeAssignments/$id';
+  // #6 — PATCH .../fee-assignments/:id/cancel.
+  static String feeAssignmentCancel(String id) => '${feeAssignment(id)}/cancel';
   static String studentAccount(String studentId) =>
       '$studentAccounts/$studentId';
   static String receipt(String id) => '$receipts/$id';

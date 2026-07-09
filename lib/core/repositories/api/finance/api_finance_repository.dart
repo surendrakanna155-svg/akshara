@@ -399,6 +399,13 @@ class ApiFinanceRepository implements FinanceRepository {
       );
 
   @override
+  Future<FinanceFeeStructure> archiveFeeStructure({
+    required RepositoryQuery query,
+    required String feeStructureId,
+  }) =>
+      _remote.archiveFeeStructure(query: query, feeStructureId: feeStructureId);
+
+  @override
   Future<StudentFeeAccount> createStudentAccount({
     required RepositoryQuery query,
     required CreateStudentAccountRequest request,
@@ -423,6 +430,13 @@ class ApiFinanceRepository implements FinanceRepository {
     required AssignFeePlanRequest request,
   }) =>
       _remote.assignFeePlan(query: query, request: request);
+
+  @override
+  Future<StudentFeeAccount> cancelFeeAssignment({
+    required RepositoryQuery query,
+    required String feeAssignmentId,
+  }) =>
+      _remote.cancelFeeAssignment(query: query, feeAssignmentId: feeAssignmentId);
 
   @override
   Future<RefundRequest> createRefund({

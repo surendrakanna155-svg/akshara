@@ -1,7 +1,10 @@
 import type { AppConfig } from "../config.ts";
 import { errorEnvelope } from "../http.ts";
 import { handleDashboard } from "./sis_dashboard_handlers.ts";
-import { handleAdmissionsConversion } from "./sis_conversion_handlers.ts";
+import {
+  handleAdmissionsConversion,
+  handleListAdmissionsConversion,
+} from "./sis_conversion_handlers.ts";
 import {
   handleCreateEnrollment,
   handleListEnrollments,
@@ -60,6 +63,9 @@ export function matchSisRoute(
     return { handler: handleCreateEnrollment, args: [] };
   }
 
+  if (path === "/sis/admissions-conversion" && method === "GET") {
+    return { handler: handleListAdmissionsConversion, args: [] };
+  }
   if (path === "/sis/admissions-conversion" && method === "POST") {
     return { handler: handleAdmissionsConversion, args: [] };
   }

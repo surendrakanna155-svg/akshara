@@ -248,6 +248,13 @@ class HybridFinanceRepository implements FinanceRepository {
       );
 
   @override
+  Future<FinanceFeeStructure> archiveFeeStructure({
+    required RepositoryQuery query,
+    required String feeStructureId,
+  }) =>
+      _api.archiveFeeStructure(query: query, feeStructureId: feeStructureId);
+
+  @override
   Future<StudentFeeAccount> createStudentAccount({
     required RepositoryQuery query,
     required CreateStudentAccountRequest request,
@@ -272,6 +279,13 @@ class HybridFinanceRepository implements FinanceRepository {
     required AssignFeePlanRequest request,
   }) =>
       _api.assignFeePlan(query: query, request: request);
+
+  @override
+  Future<StudentFeeAccount> cancelFeeAssignment({
+    required RepositoryQuery query,
+    required String feeAssignmentId,
+  }) =>
+      _api.cancelFeeAssignment(query: query, feeAssignmentId: feeAssignmentId);
 
   @override
   Future<RefundRequest> createRefund({
