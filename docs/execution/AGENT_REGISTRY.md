@@ -34,10 +34,9 @@ Reconcile against them FIRST, then continue.
 
 | Agent ID | Model | Task | Scope (files) | State | Recovery |
 |---|---|---|---|---|---|
-| `a25f56dfb0697f62b` | sonnet | **Gap-sweep STEP 3 wiring** (worktree, base `d8482029`) — #5 SIS-conversion GET build · #4 timetable reassign-teacher route · #6 finance archive/cancel UI wiring · #1 mgmt-resolve trace→reuse/remove | `{academics,sis,finance,management}` backend+client | 🟢 running | verify-first per item; integrate via cherry-pick on report |
-| `a81a916cac05d1c0e` | sonnet | **VPS Track-B RLS live cross-tenant probes** (worktree, base `d8482029`) — rolled-back-txn isolation for QA-B cluster (hr/hostel/finance/parent/control-center/… P0s) against `akshara-postgres` | `docs/engineering/eos/TRACK_B_RLS_LIVE_EVIDENCE.md` + probe tests · VPS read-only/rolled-back | 🟢 running | PROD-SAFE (Akshara-only, non-destructive); ControlMaster socket; flags leaks LOUD; main flips tracker rows |
-| `a3845fd85b7d35e44` | sonnet | **VPS Track-B backup + reminder cron** (worktree, base `d8482029`) — verify nightly pg_dump (~24h RPO) + COM-4 scheduled-broadcast cron; additive-only fixes | `docs/engineering/eos/TRACK_B_INFRA_EVIDENCE.md` + Akshara-namespaced scripts · VPS diagnose-first | 🟢 running | PROD-SAFE (additive/Akshara-only; no existing-config edits; no secrets in repo); ControlMaster socket |
-
+| `a27ffe6ca4d7698aa` | sonnet | **COM-4 internal-cron-token** (worktree, base `34d33995`) — fail-closed internal-auth path for /communications/broadcasts/run-scheduled + all-orgs loop + audit; VPS activation STAGED (not activated) | `communication/**` + `deploy/akshara-vps/` + runbook | 🟢 running | security-surface; integrate + review on report |
+| `a80cbeb9514a8d678` | sonnet | **Off-site backup R2 prep** (worktree, base `34d33995`) — additive opt-in rclone off-site copy, credentials-PENDING; runbook | `deploy/akshara-vps/backup/**` + runbook | 🟢 running | additive/non-activating; no secrets; integrate on report |
+| `a343a704e2f1cb124` | sonnet | **Gap-sweep STEP 4 backend completion** (worktree, base `34d33995`) — Inventory Replacement (#2) + SIS Academic Assignment (#3), verify-first no-dup, build w/ RBAC+audit+tests | `inventory_distribution` + `sis` backend+client | 🟢 running | integrate via cherry-pick on report |
 
 ## Terminal this session (2026-07-08) — for provenance / no-duplicate
 
@@ -66,6 +65,9 @@ Reconcile against them FIRST, then continue.
 | `a83fdbf81c31e1c93` | sonnet | finance money-math fixes (worktree) | ✅ done | aging/waiveLateFee/discount-caveat → `2aeda21a` (deno 160/0); worktree removed |
 | `ab0524c1dcf56e0b5` | sonnet | SoD-hardening fixes (worktree) | ✅ done | PO self-approval + approval requester-spoof + admissions status-flip → `13c6b45e` (140/0, 13 tests); worktree removed |
 | `a02699474a07ed9f8` | sonnet | attendance-% canonical unify (worktree) | ✅ done | ONE shared formula, 4 sites → `e1fa8017` (212/0); flagged 6 more attendance-% call sites for a follow-up sweep; worktree removed |
+| `a25f56dfb0697f62b` | sonnet | Gap-sweep STEP 3 wiring (worktree) | ✅ done | #5 SIS-conv GET + #4 timetable-reassign built · #6 finance archive/cancel wired (+2 latent bugs) · #1 mgmt-resolve = DEAD-CODE removed (real path /approvals untouched) → `b0406215`; deno 2267/0, flutter 3761/0; worktree removed |
+| `a81a916cac05d1c0e` | sonnet | VPS Track-B RLS live probes (worktree) | ✅ done | ALL 12 QA-B rows PASS + 233/233 enforced suite, ZERO leaks, non-destructive (akshara_tenant_test, rolled-back) → `33e52eaa`; tracker flipped `34d33995`; worktree removed |
+| `a3845fd85b7d35e44` | sonnet | VPS Track-B backup/cron (worktree) | ✅ done | backup GREEN (nightly+drill+restorable verified) → `bd9ef023`; off-site + COM-4-cron surfaced → owner APPROVED both; worktree removed |
 | `btor0cbhu` (bg task) | (bash) | Re-crawl v2 (filename fix only) | ❌ tainted-reset | filename fix worked (72/72 distinct on disk, 0 overwrite) BUT deduped 136 distinct PDFs against the STALE engine `checksum_index.json` I forgot to reset → verified-but-not-saved. Fixed by `reset_archive.sh` (resets ALL stores); superseded by `buewnbpvb` |
 
 ---
