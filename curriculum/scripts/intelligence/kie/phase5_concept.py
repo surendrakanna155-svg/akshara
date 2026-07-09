@@ -30,9 +30,17 @@ _SLUG = re.compile(r"[^A-Z0-9]+")
 _DATE = re.compile(r"\b(19|20)\d{2}\b")
 _NOISE = re.compile(
     r"shift|careers?360|allen|resonance|www\.|https?:|\.com|page\s*\d|marking scheme|"
-    r"sample\s+(?:test\s+)?paper|test\s+paper|question\s+paper|mock\s+test|answer\s+key|solution",
+    r"sample\s+(?:test\s+)?paper|test\s+paper|question\s+paper|mock\s+test|answer\s+key|solution|"
+    r"national testing agency|batch|advertisement|directors team|kotacrack|achiever|academy|"
+    r"institute|toppers|rank\s+booster|coaching|enrol|registration|"
+    r"section\s+[a-e]\b|part\s+[a-e]\b",
     re.I,
 )
+# bare subject / organizational markers are structure, not concepts
+_SUBJECT_MARKER = {
+    "physics", "chemistry", "biology", "botany", "zoology", "mathematics", "maths",
+    "science", "general knowledge", "reasoning", "aptitude",
+}
 # equation-ish symbols, or alphanumeric-garble tokens (e.g. 12dBk, AkB0dt, 0lim) that
 # leak in when heading detection fires on math fragments in exam papers.
 _MATHY = re.compile(r"[=+*/^_→←↔∫∑√±×÷<>{}\\|]|[A-Za-z]\d|\d[A-Za-z]")
@@ -90,6 +98,8 @@ def is_concept_title(title: str) -> bool:
     if len(alpha_words) < 1:
         return False
     if _DATE.search(t) or _NOISE.search(t) or _MATHY.search(t):
+        return False
+    if t.lower() in _SUBJECT_MARKER:
         return False
     letters = sum(c.isalpha() for c in t)
     digits = sum(c.isdigit() for c in t)
@@ -193,8 +203,10 @@ def run(conn, limit: Optional[int] = None, force: bool = False) -> dict:
     # them from scratch so stale candidates from an earlier heuristic don't linger.
     if force and not limit:
         with store.txn(conn):
-            conn.execute("DELETE FROM formulas")
-            conn.execute("DELETE FROM concepts")
+            # delete concept-dependent derived tables first (FK order); the graph
+            # (Phase 6) must be rebuilt after a concept-layer rebuild anyway.
+            for tbl in ("concept_edges", "concept_board_mappings", "formulas", "concepts"):
+                conn.execute(f"DELETE FROM {tbl}")
     rows = conn.execute(
         "SELECT DISTINCT s.* FROM source_documents s "
         "JOIN chunks c ON c.doc_id = s.doc_id WHERE s.certify_status = 'certified' ORDER BY s.doc_id"
