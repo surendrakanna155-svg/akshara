@@ -1,21 +1,49 @@
-# Curriculum workspace — binary/content trees NEVER enter git (R10 guard).
-# Committed: configs/, scripts/, reports/ (markdown), indexes/ + metadata/ summaries, PM files.
+# =============================================================================
+# RESOURCE STORAGE POLICY (LOCKED — owner 2026-07-09)
+# All downloaded learning resources are LOCAL DEVELOPMENT ASSETS ONLY.
+# Never commit copyrighted source documents (NCERT, JEE, NEET, AIPMT, AIIMS,
+# NTA samples, DPPs, question banks, mock tests, formula sheets, etc.).
+# Policy: docs/curriculum-intelligence/RESOURCE_STORAGE_POLICY.md
+# =============================================================================
+
+# --- Raw resource trees (NEVER commit) ----------------------------------------
 resources/
+resources/foundation/
+resources/archive/
+resources/curriculum/
 downloads/
 cache/
 temp/
 archives/
+
+# --- Downloaded / copyrighted binary formats (NEVER commit) ---------------------
 *.pdf
 *.docx
 *.doc
 *.epub
 *.zip
+*.ecar
+*.rar
+*.7z
+
+# --- Acquisition runtime logs (local download traces) ---------------------------
+acquisition/*.log
+acquisition/*.out
+acquisition/.counters.json
+acquisition/.acquire.pid
+acquisition/.fetch_direct.pid
 # Runtime engineering logs are seeded on disk (Part-04 logs/) but are
 # machine-local artifacts — keep them out of git; the tracked logs/.gitkeep
 # preserves the directory.
 logs/*.log
 __pycache__/
 *.pyc
+
+# --- Knowledge Intelligence Engine local virtualenv (NEVER commit) --------------
+# Dedicated Python 3.13 venv for the KIE data-lane (pypdf/PyMuPDF/pdfplumber/OCR).
+# Reproducible from scripts/intelligence/requirements.txt — the env itself is local.
+.venv/
+*.egg-info/
 
 # --- Owner local-storage lock (2026-07-08) --------------------------------
 # Derived / AI-generated knowledge is LOCAL ONLY — NOT committed until the

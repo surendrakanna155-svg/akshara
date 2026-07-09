@@ -1,0 +1,18 @@
+# Knowledge Intelligence Engine — Python data-lane dependencies
+# Runtime: Python 3.13 (binary-wheel libs lag on 3.14). Isolated venv, gitignored.
+#   python3.13 -m venv curriculum/.venv
+#   curriculum/.venv/bin/pip install -r curriculum/scripts/intelligence/requirements.txt
+#
+# Everything runs locally. No PDF/book is ever sent to an AI model (LLM policy).
+
+# --- Phase 1: Repository Verification (installed) -----------------------------
+pypdf==6.14.2            # pure-python PDF open/page-count/text-sample → integrity + parser-readiness
+
+# --- Phase 2: Local Parser (staged — uncomment when Phase 2 starts) -----------
+# pymupdf>=1.24            # fast text/tables/images/coordinates extraction (primary parser)
+# pdfplumber>=0.11         # table + word-box extraction (secondary / cross-check)
+# pytesseract>=0.3.13      # OCR wrapper for scanned PDFs (requires system `tesseract`)
+# Pillow>=10               # image handling for OCR pipeline
+
+# --- Phases 5-8: analysis / generation (staged) -------------------------------
+# numpy>=2                 # vector/statistics for question-intelligence
