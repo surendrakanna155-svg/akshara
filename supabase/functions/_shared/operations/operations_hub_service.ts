@@ -1,5 +1,6 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
 import { buildDistributionDashboard } from "../inventory_distribution/inventory_distribution_repository.ts";
+import { attendancePercentSql } from "../attendance/attendance_percentage.ts";
 
 export interface OperationsHubSnapshot {
   schoolHealth: number;
@@ -36,15 +37,20 @@ export async function buildOperationsHub(
     inventory,
     feeAlerts,
   ] = await Promise.all([
-    client.queryObject<{ present: number; absent: number; total: number }>(
+    client.queryObject<
+      { present: number; absent: number; total: number; attendance_pct: number | null }
+    >(
       // attendance_records has no date column of its own; the date lives on the
       // parent attendance_sessions row (session_date). Join through session_id —
       // the previous `recorded_on = CURRENT_DATE` referenced a non-existent
       // column and 500'd the whole operations hub / widgets data endpoint.
+      // attendance_pct uses the ONE canonical formula (attendance_percentage.ts):
+      // attended = present+late+0.5*half_day; denominator = total − excused.
       `SELECT
        count(*) FILTER (WHERE ar.mark = 'present')::int AS present,
        count(*) FILTER (WHERE ar.mark = 'absent')::int AS absent,
-       count(*)::int AS total
+       count(*)::int AS total,
+       ${attendancePercentSql("ar.mark")} AS attendance_pct
      FROM attendance_records ar
      JOIN attendance_sessions s
        ON s.id = ar.session_id
@@ -93,8 +99,10 @@ export async function buildOperationsHub(
     ),
   ]);
 
-  const att = attendance[0] ?? { present: 0, absent: 0, total: 0 };
-  const attendancePct = att.total > 0 ? Math.round((att.present / att.total) * 100) : 0;
+  const att = attendance[0] ?? { present: 0, absent: 0, total: 0, attendance_pct: null };
+  // Canonical attendance-% from the shared SQL (null when no gradable marks); this KPI
+  // shows 0 for a no-data day, matching prior dashboard behaviour.
+  const attendancePct = att.attendance_pct ?? 0;
   const criticalCount =
     (studentRisks[0]?.count ?? 0) +
     (employeeRisks[0]?.count ?? 0) +
