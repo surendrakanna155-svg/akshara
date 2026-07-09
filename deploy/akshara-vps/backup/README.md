@@ -23,12 +23,17 @@ actually restore.**
 
 | File | Role |
 |------|------|
-| `lib-common.sh` | shared config loader + helpers (sourced, not run directly) |
+| `lib-common.sh` | shared config loader + helpers (sourced, not run directly); also owns `offsite_copy()` / `offsite_prune()` |
 | `backup.env.example` | config template → copy to `/opt/akshara/backup/backup.env` |
-| `akshara-backup.sh` | the nightly backup (run by cron; `manual` arg for ad-hoc) |
+| `rclone.conf.example` | **off-site** remote config template (inert placeholders) → copy to `/opt/akshara/backup/rclone.conf` |
+| `akshara-backup.sh` | the nightly backup (run by cron; `manual` and/or `--dry-run` args for ad-hoc) |
 | `akshara-restore.sh` | restore an artifact into a target DB (refuses live DB without `--force`) |
 | `akshara-restore-drill.sh` | automated restore test into a throwaway DB |
-| `install-ops-cron.sh` | idempotent installer: key, dirs, cron, logrotate |
+| `install-ops-cron.sh` | idempotent installer: key, dirs, cron, logrotate, rclone.conf placeholder |
+
+Full off-site setup (Cloudflare R2) walkthrough, including exactly what credentials
+the owner must supply and how to verify the first upload + a restore-from-remote:
+**`docs/engineering/eos/OFFSITE_BACKUP_R2_RUNBOOK.md`**.
 
 ## First-time install (on the VPS)
 
@@ -65,10 +70,24 @@ Off-site is **off by default** — the script logs a loud warning and records
 `offsite=false` until you configure it. To enable:
 
 1. Install `rclone` on the VPS.
-2. `rclone config` a remote (Cloudflare R2 / Backblaze B2 / any S3) named e.g. `r2`.
-3. Set `RCLONE_REMOTE=r2:akshara-backups/db` in `backup.env`.
+2. Copy `rclone.conf.example` → `/opt/akshara/backup/rclone.conf` (chmod 600) and
+   fill in the real Cloudflare R2 (or any S3-compatible) values.
+3. In `backup.env`, set `RCLONE_CONFIG_FILE=/opt/akshara/backup/rclone.conf` and
+   `RCLONE_REMOTE=r2:akshara-backups/db`.
 
 The remote bucket should live with a **different provider / region** than the VPS.
+Full step-by-step (exact credentials needed, verification, restore-from-remote):
+**`docs/engineering/eos/OFFSITE_BACKUP_R2_RUNBOOK.md`**.
+
+**Test the wiring before you have credentials.** `akshara-backup.sh` supports a
+`--dry-run` flag that runs a real dump/encrypt/ledger cycle as usual but only
+*logs* the off-site `rclone` command(s) it would run instead of executing them —
+so the plumbing can be proven correct with no `rclone` binary and no R2
+credentials at all:
+
+```bash
+./akshara-backup.sh manual --dry-run
+```
 
 ## Disaster recovery (server lost)
 

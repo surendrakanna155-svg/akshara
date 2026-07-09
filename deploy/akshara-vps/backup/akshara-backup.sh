@@ -9,8 +9,15 @@
 #   3. Copies the encrypted artifact OFF the box via rclone (if configured).
 #   4. Prunes old local backups on a grandfather-father-son schedule.
 #
-# Safe to run by hand: ./akshara-backup.sh [manual]
+# Safe to run by hand: ./akshara-backup.sh [manual] [--dry-run]
 # Cron runs it nightly (see install-ops-cron.sh). A flock prevents overlap.
+#
+#   manual     classify this run as "manual" for retention (instead of the
+#              date-derived nightly/weekly/monthly kind).
+#   --dry-run  do the real dump+encrypt+ledger as usual, but only LOG the
+#              off-site rclone command(s) instead of running them — proves the
+#              off-site wiring end-to-end without rclone installed or any R2
+#              credentials configured. See docs/engineering/eos/OFFSITE_BACKUP_R2_RUNBOOK.md.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib-common.sh"
 
@@ -29,10 +36,20 @@ flock -n 9 || die "another backup is already running (lock: $LOCK)"
 ensure_pg_up
 [[ -f "$BACKUP_KEY_FILE" ]] || die "encryption key file missing: $BACKUP_KEY_FILE (run install-ops-cron.sh)"
 
+# Parse args (order-independent; both can be combined, e.g. `manual --dry-run`).
+MANUAL=false
+DRY_RUN=false
+for arg in "$@"; do
+  case "$arg" in
+    manual|--manual) MANUAL=true ;;
+    dry-run|--dry-run) DRY_RUN=true ;;
+  esac
+done
+
 # Classify this run for retention: monthly on the 1st, weekly on Sunday, else daily.
 DOM="$(date -u +%d)"
 DOW="$(date -u +%u)"   # 1=Mon .. 7=Sun
-if [[ "${1:-}" == "manual" || "${1:-}" == "--manual" ]]; then
+if [[ "$MANUAL" == true ]]; then
   KIND="manual"
 elif [[ "$DOM" == "01" ]]; then
   KIND="monthly"
@@ -78,30 +95,11 @@ SHA="$(sha256sum "$ARTIFACT" | awk '{print $1}')"
 BYTES="$(stat -c%s "$ARTIFACT" 2>/dev/null || stat -f%z "$ARTIFACT")"
 log "dump complete: $BYTES bytes, sha256=$SHA"
 
-# --- off-site copy -------------------------------------------------------------
-OFFSITE=false
-OFFSITE_LOC=""
-if [[ -n "$RCLONE_REMOTE" ]]; then
-  if command -v rclone >/dev/null 2>&1; then
-    DEST="$RCLONE_REMOTE/$HOSTNAME_SHORT"
-    if rclone copy "$ARTIFACT" "$DEST/" --checksum $RCLONE_FLAGS >>"$LOG_DIR/backup.log" 2>&1; then
-      # confirm it actually landed
-      if rclone lsf "$DEST/$(basename "$ARTIFACT")" $RCLONE_FLAGS >/dev/null 2>&1; then
-        OFFSITE=true
-        OFFSITE_LOC="$DEST/$(basename "$ARTIFACT")"
-        log "off-site copy OK -> $OFFSITE_LOC"
-      else
-        log "WARNING: off-site copy reported success but file not found at $DEST"
-      fi
-    else
-      log "WARNING: off-site rclone copy FAILED (backup is local-only)"
-    fi
-  else
-    log "WARNING: RCLONE_REMOTE set but rclone not installed (backup is local-only)"
-  fi
-else
-  log "WARNING: no RCLONE_REMOTE configured — backup is LOCAL-ONLY (violates 3-2-1)"
-fi
+# --- off-site copy ---------------------------------------------------------
+# offsite_copy (lib-common.sh) sets OFFSITE / OFFSITE_LOC. Opt-in: no-op with a
+# loud log line while RCLONE_REMOTE is unset (today's default, zero change).
+# --dry-run logs the would-be rclone command without needing rclone/credentials.
+offsite_copy "$ARTIFACT" "$DRY_RUN"
 
 # --- retention prune (local) ---------------------------------------------------
 prune_kind() {
@@ -116,10 +114,7 @@ prune_kind nightly "$KEEP_DAILY"
 prune_kind weekly  "$KEEP_WEEKLY"
 prune_kind monthly "$KEEP_MONTHLY"
 # Off-site retention (best-effort): drop nightly copies older than KEEP_DAILY days.
-if [[ "$OFFSITE" == true ]]; then
-  rclone delete "$RCLONE_REMOTE/$HOSTNAME_SHORT" --include "akshara_db_*_nightly.dump.enc" \
-    --min-age "${KEEP_DAILY}d" $RCLONE_FLAGS >>"$LOG_DIR/backup.log" 2>&1 || true
-fi
+offsite_prune "$DRY_RUN"
 
 # --- close ledger row ----------------------------------------------------------
 trap - ERR
@@ -130,4 +125,8 @@ pg -c "UPDATE ops_backup_runs SET status='success', artifact_path='$(sql_str "$A
   offsite_location=$( [[ -n "$OFFSITE_LOC" ]] && echo "'$(sql_str "$OFFSITE_LOC")'" || echo NULL ), \
   duration_ms=$DUR, finished_at=now() WHERE id='$RUN_ID';" >/dev/null
 
-log "backup SUCCESS ($KIND) in ${DUR}ms (offsite=$OFFSITE)"
+if [[ "$DRY_RUN" == true ]]; then
+  log "backup SUCCESS ($KIND) in ${DUR}ms (offsite=$OFFSITE, off-site step was --dry-run)"
+else
+  log "backup SUCCESS ($KIND) in ${DUR}ms (offsite=$OFFSITE)"
+fi

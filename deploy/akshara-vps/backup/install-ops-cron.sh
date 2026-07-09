@@ -19,6 +19,18 @@ if [[ ! -f "$ENV_FILE" ]]; then
   echo "seeded $ENV_FILE from example — review RCLONE_REMOTE etc. before relying on off-site"
 fi
 chmod 600 "$ENV_FILE"
+
+# Seed an inert rclone config template (no real credentials — every value is a
+# placeholder) next to backup.env if one isn't already there. Off-site stays
+# opt-in either way: this alone does not activate anything, RCLONE_REMOTE must
+# still be set in backup.env. See docs/engineering/eos/OFFSITE_BACKUP_R2_RUNBOOK.md.
+RCLONE_CONF_TARGET="$INSTALL_DIR/rclone.conf"
+if [[ ! -f "$RCLONE_CONF_TARGET" && -f "$INSTALL_DIR/rclone.conf.example" ]]; then
+  cp "$INSTALL_DIR/rclone.conf.example" "$RCLONE_CONF_TARGET"
+  chmod 600 "$RCLONE_CONF_TARGET"
+  echo "seeded $RCLONE_CONF_TARGET (placeholder — fill in real R2 credentials before enabling off-site)"
+fi
+
 # shellcheck disable=SC1090
 source "$ENV_FILE"
 : "${BACKUP_ROOT:=/opt/akshara/backup/store}"
@@ -72,4 +84,15 @@ $LOG_DIR/*.log {
 EOF
 echo "installed logrotate rule /etc/logrotate.d/akshara-ops"
 
+# --- off-site status (informational only; never blocks install) ---------------
+if [[ -z "${RCLONE_REMOTE:-}" ]]; then
+  echo "NOTE: off-site backup copy is NOT configured (RCLONE_REMOTE empty) — backups"
+  echo "      are local-only for now (3-2-1 not yet met). This is expected until R2"
+  echo "      credentials are provided. See docs/engineering/eos/OFFSITE_BACKUP_R2_RUNBOOK.md"
+elif ! command -v rclone >/dev/null 2>&1; then
+  echo "NOTE: RCLONE_REMOTE is set but the 'rclone' binary is not installed yet —"
+  echo "      install it (see the runbook) before the off-site copy can run."
+fi
+
 echo "done. Run a first backup now with:  $INSTALL_DIR/akshara-backup.sh manual"
+echo "To test off-site wiring with no credentials yet: $INSTALL_DIR/akshara-backup.sh manual --dry-run"

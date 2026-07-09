@@ -1,0 +1,39 @@
+# rclone remote TEMPLATE for the Akshara off-site backup copy (3-2-1 "1").
+#
+# This file is INERT as shipped — every value below is a placeholder, not a
+# real credential. It will not authenticate against anything. NEVER commit a
+# copy of this file with real values filled in.
+#
+# --- What to do with this file (see the full runbook for step-by-step detail:
+#     docs/engineering/eos/OFFSITE_BACKUP_R2_RUNBOOK.md) ---
+#
+#   1. Copy it to the VPS as /opt/akshara/backup/rclone.conf :
+#        cp rclone.conf.example /opt/akshara/backup/rclone.conf
+#        chmod 600 /opt/akshara/backup/rclone.conf   # root-only, this holds a secret
+#   2. Replace the placeholder values below with the REAL Cloudflare R2 values
+#      (from Cloudflare dashboard -> R2 -> Manage API Tokens -> Create API Token):
+#        account_id        -> your Cloudflare account ID
+#        access_key_id      -> the R2 token's Access Key ID
+#        secret_access_key  -> the R2 token's Secret Access Key
+#        endpoint           -> https://<account_id>.r2.cloudflarestorage.com
+#   3. In backup.env (same directory, also chmod 600), set:
+#        RCLONE_CONFIG_FILE=/opt/akshara/backup/rclone.conf
+#        RCLONE_REMOTE=r2:<your-bucket-name>/db
+#      Everything else (the backup script's off-site step) is already wired and
+#      will start using this remote on the very next backup run — no code
+#      change needed, no restart required.
+#
+# --- Provider-agnostic note ---
+# The remote name "r2" and "type = s3" below work for ANY S3-compatible
+# provider (Cloudflare R2, Backblaze B2's S3 API, AWS S3, MinIO, ...) — just
+# swap the endpoint/provider fields. R2 is the accepted target for Akshara
+# because it has zero egress fees, which matters for restore drills / DR.
+
+[r2]
+type = s3
+provider = Cloudflare
+access_key_id = REPLACE_WITH_R2_ACCESS_KEY_ID
+secret_access_key = REPLACE_WITH_R2_SECRET_ACCESS_KEY
+endpoint = https://REPLACE_WITH_ACCOUNT_ID.r2.cloudflarestorage.com
+acl = private
+no_check_bucket = true
