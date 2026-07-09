@@ -67,6 +67,18 @@ CREATE TABLE IF NOT EXISTS parsed_documents (
   created_at   TEXT NOT NULL
 );
 
+-- ── Phase 3: document section outline (headings → chapters/topics) ──────────────
+CREATE TABLE IF NOT EXISTS document_sections (
+  section_id TEXT PRIMARY KEY,             -- <doc_id>#s<ordinal>
+  doc_id     TEXT NOT NULL REFERENCES source_documents(doc_id),
+  ordinal    INTEGER NOT NULL,
+  level      INTEGER NOT NULL,             -- 1 = chapter, 2 = topic, ...
+  title      TEXT NOT NULL,
+  page       INTEGER,
+  path       TEXT                          -- breadcrumb, e.g. "Real Numbers > Euclid's Lemma"
+);
+CREATE INDEX IF NOT EXISTS idx_sections_doc ON document_sections(doc_id);
+
 -- ── Phase 4: structure-aware chunks + FTS5 lexical index ────────────────────────
 CREATE TABLE IF NOT EXISTS chunks (
   chunk_id     TEXT PRIMARY KEY,              -- <doc_id>#<ordinal>
