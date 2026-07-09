@@ -42,6 +42,14 @@
 6. Activate COM-4 + off-site R2 (owner supplies token + creds); start the 7-day cron watch.
 7. **Representative-pass pilot run** on the live lane → then GA gate.
 
+## 4b. Post-deploy broad smoke (2026-07-10, live prod, read-only)
+
+After the full-backlog prod deploy, a read-only GET smoke across 13 core modules and all 3 auth scopes (seed personas) — **34/36 reads served, 0 server errors (no 500s)**:
+- **School scope** (schoolAdmin): finance (dashboard/invoices/fee-structures/fee-reductions), attendance, exams, admissions (incl. the new `/admissions/fee-structures`), SIS, HR, transport, library, communications, operations-hub (incl. `/operations/actions`), school-completion — all 200. Inventory-intelligence + alumni returned 403 (correct RBAC — schoolAdmin lacks those perms).
+- **Parent scope**: dashboard, fees, exams, timetable, attendance — all 200.
+- **Student scope** (token scope=student): `/student/dashboard`, `/attendance`, `/exams`, `/homework`, `/notices` — **all 200. Confirms the P0-1 fix LIVE** (these were 404 for every student before this deploy).
+- The 2 non-200s were GET probes against **POST-only** routes (`/finance/scholarships` create, `/transport/demands`) — not missing routes, not defects.
+
 ## 5. Bottom line
 
 Engineering is **done and green** for the pilot scope. The gate is **operational, not code**: one owner action (SSH socket) unblocks the deploy + money-flow cert; two credential handoffs (cron token, R2) and one device (Face ID) clear the remaining reliability/attendance items. No feature work stands between here and a controlled pilot.
