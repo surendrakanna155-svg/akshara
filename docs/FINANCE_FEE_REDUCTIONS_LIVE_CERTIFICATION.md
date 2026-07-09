@@ -38,6 +38,19 @@ ERROR: check constraint "comm_broadcasts_audience_check" of relation
 
 C0–C3 certify the **database-level money guardrails live**. The **application-level invariants** — SoD (`approved_by ≠ created_by`), lockstep (`invoice.outstanding ↔ account.outstanding` move by the same delta), and clamp-to-outstanding (no negative payable, exact reversal) — live in `finance_fee_reductions_repository.ts` and are proven by the deno unit suite (green in the `_shared` 2409/0 run). A full **live end-to-end** approve/reverse/clamp through the edge requires the new edge deployed against a tenant DB; that runs **after the prod deploy** (owner-gated) and is the one remaining item to close this cert end-to-end.
 
-## 5. Verdict
+## 5. PROD DEPLOYMENT + live E2E (2026-07-09, owner-authorized)
 
-**DB-level cert: PASS (live, non-destructive).** The `finance_fee_reductions` schema + RLS + constraint guardrails behave exactly as designed on real Postgres. The backlog is now **prod-deploy-ready** (the `20260838` blocker is fixed and the full chain applied cleanly on the tenant mirror). Prod deploy remains **paused pending owner go** (owner chose test-tenant-first).
+The full backlog was deployed to prod after the tenant-test rehearsal:
+- **Pre-deploy backup** `predeploy_gapsweep_20260709_134956.sql.gz` (verified: gzip-ok, complete footer, 196 tables).
+- **44/44 migrations applied to `akshara_db`** (as `supabase_admin` — the first attempt as `postgres` cleanly rolled back on a `schema_migrations` permission denial with 0 applied; re-run under the correct role succeeded). Prod now at `20260866`.
+- **Edge redeployed** to HEAD `2568ff9b` (functions synced, `build_info.json` written, `akshara-edge` restarted); `/health` `200` version==HEAD, `/ready` db:true, `/storage` reachable, `/providers` role `erp_tenant` bypassRls:false; edge logs clean (0 uncaught/TypeError). **Smoke:** new gap-wave routes now serve (401-gated, were 404); control route still 404.
+- **Live E2E through the deployed edge** (real OTP auth, real DB/RBAC), non-destructive/net-zero on invoice `b9000000…001` (outstanding 44,500 unchanged throughout, test row deleted after):
+  - authed `GET /finance/fee-reductions` → 200;
+  - **propose** (maker) → `pending`, moves no money; studentId/accountId server-resolved from the invoice;
+  - **SoD self-approve → HTTP 403** "cannot be approved by the person who proposed it" (governance gate enforced live);
+  - **reject** → 200; cleanup → invoice unchanged, 0 rows left.
+- **Not run live:** the successful-approval lockstep+clamp+reversal path — the seed tenant has no second finance user and SoD (correctly) requires proposer ≠ approver; creating prod users for a cert was declined. That path stays covered by the DB-level cert (§3) + the deno unit suite (2409/0). COM-4 / R2 / Face ID were excluded from this deploy by instruction.
+
+## 6. Verdict
+
+**PASS (live).** Prod is deployed at HEAD and healthy; `finance_fee_reductions` guardrails (RLS + CHECK + partial-unique) are certified live, and the deployed edge enforces the maker-checker SoD gate end-to-end. Residual: the money-moving approval E2E (deferred to protect prod balances / absent 2nd seed user) — covered by DB + unit certs. Rollback assets retained: `predeploy_gapsweep_20260709_134956.sql.gz` + `functions.bak.20260709_180405`.

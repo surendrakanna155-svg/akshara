@@ -7,8 +7,15 @@ Local work is COMPLETE and regression-green. The gap-remediation wave (3 P0 + 7 
 
 Done this session: (1) ✅ full flutter confirmed green after DS fix · (2) ✅ `docs/GAP_SWEEP_CERTIFICATION.md` (EOS gate PASS) · (3) ✅ P2 — new RLS migration `20260866` (student-scope read on `student_profiles`/`student_guardians`), report-card real school-name, education-only vertical-pack gate, orphaned `DynamicDashboardScreen` removed; verify-first KEPT 6 reachable/no-UI "dead code" candidates · (4) ✅ baseline updated · (7) ✅ `docs/PILOT_READINESS_REPORT.md`.
 
-## 1. Resume here — PROD DEPLOY is the one remaining action (owner-go-gated)
-**Socket was opened 2026-07-09; the test-tenant rehearsal + live cert are DONE. Prod is intentionally PAUSED (owner chose test-tenant-first).**
+## 1. PROD DEPLOY DONE (2026-07-09, owner-authorized) — resume at COM-4/R2/Face-ID/pilot
+**The full backlog is deployed to prod and certified live.** Predeploy backup verified → **44/44 migrations applied to `akshara_db`** (as `supabase_admin`; `postgres` lacks INSERT on the `supabase_admin`-owned `schema_migrations`) → prod at `20260866` → **edge redeployed to HEAD `2568ff9b`** (`/health` version==HEAD, all health green, edge logs clean) → smoke: new routes serve (401, were 404) → **fee-reductions live E2E PASSED** (auth+read+propose+**SoD 403**+reject, net-zero, prod pristine). Rollback assets: `predeploy_gapsweep_20260709_134956.sql.gz` + `functions.bak.20260709_180405`. Details: `docs/FINANCE_FEE_REDUCTIONS_LIVE_CERTIFICATION.md` §5-6.
+
+**Remaining (all owner-gated, NOT done this deploy per instruction):**
+- fee-reductions money-moving E2E (lockstep/clamp/reversal) — needs a 2nd finance user (seed tenant has none); covered by DB + unit certs meanwhile.
+- COM-4 cron activation (needs `INTERNAL_CRON_TOKEN`) · off-site R2 (needs creds) · Face ID on-device cert (needs device) · then the pilot run → GA.
+
+### (historical) pre-deploy state
+**Socket was opened 2026-07-09; the test-tenant rehearsal + live cert were done first (owner chose test-tenant-first), then prod.**
 
 What happened this session on the live lane:
 - **Scope correction:** prod `akshara_db` + edge are **44 migrations / 8 days behind HEAD** (`20260818` / `bcebbf12`), so the deploy is the **full backlog** (`20260819…20260866`), not just this session's 4.
