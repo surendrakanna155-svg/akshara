@@ -2,17 +2,16 @@
 
 **Canonical reference:** `docs/execution/CANONICAL_EXECUTION_BASELINE.md` (read it first). Registry: `docs/execution/AGENT_REGISTRY.md`. This handoff = what's in-flight + the exact next steps.
 
-## 0. Fix wave is DONE — start at step 1
-The gap-remediation wave (3 P0 + 7 P1, `docs/execution/GAP_REMEDIATION_WAVE.md`) is **fully built + integrated** onto the feature tip (all 6 agent commits cherry-picked; worktrees cleaned; the two duplicate `20260864000000` migrations were split — inventory-replacement keeps it, operations-hub-item-actions became `20260865000000`). Re-cert GREEN: deno `_shared` **2409/0**, `flutter analyze` 0, goldens 70/70. Verify on resume: `git rev-parse HEAD` is a descendant of `bea918c2`; `git worktree list` = main only. If a full `flutter test` was still running at handoff, confirm `/tmp/recert_flutter.log` ended "All tests passed!".
+## 0. Steps 1–4 + 7 DONE (2026-07-09, commit `db54ed0c`) — resume at the SSH-gated live lane
+Local work is COMPLETE and regression-green. The gap-remediation wave (3 P0 + 7 P1) is built + integrated; **re-cert caught + fixed one DS-enforcement regression** the wave had introduced (raw `TextStyle` in `onboarding_hub_screen.dart` — the earlier "~3800/0 green" claim was optimistic; the real result was `+3765 -1`). **P2 cleanup CLOSED**, cert + baseline + pilot-readiness written. Regression: deno `_shared` **2409/0** · `flutter analyze` **0** · full `flutter test` **3766/0** (1 skipped) · goldens 70/70.
 
-## 1. Sequence from here
-1. **Confirm the full `flutter test`** (should be ~3800/0) — the wave touched onboarding/operations client + tests.
-2. **Gap-sweep CERTIFICATION** — the sweep is now CLOSED (all P0+P1 fixed + regression green); write the cert doc.
-3. **P2 cleanup pass** — the ~13 P2 items in `GAP_REMEDIATION_WAVE.md` **P2 list** (dead-code removals: vault-rotate/school-calendar/widgets-refresh/DynamicDashboardScreen/orphaned catalog widgets/social-router/memories-analytics/setup-wizard-session · report-card PDF school-name (parent+student_app) · gate the Salon/Hospital vertical-pack picker · honest alumni KPI already done · **new: `student_profiles`/`student_guardians` need a student-scope RLS read policy** so student profile fields populate). Remove dead code / fix cosmetics; build only what's cheap.
-4. **Update the baseline** (`CANONICAL_EXECUTION_BASELINE.md`) — the wave restored ERP wiring; re-affirm with evidence, keep qualitative labels (no subjective %).
-5. **Priority 3 — live deploy prep:** deploy this session's new backend to `akshara-edge` (fee-reductions `20260863` + COM-4 token + the gap-wave migrations `20260864`/`20260865`); off-site backup activation (R2 creds pending); migration verification. Runbooks in `docs/engineering/eos/`.
-6. **Priority 4 — live-cert checklist (non-destructive VPS):** apply+cert `finance_fee_reductions` on `akshara_tenant_test` (concurrent approve/reverse/clamp); re-affirm RLS + backup.
-7. **Priority 5 — Pilot Readiness report** with remaining blockers.
+Done this session: (1) ✅ full flutter confirmed green after DS fix · (2) ✅ `docs/GAP_SWEEP_CERTIFICATION.md` (EOS gate PASS) · (3) ✅ P2 — new RLS migration `20260866` (student-scope read on `student_profiles`/`student_guardians`), report-card real school-name, education-only vertical-pack gate, orphaned `DynamicDashboardScreen` removed; verify-first KEPT 6 reachable/no-UI "dead code" candidates · (4) ✅ baseline updated · (7) ✅ `docs/PILOT_READINESS_REPORT.md`.
+
+## 1. Resume here — steps 5 & 6 are BLOCKED on ONE owner action
+**Open the authenticated SSH ControlMaster socket** (`~/.ssh/akshara-cm.sock`). Verified 2026-07-09: VPS is reachable but `ssh root@46.28.44.46` → `Permission denied (publickey)`, no master socket. Until then, no live deploy / live cert / activation can run. Once open, execute the staged, one-command-ready recipe:
+- **Step 5 — live deploy:** `docs/engineering/eos/GAP_SWEEP_DEPLOY_AND_LIVECERT_CHECKLIST.md` **Part B** — apply migrations `20260863`→`20260866` to `akshara_db`, deploy edge to `akshara-edge`, health smoke. (COM-4 cron + off-site R2 stay owner-gated on token + creds.)
+- **Step 6 — live cert:** checklist **Part C** — `finance_fee_reductions` on `akshara_tenant_test` (RLS/CHECK/partial-unique/FOR-UPDATE + concurrent approve/reverse/clamp), rolled back; then write `docs/FINANCE_FEE_REDUCTIONS_LIVE_CERTIFICATION.md` + re-affirm RLS/backup.
+- Then the pilot run (representative-pass) → GA gate.
 
 ## 2. STANDING RULES (do not violate)
 - **Curriculum lane = SEPARATE session — HANDS-OFF.** Never touch `curriculum/` or `scripts/acquisition/run_acquisition.py`. It owns that working state (leaving `curriculum/*` uncommitted is expected). Wording: **"Acquisition engine complete. Curriculum repository still incomplete"** (matrix 10.1%, 74/736 — authoritative in `curriculum/reports/COVERAGE_MATRIX.md`). When committing, `git add` SPECIFIC ERP files only — never `-A` (it would stage the curriculum lane's state).
