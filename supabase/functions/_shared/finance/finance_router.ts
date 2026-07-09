@@ -99,6 +99,14 @@ import {
   handleCreateScholarship,
   handleUpdateScholarship,
 } from "./finance_scholarships_handlers.ts";
+import {
+  handleApproveFeeReduction,
+  handleListFeeReductions,
+  handleProposeDiscountApplication,
+  handleProposeScholarshipAward,
+  handleRejectFeeReduction,
+  handleReverseFeeReduction,
+} from "./finance_fee_reductions_handlers.ts";
 
 const UUID_SEGMENT =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -415,6 +423,31 @@ export function matchFinanceRoute(
   const scholarshipMatch = path.match(/^\/finance\/scholarships\/([^/]+)$/);
   if (scholarshipMatch && method === "PUT") {
     return { handler: handleUpdateScholarship, args: [scholarshipMatch[1]!] };
+  }
+
+  // ─── STEP-5: fee reductions (scholarship awards + discount applications) ─────
+  // A reduction is proposed (maker), then approved/rejected/reversed (checker,
+  // approver != proposer). Approval is what actually reduces the payable.
+  if (path === "/finance/fee-reductions" && method === "GET") {
+    return { handler: handleListFeeReductions, args: [] };
+  }
+  if (path === "/finance/fee-reductions/scholarship-awards" && method === "POST") {
+    return { handler: handleProposeScholarshipAward, args: [] };
+  }
+  if (path === "/finance/fee-reductions/discount-applications" && method === "POST") {
+    return { handler: handleProposeDiscountApplication, args: [] };
+  }
+  const approveReductionMatch = path.match(/^\/finance\/fee-reductions\/([^/]+)\/approve$/);
+  if (approveReductionMatch && method === "POST") {
+    return { handler: handleApproveFeeReduction, args: [approveReductionMatch[1]!] };
+  }
+  const rejectReductionMatch = path.match(/^\/finance\/fee-reductions\/([^/]+)\/reject$/);
+  if (rejectReductionMatch && method === "POST") {
+    return { handler: handleRejectFeeReduction, args: [rejectReductionMatch[1]!] };
+  }
+  const reverseReductionMatch = path.match(/^\/finance\/fee-reductions\/([^/]+)\/reverse$/);
+  if (reverseReductionMatch && method === "POST") {
+    return { handler: handleReverseFeeReduction, args: [reverseReductionMatch[1]!] };
   }
 
   return null;

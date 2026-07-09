@@ -251,6 +251,117 @@ export async function reverseCollectionFromHeads(
   return reversed;
 }
 
+/**
+ * STEP-5 fee reductions — a scholarship/discount does NOT pay a head, it
+ * REDUCES what is billed for it. To keep the derived ledger reconciled with the
+ * invoice after a reduction of `amount` is applied, subtract `amount` from
+ * `head_total_minor` across heads (priority asc, then sort_order asc), never
+ * pushing a head's total below what has already been PAID on it
+ * (head_remaining = head_total - head_paid is the per-head headroom). The caller
+ * clamps `amount` to the invoice's outstanding, and SUM(head_remaining) ==
+ * outstanding, so the reduction is always fully absorbable. Preserves both:
+ *   - SUM(head_total) == invoice.total_amount (both drop by `amount`), and
+ *   - head_paid_minor unchanged, so SUM(head_paid) == amount_paid still holds.
+ * Returns the amount actually removed from the head totals (== `amount`).
+ */
+export async function reduceHeadTotals(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  invoiceId: string,
+  amount: number,
+): Promise<number> {
+  const target = round2(amount);
+  if (target <= 0) return 0;
+
+  const heads = await db.queryObject<FinanceInvoiceHeadAllocationRow>(
+    `SELECT * FROM finance_invoice_head_allocations
+     WHERE invoice_id = $1 AND organization_id = $2 AND school_id = $3
+     ORDER BY priority ASC, sort_order ASC, created_at ASC`,
+    [invoiceId, organizationId, schoolId],
+  );
+
+  let remaining = target;
+  let reduced = 0;
+  for (const head of heads) {
+    if (remaining <= 0) break;
+    const headTotal = parseAmount(head.head_total_minor);
+    const headPaid = parseAmount(head.head_paid_minor);
+    const headroom = round2(headTotal - headPaid);
+    if (headroom <= 0) continue;
+    const toCut = round2(Math.min(headroom, remaining));
+    const newTotal = round2(headTotal - toCut);
+    await db.queryObject(
+      `UPDATE finance_invoice_head_allocations
+        SET head_total_minor = $1, updated_at = timezone('utc', now())
+      WHERE id = $2 AND organization_id = $3 AND school_id = $4`,
+      [formatNumeric(newTotal), head.id, organizationId, schoolId],
+    );
+    remaining = round2(remaining - toCut);
+    reduced = round2(reduced + toCut);
+  }
+  return reduced;
+}
+
+/**
+ * STEP-5 fee reductions — the exact inverse of {@link reduceHeadTotals} for a
+ * reversal: add `amount` back to the invoice's head totals so SUM(head_total)
+ * climbs by exactly `amount` (restoring SUM(head_total) == invoice.total_amount
+ * after the invoice + account are reversed). It is added back in priority order,
+ * capped per head at the amount that head is currently "short" of the fully-paid
+ * line (head_paid - head_total, when a head was cut below its paid... which
+ * reduceHeadTotals never does) — in practice there is no per-head ceiling, so
+ * the reduction is distributed across heads and the last head absorbs any
+ * rounding remainder. Head-level distribution after an apply→reverse cycle may
+ * differ from the original split, but every ledger INVARIANT is preserved
+ * (SUM(head_total) exact; head_remaining >= 0). Returns the amount restored.
+ */
+export async function restoreHeadTotals(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  invoiceId: string,
+  amount: number,
+): Promise<number> {
+  const target = round2(amount);
+  if (target <= 0) return 0;
+
+  const heads = await db.queryObject<FinanceInvoiceHeadAllocationRow>(
+    `SELECT * FROM finance_invoice_head_allocations
+     WHERE invoice_id = $1 AND organization_id = $2 AND school_id = $3
+     ORDER BY priority ASC, sort_order ASC, created_at ASC`,
+    [invoiceId, organizationId, schoolId],
+  );
+  if (heads.length === 0) return 0;
+
+  // Distribute proportionally to each head's current total so the reversal
+  // mirrors the (proportional) footprint of the fee it is undoing; the last head
+  // takes the rounding remainder so SUM increases by EXACTLY `target`.
+  const sumTotals = round2(
+    heads.reduce((s, h) => s + parseAmount(h.head_total_minor), 0),
+  );
+  let distributed = 0;
+  for (let i = 0; i < heads.length; i++) {
+    const head = heads[i]!;
+    const isLast = i === heads.length - 1;
+    const share = isLast
+      ? round2(target - distributed)
+      : sumTotals > 0
+      ? round2(target * (parseAmount(head.head_total_minor) / sumTotals))
+      : 0;
+    if (share <= 0 && !isLast) continue;
+    const newTotal = round2(parseAmount(head.head_total_minor) + share);
+    await db.queryObject(
+      `UPDATE finance_invoice_head_allocations
+        SET head_total_minor = $1, updated_at = timezone('utc', now())
+      WHERE id = $2 AND organization_id = $3 AND school_id = $4`,
+      [formatNumeric(newTotal), head.id, organizationId, schoolId],
+    );
+    distributed = round2(distributed + share);
+  }
+  return distributed;
+}
+
 export async function listHeadAllocationsForInvoice(
   db: TenantQueryClient,
   organizationId: string,
