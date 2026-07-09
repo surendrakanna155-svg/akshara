@@ -88,6 +88,25 @@ Deno.test("dashboard: aggregates registered count, donations by status, engageme
   assertEquals(upcoming.map((e) => e.id), ["e1"]);
 });
 
+// P2 (gap-remediation): registrations has no write path yet, so real events
+// always have registrations:0 in production. Assert the dashboard says so
+// honestly instead of reporting a fabricated "0%" attendance rate.
+Deno.test("dashboard: events with capacity but untracked registrations => 'Not yet tracked', not a fabricated 0%", () => {
+  const rows: AlumniLiveRows = {
+    alumni: [],
+    events: [
+      { id: "e1", title: "Reunion", date: "2026-08-01", status: "upcoming", registrations: 0, capacity: 100 },
+    ],
+    campaigns: [],
+    donations: [],
+    mentorship: [],
+  };
+
+  const d = computeAlumniDashboard(rows);
+  const eng = d.engagement as Record<string, unknown>;
+  assertEquals(eng.eventAttendanceRate, "Not yet tracked");
+});
+
 Deno.test("profile detail: real donations surfaced, employment/events honest empty (no Tech Corp)", () => {
   const alumni = {
     id: "a1",
@@ -147,14 +166,21 @@ Deno.test("profile detail: real employment/events fields surfaced when persisted
 
 Deno.test("reports: empty => empty trends, catalog preserved", () => {
   const catalog = [{ id: "rpt_eng", title: "Engagement Report" }];
-  const r = computeAlumniReports({ donations: [], events: [] }, catalog);
+  const r = computeAlumniReports({ alumni: [], donations: [], events: [] }, catalog);
   assertEquals(r.catalog, catalog);
   assertEquals(r.donationTrend, []);
-  assertEquals(r.eventAttendance, []);
+  assertEquals(r.engagementByBatch, []);
+  assertEquals(r.eventAttendanceTrend, []);
 });
 
-Deno.test("reports: donation trend grouped by month in lakhs, attendance per event", () => {
+// #5: the client mapper (toReports) reads `eventAttendanceTrend` (generic
+// AlumniTrendPoint: label+amountLakhs) and `engagementByBatch` (AlumniSegment:
+// label+value+percent) — this proves both keys are now emitted with real data
+// computed from live rows, replacing the old `eventAttendance` key the client
+// never read.
+Deno.test("reports: donation trend grouped by month in lakhs, attendance-rate per event", () => {
   const r = computeAlumniReports({
+    alumni: [],
     donations: [
       { id: "d1", amount: "₹1,00,000", status: "received", date: "2026-06-01" },
       { id: "d2", amount: "₹50,000", status: "received", date: "2026-06-15" },
@@ -163,6 +189,7 @@ Deno.test("reports: donation trend grouped by month in lakhs, attendance per eve
     ],
     events: [
       { id: "e1", title: "Reunion", date: "2026-08-01", registrations: 40, capacity: 100 },
+      { id: "e2", title: "Alumni Meet", date: "2026-09-01", registrations: 30, capacity: 40 },
     ],
   }, []);
 
@@ -172,7 +199,27 @@ Deno.test("reports: donation trend grouped by month in lakhs, attendance per eve
     { label: "Jul 2026", amountLakhs: 2 }, // refunded excluded
   ]);
 
-  assertEquals(r.eventAttendance, [
-    { label: "Reunion", registrations: 40, capacity: 100 },
+  // Most recent event first; amountLakhs carries the attendance-rate percent.
+  assertEquals(r.eventAttendanceTrend, [
+    { label: "Alumni Meet", amountLakhs: 75 }, // 30/40 = 75%
+    { label: "Reunion", amountLakhs: 40 }, // 40/100 = 40%
+  ]);
+});
+
+Deno.test("reports: engagementByBatch groups active alumni by batch year with share-of-total percent", () => {
+  const r = computeAlumniReports({
+    alumni: [
+      { id: "a1", batchYear: "2020", engagementStatus: "active" },
+      { id: "a2", batchYear: "2020", engagementStatus: "active" },
+      { id: "a3", batchYear: "2019", engagementStatus: "active" },
+      { id: "a4", batchYear: "2019", engagementStatus: "inactive" }, // excluded
+    ],
+    donations: [],
+    events: [],
+  }, []);
+
+  assertEquals(r.engagementByBatch, [
+    { label: "2019", value: 1, percent: 33.3 },
+    { label: "2020", value: 2, percent: 66.7 },
   ]);
 });

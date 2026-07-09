@@ -72,6 +72,9 @@ export async function handleCreateEvent(req: Request, config: AppConfig): Promis
       title: requireStr(body, "title"),
       date: requireStr(body, "date"),
       venue: str(body, "venue") ?? "",
+      // P2 (gap-remediation): seeded at 0 with no RSVP/check-in write path yet
+      // to increment it. computeAlumniDashboard reports `eventAttendanceRate`
+      // as "Not yet tracked" (not a fabricated "0%") until that path exists.
       registrations: 0,
       capacity: intOr(body, 0, "capacity"),
       status: str(body, "status") ?? "upcoming",

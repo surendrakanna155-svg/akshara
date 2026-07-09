@@ -182,11 +182,13 @@ export async function handleReports(req: Request, config: AppConfig): Promise<Re
     config,
     "Failed to load alumni reports",
     async (db, orgId, schoolId) => {
-      const [donations, events] = await Promise.all([
+      // #5: alumni rows are needed too, for the engagementByBatch aggregation.
+      const [alumni, donations, events] = await Promise.all([
+        listAll(db, orgId, schoolId, "alumni"),
         listAll(db, orgId, schoolId, "donation"),
         listAll(db, orgId, schoolId, "event"),
       ]);
-      return computeAlumniReports({ donations, events }, REPORTS_CATALOG);
+      return computeAlumniReports({ alumni, donations, events }, REPORTS_CATALOG);
     },
   );
 }

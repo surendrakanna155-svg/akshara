@@ -20,6 +20,8 @@ const NEW_ROUTES: Array<{ method: string; path: string }> = [
   { method: "GET", path: "/admissions/approval-queue" },
   { method: "GET", path: "/admissions/enrollments/pending" },
   { method: "GET", path: "/admissions/enrollment/prefill" },
+  // #4: fee-handoff picker options (reuses Finance's fee-structure catalog).
+  { method: "GET", path: "/admissions/fee-structures" },
   {
     method: "POST",
     path: "/admissions/approval/11111111-1111-1111-1111-111111111111/notes",

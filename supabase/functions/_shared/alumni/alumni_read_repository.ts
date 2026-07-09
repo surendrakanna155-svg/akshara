@@ -158,9 +158,16 @@ export function computeAlumniDashboard(rows: AlumniLiveRows): Record<string, unk
     (sum, e) => sum + (typeof e.capacity === "number" ? e.capacity : 0),
     0,
   );
-  const eventAttendanceRate = totalCapacity > 0
-    ? `${Math.round((totalRegistrations / totalCapacity) * 100)}%`
-    : "0%";
+  // P2 (gap-remediation): `registrations` has no write path yet (events are
+  // created with registrations:0 and nothing increments it — no RSVP/check-in
+  // flow exists). So whenever real events exist, totalRegistrations is always
+  // 0 and this would silently read "0%" — indistinguishable from a genuine
+  // zero-turnout event. Say so honestly instead of fabricating a rate.
+  const eventAttendanceRate = totalCapacity === 0
+    ? "0%"
+    : totalRegistrations === 0
+    ? "Not yet tracked"
+    : `${Math.round((totalRegistrations / totalCapacity) * 100)}%`;
 
   const totalDonors = campaigns.reduce(
     (sum, c) => sum + (typeof c.donorCount === "number" ? c.donorCount : 0),
@@ -231,15 +238,23 @@ function monthLabel(key: string): string {
 }
 
 /**
- * Compute the alumni reports snapshot (donationTrend / eventAttendance) from
- * live rows. The static report catalog (definitions of available exports) is
- * preserved as-is since it describes report templates, not seeded data.
+ * Compute the alumni reports snapshot (donationTrend / engagementByBatch /
+ * eventAttendanceTrend) from live rows. The static report catalog
+ * (definitions of available exports) is preserved as-is since it describes
+ * report templates, not seeded data.
+ *
+ * #5 (gap-remediation): the client mapper (`toReports` in alumni_mapper.dart)
+ * reads `eventAttendanceTrend` (shape {label, amountLakhs, targetLakhs} — the
+ * same generic AlumniTrendPoint contract donationTrend uses) and
+ * `engagementByBatch` (shape {label, value, percent} — AlumniSegment). This
+ * emits both real keys instead of the old `eventAttendance` key with a
+ * {label, registrations, capacity} shape the client never read.
  */
 export function computeAlumniReports(
-  rows: Pick<AlumniLiveRows, "donations" | "events">,
+  rows: Pick<AlumniLiveRows, "alumni" | "donations" | "events">,
   catalog: unknown[],
 ): Record<string, unknown> {
-  const { donations, events } = rows;
+  const { alumni, donations, events } = rows;
 
   // Donation trend: total received rupees per month (in lakhs).
   const donationByMonth = new Map<string, number>();
@@ -256,18 +271,44 @@ export function computeAlumniReports(
       amountLakhs: Math.round((amount / LAKH) * 10) / 10,
     }));
 
-  // Event attendance: registrations vs capacity per event (most recent first).
-  const eventAttendance = [...events]
-    .sort((a, b) => str(b.date).localeCompare(str(a.date)))
-    .map((e) => ({
-      label: str(e.title),
-      registrations: typeof e.registrations === "number" ? e.registrations : 0,
-      capacity: typeof e.capacity === "number" ? e.capacity : 0,
+  // Engagement by batch: distribution of currently-active (engaged) alumni
+  // across graduation years — the only per-batch breakdown real fields
+  // support (batchYear + engagementStatus), mirroring the count+share-of-total
+  // shape used elsewhere (e.g. library's overdueByClass).
+  const activeByBatch = new Map<string, number>();
+  for (const a of alumni) {
+    if (str(a.engagementStatus) !== "active") continue;
+    const year = str(a.batchYear) || "Unknown";
+    activeByBatch.set(year, (activeByBatch.get(year) ?? 0) + 1);
+  }
+  const totalActive = [...activeByBatch.values()].reduce((sum, n) => sum + n, 0);
+  const engagementByBatch = [...activeByBatch.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([label, value]) => ({
+      label,
+      value,
+      percent: totalActive > 0 ? Math.round((value / totalActive) * 1000) / 10 : 0,
     }));
+
+  // Event attendance rate trend: registrations/capacity as a percent per
+  // event (most recent first), reshaped to the generic trend-point contract
+  // (amountLakhs carries the percent value here, same as the mock fixture).
+  const eventAttendanceTrend = [...events]
+    .sort((a, b) => str(b.date).localeCompare(str(a.date)))
+    .map((e) => {
+      const registrations = typeof e.registrations === "number" ? e.registrations : 0;
+      const capacity = typeof e.capacity === "number" ? e.capacity : 0;
+      const rate = capacity > 0 ? Math.round((registrations / capacity) * 1000) / 10 : 0;
+      return {
+        label: str(e.title),
+        amountLakhs: rate,
+      };
+    });
 
   return {
     catalog,
     donationTrend,
-    eventAttendance,
+    engagementByBatch,
+    eventAttendanceTrend,
   };
 }

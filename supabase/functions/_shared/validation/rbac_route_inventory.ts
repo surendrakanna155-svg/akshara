@@ -24,6 +24,8 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "POST", path: "/admissions/leads/:id/followups/:followupId/complete", permission: "manageAdmissions", scope: "school", module: "admissions" },
   { method: "POST", path: "/admissions/leads/:id/followups/:followupId/reschedule", permission: "manageAdmissions", scope: "school", module: "admissions" },
   { method: "GET", path: "/admissions/enrollments/:id/offer-letter", permission: "viewAdmissions", scope: "school", module: "admissions" },
+  // #4: fee-handoff picker options (cross-module read of Finance's catalog).
+  { method: "GET", path: "/admissions/fee-structures", permission: "viewAdmissions", scope: "school", module: "admissions" },
   { method: "GET", path: "/finance/dashboard", permission: "viewFinance", scope: "school", module: "finance" },
   { method: "POST", path: "/finance/fee-structures", permission: "manageFinance", scope: "school", module: "finance" },
   { method: "POST", path: "/finance/refunds/:id/approve", permission: "approveRefunds", scope: "school", module: "finance" },

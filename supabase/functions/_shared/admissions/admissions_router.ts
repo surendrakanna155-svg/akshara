@@ -39,6 +39,7 @@ import {
   handleAddApprovalNote,
   handleApprovalQueue,
   handleEnrollmentPrefill,
+  handleListFeeStructureOptions,
   handlePendingEnrollments,
   handleReports,
   handleSaveSettings,
@@ -80,6 +81,11 @@ function matchAdmissionsRoute(
   }
   if (path === "/admissions/enrollment/prefill" && method === "GET") {
     return { handler: handleEnrollmentPrefill, args: [] };
+  }
+  // #4: fee-structure options for the admission→Finance handoff picker
+  // (reuses Finance's own fee-structure catalog cross-module).
+  if (path === "/admissions/fee-structures" && method === "GET") {
+    return { handler: handleListFeeStructureOptions, args: [] };
   }
   if (path === "/admissions/leads" && method === "POST") {
     return { handler: handleCreateLead, args: [] };

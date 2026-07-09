@@ -32,6 +32,16 @@ import {
   getAdmissionsSettings,
   saveAdmissionsSettings,
 } from "./admissions_settings_repository.ts";
+// #4: the Fee-Handoff picker needs the same fee-structure catalog Finance
+// already maintains. Reuse Finance's read repository + mapper cross-module
+// (an established pattern — see transport/library/HR handlers importing
+// from ../finance/*) instead of standing up a parallel admissions copy.
+import {
+  type FinanceFeeStructureItemRow,
+  type FinanceFeeStructureRow,
+  feeStructureToApi,
+} from "../finance/finance_mapper.ts";
+import { listFeeStructures } from "../finance/finance_structures_repository.ts";
 
 function parsePagination(url: URL): { page: number; pageSize: number } {
   const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
@@ -394,6 +404,79 @@ export async function handleAddApprovalNote(
         content: note.content,
       }),
       { status: 201 },
+    );
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    throw error;
+  }
+}
+
+// ─── #4: GET /admissions/fee-structures ──────────────────────────────────────
+// The Fee-Handoff picker (admissions_fee_handoff_provider.dart) calls this to
+// populate `feeStructureId` options before sending an approved student to
+// Finance. There is no admissions-owned fee-structure table — Finance already
+// owns and exposes this catalog at GET /finance/fee-structures — so this
+// reads the same finance_fee_structures rows via Finance's own repository +
+// mapper and reshapes them into the admissions client's FeeStructureOption
+// contract ({id, label, annualAmount, installments}).
+
+/** Pure, testable reshape from a Finance fee-structure row to the admissions picker's option shape. */
+export function feeStructureToAdmissionsOption(
+  structure: FinanceFeeStructureRow,
+  items: FinanceFeeStructureItemRow[],
+): Record<string, unknown> {
+  const api = feeStructureToApi(structure, items);
+  const installmentOptions = api.installmentOptions;
+  return {
+    id: api.id,
+    label: api.name,
+    annualAmount: api.totalAnnual,
+    // Finance does not yet track distinct installment plans per structure
+    // (installmentOptions is always []); default to 1 rather than fabricate
+    // a count, matching the client's own fallback for a missing value.
+    installments: Array.isArray(installmentOptions) && installmentOptions.length > 0
+      ? installmentOptions.length
+      : 1,
+  };
+}
+
+export async function handleListFeeStructureOptions(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requireAdmissionsRead(auth.claims);
+  if (denied) return denied;
+
+  const url = new URL(req.url);
+  const pagination = parsePagination(url);
+  const academicYear = url.searchParams.get("academicYear") ??
+    url.searchParams.get("academic_year") ?? undefined;
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const result = await runTenant(config, auth.claims, (db) =>
+      listFeeStructures(db, orgId, schoolId, pagination, academicYear || undefined)
+    );
+    return jsonResponse(
+      envelope(
+        listEnvelope(
+          result.items.map(({ structure, items }) =>
+            feeStructureToAdmissionsOption(structure, items)
+          ),
+          {
+            page: result.page,
+            pageSize: result.pageSize,
+            total: result.total,
+            hasMore: result.hasMore,
+          },
+        ),
+      ),
     );
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
