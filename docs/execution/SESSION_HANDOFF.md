@@ -2,19 +2,15 @@
 
 **Canonical reference:** `docs/execution/CANONICAL_EXECUTION_BASELINE.md` (read it first). Registry: `docs/execution/AGENT_REGISTRY.md`. This handoff = what's in-flight + the exact next steps.
 
-## 0. FIRST ACTION on resume — recovery-first (a fix wave is in flight)
-6 worktree fix agents were launched (base `ad28f603`) for the gap-remediation wave (`docs/execution/GAP_REMEDIATION_WAVE.md`). They may have finished or been killed mid-run when the session ended. Do this:
-1. `git worktree list` and `git branch --list 'worktree-agent-*'` — find the fix-wave worktrees/branches.
-2. For each that has a **committed** result (`git log <branch>`), **cherry-pick it onto the current feature tip** (`feature/data-reliability-platform`), verify (`deno test`/`flutter analyze` on the touched module), then `git worktree remove` + delete the branch. They are DISJOINT modules → cherry-picks should be clean.
-3. For any that did NOT finish (no commit / partial), **re-run that one item** as a fresh worktree agent from the spec in `GAP_REMEDIATION_WAVE.md`.
-4. The 6 items (module → gap): entity_read/pilot → student-snapshot P0 · school_completion → 5 timetable endpoints P0 · inventory_distribution → replacement-RLS P0 · admissions+alumni → fee-structures + reports P1 · communication/parent/whatsapp → parent msg/ack + WhatsApp honesty P1 · operations+onboarding → dismiss/complete + invite P1.
+## 0. Fix wave is DONE — start at step 1
+The gap-remediation wave (3 P0 + 7 P1, `docs/execution/GAP_REMEDIATION_WAVE.md`) is **fully built + integrated** onto the feature tip (all 6 agent commits cherry-picked; worktrees cleaned; the two duplicate `20260864000000` migrations were split — inventory-replacement keeps it, operations-hub-item-actions became `20260865000000`). Re-cert GREEN: deno `_shared` **2409/0**, `flutter analyze` 0, goldens 70/70. Verify on resume: `git rev-parse HEAD` is a descendant of `bea918c2`; `git worktree list` = main only. If a full `flutter test` was still running at handoff, confirm `/tmp/recert_flutter.log` ended "All tests passed!".
 
-## 1. Sequence after the fix wave is integrated
-1. **Re-run full regression** (Step 6 re-cert): `cd supabase/functions && deno test -A _shared/` (expect ~2331+/0) · `flutter analyze lib` (0) · `flutter test test/golden/` (70/0) · optionally full `flutter test`.
-2. **Gap-sweep CERTIFICATION** — write the cert; the sweep is CLOSED only when all P0+P1 fixed + regression green.
-3. **P2 cleanup pass** — the ~13 P2 items listed in `GAP_REMEDIATION_WAVE.md` (dead-code removals, report-card PDF school-name, gate the vertical-pack picker, honest KPIs, etc.). Remove dead code / fix cosmetics; build only what's cheap.
-4. **Update the baseline** — ERP status was over-optimistic; downgrade with the fix-wave evidence.
-5. **Priority 3 — live deploy prep:** fee-reductions migration (`20260863`) + COM-4 token path deploy to `akshara-edge`; off-site backup activation (R2 creds pending); migration verification. Runbooks staged in `docs/engineering/eos/` (COM4_CRON_ACTIVATION_RUNBOOK, OFFSITE_BACKUP_R2_RUNBOOK).
+## 1. Sequence from here
+1. **Confirm the full `flutter test`** (should be ~3800/0) — the wave touched onboarding/operations client + tests.
+2. **Gap-sweep CERTIFICATION** — the sweep is now CLOSED (all P0+P1 fixed + regression green); write the cert doc.
+3. **P2 cleanup pass** — the ~13 P2 items in `GAP_REMEDIATION_WAVE.md` **P2 list** (dead-code removals: vault-rotate/school-calendar/widgets-refresh/DynamicDashboardScreen/orphaned catalog widgets/social-router/memories-analytics/setup-wizard-session · report-card PDF school-name (parent+student_app) · gate the Salon/Hospital vertical-pack picker · honest alumni KPI already done · **new: `student_profiles`/`student_guardians` need a student-scope RLS read policy** so student profile fields populate). Remove dead code / fix cosmetics; build only what's cheap.
+4. **Update the baseline** (`CANONICAL_EXECUTION_BASELINE.md`) — the wave restored ERP wiring; re-affirm with evidence, keep qualitative labels (no subjective %).
+5. **Priority 3 — live deploy prep:** deploy this session's new backend to `akshara-edge` (fee-reductions `20260863` + COM-4 token + the gap-wave migrations `20260864`/`20260865`); off-site backup activation (R2 creds pending); migration verification. Runbooks in `docs/engineering/eos/`.
 6. **Priority 4 — live-cert checklist (non-destructive VPS):** apply+cert `finance_fee_reductions` on `akshara_tenant_test` (concurrent approve/reverse/clamp); re-affirm RLS + backup.
 7. **Priority 5 — Pilot Readiness report** with remaining blockers.
 

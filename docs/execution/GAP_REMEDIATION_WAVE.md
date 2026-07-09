@@ -1,5 +1,8 @@
 # Gap Remediation Wave (final gap-discovery → fix) — 2026-07-09
 
+
+> **✅ ALL P0+P1 CLOSED (2026-07-09).** All 3 P0 + 7 P1 built + integrated (RBAC + audit + tests, no stubs; migrations `20260864` inventory-replacement + `20260865` operations-hub-actions). Re-cert GREEN: deno `_shared` **2409/0**, `flutter analyze` 0, goldens 70/70 (full `flutter test` running at close). **P2 cleanup list below still OPEN.** This certifies the gap sweep CLOSED.
+
 Owner: fix ALL P0+P1 now, **build** the missing backends (complete the feature); then P2 cleanup. Verify-first each (the discovery already traced each to a reachable broken behavior + ruled out false positives). Re-certify after.
 
 ## P0 (broken production flows)
