@@ -46,6 +46,7 @@ final studentExamsProvider = Provider<StudentExamsData>((ref) {
       subjectScores: const [],
       averagePercent: 0,
       unreadNotifications: resolved.unreadNotifications,
+      schoolName: resolved.schoolName,
     );
   }
 

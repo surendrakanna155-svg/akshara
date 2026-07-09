@@ -9,19 +9,27 @@ import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import 'widgets/report_card_view.dart';
 
-/// School name for report-card branding (placeholder until school profile wired).
-const String _reportCardSchoolName = 'Akshara Vidyalaya';
+/// Neutral fallback when the real per-tenant school name is momentarily
+/// unavailable (e.g. the dashboard/exams snapshot hasn't resolved yet) — never
+/// a hardcoded specific school's name.
+const String _reportCardSchoolNameFallback = 'School';
 
 /// In-app report card (Slice 6). Reused by parent and student apps — each passes
-/// the provider that builds the card for its own student.
+/// the provider that builds the card for its own student, and its own real
+/// per-tenant [schoolName] (sourced from `schools.name` via that app's own
+/// exams snapshot — parent and student scopes read different backend routes,
+/// so this widget stays scope-agnostic and takes the resolved name as input).
 class ReportCardScreen extends ConsumerWidget {
-  const ReportCardScreen({super.key, required this.provider});
+  const ReportCardScreen({super.key, required this.provider, required this.schoolName});
 
   final ProviderListenable<ExamReportCard?> provider;
+  final String schoolName;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final card = ref.watch(provider);
+    final resolvedSchoolName =
+        schoolName.isNotEmpty ? schoolName : _reportCardSchoolNameFallback;
 
     return Scaffold(
       backgroundColor: context.colors.surfaceContainerLow,
@@ -37,7 +45,7 @@ class ReportCardScreen extends ConsumerWidget {
                   .read(aksharaReportExportServiceProvider)
                   .shareReportCardPdf(
                     card: card,
-                    schoolName: _reportCardSchoolName,
+                    schoolName: resolvedSchoolName,
                   ),
             ),
         ],

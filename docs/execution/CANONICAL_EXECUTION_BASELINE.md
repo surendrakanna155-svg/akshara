@@ -12,9 +12,9 @@
 
 | Track | Status | Basis (measurable) |
 |---|---|---|
-| **ERP** | **High** — functionally feature-complete for Pilot | Phase-C C0–C21 + P1-non-gated + P2 (5 waves) + gap-sweep 1–2 all closed & regression-green; remaining = owner-gated P1-CODE + deploy/cert |
+| **ERP** | **High** — functionally feature-complete for Pilot | Phase-C C0–C21 + P1-non-gated + P2 (5 waves) + gap-sweep 1–2 + **final gap-sweep (3 P0 / 7 P1 built) + P2 cleanup** all closed & regression-green (`docs/GAP_SWEEP_CERTIFICATION.md`); remaining = owner-gated P1-CODE + deploy/cert |
 | **Curriculum Engine** | **High** — deterministic engine complete | CI-C1/C3/C7/C8/C4-schema + B12/E1b done; AI-engine waves (C5/C6/C10/C11) P3-gated (future) |
-| **Curriculum Repository** | **Coverage Matrix = 10.1% (74 / 736 verified cells)** — AUTHORITATIVE | `COVERAGE_MATRIX.md` SSOT. By board: CBSE 14.8%, TS 12.5%, AP 6.9%, CISCE 7.1%. **Lane CONVERGED at 10.1%** — 653 cells UNRESOLVED (no source resolved yet; need source-ladder expansion, NOT yet "Missing") |
+| **Curriculum Repository** | **Coverage Matrix — live SSOT (~14.1% at 2026-07-09), advancing** | `curriculum/reports/COVERAGE_MATRIX.md` is the authoritative, always-current metric (verified cells ÷ 736), owned by the separate acquisition lane — read it for the live figure/by-board split. Not an ERP-pilot dependency (see §5 note). **Hands-off** — do not interrupt/replace/spawn-another. |
 | **Assessment** | **Early** — schema dormant-seeded only | B12/E1b tables exist; platform (Question Factory / Diagram / adaptive) post-pilot + P3-gated |
 | **Infrastructure** | **Medium** — live RLS ✅ + backup ✅; activation/deploy pending | off-site R2 + COM-4 cron staged (not activated); new backend not deployed; 7-day cron pending |
 | **Production Readiness** | **Early** — 2 of 6 blockers cleared (RLS, backup) | matrix convergence + deploy + live-cert + Face-ID + pilot remain (see §5) |
@@ -32,10 +32,12 @@
   - Correctness: attendance-% unified to ONE canonical formula.
   - Wiring/completion: SIS-conversion GET, timetable reassign-teacher, finance archive/cancel UI, Inventory Replacement backend.
   - **3 false positives eliminated by verify-first** (Management placeholder, mgmt-resolve dead code, SIS academic-assignment deprecated route).
+- **Final gap-sweep CLOSED (2026-07-09)** — a fresh discovery pass found **3 P0 + 7 P1**, all **built** (no stubs) + tested + integrated (student-404 fallback, 5 timetable-workforce endpoints, inventory-replacement RLS consistency, admissions fee-structures GET, alumni report keys, operations-hub dismiss/complete, parent message/ack routes, honest WhatsApp/onboarding status). Verify-first discarded **4** false positives; re-cert caught + fixed **1** DS-enforcement regression the wave had introduced. See `docs/GAP_SWEEP_CERTIFICATION.md`.
+- **P2 cleanup CLOSED (2026-07-09)** — `student_profiles`/`student_guardians` student-scope RLS read policy (`20260866`), education-only vertical-pack picker gate (UI + backend), report-card real school-name (parent+student), orphaned `DynamicDashboardScreen` removed. Verify-first kept 6 "dead code" candidates that were actually reachable/no-UI.
 - **Live RLS cross-tenant isolation VERIFIED** on the VPS: all 12 QA-B rows PASS + 233/233 enforced probes, **zero leaks** (non-destructive).
 - **Nightly backup verified GREEN** (restorable).
 
-**Cumulative regression GREEN:** deno `_shared` 2308/0 · `flutter analyze` 0 · goldens 70/70 · full flutter suite 3761/0 (as of step-3).
+**Cumulative regression GREEN:** deno `_shared` **2409/0** · `flutter analyze` **0** · goldens 70/70 · full flutter suite **3766/0** (1 skipped) — as of the final gap-sweep + P2 close, 2026-07-09.
 
 **Remaining ERP (owner-gated / follow-ups):** P1-CODE-4 (Identity platform), P1-CODE-6/7/8 (Finance-posting MOD-1 / Hostel / Alumni scope); fee-reduction follow-ups (Approval-Center type wiring + full client propose-award UX); exam-override client polish (narrow, `EXAM_APPROVAL_REQUIRED=false` builds); COM-4 per-school scheduled-broadcast RLS (P2).
 
@@ -44,7 +46,7 @@
 ## 2. Curriculum — **engine complete; repository INCOMPLETE**
 
 - **Acquisition ENGINE complete (proven):** crawler ran clean, integrity proven; the deterministic Board→Class→Subject→DocType pipeline (`scripts/acquisition/run_acquisition.py`) is the canonical acquirer (broad crawler retired). See `docs/curriculum-intelligence/ACQUISITION_STATUS.md`.
-- **Repository INCOMPLETE — authoritative Coverage Matrix = 10.1% (74 / 736 verified cells)** (`curriculum/reports/COVERAGE_MATRIX.md` SSOT). By board: CBSE 14.8% (26/176), TS 12.5% (20/160), AP 6.9% (11/160), CISCE 7.1% (17/240). The lane has **CONVERGED at 10.1%** (stopped — no actionable work left with currently-resolved sources); **653 cells are UNRESOLVED** (expected, no source resolved yet — NOT yet "Missing"). Raising coverage now requires **source-ladder expansion** (resolve more official→mirror→third-party sources for the unresolved cells), then a fresh lane pass — the lane's own domain; **do not interrupt/replace/spawn-another**.
+- **Repository INCOMPLETE — authoritative Coverage Matrix is the live SSOT** (`curriculum/reports/COVERAGE_MATRIX.md`), ~14.1% at 2026-07-09 and **actively advancing** (the separate acquisition lane is running; the earlier "converged at 10.1%" snapshot is superseded). Read the matrix for the current figure + by-board split — do not hardcode a number here (it goes stale). Raising coverage is the **lane's own domain** (source-ladder expansion → fresh passes); **do not interrupt/replace/spawn-another.**
 - **Deterministic ENGINE layer complete (pre-pilot):** CI-C1 (template solver) · CI-C3 (multi-set export) · CI-C7 (exam profiles) · CI-C8 (item rotation) · CI-C4-schema · B12 Question-Factory + CI-E1b concept-graph dormant seeds. Additive/dormant, invariants I1–I8 intact.
 - **AI-dependent curriculum waves GATED** (CI-C5/C6/C9/C10/C11) — depend on P3 Adaptive AI + canonical concepts (content).
 
@@ -71,9 +73,9 @@
 
 *(Live RLS isolation + nightly backup already **cleared** this session.)*
 
-1. **Curriculum repository convergence** — the 736-cell `Board→Class→Subject→DocType` matrix filled with verified cells. **Currently 10.1% (74/736); the lane has CONVERGED on currently-resolved sources.** Next: source-ladder expansion for the 653 unresolved cells → fresh lane pass (lane's domain).
-2. **Remaining live deployment** — deploy this session's new backend to `akshara-edge` (fee-reductions migration + COM-4 cron-token path); **activate COM-4 cron** (set `INTERNAL_CRON_TOKEN` + install cron); **activate off-site backup** (supply R2 credentials, 3-2-1); sustain the **7-day cron green** (scheduled-broadcast/reminder + monitoring). All runbooks staged.
-3. **Live certification** — apply + cert `finance_fee_reductions` on the live tenant DB (RLS/CHECK/partial-unique/FOR-UPDATE + concurrent approve/reverse/clamp; currently pattern-matched, not live-run) + any deploy-time re-cert of the new endpoints.
+1. **Curriculum repository convergence** — the 736-cell `Board→Class→Subject→DocType` matrix filled with verified cells (live SSOT `COVERAGE_MATRIX.md`, ~14.1% and advancing). Lane's own domain (source-ladder expansion → fresh passes). **NOTE:** this is a **GA / Assessment-platform** dependency, **not** an ERP-pilot blocker — the ERP pilot runs without it.
+2. **Remaining live deployment** — deploy this session's new backend + migrations **`20260863–20260866`** to `akshara-edge` (fee-reductions + inv-replacement scope + operations-hub actions + student-read RLS; COM-4 cron-token path); **activate COM-4 cron** (set `INTERNAL_CRON_TOKEN` + install cron); **activate off-site backup** (supply R2 credentials, 3-2-1); sustain the **7-day cron green**. **BLOCKED on the owner opening the SSH ControlMaster socket** (verified closed 2026-07-09: VPS reachable, `publickey` denied, no master). One-command-ready recipe staged: `docs/engineering/eos/GAP_SWEEP_DEPLOY_AND_LIVECERT_CHECKLIST.md`.
+3. **Live certification** — apply + cert `finance_fee_reductions` on `akshara_tenant_test` (RLS/CHECK/partial-unique/FOR-UPDATE + concurrent approve/reverse/clamp; currently pattern-matched, not live-run) + deploy-time re-cert of the new endpoints. Same SSH-socket blocker; checklist Part C staged (non-destructive, rolled back).
 4. **Staff Face ID attendance certification** (GPS geofence + anti-mock + live camera face; separate Must-Before-GA track).
 5. **Pilot run** (representative-pass) on the live lane.
 6. **General Availability** — the final gate; declared only once blockers 1–5 are cleared and green.
@@ -91,4 +93,4 @@
 ---
 
 ### Session provenance (2026-07-09)
-Acquisition engine proven + repository-incomplete terminology locked · gap-sweep waves 1+2 · live RLS all-pass · backup GREEN · off-site R2 + COM-4 token staged · discounts→billing maker-checker + full financial regression. All reviewer-gated, committed, tree clean (except the autonomous acquisition lane's own `curriculum/` working state, owned by that lane).
+Acquisition engine proven + repository-incomplete terminology locked · gap-sweep waves 1+2 · live RLS all-pass · backup GREEN · off-site R2 + COM-4 token staged · discounts→billing maker-checker + full financial regression. **2026-07-09 addendum:** final gap-sweep (3 P0 / 7 P1 built) + P2 cleanup CLOSED, one DS-enforcement regression caught + fixed at re-cert, regression green (deno 2409/0 · analyze 0 · flutter 3766/0); deploy + live-cert staged and blocked on the SSH socket. All reviewer-gated, committed, tree clean (except the autonomous acquisition lane's own `curriculum/` working state, owned by that lane).

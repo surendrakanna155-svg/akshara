@@ -134,6 +134,7 @@ class StudentExamsScreen extends ConsumerWidget {
                                 StudentExamSection.results => _ResultsSection(
                                     results: data.examResults,
                                     subjectScores: data.subjectScores,
+                                    schoolName: data.schoolName,
                                   ),
                               },
                             ],
@@ -216,10 +217,12 @@ class _ResultsSection extends StatelessWidget {
   const _ResultsSection({
     required this.results,
     required this.subjectScores,
+    required this.schoolName,
   });
 
   final List<StudentExamResult> results;
   final List<SubjectScore> subjectScores;
+  final String schoolName;
 
   @override
   Widget build(BuildContext context) {
@@ -249,8 +252,10 @@ class _ResultsSection extends StatelessWidget {
             key: QaTestKeys.studentReportCardButton,
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
-                builder: (_) =>
-                    ReportCardScreen(provider: studentReportCardProvider),
+                builder: (_) => ReportCardScreen(
+                  provider: studentReportCardProvider,
+                  schoolName: schoolName,
+                ),
               ),
             ),
             icon: const Icon(Icons.assignment_outlined),

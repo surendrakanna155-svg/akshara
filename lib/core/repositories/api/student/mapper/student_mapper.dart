@@ -84,6 +84,7 @@ class StudentMapper {
     return StudentExamsData(
       studentName: raw['studentName'] as String? ?? '',
       classLabel: raw['classLabel'] as String? ?? '',
+      schoolName: raw['schoolName'] as String? ?? '',
       unreadNotifications: raw['unreadNotifications'] as int? ?? 0,
       averagePercent: raw['averagePercent'] as int? ?? 0,
       upcomingExams: _mapUpcomingExams(raw['upcomingExams'] as List<dynamic>? ?? const []),

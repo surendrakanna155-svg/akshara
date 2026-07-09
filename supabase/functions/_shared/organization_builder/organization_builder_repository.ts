@@ -223,10 +223,18 @@ function mapJob(row: JobRow): ProvisioningJobView {
 // ─── Packs (catalog) ────────────────────────────────────────────────────────
 
 export async function listPacks(db: TenantQueryClient): Promise<OrgBuilderPack[]> {
+  // Akshara is an education-only product: the salon/hospital/restaurant packs are
+  // seed/reference rows that are explicitly out of scope (hide-first). Offer only
+  // the school pack. Mirrors the client-side pack-picker gate
+  // (organization_builder_hub_screen.dart _kSupportedVerticalPackTypes) as
+  // defense-in-depth. getPack() is intentionally left unfiltered so an already-
+  // started non-school interview draft can still be reopened.
   const rows = await db.queryObject<PackRow>(
     `SELECT id, type, name, description, primary_entities, module_seeds,
             dashboard_focus, brand_label
-     FROM org_builder_packs ORDER BY sort_order, name`,
+     FROM org_builder_packs
+     WHERE type = 'school'
+     ORDER BY sort_order, name`,
   );
   return rows.map(mapPack);
 }

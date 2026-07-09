@@ -74,6 +74,7 @@ class StudentExamsData {
     required this.subjectScores,
     required this.averagePercent,
     this.unreadNotifications = 0,
+    this.schoolName = '',
   });
 
   final String studentName;
@@ -83,4 +84,8 @@ class StudentExamsData {
   final List<SubjectScore> subjectScores;
   final int averagePercent;
   final int unreadNotifications;
+
+  /// Real per-tenant school name (from `schools.name`), used to brand the
+  /// report-card PDF export. Empty until the backend snapshot resolves.
+  final String schoolName;
 }

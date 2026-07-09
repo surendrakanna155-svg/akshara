@@ -11,6 +11,14 @@ import 'organization_builder_models.dart';
 import 'organization_builder_providers.dart';
 import '../../../theme/spacing.dart';
 
+/// Akshara is an education-only product — the salon/hospital/restaurant verticals
+/// are explicitly out of scope (hide-first). The org-builder pack picker only
+/// ever offers the school pack. The backend (`listPacks`) applies the same filter
+/// as defense-in-depth; this is the user-facing gate.
+const Set<VerticalPackType> _kSupportedVerticalPackTypes = {
+  VerticalPackType.school,
+};
+
 class OrganizationBuilderHubScreen extends ConsumerWidget {
   const OrganizationBuilderHubScreen({super.key});
 
@@ -51,7 +59,11 @@ class OrganizationBuilderHubScreen extends ConsumerWidget {
               apiFailureMapper.fromException(error),
               onRetry: () => ref.invalidate(verticalPacksProvider),
             ),
-            data: (packs) => _PackGrid(packs: packs),
+            data: (packs) => _PackGrid(
+              packs: packs
+                  .where((p) => _kSupportedVerticalPackTypes.contains(p.type))
+                  .toList(),
+            ),
           ),
           const SizedBox(height: 24),
           const Text(

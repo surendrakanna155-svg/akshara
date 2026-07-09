@@ -11,6 +11,7 @@ import '../../shared/widgets/akshara_loading_state.dart';
 import 'onboarding_models.dart';
 import 'onboarding_provider.dart';
 import '../../theme/spacing.dart';
+import '../../theme/theme_extensions.dart';
 
 /// Gap-remediation #10 — invite creation is honest about delivery: creating an
 /// invite only ever generates a link (`status = 'pending'`); it is marked
@@ -44,7 +45,7 @@ class OnboardingHubScreen extends ConsumerWidget {
               value: '${data.totalInvites}',
             ),
             const SizedBox(height: 16),
-            const Text('Recent import jobs', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('Recent import jobs', style: context.aksharaText.titleSmall),
             if (data.recentJobs.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s3),
@@ -63,7 +64,7 @@ class OnboardingHubScreen extends ConsumerWidget {
               child: const Text('Invite parent / teacher / student'),
             ),
             const SizedBox(height: 16),
-            const Text('Invites', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('Invites', style: context.aksharaText.titleSmall),
             invites.when(
               loading: () => const Padding(
                 padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s3),
@@ -177,7 +178,14 @@ class _MetricRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: AksharaSpacing.s1),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [Text(label), Text(value, style: const TextStyle(fontWeight: FontWeight.w600))],
+        children: [
+          Text(label),
+          Text(
+            value,
+            style: context.aksharaText.bodyMedium
+                .copyWith(fontWeight: FontWeight.w600),
+          ),
+        ],
       ),
     );
   }
@@ -301,7 +309,11 @@ class _InviteFormSheetState extends State<_InviteFormSheet> {
           ),
           if (_error != null) ...[
             const SizedBox(height: AksharaSpacing.s2),
-            Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            Text(
+              _error!,
+              style: context.aksharaText.bodyMedium
+                  .copyWith(color: context.colors.error),
+            ),
           ],
           const SizedBox(height: AksharaSpacing.s4),
           Align(

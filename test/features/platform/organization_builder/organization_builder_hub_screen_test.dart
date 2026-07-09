@@ -183,7 +183,11 @@ void main() {
 
     expect(find.byKey(QaTestKeys.organizationBuilderHubScreen), findsOneWidget);
     expect(find.text('Education'), findsOneWidget);
-    expect(find.text('Salon'), findsOneWidget);
+    // Akshara is education-only: the salon/hospital/restaurant packs are gated
+    // out of the picker even when the repository returns them (hide-first).
+    expect(find.text('Salon'), findsNothing);
+    // Existing interview drafts are NOT gated — only the pack picker is — so a
+    // previously-started (non-school) draft still surfaces in the drafts list.
     expect(find.text('Velora Downtown'), findsOneWidget);
     expect(find.byKey(QaTestKeys.organizationBuilderSchoolSetupLink), findsOneWidget);
   });

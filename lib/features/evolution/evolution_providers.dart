@@ -11,18 +11,6 @@ final evolutionQueryProvider = Provider<RepositoryQuery>(
 
 final teacherClassFilterProvider = StateProvider<String?>((ref) => null);
 
-final widgetLiveDataProvider = FutureProvider.family<Map<String, WidgetLiveData>, bool>(
-  (ref, forceRefresh) async {
-    final layout = await ref.watch(dashboardLayoutProvider.future);
-    final visibleIds = layout.where((p) => p.visible).map((p) => p.widgetId).toList();
-    return ref.read(evolutionRepositoryProvider).getWidgetData(
-          query: ref.watch(evolutionQueryProvider),
-          widgetIds: visibleIds.isEmpty ? null : visibleIds,
-          forceRefresh: forceRefresh,
-        );
-  },
-);
-
 final growthFunnelProvider = FutureProvider<GrowthFunnel>((ref) async {
   return ref.read(evolutionRepositoryProvider).getGrowthFunnel(
         query: ref.watch(evolutionQueryProvider),
@@ -49,18 +37,6 @@ final setupWizardProvider = FutureProvider<SetupWizardSession>((ref) async {
   return ref.read(evolutionRepositoryProvider).createSetupWizard(
         query: ref.watch(evolutionQueryProvider),
         inputs: const {'schoolName': 'Akshara Demo School', 'studentCount': 200, 'teacherCount': 12},
-      );
-});
-
-final widgetRegistryProvider = FutureProvider<List<WidgetDefinition>>((ref) async {
-  return ref.read(evolutionRepositoryProvider).listWidgets(
-        query: ref.watch(evolutionQueryProvider),
-      );
-});
-
-final dashboardLayoutProvider = FutureProvider<List<DashboardWidgetPlacement>>((ref) async {
-  return ref.read(evolutionRepositoryProvider).getDashboardLayout(
-        query: ref.watch(evolutionQueryProvider),
       );
 });
 

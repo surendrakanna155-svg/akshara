@@ -79,6 +79,7 @@ class ParentMapper {
     return ParentExamsData(
       childName: raw['childName'] as String? ?? '',
       childClass: raw['childClass'] as String? ?? '',
+      schoolName: raw['schoolName'] as String? ?? '',
       unreadNotifications: raw['unreadNotifications'] as int? ?? 0,
       upcomingExams: _mapUpcomingExams(raw['upcomingExams'] as List<dynamic>? ?? const []),
       examResults: _mapExamResults(raw['examResults'] as List<dynamic>? ?? const []),

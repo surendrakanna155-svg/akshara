@@ -11,8 +11,10 @@ import '../exams/student_exams_provider.dart';
 import '../exams/widgets/exam_result_row.dart';
 import '../exams/widgets/subject_score_row.dart';
 
-/// School name for report-card branding (placeholder until school profile wired).
-const String _reportCardSchoolName = 'Akshara Vidyalaya';
+/// Neutral fallback when the real per-tenant school name is momentarily
+/// unavailable (e.g. the exams snapshot hasn't resolved yet) — never a
+/// hardcoded specific school's name.
+const String _reportCardSchoolNameFallback = 'School';
 
 /// ST-06 — Term report card synthesized from synced exam results.
 class StudentReportCardScreen extends ConsumerWidget {
@@ -45,7 +47,9 @@ class StudentReportCardScreen extends ConsumerWidget {
                   .read(aksharaReportExportServiceProvider)
                   .shareReportCardPdf(
                     card: reportCard,
-                    schoolName: _reportCardSchoolName,
+                    schoolName: data.schoolName.isNotEmpty
+                        ? data.schoolName
+                        : _reportCardSchoolNameFallback,
                   ),
             ),
         ],

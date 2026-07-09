@@ -65,6 +65,7 @@ class ParentExamsData {
     required this.unreadNotifications,
     required this.upcomingExams,
     required this.examResults,
+    this.schoolName = '',
   });
 
   final String childName;
@@ -72,6 +73,10 @@ class ParentExamsData {
   final int unreadNotifications;
   final List<ExamScheduleItem> upcomingExams;
   final List<ExamResultItem> examResults;
+
+  /// Real per-tenant school name (from `schools.name`), used to brand the
+  /// report-card PDF export. Empty until the backend snapshot resolves.
+  final String schoolName;
 
   int get upcomingCount => upcomingExams.length;
   int get resultsCount => examResults.length;
@@ -100,6 +105,7 @@ class ParentExamsData {
     int? unreadNotifications,
     List<ExamScheduleItem>? upcomingExams,
     List<ExamResultItem>? examResults,
+    String? schoolName,
   }) {
     return ParentExamsData(
       childName: childName ?? this.childName,
@@ -107,6 +113,7 @@ class ParentExamsData {
       unreadNotifications: unreadNotifications ?? this.unreadNotifications,
       upcomingExams: upcomingExams ?? this.upcomingExams,
       examResults: examResults ?? this.examResults,
+      schoolName: schoolName ?? this.schoolName,
     );
   }
 

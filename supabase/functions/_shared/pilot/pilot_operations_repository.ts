@@ -1863,13 +1863,28 @@ export async function overlayExamsSnapshotFromResults(
     // keep snapshot identity on any lookup failure
   }
 
+  // P2 cosmetic-correctness fix — the report-card PDF (parent + student both
+  // export off this exams snapshot) must brand with the REAL per-tenant school,
+  // never a seeded/hardcoded label. `schools` is the single source of truth;
+  // always overlay it live, same precedent query as loadStudentSnapshotContext.
+  let schoolName = snapshot.schoolName;
+  try {
+    const schoolRows = await db.queryObject<{ name: string }>(
+      `SELECT name FROM schools WHERE id = $1 LIMIT 1`,
+      [schoolId],
+    );
+    if (schoolRows[0]?.name) schoolName = schoolRows[0].name;
+  } catch {
+    // keep snapshot schoolName on any lookup failure
+  }
+
   const { listPublishedResultsForStudent } = await import(
     "../academics/exam_administration/exam_administration_repository.ts"
   );
   const published = await listPublishedResultsForStudent(db, orgId, schoolId, studentId);
 
   if (published.length === 0) {
-    return { ...snapshot, childName, childClass };
+    return { ...snapshot, childName, childClass, schoolName };
   }
 
   const examResults = published.map((r) => ({
@@ -1882,7 +1897,7 @@ export async function overlayExamsSnapshotFromResults(
     grade: String(r.grade ?? ""),
   }));
 
-  return { ...snapshot, childName, childClass, examResults };
+  return { ...snapshot, childName, childClass, schoolName, examResults };
 }
 
 // --- Student homework READ overlay (MJ-H7 belt-and-suspenders) ---

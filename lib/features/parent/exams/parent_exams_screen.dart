@@ -287,8 +287,10 @@ class _SectionContent extends StatelessWidget {
             key: QaTestKeys.parentReportCardButton,
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
-                builder: (_) =>
-                    ReportCardScreen(provider: parentReportCardProvider),
+                builder: (_) => ReportCardScreen(
+                  provider: parentReportCardProvider,
+                  schoolName: data.schoolName,
+                ),
               ),
             ),
             icon: const Icon(Icons.assignment_outlined),
