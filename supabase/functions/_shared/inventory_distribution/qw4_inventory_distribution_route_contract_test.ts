@@ -222,3 +222,60 @@ Deno.test("gap-sweep-2/step-4: non-UUID replacement id under /approve is unregis
   ]);
   assertEquals(res?.status, 404);
 });
+
+// ─── Gap-remediation P0-3 — POST /items/:id/replacement (request-replacement) ──
+//
+// This route was previously untested at the contract level even though its
+// handler (`handleRequestReplacement`) carries a deliberate
+// `scope !== "parent"` bypass of the staff write-permission gate — i.e. a
+// parent-scope caller with ZERO staff RBAC permissions is meant to reach the
+// DB here, while a school-scope caller still needs manageInventoryDistribution/
+// manageInventory. These prove that contract explicitly.
+
+const itemId = "33333333-3333-3333-3333-333333333333";
+
+Deno.test("gap-remediation/P0-3: parent-scope replacement request reaches the DB with NO staff inventory permission (503)", async () => {
+  const res = await call(
+    "POST",
+    `/inventory/distribution/items/${itemId}/replacement`,
+    [], // parents carry no staff RBAC permissions — scope alone is the gate
+    { notes: "torn cover" },
+    { scope: "parent" },
+  );
+  assertEquals(res?.status, 503);
+});
+
+Deno.test("gap-remediation/P0-3: school-scope replacement request without manage permission is denied (403)", async () => {
+  const res = await call(
+    "POST",
+    `/inventory/distribution/items/${itemId}/replacement`,
+    ["viewSis"],
+    { notes: "torn cover" },
+  );
+  assertEquals(res?.status, 403);
+});
+
+Deno.test("gap-remediation/P0-3: school-scope replacement request WITH manageInventoryDistribution passes the gate (503)", async () => {
+  const res = await call(
+    "POST",
+    `/inventory/distribution/items/${itemId}/replacement`,
+    ["manageInventoryDistribution"],
+    { notes: "torn cover" },
+  );
+  assertEquals(res?.status, 503);
+});
+
+Deno.test("gap-remediation/P0-3: unauthenticated replacement request is rejected (401)", async () => {
+  const req = new Request(`https://x/inventory/distribution/items/${itemId}/replacement`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ notes: "torn cover" }),
+  });
+  const res = await routeInventoryDistribution(
+    req,
+    config,
+    "POST",
+    `/inventory/distribution/items/${itemId}/replacement`,
+  );
+  assertEquals(res?.status, 401);
+});

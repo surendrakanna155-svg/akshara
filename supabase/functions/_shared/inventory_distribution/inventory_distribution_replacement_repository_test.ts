@@ -20,6 +20,7 @@ import type { TenantQueryClient } from "../tenant_db.ts";
 import {
   approveReplacementRequest,
   createDistribution,
+  DistributionUpdateBlockedError,
   fulfillReplacementRequest,
   listReplacementRequests,
   rejectReplacementRequest,
@@ -62,10 +63,34 @@ interface DistRow {
   replacement_rejection_reason: string | null;
 }
 
-/** Stateful in-memory model of the two tables this workflow touches. */
+interface PaymentRequestRow {
+  id: string;
+  organization_id: string;
+  school_id: string;
+  student_id: string;
+  payer_user_id: string;
+  source_type: string;
+  source_id: string;
+  invoice_id: string | null;
+  amount: number;
+  currency: string;
+  status: string;
+  idempotency_key: string | null;
+}
+
+/** Stateful in-memory model of the tables this workflow touches. */
 class FakeDistributionDb {
   catalog = new Map<string, CatalogRow>();
   distributions = new Map<string, DistRow>();
+  /// Gap-remediation P0-3: models `payment_requests` so the paid-item branch
+  /// of `requestReplacement` (unit_price > 0) can be exercised here too.
+  paymentRequests = new Map<string, PaymentRequestRow>();
+  /// Gap-remediation P0-3: simulates the exact bug this file proves is fixed —
+  /// an RLS policy silently filtering the replacement-status UPDATE to 0 rows
+  /// (pre-fix: any parent-scope session, since only a school-scope write
+  /// policy existed). When true, every `replacement_status`-mutating UPDATE
+  /// below returns `[]` instead of the updated row.
+  simulateBlockedUpdate = false;
   private seq = 0;
 
   private nextId(prefix: string): string {
@@ -81,6 +106,57 @@ class FakeDistributionDb {
   // deno-lint-ignore require-await
   async queryObject<T>(sql: string, params: unknown[] = []): Promise<T[]> {
     const q = sql.replace(/\s+/g, " ").trim();
+
+    if (
+      this.simulateBlockedUpdate &&
+      ((q.startsWith("UPDATE inv_student_distributions") && q.includes("payment_request_id = $2")) ||
+        q.includes("SET replacement_status = 'approved'") ||
+        q.includes("SET replacement_status = 'rejected'") ||
+        q.includes("SET replacement_status = 'fulfilled'"))
+    ) {
+      return [];
+    }
+
+    if (q.startsWith("SELECT * FROM payment_requests")) {
+      const [organizationId, sourceType, sourceId, payerUserId] = params as [string, string, string, string];
+      const existing = [...this.paymentRequests.values()].find((p) =>
+        p.organization_id === organizationId &&
+        p.source_type === sourceType &&
+        p.source_id === sourceId &&
+        p.payer_user_id === payerUserId
+      );
+      return existing ? [existing as unknown as T] : [];
+    }
+
+    if (q.startsWith("INSERT INTO payment_requests")) {
+      const [
+        organizationId,
+        schoolId,
+        studentId,
+        payerUserId,
+        sourceType,
+        sourceId,
+        invoiceId,
+        amount,
+        idempotencyKey,
+      ] = params as [string, string, string, string, string, string, string | null, number, string | null];
+      const row: PaymentRequestRow = {
+        id: this.nextId("pay"),
+        organization_id: organizationId,
+        school_id: schoolId,
+        student_id: studentId,
+        payer_user_id: payerUserId,
+        source_type: sourceType,
+        source_id: sourceId,
+        invoice_id: invoiceId,
+        amount,
+        currency: "INR",
+        status: "pending",
+        idempotency_key: idempotencyKey,
+      };
+      this.paymentRequests.set(row.id, row);
+      return [row as unknown as T];
+    }
 
     if (q.startsWith("INSERT INTO inv_student_distributions")) {
       const [organizationId, schoolId, studentId, catalogItemId, quantity, createdBy, replacementOfId] =
@@ -327,4 +403,136 @@ Deno.test("gap-sweep-2/step-4: reject rejects a request that's already fulfilled
     () => rejectReplacementRequest(db, distributionId),
     ReplacementRequestInvalidStateError,
   );
+});
+
+// ─── Gap-remediation P0-3 — RLS-blocked UPDATE must never be swallowed ─────
+//
+// `requestReplacement` is reachable by a parent-scope session (see
+// inventory_distribution_handlers.ts `handleRequestReplacement`'s explicit
+// `scope !== "parent"` bypass of the staff write-permission gate), which
+// commits a `payment_request` (paid items) THEN updates the distribution's
+// status/replacement_status. Pre-fix, if the latter UPDATE's RLS predicate
+// excluded every row (0 rows, no Postgres error), `updated[0]!` returned
+// `undefined` with no signal — the payment could commit while the
+// distribution's own state never moved. These tests prove: (1) the paid,
+// unblocked path still keeps payment + status consistent, and (2) a blocked
+// UPDATE now throws instead of silently succeeding, for every mutating
+// replacement-workflow call (request/approve/reject/fulfill).
+
+Deno.test("gap-remediation/P0-3: requestReplacement (paid item, unblocked) keeps the payment_request and the status flip consistent", async () => {
+  const { fake, db } = makeDb();
+  fake.catalog.set("cat-paid", {
+    id: "cat-paid",
+    name: "School Blazer",
+    category: "uniforms",
+    unit_price: 500,
+    stock_on_hand: 10,
+  });
+  const created = await createDistribution(db, ORG, SCHOOL, {
+    studentId: STUDENT,
+    catalogItemId: "cat-paid",
+    quantity: 1,
+    createdBy: STAFF,
+  });
+
+  const result = await requestReplacement(db, ORG, SCHOOL, created.id, STAFF, "Blazer torn");
+
+  assertEquals(result.distribution.status, "payment_pending");
+  assertEquals(result.paymentRequestId !== null, true);
+  assertEquals(fake.paymentRequests.size, 1);
+  const stored = fake.distributions.get(created.id)!;
+  assertEquals(stored.replacement_status, "pending");
+  assertEquals(stored.payment_request_id, result.paymentRequestId);
+});
+
+Deno.test("gap-remediation/P0-3: requestReplacement throws DistributionUpdateBlockedError (never a fabricated success) when the status UPDATE is RLS-blocked", async () => {
+  const { fake, db } = makeDb();
+  fake.catalog.set("cat-paid", {
+    id: "cat-paid",
+    name: "School Blazer",
+    category: "uniforms",
+    unit_price: 500,
+    stock_on_hand: 10,
+  });
+  const created = await createDistribution(db, ORG, SCHOOL, {
+    studentId: STUDENT,
+    catalogItemId: "cat-paid",
+    quantity: 1,
+    createdBy: STAFF,
+  });
+
+  // Simulates the bug this ticket fixes: a parent-scope session reaches
+  // requestReplacement(), but (pre-fix) no RLS policy permitted the status
+  // UPDATE under scope='parent' — Postgres silently returns 0 rows.
+  fake.simulateBlockedUpdate = true;
+
+  await assertRejects(
+    () => requestReplacement(db, ORG, SCHOOL, created.id, STAFF, "Blazer torn"),
+    DistributionUpdateBlockedError,
+  );
+
+  // The payment_request was already inserted by this point in a real
+  // Postgres transaction, `withTenantContext` (tenant_db.ts) wraps every
+  // repository call in BEGIN/COMMIT-or-ROLLBACK, so throwing here rolls that
+  // insert back too — the fix this proves is that the repository now
+  // SIGNALS the failure instead of returning `{ distribution: undefined }`.
+  assertEquals(fake.paymentRequests.size, 1);
+
+  // And the distribution row itself was never mutated into a false
+  // "payment_pending"/"replacement_status=pending" state.
+  const stored = fake.distributions.get(created.id)!;
+  assertEquals(stored.status, "available");
+  assertEquals(stored.replacement_status, null);
+});
+
+Deno.test("gap-remediation/P0-3: approve throws DistributionUpdateBlockedError instead of returning rows[0]! === undefined", async () => {
+  const { fake, db } = makeDb();
+  const pendingId = await seedDistribution(db);
+  await requestReplacement(db, ORG, SCHOOL, pendingId, STAFF);
+
+  fake.simulateBlockedUpdate = true;
+  await assertRejects(
+    () => approveReplacementRequest(db, pendingId),
+    DistributionUpdateBlockedError,
+  );
+  // The blocked UPDATE must not have mutated the row either.
+  assertEquals(fake.distributions.get(pendingId)!.replacement_status, "pending");
+});
+
+Deno.test("gap-remediation/P0-3: reject throws DistributionUpdateBlockedError instead of returning rows[0]! === undefined", async () => {
+  const { fake, db } = makeDb();
+  const pendingId = await seedDistribution(db);
+  await requestReplacement(db, ORG, SCHOOL, pendingId, STAFF);
+
+  fake.simulateBlockedUpdate = true;
+  await assertRejects(
+    () => rejectReplacementRequest(db, pendingId, "Not eligible"),
+    DistributionUpdateBlockedError,
+  );
+  assertEquals(fake.distributions.get(pendingId)!.replacement_status, "pending");
+});
+
+Deno.test("gap-remediation/P0-3: fulfill throws DistributionUpdateBlockedError instead of returning rows[0]! === undefined (and still issued the new item)", async () => {
+  const { fake, db } = makeDb();
+  const approvedId = await seedDistribution(db);
+  await requestReplacement(db, ORG, SCHOOL, approvedId, STAFF);
+  await approveReplacementRequest(db, approvedId);
+
+  const before = fake.distributions.size;
+  fake.simulateBlockedUpdate = true;
+  await assertRejects(
+    () => fulfillReplacementRequest(db, ORG, SCHOOL, approvedId, STAFF),
+    DistributionUpdateBlockedError,
+  );
+  // fulfillReplacementRequest issues the new distribution row (a plain
+  // INSERT, self-protected by Postgres — WITH CHECK violations raise rather
+  // than silently drop) BEFORE the final blocked UPDATE. In a real Postgres
+  // transaction this insert rolls back together with everything else in the
+  // same withTenantContext operation; the fake proves the repository layer
+  // now signals the failure instead of returning a fabricated "fulfilled" row.
+  assertEquals(fake.distributions.size, before + 1);
+  assertEquals(fake.distributions.get(approvedId)!.replacement_status, "approved");
+  // Still whatever requestReplacement() left it at — never flipped to
+  // 'reissued' by the blocked fulfil UPDATE.
+  assertEquals(fake.distributions.get(approvedId)!.status, "replacement_requested");
 });

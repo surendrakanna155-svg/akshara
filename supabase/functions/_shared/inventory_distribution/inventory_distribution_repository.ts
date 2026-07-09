@@ -47,6 +47,46 @@ export class ReplacementRequestInvalidStateError extends Error {
   }
 }
 
+/**
+ * Gap-remediation P0-3: an `UPDATE ... RETURNING` on `inv_student_distributions`
+ * that should affect exactly one row affected zero. Postgres does NOT raise an
+ * error when an RLS policy silently filters an UPDATE down to 0 rows (unlike
+ * `INSERT ... RETURNING`, which raises on a WITH CHECK violation) — so a
+ * caller that does `rows[0]!` gets `undefined` at runtime with no signal;
+ * the `!` is a compile-time-only assertion.
+ *
+ * That masked exactly this bug: a parent-scope session could pass the
+ * RLS-gated SELECT/INSERT steps of a replacement request (the parent read
+ * policy + `payment_requests_parent_scope`) and then have the *status* UPDATE
+ * on `inv_student_distributions` silently dropped by the school-only FOR ALL
+ * policy — while the `payment_request` it had just inserted, in the SAME
+ * transaction, still committed.
+ *
+ * Every call site below now throws this instead of swallowing the empty
+ * result. Because every repository call runs inside the single
+ * BEGIN/COMMIT-or-ROLLBACK transaction `withTenantContext` opens (see
+ * tenant_db.ts), throwing here makes the WHOLE operation roll back — so a
+ * blocked/failed status transition can never coexist with a committed
+ * payment_request (or a fabricated new distribution row, for `fulfill`) for
+ * the same request.
+ */
+export class DistributionUpdateBlockedError extends Error {
+  constructor(public readonly id: string, public readonly action: string) {
+    super(
+      `${action} affected 0 rows for distribution ${id} — blocked by RLS ` +
+        `(wrong scope/ownership) or a concurrent change; rolling back`,
+    );
+    this.name = "DistributionUpdateBlockedError";
+  }
+}
+
+/** Fails loudly instead of returning `rows[0]!` (see DistributionUpdateBlockedError). */
+function requireUpdatedRow<T>(rows: T[], id: string, action: string): T {
+  const row = rows[0];
+  if (!row) throw new DistributionUpdateBlockedError(id, action);
+  return row;
+}
+
 export interface DistributionDashboard {
   pendingDistributions: number;
   replacementRequests: number;
@@ -210,7 +250,8 @@ export async function requestReplacement(
     ],
   );
 
-  return { distribution: updated[0]!, paymentRequestId };
+  const distribution = requireUpdatedRow(updated, distributionId, "requestReplacement");
+  return { distribution, paymentRequestId };
 }
 
 /**
@@ -268,7 +309,7 @@ export async function approveReplacementRequest(
      RETURNING d.*, c.name AS "itemName", c.category`,
     [requestId],
   );
-  return rows[0]!;
+  return requireUpdatedRow(rows, requestId, "approveReplacementRequest");
 }
 
 export async function rejectReplacementRequest(
@@ -290,7 +331,7 @@ export async function rejectReplacementRequest(
      RETURNING d.*, c.name AS "itemName", c.category`,
     [requestId, reason ?? null],
   );
-  return rows[0]!;
+  return requireUpdatedRow(rows, requestId, "rejectReplacementRequest");
 }
 
 /**
@@ -332,7 +373,7 @@ export async function fulfillReplacementRequest(
      RETURNING d.*, c.name AS "itemName", c.category`,
     [requestId],
   );
-  return rows[0]!;
+  return requireUpdatedRow(rows, requestId, "fulfillReplacementRequest");
 }
 
 export async function buildDistributionDashboard(

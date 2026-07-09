@@ -15,6 +15,7 @@ import {
   approveReplacementRequest,
   buildDistributionDashboard,
   createDistribution,
+  DistributionUpdateBlockedError,
   fulfillReplacementRequest,
   listCatalogItems,
   listReplacementRequests,
@@ -109,6 +110,14 @@ function mapReplacementRepositoryError(error: unknown): Response | null {
   }
   if (error instanceof ReplacementRequestInvalidStateError) {
     return errorEnvelope("INVALID_STATE", error.message, 409);
+  }
+  // Gap-remediation P0-3: the status UPDATE affected 0 rows (RLS blocked it —
+  // wrong scope/ownership — or a concurrent change). The repository already
+  // rolled the whole DB transaction back (see tenant_db.ts withTenantContext),
+  // so nothing partially committed; surface it as a conflict rather than a
+  // fabricated 2xx built from an undefined row.
+  if (error instanceof DistributionUpdateBlockedError) {
+    return errorEnvelope("REPLACEMENT_UPDATE_BLOCKED", error.message, 409);
   }
   return null;
 }
@@ -319,6 +328,8 @@ export async function handleRequestReplacement(
     }), { status: 201 });
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    const mapped = mapReplacementRepositoryError(error);
+    if (mapped) return mapped;
     const message = error instanceof Error ? error.message : "Replacement request failed";
     return errorEnvelope("INVENTORY_DISTRIBUTION_ERROR", message, 500);
   }
