@@ -42,6 +42,14 @@ import {
   loadCommunicationWebhookConfig,
   verifyCommunicationWebhookSignature,
 } from "./communication_webhook_auth.ts";
+import {
+  INTERNAL_CRON_ACTOR_ID,
+  INTERNAL_CRON_ROLE,
+  INTERNAL_CRON_SESSION_ID,
+  INTERNAL_CRON_TOKEN_HEADER,
+  loadCommunicationCronConfig,
+  verifyInternalCronToken,
+} from "./communication_cron_auth.ts";
 
 /** Inline mutation-audit helper for communication writes (module-local style,
  * mirroring communication_service.ts which calls recordMutationAudit directly). */
@@ -565,11 +573,25 @@ export async function handleCreateBroadcast(
  * scheduled broadcast whose time has arrived for the caller's org. Gated by the
  * `manageCommunications` ops permission (same as the delivery-queue processor).
  * Idempotent; the periodic trigger (cron) that calls it is a deployment concern.
+ *
+ * COM-4: a scheduler has no user session, so it authenticates instead with
+ * `x-internal-cron-token` (see `communication_cron_auth.ts`). When that header
+ * verifies against the server-side `INTERNAL_CRON_TOKEN`, this call fans out
+ * across EVERY org (`handleRunScheduledBroadcastsForAllOrgs`) instead of just
+ * the caller's own — a scheduler has no single org to scope to. When it does
+ * NOT verify (header absent, wrong, or the server token itself isn't
+ * configured — fail CLOSED, never open), control falls straight through to
+ * the pre-existing full-JWT + `manageCommunications` path below, unchanged.
  */
 export async function handleRunScheduledBroadcasts(
   req: Request,
   config: AppConfig,
 ): Promise<Response> {
+  const cronToken = req.headers.get(INTERNAL_CRON_TOKEN_HEADER);
+  if (await verifyInternalCronToken(loadCommunicationCronConfig(), cronToken)) {
+    return await handleRunScheduledBroadcastsForAllOrgs(req, config);
+  }
+
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
   const denied = requirePermission(auth.claims, "manageCommunications");
@@ -591,6 +613,157 @@ export async function handleRunScheduledBroadcasts(
     }
     return errorEnvelope("INTERNAL_ERROR", "Failed to run scheduled broadcasts", 500);
   }
+}
+
+/** Per-org outcome of an internal-cron scheduled-broadcast run. */
+interface CronOrgResult {
+  organizationId: string;
+  processed: number;
+  totalRecipients: number;
+  error?: string;
+}
+
+/**
+ * Lists every org the cron sweep should cover: not deleted, and either
+ * `trial` or `active` (mirrors the `organizations.status` check constraint in
+ * `20260607100000_core_platform_schema.sql`; `suspended` orgs are
+ * intentionally excluded — same reasoning as billing/access checks elsewhere).
+ * Uses the service-role client (bypasses RLS) — the same
+ * `createServiceClient(...).from("organizations")` shape already used by
+ * `handleReady` (`auth_handlers.ts`) to probe DB reachability.
+ */
+async function listActiveOrganizationIds(config: AppConfig): Promise<string[]> {
+  const client = createServiceClient(config);
+  const { data, error } = await client
+    .from("organizations")
+    .select("id")
+    .in("status", ["trial", "active"])
+    .is("deleted_at", null);
+  if (error) {
+    throw new Error(`organizations lookup failed: ${error.message}`);
+  }
+  return ((data ?? []) as { id: string }[]).map((row) => row.id);
+}
+
+/** Synthetic claims for the cron actor, scoped to one org at a time. `scope`
+ * is "organization" (org-wide, no single school) — the same scope a
+ * chain/trust-level admin token would carry; matches the existing
+ * `comm_broadcasts_school` RLS policy branch for org-wide scheduled
+ * broadcasts (`school_id IS NULL`). Per-school scheduled broadcasts are
+ * claimed the same way a school-scoped admin token already would be, which is
+ * an existing scoping property of `runDueScheduledBroadcasts`/RLS, not
+ * something introduced by this cron path. */
+function internalCronClaimsForOrg(orgId: string): AccessTokenClaims {
+  return {
+    sub: INTERNAL_CRON_ACTOR_ID,
+    tenant_id: orgId,
+    organization_id: orgId,
+    school_id: null,
+    role: INTERNAL_CRON_ROLE,
+    role_slugs: [INTERNAL_CRON_ROLE],
+    primary_role: INTERNAL_CRON_ROLE,
+    permissions: ["manageCommunications"],
+    permissions_version: 0,
+    scope: "organization",
+    school_group_id: null,
+    student_id: null,
+    child_ids: [],
+    session_id: INTERNAL_CRON_SESSION_ID,
+  };
+}
+
+/** Runs the due-scheduled-broadcast dispatch for ONE org under its own
+ * tenant-RLS context, records a distinct `communication.broadcasts.cron_run`
+ * audit event (so a live run leaves unambiguous evidence per org — see the
+ * activation runbook), then drains the newly-enqueued deliveries. Any error
+ * (including `TenantDbNotConfiguredError`) is caught and reported on the
+ * result instead of propagating, so one org's failure never aborts the rest
+ * of the sweep. */
+async function runScheduledBroadcastsForOrg(
+  config: AppConfig,
+  orgId: string,
+  req: Request,
+): Promise<CronOrgResult> {
+  const claims = internalCronClaimsForOrg(orgId);
+  try {
+    const dispatch = await withTenantContext(config, claims, async (db) => {
+      const result = await runDueScheduledBroadcasts(db, claims, req);
+      await recordMutationAudit(
+        db,
+        claims,
+        {
+          eventType: "communication.broadcasts.cron_run",
+          category: "workflow",
+          entityType: "comm_broadcast_cron_run",
+          entityId: orgId,
+          metadata: {
+            processed: result.processed,
+            totalRecipients: result.totalRecipients,
+            broadcastIds: result.broadcastIds,
+          },
+          correlationId: correlationIdFromRequest(req),
+        },
+        null,
+        req,
+      );
+      return result;
+    });
+    await scheduleNotificationDrain(config, claims);
+    return {
+      organizationId: orgId,
+      processed: Number(dispatch.processed ?? 0),
+      totalRecipients: Number(dispatch.totalRecipients ?? 0),
+    };
+  } catch (error) {
+    return {
+      organizationId: orgId,
+      processed: 0,
+      totalRecipients: 0,
+      error: error instanceof Error ? error.message : "unknown error",
+    };
+  }
+}
+
+/**
+ * COM-4 internal-cron branch: fans the scheduled-broadcast run out across
+ * every non-deleted trial/active org, since the scheduler has no single org's
+ * JWT to scope to. Each org is fully isolated — one org's DB/data problem is
+ * recorded in that org's `results[]` entry (`orgsFailed` surfaces the count)
+ * and never aborts the rest of the run. Only a failure to enumerate orgs at
+ * all (nothing could even start) is a hard 500.
+ */
+async function handleRunScheduledBroadcastsForAllOrgs(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  let orgIds: string[];
+  try {
+    orgIds = await listActiveOrganizationIds(config);
+  } catch (_error) {
+    return errorEnvelope(
+      "INTERNAL_ERROR",
+      "Failed to enumerate organizations for the cron run",
+      500,
+    );
+  }
+
+  const results: CronOrgResult[] = [];
+  for (const orgId of orgIds) {
+    results.push(await runScheduledBroadcastsForOrg(config, orgId, req));
+  }
+
+  const orgsFailed = results.filter((r) => r.error).length;
+  const totalProcessed = results.reduce((sum, r) => sum + r.processed, 0);
+  const totalRecipients = results.reduce((sum, r) => sum + r.totalRecipients, 0);
+
+  return jsonResponse(envelope({
+    cron: true,
+    orgsConsidered: orgIds.length,
+    orgsFailed,
+    totalProcessed,
+    totalRecipients,
+    results,
+  }));
 }
 
 export async function handleProcessNotificationQueue(
