@@ -1,11 +1,23 @@
 # Gap-Sweep Deploy & Live-Cert Checklist — 2026-07-09
 
-**Status: STAGED — NOT YET RUN.** Every live step below is **BLOCKED on the owner
-opening the authenticated SSH ControlMaster socket** (`~/.ssh/akshara-cm.sock`).
-Verified this session: the VPS is network-reachable but
-`ssh … root@46.28.44.46` → `Permission denied (publickey)` with no master socket
-present, so no live apply / live cert / activation can run. This document is the
-exact, ordered recipe to execute the moment the socket is open. Nothing here has
+**UPDATE (2026-07-09, socket opened): the TEST-TENANT rehearsal + live cert are
+DONE; PROD is still PAUSED pending owner go.** Findings that change this plan:
+- **Scope is the FULL backlog, not 4 migrations.** Prod `akshara_db` + edge are at
+  `20260818` / `bcebbf12` (2026-07-01) — **44 migrations behind HEAD**
+  (`20260819…20260866`). Deploying "this session's changes" = deploying the whole
+  8-day backlog. Part B below must apply **all** pending migrations in order.
+- **A real deploy blocker was caught + fixed:** `20260838000000` dropped `'all_staff'`
+  from `comm_broadcasts_audience_check`, which is violated by existing prod rows
+  (halts a sequential run mid-way). Fixed in place (details in
+  `docs/FINANCE_FEE_REDUCTIONS_LIVE_CERTIFICATION.md` §2). The full backlog then
+  applied cleanly on `akshara_tenant_test`.
+- **`finance_fee_reductions` DB-level live cert PASSED** on `akshara_tenant_test`
+  (non-destructive, rolled back) — RLS + CHECK + partial-unique all enforce live.
+- **PROD untouched** (verified: `akshara_db` still `20260818`, no fee_reductions
+  table; edge still `bcebbf12`).
+
+**Remaining live step (PROD) is BLOCKED on owner go** (owner chose test-tenant-first).
+Below is the exact recipe for the prod apply + edge deploy. Nothing here has
 touched production.
 
 **Governing law:** `AKSHARA_ENGINEERING_CONSTITUTION.md` Part 7B/8 · **Recipe

@@ -32,7 +32,13 @@
 ALTER TABLE comm_broadcasts DROP CONSTRAINT IF EXISTS comm_broadcasts_audience_check;
 ALTER TABLE comm_broadcasts ADD CONSTRAINT comm_broadcasts_audience_check CHECK (
   audience IN (
-    'all_parents', 'all_teachers', 'all_students', 'school_wide',
+    -- 'all_staff' was added to this constraint by 20260729000000
+    -- (school_publisher) and MUST be preserved here — omitting it NARROWS the
+    -- constraint and is violated by existing 'all_staff' broadcasts, which halts
+    -- the migration on any DB that already has them (both akshara_db and
+    -- akshara_tenant_test do). 20260851000000 later re-adds 'all_staff' too; this
+    -- keeps the intermediate state valid so a sequential run does not break.
+    'all_parents', 'all_teachers', 'all_students', 'all_staff', 'school_wide',
     'class_parents', 'class_students'
   )
 );
