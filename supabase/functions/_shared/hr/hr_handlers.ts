@@ -139,6 +139,7 @@ export async function handleDashboard(req: Request, config: AppConfig): Promise<
         deterministic,
         ai.apiKey,
         { provider: ai.provider, model: ai.model },
+        { db, organizationId: orgId, schoolId, userId: auth.claims.sub },
       );
       return composeDashboard(inputs, facts, aiInsight);
     });

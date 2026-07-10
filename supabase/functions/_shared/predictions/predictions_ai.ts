@@ -9,6 +9,7 @@
 // deterministic baseline unchanged — the narrative is strictly additive and safe.
 
 import { type AiProvider, callClaude, claudeModel } from "../ai/anthropic_client.ts";
+import { type Governance, governedTextFor } from "../ai/model_gateway.ts";
 
 const NARRATIVE_MAX_TOKENS = 500;
 
@@ -36,9 +37,8 @@ export async function narratePredictionsWithClaude(
   context: PredictionsNarrativeContext,
   apiKey?: string,
   opts?: { provider?: AiProvider; model?: string },
+  governance?: Governance,
 ): Promise<string> {
-  if (!apiKey) return baseline;
-
   const userMessage = [
     `Prediction type: ${context.kind}.`,
     `Counts (final): ${context.total} analysed, ${context.high} high-priority.`,
@@ -48,6 +48,18 @@ export async function narratePredictionsWithClaude(
     "Deterministic baseline to rewrite into a leader-facing narrative:",
     baseline,
   ].join("\n");
+
+  if (governance) {
+    const text = await governedTextFor(governance, `predictions_${context.kind}`, {
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content: userMessage }],
+      maxTokens: NARRATIVE_MAX_TOKENS,
+    });
+    const trimmed = (text ?? "").trim();
+    return trimmed.length > 0 ? trimmed : baseline;
+  }
+
+  if (!apiKey) return baseline;
 
   try {
     const result = await callClaude({

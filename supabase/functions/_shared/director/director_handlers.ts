@@ -223,6 +223,8 @@ export async function handleSummary(req: Request, config: AppConfig): Promise<Re
         },
         ai.apiKey,
         { provider: ai.provider, model: ai.model },
+        // Governed path (org-scoped: director has no single school).
+        { db, organizationId: orgId, schoolId: null, userId: auth.claims.sub },
       );
     });
     return jsonResponse(envelope({ summary }));

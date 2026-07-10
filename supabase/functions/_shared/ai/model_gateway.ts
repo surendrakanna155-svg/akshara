@@ -525,3 +525,30 @@ export async function governedModelText(
   const result = await callModelGateway(db, ctx, input, "", opts);
   return result.ok ? result.text : null;
 }
+
+/**
+ * The tenant governance handle a module caller threads from its handler so its
+ * model call can be routed through the gateway. schoolId is null for org-scoped
+ * surfaces (director / org-builder / onboarding).
+ */
+export interface Governance {
+  db: TenantQueryClient;
+  organizationId: string;
+  schoolId: string | null;
+  userId?: string | null;
+}
+
+/** governedModelText bound to a {@link Governance} handle + a surface id. */
+export function governedTextFor(
+  gov: Governance,
+  surface: string,
+  input: GatewayInput,
+  opts?: { timeoutMs?: number },
+): Promise<string | null> {
+  return governedModelText(gov.db, {
+    organizationId: gov.organizationId,
+    schoolId: gov.schoolId,
+    userId: gov.userId ?? null,
+    surface,
+  }, input, opts);
+}

@@ -79,9 +79,9 @@ async function readScoped(
 
 export function handleFeeDefault(req: Request, config: AppConfig): Promise<Response> {
   return readScoped(req, config, "viewFinance", "Failed to predict fee defaults",
-    async (db, orgId, schoolId) => {
+    async (db, orgId, schoolId, claims) => {
       const items = await computeFeeDefaultRisk(db, orgId, schoolId);
-      const narrative = await narrate(db, orgId, "fee-default", items,
+      const narrative = await narrate(db, orgId, schoolId, claims.sub, "fee-default", items,
         items.map((i) => ({ name: i.studentName, metric: `₹${i.outstandingInr}, ${i.daysOverdue}d overdue` })),
         (i: FeeDefaultPrediction) => i.riskLevel);
       return { items, narrative };
@@ -90,11 +90,11 @@ export function handleFeeDefault(req: Request, config: AppConfig): Promise<Respo
 
 export function handleAdmissionConversion(req: Request, config: AppConfig): Promise<Response> {
   return readScoped(req, config, "viewAdmissions", "Failed to predict admission conversion",
-    async (db, orgId, schoolId) => {
+    async (db, orgId, schoolId, claims) => {
       const items = await computeAdmissionConversion(db, orgId, schoolId);
       // "high priority" for conversion = high likelihood worth chasing now.
       const high = items.filter((i) => i.band === "hot").length;
-      const narrative = await narrateWithCount(db, orgId, "admission-conversion", items.length, high,
+      const narrative = await narrateWithCount(db, orgId, schoolId, claims.sub, "admission-conversion", items.length, high,
         items.slice(0, 3).map((i) => ({ name: i.studentName, metric: `${i.likelihood}% likely` })));
       return { items, narrative };
     });
@@ -102,9 +102,9 @@ export function handleAdmissionConversion(req: Request, config: AppConfig): Prom
 
 export function handleStudentRisk(req: Request, config: AppConfig): Promise<Response> {
   return readScoped(req, config, "viewStudentRisk", "Failed to predict student risk",
-    async (db, orgId, schoolId) => {
+    async (db, orgId, schoolId, claims) => {
       const items = await computeStudentRiskList(db, orgId, schoolId);
-      const narrative = await narrate(db, orgId, "student-risk", items,
+      const narrative = await narrate(db, orgId, schoolId, claims.sub, "student-risk", items,
         items.map((i) => ({ name: i.studentName, metric: `${i.riskScore} (${i.topReason})` })),
         (i: StudentRiskPrediction) => i.riskLevel);
       return { items, narrative };
@@ -115,18 +115,22 @@ export function handleStudentRisk(req: Request, config: AppConfig): Promise<Resp
 async function narrate(
   db: Parameters<Parameters<typeof withTenantContext>[2]>[0],
   orgId: string,
+  schoolId: string,
+  userId: string | null,
   kind: "fee-default" | "student-risk",
   items: Array<FeeDefaultPrediction | StudentRiskPrediction>,
   topItems: { name: string; metric: string }[],
   level: (i: never) => string,
 ): Promise<string> {
   const high = items.filter((i) => HIGH.has(level(i as never))).length;
-  return narrateWithCount(db, orgId, kind, items.length, high, topItems.slice(0, 3));
+  return narrateWithCount(db, orgId, schoolId, userId, kind, items.length, high, topItems.slice(0, 3));
 }
 
 async function narrateWithCount(
   db: Parameters<Parameters<typeof withTenantContext>[2]>[0],
   orgId: string,
+  schoolId: string,
+  userId: string | null,
   kind: "fee-default" | "admission-conversion" | "student-risk",
   total: number,
   high: number,
@@ -139,6 +143,7 @@ async function narrateWithCount(
     { kind, total, high, topItems },
     ai.apiKey,
     { provider: ai.provider, model: ai.model },
+    { db, organizationId: orgId, schoolId, userId },
   );
 }
 

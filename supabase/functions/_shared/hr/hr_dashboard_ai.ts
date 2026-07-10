@@ -13,6 +13,7 @@
 // (buildDeterministicInsight) must always produce a sensible, honest insight.
 
 import { type AiProvider, callClaude, claudeModel } from "../ai/anthropic_client.ts";
+import { type Governance, governedTextFor } from "../ai/model_gateway.ts";
 import { type DashboardKpiFacts } from "./hr_read_repository.ts";
 
 const INSIGHT_MAX_TOKENS = 400;
@@ -39,9 +40,8 @@ export async function generateHrInsightWithClaude(
   deterministic: string,
   apiKey?: string,
   opts?: { provider?: AiProvider; model?: string },
+  governance?: Governance,
 ): Promise<string> {
-  if (!apiKey) return deterministic;
-
   const userMessage = [
     "School HR facts (final — do not change them):",
     JSON.stringify({
@@ -58,6 +58,18 @@ export async function generateHrInsightWithClaude(
     "Deterministic insight to improve (keep its numbers):",
     deterministic,
   ].join("\n");
+
+  if (governance) {
+    const text = await governedTextFor(governance, "hr_dashboard", {
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content: userMessage }],
+      maxTokens: INSIGHT_MAX_TOKENS,
+    });
+    const trimmed = (text ?? "").trim();
+    return trimmed.length > 0 ? trimmed : deterministic;
+  }
+
+  if (!apiKey) return deterministic;
 
   try {
     const result = await callClaude({

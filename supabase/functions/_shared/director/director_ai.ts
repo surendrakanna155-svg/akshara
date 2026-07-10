@@ -10,6 +10,7 @@
 // deterministic summary unchanged — refinement is strictly additive and safe.
 
 import { type AiProvider, callClaude, claudeModel } from "../ai/anthropic_client.ts";
+import { type Governance, governedTextFor } from "../ai/model_gateway.ts";
 
 const REFINE_MAX_TOKENS = 600;
 
@@ -46,9 +47,8 @@ export async function refineExecutiveSummaryWithClaude(
   context: ExecutiveSummaryContext,
   apiKey?: string,
   opts?: { provider?: AiProvider; model?: string },
+  governance?: Governance,
 ): Promise<string> {
-  if (!apiKey) return deterministicSummary;
-
   const userMessage = [
     `Focus area: ${context.focusArea}.`,
     "Portfolio facts (final — do not change them):",
@@ -66,6 +66,19 @@ export async function refineExecutiveSummaryWithClaude(
     "Deterministic brief to rewrite:",
     deterministicSummary,
   ].join("\n");
+
+  // Governed path (org-scoped): timeout + rate-limit + spend-cap + ai_call_log.
+  if (governance) {
+    const text = await governedTextFor(governance, "director_summary", {
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content: userMessage }],
+      maxTokens: REFINE_MAX_TOKENS,
+    });
+    const trimmed = (text ?? "").trim();
+    return trimmed.length > 0 ? trimmed : deterministicSummary;
+  }
+
+  if (!apiKey) return deterministicSummary;
 
   try {
     const result = await callClaude({
