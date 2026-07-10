@@ -3,8 +3,13 @@
 Deterministic tooling parses everything it can; nothing is ever sent to an LLM
 (AIP v3.0 line 200). PyMuPDF is the PRIMARY parser (born-digital text + block structure
 with fonts/sizes for Phase-4 chunking); pdfplumber is a table fallback used ONLY where
-PyMuPDF finds no table on a ruled page; Tesseract OCRs scanned pages. Only CERTIFIED
-documents are parsed (D-5). Output is a normalized parse per document at
+PyMuPDF finds no table on a ruled page. Tesseract OCR is a DETECTION-FIRST, PER-PAGE
+FALLBACK: every page is text-extracted with PyMuPDF and OCR runs ONLY on pages that carry
+no usable embedded text — so a PDF with a real text layer skips OCR entirely, a partly
+scanned PDF OCRs only its image pages, and an image-only PDF OCRs all pages. The Phase-1
+`parser_strategy` label is advisory only (it came from pypdf, which under-extracts); the
+per-page text detection here is authoritative. method = pymupdf | mixed | tesseract.
+Only CERTIFIED documents are parsed (D-5). Output is a normalized parse per document at
 parsed/<doc_id>.json + a parsed_documents row.
 
 For the concept-extraction and question-intelligence phases, the parse PRESERVES, in the
@@ -261,33 +266,82 @@ def ocr_pages(doc):
     return pages, conf
 
 
+# ── detection-first per-page OCR fallback ───────────────────────────────────────
+def _ocr_page(page):
+    """OCR a single page → (text, word-boxes, mean_conf). Boxes in PDF points (72/dpi)."""
+    import pytesseract
+    from PIL import Image
+
+    scale = 72.0 / OCR_DPI
+    pix = page.get_pixmap(dpi=OCR_DPI)
+    img = Image.open(io.BytesIO(pix.tobytes("png")))
+    text = pytesseract.image_to_string(img)
+    data = pytesseract.image_to_data(img, output_type=pytesseract.Output.DICT)
+    words, confs = [], []
+    for j, txt in enumerate(data.get("text", [])):
+        t = (txt or "").strip()
+        if not t:
+            continue
+        c = data["conf"][j]
+        ci = int(c) if str(c).lstrip("-").isdigit() else -1
+        if ci >= 0:
+            confs.append(ci)
+        words.append({"text": t, "conf": float(ci),
+                      "bbox": [round(data["left"][j] * scale, 1), round(data["top"][j] * scale, 1),
+                               round((data["left"][j] + data["width"][j]) * scale, 1),
+                               round((data["top"][j] + data["height"][j]) * scale, 1)]})
+    return text, words, (round(sum(confs) / len(confs), 1) if confs else 0.0)
+
+
+def _apply_ocr_fallback(doc, pages):
+    """OCR ONLY pages whose embedded text is below threshold (image pages). Mutates those
+    pages in place (adds OCR text + word boxes; preserves their image refs). Pages that
+    already have embedded text are left as direct PyMuPDF extraction. Returns (n_ocr, conf)."""
+    confs, n = [], 0
+    for i, p in enumerate(pages):
+        if len((p.get("text") or "").strip()) >= TEXT_MIN_CHARS_PER_PAGE:
+            continue                                  # embedded selectable text → keep, no OCR
+        text, words, conf = _ocr_page(doc[i])
+        if text.strip():
+            p["text"] = text
+            p["words"] = words
+            p["ocr_dpi"] = OCR_DPI
+            p["ocr"] = True
+            n += 1
+            if conf:
+                confs.append(conf)
+    return n, (round(sum(confs) / len(confs), 1) if confs else None)
+
+
+def _method_for(n_ocr: int, total: int, prefix: str = "") -> tuple:
+    if n_ocr == 0:
+        return prefix + "pymupdf", False
+    if total and n_ocr >= total:
+        return prefix + "tesseract", True
+    return prefix + "mixed", True
+
+
 # ── per-document dispatch ────────────────────────────────────────────────────────
 def _abs_path(doc_row, workspace: Path) -> Path:
     return Path(workspace) / config.CORPORA[doc_row["corpus"]] / doc_row["rel_path"]
 
 
 def parse_pdf_file(path: Path, strategy: str) -> dict:
+    """Detection-first. PyMuPDF text-extracts every page; OCR runs ONLY on pages with no
+    usable embedded text. `strategy` is advisory — per-page detection decides OCR."""
     if fitz is None:
         raise ParserUnavailable("PyMuPDF (fitz) not installed")
     with fitz.open(str(path)) as doc:
+        if doc.needs_pass:
+            doc.authenticate("")                      # empty owner-password (NCERT-style)
         pages = extract_text_pages(doc)
-        total_chars = sum(len(p["text"]) for p in pages)
         chapters = _toc_chapters(doc) or _heuristic_chapters(pages)
-        ocr_used = False
-        conf: Optional[float] = None
-        want_ocr = strategy == "ocr" or (
-            doc.page_count and total_chars < TEXT_MIN_CHARS_PER_PAGE * doc.page_count
-        )
-        if want_ocr:
-            pages, conf = ocr_pages(doc)
-            ocr_used = True
-            method = "tesseract"
-        else:
-            method = "pymupdf"
-            _pdfplumber_fallback(path, pages)
+        n_ocr, conf = _apply_ocr_fallback(doc, pages)
+        _pdfplumber_fallback(path, pages)             # only touches ruled, text-bearing pages
     for p in pages:
         p.pop("_grid", None)
-    return _assemble(pages, _flatten_tables(pages), method, ocr_used, conf, chapters)
+    method, ocr_used = _method_for(n_ocr, len(pages))
+    return _assemble(pages, _flatten_tables(pages), method, ocr_used, conf, chapters, n_ocr)
 
 
 def parse_archive(path: Path) -> dict:
@@ -295,19 +349,19 @@ def parse_archive(path: Path) -> dict:
         raise ParserUnavailable("PyMuPDF (fitz) not installed")
     pages: List[dict] = []
     chapters: List[dict] = []
-    ocr_used = False
+    n_ocr_total = 0
     confs = []
     with zipfile.ZipFile(str(path)) as z:
         for name in sorted(n for n in z.namelist() if n.lower().endswith(".pdf")):
             data = z.read(name)
             with fitz.open(stream=data, filetype="pdf") as doc:
+                if doc.needs_pass:
+                    doc.authenticate("")
                 member_pages = extract_text_pages(doc)
                 member_chapters = _toc_chapters(doc)
-                if doc.page_count and sum(len(p["text"]) for p in member_pages) < (
-                    TEXT_MIN_CHARS_PER_PAGE * doc.page_count
-                ):
-                    member_pages, c = ocr_pages(doc)
-                    ocr_used = True
+                n_ocr, c = _apply_ocr_fallback(doc, member_pages)   # per-page detection
+                n_ocr_total += n_ocr
+                if c:
                     confs.append(c)
             for p in member_pages:
                 p.pop("_grid", None)
@@ -317,11 +371,11 @@ def parse_archive(path: Path) -> dict:
                 ch["member"] = name
                 chapters.append(ch)
     conf = round(sum(confs) / len(confs), 1) if confs else None
-    method = "archive:tesseract" if ocr_used else "archive:pymupdf"
-    return _assemble(pages, _flatten_tables(pages), method, ocr_used, conf, chapters)
+    method, ocr_used = _method_for(n_ocr_total, len(pages), prefix="archive:")
+    return _assemble(pages, _flatten_tables(pages), method, ocr_used, conf, chapters, n_ocr_total)
 
 
-def _assemble(pages, tables, method, ocr_used, conf, chapters=None) -> dict:
+def _assemble(pages, tables, method, ocr_used, conf, chapters=None, ocr_pages=0) -> dict:
     chapters = chapters or []
     return {
         "pages": pages,
@@ -329,6 +383,7 @@ def _assemble(pages, tables, method, ocr_used, conf, chapters=None) -> dict:
         "chapter_boundaries": chapters,
         "method": method,
         "ocr_used": ocr_used,
+        "ocr_pages": ocr_pages,
         "confidence": conf,
         "char_count": sum(len(p["text"]) for p in pages),
         "table_count": len(tables),

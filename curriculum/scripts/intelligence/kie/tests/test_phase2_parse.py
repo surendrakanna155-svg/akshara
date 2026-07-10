@@ -219,5 +219,76 @@ class TestPreservation(unittest.TestCase):
         self.assertIn("PHYSIC", " ".join(w["text"] for w in pages[0]["words"]).upper())
 
 
+def _image_only_pdf(path, tmp, text="PHYSICS ENTRANCE EXAM"):
+    """A PDF whose page is a rendered image with NO text layer (simulates a scan)."""
+    src = fitz.open()
+    src.new_page(width=612, height=792).insert_text((60, 300), text, fontsize=42)
+    pix = src[0].get_pixmap(dpi=150)
+    png = tmp / "render.png"
+    pix.save(str(png))
+    src.close()
+    out = fitz.open()
+    out.new_page(width=612, height=792).insert_image(fitz.Rect(0, 0, 612, 792), filename=str(png))
+    out.save(str(path))
+    out.close()
+    return path
+
+
+def _mixed_pdf(path, tmp):
+    """Page 1 = real embedded text; page 2 = image-only (scanned)."""
+    out = fitz.open()
+    out.new_page(width=612, height=792).insert_text(
+        (72, 200), "This page has real selectable embedded text for direct extraction of physics",
+        fontsize=13)
+    src = fitz.open()
+    src.new_page(width=612, height=792).insert_text((60, 300), "SCANNED CHEMISTRY PAGE", fontsize=42)
+    pix = src[0].get_pixmap(dpi=150)
+    png = tmp / "mix.png"
+    pix.save(str(png))
+    src.close()
+    out.new_page(width=612, height=792).insert_image(fitz.Rect(0, 0, 612, 792), filename=str(png))
+    out.save(str(path))
+    out.close()
+    return path
+
+
+class TestDetectionFirst(unittest.TestCase):
+    """Detection-first: OCR only image pages; text pages use direct PyMuPDF extraction."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_embedded_text_skips_ocr_even_when_strategy_is_ocr(self):
+        p = self.tmp / "t.pdf"
+        p.write_bytes(_text_pdf_bytes("Kinematics velocity acceleration momentum energy", pages=2))
+        res = phase2_parse.parse_pdf_file(p, "ocr")   # Phase-1 said scan; text is really there
+        self.assertEqual(res["method"], "pymupdf")
+        self.assertEqual(res["ocr_pages"], 0)
+        self.assertFalse(res["ocr_used"])
+
+    @unittest.skipUnless(shutil.which("tesseract"), "tesseract required")
+    def test_image_only_full_ocr(self):
+        p = _image_only_pdf(self.tmp / "scan.pdf", self.tmp)
+        res = phase2_parse.parse_pdf_file(p, "text_extract")
+        self.assertEqual(res["method"], "tesseract")
+        self.assertEqual(res["ocr_pages"], res["page_count"])
+        self.assertTrue(res["ocr_used"])
+        self.assertIn("PHYSIC", " ".join(pg["text"] for pg in res["pages"]).upper())
+
+    @unittest.skipUnless(shutil.which("tesseract"), "tesseract required")
+    def test_mixed_partial_ocr(self):
+        p = _mixed_pdf(self.tmp / "mixed.pdf", self.tmp)
+        res = phase2_parse.parse_pdf_file(p, "text_extract")
+        self.assertEqual(res["page_count"], 2)
+        self.assertEqual(res["method"], "mixed")
+        self.assertEqual(res["ocr_pages"], 1)
+        self.assertIn("selectable", res["pages"][0]["text"].lower())   # page1 direct
+        self.assertFalse(res["pages"][0].get("ocr"))
+        self.assertTrue(res["pages"][1].get("ocr"))                    # page2 OCR'd
+
+
 if __name__ == "__main__":
     unittest.main()
