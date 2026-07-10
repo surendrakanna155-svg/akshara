@@ -2190,6 +2190,8 @@ abstract final class QaTestKeys {
       ValueKey<String>('predictions_student_risk_section');
   static const intelligencePredictionsLaunchTile =
       ValueKey<String>('intelligence_predictions_launch_tile');
+  static const intelligenceAiEconomicsLaunchTile =
+      ValueKey<String>('intelligence_ai_economics_launch_tile');
 
   static const directorManageInputsButton =
       ValueKey<String>('director_manage_inputs_button');

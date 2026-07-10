@@ -493,7 +493,7 @@ class _PrincipalSummaryTab extends ConsumerWidget {
             const SizedBox(height: AksharaSpacing.s2),
             Card(
               child: ListTile(
-                key: const ValueKey('intelligence_ai_economics_launch_tile'),
+                key: QaTestKeys.intelligenceAiEconomicsLaunchTile,
                 leading: const Icon(Icons.payments_outlined),
                 title: const Text('AI Usage & Cost'),
                 subtitle: const Text(

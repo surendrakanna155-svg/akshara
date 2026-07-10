@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../copilot/copilot_models.dart';
 import '../../copilot/copilot_provider.dart';
 import '../../../shared/async/erp_async_state.dart';
+import '../../../shared/widgets/akshara_error_state.dart';
 import '../../../shared/widgets/akshara_executive_kpi_card.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_status_chip.dart';
@@ -21,11 +22,25 @@ class AiEconomicsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Defense-in-depth: the Hub tile is RBAC-gated, but the screen re-checks
+    // like CopilotScreen so a direct push or a stale client cache never shows
+    // an unauthorized user a healthy-looking cost panel.
+    if (!ref.watch(copilotCanUseProvider)) {
+      return const Scaffold(
+        body: AksharaErrorState(
+          message: 'AI Copilot is not enabled for your role.',
+          icon: Icons.lock_outline,
+        ),
+      );
+    }
+
     final economicsAsync = ref.watch(copilotEconomicsFutureProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('AI Usage & Cost')),
       body: ErpAsyncBody(
-        state: resolveErpAsync(economicsAsync),
+        // A single-object payload is never "empty" — zeros are real data, so
+        // the empty state (and its message) is deliberately unreachable.
+        state: resolveErpAsync(economicsAsync, isDataEmpty: (_) => false),
         loadingLabel: 'Loading AI usage & cost',
         emptyMessage: 'No AI usage recorded yet this month.',
         onRetry: () => ref.invalidate(copilotEconomicsFutureProvider),
@@ -104,7 +119,9 @@ class _AiEconomicsBody extends StatelessWidget {
                   ),
                   const SizedBox(height: AksharaSpacing.s1),
                   Text(
-                    '${(ratio * 100).round()}% of the monthly cap · warns at '
+                    // The bar clamps at 100%, the label never lies: overspend
+                    // shows its true magnitude (e.g. 120%).
+                    '${(economics.spendRatio * 100).round()}% of the monthly cap · warns at '
                     '${(economics.spendWarnRatio * 100).round()}%',
                     style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
                   ),
@@ -167,6 +184,26 @@ class _AiEconomicsBody extends StatelessWidget {
             ),
           ],
         ),
+        if (economics.callsByOutcome.isNotEmpty) ...[
+          const SizedBox(height: AksharaSpacing.s6),
+          const AksharaSectionHeader(title: 'Calls by outcome', fixedHeight: false),
+          const SizedBox(height: AksharaSpacing.s2),
+          for (final entry in economics.callsByOutcome.entries)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
+              child: Material(
+                color: colors.surface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: AksharaRadius.card,
+                  side: BorderSide(color: colors.outlineVariant),
+                ),
+                child: ListTile(
+                  title: Text(_surfaceLabel(entry.key)),
+                  trailing: Text('${entry.value}', style: text.titleSmall),
+                ),
+              ),
+            ),
+        ],
         const SizedBox(height: AksharaSpacing.s6),
         const AksharaSectionHeader(title: 'Calls by surface', fixedHeight: false),
         const SizedBox(height: AksharaSpacing.s2),

@@ -1,6 +1,7 @@
 import 'package:akshara_erp/features/copilot/copilot_models.dart';
 import 'package:akshara_erp/features/copilot/copilot_provider.dart';
 import 'package:akshara_erp/features/intelligence/management/ai_economics_screen.dart';
+import 'package:akshara_erp/shared/widgets/akshara_error_state.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -34,6 +35,7 @@ Future<void> _pump(WidgetTester tester, AiEconomics economics) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        copilotCanUseProvider.overrideWithValue(true),
         copilotEconomicsFutureProvider.overrideWith((_) async => economics),
       ],
       child: MaterialApp(
@@ -85,5 +87,50 @@ void main() {
     expect(find.text('US\$640.00'), findsOneWidget);
     expect(find.text('No monthly spend cap configured.'), findsOneWidget);
     expect(find.byType(LinearProgressIndicator), findsNothing);
+  });
+
+  testWidgets('re-checks RBAC: an unauthorized user sees the lock state, not data',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          copilotCanUseProvider.overrideWithValue(false),
+          copilotEconomicsFutureProvider.overrideWith((_) async => _economics()),
+        ],
+        child: MaterialApp(
+          theme: AksharaAppTheme.light(),
+          home: const AiEconomicsScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('AI Copilot is not enabled for your role.'), findsOneWidget);
+    expect(find.textContaining('US\$'), findsNothing);
+  });
+
+  testWidgets('a backend failure surfaces the error state, never a healthy \$0 panel',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          copilotCanUseProvider.overrideWithValue(true),
+          copilotEconomicsFutureProvider.overrideWith(
+            (_) async => throw Exception('backend down'),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AksharaAppTheme.light(),
+          home: const AiEconomicsScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The monitoring surface must be honest about an outage (audit P1): an
+    // error state with retry — NOT zeros that read as 'On track'.
+    expect(find.byType(AksharaErrorState), findsOneWidget);
+    expect(find.text('On track'), findsNothing);
+    expect(find.textContaining('US\$0.00'), findsNothing);
   });
 }
