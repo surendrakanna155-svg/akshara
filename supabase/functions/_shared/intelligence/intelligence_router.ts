@@ -44,6 +44,7 @@ import {
   handleRecommendationFeedback,
   handleRecommendationFeed,
 } from "./priority/recommendation_handlers.ts";
+import { handleQuickActions } from "./quick_actions/quick_action_handlers.ts";
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -66,6 +67,10 @@ export function matchIntelligenceRoute(
   }
   if (path === "/intelligence/recommendations/feedback" && method === "POST") {
     return { handler: handleRecommendationFeedback, args: [] };
+  }
+  // W2-GATE-2 — the per-persona Quick Action Registry (action-first, AI-last).
+  if (path === "/intelligence/quick-actions" && method === "GET") {
+    return { handler: handleQuickActions, args: [] };
   }
 
   if (path === "/intelligence/risk/students" && method === "GET") {
