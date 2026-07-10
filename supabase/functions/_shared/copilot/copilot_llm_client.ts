@@ -7,6 +7,8 @@ import {
   claudeModel,
   type ClaudeMessage,
 } from "../ai/anthropic_client.ts";
+import { callModelGateway } from "../ai/model_gateway.ts";
+import type { TenantQueryClient } from "../tenant_db.ts";
 
 export interface CopilotGenerationInput {
   systemPrompt: string;
@@ -18,6 +20,17 @@ export interface CopilotGenerationInput {
   /** Provider + model from the resolved AI config; default to env when unset. */
   provider?: AiProvider;
   model?: string;
+  /**
+   * When both are supplied the call is routed through the governed Model
+   * Gateway (timeout + rate-limit + spend-cap + telemetry). Omitted by unit
+   * tests and any not-yet-migrated caller, which keep the legacy direct path.
+   */
+  db?: TenantQueryClient;
+  gatewayContext?: {
+    organizationId: string;
+    schoolId: string;
+    userId?: string | null;
+  };
 }
 
 export interface CopilotGenerationResult {
@@ -45,6 +58,39 @@ const REFUSAL_REPLY =
 export async function generateCopilotResponse(
   input: CopilotGenerationInput,
 ): Promise<CopilotGenerationResult> {
+  const messages: ClaudeMessage[] = [
+    ...input.history.map((m) => ({ role: m.role, content: m.content })),
+    { role: "user" as const, content: input.userMessage },
+  ];
+
+  // Governed path: route through the Model Gateway when a tenant db + context
+  // are supplied (production). Adds timeout/rate-limit/spend-cap/telemetry while
+  // preserving the deterministic-stub and refusal semantics below: a
+  // no-key/limit/timeout/error outcome returns the stub; a refusal returns the
+  // read-only refusal reply; a real answer is served verbatim.
+  if (input.db && input.gatewayContext) {
+    const stub = buildStubAssistantReply(
+      input.assistantType,
+      input.userMessage,
+      input.context,
+    );
+    const gw = await callModelGateway(
+      input.db,
+      {
+        organizationId: input.gatewayContext.organizationId,
+        schoolId: input.gatewayContext.schoolId,
+        userId: input.gatewayContext.userId ?? null,
+        surface: "copilot",
+      },
+      { system: input.systemPrompt, messages, maxTokens: COPILOT_MAX_TOKENS },
+      stub,
+    );
+    if (gw.refused) return { content: REFUSAL_REPLY, model: gw.model || "akshara-ai", stub: false };
+    if (gw.ok) return { content: gw.text, model: gw.model, stub: false };
+    return { content: stub, model: "akshara-stub", stub: true };
+  }
+
+  // Legacy direct path (no gateway context) — unchanged behaviour.
   if (!input.apiKey) {
     return {
       content: buildStubAssistantReply(
@@ -56,11 +102,6 @@ export async function generateCopilotResponse(
       stub: true,
     };
   }
-
-  const messages: ClaudeMessage[] = [
-    ...input.history.map((m) => ({ role: m.role, content: m.content })),
-    { role: "user" as const, content: input.userMessage },
-  ];
 
   try {
     const result = await callClaude({

@@ -288,6 +288,10 @@ export async function handleSendMessage(
         apiKey: ai.apiKey,
         provider: ai.provider,
         model: ai.model,
+        // Route the live call through the governed Model Gateway (W1.1b):
+        // timeout + rate-limit + spend-cap + ai_call_log telemetry.
+        db,
+        gatewayContext: { organizationId: orgId, schoolId, userId: auth.claims.sub },
       });
 
       const assistantMessage = await appendCopilotMessage(

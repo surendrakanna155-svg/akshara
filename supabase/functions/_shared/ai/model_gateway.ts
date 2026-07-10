@@ -194,6 +194,8 @@ export interface GatewayCallResult {
   fallbackUsed: boolean;
   outcome: AiCallOutcome;
   refused: boolean;
+  /** The resolved/served model id (provider-returned on success, else configured). */
+  model: string;
   usage: ClaudeUsage | null;
 }
 
@@ -330,6 +332,7 @@ export async function runGateway(
       fallbackUsed: true,
       outcome,
       refused: false,
+      model: cfg.model,
       usage: null,
     };
   }
@@ -368,6 +371,7 @@ export async function runGateway(
         fallbackUsed: true,
         outcome: "refused",
         refused: true,
+        model,
         usage: result.usage,
       };
     }
@@ -377,6 +381,7 @@ export async function runGateway(
       fallbackUsed: false,
       outcome: "ok",
       refused: false,
+      model,
       usage: result.usage,
     };
   } catch (err) {
@@ -400,6 +405,7 @@ export async function runGateway(
       fallbackUsed: true,
       outcome,
       refused: false,
+      model: cfg.model,
       usage: null,
     };
   } finally {

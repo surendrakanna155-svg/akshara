@@ -257,6 +257,15 @@ Deno.test("runGateway: model error → fallback_error", async () => {
   clearLimitEnv();
 });
 
+Deno.test("runGateway: result carries the resolved model on success and denial", async () => {
+  clearLimitEnv();
+  const ok = await runGateway(CTX, { system: "s", messages: [] }, "FB", makeDeps({}).deps);
+  assertEquals(ok.model, "claude-opus-4-8");
+  const noKey = await runGateway(CTX, { system: "s", messages: [] }, "FB", makeDeps({ apiKey: null }).deps);
+  assertEquals(noKey.model, "claude-opus-4-8"); // configured model even when the key is absent
+  clearLimitEnv();
+});
+
 Deno.test("runGateway: telemetry failure never breaks the user path", async () => {
   clearLimitEnv();
   const { deps } = makeDeps({});
