@@ -6,7 +6,7 @@
 // route performs the write. AI NEVER executes (governance rail, doc 01 §6) —
 // hence `requiresConfirmation: true` on every action, always. Pure + deterministic.
 
-import type { PriorityItemType, RawPriorityItem } from "./priority_types.ts";
+import type { RawPriorityItem } from "./priority_types.ts";
 
 export interface PriorityAction {
   /** Button label the UI renders. */
@@ -148,9 +148,3 @@ export function actionForItem(item: RawPriorityItem): PriorityAction | undefined
       return undefined;
   }
 }
-
-/** The item types that always carry an action, for coverage assertions. */
-export const ACTIONABLE_TYPES: readonly PriorityItemType[] = [
-  "exception",
-  "follow_up",
-] as const;
