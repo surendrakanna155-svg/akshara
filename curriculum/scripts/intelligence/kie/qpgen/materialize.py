@@ -50,6 +50,39 @@ def _pick(options, key: str, seed: int):
 
 _LEAD_ARTICLE = re.compile(r"^(the|a|an)\s+", re.I)
 
+# a certified definition is usable as a model answer only if it reads as a COMPLETE statement.
+# The KIE concept layer occasionally captures a truncated clause ("the amount of", "below :"),
+# which must NOT be shown as an authoritative answer — those fall back to the honest marking
+# guideline (same safe path as a missing definition). Conservative: only clear fragments are
+# rejected, so real definitions ("the force per unit area") are kept.
+_DANGLING_TAIL = {
+    "of", "to", "the", "a", "an", "and", "or", "per", "in", "on", "for", "with", "as", "is",
+    "are", "from", "into", "by", "that", "which", "than", "then", "between", "about", "its",
+    "their", "this", "these", "at", "be", "was", "were", "has", "have", "when", "where",
+}
+_DEF_MIN_LEN = 12
+
+
+def usable_definition(definition: str) -> bool:
+    """True if a certified definition is complete enough to present as a model answer.
+
+    Rejects clear extraction fragments (too short, terminal non-period punctuation, a dangling
+    function word or a truncated final token). Deterministic + conservative."""
+    d = (definition or "").strip()
+    if len(d) < _DEF_MIN_LEN:
+        return False
+    if d[-1] in ":;,-–—":                              # ends mid-clause
+        return False
+    words = re.findall(r"[A-Za-z][A-Za-z'\-]*", d)
+    if not words:
+        return False
+    last = words[-1].lower()
+    if last in _DANGLING_TAIL:                          # "... the amount of"
+        return False
+    if len(words[-1]) <= 2 and last not in ("ph",):     # truncated final token ("... ratio of re")
+        return False
+    return True
+
 
 def display_title(title: str) -> str:
     """Readable concept title for a stem: title-case ALL-CAPS headings (PROTEINS → Proteins)
@@ -89,9 +122,10 @@ def render_deterministic(slot: QuestionSlot, definition: str, seed: int) -> Ques
         slot.stem = f"{verb} {embedded}."
     else:  # LONG_ANSWER
         slot.stem = _pick(_LONG_VERBS, slot.concept_code, seed).format(t=embedded)
-    # answer = the certified definition when present, else an explicit teacher MARKING GUIDELINE
-    # (never a fabricated fact and never copied source text — copyright-safe).
-    if definition.strip():
+    # answer = the certified definition when present AND complete, else an explicit teacher
+    # MARKING GUIDELINE (never a fabricated fact and never copied source text — copyright-safe).
+    # A truncated/fragmentary definition is NOT shown as an authoritative answer.
+    if usable_definition(definition):
         slot.answer = definition.strip()
         slot.solution = f"Award marks for a correct explanation of {title}: {definition.strip()}"
     else:
@@ -172,8 +206,9 @@ def spec_of(slot: QuestionSlot) -> Dict:
             "subject": slot.subject, "question_type": slot.question_type, "bloom": slot.bloom,
             "difficulty": slot.difficulty, "marks": slot.marks,
             "chapter": (slot.provenance or {}).get("chapter"),
-            "requirements": "original, in-syllabus, no copied source text; MCQ needs one correct "
-                            "option + 3 plausible distractors; numerical needs a worked solution"}
+            "requirements": "original, in-syllabus, no copied source text; the stem MUST reference "
+                            "the concept by name (it is re-validated for grounding); MCQ needs one "
+                            "correct option + 3 plausible distractors; numerical needs a worked solution"}
 
 
 def _spec_hash(spec: Dict) -> str:

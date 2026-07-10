@@ -44,14 +44,27 @@ def validate_slot(slot: QuestionSlot, scope: SyllabusScope) -> List[str]:
     prof = (slot.provenance or {}).get("exam")
     if prof and prof != scope.exam_profile:
         v.append(f"EXAM_MISMATCH: slot exam {prof!r} != scope {scope.exam_profile!r}")
-    # a FILLED DESCRIPTIVE stem must name its concept; objective items (template/AI) are
-    # topic-bound by construction (concept binding + solver/spec provenance), so the
-    # title-mention check does not apply — but every OTHER check above still does (same gate).
-    if slot.status == SlotStatus.FILLED and slot.question_type in (
-            QuestionType.SHORT_ANSWER, QuestionType.LONG_ANSWER):
-        if not slot.stem or slot.concept_title.lower() not in (slot.stem or "").lower():
-            v.append("UNGROUNDED_STEM: filled descriptive stem does not reference its concept")
+    # GROUNDING: a FILLED stem authored from free text (descriptive render OR the gated AI) must
+    # reference its bound concept, so off-topic content cannot ship even for an in-scope concept.
+    # Solver-verified TEMPLATE items are exempt (a numeric problem legitimately does not name the
+    # concept, and its correctness is machine-verified). Every OTHER check above still applies.
+    src = (slot.provenance or {}).get("source")
+    grounded_types = (QuestionType.SHORT_ANSWER, QuestionType.LONG_ANSWER)
+    needs_grounding = (slot.status == SlotStatus.FILLED and
+                       (slot.question_type in grounded_types or src == "ai"))
+    if needs_grounding and src != "template":
+        if not slot.stem or not _mentions_concept(slot.concept_title, slot.stem):
+            v.append("UNGROUNDED_STEM: filled stem does not reference its concept")
     return v
+
+
+def _norm(s: str) -> str:
+    return (s or "").lower().replace("’", "'").replace("‘", "'")
+
+
+def _mentions_concept(title: str, stem: str) -> bool:
+    """The stem references the concept if it contains the (apostrophe-normalized) title."""
+    return _norm(title) in _norm(stem)
 
 
 def validate_paper(slots: List[QuestionSlot], blueprint: Blueprint, scope: SyllabusScope) -> ValidationReport:
