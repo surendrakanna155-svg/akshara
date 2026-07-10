@@ -55,6 +55,10 @@ def validate_slot(slot: QuestionSlot, scope: SyllabusScope) -> List[str]:
     if needs_grounding and src != "template":
         if not slot.stem or not _mentions_concept(slot.concept_title, slot.stem):
             v.append("UNGROUNDED_STEM: filled stem does not reference its concept")
+    # RENDER-TIME STEM QUALITY: a FILLED stem carrying OCR/extraction artifacts (merged word,
+    # doubled capital, glued caps-run, doubled punctuation) must never reach the paper.
+    if slot.status == SlotStatus.FILLED and not sanitize.stem_quality_ok(slot.stem):
+        v.append("LOW_QUALITY_STEM: stem carries OCR/extraction artifacts")
     return v
 
 

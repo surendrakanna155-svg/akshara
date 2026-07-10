@@ -145,7 +145,9 @@ def resolve_scope(conn, request: PaperRequest) -> SyllabusScope:
     considered = clean_ct = evidence_ct = grade_kept = 0
     for r in rows:
         considered += 1
-        title = r["title"]
+        # repair OCR/extraction artifacts first, so a real concept is cleaned (not discarded);
+        # genuine fragments still fail is_clean_concept below and are dropped.
+        title = sanitize.normalize_concept_title(r["title"])
         if not sanitize.is_clean_concept(title):
             continue
         clean_ct += 1
