@@ -156,7 +156,14 @@ class MockAdaptiveAiRepository implements AdaptiveAiRepository {
     );
   }
 
+  // Mirror the live W2.0 backend: the feed serves the school-operational /
+  // aggregate personas today. Per-user personas (teacher/parent/student) return
+  // an empty feed until their rollout wave, so the client self-hides in dev too.
+  static const _servedPersonas = {'principal', 'finance', 'director', 'admin'};
+
   List<AdaptivePriorityItem> _seedItems(String persona, {required bool withActions}) {
+    if (!_servedPersonas.contains(persona)) return const [];
+
     AdaptiveAction? act(String label, String deepLink, [Map<String, dynamic> payload = const {}]) =>
         withActions ? AdaptiveAction(label: label, deepLink: deepLink, payload: payload) : null;
 

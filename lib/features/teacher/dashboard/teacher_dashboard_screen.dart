@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/layout/mobile_dashboard_layout.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
+import '../../adaptive_ai/widgets/adaptive_priority_feed.dart';
 import 'teacher_dashboard_provider.dart';
 import 'widgets/attendance_summary_card.dart';
 import 'widgets/class_teacher_card.dart';
@@ -144,6 +145,9 @@ class _MobileBody extends StatelessWidget {
           onNavigate: onNavigate,
         ),
         const SizedBox(height: AksharaSpacing.s4),
+        // W2 Adaptive AI feed — self-hides until the teacher rollout wave serves
+        // per-class items server-side; renders nothing today (no orphan gap).
+        const AdaptivePriorityFeedSection(persona: 'teacher'),
         PendingTasksSection(
           tasks: data.pendingTasks,
           onTaskTap: (task) => onNavigate(task.id),

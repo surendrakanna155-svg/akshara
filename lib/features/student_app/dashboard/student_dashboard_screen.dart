@@ -5,6 +5,7 @@ import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/layout/mobile_dashboard_layout.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
+import '../../adaptive_ai/widgets/adaptive_priority_feed.dart';
 import 'student_dashboard_provider.dart';
 import 'widgets/attendance_kpi_card.dart';
 import 'widgets/daily_schedule_strip.dart';
@@ -139,6 +140,9 @@ class StudentDashboardScreen extends ConsumerWidget {
                               _navigate(onNavigate, 'homework_list'),
                         ),
                         const SizedBox(height: AksharaSpacing.s4),
+                        // W2 Adaptive AI feed — self-hides until the student
+                        // rollout wave serves own-data study items server-side.
+                        const AdaptivePriorityFeedSection(persona: 'student'),
                         ExamReminderCard(
                           reminder: data.examReminder,
                           onTap: () => _navigate(

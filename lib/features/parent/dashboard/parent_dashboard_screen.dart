@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/layout/mobile_dashboard_layout.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../adaptive_ai/widgets/adaptive_priority_feed.dart';
 import '../../auth/auth_provider.dart';
 import '../../notifications/notifications_provider.dart';
 import '../parent_active_child_provider.dart';
@@ -107,6 +108,9 @@ class ParentDashboardScreen extends ConsumerWidget {
                         ParentReminderBanners(
                           onActionTap: _navigate,
                         ),
+                        // W2 Adaptive AI feed — self-hides until the parent rollout
+                        // wave serves own-children items server-side.
+                        const AdaptivePriorityFeedSection(persona: 'parent'),
                         // PAR-D4 — "what needs my action" inbox entry point.
                         AksharaSurfaceListTile(
                           icon: Icons.checklist_outlined,

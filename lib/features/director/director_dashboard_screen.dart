@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/testing/qa_test_keys.dart';
+import '../../router/route_names.dart';
+import '../adaptive_ai/adaptive_ai_models.dart';
+import '../adaptive_ai/widgets/adaptive_priority_feed.dart';
 import '../../shared/async/erp_async_state.dart';
 import '../../shared/widgets/widgets.dart';
 import '../../theme/spacing.dart';
@@ -88,9 +92,23 @@ class _DashboardBody extends StatelessWidget {
             ],
           ),
         const SizedBox(height: AksharaSpacing.s5),
+        // W2 Adaptive AI — the aggregate director feed (self-hiding when empty).
+        // Actions navigate to the org-scoped drill-down; the human acts there.
+        AdaptivePriorityFeedSection(persona: 'director', onOpenAction: _openDirectorAction),
+        const SizedBox(height: AksharaSpacing.s5),
         DirectorExecutiveSummaryCard(summary: data.executiveSummary),
       ],
     );
+  }
+
+  void _openDirectorAction(BuildContext context, AdaptiveAction action) {
+    final link = action.deepLink;
+    final route = link.startsWith('/finance')
+        ? RouteNames.directorRevenue
+        : link.contains('complian')
+            ? RouteNames.directorCompliance
+            : RouteNames.directorPortfolio;
+    context.go(route);
   }
 }
 
