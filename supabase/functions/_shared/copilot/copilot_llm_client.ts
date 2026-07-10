@@ -8,6 +8,7 @@ import {
   type ClaudeMessage,
 } from "../ai/anthropic_client.ts";
 import { callModelGateway } from "../ai/model_gateway.ts";
+import { mintCacheKey } from "../ai/ai_response_cache_repository.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 
 export interface CopilotGenerationInput {
@@ -74,6 +75,17 @@ export async function generateCopilotResponse(
       input.userMessage,
       input.context,
     );
+    // Tier-2 cache key over the full prompt signature: two identical requests
+    // (same school context + question + model) share one generation; any change
+    // to the injected facts changes the key, so a hit never serves stale data.
+    const cacheKey = await mintCacheKey({
+      surface: "copilot",
+      schoolId: input.gatewayContext.schoolId,
+      language: "english",
+      model: input.model ?? "",
+      system: input.systemPrompt,
+      messages,
+    });
     const gw = await callModelGateway(
       input.db,
       {
@@ -84,6 +96,7 @@ export async function generateCopilotResponse(
       },
       { system: input.systemPrompt, messages, maxTokens: COPILOT_MAX_TOKENS },
       stub,
+      { cache: { key: cacheKey, entityTags: [], ttlSeconds: 86_400, language: "english" } },
     );
     if (gw.refused) return { content: REFUSAL_REPLY, model: gw.model || "akshara-ai", stub: false };
     if (gw.ok) return { content: gw.text, model: gw.model, stub: false };

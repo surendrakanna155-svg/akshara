@@ -4,12 +4,16 @@ import type { CopilotContextBundle } from "./copilot_context_engine.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 
 /** Fake tenant client for the gateway path: no provider-config row (falls to
- * env), zero usage counters, INSERTs accepted. */
-function fakeGatewayDb(): TenantQueryClient {
+ * env), zero usage counters, INSERTs accepted. Optionally returns a cache hit
+ * for the ai_response_cache lookup. */
+function fakeGatewayDb(cacheHit?: { payload: string; model: string }): TenantQueryClient {
   return {
     queryObject: (sql: string) => {
       if (sql.includes("count(*)")) return Promise.resolve([{ n: 0 }]);
       if (sql.includes("sum(")) return Promise.resolve([{ total: 0 }]);
+      if (cacheHit && sql.trimStart().startsWith("SELECT") && sql.includes("FROM ai_response_cache")) {
+        return Promise.resolve([{ id: "c1", payload: cacheHit.payload, model: cacheHit.model }]);
+      }
       return Promise.resolve([]);
     },
     // deno-lint-ignore no-explicit-any
@@ -93,6 +97,28 @@ Deno.test("gateway path: no key configured → deterministic stub (W1.1b wiring)
   assertEquals(result.stub, true);
   assertEquals(result.model, "akshara-stub");
   clearAiKeyEnv();
+});
+
+Deno.test("gateway path: a cache hit is served with zero model calls (W1.2b)", async () => {
+  clearAiKeyEnv();
+  Deno.env.set("ANTHROPIC_API_KEY", "sk-ant-test");
+  const original = globalThis.fetch;
+  globalThis.fetch = (() => {
+    throw new Error("the model must not be called on a cache hit");
+  }) as unknown as typeof fetch;
+  try {
+    const result = await generateCopilotResponse({
+      ...baseInput("sk-ant-test"),
+      db: fakeGatewayDb({ payload: "cached: 3 fees due", model: "claude-opus-4-8" }),
+      gatewayContext: GATEWAY_CTX,
+    });
+    assertEquals(result.stub, false);
+    assertEquals(result.content, "cached: 3 fees due");
+    assertEquals(result.model, "claude-opus-4-8");
+  } finally {
+    globalThis.fetch = original;
+    clearAiKeyEnv();
+  }
 });
 
 Deno.test("gateway path: serves the real model answer when a key is present", async () => {
