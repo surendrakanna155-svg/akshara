@@ -219,12 +219,48 @@ Deno.test("gateway path: serves the real model answer when a key is present", as
   try {
     const result = await generateCopilotResponse({
       ...baseInput("sk-ant-test"),
+      // The system prompt embeds the fact (as production buildSystemPrompt does),
+      // so the ₹1000 in the reply is grounded and passes the F3 output guard.
+      systemPrompt: "read-only policy. Collections this month: ₹1000.",
       db: fakeGatewayDb(),
       gatewayContext: GATEWAY_CTX,
     });
     assertEquals(result.stub, false);
     assertEquals(result.content, "Collections: ₹1000 collected.");
     assertEquals(result.model, "claude-opus-4-8");
+  } finally {
+    globalThis.fetch = original;
+    clearAiKeyEnv();
+  }
+});
+
+Deno.test("gateway path: an ungrounded number in the reply is guarded → stub (F3)", async () => {
+  clearAiKeyEnv();
+  Deno.env.set("ANTHROPIC_API_KEY", "sk-ant-test");
+  const original = globalThis.fetch;
+  globalThis.fetch = (() =>
+    Promise.resolve(
+      new Response(
+        JSON.stringify({
+          // ₹9,999 is nowhere in the (stub) system prompt → fabricated → guarded.
+          content: [{ type: "text", text: "You owe ₹9,999 immediately." }],
+          model: "claude-opus-4-8",
+          stop_reason: "end_turn",
+          usage: { input_tokens: 12, output_tokens: 9 },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    )) as typeof fetch;
+  try {
+    const result = await generateCopilotResponse({
+      ...baseInput("sk-ant-test"),
+      systemPrompt: "read-only policy. No dues on record.",
+      db: fakeGatewayDb(),
+      gatewayContext: GATEWAY_CTX,
+    });
+    // Fabricated ₹ amount discarded → deterministic stub served instead.
+    assertEquals(result.stub, true);
+    assertEquals(result.model, "akshara-stub");
   } finally {
     globalThis.fetch = original;
     clearAiKeyEnv();

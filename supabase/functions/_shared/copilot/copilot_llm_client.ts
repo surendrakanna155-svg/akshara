@@ -142,7 +142,7 @@ export async function generateCopilotResponse(
         userId: input.gatewayContext.userId ?? null,
         surface: "copilot",
       },
-      { system: input.systemPrompt, messages, maxTokens: COPILOT_MAX_TOKENS },
+      { system: input.systemPrompt, messages, maxTokens: COPILOT_MAX_TOKENS, guard: true },
       stub,
       {
         cache: {

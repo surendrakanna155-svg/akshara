@@ -36,6 +36,7 @@ import {
   lookupResponseCache,
   writeResponseCache,
 } from "./ai_response_cache_repository.ts";
+import { type GuardOptions, guardModelReply } from "./output_guard.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 
 export const DEFAULT_TIMEOUT_MS = 20_000;
@@ -188,6 +189,12 @@ export interface GatewayInput {
   system: string;
   messages: ClaudeMessage[];
   maxTokens?: number;
+  /** Opt-in output-side guard (F3): validate the reply against the injected
+   * context before serving/caching. `true` = defaults; an object = tuned caps.
+   * On violation the reply is discarded, the fallback served, and the call
+   * logged as `fallback_guard`. Off by default (structured-JSON callers keep
+   * their own field re-validation). */
+  guard?: boolean | GuardOptions;
 }
 
 export interface GatewayCallResult {
@@ -422,19 +429,22 @@ export async function runGateway(
     });
     const latencyMs = Math.max(0, deps.now().getTime() - started);
     const model = result.model || cfg.model;
-    const outcome: AiCallOutcome = result.refused ? "refused" : "ok";
-    await safeRecord(deps, {
-      ...baseEntry(ctx, cfg),
-      model,
-      outcome,
-      inputTokens: result.usage?.inputTokens ?? 0,
-      outputTokens: result.usage?.outputTokens ?? 0,
-      estimatedCostMicros: estimateCostMicros(model, result.usage),
-      latencyMs,
-      cacheWritten: false,
-      fallbackUsed: result.refused,
-    });
+    const inputTokens = result.usage?.inputTokens ?? 0;
+    const outputTokens = result.usage?.outputTokens ?? 0;
+    const estimatedCostMicros = estimateCostMicros(model, result.usage);
+
     if (result.refused) {
+      await safeRecord(deps, {
+        ...baseEntry(ctx, cfg),
+        model,
+        outcome: "refused",
+        inputTokens,
+        outputTokens,
+        estimatedCostMicros,
+        latencyMs,
+        cacheWritten: false,
+        fallbackUsed: true,
+      });
       return {
         text: fallbackText,
         ok: false,
@@ -446,14 +456,60 @@ export async function runGateway(
         usage: result.usage,
       };
     }
+
+    // Output-side guard (F3): validate the reply against the injected context
+    // BEFORE it is served or cached. A violation is discarded — the model was
+    // consulted (tokens/cost still logged) but the deterministic fallback wins.
+    if (input.guard) {
+      const guardOpts = typeof input.guard === "object" ? input.guard : undefined;
+      const guardContext = [input.system, ...input.messages.map((m) => m.content)].join("\n");
+      const verdict = guardModelReply(result.text, guardContext, guardOpts);
+      if (!verdict.ok) {
+        await safeRecord(deps, {
+          ...baseEntry(ctx, cfg),
+          model,
+          outcome: "fallback_guard",
+          inputTokens,
+          outputTokens,
+          estimatedCostMicros,
+          latencyMs,
+          cacheWritten: false,
+          fallbackUsed: true,
+        });
+        return {
+          text: fallbackText,
+          ok: false,
+          fallbackUsed: true,
+          outcome: "fallback_guard",
+          refused: false,
+          fromCache: false,
+          model,
+          usage: result.usage,
+        };
+      }
+    }
+
     // Write-through: this validated answer becomes a Tier-2 asset (doc 01 §2).
+    let cacheWritten = false;
     if (deps.cache) {
       try {
-        await deps.cache.write(scope, ctx.surface, result.text, model, result.usage?.outputTokens ?? 0);
+        await deps.cache.write(scope, ctx.surface, result.text, model, outputTokens);
+        cacheWritten = true;
       } catch {
         // caching is best-effort; never fail the served answer
       }
     }
+    await safeRecord(deps, {
+      ...baseEntry(ctx, cfg),
+      model,
+      outcome: "ok",
+      inputTokens,
+      outputTokens,
+      estimatedCostMicros,
+      latencyMs,
+      cacheWritten,
+      fallbackUsed: false,
+    });
     return {
       text: result.text,
       ok: true,

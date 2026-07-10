@@ -326,6 +326,50 @@ Deno.test("runGateway: cache miss → model called + write-through of the answer
   clearLimitEnv();
 });
 
+Deno.test("runGateway: output guard rejects a fabricated number → fallback_guard, not cached (F3)", async () => {
+  clearLimitEnv();
+  const fabricated: ClaudeCallResult = {
+    text: "You owe ₹9,999 today.",
+    model: "claude-opus-4-8",
+    refused: false,
+    usage: { inputTokens: 100, outputTokens: 50 },
+  };
+  const { deps, records, cacheWrites } = makeDeps({
+    callModel: () => Promise.resolve(fabricated),
+    cacheHit: null,
+  });
+  const r = await runGateway(
+    CTX,
+    { system: "Aarav has no dues.", messages: [], guard: true },
+    "SAFE FALLBACK",
+    deps,
+  );
+  assertEquals(r.ok, false);
+  assertEquals(r.fallbackUsed, true);
+  assertEquals(r.outcome, "fallback_guard");
+  assertEquals(r.text, "SAFE FALLBACK");
+  assertEquals(records[0].outcome, "fallback_guard");
+  assertEquals(records[0].estimatedCostMicros, 100 * 15 + 50 * 75); // model WAS called → cost logged
+  assertEquals(cacheWrites.length, 0); // a guarded reply is never cached
+  clearLimitEnv();
+});
+
+Deno.test("runGateway: output guard passes a grounded reply → ok + cached (F3)", async () => {
+  clearLimitEnv();
+  const { deps, records, cacheWrites } = makeDeps({ cacheHit: null });
+  const r = await runGateway(
+    CTX,
+    { system: "context", messages: [], guard: true },
+    "FB",
+    deps,
+  );
+  assertEquals(r.ok, true);
+  assertEquals(r.text, "real answer"); // OK_RESULT has no numbers/urls → passes
+  assertEquals(records[0].outcome, "ok");
+  assertEquals(cacheWrites.length, 1);
+  clearLimitEnv();
+});
+
 Deno.test("runGateway: org-scoped call (null schoolId) logs an org-scoped row", async () => {
   clearLimitEnv();
   const { deps, records } = makeDeps({});

@@ -8,7 +8,7 @@
 
 import type { TenantQueryClient } from "../tenant_db.ts";
 
-/** The eight outcomes an attempted gateway call can record. */
+/** The outcomes an attempted gateway call can record. */
 export type AiCallOutcome =
   | "ok"
   | "refused"
@@ -17,7 +17,9 @@ export type AiCallOutcome =
   | "fallback_rate_school"
   | "fallback_spend_cap"
   | "fallback_timeout"
-  | "fallback_error";
+  | "fallback_error"
+  /** Reply failed the output guard (output_guard.ts) → discarded, fallback served. */
+  | "fallback_guard";
 
 export interface AiCallLogEntry {
   organizationId: string;
