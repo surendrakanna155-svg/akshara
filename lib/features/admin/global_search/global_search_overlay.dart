@@ -10,6 +10,9 @@ import '../../../router/route_names.dart';
 import '../../../shared/widgets/akshara_motion.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
+import '../../adaptive_ai/adaptive_ai_models.dart';
+import '../../adaptive_ai/adaptive_ai_providers.dart';
+import '../../adaptive_ai/widgets/adaptive_search_results.dart';
 import 'global_search_registry.dart';
 import 'recent_routes_provider.dart';
 
@@ -48,6 +51,15 @@ class _GlobalSearchOverlayState extends ConsumerState<GlobalSearchOverlay> {
     recordRecentRoute(widget.ref, entry.route);
     Navigator.of(context).pop();
     context.go(entry.route);
+  }
+
+  /// Open an Adaptive Universal Search record (student/staff/lead) — deterministic
+  /// navigation to the ERP record, no AI call (Search First → AI Later).
+  void _openRecord(SearchResultItem item) {
+    final route = adaptiveSearchRoute(item.category, item.id);
+    if (route == null) return;
+    Navigator.of(context).pop();
+    context.go(route);
   }
 
   @override
@@ -91,7 +103,7 @@ class _GlobalSearchOverlayState extends ConsumerState<GlobalSearchOverlay> {
                   autofocus: true,
                   textInputAction: TextInputAction.search,
                   decoration: const InputDecoration(
-                    hintText: 'Search modules, screens, workflows…',
+                    hintText: 'Search students, staff, modules…',
                     prefixIcon: Icon(Icons.search),
                   ),
                   onChanged: (value) => setState(() => _query = value.trim()),
@@ -115,6 +127,9 @@ class _GlobalSearchOverlayState extends ConsumerState<GlobalSearchOverlay> {
                       ),
                       const SizedBox(height: AksharaSpacing.s4),
                     ],
+                    // W2.S — deterministic, RBAC-scoped entity records (students /
+                    // staff / admissions). Self-hides for short/empty queries.
+                    AdaptiveSearchResults(query: _query, onSelect: _openRecord),
                     _SectionHeader(
                       title: _query.isEmpty ? 'All destinations' : 'Results',
                     ),

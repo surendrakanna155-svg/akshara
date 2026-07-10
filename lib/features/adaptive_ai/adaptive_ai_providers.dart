@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/repositories/repository_providers.dart';
 import '../../core/tenant/tenant_provider.dart';
+import '../../router/route_names.dart';
 import '../copilot/copilot_role_intelligence.dart';
 import 'adaptive_ai_models.dart';
 
@@ -59,6 +60,32 @@ final adaptiveQuickActionsProvider =
   final query = ref.watch(repositoryQueryProvider);
   return repo.getQuickActions(query: query, persona: persona);
 });
+
+/// Universal School Search — deterministic, zero-token, RBAC-scoped entity
+/// resolver. Keyed by the (debounced) query; empty for <2 chars. AutoDisposed.
+final adaptiveSearchProvider =
+    FutureProvider.autoDispose.family<UniversalSearchResult, String>((ref, term) async {
+  final q = term.trim();
+  if (q.length < 2) return UniversalSearchResult.empty(q);
+  final repo = ref.watch(adaptiveAiRepositoryProvider);
+  final query = ref.watch(repositoryQueryProvider);
+  return repo.universalSearch(query: query, term: q, limit: 6);
+});
+
+/// Map a search-result (category, id) to the real ERP record route (decision 8:
+/// a selection navigates directly to the record). Null = no known detail route.
+String? adaptiveSearchRoute(String category, String id) {
+  switch (category) {
+    case 'students':
+      return RouteNames.sisStudentDetail(id);
+    case 'staff':
+      return RouteNames.hrEmployeeDetail(id);
+    case 'admissions':
+      return RouteNames.admissionsLeadDetail(id);
+    default:
+      return null;
+  }
+}
 
 /// Record accept/dismiss/suppress feedback, then refresh the persona's feed.
 Future<void> recordAdaptiveFeedback(
