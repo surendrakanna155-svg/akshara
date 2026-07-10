@@ -19,6 +19,7 @@ from kie import (config, phase1_verify, phase2_parse, phase3_metadata, phase4_ch
                  phase5_concept, phase6_graph, phase7_questions, store)
 from kie.curate import cleanup as knowledge_cleanup
 from kie.curate import enrich as knowledge_enrich
+from kie.curate import quality as knowledge_quality
 
 # Ordered pipeline after Phase-1 verification. Each maps to an existing phase run().
 PIPELINE = ("parse", "metadata", "chunk", "concept", "graph", "questions")
@@ -94,6 +95,17 @@ def cmd_enrich(args) -> int:
     return 0
 
 
+def cmd_quality(args) -> int:
+    config.ensure_dirs()
+    conn = store.open_store(args.db)
+    try:
+        summary = knowledge_quality.run(conn, dry_run=args.dry_run)
+    finally:
+        conn.close()
+    print(json.dumps(summary, indent=2, sort_keys=True))
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="kie", description="Knowledge Intelligence Engine")
     sub = ap.add_subparsers(dest="phase", required=True)
@@ -119,6 +131,11 @@ def main(argv=None) -> int:
     e.add_argument("--dry-run", action="store_true", help="preview impact; write nothing")
     e.add_argument("--db", default=None, help="SQLite store path (default: knowledge/kie/kie.db)")
     e.set_defaults(func=cmd_enrich)
+
+    q = sub.add_parser("quality", help="Knowledge Layer Phase 3 — KIE quality (graph/taxonomy/evidence)")
+    q.add_argument("--dry-run", action="store_true", help="preview impact; write nothing")
+    q.add_argument("--db", default=None, help="SQLite store path (default: knowledge/kie/kie.db)")
+    q.set_defaults(func=cmd_quality)
 
     args = ap.parse_args(argv)
     return args.func(args)
