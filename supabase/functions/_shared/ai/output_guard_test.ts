@@ -55,6 +55,22 @@ Deno.test("guardModelReply rejects injection echo + fence-sentinel leakage", () 
   );
 });
 
+Deno.test("guardModelReply grounds equal-value numbers across precision (H4)", () => {
+  // 8500.50 (context) ≡ 8500.5 (reply); 87.50% ≡ 87.5% — no false-positive discard.
+  assertEquals(
+    guardModelReply("Balance ₹8500.5, attendance 87.5%.", "Balance: ₹8500.50, attendance 87.50%."),
+    { ok: true },
+  );
+});
+
+Deno.test("guardModelReply matches a context URL host regardless of query string (H4)", () => {
+  const ctx = "Portal: https://school.example.org/pay";
+  assertEquals(
+    guardModelReply("Pay at https://school.example.org/pay?ref=inv42 today.", ctx),
+    { ok: true },
+  );
+});
+
 Deno.test("guardModelReply rejects an over-length reply", () => {
   assertEquals(
     guardModelReply("x".repeat(9000), CONTEXT, { maxChars: 8000 }),

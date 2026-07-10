@@ -46,7 +46,7 @@ const INJECTION_MARKERS = [
   "untrusted-data",
 ];
 
-const URL_RE = /\bhttps?:\/\/([^\s/"'<>)\]}]+)/gi;
+const URL_RE = /\bhttps?:\/\/([^\s/"'<>)\]}?#]+)/gi;
 // A number: digit-groups with an OPTIONAL decimal part only when digits follow
 // (so a trailing sentence period is never captured — "8,500." → "8,500").
 const NUMBER_RE = /\d[\d,]*(?:\.\d+)?/g;
@@ -56,7 +56,10 @@ const CURRENCY_RE = /(?:₹|\brs\.?|\binr)\s*(\d[\d,]*(?:\.\d+)?)/gi;
 const PERCENT_RE = /(\d[\d,]*(?:\.\d+)?)\s*(?:%|percent\b)/gi;
 
 function normalizeNumber(raw: string): string {
-  const cleaned = raw.replace(/,/g, "").replace(/\.0+$/, "");
+  const cleaned = raw
+    .replace(/,/g, "")
+    .replace(/(\.\d*?)0+$/, "$1") // strip trailing fractional zeros: 8500.50 → 8500.5 (H4)
+    .replace(/\.$/, ""); // 8500. → 8500
   return cleaned.replace(/^0+(?=\d)/, ""); // drop leading zeros but keep "0"
 }
 

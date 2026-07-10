@@ -54,3 +54,25 @@ Deno.test("fingerprintQuestion still collapses non-relational paraphrases after 
   const rel = fingerprintQuestion("Is class 5 bigger than class 6?");
   assertEquals(fingerprintQuestion(rel), rel);
 });
+
+// H2 — transitive relations beyond the comparison set, incl. name-vs-name via
+// the 2-entity structural rule (no listed verb needed).
+Deno.test("fingerprintQuestion distinguishes reversed transitive-verb relations (H2)", () => {
+  assert(
+    fingerprintQuestion("Did the principal approve the teacher's leave?") !==
+      fingerprintQuestion("Did the teacher approve the principal's leave?"),
+  );
+});
+
+Deno.test("fingerprintQuestion distinguishes two named entities by order (H2)", () => {
+  // "manage" + two proper nouns → order preserved either way.
+  assert(
+    fingerprintQuestion("Does Ms. Iyer manage Mr. Rao?") !==
+      fingerprintQuestion("Does Mr. Rao manage Ms. Iyer?"),
+  );
+  // A single named entity still collapses (paraphrase win intact).
+  assertEquals(
+    fingerprintQuestion("Aarav's attendance this week"),
+    fingerprintQuestion("attendance this week for Aarav"),
+  );
+});

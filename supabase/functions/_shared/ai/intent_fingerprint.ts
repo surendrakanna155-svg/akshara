@@ -28,23 +28,49 @@ const STOPWORDS = new Set([
 // Detected on the RAW token stream (before stopword removal) so markers that
 // are also stopwords ("than", "over", "under", "before", "after") still count.
 const RELATIONAL_MARKERS = new Set([
+  // comparison
   "more", "less", "fewer", "greater", "greatest", "higher", "highest",
   "lower", "lowest", "bigger", "biggest", "smaller", "smallest", "larger",
   "largest", "longer", "shorter", "better", "worse", "best", "worst",
   "faster", "slower", "than", "versus", "vs",
+  // direction / ordering
   "before", "after", "over", "under", "above", "below", "ahead", "behind",
+  "compare", "compared", "difference", "gap", "between",
+  // transitive relations where subject↔object order flips meaning
   "pay", "pays", "paid", "owe", "owes", "owed", "beat", "beats",
   "exceed", "exceeds", "exceeded", "outperform", "outperforms", "outperformed",
-  "compare", "compared", "difference", "gap", "between",
+  "manage", "manages", "managed", "supervise", "supervises", "supervised",
+  "report", "reports", "reported", "approve", "approves", "approved",
+  "reject", "rejects", "rejected", "assign", "assigns", "assigned",
+  "teach", "teaches", "taught", "mentor", "mentors", "mentored",
+  "promote", "promotes", "promoted", "demote", "demotes", "demoted",
+  "transfer", "transfers", "transferred", "replace", "replaces", "replaced",
+  "lend", "lends", "lent", "grade", "grades", "graded", "handover", "handoff",
 ]);
+
+/** Distinct capitalized proper-noun-like tokens (potential named ENTITIES),
+ * ignoring the sentence-initial word. Two+ entities => operand order usually
+ * carries meaning ("Iyer manage Rao" vs the reverse), so we preserve order even
+ * without a listed verb (audit H2). */
+function entityCount(text: string): number {
+  const words = text.trim().split(/\s+/);
+  const seen = new Set<string>();
+  for (let i = 1; i < words.length; i++) {
+    const m = /^[A-Z][A-Za-z]+/.exec(words[i]!);
+    if (m) seen.add(m[0].toLowerCase());
+  }
+  return seen.size;
+}
 
 /** Normalize free-text into a canonical fingerprint (design doc 03 §3.2).
  * Lowercase → strip punctuation → drop stopwords, then:
  *   • order-independent lookups → sort + de-dup so paraphrases collapse
  *     ("when is Aarav's fee due" ≈ "fee due for Aarav")
- *   • order-sensitive relational questions → preserve token order so operand
- *     swaps mint distinct keys (audit F1 — never serve a wrong cached answer).
- * Deterministic and idempotent; empty input yields "". */
+ *   • order-sensitive questions (a relational marker OR 2+ named entities) →
+ *     preserve token order so operand swaps mint distinct keys (audit F1/H2 —
+ *     never serve a wrong cached answer; a false miss is only a redundant call).
+ * Stage-1 heuristic: exotic lowercase relations still escape it; the pgvector
+ * semantic cache (W2.8) is the exhaustive layer. Deterministic + idempotent. */
 export function fingerprintQuestion(text: string): string {
   const rawTokens = text
     .toLowerCase()
@@ -52,7 +78,8 @@ export function fingerprintQuestion(text: string): string {
     .replace(/[^\p{L}\p{N}\s]/gu, " ") // drop punctuation (unicode-aware)
     .split(/\s+/)
     .filter((t) => t.length > 0);
-  const orderSensitive = rawTokens.some((t) => RELATIONAL_MARKERS.has(t));
+  const orderSensitive = entityCount(text) >= 2 ||
+    rawTokens.some((t) => RELATIONAL_MARKERS.has(t));
   const content = rawTokens.filter((t) => !STOPWORDS.has(t));
   if (orderSensitive) {
     // Preserve order + repeats: positional distinctness is the whole point.

@@ -145,6 +145,34 @@ async function readCursor(db: TenantQueryClient, scope: AiTenantScope): Promise<
   return typeof v === "string" && v.length > 0 ? v : null;
 }
 
+/** Advance the watermark MONOTONICALLY: the ON CONFLICT update only fires when
+ * the stored cursor is strictly older, so two overlapping drains for the same
+ * school can never REGRESS the watermark (H5). ISO-8601 UTC strings compare
+ * chronologically as text. */
+async function writeCursor(
+  db: TenantQueryClient,
+  scope: AiTenantScope,
+  lastCreatedAt: string,
+): Promise<void> {
+  await db.queryObject(
+    `INSERT INTO ai_fact_signals (
+       organization_id, school_id, signal_type, scope_key, payload, computed_at
+     ) VALUES ($1,$2,$3,$4,$5::jsonb, timezone('utc', now()))
+     ON CONFLICT (organization_id, school_id, signal_type, scope_key) DO UPDATE SET
+       payload = EXCLUDED.payload,
+       computed_at = timezone('utc', now())
+     WHERE (ai_fact_signals.payload->>'lastCreatedAt')
+             < (EXCLUDED.payload->>'lastCreatedAt')`,
+    [
+      scope.organizationId,
+      scope.schoolId,
+      CURSOR_SIGNAL,
+      CURSOR_SCOPE,
+      JSON.stringify({ lastCreatedAt }),
+    ],
+  );
+}
+
 /**
  * Production entry point (must run under the SCHOOL RLS scope of `scope`).
  * Consumes this school's domain_events newer than the watermark, in created_at
@@ -179,7 +207,12 @@ export async function runSignalRefinery(
   let cacheEntriesInvalidated = 0;
   let signalsTouched = 0;
   let skipped = 0;
-  let lastCreatedAt = cursor;
+  // Advance only over the CONTIGUOUS successfully-processed prefix (H5): a
+  // (usually transient) per-event error stops advancement so that event and
+  // everything after it is re-consumed next run — idempotently — instead of
+  // being silently passed forever (the W1 layer has no nightly recompute yet).
+  let cursorAdvance: string | null = cursor;
+  let contiguous = true;
   let i = 0;
   for (const r of rows) {
     const sp = `sr_${i++}`;
@@ -196,22 +229,19 @@ export async function runSignalRefinery(
         signalsTouched++;
       }
       await db.queryObject(`RELEASE SAVEPOINT ${sp}`);
+      // Normalize to ISO-8601 UTC (deno-postgres returns timestamptz as a Date)
+      // so the watermark stored + compared everywhere is one consistent format.
+      if (contiguous) cursorAdvance = new Date(r.created_at).toISOString();
     } catch {
       // Un-poison the transaction and skip only this event (audit F19).
       await db.queryObject(`ROLLBACK TO SAVEPOINT ${sp}`);
       skipped++;
+      contiguous = false;
     }
-    // Advance past every event read (including skipped) so a poison event never
-    // blocks the watermark; the nightly full-recompute is the drift guarantee.
-    lastCreatedAt = r.created_at;
   }
 
-  if (lastCreatedAt) {
-    await upsertFactSignal(db, scope, {
-      signalType: CURSOR_SIGNAL,
-      scopeKey: CURSOR_SCOPE,
-      payload: { lastCreatedAt },
-    });
+  if (cursorAdvance && cursorAdvance !== cursor) {
+    await writeCursor(db, scope, cursorAdvance);
   }
   return { processed: rows.length, cacheEntriesInvalidated, signalsTouched, skipped };
 }

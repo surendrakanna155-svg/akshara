@@ -129,15 +129,18 @@ export async function getAiEconomics(
       GROUP BY surface`,
     [scope.organizationId, scope.schoolId, monthStart],
   );
-  // Live (non-expired) cache only; tokens saved = per-entry output × times reused
-  // (hit_count), the actual reuse savings — not the one-generation value (F6).
+  // entries = LIVE (non-expired) cache size; hits/saved = LIFETIME so they don't
+  // decay as entries expire (H3 — the ratio must not trend to zero from normal
+  // TTL churn). tokens saved = per-entry output × times reused (hit_count), the
+  // actual reuse savings, not the one-generation value (F6).
   const cacheRows = await db.queryObject<{ entries: number; hits: string | number; saved: string | number }>(
-    `SELECT count(*)::int AS entries,
+    `SELECT count(*) FILTER (
+              WHERE expires_at IS NULL OR expires_at > timezone('utc', now())
+            )::int AS entries,
             coalesce(sum(hit_count), 0)::bigint AS hits,
             coalesce(sum(tokens_saved * hit_count), 0)::bigint AS saved
        FROM ai_response_cache
-      WHERE organization_id = $1 AND school_id IS NOT DISTINCT FROM $2
-        AND (expires_at IS NULL OR expires_at > timezone('utc', now()))`,
+      WHERE organization_id = $1 AND school_id IS NOT DISTINCT FROM $2`,
     [scope.organizationId, scope.schoolId],
   );
   // Lifetime model calls for a window-consistent cache-hit ratio (cache hits are

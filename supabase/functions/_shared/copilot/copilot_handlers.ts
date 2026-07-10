@@ -325,15 +325,23 @@ export async function handleSendMessage(
       );
 
       // F5: persist the deterministic rolling summary of the turns dropped from
-      // the window, so long conversations keep condensed context (not silently
-      // lost). Best-effort — never fail the reply on a summary write.
+      // the window, so long conversations keep condensed context. Truly
+      // best-effort: SAVEPOINT-guarded so a summary-write failure rolls back
+      // ONLY the summary and never the already-persisted (and possibly billed)
+      // reply/message/telemetry in this same transaction (H1).
       if (generation.summarizedCount && generation.summarizedCount > 0) {
-        await updateSessionRollingSummary(
-          db,
-          sessionId,
-          generation.rollingSummary ?? "",
-          generation.summarizedCount,
-        );
+        await db.queryObject("SAVEPOINT copilot_summary");
+        try {
+          await updateSessionRollingSummary(
+            db,
+            sessionId,
+            generation.rollingSummary ?? "",
+            generation.summarizedCount,
+          );
+          await db.queryObject("RELEASE SAVEPOINT copilot_summary");
+        } catch {
+          await db.queryObject("ROLLBACK TO SAVEPOINT copilot_summary");
+        }
       }
 
       if (session.title === "New conversation" && content.length <= 120) {
