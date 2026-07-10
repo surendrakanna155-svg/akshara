@@ -194,6 +194,16 @@ class TestPreservation(unittest.TestCase):
         self.assertEqual(len(tbls[0]["bbox"]), 4)                # table boundary preserved
         self.assertIn(tbls[0]["source"], ("pymupdf", "pdfplumber"))
 
+    def test_decorative_page_not_treated_as_grid(self):
+        # a graphics-heavy page (>1500 vector items) must NOT trigger the pdfplumber fallback
+        doc = fitz.open()
+        page = doc.new_page(width=612, height=792)
+        for i in range(1700):
+            y = 40 + (i % 700)
+            page.draw_line((0, y), (400, y))
+        self.assertFalse(phase2_parse._page_has_grid(page))
+        doc.close()
+
     def test_chapter_boundaries_from_toc(self):
         doc = fitz.open()
         for _ in range(2):

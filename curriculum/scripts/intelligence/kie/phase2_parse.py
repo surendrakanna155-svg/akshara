@@ -73,22 +73,32 @@ def _is_math_span(font: str, text: str) -> bool:
     return sum(1 for ch in text if ch in MATH_SYMBOLS) >= 2
 
 
+# A genuine ruled table has a bounded number of vector segments. Pages with far more are
+# decorative graphics (branded mock-paper backgrounds carry tens of thousands of items) —
+# running the pure-Python pdfplumber table finder on them is pathologically slow and finds
+# nothing, so we treat such pages as non-grid and skip the fallback entirely.
+GRID_MAX_DRAWING_ITEMS = 1500
+
+
 def _page_has_grid(page) -> bool:
     """Ruled-grid detector via vector drawings — gates the pdfplumber table fallback."""
-    h = v = rects = 0
     try:
-        for d in page.get_drawings():
-            for it in d.get("items", []):
-                if it[0] == "l":
-                    p1, p2 = it[1], it[2]
-                    if abs(p1.y - p2.y) < 1.0:
-                        h += 1
-                    elif abs(p1.x - p2.x) < 1.0:
-                        v += 1
-                elif it[0] == "re":
-                    rects += 1
+        drawings = page.get_drawings()
     except Exception:
         return False
+    if sum(len(d.get("items", [])) for d in drawings) > GRID_MAX_DRAWING_ITEMS:
+        return False                                  # decorative/graphics page, not a table
+    h = v = rects = 0
+    for d in drawings:
+        for it in d.get("items", []):
+            if it[0] == "l":
+                p1, p2 = it[1], it[2]
+                if abs(p1.y - p2.y) < 1.0:
+                    h += 1
+                elif abs(p1.x - p2.x) < 1.0:
+                    v += 1
+            elif it[0] == "re":
+                rects += 1
     return (h >= 2 and v >= 2) or rects >= 3
 
 
@@ -268,16 +278,17 @@ def ocr_pages(doc):
 
 # ── detection-first per-page OCR fallback ───────────────────────────────────────
 def _ocr_page(page):
-    """OCR a single page → (text, word-boxes, mean_conf). Boxes in PDF points (72/dpi)."""
+    """OCR a single page with ONE Tesseract pass. image_to_data yields text + word boxes +
+    confidence together; page text is reconstructed line-by-line from the same pass (so we
+    do not pay for a second image_to_string call). Boxes in PDF points (72/dpi)."""
     import pytesseract
     from PIL import Image
 
     scale = 72.0 / OCR_DPI
     pix = page.get_pixmap(dpi=OCR_DPI)
     img = Image.open(io.BytesIO(pix.tobytes("png")))
-    text = pytesseract.image_to_string(img)
     data = pytesseract.image_to_data(img, output_type=pytesseract.Output.DICT)
-    words, confs = [], []
+    words, confs, lines = [], [], {}
     for j, txt in enumerate(data.get("text", [])):
         t = (txt or "").strip()
         if not t:
@@ -290,6 +301,8 @@ def _ocr_page(page):
                       "bbox": [round(data["left"][j] * scale, 1), round(data["top"][j] * scale, 1),
                                round((data["left"][j] + data["width"][j]) * scale, 1),
                                round((data["top"][j] + data["height"][j]) * scale, 1)]})
+        lines.setdefault((data["block_num"][j], data["par_num"][j], data["line_num"][j]), []).append(t)
+    text = "\n".join(" ".join(lines[k]) for k in sorted(lines))
     return text, words, (round(sum(confs) / len(confs), 1) if confs else 0.0)
 
 
