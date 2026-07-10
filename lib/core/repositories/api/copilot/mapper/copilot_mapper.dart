@@ -63,4 +63,23 @@ class CopilotMapper {
       stub: dto.stub,
     );
   }
+
+  AiEconomics toEconomics(AiEconomicsDto dto) {
+    return AiEconomics(
+      monthStart: dto.monthStart,
+      spendMicros: dto.spendMicros,
+      spendCapMicros: dto.spendCapMicros,
+      spendWarnRatio: dto.spendWarnRatio,
+      atSpendWarn: dto.atSpendWarn,
+      atSpendCap: dto.atSpendCap,
+      modelCalls: dto.modelCalls,
+      fallbacks: dto.fallbacks,
+      callsByOutcome: dto.callsByOutcome,
+      callsBySurface: dto.callsBySurface,
+      cacheEntries: dto.cacheEntries,
+      cacheHits: dto.cacheHits,
+      tokensSaved: dto.tokensSaved,
+      cacheHitRatio: dto.cacheHitRatio,
+    );
+  }
 }

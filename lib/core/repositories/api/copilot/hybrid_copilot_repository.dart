@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../interfaces/copilot_repository.dart';
 import '../../repository_query.dart';
 import '../../../../features/copilot/copilot_models.dart';
@@ -52,4 +54,21 @@ class HybridCopilotRepository implements CopilotRepository {
         content: content,
         screenContext: screenContext,
       );
+
+  // The cost panel is read-mostly telemetry: on an API failure it degrades to
+  // the empty/zero state (mirrors HybridAdaptiveAiRepository's fail-soft
+  // feeds) rather than throwing into the dashboard.
+  @override
+  Future<AiEconomics> getEconomics({required RepositoryQuery query}) async {
+    try {
+      return await _api.getEconomics(query: query);
+    } catch (error, stack) {
+      debugPrint('Copilot hybrid: getEconomics failed, degrading soft: $error');
+      assert(() {
+        debugPrintStack(stackTrace: stack, label: 'Copilot.getEconomics');
+        return true;
+      }());
+      return const AiEconomics.empty();
+    }
+  }
 }

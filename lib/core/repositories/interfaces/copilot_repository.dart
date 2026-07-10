@@ -29,4 +29,8 @@ abstract class CopilotRepository {
     required String content,
     CopilotScreenContext? screenContext,
   });
+
+  /// The N10 AI cost panel: month-to-date spend vs cap, calls by outcome/
+  /// surface, and cache reuse savings (RBAC viewAiCopilot).
+  Future<AiEconomics> getEconomics({required RepositoryQuery query});
 }

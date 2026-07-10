@@ -242,6 +242,38 @@ class MockCopilotRepository implements CopilotRepository {
     );
   }
 
+  // Deterministic canned data so the N10 AI cost panel renders before the
+  // backend flag (aiCopilotApiEnabledProvider) is turned on, mirroring how the
+  // other Mock repositories seed realistic data.
+  @override
+  Future<AiEconomics> getEconomics({required RepositoryQuery query}) async {
+    return const AiEconomics(
+      monthStart: '2026-07-01T00:00:00.000Z',
+      spendMicros: 640000000,
+      spendCapMicros: 1000000000,
+      spendWarnRatio: 0.8,
+      atSpendWarn: false,
+      atSpendCap: false,
+      modelCalls: 812,
+      fallbacks: 46,
+      callsByOutcome: {
+        'ok': 780,
+        'refused': 32,
+        'fallback_no_key': 20,
+        'fallback_error': 26,
+      },
+      callsBySurface: {
+        'copilot_chat': 540,
+        'quick_action': 180,
+        'suggestions': 92,
+      },
+      cacheEntries: 340,
+      cacheHits: 2210,
+      tokensSaved: 1875000,
+      cacheHitRatio: 0.73,
+    );
+  }
+
   Future<String> _resolveReply(
     String content,
     CopilotScreenContext? screenContext,

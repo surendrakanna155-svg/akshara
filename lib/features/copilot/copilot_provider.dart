@@ -51,6 +51,14 @@ final copilotSessionDetailFutureProvider = FutureProvider<CopilotSessionDetail?>
       );
 });
 
+/// The N10 AI cost panel — month-to-date spend vs cap, calls by outcome/
+/// surface, and cache reuse savings (backend GET /copilot/economics).
+final copilotEconomicsFutureProvider = FutureProvider<AiEconomics>((ref) async {
+  return ref.read(copilotRepositoryProvider).getEconomics(
+        query: ref.watch(copilotQueryProvider),
+      );
+});
+
 final copilotCanUseProvider = Provider<bool>((ref) {
   final rbac = ref.watch(rbacServiceProvider);
   return rbac.hasPermission(Permission.viewAiCopilot);

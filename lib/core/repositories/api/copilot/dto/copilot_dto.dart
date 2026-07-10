@@ -10,6 +10,25 @@ List<Map<String, dynamic>> parseCopilotItems(Map<String, dynamic> json) {
   return items.map((item) => item as Map<String, dynamic>).toList();
 }
 
+int _int(dynamic v, [int fallback = 0]) {
+  if (v is num) return v.toInt();
+  if (v is String) return int.tryParse(v) ?? fallback;
+  return fallback;
+}
+
+double _double(dynamic v, [double fallback = 0]) {
+  if (v is num) return v.toDouble();
+  if (v is String) return double.tryParse(v) ?? fallback;
+  return fallback;
+}
+
+Map<String, int> _intRecord(dynamic v) {
+  if (v is Map) {
+    return v.map((key, value) => MapEntry(key.toString(), _int(value)));
+  }
+  return const {};
+}
+
 class CopilotAssistantDto {
   CopilotAssistantDto({
     required this.type,
@@ -159,4 +178,60 @@ class CopilotSessionDetailDto {
 
   final CopilotSessionDto session;
   final List<CopilotMessageDto> messages;
+}
+
+/// N10 AI cost panel payload — mirrors the backend `AiEconomics` shape
+/// (`supabase/functions/_shared/ai/ai_economics_service.ts`). Spend fields are
+/// micro-USD ints; ratios are 0..1 doubles.
+class AiEconomicsDto {
+  const AiEconomicsDto({
+    required this.monthStart,
+    required this.spendMicros,
+    required this.spendCapMicros,
+    required this.spendWarnRatio,
+    required this.atSpendWarn,
+    required this.atSpendCap,
+    required this.modelCalls,
+    required this.fallbacks,
+    required this.callsByOutcome,
+    required this.callsBySurface,
+    required this.cacheEntries,
+    required this.cacheHits,
+    required this.tokensSaved,
+    required this.cacheHitRatio,
+  });
+
+  factory AiEconomicsDto.fromJson(Map<String, dynamic> json) {
+    return AiEconomicsDto(
+      monthStart: json['monthStart'] as String? ?? '',
+      spendMicros: _int(json['spendMicros']),
+      spendCapMicros: _int(json['spendCapMicros']),
+      spendWarnRatio: _double(json['spendWarnRatio'], 0.8),
+      atSpendWarn: json['atSpendWarn'] == true,
+      atSpendCap: json['atSpendCap'] == true,
+      modelCalls: _int(json['modelCalls']),
+      fallbacks: _int(json['fallbacks']),
+      callsByOutcome: _intRecord(json['callsByOutcome']),
+      callsBySurface: _intRecord(json['callsBySurface']),
+      cacheEntries: _int(json['cacheEntries']),
+      cacheHits: _int(json['cacheHits']),
+      tokensSaved: _int(json['tokensSaved']),
+      cacheHitRatio: _double(json['cacheHitRatio']),
+    );
+  }
+
+  final String monthStart;
+  final int spendMicros;
+  final int spendCapMicros;
+  final double spendWarnRatio;
+  final bool atSpendWarn;
+  final bool atSpendCap;
+  final int modelCalls;
+  final int fallbacks;
+  final Map<String, int> callsByOutcome;
+  final Map<String, int> callsBySurface;
+  final int cacheEntries;
+  final int cacheHits;
+  final int tokensSaved;
+  final double cacheHitRatio;
 }

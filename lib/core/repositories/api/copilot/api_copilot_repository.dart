@@ -77,4 +77,10 @@ class ApiCopilotRepository implements CopilotRepository {
     );
     return _mapper.toSendResult(dto);
   }
+
+  @override
+  Future<AiEconomics> getEconomics({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchEconomics(query: query);
+    return _mapper.toEconomics(dto);
+  }
 }

@@ -19,6 +19,8 @@ import '../../admin/admin_content_scaffold.dart';
 import '../../admin/admin_layout.dart';
 import '../../admin/admin_shell.dart';
 import '../../admin/models/admin_nav_models.dart';
+import '../../copilot/copilot_provider.dart';
+import 'ai_economics_screen.dart';
 import 'intelligence_models.dart';
 import 'intelligence_provider.dart';
 import '../operations/operations_intelligence_provider.dart';
@@ -487,6 +489,25 @@ class _PrincipalSummaryTab extends ConsumerWidget {
               onTap: () => context.go(RouteNames.aiPredictions),
             ),
           ),
+          if (ref.watch(copilotCanUseProvider)) ...[
+            const SizedBox(height: AksharaSpacing.s2),
+            Card(
+              child: ListTile(
+                key: const ValueKey('intelligence_ai_economics_launch_tile'),
+                leading: const Icon(Icons.payments_outlined),
+                title: const Text('AI Usage & Cost'),
+                subtitle: const Text(
+                  'Month-to-date spend vs cap, model calls and cache savings',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AiEconomicsScreen(),
+                  ),
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: AksharaSpacing.s4),
           const AksharaSectionHeader(title: 'Highlights'),
           for (final item in summary.highlights)

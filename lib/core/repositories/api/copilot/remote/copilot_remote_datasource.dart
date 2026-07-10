@@ -37,6 +37,18 @@ class CopilotRemoteDataSource {
     return CopilotSuggestionsDto.fromJson(parseCopilotEnvelope(_responseMap(response)));
   }
 
+  /// The N10 AI cost panel: month-to-date spend vs cap, calls by outcome /
+  /// surface, and cache hit ratio (RBAC viewAiCopilot; school-scoped).
+  Future<AiEconomicsDto> fetchEconomics({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      CopilotApiPaths.economics,
+      queryParameters: _queryParams(query),
+    );
+    return AiEconomicsDto.fromJson(parseCopilotEnvelope(_responseMap(response)));
+  }
+
   Future<List<CopilotSessionDto>> fetchSessions({
     required RepositoryQuery query,
   }) async {
