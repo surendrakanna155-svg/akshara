@@ -21,7 +21,7 @@ import json
 import sys
 import time
 
-from kie.intake import collector
+from kie.intake import collector, report
 from kie.intake.center import IntakeCenter
 from kie.intake.models import SourceKind
 
@@ -101,6 +101,16 @@ def cmd_backfill(args) -> int:
     return 0
 
 
+def cmd_report(args) -> int:
+    c = _center(args)
+    conn = c.open()
+    try:
+        print(report.batch_report(conn, args.batch_id) if args.batch_id else report.queue_report(conn))
+    finally:
+        conn.close()
+    return 0
+
+
 def cmd_url(args) -> int:
     try:
         collector.url_import(args.url)
@@ -157,6 +167,10 @@ def main(argv=None) -> int:
 
     p = sub.add_parser("backfill-lineage", help="register baseline docs for versioning")
     p.set_defaults(func=cmd_backfill)
+
+    p = sub.add_parser("report", help="render a batch report, or the queue status if no batch")
+    p.add_argument("batch_id", nargs="?", default=None)
+    p.set_defaults(func=cmd_report)
 
     p = sub.add_parser("url", help="Direct URL Import (placeholder — not implemented)")
     p.add_argument("url")
