@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../router/route_names.dart';
 import '../../../shared/layout/mobile_dashboard_layout.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../adaptive_ai/adaptive_ai_models.dart';
 import '../../adaptive_ai/widgets/adaptive_priority_feed.dart';
 import '../../auth/auth_provider.dart';
 import '../../notifications/notifications_provider.dart';
@@ -108,9 +111,13 @@ class ParentDashboardScreen extends ConsumerWidget {
                         ParentReminderBanners(
                           onActionTap: _navigate,
                         ),
-                        // W2 Adaptive AI feed — self-hides until the parent rollout
-                        // wave serves own-children items server-side.
-                        const AdaptivePriorityFeedSection(persona: 'parent'),
+                        // W2 Adaptive AI feed — real own-children items
+                        // (attendance/fees), self-hides when empty. onOpenAction
+                        // navigates to the module; the parent acts there.
+                        const AdaptivePriorityFeedSection(
+                          persona: 'parent',
+                          onOpenAction: _openParentAdaptiveAction,
+                        ),
                         // PAR-D4 — "what needs my action" inbox entry point.
                         AksharaSurfaceListTile(
                           icon: Icons.checklist_outlined,
@@ -239,6 +246,20 @@ KpiAccent _accentForTone(DashboardChipTone tone) {
 }
 
 /// Soft rounded school badge for the hero trailing slot.
+/// Map an Adaptive AI recommendation's (logical) deep link to the parent route.
+/// The parent lands on the module and acts there — the AI only navigated.
+void _openParentAdaptiveAction(BuildContext context, AdaptiveAction action) {
+  final link = action.deepLink;
+  final route = link.startsWith('/parent/fees')
+      ? RouteNames.parentFees
+      : link.startsWith('/parent/attendance')
+          ? RouteNames.parentAttendance
+          : link.startsWith('/parent/homework')
+              ? RouteNames.parentHomework
+              : RouteNames.parentDashboard;
+  context.go(route);
+}
+
 class _SchoolBadge extends StatelessWidget {
   const _SchoolBadge({required this.schoolName});
 

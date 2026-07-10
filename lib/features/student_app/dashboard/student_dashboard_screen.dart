@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../router/route_names.dart';
 import '../../../shared/layout/mobile_dashboard_layout.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
+import '../../adaptive_ai/adaptive_ai_models.dart';
 import '../../adaptive_ai/widgets/adaptive_priority_feed.dart';
 import 'student_dashboard_provider.dart';
 import 'widgets/attendance_kpi_card.dart';
@@ -140,9 +143,12 @@ class StudentDashboardScreen extends ConsumerWidget {
                               _navigate(onNavigate, 'homework_list'),
                         ),
                         const SizedBox(height: AksharaSpacing.s4),
-                        // W2 Adaptive AI feed — self-hides until the student
-                        // rollout wave serves own-data study items server-side.
-                        const AdaptivePriorityFeedSection(persona: 'student'),
+                        // W2 Adaptive AI feed — real own-data study nudges
+                        // (homework/attendance), self-hides when empty.
+                        const AdaptivePriorityFeedSection(
+                          persona: 'student',
+                          onOpenAction: _openStudentAdaptiveAction,
+                        ),
                         ExamReminderCard(
                           reminder: data.examReminder,
                           onTap: () => _navigate(
@@ -213,6 +219,17 @@ class StudentDashboardScreen extends ConsumerWidget {
   void _navigate(void Function(String actionId)? handler, String actionId) {
     handler?.call(actionId);
   }
+}
+
+/// Map an Adaptive AI recommendation's (logical) deep link to the student route.
+void _openStudentAdaptiveAction(BuildContext context, AdaptiveAction action) {
+  final link = action.deepLink;
+  final route = link.startsWith('/student/attendance')
+      ? RouteNames.studentAttendance
+      : link.startsWith('/student/homework')
+          ? RouteNames.studentHomework
+          : RouteNames.studentDashboard;
+  context.go(route);
 }
 
 class _StatusKpiRow extends StatelessWidget {

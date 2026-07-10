@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../router/route_names.dart';
 import '../../../shared/layout/mobile_dashboard_layout.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
+import '../../adaptive_ai/adaptive_ai_models.dart';
 import '../../adaptive_ai/widgets/adaptive_priority_feed.dart';
 import 'teacher_dashboard_provider.dart';
 import 'widgets/attendance_summary_card.dart';
@@ -115,6 +118,20 @@ class TeacherDashboardScreen extends ConsumerWidget {
   }
 }
 
+/// Map an Adaptive AI recommendation's (logical) deep link to the teacher route.
+/// The human lands on the module and acts there — the AI only navigated.
+void _openTeacherAdaptiveAction(BuildContext context, AdaptiveAction action) {
+  final link = action.deepLink;
+  final route = link.startsWith('/teacher/attendance')
+      ? RouteNames.teacherAttendance
+      : link.startsWith('/teacher/homework')
+          ? RouteNames.teacherHomework
+          : link.startsWith('/teacher/exams')
+              ? RouteNames.teacherExams
+              : RouteNames.teacherDashboard;
+  context.go(route);
+}
+
 class _MobileBody extends StatelessWidget {
   const _MobileBody({
     required this.data,
@@ -145,9 +162,13 @@ class _MobileBody extends StatelessWidget {
           onNavigate: onNavigate,
         ),
         const SizedBox(height: AksharaSpacing.s4),
-        // W2 Adaptive AI feed — self-hides until the teacher rollout wave serves
-        // per-class items server-side; renders nothing today (no orphan gap).
-        const AdaptivePriorityFeedSection(persona: 'teacher'),
+        // W2 Adaptive AI feed — real per-class items (attendance/homework/exam),
+        // self-hides when empty. onOpenAction navigates to the module; the human
+        // acts there (AI never executes).
+        const AdaptivePriorityFeedSection(
+          persona: 'teacher',
+          onOpenAction: _openTeacherAdaptiveAction,
+        ),
         PendingTasksSection(
           tasks: data.pendingTasks,
           onTaskTap: (task) => onNavigate(task.id),
