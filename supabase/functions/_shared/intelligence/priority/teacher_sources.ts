@@ -112,16 +112,19 @@ export function teacherHomeworkItems(homework: TeacherHomeworkInput[]): RawPrior
     });
 }
 
-/** (3) Exams for the teacher's classes not yet published → a marks-entry
- * deadline. No reliable ISO date exists on the session, so severity (not a
- * clock) carries the urgency. */
+/** (3) Exams in the teacher's classes (sections) not yet published → a
+ * marks-entry deadline. The upstream read is section-scoped (grade+section),
+ * not subject-owner-scoped, so the framing is deliberately neutral — it states
+ * the exam is awaiting marks rather than asserting it is THIS teacher's task;
+ * the marks-entry screen enforces its own per-subject RBAC. No reliable ISO date
+ * on the session, so severity (not a clock) carries the urgency. */
 export function teacherExamItems(exams: TeacherExamInput[]): RawPriorityItem[] {
   return exams.map((e) => ({
     itemKey: `teacher:exam:${e.examId}`,
     type: "deadline" as const,
     title: `Marks entry — ${e.title}`,
-    detail: `${e.title} for ${e.classLabel} is not yet published (max ${e.maxMarks}). ` +
-      `Enter and verify marks so results can be released.`,
+    detail: `${e.title} for ${e.classLabel} is awaiting marks entry and publication ` +
+      `(max ${e.maxMarks}). If you teach this exam, complete and verify the marks.`,
     personas: TEACHER,
     entityTags: [`exam:${e.examId}`, "teacher:exam"],
     factors: { impactClass: "elevated" as const },
