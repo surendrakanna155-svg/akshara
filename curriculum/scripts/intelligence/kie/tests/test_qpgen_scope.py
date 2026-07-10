@@ -47,6 +47,13 @@ class TestSanitizer(unittest.TestCase):
         for t in ("", "  ", "12.3", "***", "a"):
             self.assertFalse(sanitize.is_clean_concept(t), repr(t))
 
+    def test_rejects_generic_standalone_words(self):
+        for t in ("Applications", "Characteristics", "FUNCTIONS", "Properties", "Introduction"):
+            self.assertFalse(sanitize.is_clean_concept(t), t)
+        # but the same words WITHIN a real multi-word concept are fine
+        self.assertTrue(sanitize.is_clean_concept("Properties of Rational Numbers"))
+        self.assertTrue(sanitize.is_clean_concept("Applications of Derivatives"))
+
 
 class TestScope(unittest.TestCase):
     def setUp(self):

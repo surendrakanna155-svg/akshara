@@ -34,6 +34,17 @@ class QuestionPaperEngine:
     def __init__(self, conn: Optional[sqlite3.Connection] = None, db_path: Optional[Path] = None):
         self._conn = conn                         # injected (tests / callers own it)
         self.db_path = str(db_path) if db_path else str(config.DB_PATH)
+        self._cache: dict = {}                    # (scope key) -> (SyllabusScope, pool) memo
+
+    def _scope_and_pool(self, conn, request: PaperRequest):
+        """Resolve + cache scope and pool by the scope-determining fields, so a batch /
+        generate_series (same scope, varying seed/exclude) does not recompute O(corpus) work."""
+        key = (request.exam, request.board, request.class_label,
+               tuple(request.subjects), tuple(request.chapters))
+        if key not in self._cache:
+            sc = scope_mod.resolve_scope(conn, request)     # may raise (not cached on failure)
+            self._cache[key] = (sc, pool_mod.build_pool(conn, sc))
+        return self._cache[key]
 
     def _connection(self):
         if self._conn is not None:
@@ -43,8 +54,8 @@ class QuestionPaperEngine:
     def generate(self, request: PaperRequest) -> GeneratedPaper:
         conn, owned = self._connection()
         try:
-            # 1) strict scope (raises ScopeError/ScopeEmptyError for unsupported/empty scopes)
-            scope = scope_mod.resolve_scope(conn, request)
+            # 1) strict scope + pool (cached by scope key; raises for unsupported/empty scopes)
+            scope, pool = self._scope_and_pool(conn, request)
 
             # 2) blueprint + structural validation + feasibility
             try:
@@ -59,8 +70,7 @@ class QuestionPaperEngine:
             availability = bp_mod.type_availability(conn, scope)
             warnings = list(bp_mod.feasibility(blueprint, availability))
 
-            # 3) pool → 4) select → 5) materialize
-            pool = pool_mod.build_pool(conn, scope)
+            # 3) select (pool cached above) → 4) materialize
             selection = select_mod.select(blueprint, pool, request, scope)
             warnings += selection.shortfalls + selection.notes
             mat = materialize.materialize(selection.slots, conn, request)

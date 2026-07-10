@@ -33,6 +33,14 @@ _SENTENCE_WORDS = {
 }
 _MID_ARTICLES = {"The", "A", "An", "This", "These"}
 MAX_WORDS = 5
+# generic section words that are not a teachable concept when they stand ALONE
+# (multi-word titles that merely contain them — "Properties of Gases" — are fine)
+_GENERIC_ALONE = {
+    "applications", "application", "characteristics", "characteristic", "functions", "function",
+    "properties", "property", "types", "type", "uses", "importance", "introduction", "overview",
+    "general", "basics", "methods", "method", "process", "processes", "features", "feature",
+    "terminology", "definition", "definitions", "structure", "classification", "components",
+}
 _BOILERPLATE_PREFIX = ("activity ", "chapter ", "unit ", "exercise ", "fig", "figure ",
                        "table ", "example ", "section ", "part ", "q.", "question ")
 
@@ -106,5 +114,8 @@ def is_clean_concept(title: Optional[str]) -> bool:
         return False
     # a capitalized article/determiner in a non-initial position ⇒ concatenated clauses
     if any(w in _MID_ARTICLES for w in words[1:]):
+        return False
+    # a single generic section word alone ("Applications", "Characteristics") is not a concept
+    if len(words) == 1 and low in _GENERIC_ALONE:
         return False
     return True

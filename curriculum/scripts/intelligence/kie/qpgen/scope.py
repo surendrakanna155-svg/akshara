@@ -18,6 +18,10 @@ from kie.qpgen.models import PaperRequest, Subject
 
 _CLASS_RE = re.compile(r"class\s*(\d{1,2})", re.I)
 
+# a concept must appear in >= this many questions (pattern frequency) to be admitted on
+# evidence alone; named laws and defined concepts bypass the floor. Drops single-occurrence noise.
+MIN_EVIDENCE_FREQUENCY = 2
+
 
 def doc_grade(class_label: Optional[str], doc_exam: Optional[str]) -> Optional[int]:
     """Grade of a concept's evidencing document, or None if it cannot be determined.
@@ -149,8 +153,8 @@ def resolve_scope(conn, request: PaperRequest) -> SyllabusScope:
         f = freq.get(code, 0)
         has_def = bool((r["definition"] or "").strip())
         is_law = code in formulas
-        if not (f > 0 or has_def or is_law):
-            continue                                   # no exam/definition/law evidence → drop
+        if not (f >= MIN_EVIDENCE_FREQUENCY or has_def or is_law):
+            continue                                   # too-weak evidence (single-occurrence noise) → drop
         evidence_ct += 1
         # exam-provenance boundary: the concept's source doc must be in-profile (NCERT/Practice
         # are in every profile, so textbook-derived concepts pass; cross-exam leakage is cut).

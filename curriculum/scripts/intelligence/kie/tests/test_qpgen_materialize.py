@@ -44,7 +44,7 @@ class TestMaterialize(unittest.TestCase):
         slots = [_slot(1, QuestionType.SHORT_ANSWER, code="BIO_A", title="Photosynthesis", subject="Biology")]
         materialize.materialize(slots, self.conn, PaperRequest(exam="NEET"))
         self.assertIn("Photosynthesis", slots[0].stem)
-        self.assertIn("[Model answer", slots[0].answer)    # honest rubric, no invented facts
+        self.assertIn("Marking guideline", slots[0].answer)   # honest rubric, no invented facts
 
     def test_objective_becomes_spec_by_default(self):
         slots = [_slot(1, QuestionType.MCQ), _slot(2, QuestionType.NUMERICAL)]
@@ -66,6 +66,11 @@ class TestMaterialize(unittest.TestCase):
         slots = [_slot(1, QuestionType.MCQ)]
         out = materialize.materialize(slots, self.conn, PaperRequest(exam="NEET"))
         self.assertFalse(out["ai"]["attempted"])
+
+    def test_title_normalization_in_stems(self):
+        self.assertEqual(materialize.display_title("PROTEINS"), "Proteins")
+        self.assertEqual(materialize.display_title("DNA Replication"), "DNA Replication")  # acronym kept
+        self.assertEqual(materialize.embed_title("The momentum of an object"), "the momentum of an object")
 
     def test_deterministic_stems_reproducible(self):
         a = [_slot(1, QuestionType.SHORT_ANSWER)]

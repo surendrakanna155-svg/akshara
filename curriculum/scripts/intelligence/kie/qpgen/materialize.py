@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 from typing import Dict, List, Optional
 
 from kie.qpgen.models import (Bloom, PaperRequest, QuestionSlot, QuestionType,
@@ -44,6 +45,29 @@ def _pick(options, key: str, seed: int):
     return options[idx]
 
 
+_LEAD_ARTICLE = re.compile(r"^(the|a|an)\s+", re.I)
+
+
+def display_title(title: str) -> str:
+    """Readable concept title for a stem: title-case ALL-CAPS headings (PROTEINS → Proteins)
+    while leaving normal/Title-Case text intact (keeps DNA/RNA-style acronyms untouched)."""
+    words = title.split()
+    out = []
+    for w in words:
+        if len(w) >= 4 and w.isupper():           # heading-case word → Title Case
+            out.append(w.capitalize())
+        else:
+            out.append(w)                          # keep acronyms (DNA) and normal case
+    return " ".join(out)
+
+
+def embed_title(title: str) -> str:
+    """Title embedded after a verb: drop a leading article so 'Define The momentum' → 'Define
+    the momentum' reads naturally."""
+    t = display_title(title)
+    return _LEAD_ARTICLE.sub(lambda m: m.group(1).lower() + " ", t)
+
+
 def _definitions(conn, codes: List[str]) -> Dict[str, str]:
     if not conn or not codes:
         return {}
@@ -55,19 +79,22 @@ def _definitions(conn, codes: List[str]) -> Dict[str, str]:
 
 def render_deterministic(slot: QuestionSlot, definition: str, seed: int) -> QuestionSlot:
     """Render an original descriptive stem grounded in the concept. Sets stem/answer + FILLED."""
-    title = slot.concept_title
+    title = display_title(slot.concept_title)
+    embedded = embed_title(slot.concept_title)
     if slot.question_type == QuestionType.SHORT_ANSWER:
         verb = _pick(_SHORT_VERBS, slot.concept_code, seed)
-        slot.stem = f"{verb} {title}." if not verb.endswith("of") else f"{verb} {title}."
+        slot.stem = f"{verb} {embedded}."
     else:  # LONG_ANSWER
-        slot.stem = _pick(_LONG_VERBS, slot.concept_code, seed).format(t=title)
-    # answer = the certified definition when present, else an honest rubric marker (no fabrication)
+        slot.stem = _pick(_LONG_VERBS, slot.concept_code, seed).format(t=embedded)
+    # answer = the certified definition when present, else an explicit teacher MARKING GUIDELINE
+    # (never a fabricated fact and never copied source text — copyright-safe).
     if definition.strip():
         slot.answer = definition.strip()
         slot.solution = f"Award marks for a correct explanation of {title}: {definition.strip()}"
     else:
-        slot.answer = f"[Model answer: a correct, in-syllabus explanation of '{title}'.]"
-        slot.solution = f"Award {slot.marks} marks for a complete, correct account of {title}."
+        slot.answer = (f"[Marking guideline — award full marks for a correct, in-syllabus "
+                       f"explanation of {title}; teacher to confirm key points.]")
+        slot.solution = f"Award up to {slot.marks} marks for a complete, correct account of {title}."
     slot.render_mode = RenderMode.DETERMINISTIC
     slot.status = SlotStatus.FILLED
     return slot
