@@ -23,6 +23,12 @@ export interface AiRuntimeConfig {
   apiKey?: string;
   /** Where the config came from — for telemetry/debugging only. */
   source: "panel" | "env";
+  /**
+   * The raw admin-saved provider `config` JSON (panel source only), so the
+   * Model Gateway can read per-school governance knobs (rate limits, monthly
+   * spend cap) without a second query. Undefined for the env fallback.
+   */
+  rawConfig?: Record<string, unknown> | null;
 }
 
 /** Map a stored provider_name to an AiProvider our client can actually call. */
@@ -88,7 +94,9 @@ export async function resolveAiConfig(
           : "";
         const model = cfgModel ||
           (provider === "openrouter" ? DEFAULT_OPENROUTER_MODEL : DEFAULT_CLAUDE_MODEL);
-        if (apiKey) return { provider, model, apiKey, source: "panel" };
+        if (apiKey) {
+          return { provider, model, apiKey, source: "panel", rawConfig: row.config ?? null };
+        }
       }
     }
   } catch {

@@ -35,6 +35,12 @@ export interface ClaudeCallInput {
   apiKey: string;
   /** Defaults to the configured {@link aiProvider}. */
   provider?: AiProvider;
+  /**
+   * Optional abort signal for a per-request timeout. The Model Gateway
+   * (`model_gateway.ts`) supplies one so a hung provider call aborts and falls
+   * back deterministically (closes AI-3); direct callers may omit it.
+   */
+  signal?: AbortSignal;
 }
 
 export interface ClaudeUsage {
@@ -144,6 +150,7 @@ async function callAnthropic(input: ClaudeCallInput, model: string): Promise<Cla
       system: input.system,
       messages: input.messages,
     }),
+    signal: input.signal,
   });
 
   if (!response.ok) {
@@ -195,6 +202,7 @@ async function callOpenRouter(input: ClaudeCallInput, model: string): Promise<Cl
       max_tokens: input.maxTokens ?? 1024,
       messages,
     }),
+    signal: input.signal,
   });
 
   if (!response.ok) {
