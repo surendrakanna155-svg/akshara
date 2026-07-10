@@ -177,7 +177,8 @@ function denyOutcome(reason: GatewayDenyReason): AiCallOutcome {
 
 export interface GatewayContext {
   organizationId: string;
-  schoolId: string;
+  /** Null for an org-scoped call (director / org-builder / onboarding). */
+  schoolId: string | null;
   userId?: string | null;
   /** Stable surface id for telemetry, e.g. "copilot" / "director_summary". */
   surface: string;
@@ -506,4 +507,21 @@ export function callModelGateway(
   opts?: { timeoutMs?: number; cache?: GatewayCacheConfig },
 ): Promise<GatewayCallResult> {
   return runGateway(ctx, input, fallbackText, gatewayDepsFor(db, opts));
+}
+
+/**
+ * Governed model call for callers that produce STRUCTURED output (parse the
+ * model text, else fall back to a computed object). Returns the model text, or
+ * null when the gateway did not serve a live answer (no-key / rate / spend cap /
+ * timeout / error / refusal) — the caller then uses its own deterministic
+ * fallback. All governance (timeout, limits, spend cap, ai_call_log) applies.
+ */
+export async function governedModelText(
+  db: TenantQueryClient,
+  ctx: GatewayContext,
+  input: GatewayInput,
+  opts?: { timeoutMs?: number },
+): Promise<string | null> {
+  const result = await callModelGateway(db, ctx, input, "", opts);
+  return result.ok ? result.text : null;
 }

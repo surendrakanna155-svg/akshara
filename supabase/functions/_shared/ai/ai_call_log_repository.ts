@@ -21,7 +21,8 @@ export type AiCallOutcome =
 
 export interface AiCallLogEntry {
   organizationId: string;
-  schoolId: string;
+  /** Null for an org-scoped call (director / org-builder / onboarding). */
+  schoolId: string | null;
   userId?: string | null;
   surface: string;
   provider: string;
@@ -37,7 +38,8 @@ export interface AiCallLogEntry {
 
 export interface AiTenantScope {
   organizationId: string;
-  schoolId: string;
+  /** Null for an org-scoped call; matched with IS NOT DISTINCT FROM. */
+  schoolId: string | null;
 }
 
 /** Insert one telemetry row. Never throws into the caller's happy path — the
@@ -83,7 +85,7 @@ export async function countUserCallsSince(
   const rows = await db.queryObject<{ n: number }>(
     `SELECT count(*)::int AS n
        FROM ai_call_log
-      WHERE organization_id = $1 AND school_id = $2 AND user_id = $3
+      WHERE organization_id = $1 AND school_id IS NOT DISTINCT FROM $2 AND user_id = $3
         AND created_at >= $4
         AND outcome <> 'fallback_no_key'`,
     [scope.organizationId, scope.schoolId, userId, sinceIso],
@@ -101,7 +103,7 @@ export async function countSchoolCallsSince(
   const rows = await db.queryObject<{ n: number }>(
     `SELECT count(*)::int AS n
        FROM ai_call_log
-      WHERE organization_id = $1 AND school_id = $2
+      WHERE organization_id = $1 AND school_id IS NOT DISTINCT FROM $2
         AND created_at >= $3
         AND outcome <> 'fallback_no_key'`,
     [scope.organizationId, scope.schoolId, sinceIso],
@@ -119,7 +121,7 @@ export async function sumSchoolCostMicrosSince(
   const rows = await db.queryObject<{ total: string | number }>(
     `SELECT coalesce(sum(estimated_cost_micros), 0)::bigint AS total
        FROM ai_call_log
-      WHERE organization_id = $1 AND school_id = $2
+      WHERE organization_id = $1 AND school_id IS NOT DISTINCT FROM $2
         AND created_at >= $3`,
     [scope.organizationId, scope.schoolId, sinceIso],
   );

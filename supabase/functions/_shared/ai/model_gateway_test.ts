@@ -2,6 +2,7 @@ import { assert, assertEquals } from "jsr:@std/assert@1";
 import type { ClaudeCallResult } from "./anthropic_client.ts";
 import type { AiRuntimeConfig } from "./ai_settings.ts";
 import type { AiCallLogEntry } from "./ai_call_log_repository.ts";
+import type { TenantQueryClient } from "../tenant_db.ts";
 import {
   callModelGateway as _callModelGateway,
   decideGateway,
@@ -10,12 +11,26 @@ import {
   type GatewayContext,
   type GatewayDeps,
   type GatewayUsage,
+  governedModelText,
   resolveLimits,
   runGateway,
 } from "./model_gateway.ts";
 
 // keep the production export referenced (compile guard)
 const _ref = _callModelGateway;
+
+function clearAllAiEnv() {
+  for (
+    const k of [
+      "AI_PROVIDER",
+      "ANTHROPIC_API_KEY",
+      "OPENROUTER_API_KEY",
+      "AI_RATE_USER_PER_HOUR",
+      "AI_RATE_SCHOOL_PER_DAY",
+      "AI_MONTHLY_SPEND_CAP_MICROS",
+    ]
+  ) Deno.env.delete(k);
+}
 
 const CTX: GatewayContext = {
   organizationId: "org-1",
@@ -309,6 +324,40 @@ Deno.test("runGateway: cache miss → model called + write-through of the answer
   assertEquals(cacheWrites.length, 1);
   assertEquals(cacheWrites[0].payload, "real answer");
   clearLimitEnv();
+});
+
+Deno.test("runGateway: org-scoped call (null schoolId) logs an org-scoped row", async () => {
+  clearLimitEnv();
+  const { deps, records } = makeDeps({});
+  const orgCtx: GatewayContext = {
+    organizationId: "org-1",
+    schoolId: null,
+    userId: "u-1",
+    surface: "director_summary",
+  };
+  const r = await runGateway(orgCtx, { system: "s", messages: [] }, "FB", deps);
+  assertEquals(r.ok, true);
+  assertEquals(records[0].schoolId, null);
+  clearLimitEnv();
+});
+
+Deno.test("governedModelText returns null when the gateway cannot serve (no key)", async () => {
+  clearAllAiEnv();
+  const db = {
+    queryObject: (sql: string) =>
+      Promise.resolve(
+        sql.includes("count(") ? [{ n: 0 }] : sql.includes("sum(") ? [{ total: 0 }] : [],
+      ),
+    // deno-lint-ignore no-explicit-any
+  } as any as TenantQueryClient;
+  const text = await governedModelText(db, {
+    organizationId: "org-1",
+    schoolId: null,
+    userId: "u-1",
+    surface: "director_summary",
+  }, { system: "s", messages: [] });
+  assertEquals(text, null);
+  clearAllAiEnv();
 });
 
 Deno.test("runGateway: telemetry failure never breaks the user path", async () => {
