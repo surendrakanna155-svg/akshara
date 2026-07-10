@@ -34,32 +34,66 @@ class SelectionResult:
 # (equally-important) concepts → cross-paper variety WITHOUT sacrificing importance ordering.
 IMPORTANCE_TIERS = 4
 
+# Composite importance signal (Phase 4). Exam frequency stays PRIMARY; PYQ recency, concept-graph
+# centrality (already computed in the pool, previously unused in ranking) and evidence authority
+# (named-law / definition / multi-pattern breadth) are additive modifiers. Deterministic:
+# recency is measured against the corpus's own latest year, never the wall clock.
+# Modifier weights are deliberately SMALL so exam frequency stays clearly primary: each modifier
+# differentiates similar-frequency concepts and breaks ties, but a real frequency gap still wins.
+_RECENCY_WINDOW = 12      # a PYQ this many years older than the corpus's latest counts for ~0
+_GRAPH_CAP = 10           # cap a hub concept's centrality contribution so it can't dominate
+_W_RECENCY, _W_GRAPH, _W_AUTHORITY = 1.0, 0.25, 0.3
+
 
 def _seed_hash(concept_code: str, seed: int) -> int:
     return int(hashlib.sha256(f"{concept_code}|{seed}".encode()).hexdigest()[:12], 16)
 
 
-def _tier_map(cands: List[Candidate], n: int = IMPORTANCE_TIERS) -> Dict[str, int]:
-    """Bucket candidates of one type into n equal-size importance tiers by frequency RANK
-    (tier 0 = top quantile of exam-importance). Rank-based (not ratio-to-max) so a power-law
-    frequency distribution still spreads concepts across tiers — giving the seed real room to
-    vary selection within a tier while keeping quality (tier 0 stays the most important)."""
-    ordered = sorted(cands, key=lambda c: (-c.frequency, c.concept_code))
+def _recency(years: List[int], ref_year) -> float:
+    """Weighted count of appearances, recent PYQs weighing more (linear decay over the window).
+    0 when there is no year evidence (e.g. descriptive candidates) or no reference year."""
+    if not years or ref_year is None:
+        return 0.0
+    return sum(max(0.0, 1.0 - (ref_year - y) / _RECENCY_WINDOW) for y in years)
+
+
+def importance_score(cand: Candidate, ref_year) -> float:
+    """Deterministic composite importance: frequency (primary) + recency + graph centrality +
+    evidence authority. Higher = more important. Used for tiering and the within-tier tie-break."""
+    freq = cand.frequency or 0
+    centrality = min(cand.graph_degree or 0, _GRAPH_CAP)
+    authority = max(0, (cand.evidence or 0) - freq)     # law/def/breadth beyond raw frequency
+    return (freq + _W_RECENCY * _recency(cand.years, ref_year)
+            + _W_GRAPH * centrality + _W_AUTHORITY * authority)
+
+
+def _ref_year(pool: List[Candidate]):
+    """The corpus's latest PYQ year (data-driven, so recency stays deterministic + wall-clock-free)."""
+    years = [y for c in pool for y in (c.years or ())]
+    return max(years) if years else None
+
+
+def _tier_map(cands: List[Candidate], score_of: Dict[str, float], n: int = IMPORTANCE_TIERS) -> Dict[str, int]:
+    """Bucket candidates of one type into n equal-size importance tiers by composite-score RANK
+    (tier 0 = top quantile of importance). Rank-based (not ratio-to-max) so a power-law
+    distribution still spreads concepts across tiers — giving the seed real room to vary
+    selection within a tier while keeping quality (tier 0 stays the most important)."""
+    ordered = sorted(cands, key=lambda c: (-score_of[c.key], c.concept_code))
     size = max(1, math.ceil(len(ordered) / n))
     return {c.key: min(n - 1, i // size) for i, c in enumerate(ordered)}
 
 
 def _priority(cand: Candidate, seed: int, subject_usage: Dict[str, int],
-              chapter_usage: Dict[str, int], tier: int):
+              chapter_usage: Dict[str, int], tier: int, score: float):
     """Lower = picked first: balance subjects → balance chapters → importance tier → SEEDED
-    order (variety) → frequency → stable id. Subject and chapter coverage are balanced first,
-    so every paper spreads across the syllabus; the seed drives variety within a tier."""
+    order (variety) → composite importance → stable id. Subject and chapter coverage are balanced
+    first, so every paper spreads across the syllabus; the seed drives variety within a tier."""
     return (
         subject_usage.get(cand.subject, 0),    # per-paper subject balance
         chapter_usage.get(cand.chapter, 0),    # per-paper chapter/topic balance
-        tier,                                  # importance tier (quality preserved)
+        tier,                                  # importance tier (graph + recency + evidence + freq)
         _seed_hash(cand.concept_code, seed),   # SEED drives which concepts of a tier are chosen
-        -cand.frequency,                       # within tier+seed, prefer higher frequency
+        -round(score, 6),                      # within tier+seed, prefer higher composite importance
         cand.concept_code,                     # final stable tie-break (reproducible)
     )
 
@@ -67,6 +101,8 @@ def _priority(cand: Candidate, seed: int, subject_usage: Dict[str, int],
 def select(blueprint: Blueprint, pool: List[Candidate], request: PaperRequest,
            scope: SyllabusScope) -> SelectionResult:
     exclude = set(request.exclude_concepts or ())
+    ref_year = _ref_year(pool)
+    score_of: Dict[str, float] = {c.key: importance_score(c, ref_year) for c in pool}
     by_type: Dict[str, List[Candidate]] = {}
     for c in pool:
         if c.concept_code in exclude:          # cross-paper non-overlap (Set A/B / series)
@@ -74,7 +110,7 @@ def select(blueprint: Blueprint, pool: List[Candidate], request: PaperRequest,
         by_type.setdefault(c.question_type, []).append(c)
     tier_of: Dict[str, int] = {}
     for cands in by_type.values():
-        tier_of.update(_tier_map(cands))
+        tier_of.update(_tier_map(cands, score_of))
 
     res = SelectionResult()
     subject_usage: Dict[str, int] = {}
@@ -98,7 +134,7 @@ def select(blueprint: Blueprint, pool: List[Candidate], request: PaperRequest,
             for k in relaxed_here:
                 relaxed[k] += 1
             best = min(bucket, key=lambda c: _priority(c, request.seed, subject_usage,
-                                                       chapter_usage, tier_of[c.key]))
+                                                       chapter_usage, tier_of[c.key], score_of[c.key]))
             number += 1
             picked += 1
             res.used_concepts.add(best.concept_code)
@@ -113,6 +149,8 @@ def select(blueprint: Blueprint, pool: List[Candidate], request: PaperRequest,
                 provenance={"frequency": best.frequency, "years": best.years, "source": best.source,
                             "pattern_id": best.pattern_id, "exam": scope.exam_profile,
                             "graph_degree": best.graph_degree, "chapter": best.chapter,
+                            "importance_score": round(score_of[best.key], 4),
+                            "recency": round(_recency(best.years, ref_year), 4),
                             "requested_difficulty": cell.difficulty, "requested_bloom": cell.bloom,
                             "difficulty_met": (not cell.difficulty) or best.difficulty == cell.difficulty,
                             "bloom_met": (not cell.bloom) or best.bloom == cell.bloom}))
