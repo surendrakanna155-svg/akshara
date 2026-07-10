@@ -5,6 +5,7 @@
 **Consolidates (and supersedes as the forward plan):** `docs/audits/MASTER_EXECUTION_ROADMAP.md`, `docs/audits/FABLE_FINAL_ROADMAP.md`, and the Phase B/C/D of `docs/FINAL_QA_ROADMAP.md`.
 **Source of truth inputs:** `docs/audits/00`–`11`, `docs/audits/AUDIT_FINDINGS_LEDGER.md`, `docs/strategy/*`, `docs/design/adaptive-ai/00`–`09` (Phase-3 implementation suite), `docs/engineering/eos/*`, owner decisions O1–O10 + freezes.
 **Companions:** [`AUTONOMOUS_EXECUTION_PLAN.md`](AUTONOMOUS_EXECUTION_PLAN.md) (how it runs) · [`../execution/IMPLEMENTATION_PROGRESS.md`](../execution/IMPLEMENTATION_PROGRESS.md) (the journal).
+**Reconciled:** 🔄 **RECON-1 (2026-07-10, tip `7224782d`)** — tracking synced to repository reality (owner-approved). Adds: the 🔶/🟩 states, the **Wave Ledger (§0b, derived progress — never hand-estimated)**, **P0-LIVE-1** (consolidated live checklist), the **P1 gap-sweep record**, **P3-AI-3** (W2 hardening & closure), the **Knowledge Lane (K-1..K-4)**, the **CFC-1 Code-Freeze-Checklist + FREEZE-1 Feature-Freeze gates**, and **P6-VAL-1 / P6-BETA-1** (final E2E validation + Beta Schools). **No phase removed or reordered; no EOS gate or recovery checkpoint weakened; execution philosophy unchanged.**
 
 > **Governance (absolute):** every wave is EOS-gated. **No phase continues unless `/eos` returns PASS.**
 > Frozen owner decisions (O1–O10, identity freeze, attendance-auth, English-first) are respected
@@ -16,28 +17,53 @@
 ## Legend
 
 - **Priority:** 🔴 Critical · 🟠 High · 🟡 Medium · 🟢 Low
-- **Status:** ✅ Already Complete · 🔵 In Progress · ⚪ Pending · ⏸ Deferred · 👤 Owner Decision · 🔮 Future Version
+- **Status:** ✅ Already Complete · 🔶 **Implementation Complete — Hardening In Progress** (built + audited, but repeated audits are still finding issues; **NOT production-certified**) · 🟩 **Production Certified** (LIVE-grade evidence; granted **only by P7** — interim live-verified items are noted per-task, never phase-wide) · 🔵 In Progress · ⚪ Pending · ⏸ Deferred · 👤 Owner Decision · 🔮 Future Version
+- **State law:** *Implementation Complete ≠ Production Complete.* A 🔶 item may not be described as "done/ready/shipped"; it graduates to ✅ only when its hardening loop exits (repeated audits find no meaningful issues), and to 🟩 only via P7.
 - **Category:** CODE · UI/UX · INFRA · DOCS · TEST · SEC · AI · PILOT · CERT
 - **Complexity:** S (≤2d) · M (~1wk) · L (>1wk)
 - **EOS gate:** the scope `/eos` must PASS before the task/wave is "done."
 
 ---
 
-## 0. Progress dashboard
+## 0. Progress dashboard  (reconciled RECON-1, 2026-07-10)
 
 | Phase | Title | Priority | Status | Gate |
 |---|---|---|---|---|
-| **P0** | Truth · Documentation · Live Verification | 🔴 | 🔵 In Progress — **W1 Documentation Truth ✅ (2026-07-04)**; W2 Safety Fixes next | EOS PASS per task |
-| **P1** | Remaining Backend & Code Fixes | 🟠 | ⚪ Pending | EOS PASS per wave |
-| **P2** | UI / UX Improvements | 🟠 | ⚪ Pending | EOS PASS per wave |
-| **P3** | Adaptive AI Implementation | 🟡 | ⚪ Pending | EOS PASS per wave |
-| **P4** | Global Red Team Preparation | 🔴 | ⚪ Pending | Framework ready |
+| **RECON** | Roadmap Reconciliation (RECON-1) | 🔴 | ✅ Complete (2026-07-10) — tracking-only, no implementation | EOS DOCS PASS |
+| **P0** | Truth · Documentation · Live Verification | 🔴 | 🔵 — W1 ✅ · W2 ✅ (14/19 tasks) · **P0-LIVE-1 ⚪ (consolidated live checklist, absorbs W3; 4/13 items already live-verified 2026-07-09)** | EOS PASS per task |
+| **P1** | Remaining Backend & Code Fixes | 🟠 | 🔵 — non-gated lane ✅ (CODE-1/2/3/5 · PROD-0 · C1–C21 · CI-0 · **GS-1..3 gap-sweeps**); open: CODE-4/6/7/8 👤 · **PROD-22 Face ID (Must-Before-GA — schedule now)** · SEC-1 · TEST-1/2 | EOS PASS per wave |
+| **P2** | UI / UX Improvements | 🟠 | ✅ Complete (2026-07-08, UX-1..5) | EOS UX PASS |
+| **P3** | Adaptive AI Implementation | 🟡 | 🔵 — **W1 (P3-AI-1) ✅ CERTIFIED (2026-07-10)** · **W2 (P3-AI-2) 🔶 hardening in progress** · P3-AI-3 closure ⚪ | EOS AI per sub-wave |
+| **K** | Knowledge Lane — KIE + QP Engine | 🟡 | 🔶 — K-1 KIE ✅ (local) · **K-2 QP hardening 🔶** · K-3 promotion 👤 (not GA-gating) · K-4 re-cert ⚪ | K-gates |
+| **CFC** | Code Freeze Checklist (quality gate) | 🔴 | ⚪ — mandatory before FREEZE-1 | CFC-1 PASS |
+| **FREEZE** | Feature Freeze | 🔴 | ⚪ — entry: CFC-1 PASS | FREEZE declared |
+| **P4** | Global Red Team Preparation | 🔴 | ⚪ — entry: FREEZE-1 | Framework ready |
 | **P5** | Red Team Fixes | 🔴 | ⚪ Pending | EOS PASS + live re-verify |
-| **P6** | Pilot School Simulation | 🔴 | ⚪ Pending | PILOT-READY gate |
-| **P7** | Production Certification | 🔴 | ⚪ Pending | GA gates PASS |
+| **P6** | Final Validation · Pilot · Beta Schools | 🔴 | ⚪ — **VAL-1 → PILOT-1 → BETA-1** (strictly in order) | VAL PASS → PILOT-READY → BETA PASS |
+| **P7** | Production Certification | 🔴 | ⚪ — repeated audit rounds until no meaningful findings | GA gates PASS |
 | **P8** | GA Readiness & Launch | 🔴 | ⚪ Pending | GA declared |
 
+### 0b. Wave Ledger — derived progress (automatic, never estimated)
+
+**Formula (law):** progress = Σ wave credit ÷ Σ wave units, where ✅ = 1.0 · 🔶 = 0.5 · every other state = 0. Update a wave's status and the % follows — Mission Control and the Execution Dashboard mirror this ledger and must never carry a hand-set percentage.
+
+| Lane | Units | ✅ | 🔶 | Credit |
+|---|---:|---:|---:|---:|
+| Gates (RECON-1 · CFC-1 · FREEZE-1) | 3 | 1 | 0 | 1.0 |
+| P0 (W1 · W2 · LIVE-1) | 3 | 2 | 0 | 2.0 |
+| P1 (13 base + 22 PROD + GS-1..3) | 38 | 27 | 0 | 27.0 |
+| P2 (UX-1..5) | 5 | 5 | 0 | 5.0 |
+| P3 (W1.1–1.5 · W2.0/GATE/S · W2.1–2.9 · AI-3) | 18 | 5 | 8 | 9.0 |
+| K (K-1..K-4) | 4 | 1 | 1 | 1.5 |
+| P4 | 2 | 0 | 0 | 0 |
+| P5 | 1 | 0 | 0 | 0 |
+| P6 (VAL-1 · PILOT-1 · BETA-1) | 3 | 0 | 0 | 0 |
+| P7 | 1 | 0 | 0 | 0 |
+| P8 | 5 | 0 | 0 | 0 |
+| **Total** | **83** | **41** | **9** | **45.5 → 54.8%** |
+
 **Already-verified-live during the audit (do NOT restart):** tenant RLS isolation (QA-2/LV-11), edge uses `erp_tenant` NOBYPASSRLS (DB-2), entitlement enforcement ON (ENG-2/OPS-5), automated encrypted backups + monthly restore drill (LV-2/LV-8), watchdog running (LV-9), AI live via OpenRouter (AI-4 part), live DB password rotated (DB-1 live), `inventory_stock_valuations` WITH-CHECK fix. See ledger §A.
+**Additionally live-verified 2026-07-09 (do NOT restart):** production deploy of the full 44-migration backlog (prod `akshara_db` → `20260866`) + edge redeploy `2568ff9b` with all `/health` green (`8c98e3b3`) · post-deploy broad smoke 34/36 reads, 0 server errors (`cc7c4efb`) · live RLS cross-tenant probes — 12 QA-B rows PASS, 233/233 enforced probes, zero leaks (`33e52eaa`/`34d33995`) · nightly backup GREEN/restorable (`bd9ef023`) · `finance_fee_reductions` live certification (`docs/FINANCE_FEE_REDUCTIONS_LIVE_CERTIFICATION.md`). ⚠ **W1/W2 AI migrations (`20260867`+, incl. `20260873`) are NOT yet deployed** — see P0-LIVE-1 item ①.
 
 ---
 
@@ -85,7 +111,7 @@
 - **Evidence:** release-binary scan. **EOS gate:** SEC PASS. **Done when:** no demo/mock auth in a prod build.
 
 ### P0-INFRA-1 · 🟠 · INFRA · Off-site backup (3-2-1)
-- **Depends:** — · **Complexity:** S · **Status:** ⚪ Pending · **Finding:** LV-3
+- **Depends:** 👤 owner creds (`RCLONE_REMOTE`) · **Complexity:** S · **Status:** 🔵 Staged — R2 template + runbook + dry-run done (`9378f2c1`, 2026-07-09); **executes as P0-LIVE-1 item ⑥** · **Finding:** LV-3
 - **Outcome:** `RCLONE_REMOTE` set + `rclone` installed + nightly encrypted push (script already off-site-ready).
 - **Evidence:** off-site object listing after a nightly run; `offsite=true` in backup.log. **EOS gate:** OPS PASS. **Done when:** a backup exists off-box.
 
@@ -102,7 +128,7 @@
 ### P0-INFRA-4 · 🟢 · INFRA · Fix backup script `$1` warning
 - **Depends:** — · **Complexity:** S · **Status:** ✅ Resolved in-repo (2026-07-04, P0·W2); live redeploy ⏳ deferred · **Finding:** LV-10
 - **Outcome:** the `$1` bug (line 35) is already `"${1:-}"` in-repo; all backup scripts `bash -n` clean; remaining `$1` uses are inside always-called-with-args functions. The live warning was a **stale deployed script** — clears on the next (live-lane) redeploy of the current script.
-- **Evidence:** `bash -n` clean on all 5 scripts; `git show HEAD:…:35` = `${1:-}`. **EOS gate:** OPS PASS. **Done when:** warning gone (repo ✅; live redeploy ⏳).
+- **Evidence:** `bash -n` clean on all 5 scripts; `git show HEAD:…:35` = `${1:-}`. **EOS gate:** OPS PASS. **Done when:** warning gone (repo ✅; **live leg ✅ cleared by the 2026-07-09 production redeploy — nightly backup verified GREEN post-deploy, `bd9ef023`**).
 
 ### P0-INFRA-5 · 🟡 · INFRA · Rotate DB password out of the migration
 - **Depends:** — · **Complexity:** S · **Status:** ✅ Complete (2026-07-04, P0·W2) · **Finding:** DB-1/OPS-6
@@ -112,7 +138,7 @@
 ### P0-INFRA-6 · 🟠 · INFRA · Deploy-time `erp_tenant` assertion
 - **Depends:** — · **Complexity:** S · **Status:** ✅ Code complete (2026-07-04, P0·W2); live assertion runs on next deploy ⏳ · **Finding:** DB-2
 - **Outcome:** `probeTenantConnection` now returns `role` + `bypassRls`; the pure `assertEdgeTenantRole()` rejects any role ≠ `erp_tenant` or `rolbypassrls=true` (e.g. `service_role`); `/health/tenant-access` returns **503** on a wrong role and `production_launch_verify.sh` asserts it → **the deploy fails if the role is wrong**.
-- **Evidence:** `tenant_db_test` +4 assertion tests; health/tenant tests 14/0; api entrypoint typechecks; verify-script `bash -n` clean. **EOS gate:** SEC PASS. **Done when:** deploy fails if the role is wrong (code ✅; live run ⏳ on the deferred live lane).
+- **Evidence:** `tenant_db_test` +4 assertion tests; health/tenant tests 14/0; api entrypoint typechecks; verify-script `bash -n` clean. **EOS gate:** SEC PASS. **Done when:** deploy fails if the role is wrong (code ✅; **live run ✅ 2026-07-09 — production deploy `8c98e3b3` with all `/health` green, including the tenant-role assertion**).
 
 ### P0-CODE-1 · 🟠 · CODE · Enforce finance `row_version`/409 (money lost-update)
 - **Depends:** — · **Complexity:** M · **Status:** ✅ Complete (2026-07-04, P0·W2) · **Finding:** ENG-1
@@ -124,22 +150,40 @@
 - **Outcome:** the 8 backend-less surfaces (Workflow / Academic-Ops / Continuity / Platform-Intel / Platform-Ops / Multi-School-Ops / Verticals / White-Label) are **route-guarded OFF in a live build** when their API flag is off — new `isBackendLessSurfaceHidden()` gate wired into `ErpRouteGuard` (blocks deep-links → `AccessDeniedScreen`) and the management/SIS/control-center sub-navs (drops dead tabs). No-op in local/mock builds. (Alumni/Hostel scope = MOD-5/6 → P1-CODE-7/8, separate owner scope.)
 - **Evidence:** `surface_backend_gate_test` (local visible · live+flag-off hidden across all 8 · live+flag-on visible · backed routes never hidden); `flutter analyze` 0. **EOS gate:** FEATURE PASS. **Done when:** no mock surface reachable in a prod build ✅.
 
-### P0-TEST-1 · 🟠 · TEST · CI on the working branch
+### P0-TEST-1 · 🟠 · TEST · CI on the working branch  *(→ executes as P0-LIVE-1 item ⑧)*
 - **Depends:** — · **Complexity:** S · **Status:** ⚪ Pending · **Finding:** QA-3
 - **Outcome:** CI runs on the branch (or a gated branch); first green run IDs captured.
 - **Evidence:** committed run IDs. **EOS gate:** CI PASS. **Done when:** analyze+tests+coverage gate green in CI.
 
-### P0-TEST-2 · 🟠 · TEST · Wire the 233-probe isolation suite into CI
-- **Depends:** P0-TEST-1 · **Complexity:** M · **Status:** ⚪ Pending (isolation proven live once) · **Finding:** QA-2, QA-7(part)
+### P0-TEST-2 · 🟠 · TEST · Wire the 233-probe isolation suite into CI  *(→ executes as P0-LIVE-1 item ⑨)*
+- **Depends:** P0-TEST-1 · **Complexity:** M · **Status:** ⚪ Pending (isolation proven live **twice** — audit 2026-07-03 + VPS probe run 2026-07-09 `33e52eaa`: 12 QA-B rows, 233/233, zero leaks; CI wiring still missing) · **Finding:** QA-2, QA-7(part)
 - **Outcome:** `tenant_isolation_enforced_test.ts` runs against a throwaway tenant DB in CI.
 - **Evidence:** green CI run of 233 probes. **EOS gate:** SECURITY PASS. **Done when:** isolation regression is guarded.
 
-### P0-TEST-3 · 🟠 · TEST · Live-regression cron + 7-day-green clock
+### P0-TEST-3 · 🟠 · TEST · Live-regression cron + 7-day-green clock  *(→ executes as P0-LIVE-1 item ⑩ — calendar-critical: gates P7)*
 - **Depends:** P0-TEST-1 · **Complexity:** S · **Status:** ⚪ Pending · **Finding:** QA-3
 - **Outcome:** nightly live-regression running; the 7-consecutive-day clock started.
 - **Evidence:** cron logs; day-count. **EOS gate:** CI PASS. **Done when:** cron green and counting (GA prereq).
 
-**PHASE 0 EXIT (EOS gate):** docs truthful; no over-claim; release fail-closed; off-site+WAL+alerts live; money row_version enforced; no mock surface reachable; CI green on branch; isolation suite in CI; cron clock started.
+### P0-LIVE-1 · 🔴 · INFRA/TEST · **Consolidated Live Deployment & Verification wave** (absorbs P0·W3; added at RECON-1)
+- **Depends:** 👤 owner (R2 creds · `INTERNAL_CRON_TOKEN` · CI runner) · **Complexity:** M · **Status:** ⚪ — **4/13 items already live-verified 2026-07-09** · **Finding:** LV-3/LV-6, QA-2/QA-3 + the accumulated W1/W2 deploy queue
+- **Checklist (each item needs LIVE evidence; this is the ONE deploy queue — nothing lives outside it):**
+  ① deploy the W1/W2 AI migrations (`20260867`+, incl. `20260873` ai_persona_memory RLS) + edge redeploy — **must reach production BEFORE the W2 release flag (`ce1e886f`) reaches any live build** (sequencing guard) ·
+  ② schedule the outbox drain so the Signal Refinery fires (W1.4 live leg) ·
+  ③ COM-4 scheduled-broadcast cron (`INTERNAL_CRON_TOKEN` — token support already live, `3e266d2f`) ·
+  ④ reminder crons (XCT-2 rail consumers) ·
+  ⑤ run the live `ai_*` isolation probes (+5, extending the 233-probe suite) ·
+  ⑥ off-site R2 push live (`offsite=true` — P0-INFRA-1) ·
+  ⑦ watchdog alert delivery to a human sink (P0-INFRA-3) ·
+  ⑧ CI on the branch (P0-TEST-1) ·
+  ⑨ isolation suite in CI (P0-TEST-2) ·
+  ⑩ nightly live-regression cron + **start the 7-day-green clock** (P0-TEST-3) ·
+  ⑪ backup-script live redeploy — **✅ 2026-07-09** ·
+  ⑫ tenant-role deploy assertion live run — **✅ 2026-07-09** ·
+  ⑬ live RLS cross-tenant probe set — **✅ 2026-07-09 (zero leaks)** · (+ nightly backup GREEN + prod at `20260866` + broad smoke 34/36 — **✅ 2026-07-09**)
+- **Evidence:** per-item live artifacts committed. **EOS gate:** OPS+SECURITY+CI PASS. **Done when:** all 13 live-verified and the 7-day clock is counting.
+
+**PHASE 0 EXIT (EOS gate):** docs truthful; no over-claim; release fail-closed; money row_version enforced; no mock surface reachable; **P0-LIVE-1 checklist fully live-verified** (off-site + alerts + crons + CI + isolation-in-CI + AI migrations deployed) and the 7-day clock started.
 
 ---
 
@@ -159,7 +203,8 @@
 | **P1-CODE-8** | 🟢 | CODE | Alumni — graduation auto-population + Finance link, or keep hidden | 👤 | M | 👤 | MOD-5 | scope-decided + built/hidden | FEATURE PASS |
 | **P1-PROD-0** | 🟠 | CODE | XCT foundations: shared export pipeline · reminder/scheduling rail · date pickers | P0 | L | ✅ `83bc267` | XCT-1/2/3 | ≥3 real exports; ≥1 in-app reminder fires; date pickers | FOUNDATION PASS (2026-07-04) |
 | **P1-PROD-1..21** | 🟠/🟡 | CODE | Frozen enhancement backlog waves C1–C21 (Finance recovery CRM, Exams fast-marks/tabulation, Academic registers+certs, Homework core, Transport fleet/fee, Inventory, Library, Communication, Principal/Director/Parent productivity). **Wave decomposition (normative):** the C0–C21 wave table + per-wave completion criteria in `docs/FINAL_QA_ROADMAP.md` §Phase C remain the authoritative grouping (retained for this purpose despite that file's superseded banner); item scope = the frozen backlog (rev 5) | P1-PROD-0; 👤 Appendix A | var | **C1 `c1b9feb` · C2 `fa30e00` · C4 verified · C5 `1fc6104` · C7 `524105e` · C8 verified · C9 `2ecee77` · C10 `7c9294b` · C11 `10f8461` · C12 `2bd7ecd` · C13-Exams `0a8c2a3` · C14 `9e5602a` · C15 `4b65ce1` · C16 `5eba37d` · C17 `d5edab9c` · C18 `c2306daa` · C19 verified · C20 `8cd8743` · C21 `799713f1` — C1–C21 all ✅** (+ P1-CI-0 curriculum-engine seam `ba47f065` ✅ — tracked in EOS ledger) / C3 ⏳ (GA-1 live) · C6 + C13-homework 👤 (HWK-1 schema change) · tracked `TRN9-DEDUPE`, `PRI1-CLIENT-TEST` | PRODUCT_ENHANCEMENT_BACKLOG | per-wave completion criteria per the C-wave table | per-wave EOS PASS |
-| **P1-PROD-22** | 🟠 | CODE | **Staff attendance (Face ID) Must-Before-GA track:** GA-1 geofence + anti-mock GPS + live-camera-face check-in/out per the frozen `docs/ATTENDANCE_AUTH_DESIGN_DECISION.md` (**re-implements** the superseded device-biometric O5 build; NEVER OS biometric/PIN) · GA-2 manual request/close (maker-checker, audited) · GA-3 principal real-time summary (+ TCH-9 "My Attendance", HR-6 muster = old wave C3). Frozen config GA-D1..D4 apply. **GA blocker** — pilot Stage 12 exercises it | P0; XCT-1 | L | ⚪ | Backlog §Must-Before-GA; attendance-auth freeze | check-in/out live on the corrected auth; manual flows audited; summary rolls up; no device-biometric path | FEATURE+SEC PASS |
+| **P1-GS-1..3** | 🟠 | CODE/SEC | **Gap-sweep waves (recorded at RECON-1):** GS-1+GS-2 (3 SoD holes closed — PO self-approval `13c6b45e` · exam-publish override permission `4df49398` · attendance-% unified to ONE canonical formula `e1fa8017`/`05c7dbd8`/`6d4100ac` · finance aging/waiveLateFee `2aeda21a` · **discounts/scholarships→billing via two-person maker-checker** `b3a9b5e2` · 4 ISO-COUNT tripwires repaired · Management-hide false-positive reverted `34fb2e82`) · GS-3 final gap-sweep + P2 cleanup (3 P0 + 7 P1 **built**, 4 false positives discarded by verify-first, 1 DS regression caught+fixed at re-cert `db54ed0c`; student-read RLS `20260866`) | — | M | ✅ (2026-07-09) | gap-sweep discovery | `docs/GAP_SWEEP_CERTIFICATION.md`; full financial-flow regression PASSED; deno `_shared` 2409/0 · flutter 3766/0 · goldens 70/70 | SECURITY+FEATURE PASS |
+| **P1-PROD-22** | 🟠 | CODE | **Staff attendance (Face ID) Must-Before-GA track:** GA-1 geofence + anti-mock GPS + live-camera-face check-in/out per the frozen `docs/ATTENDANCE_AUTH_DESIGN_DECISION.md` (**re-implements** the superseded device-biometric O5 build; NEVER OS biometric/PIN) · GA-2 manual request/close (maker-checker, audited) · GA-3 principal real-time summary (+ TCH-9 "My Attendance", HR-6 muster = old wave C3). Frozen config GA-D1..D4 apply. **GA blocker** — pilot Stage 12 exercises it | P0; XCT-1 | L | ⚪ **schedule immediately — the largest un-started Must-Before-GA build; must land before P6-PILOT-1 Stage 12** | Backlog §Must-Before-GA; attendance-auth freeze | check-in/out live on the corrected auth; manual flows audited; summary rolls up; no device-biometric path | FEATURE+SEC PASS |
 | **P1-SEC-1** | 🟡 | SEC | Session-revoke live-proof; TLS cert pinning; root/jailbreak + optional biometric app-lock; apply Google-Cloud API-key app restrictions to the committed Firebase Android client key (audit 03 §5 hardening) | P0 | M | ⚪ | SEC-4,5,8 (+03 §5 prose) | revoke takes effect live; pinning; root signals; key restricted | SECURITY PASS |
 | **P1-TEST-1** | 🟠 | TEST | Real-device Patrol E2E; commit live-cert artifacts; close 34 P0 + 23 P1 unverified; router tests for 41 routers; fresh lcov | P0-TEST | L | ⚪ | QA-4,5,6,7,8 | device E2E green; artifacts committed; rows Verified-live | CI+QA PASS |
 | **P1-TEST-2** | 🟡 | TEST | Concurrent-load test the single edge isolate; fix hot N+1 report loops | P1 | M | ⚪ | ENG-6 | load numbers; no pool starvation | PERFORMANCE PASS |
@@ -187,8 +232,9 @@
 
 | ID | Pri | Cat | Description | Depends | Cx | Status | Finding | Done-when | EOS |
 |---|---|---|---|---|---|---|---|---|---|
-| **P3-AI-1** | 🟠 | AI | **Cost/safety foundation (build first):** response + semantic cache · rate-limit + spend-cap · request timeout → deterministic fallback · no-key health signal · prompt-injection hardening · event-driven cache invalidation · memory tables | P0 | L | ⚪ | AI-1,2,3,4(res),5 | ≥90% impressions served with 0 model calls; spend-cap enforced; timeout fallback | AI PASS |
-| **P3-AI-2** | 🟡 | AI | **Adaptive wave:** Priority Engine · per-persona routers (Teacher→Parent→Principal→Finance→Office→Director→Transport/Library/Inventory) · Recommendation Engine + accept/dismiss learning · dynamic role-aware dashboards on the Widget Platform · guarded draft-and-hold automation · rename deterministic "Intelligence"→"Analytics" | P3-AI-1; 👤 timing | L | ⚪ / 👤 | Adaptive-AI vision, AI-6 | dashboards adapt per school; per-persona AI live; cost bounded | AI PASS |
+| **P3-AI-1** | 🟠 | AI | **Cost/safety foundation (build first):** response + semantic cache · rate-limit + spend-cap · request timeout → deterministic fallback · no-key health signal · prompt-injection hardening · event-driven cache invalidation · memory tables | P0 | L | ✅ **CERTIFIED (2026-07-10)** — W1.1–W1.5 (`b38f3e6e`→`ea7f4807`) + residuals (ALL 8 legacy callers routed through the gateway; legacy `callClaude` **deleted** → gateway is the compiler-enforced sole model path) + completion pass **F1–F12** + adversarial re-audit **H1–H6**; **Final Certification v2: PASS / implementation-complete** (`docs/ADAPTIVE_AI_W1_CERTIFICATION_REPORT.md`, `56f780a1`). 2 non-code follow-ons → **P0-LIVE-1 ②⑤** | AI-1,2,3,4(res),5 | ≥90% impressions served with 0 model calls; spend-cap enforced; timeout fallback | AI PASS ✅ |
+| **P3-AI-2** | 🟡 | AI | **Adaptive wave:** Priority Engine · per-persona routers · Recommendation Engine + accept/dismiss learning · dynamic role-aware dashboards · guarded draft-and-hold automation · rename deterministic "Intelligence"→"Analytics" | P3-AI-1 ✅ | L | 🔶 **Implementation largely complete — HARDENING IN PROGRESS.** Done: W2.0a Priority (`2752be65`) · W2.0b Recommendation + persona memory (`9da6d505`) · W2-GATE-1 Domain Gate (`60fcb7ca`) · W2-GATE-2 Quick-Action Registry (`e55a0012`) · W2.S Universal Search (+staff/admissions) (`2868c0d2`/`918ec2fd`) · per-role copilot quotas (`95fd3adf`) · client phases 1–4 (`8926fb6b`→`08b991d7`/`2bead80e`) · Teacher/Parent/Student server-side feeds (`f8935d10`/`715fec3d`/`0762ffff`) · rollout-audit fix (`8d12e7dc`). **Audit loop OPEN** — P0-1/P1-1/P1-2 already found+fixed (`ce1e886f`/`cf32d1ab`/`7224782d`); more rounds required. **Open:** W2.1 briefs/digests (ops-gated) · W2.7 ops worklists · W2.8 pgvector · W2.9 truth-in-naming (AI-6) · teacher-exam subject scoping (P2) · cost-panel client binding · migrations `20260867`+/`20260873` **not deployed** (→ LIVE-1 ①) | Adaptive-AI vision, AI-6 | dashboards adapt per school; per-persona AI live; cost bounded | AI PASS (per closed sub-wave) |
+| **P3-AI-3** | 🟠 | AI | **W2 Hardening & Closure (added at RECON-1):** mandatory pipeline — **Implementation → Hardening → Repeated audit → Regression → Re-audit → Production certification.** Each round = independent audit → fix every meaningful finding → full regression (analyze 0 · flutter no-new-fail · deno green) → re-audit. Closes W2.1/2.7/2.8/2.9 (or explicitly re-scopes them with owner sign-off), the open audit-round findings (P1/P2/P3 tail), teacher-exam subject scoping, and the cost-panel binding | P3-AI-2 🔶 | M–L | ⚪ | W2 audit rounds | **Exit = consecutive audit rounds find NO meaningful (P0/P1) issues** — never a fixed round count. W2 may not be called complete before this exits | AI PASS + hardening-exit |
 
 **P3 executes from the implementation-ready suite `docs/design/adaptive-ai/` (doc 09 is the wave contract).** P3-AI-1 = **W1** (foundation); P3-AI-2 = **W2** (adaptive); W3 = post-GA (P8-GA-5 register).
 
@@ -197,7 +243,49 @@
 - **⚠ Cross-phase dependencies (from doc 09 §0 — these move specific P1 items *before* the dependent P3 sub-wave):** W1.4 nightly jobs need **P1-PROD-0 / XCT-2**; homework intelligence needs **HWK-1**; fee-reminder ladders + recovery timing need **FIN-6**; transport compliance clock needs **TRN-2**; unified recovery-CRM scope needs **MOD-1 (👤)**; best-moment delivery + resend-to-unread need **COM-1**; Principal rollout (W2.4) needs the **P2 Principal-hub consolidation**; any live T3 behaviour needs the **P0 live-AI-key** verification.
 - **Standing AI test assets (built in W1, run every AI wave):** injection corpus · determinism validator (T3 numbers == injected facts) · `ai_*` isolation probes · cost-regression (no surface ships below its tier) · fallback drills (no-key/timeout/over-cap/over-rate).
 
-**PHASE 3 EXIT:** AI cost controls + cache live (AI-1..5 closed with tests); ≥90% zero-model-call impressions; per-school adaptivity evidenced; cost bounded under cap at pilot scale; AI-6 naming corrected.
+**PHASE 3 EXIT:** AI cost controls + cache live (AI-1..5 closed with tests); ≥90% zero-model-call impressions; per-school adaptivity evidenced; cost bounded under cap at pilot scale; AI-6 naming corrected; **P3-AI-3 hardening loop exited (repeated audits clean).** *P3 exit grants 🔶→✅ only — 🟩 Production Certified comes solely via P7.*
+
+---
+
+## KNOWLEDGE LANE — KIE + QP Engine  🟡  (added at RECON-1; parallel lane, disjoint ownership `curriculum/**`; **local-only — no production dependency**)
+
+*Born from the 2026-07-09 owner pivot ([[knowledge-intelligence-engine-pivot]]): the curriculum data lane became the JEE/NEET Knowledge Intelligence Engine. This lane runs parallel to the ERP phases and never blocks them. The separate school-board acquisition lane (deterministic Board→Class→Subject→DocType, Coverage Matrix SSOT `curriculum/reports/COVERAGE_MATRIX.md`, 14.1% and advancing) is hands-off per `curriculum/ACQUISITION_STRATEGY.md` — not a wave here.*
+
+| ID | Pri | Cat | Description | Depends | Cx | Status | Done-when | Gate |
+|---|---|---|---|---|---|---|---|---|
+| **K-1** | 🟡 | AI/CODE | **KIE core:** Phases 1–7 (verify+D-5 cert → parse/OCR → metadata → chunk+FTS5 → concepts → Concept Graph → Question Intelligence, copyright-safe) + **full 360-document corpus processed & CERTIFIED** (16/16 verification, `367c1361`) + **Knowledge Intake Center I0–I6** (incremental ingestion = SOLE entry for new knowledge; 360-doc corpus = immutable baseline; `4a360033`→`ee82af7c` + cert) | — | L | ✅ (2026-07-10) — **complete for the LOCAL knowledge repository; production promotion intentionally deferred (→ K-3)** | certs: `docs/knowledge-intelligence-engine/{FULL_REPOSITORY_PROCESSING_REPORT,KNOWLEDGE_INTAKE_CENTER_CERTIFICATION}.md`; 66+38 tests | KIE cert ✅ |
+| **K-2** | 🟡 | AI/CODE | **QP Engine Hardening Program:** engine Q1–Q8 built (`c234b931`→`012a2be3`) → dedicated audit found **2 P0 + 4 P1** (`QP_ENGINE_AUDIT_2026-07-10.md`) → **R1–R9 fixed all** → production-readiness cert **GO, 0 P0/P1/P2 open** (`QP_ENGINE_PRODUCTION_READINESS_CERTIFICATION.md` — *scoped to the current corpus/concept layer*). **Hardening continues** (Phase 1 landed `835f39e4`): sanitizer improvements · OCR artifact cleanup · **deterministic template expansion (substantial)** · **real Blueprint Library (CBSE · AP · TS · NEET · JEE Main · JEE Advanced)** · graph-degree utilization · recency weighting · difficulty + Bloom improvements · MCQ validation · AI validation (gated) · question/exam quality | K-1 | L | 🔶 **Implementation Complete — Hardening In Progress.** Runs as repeated **audit → fix → regression → re-audit** rounds | **Exit = 2 consecutive CLEAN independent audits → K-lane Feature Freeze.** Never a fixed round count | per-round audit + 196-test regression |
+| **K-3** | 🟡 | INFRA | **Promotion bridge:** `kie.intake` → Postgres `edu_*` (Intake promotion; local store already mirrors the `edu_*` shape) | K-2 exit; 👤 owner timing | M | 👤 — **explicitly NOT GA-gating**; the ERP pilot and GA do not depend on it | promotion runs additively; certified invariants intact; no prod curriculum import before owner go ([[curriculum-local-storage-decision]]) | MIGRATION+FEATURE PASS |
+| **K-4** | 🟡 | CERT | **Re-certification at K-lane freeze:** full engine + KIE regression (196+ tests) + one final independent audit on the frozen engine | K-2 exit | S | ⚪ | frozen-engine cert doc committed | K-lane cert |
+
+**KNOWLEDGE LANE EXIT:** K-2 hardening exited via 2 consecutive clean audits; K-4 re-cert committed; K-3 promoted only on owner go. *This lane's 🔶 items must never be reported as "production-ready" — the production-readiness cert's GO is scoped to the local corpus and promotion is deferred by design.*
+
+---
+
+## GATE CFC-1 — Code Freeze Checklist  🔴 CRITICAL  (added at RECON-1 — mandatory quality gate, NOT a development phase)
+
+**FREEZE-1 cannot be declared until every item below passes with committed evidence** (sweep artifacts / lint output / EOS ledger references):
+
+1. **No TODO/FIXME in production code** (`lib/**`, `supabase/functions/**` — swept, each hit resolved or explicitly waived by owner)
+2. **No mock repositories reachable in production builds** (release-flavor gate proven — extends P0-SEC-3/P0-CODE-2 evidence)
+3. **No fake/stub APIs enabled** (honest-status endpoints only; WhatsApp-style stubs clearly labelled or disabled)
+4. **No debug code** (no debug prints/flags/panels in release paths)
+5. **No temporary feature flags** (each flag promoted to permanent config or removed; **the W2 release flag `ce1e886f` must be deploy-sequenced via LIVE-1 ① before this passes**)
+6. **No commented-out production code**
+7. **No temporary bypasses** (auth/RBAC/validation shortcuts — none)
+8. **No unfinished migrations** (repo migration head == deployed head; zero pending schema drift)
+9. **No uncommitted work** (clean tree across ALL lanes — ERP, AI, curriculum, docs)
+10. **No known open P0/P1 anywhere** (EOS run ledger + all audit-round logs clean)
+
+**Evidence:** per-item artifact committed under `docs/engineering/eos/`. **EOS gate:** RELEASE-scope PASS. **Done when:** all 10 green in one sweep on one commit.
+
+---
+
+## GATE FREEZE-1 — Feature Freeze  🔴 CRITICAL  (added at RECON-1)
+
+- **Entry:** CFC-1 PASS **+** P3-AI-3 hardening exit **+** K-2 hardening exit *(or an explicit owner carve-out excluding the K lane from the ERP freeze — surface as an owner decision)*.
+- **After FREEZE-1, NO NEW FEATURES.** Only: bug fixes · regression fixes · performance · security · quality · stability.
+- **Gates P4-RT-0.** Any feature request after freeze goes to the post-GA register (P8-GA-5), never into P4–P8.
 
 ---
 
@@ -205,10 +293,10 @@
 
 | ID | Pri | Cat | Description | Depends | Cx | Status | Done-when | EOS |
 |---|---|---|---|---|---|---|---|---|
-| **P4-RT-0** | 🔴 | TEST | Prepare the Red Team: freeze honest re-scoped claims (P0-DOC-4), stand up domain operators, seed attacks from the audit's confirmed+flagged risks, ready staging/throwaway tenants | Phases 0–3 substantially done | M | ⚪ | 12 domains scoped, operators + fixtures ready | READINESS PASS |
-| **P4-RT-1** | 🔴 | TEST/SEC | Execute the 12-domain adversarial assault (security, isolation, money, AI abuse, UX, workflow, ops, DR, corruption, concurrency, performance, human-error); adversarially verify every finding; loop-until-dry | P4-RT-0 | L | ⚪ | verdict rendered; findings → P5 tasks | RED-TEAM verdict |
+| **P4-RT-0** | 🔴 | TEST | Prepare the Red Team: freeze honest re-scoped claims (P0-DOC-4), stand up domain operators, seed attacks from the audit's confirmed+flagged risks, ready staging/throwaway tenants. **RECON-1 addition — refresh the attack seeds for the post-W2 surface:** persona feeds (T/P/S/Principal/Director), Universal Search RBAC scoping, per-role copilot quotas, prompt-injection on every new AI entry point, Domain-Gate bypass attempts, and (if K-3 promoted) the QP/KIE surface | **FREEZE-1** (Phases 0–3 hardened + code-frozen) | M | ⚪ | 12 domains scoped, operators + fixtures ready, seeds current | READINESS PASS |
+| **P4-RT-1** | 🔴 | TEST/SEC | Execute the 12-domain adversarial assault (security, isolation, money, AI abuse, UX, workflow, ops, DR, corruption, concurrency, performance, human-error); adversarially verify every finding; loop-until-dry. **RECON-1 strengthening — full product hardening, per subsystem:** for EACH of **ERP · Adaptive AI · Knowledge/QP Engine · Assessment seams · Flutter client · Backend · Database · Security · Performance · API · UI · UX**, run **audit → fix (P5) → regression → re-audit** and repeat | P4-RT-0 | L | ⚪ | verdict rendered; findings → P5 tasks | RED-TEAM verdict |
 
-**PHASE 4 EXIT:** all 12 domains run; converged; every finding adversarially verified and severity-rated.
+**PHASE 4 EXIT:** all 12 domains run; converged; every finding adversarially verified and severity-rated. **Round law (mandatory):** a single audit pass is NEVER sufficient — project history shows every audit finds new issues. Rounds continue (Round 1 → fix → regression → Round 2 → fix → regression → Round 3 → …) and **the exit condition is "repeated audits are no longer finding meaningful production issues" — never a fixed round count.**
 
 ---
 
@@ -222,13 +310,15 @@
 
 ---
 
-## PHASE 6 — Pilot School Simulation  🔴 CRITICAL  (blueprint: `docs/strategy/PILOT_SCHOOL_SIMULATION_MASTER.md`)
+## PHASE 6 — Final Validation · Pilot · Beta Schools  🔴 CRITICAL  (blueprint: `docs/strategy/PILOT_SCHOOL_SIMULATION_MASTER.md`; VAL-1 + BETA-1 added at RECON-1 — pilot itself unmoved)
 
 | ID | Pri | Cat | Description | Depends | Cx | Status | Done-when | EOS |
 |---|---|---|---|---|---|---|---|---|
-| **P6-PILOT-1** | 🔴 | PILOT | Unattended full-year live sim (single + 3-school concurrent): all stages 0–16 per the blueprint, real auth/DB/RBAC/gateway; confirm money loop, isolation under concurrency, DR drill, alerts, no mock surface, AI cost controls | Phase 0 + Phase 1 + **P3-AI-1** (its done-when requires the AI cost controls) + Phase 5 | L | ⚪ | all stages green unattended; evidence committed | `QA-R-001/002` live PASS → **PILOT-READY** |
+| **P6-VAL-1** | 🔴 | TEST | **Final End-to-End Validation (dedicated pre-pilot gate — treat as the final internal certification):** ALL persona journeys (Parent · Teacher · Student · Principal · Director · Finance · Admissions · Transport · Library · Hostel · HR) · multi-school + cross-role + cross-school workflows · Patrol automation · manual exploratory testing · real-user simulation · load testing · stress testing · recovery testing · offline testing · performance testing · accessibility · UI polish · UX polish · security audit · failure testing · edge-case testing. **Runs as repeated rounds** (Round N audit → fix → regression → Round N+1) | Phase 5 exit | L | ⚪ | **exit = one full round with no meaningful findings. NOTHING proceeds until this passes** | VAL PASS |
+| **P6-PILOT-1** | 🔴 | PILOT | **Internal Pilot** — unattended full-year live sim (single + 3-school concurrent): all stages 0–16 per the blueprint, real auth/DB/RBAC/gateway; confirm money loop, isolation under concurrency, DR drill, alerts, no mock surface, AI cost controls (Stage 12 exercises **P1-PROD-22 Face ID** — it must be landed) | **P6-VAL-1** + Phase 0 (LIVE-1) + Phase 1 + **P3-AI-1 ✅** + Phase 5 | L | ⚪ | all stages green unattended; evidence committed | `QA-R-001/002` live PASS → **PILOT-READY** |
+| **P6-BETA-1** | 🔴 | PILOT | **Beta Schools (added at RECON-1):** 5–10 REAL schools — real teachers, parents, students, workflows, production-scale data. Collect feedback → triage → fix → **repeat if necessary** (feedback loop runs until stable) | P6-PILOT-1 (PILOT-READY); 👤 cohort recruitment + onboarding | L | ⚪ / 👤 | beta cohort stable in daily use; all beta-sourced P0/P1 closed; feedback triaged to closure | BETA PASS |
 
-**PHASE 6 EXIT:** declare **PILOT-READY**.
+**PHASE 6 EXIT:** P6-VAL-1 PASS → **PILOT-READY** declared → **BETA PASS** (real-school validation complete). Only then does P7 open.
 
 ---
 
@@ -236,9 +326,9 @@
 
 | ID | Pri | Cat | Description | Depends | Cx | Status | Done-when | EOS |
 |---|---|---|---|---|---|---|---|---|
-| **P7-CERT-1** | 🔴 | CERT | Pass all GA gates (T/S/O/U/A/P/B/D) at their required evidence grade; complete `QA-R-012` Final Checklist with LIVE evidence; 7-day cron green; commercial prereqs decided | P6-PILOT-1 | L | ⚪ | every checklist item satisfied with LIVE evidence | `QA-R-012` PASS |
+| **P7-CERT-1** | 🔴 | CERT | Pass all GA gates (T/S/O/U/A/P/B/D) at their required evidence grade; complete `QA-R-012` Final Checklist with LIVE evidence; 7-day cron green; commercial prereqs decided. **Round law applies here too:** final certification is granted only after repeated audit rounds (P4/P6-VAL/beta feedback) have converged — never off a single clean pass | **P6-BETA-1** | L | ⚪ | every checklist item satisfied with LIVE evidence | `QA-R-012` PASS |
 
-**PHASE 7 EXIT:** all gates PASS; production-certified.
+**PHASE 7 EXIT:** all gates PASS; **production-certified — the ONLY place 🟩 is granted.**
 
 ---
 
@@ -248,7 +338,7 @@
 |---|---|---|---|---|---|---|---|---|---|
 | **P8-GA-1** | 🔴 | CERT | Final go/no-go: confirm no open P0/blocking-P1 project-wide; EOS ledger clean; sign-off | P7-CERT-1 | S | ⚪ | Prod-Cert §3 | go/no-go recorded | RELEASE PASS |
 | **P8-GA-2** | 🟠 | DOCS | Commercial readiness pack: pricing, onboarding runbook, support process, legal suite confirmed | P7 | M | 👤 | B4/B5, O6/O10 | pack complete or owner-deferred | — |
-| **P8-GA-3** | 🟠 | INFRA | Production launch: promote build; monitoring + alerting + backups + off-site confirmed on the production tenant(s); rollback proven | P8-GA-1 | M | ⚪ | OPS gates | live prod healthy; rollback tested | OPS PASS |
+| **P8-GA-3** | 🟠 | INFRA | Production launch (owner-gated): promote build. **Expanded gate checklist (RECON-1):** VPS deployment · migration verification (repo head == deployed head) · live smoke testing · production monitoring · cron verification · backup verification (incl. off-site) · security verification · performance verification · **cost verification** (AI spend under cap at production scale) · **AI quota verification** (per-role quotas enforced live) · rollback proven | P8-GA-1 | M | ⚪ | OPS gates | ALL gates pass — only then may GA be allowed; live prod healthy; rollback tested | OPS PASS |
 | **P8-GA-4** | 🟡 | DOCS | Declare **GA**; update ProjectStatus + roadmap progress + release notes; open post-GA monitoring cadence | P8-GA-3 | S | ⚪ | — | GA declared + recorded | DOCS PASS |
 | **P8-GA-5** | 🟡 | — | Post-GA forward plan handoff: Phase-2 commercial (billing/quotas/white-label/GPS, O6/O8/O10), Consolidation wave (DOC-8), Assessment Intelligence Platform, scale machinery (P1-INFRA-1) | P8-GA-4 | — | 🔮/👤 | Ledger §D | forward backlog owner-scheduled | — |
 
@@ -258,7 +348,7 @@
 
 ## Deferred / Future / Owner-Decision register (nothing lost)
 
-- **👤 Owner Decisions (gate their tasks):** hide-list (P0-CODE-2) · RPO accept (P0-INFRA-2) · module scope Hostel/Alumni/Finance-posting (P1-CODE-6/7/8) · PLAT-0 non-student Public-ID (P1-CODE-4) · Appendix A ~26 items (P1-PROD-*) · Adaptive-AI timing (P3-AI-2) · Consolidation wave DOC-8 (P8-GA-5) · `APP_ENV=staging` intent (LV-5) · shared-box strategy (LV-4/OPS-4) · UX candidate batch (`docs/design/PRODUCT_EXCELLENCE_MASTER_PLAN.md` §6: premium-completion visual wave B5, Approvals-Inbox read-model, exam-workspace early slice, C1/C3/C5/C6 candidates, PAR-D4 action-inbox, Student/HR AI extensions).
+- **👤 Owner Decisions (gate their tasks):** hide-list (P0-CODE-2 ✅) · RPO accept (P0-INFRA-2 ✅) · module scope Hostel/Alumni/Finance-posting (P1-CODE-6/7/8) · PLAT-0 non-student Public-ID + identity cluster incl. change-phone (P1-CODE-4) · Appendix A ~26 items (P1-PROD-*) · ~~Adaptive-AI timing (P3-AI-2)~~ **resolved — W2 built 2026-07-10; hardening owns it now** · Consolidation wave DOC-8 (P8-GA-5) · `APP_ENV=staging` intent (LV-5) · shared-box strategy (LV-4/OPS-4) · UX candidate batch (`docs/design/PRODUCT_EXCELLENCE_MASTER_PLAN.md` §6) · **NEW at RECON-1:** K-3 promotion timing · FREEZE-1 K-lane carve-out (does K-2 block the ERP freeze?) · P6-BETA-1 cohort recruitment (5–10 real schools) · PAR3-UPLOAD (real file bytes vs reference-only) · PRI-4/5 scheduled-send · HWK-1/C6 basis re-check (`due_date` already live) · P0-LIVE-1 provisioning (R2 creds · `INTERNAL_CRON_TOKEN` · CI runner).
 - **⏸ Deferred (scheduled, not pilot-gating):** scale machinery (P1-INFRA-1).
 - **🔮 Future Version (post-GA, owner-timed):** Phase-2 commercial (billing/quotas/marketplace/live-GPS/white-label tiers/custom-domain — O6/O8/O10) · Future Vision (verticals/franchise/geo-RFID-QR attendance/student-FaceID/website-builder/gate-pass/secure-CBT/app-biometric-lock — O1/O4/O9) · Assessment Intelligence Platform (Master Plan v3.0) · Phase-C deferred tail (`Ph2`/`Fut` enhancement items).
 - **Out-of-scope:** re-enabling deferred verticals/experimental surfaces (O1/O3); re-auditing certified-unchanged work; frozen QW1–QW8 history.
@@ -269,7 +359,7 @@
 
 - **Every audit finding** → a task/disposition in `AUDIT_FINDINGS_LEDGER.md` → a task ID above.
 - **Every strategy doc** → a phase: Adaptive AI Blueprint + the `docs/design/adaptive-ai/` suite (00–09) → **P3** (W1→P3-AI-1, W2→P3-AI-2, W3→P8-GA-5) · Pilot Sim → P6 · Red Team → P4/P5 · Prod Cert → P7 · `LONG_TERM_COMPETITIVE_STRATEGY.md` (Competitive) → steers all phases (esp. P3 + post-GA P8-GA-5). The suite's novel ideas N1–N12 map: cost-critical/foundational (N10 cost panel → W1.5) into W1/W2; consent/post-GA (N3/N5/N6-full/N7/N9) → W3/P8-GA-5.
-- **Hard gates:** P0 gates P4/P6/P7/P8 · P0-TEST-1 gates P0-TEST-2/3 (and the 7-day clock gates P7) · P1-CODE-1 gates P2-UX-2 · P3-AI-1 gates P3-AI-2 **and P6** (pilot checks the AI cost controls) · P4→P5→P6→P7→P8 strictly sequential.
-- **Execution order:** P0 fully → (P1 ∥ P2 ∥ P3-foundation) → P3-adaptive → P4 → P5 → P6 → P7 → P8.
+- **Hard gates:** P0 gates P4/P6/P7/P8 · P0-TEST-1 gates P0-TEST-2/3 (and the 7-day clock gates P7) · P1-CODE-1 gates P2-UX-2 · P3-AI-1 ✅ gates P3-AI-2 **and P6** (pilot checks the AI cost controls) · **CFC-1 → FREEZE-1 → P4** · **P4 → P5 → P6-VAL-1 → P6-PILOT-1 → P6-BETA-1 → P7 → P8 strictly sequential** · P3-AI-3 + K-2 hardening exits feed CFC-1 (item 10) · P1-PROD-22 must land before P6-PILOT-1 Stage 12.
+- **Execution order (from RECON-1, 2026-07-10):** (P0-LIVE-1 ∥ P3-AI-3 W2-hardening ∥ K-2 QP-hardening ∥ P1-PROD-22 Face ID ∥ owner-gated P1 tail as decisions land) → CFC-1 → FREEZE-1 → P4 → P5 → P6-VAL-1 → P6-PILOT-1 → P6-BETA-1 → P7 → P8. The Knowledge lane and the acquisition lane run parallel throughout and never block ERP phases (K-3 promotion is post-freeze, owner-timed, not GA-gating).
 
 *This is the only roadmap. All prior roadmaps are superseded as the forward plan and point here. Execution follows [`AUTONOMOUS_EXECUTION_PLAN.md`](AUTONOMOUS_EXECUTION_PLAN.md); progress is journaled in [`../execution/IMPLEMENTATION_PROGRESS.md`](../execution/IMPLEMENTATION_PROGRESS.md). No phase continues without an EOS PASS.*

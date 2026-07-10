@@ -94,3 +94,15 @@
 
 ### Session provenance (2026-07-09)
 Acquisition engine proven + repository-incomplete terminology locked · gap-sweep waves 1+2 · live RLS all-pass · backup GREEN · off-site R2 + COM-4 token staged · discounts→billing maker-checker + full financial regression. **2026-07-09 addendum:** final gap-sweep (3 P0 / 7 P1 built) + P2 cleanup CLOSED, one DS-enforcement regression caught + fixed at re-cert, regression green (deno 2409/0 · analyze 0 · flutter 3766/0); deploy + live-cert staged and blocked on the SSH socket. All reviewer-gated, committed, tree clean (except the autonomous acquisition lane's own `curriculum/` working state, owned by that lane).
+
+---
+
+## 7. 🔄 RECON-1 addendum (2026-07-10) — append-only; §0–§6 above remain the 2026-07-09 snapshot
+
+**The roadmap was reconciled to repository reality (owner-approved).** Authoritative state now lives in `docs/roadmap/FINAL_EXECUTION_MASTER_ROADMAP.md` §0/§0b (Wave Ledger — **derived progress 54.8%**, formula ✅=1 · 🔶=0.5, never hand-estimated) + the journal's RECON-1 catch-up block. Deltas since §0–§6:
+
+- **Adaptive AI W1 (P3-AI-1): ✅ CERTIFIED** (2026-07-10, cert v2 PASS / implementation-complete) — supersedes §4's "owner-timing-gated; do not build yet" (owner lifted the gate; W1+W2 were built 2026-07-10).
+- **Adaptive AI W2 (P3-AI-2): 🔶 Implementation Complete — Hardening In Progress** (audit loop OPEN; W2.1/2.7/2.8/2.9 open; migrations `20260867`+ NOT deployed — sequencing guard at P0-LIVE-1 ①). Closure = **P3-AI-3** (exit: repeated audits find no meaningful issues).
+- **Knowledge lane (new):** K-1 KIE ✅ local-complete (Phases 1–7 + 360-corpus cert + Intake Center; **promotion deferred → K-3 👤, NOT GA-gating**) · K-2 QP engine 🔶 hardening (cert GO scoped to current corpus; program continues; exit = 2 consecutive clean audits).
+- **Production-blocker list (§5) restated in roadmap terms:** ① matrix convergence (GA/Assessment dep, not ERP-pilot) → acquisition lane · ② live deploy ✅ **but AI migrations pending** → P0-LIVE-1 · ③ live cert (fee-reductions ✅; money-E2E deferred) · ④ Face ID → P1-PROD-22 (**open now**) · ⑤ pilot → P6-VAL-1 → P6-PILOT-1 → **P6-BETA-1 (new: 5–10 real schools)** · ⑥ GA → P7 (🟩 granted only here) → P8. Plus new gates: **CFC-1 Code-Freeze-Checklist → FREEZE-1 Feature Freeze** before P4.
+- **Reporting law extended:** *Implementation Complete ≠ Production Complete* — 🔶 items (W2, QP engine) are never described as done/ready; the acquisition reporting law of §0 stands unchanged.
