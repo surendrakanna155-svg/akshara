@@ -21,7 +21,6 @@ import {
 import type { AccessTokenClaims } from "../jwt.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
-import { resolveAiConfig } from "../ai/ai_settings.ts";
 import {
   type AdmissionConversionPrediction,
   buildPredictionsBaseline,
@@ -137,12 +136,9 @@ async function narrateWithCount(
   topItems: { name: string; metric: string }[],
 ): Promise<string> {
   const baseline = buildPredictionsBaseline(kind, { total, high }, topItems.map((t) => t.name));
-  const ai = await resolveAiConfig(db, orgId);
   return narratePredictionsWithClaude(
     baseline,
     { kind, total, high, topItems },
-    ai.apiKey,
-    { provider: ai.provider, model: ai.model },
     { db, organizationId: orgId, schoolId, userId },
   );
 }

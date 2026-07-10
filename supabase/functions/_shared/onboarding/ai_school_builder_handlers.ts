@@ -8,7 +8,6 @@ import {
 } from "../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
-import { resolveAiConfig } from "../ai/ai_settings.ts";
 import { buildSchoolBlueprint, normalizeBrief } from "./ai_school_builder_service.ts";
 import { enrichSchoolBlueprintWithClaude } from "./ai_school_builder_ai.ts";
 
@@ -39,12 +38,13 @@ export async function handleAiPrefillStartupOnboarding(
     const baseline = buildSchoolBlueprint(brief);
     const blueprint = await withTenantContext(config, auth.claims, async (db) => {
       const orgId = organizationIdFromClaims(auth.claims);
-      const ai = await resolveAiConfig(db, orgId);
-      return await enrichSchoolBlueprintWithClaude(baseline, brief, ai.apiKey, {
-        provider: ai.provider,
-        model: ai.model,
-        // Governed path (org-scoped: proposing a not-yet-provisioned school).
-      }, { db, organizationId: orgId, schoolId: null, userId: auth.claims.sub });
+      // Governed path (org-scoped: proposing a not-yet-provisioned school).
+      return await enrichSchoolBlueprintWithClaude(baseline, brief, {
+        db,
+        organizationId: orgId,
+        schoolId: null,
+        userId: auth.claims.sub,
+      });
     });
 
     return jsonResponse(envelope({

@@ -9,7 +9,6 @@
 // Any failure (no key, refusal, empty/odd output, transport error) returns the
 // deterministic summary unchanged — refinement is strictly additive and safe.
 
-import { type AiProvider, callClaude, claudeModel } from "../ai/anthropic_client.ts";
 import { type Governance, governedTextFor } from "../ai/model_gateway.ts";
 
 const REFINE_MAX_TOKENS = 600;
@@ -40,14 +39,14 @@ export interface ExecutiveSummaryContext {
 
 /**
  * Returns a board-ready narrative refined by Claude, or the deterministic
- * summary unchanged on any failure.
+ * summary unchanged on any failure. The governed Model Gateway (timeout +
+ * rate-limit + spend-cap + ai_call_log) is the only structural path to a live
+ * model call — see model_gateway.ts.
  */
 export async function refineExecutiveSummaryWithClaude(
   deterministicSummary: string,
   context: ExecutiveSummaryContext,
-  apiKey?: string,
-  opts?: { provider?: AiProvider; model?: string },
-  governance?: Governance,
+  governance: Governance,
 ): Promise<string> {
   const userMessage = [
     `Focus area: ${context.focusArea}.`,
@@ -67,32 +66,11 @@ export async function refineExecutiveSummaryWithClaude(
     deterministicSummary,
   ].join("\n");
 
-  // Governed path (org-scoped): timeout + rate-limit + spend-cap + ai_call_log.
-  if (governance) {
-    const text = await governedTextFor(governance, "director_summary", {
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userMessage }],
-      maxTokens: REFINE_MAX_TOKENS,
-    });
-    const trimmed = (text ?? "").trim();
-    return trimmed.length > 0 ? trimmed : deterministicSummary;
-  }
-
-  if (!apiKey) return deterministicSummary;
-
-  try {
-    const result = await callClaude({
-      apiKey,
-      provider: opts?.provider,
-      model: opts?.model ?? claudeModel(),
-      maxTokens: REFINE_MAX_TOKENS,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userMessage }],
-    });
-    if (result.refused) return deterministicSummary;
-    const text = result.text.trim();
-    return text.length > 0 ? text : deterministicSummary;
-  } catch {
-    return deterministicSummary;
-  }
+  const text = await governedTextFor(governance, "director_summary", {
+    system: SYSTEM_PROMPT,
+    messages: [{ role: "user", content: userMessage }],
+    maxTokens: REFINE_MAX_TOKENS,
+  });
+  const trimmed = (text ?? "").trim();
+  return trimmed.length > 0 ? trimmed : deterministicSummary;
 }

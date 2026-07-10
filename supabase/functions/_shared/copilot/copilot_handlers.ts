@@ -306,8 +306,6 @@ export async function handleSendMessage(
         userMessage: content,
         assistantType: session.assistant_type as CopilotAssistantType,
         context,
-        apiKey: ai.apiKey,
-        provider: ai.provider,
         model: ai.model,
         // Route the live call through the governed Model Gateway (W1.1b):
         // timeout + rate-limit + spend-cap + ai_call_log telemetry.

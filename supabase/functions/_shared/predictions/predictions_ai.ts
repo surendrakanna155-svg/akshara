@@ -8,7 +8,6 @@
 // Any failure (no key, refusal, empty/odd output, transport error) returns the
 // deterministic baseline unchanged — the narrative is strictly additive and safe.
 
-import { type AiProvider, callClaude, claudeModel } from "../ai/anthropic_client.ts";
 import { type Governance, governedTextFor } from "../ai/model_gateway.ts";
 
 const NARRATIVE_MAX_TOKENS = 500;
@@ -35,9 +34,7 @@ export interface PredictionsNarrativeContext {
 export async function narratePredictionsWithClaude(
   baseline: string,
   context: PredictionsNarrativeContext,
-  apiKey?: string,
-  opts?: { provider?: AiProvider; model?: string },
-  governance?: Governance,
+  governance: Governance,
 ): Promise<string> {
   const userMessage = [
     `Prediction type: ${context.kind}.`,
@@ -49,31 +46,11 @@ export async function narratePredictionsWithClaude(
     baseline,
   ].join("\n");
 
-  if (governance) {
-    const text = await governedTextFor(governance, `predictions_${context.kind}`, {
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userMessage }],
-      maxTokens: NARRATIVE_MAX_TOKENS,
-    });
-    const trimmed = (text ?? "").trim();
-    return trimmed.length > 0 ? trimmed : baseline;
-  }
-
-  if (!apiKey) return baseline;
-
-  try {
-    const result = await callClaude({
-      apiKey,
-      provider: opts?.provider,
-      model: opts?.model ?? claudeModel(),
-      maxTokens: NARRATIVE_MAX_TOKENS,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userMessage }],
-    });
-    if (result.refused) return baseline;
-    const text = result.text.trim();
-    return text.length > 0 ? text : baseline;
-  } catch {
-    return baseline;
-  }
+  const text = await governedTextFor(governance, `predictions_${context.kind}`, {
+    system: SYSTEM_PROMPT,
+    messages: [{ role: "user", content: userMessage }],
+    maxTokens: NARRATIVE_MAX_TOKENS,
+  });
+  const trimmed = (text ?? "").trim();
+  return trimmed.length > 0 ? trimmed : baseline;
 }

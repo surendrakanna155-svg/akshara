@@ -67,14 +67,13 @@ const baseContext: CopilotContextBundle = {
   studentLookup: { access: "not_requested" },
 };
 
-function baseInput(apiKey?: string | null) {
+function baseInput() {
   return {
     systemPrompt: "read-only policy",
     history: [],
     userMessage: "Summarize collections",
     assistantType: "finance" as const,
     context: baseContext,
-    apiKey,
   };
 }
 
@@ -89,45 +88,79 @@ Deno.test("boundHistory keeps only the last K turns (W1.3 token bounding)", () =
   assert(bounded.length < long.length);
 });
 
-Deno.test("copilot response is the deterministic stub without an api key", async () => {
-  const result = await generateCopilotResponse(baseInput(undefined));
+Deno.test("copilot response is the deterministic stub without a gateway context", async () => {
+  // No db/gatewayContext supplied (e.g. a caller with no tenant context) —
+  // F12: there is no direct-callClaude fallback left to reach; the ONLY
+  // structural path to a live model call is the governed gateway branch below.
+  const result = await generateCopilotResponse(baseInput());
   assertEquals(result.stub, true);
   assertEquals(result.model, "akshara-stub");
   assertEquals(result.content.includes("read-only"), true);
 });
 
-Deno.test("copilot response falls back to the stub when Claude transport throws", async () => {
+Deno.test("copilot response never dials out without a gateway context, even if fetch would throw", async () => {
   const original = globalThis.fetch;
-  globalThis.fetch = (() => Promise.reject(new Error("network down"))) as typeof fetch;
+  let fetchCalls = 0;
+  globalThis.fetch = (() => {
+    fetchCalls++;
+    return Promise.reject(new Error("must not be called"));
+  }) as typeof fetch;
   try {
-    // Must not throw — a transport failure degrades to the deterministic stub
-    // so the handler never returns 500 with a dangling user message.
-    const result = await generateCopilotResponse(baseInput("sk-ant-test"));
+    const result = await generateCopilotResponse(baseInput());
     assertEquals(result.stub, true);
     assertEquals(result.model, "akshara-stub");
-    assertEquals(result.content.includes("read-only"), true);
+    assertEquals(fetchCalls, 0);
   } finally {
     globalThis.fetch = original;
   }
 });
 
-Deno.test("copilot response falls back to the stub on a non-OK Claude response", async () => {
+Deno.test("gateway path: falls back to the stub when the model transport throws", async () => {
+  clearAiKeyEnv();
+  Deno.env.set("ANTHROPIC_API_KEY", "sk-ant-test");
+  const original = globalThis.fetch;
+  globalThis.fetch = (() => Promise.reject(new Error("network down"))) as typeof fetch;
+  try {
+    // Must not throw — a transport failure degrades to the deterministic stub
+    // so the handler never returns 500 with a dangling user message.
+    const result = await generateCopilotResponse({
+      ...baseInput(),
+      db: fakeGatewayDb(),
+      gatewayContext: GATEWAY_CTX,
+    });
+    assertEquals(result.stub, true);
+    assertEquals(result.model, "akshara-stub");
+    assertEquals(result.content.includes("read-only"), true);
+  } finally {
+    globalThis.fetch = original;
+    clearAiKeyEnv();
+  }
+});
+
+Deno.test("gateway path: falls back to the stub on a non-OK model response", async () => {
+  clearAiKeyEnv();
+  Deno.env.set("ANTHROPIC_API_KEY", "sk-ant-test");
   const original = globalThis.fetch;
   globalThis.fetch = (() =>
     Promise.resolve(new Response("upstream error", { status: 503 }))) as typeof fetch;
   try {
-    const result = await generateCopilotResponse(baseInput("sk-ant-test"));
+    const result = await generateCopilotResponse({
+      ...baseInput(),
+      db: fakeGatewayDb(),
+      gatewayContext: GATEWAY_CTX,
+    });
     assertEquals(result.stub, true);
     assertEquals(result.model, "akshara-stub");
   } finally {
     globalThis.fetch = original;
+    clearAiKeyEnv();
   }
 });
 
 Deno.test("gateway path: no key configured → deterministic stub (W1.1b wiring)", async () => {
   clearAiKeyEnv();
   const result = await generateCopilotResponse({
-    ...baseInput(undefined),
+    ...baseInput(),
     db: fakeGatewayDb(),
     gatewayContext: GATEWAY_CTX,
   });
@@ -145,7 +178,7 @@ Deno.test("gateway path: a cache hit is served with zero model calls (W1.2b)", a
   }) as unknown as typeof fetch;
   try {
     const result = await generateCopilotResponse({
-      ...baseInput("sk-ant-test"),
+      ...baseInput(),
       db: fakeGatewayDb({ payload: "cached: 3 fees due", model: "claude-opus-4-8" }),
       gatewayContext: GATEWAY_CTX,
     });
@@ -180,13 +213,13 @@ Deno.test("gateway path: a paraphrase hits the same cache entry (W1.5 fingerprin
   }) as unknown as typeof fetch;
   try {
     const first = await generateCopilotResponse({
-      ...baseInput("sk-ant-test"),
+      ...baseInput(),
       userMessage: "When is Aarav's fee due?",
       db,
       gatewayContext: GATEWAY_CTX,
     });
     const second = await generateCopilotResponse({
-      ...baseInput("sk-ant-test"),
+      ...baseInput(),
       userMessage: "fee due for Aarav??", // paraphrase → same fingerprint → same key
       db,
       gatewayContext: GATEWAY_CTX,
@@ -218,7 +251,7 @@ Deno.test("gateway path: serves the real model answer when a key is present", as
     )) as typeof fetch;
   try {
     const result = await generateCopilotResponse({
-      ...baseInput("sk-ant-test"),
+      ...baseInput(),
       // The system prompt embeds the fact (as production buildSystemPrompt does),
       // so the ₹1000 in the reply is grounded and passes the F3 output guard.
       systemPrompt: "read-only policy. Collections this month: ₹1000.",
@@ -253,7 +286,7 @@ Deno.test("gateway path: an ungrounded number in the reply is guarded → stub (
     )) as typeof fetch;
   try {
     const result = await generateCopilotResponse({
-      ...baseInput("sk-ant-test"),
+      ...baseInput(),
       systemPrompt: "read-only policy. No dues on record.",
       db: fakeGatewayDb(),
       gatewayContext: GATEWAY_CTX,

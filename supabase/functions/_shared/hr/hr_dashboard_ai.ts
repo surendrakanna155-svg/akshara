@@ -12,7 +12,6 @@
 // cert environment may have no key configured, so the deterministic fallback
 // (buildDeterministicInsight) must always produce a sensible, honest insight.
 
-import { type AiProvider, callClaude, claudeModel } from "../ai/anthropic_client.ts";
 import { type Governance, governedTextFor } from "../ai/model_gateway.ts";
 import { type DashboardKpiFacts } from "./hr_read_repository.ts";
 
@@ -38,9 +37,7 @@ Write one short, decision-oriented insight for the school's HR admin. Strict rul
 export async function generateHrInsightWithClaude(
   facts: DashboardKpiFacts,
   deterministic: string,
-  apiKey?: string,
-  opts?: { provider?: AiProvider; model?: string },
-  governance?: Governance,
+  governance: Governance,
 ): Promise<string> {
   const userMessage = [
     "School HR facts (final — do not change them):",
@@ -59,31 +56,11 @@ export async function generateHrInsightWithClaude(
     deterministic,
   ].join("\n");
 
-  if (governance) {
-    const text = await governedTextFor(governance, "hr_dashboard", {
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userMessage }],
-      maxTokens: INSIGHT_MAX_TOKENS,
-    });
-    const trimmed = (text ?? "").trim();
-    return trimmed.length > 0 ? trimmed : deterministic;
-  }
-
-  if (!apiKey) return deterministic;
-
-  try {
-    const result = await callClaude({
-      apiKey,
-      provider: opts?.provider,
-      model: opts?.model ?? claudeModel(),
-      maxTokens: INSIGHT_MAX_TOKENS,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userMessage }],
-    });
-    if (result.refused) return deterministic;
-    const text = result.text.trim();
-    return text.length > 0 ? text : deterministic;
-  } catch {
-    return deterministic;
-  }
+  const text = await governedTextFor(governance, "hr_dashboard", {
+    system: SYSTEM_PROMPT,
+    messages: [{ role: "user", content: userMessage }],
+    maxTokens: INSIGHT_MAX_TOKENS,
+  });
+  const trimmed = (text ?? "").trim();
+  return trimmed.length > 0 ? trimmed : deterministic;
 }

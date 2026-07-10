@@ -20,6 +20,7 @@ import {
   listEntities,
 } from "./hr_read_repository.ts";
 import { generateHrInsightWithClaude } from "./hr_dashboard_ai.ts";
+import type { Governance } from "../ai/model_gateway.ts";
 
 /** Empty live HR state — a brand-new school with nothing on record. */
 function emptyInputs(): DashboardInputs {
@@ -287,10 +288,21 @@ Deno.test("buildDeterministicInsight: empty school yields an honest no-staff mes
 });
 
 Deno.test("generateHrInsightWithClaude: no key => deterministic fallback, never throws", async () => {
+  // No provider config row (MockHrDb returns [] by default) and no
+  // ANTHROPIC_API_KEY/OPENROUTER_API_KEY env → the gateway declines with
+  // fallback_no_key before ever dialing out (F12: governance is now the ONLY
+  // structural path to a live model call — there is no direct-callClaude branch).
+  Deno.env.delete("ANTHROPIC_API_KEY");
+  Deno.env.delete("OPENROUTER_API_KEY");
   const facts = computeDashboardFacts(emptyInputs());
   const deterministic = buildDeterministicInsight(facts);
-  // No apiKey passed => must return the deterministic insight unchanged.
-  const insight = await generateHrInsightWithClaude(facts, deterministic, undefined);
+  const governance: Governance = {
+    db: new MockHrDb() as unknown as TenantQueryClient,
+    organizationId: ORG,
+    schoolId: SCHOOL_A,
+    userId: "u-1",
+  };
+  const insight = await generateHrInsightWithClaude(facts, deterministic, governance);
   assertEquals(insight, deterministic);
 });
 

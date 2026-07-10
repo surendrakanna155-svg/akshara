@@ -15,7 +15,6 @@ import {
   type InsightPeriod,
 } from "./parent_insights_service.ts";
 import { enrichParentInsightWithClaude } from "./parent_insights_ai.ts";
-import { resolveAiConfig } from "../ai/ai_settings.ts";
 
 export async function handleGenerateParentInsights(req: Request, config: AppConfig): Promise<Response> {
   const auth = await authenticateRequest(req, config);
@@ -53,11 +52,8 @@ export async function handleGenerateParentInsights(req: Request, config: AppConf
       }
 
       const baseSnapshot = await generateParentInsightSnapshot(db, body.studentId, period, language);
-      const ai = await resolveAiConfig(db, orgId);
       const snapshot = await enrichParentInsightWithClaude(
         baseSnapshot,
-        ai.apiKey,
-        { provider: ai.provider, model: ai.model },
         { db, organizationId: orgId, schoolId, userId: auth.claims.sub },
       );
       const rows = await db.queryObject<{ id: string }>(

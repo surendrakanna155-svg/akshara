@@ -1,12 +1,7 @@
 import { buildStubAssistantReply } from "./copilot_prompt_orchestrator.ts";
 import type { CopilotContextBundle } from "./copilot_context_engine.ts";
 import type { CopilotAssistantType } from "./copilot_types.ts";
-import {
-  type AiProvider,
-  callClaude,
-  claudeModel,
-  type ClaudeMessage,
-} from "../ai/anthropic_client.ts";
+import type { ClaudeMessage } from "../ai/anthropic_client.ts";
 import { callModelGateway } from "../ai/model_gateway.ts";
 import { mintCacheKey } from "../ai/ai_response_cache_repository.ts";
 import { fingerprintQuestion } from "../ai/intent_fingerprint.ts";
@@ -18,14 +13,15 @@ export interface CopilotGenerationInput {
   userMessage: string;
   assistantType: CopilotAssistantType;
   context: CopilotContextBundle;
-  apiKey?: string | null;
-  /** Provider + model from the resolved AI config; default to env when unset. */
-  provider?: AiProvider;
+  /** Model id — used only to mint the Tier-2 cache-key signature; the model
+   * actually served is whatever the gateway resolves. */
   model?: string;
   /**
-   * When both are supplied the call is routed through the governed Model
-   * Gateway (timeout + rate-limit + spend-cap + telemetry). Omitted by unit
-   * tests and any not-yet-migrated caller, which keep the legacy direct path.
+   * Tenant DB + governance context. When both are supplied the call is routed
+   * through the governed Model Gateway (timeout + rate-limit + spend-cap +
+   * telemetry) — the ONLY structural path to a live model call (F12). Absent
+   * only for callers with no tenant context (and unit tests exercising the
+   * stub), which get the deterministic read-only stub — never a raw client call.
    */
   db?: TenantQueryClient;
   gatewayContext?: {
@@ -90,14 +86,14 @@ const REFUSAL_REPLY =
   "assistant — ask me about the school data you have access to and I'll summarize it.";
 
 /**
- * Generate a copilot reply via Claude. Falls back to the deterministic
- * read-only stub when no ANTHROPIC_API_KEY is configured, so the copilot stays
- * safe and functional before the live key is provisioned.
- *
- * A Claude transport/non-OK error (timeout, 5xx, empty completion) also falls
- * back to the same deterministic stub — mirroring predictions_ai.ts and the
- * parent-insights client — so a transport failure yields a graceful assistant
- * reply instead of a 500 that leaves the user's persisted message dangling.
+ * Generate a copilot reply via the governed Model Gateway (F12: the ONLY
+ * structural path to a live model call — there is no direct-to-provider
+ * fallback here or anywhere else in this function). No key configured, a rate
+ * limit, a spend cap, a timeout, a transport/non-OK error, or a missing
+ * db/gatewayContext all degrade to the same deterministic read-only stub, so
+ * the copilot stays safe and functional before a live key is provisioned and a
+ * transport failure never surfaces a 500 that leaves the user's persisted
+ * message dangling.
  */
 export async function generateCopilotResponse(
   input: CopilotGenerationInput,
@@ -158,45 +154,15 @@ export async function generateCopilotResponse(
     return { content: stub, model: "akshara-stub", stub: true };
   }
 
-  // Legacy direct path (no gateway context) — unchanged behaviour.
-  if (!input.apiKey) {
-    return {
-      content: buildStubAssistantReply(
-        input.assistantType,
-        input.userMessage,
-        input.context,
-      ),
-      model: "akshara-stub",
-      stub: true,
-    };
-  }
-
-  try {
-    const result = await callClaude({
-      apiKey: input.apiKey,
-      provider: input.provider,
-      model: input.model ?? claudeModel(),
-      maxTokens: COPILOT_MAX_TOKENS,
-      system: input.systemPrompt,
-      messages,
-    });
-
-    return {
-      content: result.refused ? REFUSAL_REPLY : result.text,
-      model: result.model,
-      stub: false,
-    };
-  } catch (_error) {
-    // Transport/non-OK error — degrade to the deterministic stub rather than
-    // propagating a 500 and orphaning the already-persisted user message.
-    return {
-      content: buildStubAssistantReply(
-        input.assistantType,
-        input.userMessage,
-        input.context,
-      ),
-      model: "akshara-stub",
-      stub: true,
-    };
-  }
+  // No tenant governance context (e.g. no db/gatewayContext supplied) — never
+  // call the raw client; return the deterministic read-only stub.
+  return {
+    content: buildStubAssistantReply(
+      input.assistantType,
+      input.userMessage,
+      input.context,
+    ),
+    model: "akshara-stub",
+    stub: true,
+  };
 }

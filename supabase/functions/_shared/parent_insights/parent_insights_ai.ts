@@ -8,7 +8,6 @@
 // Any failure (no key, refusal, bad JSON, transport error) returns the original
 // deterministic snapshot unchanged — enrichment is strictly additive and safe.
 
-import { type AiProvider, callClaude, claudeModel } from "../ai/anthropic_client.ts";
 import { type Governance, governedTextFor } from "../ai/model_gateway.ts";
 import type { ParentInsightSnapshot } from "./parent_insights_service.ts";
 
@@ -72,9 +71,7 @@ function parseJsonObject(text: string): EnrichedFields | null {
  */
 export async function enrichParentInsightWithClaude(
   snapshot: ParentInsightSnapshot,
-  apiKey?: string,
-  opts?: { provider?: AiProvider; model?: string },
-  governance?: Governance,
+  governance: Governance,
 ): Promise<ParentInsightSnapshot> {
   const userMessage = [
     `Rewrite this student progress snapshot in language: ${snapshot.language}.`,
@@ -114,29 +111,10 @@ export async function enrichParentInsightWithClaude(
     };
   };
 
-  if (governance) {
-    const text = await governedTextFor(governance, "parent_insights", {
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userMessage }],
-      maxTokens: ENRICH_MAX_TOKENS,
-    });
-    return text ? applyEnrichment(text) : snapshot;
-  }
-
-  if (!apiKey) return snapshot;
-
-  try {
-    const result = await callClaude({
-      apiKey,
-      provider: opts?.provider,
-      model: opts?.model ?? claudeModel(),
-      maxTokens: ENRICH_MAX_TOKENS,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userMessage }],
-    });
-    if (result.refused) return snapshot;
-    return applyEnrichment(result.text);
-  } catch {
-    return snapshot;
-  }
+  const text = await governedTextFor(governance, "parent_insights", {
+    system: SYSTEM_PROMPT,
+    messages: [{ role: "user", content: userMessage }],
+    maxTokens: ENRICH_MAX_TOKENS,
+  });
+  return text ? applyEnrichment(text) : snapshot;
 }

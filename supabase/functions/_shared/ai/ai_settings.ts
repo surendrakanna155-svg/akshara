@@ -40,7 +40,7 @@ function mapProviderName(name: string): AiProvider | null {
     case "claude":
       return "anthropic";
     default:
-      // openai / gemini / stub aren't callable by callClaude — fall back to env.
+      // openai / gemini / stub aren't callable by the Anthropic client — fall back to env.
       return null;
   }
 }

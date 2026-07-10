@@ -22,7 +22,6 @@ import {
 } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
-import { resolveAiConfig } from "../ai/ai_settings.ts";
 import {
   buildPreview,
   getJob,
@@ -179,8 +178,8 @@ export function handleSaveStep(
     const pack = (await getPack(db, packId)) ?? (await getPack(db, "pack_school"))!;
     const orgName = answers["identity_name"] || existing.organizationName || "New Organization";
 
-    // Real AI recommendation (deterministic baseline + Claude, safe fallback).
-    const ai = await resolveAiConfig(db, orgId);
+    // Real AI recommendation (deterministic baseline + Claude, safe fallback),
+    // routed through the governed Model Gateway.
     const rec = await recommendForStep(
       {
         packId: pack.id,
@@ -190,8 +189,6 @@ export function handleSaveStep(
         stepIndex,
         answers,
       },
-      ai.apiKey,
-      { provider: ai.provider, model: ai.model },
       // Governed path (org-scoped: org-builder has no school context).
       { db, organizationId: orgId, schoolId: null, userId: claims.sub },
     );

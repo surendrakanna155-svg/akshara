@@ -112,6 +112,7 @@ export async function regeneratePaperItem(
   const aiConfig: AiRuntimeConfig = opts.ai ??
     { provider: aiProvider(), model: claudeModel(), apiKey: aiApiKey(), source: "env" };
   if (!aiConfig.apiKey) return { ok: false, reason: "ai_unavailable" };
+  if (!opts.governance) return { ok: false, reason: "ai_unavailable" };
 
   const paperChapters = Array.isArray(paper.chapters) ? paper.chapters as string[] : [];
   const chapter = opts.chapter ?? paperChapters[0] ?? "General";
@@ -135,8 +136,6 @@ export async function regeneratePaperItem(
       examType: paper.exam_type,
       chapters: [chapter],
     },
-    aiConfig.apiKey,
-    { provider: aiConfig.provider, model: aiConfig.model },
     opts.governance,
   );
   const candidate = candidates[0];
@@ -238,7 +237,7 @@ export async function generateQuestionPaper(
   // Admin-saved panel config (provider/model/key) wins; else env fallback.
   const aiConfig: AiRuntimeConfig = ai ??
     { provider: aiProvider(), model: claudeModel(), apiKey: aiApiKey(), source: "env" };
-  if (allowAi && aiConfig.apiKey && solution.gaps.length > 0) {
+  if (allowAi && aiConfig.apiKey && governance && solution.gaps.length > 0) {
     const candidates = await generateAiCandidatesForGaps(
       solution.gaps,
       {
@@ -248,8 +247,6 @@ export async function generateQuestionPaper(
         examType: input.examType,
         chapters: input.chapters,
       },
-      aiConfig.apiKey,
-      { provider: aiConfig.provider, model: aiConfig.model },
       governance,
     );
     for (const c of candidates) {

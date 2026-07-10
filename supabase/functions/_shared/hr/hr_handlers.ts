@@ -10,7 +10,6 @@ import {
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { listEnvelope } from "../finance/finance_mapper.ts";
-import { resolveAiConfig } from "../ai/ai_settings.ts";
 import {
   buildDeterministicInsight,
   composeDashboard,
@@ -129,16 +128,13 @@ export async function handleDashboard(req: Request, config: AppConfig): Promise<
       const inputs: DashboardInputs = { employees, openings, attendance, leave, recruitment };
       const facts = computeDashboardFacts(inputs);
 
-      // Real AI insight grounded only in the computed facts; resolveAiConfig
-      // prefers the org's saved provider, else env. With no key the call returns
-      // the deterministic insight unchanged (safe fallback).
+      // Real AI insight grounded only in the computed facts, routed through the
+      // governed Model Gateway. With no key the call returns the deterministic
+      // insight unchanged (safe fallback).
       const deterministic = buildDeterministicInsight(facts);
-      const ai = await resolveAiConfig(db, orgId);
       const aiInsight = await generateHrInsightWithClaude(
         facts,
         deterministic,
-        ai.apiKey,
-        { provider: ai.provider, model: ai.model },
         { db, organizationId: orgId, schoolId, userId: auth.claims.sub },
       );
       return composeDashboard(inputs, facts, aiInsight);

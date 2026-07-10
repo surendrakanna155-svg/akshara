@@ -12,7 +12,6 @@
 // Any failure (no key, refusal, bad JSON, transport error) returns the
 // deterministic blueprint unchanged — enrichment is strictly additive and safe.
 
-import { type AiProvider, callClaude, claudeModel } from "../ai/anthropic_client.ts";
 import { type Governance, governedTextFor } from "../ai/model_gateway.ts";
 import type { StartupOnboardingPayload } from "./startup_onboarding_repository.ts";
 import { GRADE_LADDER, type SchoolBlueprint, type SchoolBrief } from "./ai_school_builder_service.ts";
@@ -116,9 +115,7 @@ function asString(value: unknown, fallback: string): string {
 export async function enrichSchoolBlueprintWithClaude(
   baseline: SchoolBlueprint,
   brief: SchoolBrief,
-  apiKey?: string,
-  opts?: { provider?: AiProvider; model?: string },
-  governance?: Governance,
+  governance: Governance,
 ): Promise<SchoolBlueprint> {
   const userMessage = [
     "Brief from the school founder:",
@@ -172,29 +169,10 @@ export async function enrichSchoolBlueprintWithClaude(
     };
   };
 
-  if (governance) {
-    const text = await governedTextFor(governance, "school_builder", {
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userMessage }],
-      maxTokens: ENRICH_MAX_TOKENS,
-    });
-    return text ? applyBlueprint(text) : baseline;
-  }
-
-  if (!apiKey) return baseline;
-
-  try {
-    const result = await callClaude({
-      apiKey,
-      provider: opts?.provider,
-      model: opts?.model ?? claudeModel(),
-      maxTokens: ENRICH_MAX_TOKENS,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userMessage }],
-    });
-    if (result.refused) return baseline;
-    return applyBlueprint(result.text);
-  } catch {
-    return baseline;
-  }
+  const text = await governedTextFor(governance, "school_builder", {
+    system: SYSTEM_PROMPT,
+    messages: [{ role: "user", content: userMessage }],
+    maxTokens: ENRICH_MAX_TOKENS,
+  });
+  return text ? applyBlueprint(text) : baseline;
 }

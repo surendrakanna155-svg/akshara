@@ -6,7 +6,6 @@
 // far. Any failure (no key, refusal, bad JSON, transport error) returns the
 // deterministic baseline unchanged — refinement is strictly additive and safe.
 
-import { type AiProvider, callClaude, claudeModel } from "../ai/anthropic_client.ts";
 import { type Governance, governedTextFor } from "../ai/model_gateway.ts";
 import type { InterviewRecommendation } from "./organization_builder_repository.ts";
 
@@ -99,9 +98,7 @@ export interface RecommendInput {
  */
 export async function recommendForStep(
   input: RecommendInput,
-  apiKey?: string,
-  opts?: { provider?: AiProvider; model?: string },
-  governance?: Governance,
+  governance: Governance,
 ): Promise<InterviewRecommendation> {
   const baseline = baselineRecommendation(input.packId, input.packType, input.stepIndex);
 
@@ -123,29 +120,10 @@ export async function recommendForStep(
     return { id: baseline.id, title: title.slice(0, 80), detail: detail.slice(0, 280), confidence: 0.82 };
   };
 
-  if (governance) {
-    const text = await governedTextFor(governance, "org_builder", {
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userMessage }],
-      maxTokens: RECOMMEND_MAX_TOKENS,
-    });
-    return text ? applyRecommendation(text) : baseline;
-  }
-
-  if (!apiKey) return baseline;
-
-  try {
-    const result = await callClaude({
-      apiKey,
-      provider: opts?.provider,
-      model: opts?.model ?? claudeModel(),
-      maxTokens: RECOMMEND_MAX_TOKENS,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userMessage }],
-    });
-    if (result.refused) return baseline;
-    return applyRecommendation(result.text);
-  } catch {
-    return baseline;
-  }
+  const text = await governedTextFor(governance, "org_builder", {
+    system: SYSTEM_PROMPT,
+    messages: [{ role: "user", content: userMessage }],
+    maxTokens: RECOMMEND_MAX_TOKENS,
+  });
+  return text ? applyRecommendation(text) : baseline;
 }

@@ -12,7 +12,6 @@
 // (or zero) candidates — never a fabricated or malformed question. No student
 // data is ever sent; the prompt carries class-level syllabus scope only.
 
-import { type AiProvider, callClaude, claudeModel } from "../ai/anthropic_client.ts";
 import { type Governance, governedTextFor } from "../ai/model_gateway.ts";
 import { computeQuestionFingerprint } from "./education_fingerprint.ts";
 import type { BlueprintSlot } from "./education_blueprint_solver.ts";
@@ -176,9 +175,7 @@ function buildUserMessage(gaps: BlueprintSlot[], scope: GapFillScope): string {
 export async function generateAiCandidatesForGaps(
   gaps: BlueprintSlot[],
   scope: GapFillScope,
-  apiKey?: string,
-  opts?: { provider?: AiProvider; model?: string },
-  governance?: Governance,
+  governance: Governance,
 ): Promise<AiQuestionCandidate[]> {
   if (gaps.length === 0) return [];
 
@@ -205,29 +202,10 @@ export async function generateAiCandidatesForGaps(
     return candidates;
   };
 
-  if (governance) {
-    const text = await governedTextFor(governance, "education_gapfill", {
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: buildUserMessage(batch, scope) }],
-      maxTokens: GAPFILL_MAX_TOKENS,
-    });
-    return text ? buildCandidates(text) : [];
-  }
-
-  if (!apiKey) return [];
-
-  try {
-    const result = await callClaude({
-      apiKey,
-      provider: opts?.provider,
-      model: opts?.model ?? claudeModel(),
-      maxTokens: GAPFILL_MAX_TOKENS,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: buildUserMessage(batch, scope) }],
-    });
-    if (result.refused) return [];
-    return buildCandidates(result.text);
-  } catch {
-    return [];
-  }
+  const text = await governedTextFor(governance, "education_gapfill", {
+    system: SYSTEM_PROMPT,
+    messages: [{ role: "user", content: buildUserMessage(batch, scope) }],
+    maxTokens: GAPFILL_MAX_TOKENS,
+  });
+  return text ? buildCandidates(text) : [];
 }

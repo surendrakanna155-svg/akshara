@@ -12,6 +12,7 @@ import {
   upsertMetricInput,
 } from "./director_repository.ts";
 import { refineExecutiveSummaryWithClaude } from "./director_ai.ts";
+import type { Governance } from "../ai/model_gateway.ts";
 import { directorAudit } from "../audit/mutation_audit_catalog.ts";
 
 const ORG = "a1000000-0000-4000-8000-000000000001";
@@ -379,7 +380,19 @@ Deno.test("buildBoardPack assembles a real document from live aggregates", async
 });
 
 Deno.test("refineExecutiveSummaryWithClaude returns the deterministic brief when no key", async () => {
+  // No provider config row (MockDirectorDb returns [] by default) and no
+  // ANTHROPIC_API_KEY/OPENROUTER_API_KEY env → the gateway declines with
+  // fallback_no_key before ever dialing out (F12: governance is now the ONLY
+  // structural path to a live model call — there is no direct-callClaude branch).
+  Deno.env.delete("ANTHROPIC_API_KEY");
+  Deno.env.delete("OPENROUTER_API_KEY");
   const brief = "Portfolio spans 2 schools and 1,240 active students.";
+  const governance: Governance = {
+    db: db(),
+    organizationId: ORG,
+    schoolId: null,
+    userId: "u-1",
+  };
   const out = await refineExecutiveSummaryWithClaude(brief, {
     focusArea: "dashboard",
     schoolCount: 2,
@@ -390,7 +403,7 @@ Deno.test("refineExecutiveSummaryWithClaude returns the deterministic brief when
     inquiries: 200,
     conversionPercent: 25,
     atRiskSchools: ["Akshara East"],
-  });
+  }, governance);
   assertEquals(out, brief); // safe fallback — no API key configured in tests
 });
 

@@ -42,7 +42,6 @@ import {
   upsertMetricInput,
 } from "./director_repository.ts";
 import { refineExecutiveSummaryWithClaude } from "./director_ai.ts";
-import { resolveAiConfig } from "../ai/ai_settings.ts";
 
 const ORG_SCOPES = ["organization", "school_group", "platform"];
 
@@ -201,10 +200,9 @@ export async function handleSummary(req: Request, config: AppConfig): Promise<Re
       const admissions = await getAdmissions(db, orgId);
       const deterministic = buildExecutiveSummary(focusArea, schools, revenue, admissions);
 
-      // Real AI refinement, grounded in the deterministic numbers. resolveAiConfig
-      // prefers the org's saved provider, else env; with no key configured the
-      // refine call returns the deterministic brief unchanged (safe fallback).
-      const ai = await resolveAiConfig(db, orgId);
+      // Real AI refinement, grounded in the deterministic numbers, routed through
+      // the governed Model Gateway; with no key configured the refine call
+      // returns the deterministic brief unchanged (safe fallback).
       const atRiskSchools = schools
         .filter((s) => s.status === "atRisk" || s.status === "critical")
         .map((s) => s.schoolName);
@@ -221,8 +219,6 @@ export async function handleSummary(req: Request, config: AppConfig): Promise<Re
           conversionPercent: admissions.conversionPercent,
           atRiskSchools,
         },
-        ai.apiKey,
-        { provider: ai.provider, model: ai.model },
         // Governed path (org-scoped: director has no single school).
         { db, organizationId: orgId, schoolId: null, userId: auth.claims.sub },
       );
