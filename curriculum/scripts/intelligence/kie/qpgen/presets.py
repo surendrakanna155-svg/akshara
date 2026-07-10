@@ -40,6 +40,13 @@ EXAM_PROFILES: Dict[str, dict] = {
     },
 }
 
+# Competitive-exam sources carry NO class_label in the corpus but ARE grade 11-12 by nature
+# (previous-year papers / practice). NCERT textbooks are the only class-labelled source.
+COMPETITIVE_EXAMS = frozenset({
+    "NEET", "AIIMS", "AIPMT", "NTA_Sample", "JEE_Main", "JEE_Advanced", "Practice_Resources",
+})
+COMPETITIVE_GRADES = (11, 12)
+
 # board/class aliases → exam profile. Only mappings with certified data are allowed.
 BOARD_ALIASES = {
     "neet": "NEET", "aiims": "AIIMS", "jee": "JEE_MAIN", "jee main": "JEE_MAIN",

@@ -9,11 +9,44 @@ in Question Intelligence, or is a named law/formula, or has a definition. The re
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Dict, FrozenSet, List, Optional
 
 from kie.qpgen import presets, sanitize
 from kie.qpgen.models import PaperRequest, Subject
+
+_CLASS_RE = re.compile(r"class\s*(\d{1,2})", re.I)
+
+
+def doc_grade(class_label: Optional[str], doc_exam: Optional[str]) -> Optional[int]:
+    """Grade of a concept's evidencing document, or None if it cannot be determined.
+
+    NCERT textbooks carry a class label; competitive-exam papers do not but are grade 11-12
+    by nature. Absolute grade isolation: an unresolvable grade returns None → excluded upstream.
+    """
+    if class_label:
+        m = _CLASS_RE.search(class_label)
+        return int(m.group(1)) if m else None
+    if doc_exam in presets.COMPETITIVE_EXAMS:
+        return presets.COMPETITIVE_GRADES[0]   # 11 — representative in-band grade
+    return None
+
+
+def _grade_in_band(class_label: Optional[str], doc_exam: Optional[str], lo: int, hi: int) -> bool:
+    """Absolute grade isolation: keep only documents whose grade lies within [lo, hi].
+
+    Competitive papers (grade 11-12) are kept iff the band overlaps 11-12. Unknown grade
+    (unparseable class label / non-competitive with no label) is EXCLUDED — never assumed in-band.
+    """
+    if class_label:
+        m = _CLASS_RE.search(class_label)
+        if not m:
+            return False
+        return lo <= int(m.group(1)) <= hi
+    if doc_exam in presets.COMPETITIVE_EXAMS:
+        return lo <= presets.COMPETITIVE_GRADES[1] and hi >= presets.COMPETITIVE_GRADES[0]
+    return False
 
 
 class ScopeError(ValueError):
@@ -33,6 +66,7 @@ class ConceptRef:
     evidence: int            # strength: summed pattern frequency (+ baselines)
     is_named_law: bool
     has_definition: bool
+    grade: Optional[int] = None   # resolved grade of the evidencing document
 
 
 @dataclass
@@ -75,6 +109,7 @@ def resolve_scope(conn, request: PaperRequest) -> SyllabusScope:
     pdef = presets.EXAM_PROFILES[profile]
     profile_subjects = set(pdef["subjects"])
     source_exams = set(pdef["source_exams"])
+    grade_lo, grade_hi = pdef["grade_band"]
 
     # subject selection must be within the profile
     if request.subjects:
@@ -93,15 +128,16 @@ def resolve_scope(conn, request: PaperRequest) -> SyllabusScope:
 
     rows = conn.execute(
         "SELECT c.concept_code, c.title, c.subject_domain, c.definition, "
-        "       sd.exam AS doc_exam "
+        "       sd.exam AS doc_exam, sd.class_label AS doc_class "
         "FROM concepts c "
         "LEFT JOIN source_documents sd ON sd.doc_id = json_extract(c.evidence,'$.doc') "
-        "WHERE c.subject_domain IN (%s) AND c.status='active'" % ",".join("?" * len(subjects)),
+        "WHERE c.subject_domain IN (%s) AND c.status='active' "
+        "ORDER BY c.concept_code" % ",".join("?" * len(subjects)),
         tuple(sorted(subjects)),
     ).fetchall()
 
     concepts: Dict[str, ConceptRef] = {}
-    considered = clean_ct = evidence_ct = 0
+    considered = clean_ct = evidence_ct = grade_kept = 0
     for r in rows:
         considered += 1
         title = r["title"]
@@ -120,12 +156,20 @@ def resolve_scope(conn, request: PaperRequest) -> SyllabusScope:
         doc_exam = r["doc_exam"]
         if doc_exam and doc_exam not in source_exams:
             continue
+        # ── ABSOLUTE GRADE ISOLATION ──────────────────────────────────────────────
+        # keep only concepts whose evidencing document's grade is within the profile band.
+        # NCERT Class 6-10 material is excluded from an 11-12 profile; competitive papers
+        # (grade 11-12) are kept; unresolvable grades are excluded (never assumed in-band).
+        if not _grade_in_band(r["doc_class"], doc_exam, grade_lo, grade_hi):
+            continue
+        grade_kept += 1
         # chapter filter (optional, strict): title must match a requested chapter term
         if chapter_terms and not any(term in title.lower() for term in chapter_terms):
             continue
         base = 3 if is_law else (2 if has_def else 0)
         concepts[code] = ConceptRef(code, title, r["subject_domain"], doc_exam,
-                                    evidence=f + base, is_named_law=is_law, has_definition=has_def)
+                                    evidence=f + base, is_named_law=is_law, has_definition=has_def,
+                                    grade=doc_grade(r["doc_class"], doc_exam))
 
     if not concepts:
         raise ScopeEmptyError(
@@ -134,9 +178,11 @@ def resolve_scope(conn, request: PaperRequest) -> SyllabusScope:
             + " — refusing to fabricate out-of-syllabus content")
 
     stats = {
-        "profile": profile, "subjects": sorted(subjects), "considered": considered,
-        "clean": clean_ct, "evidence_backed": evidence_ct, "in_scope": len(concepts),
+        "profile": profile, "subjects": sorted(subjects), "grade_band": [grade_lo, grade_hi],
+        "considered": considered, "clean": clean_ct, "evidence_backed": evidence_ct,
+        "grade_in_band": grade_kept, "in_scope": len(concepts),
         "by_subject": _count_by(concepts.values(), lambda c: c.subject),
+        "by_grade": _count_by(concepts.values(), lambda c: c.grade),
     }
     return SyllabusScope(profile, sorted(subjects), concepts, chapter_terms, stats)
 

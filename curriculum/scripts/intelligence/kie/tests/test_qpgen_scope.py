@@ -8,12 +8,13 @@ from kie.qpgen.scope import ScopeEmptyError, ScopeError
 from kie.intake.store_ext import now_iso
 
 
-def _seed_concept(conn, code, title, subject, doc_exam="NEET", definition="", freq=0, is_law=False):
+def _seed_concept(conn, code, title, subject, doc_exam="NEET", definition="", freq=0, is_law=False,
+                  class_label=None):
     conn.execute(
-        "INSERT INTO source_documents(doc_id,corpus,rel_path,category,exam,sha256,integrity_ok,encrypted,"
+        "INSERT INTO source_documents(doc_id,corpus,rel_path,category,exam,class_label,sha256,integrity_ok,encrypted,"
         "is_duplicate,verify_status,certify_status,certify_reason,created_at) "
-        "VALUES (?,?,?,?,?,?,1,0,0,'verified','certified','ok',?)",
-        (code + "_d", "foundation", f"{doc_exam}/x.pdf", doc_exam, doc_exam, code + "sha", now_iso()))
+        "VALUES (?,?,?,?,?,?,?,1,0,0,'verified','certified','ok',?)",
+        (code + "_d", "foundation", f"{doc_exam}/x.pdf", doc_exam, doc_exam, class_label, code + "sha", now_iso()))
     conn.execute(
         "INSERT INTO concepts(concept_code,title,definition,subject_domain,status,evidence,created_at) "
         "VALUES (?,?,?,?, 'active', ?, ?)",
@@ -95,6 +96,55 @@ class TestScope(unittest.TestCase):
         self.assertEqual(presets.resolve_exam_profile(None, "neet", None), "NEET")
         self.assertEqual(presets.resolve_exam_profile("jee advanced", None, None), "JEE_ADVANCED")
         self.assertIsNone(presets.resolve_exam_profile(None, "CBSE", None))
+
+
+class TestGradeIsolation(unittest.TestCase):
+    """P0-1 — absolute grade isolation: no Class 6-10 content in a Class 11-12 profile."""
+
+    def setUp(self):
+        self.conn = store.open_store(":memory:")
+        # NCERT textbook concepts across grades (class-labelled)
+        _seed_concept(self.conn, "BIO_C7", "Nutrition in Plants", Subject.BIOLOGY, "NCERT", freq=4, class_label="Class 7")
+        _seed_concept(self.conn, "BIO_C9", "Tissues", Subject.BIOLOGY, "NCERT", freq=4, class_label="Class 9")
+        _seed_concept(self.conn, "BIO_C11", "Cell Structure", Subject.BIOLOGY, "NCERT", freq=4, class_label="Class 11")
+        _seed_concept(self.conn, "BIO_C12", "Human Reproduction", Subject.BIOLOGY, "NCERT", freq=4, class_label="Class 12")
+        # competitive-exam concept (no class_label) → grade 11-12 by nature
+        _seed_concept(self.conn, "PHY_NEET", "Rotational Motion", Subject.PHYSICS, "NEET", freq=6)
+        # unresolvable grade (class label present but unparseable) → excluded
+        _seed_concept(self.conn, "BIO_BAD", "Some Topic", Subject.BIOLOGY, "NCERT", freq=4, class_label="Foundation")
+        self.conn.commit()
+
+    def tearDown(self):
+        self.conn.close()
+
+    def test_neet_excludes_class_6_to_10(self):
+        sc = scope.resolve_scope(self.conn, PaperRequest(exam="NEET"))
+        codes = set(sc.concept_codes)
+        self.assertNotIn("BIO_C7", codes)     # Class 7 excluded
+        self.assertNotIn("BIO_C9", codes)     # Class 9 excluded
+        self.assertIn("BIO_C11", codes)       # Class 11 kept
+        self.assertIn("BIO_C12", codes)       # Class 12 kept
+        self.assertIn("PHY_NEET", codes)      # competitive (grade 11-12) kept
+        self.assertNotIn("BIO_BAD", codes)    # unresolvable grade excluded (never assumed in-band)
+
+    def test_foundation_includes_all_grades(self):
+        sc = scope.resolve_scope(self.conn, PaperRequest(exam="FOUNDATION"))
+        codes = set(sc.concept_codes)
+        self.assertIn("BIO_C7", codes)        # FOUNDATION grade band 6-12 keeps Class 7
+        self.assertIn("BIO_C11", codes)
+        self.assertIn("PHY_NEET", codes)
+
+    def test_doc_grade_helper(self):
+        self.assertEqual(scope.doc_grade("Class 8", "NCERT"), 8)
+        self.assertEqual(scope.doc_grade(None, "NEET"), 11)     # competitive → in-band 11
+        self.assertIsNone(scope.doc_grade("Foundation", "NCERT"))  # unparseable
+        self.assertIsNone(scope.doc_grade(None, None))          # unknown
+
+    def test_grade_isolation_reported_in_stats(self):
+        sc = scope.resolve_scope(self.conn, PaperRequest(exam="NEET"))
+        self.assertEqual(sc.stats["grade_band"], [11, 12])
+        self.assertNotIn(7, sc.stats["by_grade"])
+        self.assertNotIn(9, sc.stats["by_grade"])
 
 
 if __name__ == "__main__":
