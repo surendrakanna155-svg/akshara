@@ -13,6 +13,14 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 // (P2-7. Per-tenant timezones can replace this constant later.)
 const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
 
+/** The IST calendar date (YYYY-MM-DD) for an ISO timestamp — the school-local
+ * "today" for date-string comparisons (same P2-7 rationale as dueInDaysFrom). */
+export function istDateOf(nowIso: string): string {
+  const t = Date.parse(nowIso);
+  const shifted = new Date((Number.isFinite(t) ? t : Date.now()) + IST_OFFSET_MS);
+  return shifted.toISOString().slice(0, 10);
+}
+
 /** The IST calendar-day index for an ISO timestamp or date-only string. */
 function istDayIndex(iso: string): number | undefined {
   const t = Date.parse(iso.length <= 10 ? `${iso}T00:00:00Z` : iso);

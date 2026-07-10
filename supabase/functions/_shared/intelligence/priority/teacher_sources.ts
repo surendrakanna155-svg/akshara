@@ -122,15 +122,18 @@ export function teacherHomeworkItems(homework: TeacherHomeworkInput[]): RawPrior
 /** (3) Exams in the teacher's classes not yet published → a marks-entry
  * deadline, subject-scoped (audit P2): the upstream read is section-scoped
  * (grade+section), so the loader marks each exam `subjectOwned` from the
- * teacher's own timetable (class,subject) pairs. Owned → direct framing;
- * not owned → dropped (it is a co-teacher's exam); unknown (no subject data
- * for that class) → kept with the previous neutral framing, since dropping a
- * real obligation is worse than a soft nudge. The marks-entry screen enforces
- * its own per-subject RBAC either way. No reliable ISO date on the session, so
- * severity (not a clock) carries the urgency. */
+ * teacher's own timetable (class,subject) pairs. A confident subject match
+ * upgrades to direct "this is yours" framing; anything else — a co-teacher's
+ * exam OR a mere label drift ("Maths" vs "Mathematics") — keeps the neutral
+ * "if you teach this exam" nudge. Nothing is ever silently dropped: exam and
+ * timetable subjects are free text authored by different flows, so a
+ * non-match cannot distinguish "not mine" from "labelled differently", and
+ * dropping a real obligation is worse than a soft nudge (audit round 2,
+ * P2-4). The marks-entry screen enforces its own per-subject RBAC either
+ * way. No reliable ISO date on the session, so severity (not a clock)
+ * carries the urgency. */
 export function teacherExamItems(exams: TeacherExamInput[]): RawPriorityItem[] {
   return exams
-    .filter((e) => e.subjectOwned !== false)
     .map((e) => ({
       itemKey: `teacher:exam:${e.examId}`,
       type: "deadline" as const,

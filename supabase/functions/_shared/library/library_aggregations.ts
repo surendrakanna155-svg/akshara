@@ -68,6 +68,32 @@ export async function listAllEntities(
   return rows.map((row) => row.payload);
 }
 
+/**
+ * The OPEN (un-returned) issue rows only, filtered in SQL and bounded — for
+ * hot-path callers (the priority feed) that must not scan a school's entire
+ * cumulative loan history the way `listAllEntities` does. Open loans at one
+ * school are bounded by the physical book count; 2000 is far past any pilot
+ * school. RLS still scopes to the caller's school.
+ */
+export async function listOpenIssueEntities(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+): Promise<Row[]> {
+  const rows = await db.queryObject<{ payload: Row }>(
+    `SELECT payload
+       FROM ${LIBRARY_TABLE}
+       WHERE organization_id = $1
+         AND school_id = $2
+         AND entity_type = 'issue'
+         AND COALESCE(payload->>'status', 'active') <> 'returned'
+       ORDER BY id
+       LIMIT 2000`,
+    [organizationId, schoolId],
+  );
+  return rows.map((row) => row.payload);
+}
+
 /** Open (un-returned) loans, with computed overdue days against `today`. */
 interface OpenLoan {
   issue: Row;

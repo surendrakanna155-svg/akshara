@@ -86,14 +86,25 @@ async function loadSchoolFeedSources(
 
   // W2.7 — ops-module worklists (recovery queue / PTP / low stock / doc
   // expiries / probation / overdue loans), each behind its module's own view
-  // permission. Director gets none by design (aggregate-only) and is not
-  // degraded by their absence.
+  // permission. Missing a module permission is entitlement-by-design (not
+  // every school runs transport/library), so ops sources never flip
+  // `degraded` — that flag stays reserved for the core analytics/risk
+  // sources (audit round 2, P2-2).
   const ops = await loadOpsWorklistSources(db, claims, persona, nowIso);
 
+  // The analytics fee_collection card and the richer ops call-queue item
+  // describe the same concern and share a deep-link — serve one, not two
+  // (audit round 2, P3-5).
+  const analyticsItems = collectRawItems(inputs);
+  const hasOpsCallQueue = ops.rawItems.some((i) => i.itemKey === "ops:finance:call_queue");
+  const merged = hasOpsCallQueue
+    ? [...analyticsItems.filter((i) => i.itemKey !== "fee:collection"), ...ops.rawItems]
+    : [...analyticsItems, ...ops.rawItems];
+
   return {
-    rawItems: [...collectRawItems(inputs), ...ops.rawItems],
+    rawItems: merged,
     // Director intentionally has no risk source, so its absence is not degraded.
-    degraded: !canViewAnalytics || (persona !== "director" && !canViewRisk) || ops.degraded,
+    degraded: !canViewAnalytics || (persona !== "director" && !canViewRisk),
   };
 }
 

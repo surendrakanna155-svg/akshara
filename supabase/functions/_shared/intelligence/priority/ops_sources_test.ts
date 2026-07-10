@@ -28,8 +28,18 @@ Deno.test("recovery: actionable entries summarize into one bounded item", () => 
   // Only the 2 actionable entries count; the top is the broken promise.
   assertEquals(item.factors.peopleAffected, 2);
   assertEquals(item.factors.moneyAtStakeMinor, 1_700_000);
+  // A broken promise in the queue makes the worklist serious (audit P2-1) —
+  // ₹-heavy recovery must be able to outrank routine reminders.
+  assertEquals(item.factors.impactClass, "serious");
   assert(item.detail.includes("Diya"));
   assert(!item.detail.includes("Kabir"));
+});
+
+Deno.test("recovery: no broken promise and a modest book stays elevated", () => {
+  const items = opsRecoveryItems([
+    { studentName: "Aarav", outstandingMinor: 500_000, priority: 2, reason: "Not yet contacted" },
+  ]);
+  assertEquals(items[0]!.factors.impactClass, "elevated");
 });
 
 Deno.test("recovery: fully future-promised queue yields no item (honest empty)", () => {
@@ -134,7 +144,13 @@ Deno.test("library: overdue loans summarize with fines in paise", () => {
   assertEquals(item.itemKey, "ops:library:overdue");
   assertEquals(item.factors.moneyAtStakeMinor, 7_000);
   assertEquals(item.factors.peopleAffected, 2);
+  assertEquals(item.factors.impactClass, undefined, "small pile stays routine");
   assert(item.detail.includes("longest overdue 10 days"));
+});
+
+Deno.test("library: a 10+ book pile-up escalates to elevated", () => {
+  const rows = Array.from({ length: 10 }, () => ({ daysOverdue: 3, fineRupees: 15 }));
+  assertEquals(opsLibraryItems(rows)[0]!.factors.impactClass, "elevated");
 });
 
 Deno.test("ops items are school-persona scoped: never surface to teacher/parent/student/director", () => {

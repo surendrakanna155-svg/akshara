@@ -68,19 +68,24 @@ Deno.test("teacher exams: each unpublished exam becomes a marks-entry deadline",
   assertEquals(items[0]!.source, "teacher_exam");
 });
 
-Deno.test("teacher exams: subject scoping (audit P2) — owned direct, co-teacher dropped, unknown neutral", () => {
+Deno.test("teacher exams: subject scoping (audit P2) — owned direct, everything else neutral, nothing dropped", () => {
   const items = teacherExamItems([
     // Owned: teacher teaches this subject in this class → direct framing.
     { examId: "ex1", title: "UT1", classLabel: "8-A", maxMarks: 50, subject: "Maths", subjectOwned: true },
-    // Co-teacher's exam: subject data present but not taught by this teacher → dropped.
+    // Non-match: co-teacher's exam OR label drift — indistinguishable in free
+    // text, so it stays as a neutral nudge instead of a silent drop (round 2).
     { examId: "ex2", title: "UT1", classLabel: "8-A", maxMarks: 50, subject: "Science", subjectOwned: false },
     // Unknown (no timetable subject data for the class) → kept, neutral framing.
     { examId: "ex3", title: "UT1", classLabel: "9-B", maxMarks: 50, subject: "English" },
   ]);
-  assertEquals(items.map((i) => i.itemKey), ["teacher:exam:ex1", "teacher:exam:ex3"]);
+  assertEquals(
+    items.map((i) => i.itemKey),
+    ["teacher:exam:ex1", "teacher:exam:ex2", "teacher:exam:ex3"],
+  );
   assert(items[0]!.detail.includes("Complete and verify the marks."));
   assert(!items[0]!.detail.includes("If you teach this exam"));
   assert(items[1]!.detail.includes("If you teach this exam"));
+  assert(items[2]!.detail.includes("If you teach this exam"));
 });
 
 Deno.test("teacher items are persona-isolated: they never surface to another persona", () => {

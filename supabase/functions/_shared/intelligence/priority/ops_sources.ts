@@ -15,8 +15,9 @@
 // Split, matching teacher_sources.ts: PURE generators (structural input →
 // RawPriorityItem, no DB / no clock — unit-tested) + one async loader that
 // does the permission-gated DB reads (reusing each module's existing
-// repository/pure functions, per-source gate + degraded flag exactly like
-// loadSchoolFeedSources).
+// repository/pure functions). A missing module permission is
+// entitlement-by-design (not every school runs every module), so ops sources
+// never mark the feed `degraded`.
 
 import type { AccessTokenClaims } from "../../jwt.ts";
 import { organizationIdFromClaims, schoolIdFromClaims } from "../../permission_middleware.ts";
@@ -31,7 +32,12 @@ import {
   buildProbationEnding,
   loadEmployeePayloads,
 } from "../../hr/hr_reports_repository.ts";
-import { FINE_PER_DAY, listAllEntities, overdueList } from "../../library/library_aggregations.ts";
+import {
+  FINE_PER_DAY,
+  listOpenIssueEntities,
+  overdueList,
+} from "../../library/library_aggregations.ts";
+import { istDateOf } from "./feed_dates.ts";
 import type { Persona, RawPriorityItem } from "./priority_types.ts";
 
 /** Ops worklists are school-operational surfaces: principal + admin. Director
@@ -100,6 +106,11 @@ export function opsRecoveryItems(entries: OpsCallQueueEntryInput[]): RawPriority
       : (a.outstandingMinor >= b.outstandingMinor ? a : b)
   );
   const n = actionable.length;
+  // Severity mirrors the fee_collection precedent: a broken promise in the
+  // queue (priority 0) or a large actionable book is serious, else elevated —
+  // without a class the engine floors urgency and ₹50L could rank below a
+  // routine reminder (audit P2-1).
+  const hasBroken = actionable.some((e) => e.priority === 0);
   return [{
     itemKey: "ops:finance:call_queue",
     type: "follow_up",
@@ -108,7 +119,11 @@ export function opsRecoveryItems(entries: OpsCallQueueEntryInput[]): RawPriority
       `Top: ${top.studentName} (${INR(top.outstandingMinor)} — ${top.reason}).`,
     personas: FINANCE_OPS,
     entityTags: ["school:fees", "ops:worklist"],
-    factors: { moneyAtStakeMinor: totalMinor, peopleAffected: n },
+    factors: {
+      moneyAtStakeMinor: totalMinor,
+      peopleAffected: n,
+      impactClass: hasBroken || totalMinor >= 10_000_000 ? "serious" : "elevated",
+    },
     source: "ops_finance_recovery",
   }];
 }
@@ -187,7 +202,7 @@ export function opsTransportItems(expiries: OpsDocumentExpiryInput[]): RawPriori
     title: expired > 0
       ? `${expired} transport document${expired === 1 ? "" : "s"} expired`
       : `${n} transport document${n === 1 ? "" : "s"} expiring soon`,
-    detail: `${soonestLabel}. ${n} document${n === 1 ? "" : "s"} within the 30-day window.`,
+    detail: `${soonestLabel}. ${n} document${n === 1 ? "" : "s"} expired or due within 30 days.`,
     personas: SCHOOL_OPS,
     entityTags: ["school:transport", "ops:worklist"],
     factors: {
@@ -215,7 +230,7 @@ export function opsHrDocumentItems(rows: OpsDocumentExpiryInput[]): RawPriorityI
       soonest.inDays < 0
         ? `expired ${-soonest.inDays} day${soonest.inDays === -1 ? "" : "s"} ago`
         : `expires in ${soonest.inDays} day${soonest.inDays === 1 ? "" : "s"}`
-    }. ${n} in the 30-day window.`,
+    }. ${n} expired or due within 30 days.`,
     personas: SCHOOL_OPS,
     entityTags: ["school:hr", "ops:worklist"],
     factors: {
@@ -265,7 +280,11 @@ export function opsLibraryItems(rows: OpsOverdueLoanInput[]): RawPriorityItem[] 
     }. Send reminders from the overdue list.`,
     personas: SCHOOL_OPS,
     entityTags: ["school:library", "ops:worklist"],
-    factors: { moneyAtStakeMinor: finesMinor, peopleAffected: n },
+    factors: {
+      moneyAtStakeMinor: finesMinor,
+      peopleAffected: n,
+      ...(n >= 10 ? { impactClass: "elevated" as const } : {}),
+    },
     source: "ops_library_overdue",
   }];
 }
@@ -327,11 +346,12 @@ export async function loadOpsWorklistSources(
   const orgId = organizationIdFromClaims(claims);
   const schoolId = schoolIdFromClaims(claims);
   const perms = claims.permissions;
-  const today = nowIso.slice(0, 10);
+  // School-local calendar day (P2-7 IST convention shared with the per-user
+  // feeds); Date-based scans stay on the same clock their module screens use.
+  const today = istDateOf(nowIso);
   const now = new Date(nowIso);
 
   const inputs: OpsSourceInputs = {};
-  let degraded = false;
 
   if (applicable.finance) {
     if (perms.includes("viewFinance")) {
@@ -359,8 +379,6 @@ export async function loadOpsWorklistSources(
         promisesDueToday: parseInt(agg.ptp_due_today, 10) || 0,
         promisesOverdue: parseInt(agg.ptp_overdue, 10) || 0,
       };
-    } else {
-      degraded = true;
     }
   }
 
@@ -372,8 +390,6 @@ export async function loadOpsWorklistSources(
         quantityOnHand: r.quantityOnHand,
         reorderLevel: r.reorderLevel,
       }));
-    } else {
-      degraded = true;
     }
 
     if (perms.includes("viewTransport")) {
@@ -389,8 +405,6 @@ export async function loadOpsWorklistSources(
         EXPIRY_WINDOW_DAYS,
         now,
       ).map((e) => ({ subject: e.subject, document: e.document, inDays: e.inDays }));
-    } else {
-      degraded = true;
     }
 
     if (perms.includes("viewHr")) {
@@ -406,20 +420,18 @@ export async function loadOpsWorklistSources(
         employee: r.employee,
         daysToEnd: r.daysToEnd,
       }));
-    } else {
-      degraded = true;
     }
 
     if (perms.includes("viewLibrary")) {
-      const issues = await listAllEntities(db, orgId, schoolId, "issue");
+      // Bounded open-loan read — never the school's full cumulative loan
+      // history on the feed hot path (audit P2-3).
+      const issues = await listOpenIssueEntities(db, orgId, schoolId);
       inputs.libraryOverdue = overdueList(issues, now).map((row) => {
         const days = Number(row.daysOverdue ?? 0);
         return { daysOverdue: days, fineRupees: days * FINE_PER_DAY };
       });
-    } else {
-      degraded = true;
     }
   }
 
-  return { rawItems: collectOpsRawItems(inputs), degraded };
+  return { rawItems: collectOpsRawItems(inputs), degraded: false };
 }
