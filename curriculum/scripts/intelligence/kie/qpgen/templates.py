@@ -683,3 +683,17 @@ def instantiate(template: Template, concept_code: str, seed: int, qtype: str) ->
     out["template_id"] = template.template_id
     out["solver_verified"] = True
     return out
+
+
+# ── Knowledge-layer certified-family extension (Phase 4) ─────────────────────────────
+# CONTENT-ONLY growth: additional solver-verified families are authored in the KNOWLEDGE LAYER
+# (kie.curate.templates_ext) and registered here. This changes NO engine logic — find_template,
+# instantiate, validation and selection are untouched; only the certified-family data set grows
+# (exactly what this file's docstring sanctions). The engine's own primitives are passed in, so
+# the knowledge-layer module never imports qpgen (no circular dependency). If the extension is
+# absent or fails to load, the engine stands alone on its built-in families.
+try:
+    from kie.curate import templates_ext as _kl_templates
+    REGISTRY += _kl_templates.build_families(Template, _num_family, _mcq_options, _p, _n, QuestionType)
+except Exception:  # pragma: no cover - defensive: engine must never break on optional content
+    pass
