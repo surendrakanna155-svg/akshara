@@ -82,6 +82,50 @@ export function actionForItem(item: RawPriorityItem): PriorityAction | undefined
           payload: {},
           requiresConfirmation: true,
         };
+    // ---- W2.7 ops-module worklists (school-persona scope) ----
+    case "ops_finance_recovery":
+    case "ops_finance_ptp":
+      return {
+        label: "Open recovery call queue",
+        deepLink: "/finance/recovery/call-queue",
+        payload: {},
+        requiresConfirmation: true,
+      };
+    case "ops_inventory_reorder":
+      return {
+        label: "Open low-stock list",
+        deepLink: "/inventory/stock/low-stock",
+        payload: {},
+        requiresConfirmation: true,
+      };
+    case "ops_transport_expiry":
+      return {
+        label: "Review transport documents",
+        deepLink: "/transport/vehicles",
+        payload: {},
+        requiresConfirmation: true,
+      };
+    case "ops_hr_expiry":
+      return {
+        label: "Review expiring documents",
+        deepLink: "/hr/documents/expiring",
+        payload: {},
+        requiresConfirmation: true,
+      };
+    case "ops_hr_probation":
+      return {
+        label: "Review probation list",
+        deepLink: "/hr/probation/ending",
+        payload: {},
+        requiresConfirmation: true,
+      };
+    case "ops_library_overdue":
+      return {
+        label: "Open overdue list",
+        deepLink: "/library/overdue",
+        payload: {},
+        requiresConfirmation: true,
+      };
     // ---- Teacher (own-class scope) ----
     case "teacher_attendance": {
       const classLabel = suffixAfter(item.itemKey, "teacher:attendance:");

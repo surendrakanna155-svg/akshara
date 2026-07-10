@@ -17,6 +17,7 @@ import {
   getPersonaMemory,
 } from "../../ai/ai_persona_memory_repository.ts";
 import { collectRawItems, type PrioritySourceInputs } from "./priority_sources.ts";
+import { loadOpsWorklistSources } from "./ops_sources.ts";
 import { loadTeacherFeedSources } from "./teacher_sources.ts";
 import { loadParentFeedSources } from "./parent_sources.ts";
 import { loadStudentFeedSources } from "./student_sources.ts";
@@ -44,6 +45,7 @@ async function loadSchoolFeedSources(
   db: TenantQueryClient,
   claims: AccessTokenClaims,
   persona: Persona,
+  nowIso: string,
 ): Promise<RawSourceResult> {
   const orgId = organizationIdFromClaims(claims);
   const schoolId = schoolIdFromClaims(claims);
@@ -82,10 +84,16 @@ async function loadSchoolFeedSources(
     }));
   }
 
+  // W2.7 — ops-module worklists (recovery queue / PTP / low stock / doc
+  // expiries / probation / overdue loans), each behind its module's own view
+  // permission. Director gets none by design (aggregate-only) and is not
+  // degraded by their absence.
+  const ops = await loadOpsWorklistSources(db, claims, persona, nowIso);
+
   return {
-    rawItems: collectRawItems(inputs),
+    rawItems: [...collectRawItems(inputs), ...ops.rawItems],
     // Director intentionally has no risk source, so its absence is not degraded.
-    degraded: !canViewAnalytics || (persona !== "director" && !canViewRisk),
+    degraded: !canViewAnalytics || (persona !== "director" && !canViewRisk) || ops.degraded,
   };
 }
 
@@ -110,7 +118,7 @@ export async function loadPersonaFeedContext(
     ? await loadParentFeedSources(db, claims, nowIso)
     : persona === "student"
     ? await loadStudentFeedSources(db, claims, nowIso)
-    : await loadSchoolFeedSources(db, claims, persona);
+    : await loadSchoolFeedSources(db, claims, persona, nowIso);
 
   // Persona memory personalizes ordering (learned weights) and hides dismissed
   // items. Best-effort: an empty/absent row yields neutral defaults, so the feed
