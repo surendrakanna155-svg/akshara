@@ -356,8 +356,12 @@ export function gatewayDepsFor(
     cache: cacheCfg
       ? {
         lookup: (scope) => lookupResponseCache(db, scope, cacheCfg.key),
+        // Savepoint-wrapped like record/finalize: a DB-level cache-write
+        // failure must degrade to "not cached", never abort the request
+        // transaction (round-3 N2).
         write: (scope, surface, payload, model, tokensSaved) =>
-          writeResponseCache(db, scope, {
+          withTelemetrySavepoint(db, () =>
+            writeResponseCache(db, scope, {
             cacheKey: cacheCfg.key,
             surface,
             language: cacheCfg.language ?? "english",
@@ -366,7 +370,7 @@ export function gatewayDepsFor(
             model,
             tokensSaved,
             ttlSeconds: cacheCfg.ttlSeconds,
-          }),
+          })),
       }
       : undefined,
   };
@@ -573,8 +577,9 @@ export async function runGateway(
         fallbackUsed: true,
       });
       // Record-then-consume: if the consume is lost the reservation stays
-      // pending until the TTL sweep (over-count, conservative) — never the
-      // uncapped direction.
+      // pending until the TTL sweep (over-count, conservative). The one
+      // residual undercount is a lost RECORD with a successful consume —
+      // bounded to that single call and logged via gateway.record.
       await settleReservation(deps, reservationId, true, estimatedCostMicros);
       return {
         text: fallbackText,

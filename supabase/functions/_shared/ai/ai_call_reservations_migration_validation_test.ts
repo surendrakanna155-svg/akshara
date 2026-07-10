@@ -15,10 +15,13 @@ const MIGRATION = new URL(
   import.meta.url,
 );
 const sql = await Deno.readTextFile(MIGRATION);
-/** Statements only — the header comment legitimately narrates ai_call_log. */
+/** Statements only — comments legitimately narrate ai_call_log, so both
+ * whole-line and trailing `--` comments are stripped before matching
+ * (round-3 N4: a trailing comment must not hide statement text). */
 const statements = sql
   .split("\n")
   .filter((line) => !line.trimStart().startsWith("--"))
+  .map((line) => line.split("--")[0]!)
   .join("\n");
 
 Deno.test("20260875 creates the reservations table with RLS forced and a tenant wall", () => {
