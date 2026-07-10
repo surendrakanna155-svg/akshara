@@ -17,6 +17,23 @@ Deno.test("eventFamily classifies the known families and ignores the rest", () =
   assertEquals(eventFamily("teacher_logged_in"), null);
 });
 
+Deno.test("eventFamily covers the broadened families (F19)", () => {
+  assertEquals(eventFamily("education.homework.published"), "homework");
+  assertEquals(eventFamily("library.book.issued"), "library");
+  assertEquals(eventFamily("inventory.stock.issued"), "inventory");
+  assertEquals(eventFamily("transport.route.created"), "transport");
+  assertEquals(eventFamily("admissions.lead.stage_changed"), "admissions");
+});
+
+Deno.test("eventFamily does not misclassify transport/HR attendance as academic (F19)", () => {
+  // Bus attendance is transport, not academic class attendance.
+  assertEquals(eventFamily("transport.attendance.recorded"), "transport");
+  // Biometric HR attendance carries no academic cache/signal dependency.
+  assertEquals(eventFamily("staff_attendance.check_in.recorded"), null);
+  // Academic class attendance still classifies correctly.
+  assertEquals(eventFamily("attendance.submitted"), "attendance");
+});
+
 Deno.test("eventToEntityTags emits school + student tags for a student-scoped event", () => {
   assertEquals(
     eventToEntityTags("fee_collected", { student_id: "stu-1" }),

@@ -10,9 +10,21 @@ export async function publishPendingDomainEvents(
   db: TenantQueryClient,
   orgId: string,
   limit = 100,
-): Promise<{ processed: number; published: number; failed: number; retried: number }> {
-  const pending = await db.queryObject<{ id: string; attempt_count: number }>(
-    `SELECT id::text, attempt_count FROM domain_events
+): Promise<
+  {
+    processed: number;
+    published: number;
+    failed: number;
+    retried: number;
+    /** Distinct schools whose events were published — the Signal Refinery
+     * (W1.4) refines exactly these after the drain commits. */
+    schoolIds: string[];
+  }
+> {
+  const pending = await db.queryObject<
+    { id: string; attempt_count: number; school_id: string | null }
+  >(
+    `SELECT id::text, attempt_count, school_id::text FROM domain_events
      WHERE organization_id = $1
        AND status IN ('pending', 'failed')
        AND (next_retry_at IS NULL OR next_retry_at <= timezone('utc', now()))
@@ -24,6 +36,7 @@ export async function publishPendingDomainEvents(
   let published = 0;
   let failed = 0;
   let retried = 0;
+  const schoolIds = new Set<string>();
 
   for (const row of pending) {
     const nextAttempt = row.attempt_count + 1;
@@ -39,6 +52,7 @@ export async function publishPendingDomainEvents(
         [row.id, nextAttempt],
       );
       published += 1;
+      if (row.school_id) schoolIds.add(row.school_id);
     } catch (error) {
       const message = error instanceof Error ? error.message : "publish failed";
       if (nextAttempt >= MAX_ATTEMPTS) {
@@ -64,5 +78,5 @@ export async function publishPendingDomainEvents(
     }
   }
 
-  return { processed: pending.length, published, failed, retried };
+  return { processed: pending.length, published, failed, retried, schoolIds: [...schoolIds] };
 }

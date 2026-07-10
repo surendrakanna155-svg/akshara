@@ -53,6 +53,38 @@ export function boundHistory<T>(history: T[], maxTurns = MAX_HISTORY_TURNS): T[]
   return history.length <= maxTurns ? history : history.slice(history.length - maxTurns);
 }
 
+/** School-level cache entity tags this assistant's answers depend on, so the
+ * Signal Refinery (W1.4) can proactively evict a cached answer when the
+ * underlying data changes (audit F2 — writes must carry tags for invalidation
+ * to match). Coarse-but-safe: the content-hash cache key already guarantees
+ * correctness (a fact change mints a new key); tags add proactive freshness. */
+export function copilotCacheTags(assistantType: CopilotAssistantType): string[] {
+  switch (assistantType) {
+    case "finance":
+      return ["school:fees"];
+    case "admissions":
+      return ["school:admissions"];
+    case "academic":
+      return ["school:exams", "school:homework", "school:attendance"];
+    case "teacher":
+      return ["school:attendance", "school:exams", "school:homework"];
+    case "sis":
+      return ["school:attendance", "school:admissions"];
+    case "parentGuidance":
+      return ["school:fees", "school:attendance", "school:exams"];
+    case "principal":
+      return [
+        "school:fees",
+        "school:attendance",
+        "school:exams",
+        "school:approvals",
+        "school:admissions",
+      ];
+    case "communication":
+      return [];
+  }
+}
+
 const REFUSAL_REPLY =
   "I can't help with that request. I'm Akshara's read-only operational " +
   "assistant — ask me about the school data you have access to and I'll summarize it.";
@@ -112,7 +144,14 @@ export async function generateCopilotResponse(
       },
       { system: input.systemPrompt, messages, maxTokens: COPILOT_MAX_TOKENS },
       stub,
-      { cache: { key: cacheKey, entityTags: [], ttlSeconds: 86_400, language: "english" } },
+      {
+        cache: {
+          key: cacheKey,
+          entityTags: copilotCacheTags(input.assistantType),
+          ttlSeconds: 86_400,
+          language: "english",
+        },
+      },
     );
     if (gw.refused) return { content: REFUSAL_REPLY, model: gw.model || "akshara-ai", stub: false };
     if (gw.ok) return { content: gw.text, model: gw.model, stub: false };
