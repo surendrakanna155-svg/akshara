@@ -40,6 +40,7 @@ import { routeCommunication } from "../_shared/communication/communication_route
 import { routePilotOperations } from "../_shared/pilot/pilot_operations_router.ts";
 import { routeOnboarding } from "../_shared/onboarding/onboarding_router.ts";
 import { routeCopilot } from "../_shared/copilot/copilot_router.ts";
+import { routeSearch } from "../_shared/search/search_router.ts";
 import { routeAnalytics } from "../_shared/analytics/analytics_router.ts";
 import { routeEducation } from "../_shared/education/education_router.ts";
 import { routeIntelligence } from "../_shared/intelligence/intelligence_router.ts";
@@ -150,6 +151,8 @@ export async function routeModuleRequest(
     routeEducation,
     routeIntelligence,
     routeCopilot,
+    // W2.S — Universal School Search (deterministic, RBAC-scoped entity resolver).
+    routeSearch,
     routeCommunication,
     routeParent,
     routeTeacher,
