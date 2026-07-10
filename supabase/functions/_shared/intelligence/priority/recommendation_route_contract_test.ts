@@ -52,7 +52,10 @@ Deno.test("W2.0b: recommendations feed matches the router (reaches DB → 503)",
 });
 
 Deno.test("W2.0b: recommendations rejects a not-yet-shipped persona (422)", async () => {
-  const res = await call("GET", "/intelligence/recommendations?persona=parent", ["viewAnalytics"]);
+  const res = await call("GET", "/intelligence/recommendations?persona=student", ["viewSis"], undefined, {
+    scope: "student", role: "student", role_slugs: ["student"], primary_role: "student",
+    student_id: "stu-1",
+  });
   assertEquals(res.status, 422);
 });
 
@@ -62,6 +65,25 @@ Deno.test("W2 teacher: recommendations for persona=teacher reach the DB (503)", 
     role_slugs: ["teacher"],
     primary_role: "teacher",
   });
+  assertEquals(res.status, 503);
+});
+
+Deno.test("W2 parent: recommendations for persona=parent (parent scope) reach the DB (503)", async () => {
+  const res = await call("GET", "/intelligence/recommendations?persona=parent", ["viewSis"], undefined, {
+    scope: "parent", role: "parent", role_slugs: ["parent"], primary_role: "parent",
+    child_ids: ["stu-1"],
+  });
+  assertEquals(res.status, 503);
+});
+
+Deno.test("W2 parent: a parent session may record its own feedback (reaches DB → 503)", async () => {
+  const res = await call(
+    "POST",
+    "/intelligence/recommendations/feedback",
+    ["viewSis"],
+    { itemKey: "parent:fees:stu-1", itemType: "follow_up", action: "dismiss" },
+    { scope: "parent", role: "parent", role_slugs: ["parent"], primary_role: "parent", child_ids: ["stu-1"] },
+  );
   assertEquals(res.status, 503);
 });
 
@@ -113,7 +135,8 @@ Deno.test("W2.0b: a valid feedback body is authorized and reaches the DB (503)",
   assertEquals(res.status, 503);
 });
 
-Deno.test("W2.0b: feedback requires school scope (403)", async () => {
+Deno.test("W2.0b: feedback rejects an ineligible scope (403)", async () => {
+  // Feed-eligible scopes are school/parent/student; an organization session is not.
   const res = await call(
     "POST",
     "/intelligence/recommendations/feedback",

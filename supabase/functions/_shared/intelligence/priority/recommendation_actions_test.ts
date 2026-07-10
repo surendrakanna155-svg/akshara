@@ -61,6 +61,17 @@ Deno.test("teacher actions require confirmation and deep-link to the right surfa
   assertEquals(exam?.requiresConfirmation, true);
 });
 
+Deno.test("parent actions deep-link to the child-scoped surface with the child id", () => {
+  const att = actionForItem(item({ source: "parent_attendance", itemKey: "parent:attendance:stu-7" }));
+  assertEquals(att?.deepLink, "/parent/attendance");
+  assertEquals(att?.payload, { activeChildId: "stu-7" });
+  assertEquals(att?.requiresConfirmation, true);
+
+  const fees = actionForItem(item({ source: "parent_fees", itemKey: "parent:fees:stu-7", type: "follow_up" }));
+  assertEquals(fees?.deepLink, "/parent/fees");
+  assertEquals(fees?.payload, { activeChildId: "stu-7" });
+});
+
 Deno.test("an unknown source yields no action (informational only)", () => {
   assertEquals(actionForItem(item({ source: "some_future_source" })), undefined);
 });

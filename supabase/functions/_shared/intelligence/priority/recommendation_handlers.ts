@@ -16,7 +16,7 @@ import { envelope, errorEnvelope, jsonResponse, readJson } from "../../http.ts";
 import {
   authenticateRequest,
   organizationIdFromClaims,
-  requireSchoolOperationalScope,
+  requireFeedbackScope,
   schoolIdFromClaims,
 } from "../../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../../tenant_db.ts";
@@ -82,7 +82,7 @@ export async function handleRecommendationFeedback(
 ): Promise<Response> {
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
-  const denied = requireSchoolOperationalScope(auth.claims);
+  const denied = requireFeedbackScope(auth.claims);
   if (denied) return denied;
 
   const body = await readJson<{ itemKey?: string; itemType?: string; action?: string }>(req);

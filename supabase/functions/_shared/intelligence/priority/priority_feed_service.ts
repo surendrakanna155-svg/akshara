@@ -18,6 +18,7 @@ import {
 } from "../../ai/ai_persona_memory_repository.ts";
 import { collectRawItems, type PrioritySourceInputs } from "./priority_sources.ts";
 import { loadTeacherFeedSources } from "./teacher_sources.ts";
+import { loadParentFeedSources } from "./parent_sources.ts";
 import type { LearnedWeights, Persona, RawPriorityItem } from "./priority_types.ts";
 
 export interface PersonaFeedContext {
@@ -104,6 +105,8 @@ export async function loadPersonaFeedContext(
 
   const sources: RawSourceResult = persona === "teacher"
     ? await loadTeacherFeedSources(db, claims, nowIso)
+    : persona === "parent"
+    ? await loadParentFeedSources(db, claims, nowIso)
     : await loadSchoolFeedSources(db, claims, persona);
 
   // Persona memory personalizes ordering (learned weights) and hides dismissed

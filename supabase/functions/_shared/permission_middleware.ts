@@ -143,6 +143,22 @@ export function requireStudentSelfScope(claims: AccessTokenClaims): Response | n
   return null;
 }
 
+/**
+ * Feed feedback (accept/dismiss/suppress) writes only the caller's OWN Persona
+ * Memory row (user_id = app_current_user_id()). Any feed-eligible session —
+ * school (principal/teacher/…), parent, or student — may record its own
+ * feedback; per-user isolation is enforced by RLS, not by scope. A school_id is
+ * still required (the row is keyed by org+school+user).
+ */
+export function requireFeedbackScope(claims: AccessTokenClaims): Response | null {
+  const eligible = claims.scope === "school" || claims.scope === "parent" ||
+    claims.scope === "student";
+  if (!eligible || !claims.school_id) {
+    return errorEnvelope("FORBIDDEN", "Feedback requires a school, parent, or student session", 403);
+  }
+  return null;
+}
+
 export function organizationIdFromClaims(claims: AccessTokenClaims): string {
   return claims.tenant_id;
 }

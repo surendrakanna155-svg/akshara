@@ -110,6 +110,25 @@ export function actionForItem(item: RawPriorityItem): PriorityAction | undefined
         requiresConfirmation: true,
       };
     }
+    // ---- Parent (own-children scope) ----
+    case "parent_attendance": {
+      const studentId = suffixAfter(item.itemKey, "parent:attendance:");
+      return {
+        label: "View attendance",
+        deepLink: "/parent/attendance",
+        payload: studentId ? { activeChildId: studentId } : {},
+        requiresConfirmation: true,
+      };
+    }
+    case "parent_fees": {
+      const studentId = suffixAfter(item.itemKey, "parent:fees:");
+      return {
+        label: "View fees",
+        deepLink: "/parent/fees",
+        payload: studentId ? { activeChildId: studentId } : {},
+        requiresConfirmation: true,
+      };
+    }
     default:
       return undefined;
   }

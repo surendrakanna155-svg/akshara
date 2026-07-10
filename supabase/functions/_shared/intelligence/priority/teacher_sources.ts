@@ -21,6 +21,7 @@ import {
   listTeacherHomeworkHistory,
   listTeacherUpcomingExams,
 } from "../../pilot/pilot_operations_repository.ts";
+import { dueInDaysFrom } from "./feed_dates.ts";
 import type { Persona, RawPriorityItem } from "./priority_types.ts";
 
 const TEACHER: Persona[] = ["teacher"];
@@ -146,16 +147,6 @@ export function collectTeacherRawItems(inputs: TeacherSourceInputs): RawPriority
 
 // ─── Loader (DB reads; reuses the teacher-scoped pilot repo) ──────────────────
 
-/** Whole-date difference in days from `fromIso` to `toIso` (date-only). Returns
- * undefined when either side is unparseable. */
-function dueInDaysFrom(fromIso: string, toIso: string): number | undefined {
-  const DAY = 24 * 60 * 60 * 1000;
-  const from = Date.parse(`${fromIso.slice(0, 10)}T00:00:00Z`);
-  const to = Date.parse(`${toIso.slice(0, 10)}T00:00:00Z`);
-  if (!Number.isFinite(from) || !Number.isFinite(to)) return undefined;
-  return Math.round((to - from) / DAY);
-}
-
 function toAttendanceInput(r: Record<string, unknown>): TeacherAttendanceClassInput {
   const id = String(r.id ?? "");
   const classLabel = id.startsWith("class_") ? id.slice("class_".length) : id;
@@ -177,7 +168,7 @@ function toHomeworkInput(h: Record<string, unknown>, nowIso: string): TeacherHom
     subject: String(h.subject ?? ""),
     submittedCount: Number(h.submittedCount ?? 0),
     totalCount: Number(h.totalCount ?? 0),
-    dueInDays: dueDate ? dueInDaysFrom(nowIso, dueDate) : undefined,
+    dueInDays: dueInDaysFrom(nowIso, dueDate),
   };
 }
 
