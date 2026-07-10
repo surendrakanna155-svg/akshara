@@ -12,6 +12,7 @@ import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { loadCopilotContext } from "./copilot_context_engine.ts";
 import { generateCopilotResponse } from "./copilot_llm_client.ts";
+import { classifyDomain, SCHOOL_ASSISTANT_REFUSAL } from "../ai/domain_gate.ts";
 import { resolveAiConfig } from "../ai/ai_settings.ts";
 import { getAiEconomics } from "../ai/ai_economics_service.ts";
 import { buildSystemPrompt } from "./copilot_prompt_orchestrator.ts";
@@ -294,6 +295,36 @@ export async function handleSendMessage(
         "user",
         content,
       );
+
+      // W2-GATE (doc 10 §3, owner-locked rule 6): the school-only Domain Gate —
+      // the FIRST AI firewall gate. An off-domain request (politics, movies,
+      // sports, code, medical, recipes, travel, general knowledge…) is refused
+      // deterministically: 0 tokens, NO context load, NO model call. In-domain
+      // and ambiguous requests fall through to the governed path below.
+      const domain = classifyDomain(content);
+      if (!domain.inDomain) {
+        const refusal = await appendCopilotMessage(
+          db,
+          orgId,
+          schoolId,
+          sessionId,
+          "assistant",
+          SCHOOL_ASSISTANT_REFUSAL,
+          { domainBlocked: true, model: "none", stub: false },
+        );
+        await recordServerAuditEvent(db, auth.claims, {
+          eventType: "aiCopilotResponse",
+          category: "workflow",
+          entityType: "ai_copilot_session",
+          entityId: sessionId,
+          metadata: {
+            assistantType: session.assistant_type,
+            domainBlocked: "true",
+            reason: domain.reason,
+          },
+        }, req);
+        return { userMessage, assistantMessage: refusal, model: "none", stub: false };
+      }
 
       const ai = await resolveAiConfig(db, orgId);
       const generation = await generateCopilotResponse({
