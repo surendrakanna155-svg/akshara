@@ -33,6 +33,7 @@ function extractProbeNames(source: string): string[] {
 
 // Count updated 220 → 233: the RLS repair wave (20ae7762) registered 13 more
 // probes without bumping this tripwire, so it had been failing at HEAD.
-Deno.test("tenant isolation probe count includes v7.6 probes (233)", () => {
-  assertEquals(extractProbeNames(probesSource).length, 233);
+// 233 → 238: W1-completion F4 added 5 Adaptive AI ai_* WITH-CHECK write probes.
+Deno.test("tenant isolation probe count includes v7.6 + AI probes (238)", () => {
+  assertEquals(extractProbeNames(probesSource).length, 238);
 });

@@ -373,6 +373,26 @@ async function count(db: TenantQueryClient, sql: string, args: unknown[] = []): 
   return await db.queryCount(sql, args);
 }
 
+/** Attempt an INSERT under the current RLS scope, SAVEPOINT-guarded so a WITH
+ * CHECK rejection recovers the transaction and any accepted row is rolled back
+ * (probes must never leave data). Returns true iff the INSERT was ACCEPTED. */
+async function tryInsert(
+  db: TenantQueryClient,
+  savepoint: string,
+  sql: string,
+  args: unknown[],
+): Promise<boolean> {
+  await db.queryObject(`SAVEPOINT ${savepoint}`);
+  try {
+    await db.queryObject(sql, args);
+    await db.queryObject(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+    return true;
+  } catch {
+    await db.queryObject(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+    return false;
+  }
+}
+
 const PROBE_CONCURRENCY = 16;
 
 async function runProbeTasks(
@@ -2285,6 +2305,78 @@ export async function runEnforcedIsolationProbes(
   tasks.push(() => runWithClaims(orgBClaims(), async (db) => {
     const n = await count(db, ORGANIZATION_SUBSCRIPTION_PROBE_SQL, [SUBSCRIPTION_PROBE_ORG_A_ROW]);
     return { name: "org_b_cannot_see_org_a_subscription", pass: n === 0, detail: `visible_cross_org_subscription=${n}` };
+  }));
+
+  // ── Adaptive AI (W1) memory/cache/telemetry tables (audit F4) ──────────────
+  // Every ai_* table's RLS WITH CHECK must reject a cross-school write. Each
+  // probe attempts a SCHOOL_B INSERT under SCHOOL_A scope and expects rejection
+  // (SAVEPOINT-guarded, leaves no data).
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const accepted = await tryInsert(
+      db,
+      "ai_cl_wp",
+      "INSERT INTO ai_call_log (organization_id, school_id, surface, provider, model, outcome) VALUES ($1,$2,'probe','p','m','ok')",
+      [ORG, SCHOOL_B],
+    );
+    return {
+      name: "ai_call_log_with_check_blocks_cross_school",
+      pass: !accepted,
+      detail: `cross_school_write_accepted=${accepted}`,
+    };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const accepted = await tryInsert(
+      db,
+      "ai_rc_wp",
+      "INSERT INTO ai_response_cache (organization_id, school_id, cache_key, payload) VALUES ($1,$2,'probe-key','x')",
+      [ORG, SCHOOL_B],
+    );
+    return {
+      name: "ai_response_cache_with_check_blocks_cross_school",
+      pass: !accepted,
+      detail: `cross_school_write_accepted=${accepted}`,
+    };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const accepted = await tryInsert(
+      db,
+      "ai_fs_wp",
+      "INSERT INTO ai_fact_signals (organization_id, school_id, signal_type, scope_key) VALUES ($1,$2,'probe','probe')",
+      [ORG, SCHOOL_B],
+    );
+    return {
+      name: "ai_fact_signals_with_check_blocks_cross_school",
+      pass: !accepted,
+      detail: `cross_school_write_accepted=${accepted}`,
+    };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const accepted = await tryInsert(
+      db,
+      "ai_sp_wp",
+      "INSERT INTO ai_school_profile (organization_id, school_id) VALUES ($1,$2)",
+      [ORG, SCHOOL_B],
+    );
+    return {
+      name: "ai_school_profile_with_check_blocks_cross_school",
+      pass: !accepted,
+      detail: `cross_school_write_accepted=${accepted}`,
+    };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    // persona-memory WITH CHECK also pins user_id = current; STAFF_A is current,
+    // so only the SCHOOL_B school_id triggers the rejection here.
+    const accepted = await tryInsert(
+      db,
+      "ai_pm_wp",
+      "INSERT INTO ai_persona_memory (organization_id, school_id, user_id) VALUES ($1,$2,$3)",
+      [ORG, SCHOOL_B, STAFF_A],
+    );
+    return {
+      name: "ai_persona_memory_with_check_blocks_cross_school",
+      pass: !accepted,
+      detail: `cross_school_write_accepted=${accepted}`,
+    };
   }));
 
   const tests = await runProbeTasks(tasks);

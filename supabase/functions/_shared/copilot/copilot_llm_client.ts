@@ -55,6 +55,22 @@ export function boundHistory<T>(history: T[], maxTurns = MAX_HISTORY_TURNS): T[]
   return history.length <= maxTurns ? history : history.slice(history.length - maxTurns);
 }
 
+/** Per-surface context budget for the copilot T3 call (F7 / doc 02 §7). ~3k
+ * tokens at ≈4 chars/token — a hard ceiling on the assembled system prompt so a
+ * data-heavy school can never inflate the prompt (cost/latency) unbounded. */
+export const MAX_CONTEXT_CHARS = 12_000;
+
+/** Cap the assembled context to the budget, truncating at a line boundary so a
+ * fact is never split mid-value (the model then works from bounded context; any
+ * number it can't ground is caught by the output guard). */
+export function capContext(system: string, maxChars = MAX_CONTEXT_CHARS): string {
+  if (system.length <= maxChars) return system;
+  const head = system.slice(0, maxChars);
+  const lastNl = head.lastIndexOf("\n");
+  const body = lastNl > maxChars * 0.5 ? head.slice(0, lastNl) : head;
+  return `${body}\n[context truncated to fit the budget]`;
+}
+
 const SUMMARY_STOPWORDS = new Set([
   "the", "and", "for", "are", "was", "were", "you", "your", "our", "this",
   "that", "with", "have", "has", "can", "could", "would", "please", "what",
@@ -152,9 +168,12 @@ export async function generateCopilotResponse(
   const rollingSummary = summarizedCount > 0
     ? summarizeCopilotHistory(input.history.slice(0, summarizedCount))
     : "";
+  // F7: cap the context to the per-surface budget (the big part is the built
+  // system prompt), then append the small rolling summary so it survives.
+  const cappedBase = capContext(input.systemPrompt);
   const effectiveSystem = rollingSummary
-    ? `${input.systemPrompt}\n\n[Earlier conversation summary]\n${rollingSummary}`
-    : input.systemPrompt;
+    ? `${cappedBase}\n\n[Earlier conversation summary]\n${rollingSummary}`
+    : cappedBase;
   const summaryFields = summarizedCount > 0 ? { rollingSummary, summarizedCount } : {};
 
   // Governed path: route through the Model Gateway when a tenant db + context

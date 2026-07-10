@@ -1,7 +1,9 @@
 import { assert, assertEquals } from "jsr:@std/assert@1";
 import {
   boundHistory,
+  capContext,
   generateCopilotResponse,
+  MAX_CONTEXT_CHARS,
   MAX_HISTORY_TURNS,
   summarizeCopilotHistory,
 } from "./copilot_llm_client.ts";
@@ -303,6 +305,16 @@ Deno.test("gateway path: an ungrounded number in the reply is guarded → stub (
     globalThis.fetch = original;
     clearAiKeyEnv();
   }
+});
+
+Deno.test("capContext enforces the per-surface budget at a line boundary (F7)", () => {
+  const small = "line1\nline2";
+  assertEquals(capContext(small), small); // under budget → untouched
+  const huge = Array.from({ length: 5000 }, (_, i) => `fact ${i}`).join("\n");
+  const capped = capContext(huge);
+  assert(capped.length <= MAX_CONTEXT_CHARS + 40); // budget + truncation marker
+  assert(capped.endsWith("[context truncated to fit the budget]"));
+  assert(!capped.slice(0, -40).endsWith("fact")); // truncated at a newline, not mid-fact
 });
 
 Deno.test("summarizeCopilotHistory condenses dropped turns deterministically (F5)", () => {
