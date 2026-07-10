@@ -15,6 +15,15 @@ export type PriorityItemType =
   | "follow_up" // lead call due, defaulter call, overdue book
   | "opportunity"; // at-risk student improving, idle capacity, hot lead
 
+/** The full taxonomy as a runtime list (validation / iteration). */
+export const PRIORITY_ITEM_TYPES: readonly PriorityItemType[] = [
+  "approval",
+  "deadline",
+  "exception",
+  "follow_up",
+  "opportunity",
+] as const;
+
 /** Personas that consume a feed. W2.0 platform ships the school/aggregate
  * personas (principal/finance/director/admin — all school-operational or
  * aggregate scope). Per-user-scoped personas (teacher's classes, parent's

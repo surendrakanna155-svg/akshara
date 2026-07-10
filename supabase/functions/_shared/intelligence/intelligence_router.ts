@@ -40,6 +40,10 @@ import {
   handleExamWeakChapters,
 } from "./exam_intelligence_handlers.ts";
 import { handlePriorityFeed } from "./priority/priority_handlers.ts";
+import {
+  handleRecommendationFeedback,
+  handleRecommendationFeed,
+} from "./priority/recommendation_handlers.ts";
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -54,6 +58,14 @@ export function matchIntelligenceRoute(
   // W2.0a — the per-persona Priority Feed (Adaptive Intelligence Layer).
   if (path === "/intelligence/priorities" && method === "GET") {
     return { handler: handlePriorityFeed, args: [] };
+  }
+  // W2.0b — the Recommendation Engine (priority items + pre-staged actions) and
+  // its accept/dismiss/suppress learning loop.
+  if (path === "/intelligence/recommendations" && method === "GET") {
+    return { handler: handleRecommendationFeed, args: [] };
+  }
+  if (path === "/intelligence/recommendations/feedback" && method === "POST") {
+    return { handler: handleRecommendationFeedback, args: [] };
   }
 
   if (path === "/intelligence/risk/students" && method === "GET") {
