@@ -1,18 +1,24 @@
 # Knowledge Intelligence Engine — Python data-lane dependencies
-# Runtime: Python 3.13 (binary-wheel libs lag on 3.14). Isolated venv, gitignored.
-#   python3.13 -m venv curriculum/.venv
-#   curriculum/.venv/bin/pip install -r curriculum/scripts/intelligence/requirements.txt
+# Runtime: Python 3.14 (Homebrew removed 3.13 mid-project; PyMuPDF ships an abi3 wheel that
+#   runs on 3.14, Pillow ships cp314 wheels — all install binary-only, no compiler needed).
+#   python3.14 -m venv curriculum/.venv
+#   curriculum/.venv/bin/pip install --only-binary=:all: -r curriculum/scripts/intelligence/requirements.txt
+#
+# NOTE: the venv symlinks to the Homebrew python; a `brew upgrade`/`brew install` that bumps the
+# base python can orphan this venv — recreate it with the command above if imports vanish.
+#
+# OCR also needs the system Tesseract binary:  brew install tesseract
 #
 # Everything runs locally. No PDF/book is ever sent to an AI model (LLM policy).
 
-# --- Phase 1: Repository Verification (installed) -----------------------------
-pypdf==6.14.2            # pure-python PDF open/page-count/text-sample → integrity + parser-readiness
+# --- Phase 1: Repository Verification -----------------------------------------
+pypdf==6.14.2            # pure-python PDF open/page-count/text-sample → integrity + readiness
 
-# --- Phase 2: Local Parser (staged — uncomment when Phase 2 starts) -----------
-# pymupdf>=1.24            # fast text/tables/images/coordinates extraction (primary parser)
-# pdfplumber>=0.11         # table + word-box extraction (secondary / cross-check)
-# pytesseract>=0.3.13      # OCR wrapper for scanned PDFs (requires system `tesseract`)
-# Pillow>=10               # image handling for OCR pipeline
+# --- Phase 2: Local Parser ----------------------------------------------------
+pymupdf==1.28.0          # PRIMARY parser: text, coordinates, blocks, images, tables, TOC
+pdfplumber==0.11.10      # table fallback only, where PyMuPDF finds no table on a ruled page
+pytesseract==0.3.13      # OCR wrapper for scanned PDFs (needs system `tesseract`)
+Pillow==12.3.0           # image handling for the OCR pipeline
 
 # --- Phases 5-8: analysis / generation (staged) -------------------------------
 # numpy>=2                 # vector/statistics for question-intelligence

@@ -138,5 +138,86 @@ class TestRun(unittest.TestCase):
         self.assertEqual(parsed["pages"][0]["member"], "book/chapter1.pdf")
 
 
+class TestPreservation(unittest.TestCase):
+    """Phase-2 preserves coords / images / table bboxes / equations / chapters / OCR words."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_page_coordinates_and_keys(self):
+        doc = fitz.open(stream=_text_pdf_bytes(pages=1), filetype="pdf")
+        pages = phase2_parse.extract_text_pages(doc)
+        doc.close()
+        self.assertGreater(pages[0]["width"], 0)
+        self.assertGreater(pages[0]["height"], 0)
+        for k in ("images", "equations", "tables"):
+            self.assertIn(k, pages[0])
+
+    def test_equation_heuristic(self):
+        self.assertTrue(phase2_parse._is_math_span("ABDF+CMMI10", "x"))       # math font
+        self.assertTrue(phase2_parse._is_math_span("Helvetica", "∫ f dx = ∑ y"))  # symbols
+        self.assertFalse(phase2_parse._is_math_span("Helvetica", "plain words"))
+
+    def test_image_references(self):
+        doc = fitz.open()
+        page = doc.new_page(width=300, height=300)
+        pix = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 40, 40))
+        pix.clear_with(128)
+        page.insert_image(fitz.Rect(50, 50, 150, 150), pixmap=pix)
+        pages = phase2_parse.extract_text_pages(doc)
+        doc.close()
+        self.assertTrue(pages[0]["images"])
+        self.assertIsNotNone(pages[0]["images"][0]["xref"])
+        self.assertEqual(len(pages[0]["images"][0]["bbox"]), 4)
+
+    def test_table_boundaries(self):
+        doc = fitz.open()
+        page = doc.new_page(width=320, height=220)
+        xs, ys = [40, 110, 180, 250], [40, 80, 120, 160]
+        for x in xs:
+            page.draw_line((x, ys[0]), (x, ys[-1]))
+        for y in ys:
+            page.draw_line((xs[0], y), (xs[-1], y))
+        k = 0
+        for r in range(3):
+            for c in range(3):
+                page.insert_text((xs[c] + 15, ys[r] + 22), str(k))
+                k += 1
+        pages = phase2_parse.extract_text_pages(doc)
+        doc.close()
+        self.assertTrue(pages[0]["_grid"])                       # ruled grid detected
+        tbls = [t for p in pages for t in p["tables"]]
+        self.assertTrue(tbls)
+        self.assertEqual(len(tbls[0]["bbox"]), 4)                # table boundary preserved
+        self.assertIn(tbls[0]["source"], ("pymupdf", "pdfplumber"))
+
+    def test_chapter_boundaries_from_toc(self):
+        doc = fitz.open()
+        for _ in range(2):
+            doc.new_page().insert_text((72, 72), "chapter body text content here")
+        doc.set_toc([[1, "Chapter 1 Kinematics", 1], [1, "Chapter 2 Dynamics", 2]])
+        p = self.tmp / "toc.pdf"
+        doc.save(str(p))
+        doc.close()
+        res = phase2_parse.parse_pdf_file(p, "text_extract")
+        titles = [c["title"] for c in res["chapter_boundaries"]]
+        self.assertIn("Chapter 1 Kinematics", titles)
+        self.assertEqual(res["chapter_count"], 2)
+        self.assertTrue(all(c["source"] == "toc" for c in res["chapter_boundaries"]))
+
+    @unittest.skipUnless(shutil.which("tesseract"), "tesseract required")
+    def test_ocr_word_coordinates(self):
+        doc = fitz.open()
+        doc.new_page().insert_text((72, 200), "PHYSICS", fontsize=48)
+        pages, conf = phase2_parse.ocr_pages(doc)
+        doc.close()
+        self.assertTrue(pages[0]["words"])
+        self.assertEqual(len(pages[0]["words"][0]["bbox"]), 4)
+        self.assertIn("PHYSIC", " ".join(w["text"] for w in pages[0]["words"]).upper())
+
+
 if __name__ == "__main__":
     unittest.main()
