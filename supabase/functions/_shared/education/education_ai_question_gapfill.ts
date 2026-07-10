@@ -13,6 +13,7 @@
 // data is ever sent; the prompt carries class-level syllabus scope only.
 
 import { type Governance, governedTextFor } from "../ai/model_gateway.ts";
+import { fenceUntrusted, UNTRUSTED_DATA_PREAMBLE } from "../ai/prompt_safety.ts";
 import { computeQuestionFingerprint } from "./education_fingerprint.ts";
 import type { BlueprintSlot } from "./education_blueprint_solver.ts";
 import {
@@ -62,6 +63,8 @@ and chapter scope. Hard rules:
   slotIndex (number, echo the slot's index), questionType (string), marks
   (number), difficulty (string), chapter (string), questionText (string),
   answerText (string), options (string[]). No prose around the JSON.
+
+${UNTRUSTED_DATA_PREAMBLE}
 `.trim();
 
 interface RawCandidate {
@@ -146,15 +149,21 @@ function validateCandidate(
 }
 
 function buildUserMessage(gaps: BlueprintSlot[], scope: GapFillScope): string {
+  // Subject/class/chapter labels are user-authored blueprint text — fenced as
+  // data so a crafted chapter name can never steer the model (P2-5 / AI-5).
   return [
-    `Subject: ${scope.subjectName}`,
-    `Class: ${scope.className}`,
-    `Program track: ${scope.programTrack}`,
-    `Exam type: ${scope.examType}`,
-    `Allowed chapters (stay strictly within these): ${scope.chapters.join(", ") || "General"}`,
+    fenceUntrusted("Subject", scope.subjectName),
+    fenceUntrusted("Class", scope.className),
+    fenceUntrusted("Program track", scope.programTrack),
+    fenceUntrusted("Exam type", scope.examType),
+    fenceUntrusted(
+      "Allowed chapters (stay strictly within these)",
+      scope.chapters.join(", ") || "General",
+    ),
     "",
     "Author exactly one question for each of these slots:",
-    JSON.stringify(
+    fenceUntrusted(
+      "Slots",
       gaps.map((g) => ({
         slotIndex: g.index,
         questionType: g.questionType,

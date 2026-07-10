@@ -46,6 +46,13 @@ const SCHOOL_LEXICON: readonly string[] = [
   "risk", "at-risk", "at risk", "dropout", "promotion", "promote", "certificate",
   "transfer certificate", "id card", "biometric", "sis", "erp", "campus",
   "headmaster", "coordinator", "warden", "counselor", "counsellor",
+  // P2-4 hardening: common Indian school-operations vocabulary the first cut
+  // missed — all unambiguous school terms (the allow side is safe to widen;
+  // a false allow is still bounded by RBAC + system prompt + output guard).
+  "tuition", "marksheet", "hall ticket", "question paper", "answer sheet",
+  "unit test", "worksheet", "revision", "assembly", "sports day", "annual day",
+  "payroll", "payslip", "salary", "invigilator", "staffroom", "uniform",
+  "prefect", "house points", "school diary", "pickup point",
 ];
 
 // Off-domain categories (owner's list + general-knowledge / creative-writing).
@@ -76,7 +83,23 @@ const BLOCK_LEXICON: readonly string[] = [
   "capital of", "translate", "meaning of life", "who won", "weather forecast",
   "write me a poem", "write a story", "write an essay", "tell me a joke",
   "quantum physics", "history of the world", "population of",
+  // P2-4 hardening: further off-domain categories seen in copilot abuse tests
+  "gambling", "betting", "lottery", "horoscope", "astrology", "dating",
+  "girlfriend", "boyfriend", "song lyrics", "video game", "gaming",
 ];
+
+/** P2-4: deployment-tunable lexicon extensions — comma-separated terms in
+ * `AI_DOMAIN_ALLOW_TERMS` / `AI_DOMAIN_BLOCK_TERMS`. Lets the pilot widen
+ * either list without a code change while staying fully deterministic. Terms
+ * under 3 chars are ignored (an accidental "a" must never open the gate). */
+function envTerms(name: string): string[] {
+  const raw = Deno.env.get(name) ?? "";
+  if (raw.trim().length === 0) return [];
+  return raw
+    .split(",")
+    .map((t) => t.trim().toLowerCase())
+    .filter((t) => t.length >= 3);
+}
 
 function hasTerm(haystack: string, terms: readonly string[]): boolean {
   for (const term of terms) {
@@ -100,10 +123,12 @@ export function classifyDomain(message: string): DomainVerdict {
   const text = (message ?? "").toLowerCase().trim();
   if (text.length === 0) return { inDomain: true, reason: "empty" };
 
-  if (hasTerm(text, SCHOOL_LEXICON)) {
+  // The school lexicon (built-in + deployment extension) WINS TIES — checked
+  // first, so legitimate school phrasing is never rejected by a block term.
+  if (hasTerm(text, SCHOOL_LEXICON) || hasTerm(text, envTerms("AI_DOMAIN_ALLOW_TERMS"))) {
     return { inDomain: true, reason: "school_signal" };
   }
-  if (hasTerm(text, BLOCK_LEXICON)) {
+  if (hasTerm(text, BLOCK_LEXICON) || hasTerm(text, envTerms("AI_DOMAIN_BLOCK_TERMS"))) {
     return { inDomain: false, reason: "off_domain" };
   }
   // No school signal, no clear off-domain signal → allow (rare, and still

@@ -13,6 +13,7 @@
 // (buildDeterministicInsight) must always produce a sensible, honest insight.
 
 import { type Governance, governedTextFor } from "../ai/model_gateway.ts";
+import { fenceUntrusted, UNTRUSTED_DATA_PREAMBLE } from "../ai/prompt_safety.ts";
 import { type DashboardKpiFacts } from "./hr_read_repository.ts";
 
 const INSIGHT_MAX_TOKENS = 400;
@@ -28,6 +29,8 @@ Write one short, decision-oriented insight for the school's HR admin. Strict rul
 - Be specific and actionable — point at attendance, pending leave, or hiring when
   the facts warrant it. 1 to 3 sentences.
 - Output ONLY the insight prose. No headings, no JSON, no preamble.
+
+${UNTRUSTED_DATA_PREAMBLE}
 `.trim();
 
 /**
@@ -39,9 +42,12 @@ export async function generateHrInsightWithClaude(
   deterministic: string,
   governance: Governance,
 ): Promise<string> {
+  // Department names are user-authored and the deterministic insight embeds
+  // them — fenced as data so embedded text can never be read as instructions
+  // (P2-5 / AI-5).
   const userMessage = [
     "School HR facts (final — do not change them):",
-    JSON.stringify({
+    fenceUntrusted("HR facts", {
       totalEmployees: facts.totalEmployees,
       activeEmployees: facts.activeEmployees,
       presentToday: facts.presentToday,
@@ -52,14 +58,14 @@ export async function generateHrInsightWithClaude(
       largestDepartmentCount: facts.topDepartmentCount,
     }),
     "",
-    "Deterministic insight to improve (keep its numbers):",
-    deterministic,
+    fenceUntrusted("Deterministic insight to improve (keep its numbers)", deterministic),
   ].join("\n");
 
   const text = await governedTextFor(governance, "hr_dashboard", {
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: userMessage }],
     maxTokens: INSIGHT_MAX_TOKENS,
+    guard: true,
   });
   const trimmed = (text ?? "").trim();
   return trimmed.length > 0 ? trimmed : deterministic;

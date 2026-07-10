@@ -9,6 +9,7 @@
 // deterministic baseline unchanged — the narrative is strictly additive and safe.
 
 import { type Governance, governedTextFor } from "../ai/model_gateway.ts";
+import { fenceUntrusted, UNTRUSTED_DATA_PREAMBLE } from "../ai/prompt_safety.ts";
 
 const NARRATIVE_MAX_TOKENS = 500;
 
@@ -21,6 +22,8 @@ short, action-oriented narrative (2 to 4 sentences). Strict rules:
 - Be practical: say who to act on first and the single most useful next step.
 - No medical, psychological, or behavioural diagnoses; no PII beyond the names given.
 - Output ONLY the narrative prose. No headings, no JSON, no preamble.
+
+${UNTRUSTED_DATA_PREAMBLE}
 `.trim();
 
 export interface PredictionsNarrativeContext {
@@ -36,20 +39,25 @@ export async function narratePredictionsWithClaude(
   context: PredictionsNarrativeContext,
   governance: Governance,
 ): Promise<string> {
+  // topItems carry user-authored names (students/leads) and the baseline
+  // embeds them — fenced as data (P2-5 / AI-5). `kind` is a typed enum.
   const userMessage = [
     `Prediction type: ${context.kind}.`,
     `Counts (final): ${context.total} analysed, ${context.high} high-priority.`,
     "Top items (final — do not change names or metrics):",
-    JSON.stringify(context.topItems),
+    fenceUntrusted("Top items", context.topItems),
     "",
-    "Deterministic baseline to rewrite into a leader-facing narrative:",
-    baseline,
+    fenceUntrusted(
+      "Deterministic baseline to rewrite into a leader-facing narrative",
+      baseline,
+    ),
   ].join("\n");
 
   const text = await governedTextFor(governance, `predictions_${context.kind}`, {
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: userMessage }],
     maxTokens: NARRATIVE_MAX_TOKENS,
+    guard: true,
   });
   const trimmed = (text ?? "").trim();
   return trimmed.length > 0 ? trimmed : baseline;

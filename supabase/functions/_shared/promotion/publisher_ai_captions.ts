@@ -6,6 +6,7 @@
 // never fabricates beyond the given title/description).
 
 import { governedModelText } from "../ai/model_gateway.ts";
+import { fenceUntrusted, UNTRUSTED_DATA_PREAMBLE } from "../ai/prompt_safety.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 
 const CHANNELS = ["poster", "whatsapp", "instagram", "facebook"] as const;
@@ -42,9 +43,12 @@ export async function enhanceCaptionsWithAi(
   const system =
     "You write short, warm captions for an Indian school's social posts. " +
     "Use only the facts given. No new claims, no emojis spam, max ~200 characters each. " +
-    "Reply ONLY with compact JSON: {\"poster\":\"\",\"whatsapp\":\"\",\"instagram\":\"\",\"facebook\":\"\"}.";
-  const user = `Type: ${ctx.subjectType}\nTitle: ${ctx.title}\n` +
-    (ctx.description ? `Details: ${ctx.description}\n` : "") +
+    "Reply ONLY with compact JSON: {\"poster\":\"\",\"whatsapp\":\"\",\"instagram\":\"\",\"facebook\":\"\"}. " +
+    UNTRUSTED_DATA_PREAMBLE;
+  // Title/description are staff-typed free text — fenced (P2-5 / AI-5).
+  const user = `Type: ${ctx.subjectType}\n` +
+    fenceUntrusted("Title", ctx.title) + "\n" +
+    (ctx.description ? fenceUntrusted("Details", ctx.description) + "\n" : "") +
     "Write one caption per channel.";
 
   // Governed (timeout + rate-limit + spend-cap + ai_call_log); null text →

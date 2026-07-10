@@ -10,6 +10,7 @@
 // deterministic summary unchanged — refinement is strictly additive and safe.
 
 import { type Governance, governedTextFor } from "../ai/model_gateway.ts";
+import { fenceUntrusted, UNTRUSTED_DATA_PREAMBLE } from "../ai/prompt_safety.ts";
 
 const REFINE_MAX_TOKENS = 600;
 
@@ -23,6 +24,8 @@ Rewrite it into a concise, board-ready narrative. Strict rules:
   school-level portfolio summary only.
 - Be direct and decision-oriented, suitable for a board meeting. 3 to 5 sentences.
 - Output ONLY the narrative prose. No headings, no JSON, no preamble.
+
+${UNTRUSTED_DATA_PREAMBLE}
 `.trim();
 
 export interface ExecutiveSummaryContext {
@@ -48,10 +51,13 @@ export async function refineExecutiveSummaryWithClaude(
   context: ExecutiveSummaryContext,
   governance: Governance,
 ): Promise<string> {
+  // focusArea comes verbatim from the request body and school names are
+  // user-authored — fence everything that is not our own trusted instruction
+  // so embedded text can never be read as instructions (P2-5 / AI-5).
   const userMessage = [
-    `Focus area: ${context.focusArea}.`,
+    fenceUntrusted("Focus area", context.focusArea),
     "Portfolio facts (final — do not change them):",
-    JSON.stringify({
+    fenceUntrusted("Portfolio facts", {
       schools: context.schoolCount,
       totalStudents: context.totalStudents,
       chainRevenueCr: context.chainRevenueCr,
@@ -62,14 +68,16 @@ export async function refineExecutiveSummaryWithClaude(
       schoolsNeedingAttention: context.atRiskSchools,
     }),
     "",
-    "Deterministic brief to rewrite:",
-    deterministicSummary,
+    fenceUntrusted("Deterministic brief to rewrite", deterministicSummary),
   ].join("\n");
 
   const text = await governedTextFor(governance, "director_summary", {
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: userMessage }],
     maxTokens: REFINE_MAX_TOKENS,
+    // Output-side twin (F3): a reply that echoes injection or fabricates
+    // numbers is discarded — the deterministic summary is served instead.
+    guard: true,
   });
   const trimmed = (text ?? "").trim();
   return trimmed.length > 0 ? trimmed : deterministicSummary;

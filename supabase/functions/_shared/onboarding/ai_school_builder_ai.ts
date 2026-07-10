@@ -13,6 +13,7 @@
 // deterministic blueprint unchanged — enrichment is strictly additive and safe.
 
 import { type Governance, governedTextFor } from "../ai/model_gateway.ts";
+import { fenceUntrusted, UNTRUSTED_DATA_PREAMBLE } from "../ai/prompt_safety.ts";
 import type { StartupOnboardingPayload } from "./startup_onboarding_repository.ts";
 import { GRADE_LADDER, type SchoolBlueprint, type SchoolBrief } from "./ai_school_builder_service.ts";
 
@@ -43,6 +44,8 @@ Strict rules:
 - Keep classes ≤ 16, sections ≤ 8, fee categories ≤ 10.
 - "rationale" is one short sentence (no numbers you did not derive from the brief).
 - Never include names, addresses, phone numbers, or any personal data.
+
+${UNTRUSTED_DATA_PREAMBLE}
 `.trim();
 
 interface RefinedFields {
@@ -117,9 +120,11 @@ export async function enrichSchoolBlueprintWithClaude(
   brief: SchoolBrief,
   governance: Governance,
 ): Promise<SchoolBlueprint> {
+  // The founder brief is raw user input (school name, notes) and the baseline
+  // is derived from it — both fenced as data (P2-5 / AI-5).
   const userMessage = [
     "Brief from the school founder:",
-    JSON.stringify({
+    fenceUntrusted("Founder brief", {
       schoolName: brief.schoolName,
       board: brief.board ?? brief.curriculum,
       schoolType: brief.schoolType,
@@ -132,7 +137,7 @@ export async function enrichSchoolBlueprintWithClaude(
       notes: brief.notes,
     }),
     "Deterministic baseline to refine (keep what is already good):",
-    JSON.stringify({
+    fenceUntrusted("Baseline", {
       classes: baseline.proposal.classes,
       sections: baseline.proposal.sections,
       feeModel: baseline.proposal.feeModel,

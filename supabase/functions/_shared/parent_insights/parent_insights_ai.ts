@@ -9,9 +9,29 @@
 // deterministic snapshot unchanged — enrichment is strictly additive and safe.
 
 import { type Governance, governedTextFor } from "../ai/model_gateway.ts";
+import { fenceUntrusted, UNTRUSTED_DATA_PREAMBLE } from "../ai/prompt_safety.ts";
 import type { ParentInsightSnapshot } from "./parent_insights_service.ts";
 
 const ENRICH_MAX_TOKENS = 900;
+
+/** The languages parent insights may be rendered in (full-name form, matching
+ * parent_language_preferences). Anything else — the request body and the
+ * stored preference are both free text — normalizes to English so no
+ * uncontrolled string can reach the prompt as an instruction (P2-5). */
+export const INSIGHT_LANGUAGES: readonly string[] = [
+  "english",
+  "telugu",
+  "hindi",
+  "tamil",
+  "kannada",
+  "malayalam",
+  "urdu",
+] as const;
+
+export function normalizeInsightLanguage(raw: string | null | undefined): string {
+  const v = (raw ?? "").trim().toLowerCase();
+  return INSIGHT_LANGUAGES.includes(v) ? v : "english";
+}
 
 const SYSTEM_PROMPT = `
 You are Akshara's parent-communication assistant for a school.
@@ -28,6 +48,8 @@ it easily. Strict rules:
   attendanceInsights (string[]), homeworkInsights (string[]),
   improvementSuggestions (string[]), teacherRemarksSummary (string).
 - Keep each list to at most 3 short items.
+
+${UNTRUSTED_DATA_PREAMBLE}
 `.trim();
 
 interface EnrichedFields {
@@ -73,11 +95,16 @@ export async function enrichParentInsightWithClaude(
   snapshot: ParentInsightSnapshot,
   governance: Governance,
 ): Promise<ParentInsightSnapshot> {
+  // The language line is an INSTRUCTION, so it must never carry free text —
+  // normalize to the fixed catalog. The snapshot carries teacher-authored
+  // remarks and name-bearing prose → fenced as data (P2-5 / AI-5).
   const userMessage = [
-    `Rewrite this student progress snapshot in language: ${snapshot.language}.`,
+    `Rewrite this student progress snapshot in language: ${
+      normalizeInsightLanguage(snapshot.language)
+    }.`,
     `Period: ${snapshot.period}.`,
     "Snapshot (numbers are final — do not change them):",
-    JSON.stringify({
+    fenceUntrusted("Snapshot", {
       progressSummary: snapshot.progressSummary,
       strengths: snapshot.strengths,
       weaknesses: snapshot.weaknesses,

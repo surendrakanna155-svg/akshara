@@ -14,7 +14,7 @@ import {
   generateParentInsightSnapshot,
   type InsightPeriod,
 } from "./parent_insights_service.ts";
-import { enrichParentInsightWithClaude } from "./parent_insights_ai.ts";
+import { enrichParentInsightWithClaude, normalizeInsightLanguage } from "./parent_insights_ai.ts";
 
 export async function handleGenerateParentInsights(req: Request, config: AppConfig): Promise<Response> {
   const auth = await authenticateRequest(req, config);
@@ -50,6 +50,10 @@ export async function handleGenerateParentInsights(req: Request, config: AppConf
         );
         language = prefRows[0]?.language ?? "english";
       }
+      // Both the request body and the stored preference are free text; the
+      // language reaches the model prompt as an INSTRUCTION, so clamp it to
+      // the fixed catalog (P2-5).
+      language = normalizeInsightLanguage(language);
 
       const baseSnapshot = await generateParentInsightSnapshot(db, body.studentId, period, language);
       const snapshot = await enrichParentInsightWithClaude(

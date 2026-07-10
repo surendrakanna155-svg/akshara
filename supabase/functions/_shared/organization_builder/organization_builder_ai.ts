@@ -7,6 +7,7 @@
 // deterministic baseline unchanged — refinement is strictly additive and safe.
 
 import { type Governance, governedTextFor } from "../ai/model_gateway.ts";
+import { fenceUntrusted, UNTRUSTED_DATA_PREAMBLE } from "../ai/prompt_safety.ts";
 import type { InterviewRecommendation } from "./organization_builder_repository.ts";
 
 const RECOMMEND_MAX_TOKENS = 320;
@@ -22,6 +23,8 @@ Strict rules:
 - Recommend a module, role, workflow, or setting appropriate to the vertical.
 - Never include names, phone numbers, addresses, or any personal data.
 - Do not invent numbers that were not provided.
+
+${UNTRUSTED_DATA_PREAMBLE}
 `.trim();
 
 const STEP_FOCUS: Record<number, string> = {
@@ -107,7 +110,8 @@ export async function recommendForStep(
     `Vertical: ${input.packName} (${input.packType}).`,
     `Interview focus for this step: ${focus}.`,
     "Answers so far (no PII — generic configuration values only):",
-    JSON.stringify(input.answers),
+    // Interview answers are caller-typed free text — fenced (P2-5 / AI-5).
+    fenceUntrusted("Answers", input.answers),
     "Return the recommendation JSON now.",
   ].join("\n");
 
