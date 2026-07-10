@@ -80,6 +80,81 @@ export function toStudentResult(c: StudentCandidate, query: string): SearchResul
   };
 }
 
+// ─── Staff (employees) ───────────────────────────────────────────────────────
+
+export interface StaffCandidate {
+  id: string;
+  displayName: string;
+  employeeCode: string;
+  email: string | null;
+  phone: string | null;
+  status: string;
+}
+
+export function classifyStaffMatch(c: StaffCandidate, query: string): MatchField {
+  const q = norm(query);
+  if (c.employeeCode && norm(c.employeeCode).startsWith(q)) return "entity_id";
+  if (
+    (c.phone && norm(c.phone).replace(/\s+/g, "").includes(q.replace(/\s+/g, ""))) ||
+    (c.email && norm(c.email).startsWith(q))
+  ) {
+    return "phone"; // contact-field match (phone/email) — permission is viewEmployees
+  }
+  if (norm(c.displayName).startsWith(q)) return "name_prefix";
+  return "name_partial";
+}
+
+export function toStaffResult(c: StaffCandidate, query: string): SearchResult {
+  const matchField = classifyStaffMatch(c, query);
+  const parts: string[] = [];
+  if (c.employeeCode) parts.push(c.employeeCode);
+  if (c.status && c.status !== "active") parts.push(c.status);
+  return {
+    category: "staff",
+    id: c.id,
+    title: c.displayName,
+    subtitle: parts.join(" · "),
+    deepLink: `/staff/${c.id}`,
+    matchField,
+    rank: RANK[matchField],
+  };
+}
+
+// ─── Admissions (leads) ──────────────────────────────────────────────────────
+
+export interface AdmissionCandidate {
+  id: string;
+  studentName: string;
+  parentName: string;
+  classLabel: string | null;
+  phone: string | null;
+  stage: string;
+}
+
+export function classifyAdmissionMatch(c: AdmissionCandidate, query: string): MatchField {
+  const q = norm(query);
+  if (c.phone && norm(c.phone).replace(/\s+/g, "").includes(q.replace(/\s+/g, ""))) return "phone";
+  if (norm(c.studentName).startsWith(q) || norm(c.parentName).startsWith(q)) return "name_prefix";
+  return "name_partial";
+}
+
+export function toAdmissionResult(c: AdmissionCandidate, query: string): SearchResult {
+  const matchField = classifyAdmissionMatch(c, query);
+  const parts: string[] = [];
+  if (c.classLabel) parts.push(`Class ${c.classLabel}`);
+  if (c.parentName) parts.push(`Parent: ${c.parentName}`);
+  if (c.stage) parts.push(c.stage.replace(/_/g, " "));
+  return {
+    category: "admissions",
+    id: c.id,
+    title: c.studentName,
+    subtitle: parts.join(" · "),
+    deepLink: `/admissions/leads/${c.id}`,
+    matchField,
+    rank: RANK[matchField],
+  };
+}
+
 /** Order results by the ladder (rank asc), then by title, then id — a stable,
  * deterministic ordering independent of the DB's row order. */
 export function orderResults(results: SearchResult[]): SearchResult[] {

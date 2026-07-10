@@ -2,10 +2,16 @@
 
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import {
+  type AdmissionCandidate,
+  classifyAdmissionMatch,
+  classifyStaffMatch,
   classifyStudentMatch,
   orderResults,
+  type StaffCandidate,
   type StudentCandidate,
   studentSubtitle,
+  toAdmissionResult,
+  toStaffResult,
   toStudentResult,
 } from "./search_ranking.ts";
 
@@ -78,4 +84,44 @@ Deno.test("names are not assumed unique — same name, distinct rows both kept",
   const ordered = orderResults([a, b]);
   assertEquals(ordered.length, 2);
   assertEquals(ordered.map((r) => r.id), ["s1", "s2"]); // tie-break by id, both retained
+});
+
+// ─── Staff ───────────────────────────────────────────────────────────────────
+
+function staff(over: Partial<StaffCandidate> = {}): StaffCandidate {
+  return { id: "e1", displayName: "Priya Sharma", employeeCode: "EMP-101", email: "priya@akshara.edu", phone: "+91 98765 43210", status: "active", ...over };
+}
+
+Deno.test("staff match ladder: code → contact → name", () => {
+  assertEquals(classifyStaffMatch(staff(), "emp-1"), "entity_id");
+  assertEquals(classifyStaffMatch(staff({ employeeCode: "X" }), "9876543210"), "phone");
+  assertEquals(classifyStaffMatch(staff({ employeeCode: "X", phone: null, email: null }), "priya"), "name_prefix");
+  assertEquals(classifyStaffMatch(staff({ employeeCode: "X", phone: null, email: null }), "sharma"), "name_partial");
+});
+
+Deno.test("toStaffResult navigates to the staff screen", () => {
+  const r = toStaffResult(staff(), "priya");
+  assertEquals(r.category, "staff");
+  assertEquals(r.deepLink, "/staff/e1");
+  assertEquals(r.subtitle, "EMP-101");
+});
+
+// ─── Admissions ──────────────────────────────────────────────────────────────
+
+function lead(over: Partial<AdmissionCandidate> = {}): AdmissionCandidate {
+  return { id: "l1", studentName: "Arjun Rao", parentName: "Sita Rao", classLabel: "1", phone: "+91 90000 11111", stage: "site_visit", ...over };
+}
+
+Deno.test("admission match: phone → student/parent name prefix → partial", () => {
+  assertEquals(classifyAdmissionMatch(lead(), "9000011111"), "phone");
+  assertEquals(classifyAdmissionMatch(lead({ phone: null }), "arjun"), "name_prefix");
+  assertEquals(classifyAdmissionMatch(lead({ phone: null }), "sita"), "name_prefix"); // parent prefix
+  assertEquals(classifyAdmissionMatch(lead({ phone: null }), "rao"), "name_partial");
+});
+
+Deno.test("toAdmissionResult carries class/parent/stage and a lead deep link", () => {
+  const r = toAdmissionResult(lead(), "arjun");
+  assertEquals(r.category, "admissions");
+  assertEquals(r.deepLink, "/admissions/leads/l1");
+  assertEquals(r.subtitle, "Class 1 · Parent: Sita Rao · site visit");
 });

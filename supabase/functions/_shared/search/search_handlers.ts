@@ -19,8 +19,13 @@ import {
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
-import { orderResults, toStudentResult } from "./search_ranking.ts";
-import { searchStudents } from "./search_repository.ts";
+import {
+  orderResults,
+  toAdmissionResult,
+  toStaffResult,
+  toStudentResult,
+} from "./search_ranking.ts";
+import { searchAdmissionsLeads, searchStaff, searchStudents } from "./search_repository.ts";
 import type { SearchCategory, SearchGroup, SearchResult } from "./search_types.ts";
 
 const MIN_QUERY_LEN = 2;
@@ -50,6 +55,26 @@ const CATEGORY_SEARCHERS: readonly CategorySearcher[] = [
     async search(db, orgId, schoolId, query, limit) {
       const { candidates, total } = await searchStudents(db, orgId, schoolId, query, limit);
       const results = orderResults(candidates.map((c) => toStudentResult(c, query))).slice(0, limit);
+      return { results, total };
+    },
+  },
+  {
+    category: "staff",
+    label: "Staff",
+    requiredPermission: "viewEmployees",
+    async search(db, orgId, schoolId, query, limit) {
+      const { candidates, total } = await searchStaff(db, orgId, schoolId, query, limit);
+      const results = orderResults(candidates.map((c) => toStaffResult(c, query))).slice(0, limit);
+      return { results, total };
+    },
+  },
+  {
+    category: "admissions",
+    label: "Admissions",
+    requiredPermission: "viewAdmissions",
+    async search(db, orgId, schoolId, query, limit) {
+      const { candidates, total } = await searchAdmissionsLeads(db, orgId, schoolId, query, limit);
+      const results = orderResults(candidates.map((c) => toAdmissionResult(c, query))).slice(0, limit);
       return { results, total };
     },
   },

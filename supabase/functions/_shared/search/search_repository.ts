@@ -7,7 +7,11 @@
 // defense-in-depth and let the indexes do the work.
 
 import type { TenantQueryClient } from "../tenant_db.ts";
-import type { StudentCandidate } from "./search_ranking.ts";
+import type {
+  AdmissionCandidate,
+  StaffCandidate,
+  StudentCandidate,
+} from "./search_ranking.ts";
 
 /** How many raw candidates to consider before the pure ranker caps the display
  * set — a few times the display limit so ranking has material to order. */
@@ -74,5 +78,96 @@ export async function searchStudents(
     status: r.status,
   }));
 
+  return { candidates, total: candidates.length };
+}
+
+interface StaffRow {
+  id: string;
+  display_name: string;
+  employee_code: string;
+  email: string | null;
+  phone: string | null;
+  status: string;
+}
+
+/** Fetch staff candidates by name/code/contact. Requires viewEmployees (gated in
+ * the handler); phone/email are staff contact fields that permission authorizes. */
+export async function searchStaff(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  query: string,
+  displayLimit: number,
+): Promise<{ candidates: StaffCandidate[]; total: number }> {
+  const cap = candidateCap(displayLimit);
+  const q = query.trim();
+  const rows = await db.queryObject<StaffRow>(
+    `SELECT id::text AS id, display_name, employee_code, email, phone, status
+       FROM employees
+      WHERE organization_id = $1 AND school_id = $2
+        AND (
+          lower(display_name) LIKE lower($3) || '%'
+          OR lower(display_name) LIKE '%' || lower($3) || '%'
+          OR lower(employee_code) LIKE lower($3) || '%'
+          OR lower(email) LIKE lower($3) || '%'
+          OR replace(phone, ' ', '') LIKE '%' || replace($3, ' ', '') || '%'
+        )
+      ORDER BY display_name
+      LIMIT $4`,
+    [organizationId, schoolId, q, cap],
+  );
+  const candidates: StaffCandidate[] = rows.map((r) => ({
+    id: r.id,
+    displayName: r.display_name,
+    employeeCode: r.employee_code,
+    email: r.email,
+    phone: r.phone,
+    status: r.status,
+  }));
+  return { candidates, total: candidates.length };
+}
+
+interface AdmissionRow {
+  id: string;
+  student_name: string;
+  parent_name: string;
+  class_label: string | null;
+  phone: string | null;
+  stage: string;
+}
+
+/** Fetch admission-lead candidates by student/parent name or phone. Requires
+ * viewAdmissions (gated in the handler). */
+export async function searchAdmissionsLeads(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  query: string,
+  displayLimit: number,
+): Promise<{ candidates: AdmissionCandidate[]; total: number }> {
+  const cap = candidateCap(displayLimit);
+  const q = query.trim();
+  const rows = await db.queryObject<AdmissionRow>(
+    `SELECT id::text AS id, student_name, parent_name, class_label, phone, stage
+       FROM admissions_leads
+      WHERE organization_id = $1 AND school_id = $2
+        AND (
+          lower(student_name) LIKE lower($3) || '%'
+          OR lower(student_name) LIKE '%' || lower($3) || '%'
+          OR lower(parent_name) LIKE lower($3) || '%'
+          OR replace(phone, ' ', '') LIKE '%' || replace($3, ' ', '') || '%'
+        )
+      ORDER BY student_name
+      LIMIT $4`,
+    [organizationId, schoolId, q, cap],
+  );
+  const candidates: AdmissionCandidate[] = rows.map((r) => ({
+    id: r.id,
+    studentName: r.student_name,
+    parentName: r.parent_name,
+    classLabel: r.class_label,
+    phone: r.phone,
+    stage: r.stage,
+  }));
   return { candidates, total: candidates.length };
 }

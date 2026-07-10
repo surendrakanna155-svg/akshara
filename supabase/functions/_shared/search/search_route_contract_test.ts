@@ -40,11 +40,22 @@ Deno.test("W2.S: a permitted search reaches the DB (503 unconfigured = authorize
 });
 
 Deno.test("W2.S: a caller with NO searchable-category permission gets an empty result (200)", async () => {
-  // No viewSis → the students category is filtered out → empty groups, no DB hit.
+  // No viewSis/viewEmployees/viewAdmissions → all categories filtered → empty.
   const res = await call("GET", "/search?q=ram", ["someOtherPerm"]);
   assertEquals(res?.status, 200);
   const env = await res!.json();
   assertEquals(env.data.groups, []);
+});
+
+Deno.test("W2.S: staff/admissions categories require their own ERP permission", async () => {
+  // viewEmployees alone authorizes the staff category → reaches DB (503).
+  assertEquals((await call("GET", "/search?q=priya", ["viewEmployees"]))?.status, 503);
+  // viewAdmissions alone authorizes the admissions category → reaches DB (503).
+  assertEquals((await call("GET", "/search?q=arjun", ["viewAdmissions"]))?.status, 503);
+  // A permission for a DIFFERENT module does not unlock any category → empty 200.
+  const other = await call("GET", "/search?q=ram", ["viewTransport"]);
+  assertEquals(other?.status, 200);
+  assertEquals((await other!.json()).data.groups, []);
 });
 
 Deno.test("W2.S: a too-short query is rejected (422 before DB)", async () => {

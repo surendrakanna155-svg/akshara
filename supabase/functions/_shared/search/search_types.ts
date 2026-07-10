@@ -10,6 +10,7 @@
 export type SearchCategory =
   | "students"
   | "staff"
+  | "admissions"
   | "classes"
   | "finance"
   | "transport"
