@@ -1,5 +1,6 @@
 import type { CopilotContextBundle } from "./copilot_context_engine.ts";
 import { COPILOT_ASSISTANTS, type CopilotAssistantType } from "./copilot_types.ts";
+import { fenceUntrusted, UNTRUSTED_DATA_PREAMBLE } from "../ai/prompt_safety.ts";
 
 const READ_ONLY_POLICY = `
 You are Akshara ERP Copilot — a read-only operational assistant.
@@ -64,20 +65,24 @@ export function buildSystemPrompt(
     : "";
   return [
     READ_ONLY_POLICY,
+    UNTRUSTED_DATA_PREAMBLE,
     extraPolicy,
+    // Trusted (our own config) — not fenced.
     `Assistant: ${assistant.label}`,
     `Skills: ${assistant.skills.join(", ")}`,
-    `School context: ${JSON.stringify(context.school)}`,
-    `Academic year: ${JSON.stringify(context.academicYear)}`,
-    `Finance context: ${JSON.stringify(context.finance)}`,
-    `Admissions context: ${JSON.stringify(context.admissions)}`,
-    `SIS context: ${JSON.stringify(context.sis)}`,
-    `Communication context: ${JSON.stringify(context.communication)}`,
-    `Timetable context: ${JSON.stringify(context.timetable)}`,
-    `Teacher operations: ${JSON.stringify(context.teacherOps)}`,
-    `Analytics context: ${JSON.stringify(context.analytics)}`,
-    `Student lookup: ${JSON.stringify(context.studentLookup)}`,
-    screenContext ? `Client screen context: ${JSON.stringify(screenContext)}` : "",
+    // Untrusted (carries user-entered ERP data) — fenced so embedded text can
+    // never be read as instructions (AI-5).
+    fenceUntrusted("School context", context.school),
+    fenceUntrusted("Academic year", context.academicYear),
+    fenceUntrusted("Finance context", context.finance),
+    fenceUntrusted("Admissions context", context.admissions),
+    fenceUntrusted("SIS context", context.sis),
+    fenceUntrusted("Communication context", context.communication),
+    fenceUntrusted("Timetable context", context.timetable),
+    fenceUntrusted("Teacher operations", context.teacherOps),
+    fenceUntrusted("Analytics context", context.analytics),
+    fenceUntrusted("Student lookup", context.studentLookup),
+    screenContext ? fenceUntrusted("Client screen context", screenContext) : "",
   ].filter(Boolean).join("\n");
 }
 

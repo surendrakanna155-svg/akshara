@@ -42,6 +42,16 @@ export interface CopilotGenerationResult {
 
 const COPILOT_MAX_TOKENS = 1024;
 
+/** Cap the raw turns re-sent each request (W1.3). Older turns are dropped rather
+ * than resending the full transcript every turn — a large token saving on long
+ * conversations. (The ai_copilot_sessions.rolling_summary column added in W1.2
+ * is the substrate for summarizing the dropped prefix in a later refinement.) */
+export const MAX_HISTORY_TURNS = 12;
+
+export function boundHistory<T>(history: T[], maxTurns = MAX_HISTORY_TURNS): T[] {
+  return history.length <= maxTurns ? history : history.slice(history.length - maxTurns);
+}
+
 const REFUSAL_REPLY =
   "I can't help with that request. I'm Akshara's read-only operational " +
   "assistant — ask me about the school data you have access to and I'll summarize it.";
@@ -60,7 +70,7 @@ export async function generateCopilotResponse(
   input: CopilotGenerationInput,
 ): Promise<CopilotGenerationResult> {
   const messages: ClaudeMessage[] = [
-    ...input.history.map((m) => ({ role: m.role, content: m.content })),
+    ...boundHistory(input.history).map((m) => ({ role: m.role, content: m.content })),
     { role: "user" as const, content: input.userMessage },
   ];
 

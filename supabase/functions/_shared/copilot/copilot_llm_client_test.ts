@@ -1,5 +1,5 @@
-import { assertEquals } from "jsr:@std/assert@1";
-import { generateCopilotResponse } from "./copilot_llm_client.ts";
+import { assert, assertEquals } from "jsr:@std/assert@1";
+import { boundHistory, generateCopilotResponse, MAX_HISTORY_TURNS } from "./copilot_llm_client.ts";
 import type { CopilotContextBundle } from "./copilot_context_engine.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 
@@ -51,6 +51,17 @@ function baseInput(apiKey?: string | null) {
     apiKey,
   };
 }
+
+Deno.test("boundHistory keeps only the last K turns (W1.3 token bounding)", () => {
+  const short = [{ n: 1 }, { n: 2 }];
+  assertEquals(boundHistory(short), short); // untouched when under the cap
+  const long = Array.from({ length: MAX_HISTORY_TURNS + 8 }, (_, i) => ({ n: i }));
+  const bounded = boundHistory(long);
+  assertEquals(bounded.length, MAX_HISTORY_TURNS);
+  assertEquals(bounded[0], { n: 8 }); // oldest 8 dropped
+  assertEquals(bounded[bounded.length - 1], { n: MAX_HISTORY_TURNS + 7 });
+  assert(bounded.length < long.length);
+});
 
 Deno.test("copilot response is the deterministic stub without an api key", async () => {
   const result = await generateCopilotResponse(baseInput(undefined));
