@@ -45,6 +45,7 @@ import {
   handleRecommendationFeed,
 } from "./priority/recommendation_handlers.ts";
 import { handleQuickActions } from "./quick_actions/quick_action_handlers.ts";
+import { handleBriefPrewarm, handleDailyBrief } from "./briefs/brief_handlers.ts";
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -71,6 +72,14 @@ export function matchIntelligenceRoute(
   // W2-GATE-2 — the per-persona Quick Action Registry (action-first, AI-last).
   if (path === "/intelligence/quick-actions" && method === "GET") {
     return { handler: handleQuickActions, args: [] };
+  }
+  // W2.1 — the brief/digest platform (T1 sections + shared cached narrative);
+  // the pre-warm sweep's nightly auto-fire stays ops-gated (INTERNAL_CRON_TOKEN).
+  if (path === "/intelligence/briefs/daily" && method === "GET") {
+    return { handler: handleDailyBrief, args: [] };
+  }
+  if (path === "/intelligence/briefs/prewarm" && method === "POST") {
+    return { handler: handleBriefPrewarm, args: [] };
   }
 
   if (path === "/intelligence/risk/students" && method === "GET") {
