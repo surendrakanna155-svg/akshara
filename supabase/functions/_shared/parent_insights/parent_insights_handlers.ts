@@ -58,6 +58,7 @@ export async function handleGenerateParentInsights(req: Request, config: AppConf
         baseSnapshot,
         ai.apiKey,
         { provider: ai.provider, model: ai.model },
+        { db, organizationId: orgId, schoolId, userId: auth.claims.sub },
       );
       const rows = await db.queryObject<{ id: string }>(
         `INSERT INTO parent_insight_snapshots (

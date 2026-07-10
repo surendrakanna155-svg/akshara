@@ -5,8 +5,7 @@
 // error → the deterministic captions are kept unchanged (never blocks publish,
 // never fabricates beyond the given title/description).
 
-import { callClaude } from "../ai/anthropic_client.ts";
-import { resolveAiConfig } from "../ai/ai_settings.ts";
+import { governedModelText } from "../ai/model_gateway.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 
 const CHANNELS = ["poster", "whatsapp", "instagram", "facebook"] as const;
@@ -35,9 +34,10 @@ export async function enhanceCaptionsWithAi(
   orgId: string | null,
   assets: Record<string, unknown>,
   ctx: CaptionContext,
+  schoolId: string | null = null,
+  userId: string | null = null,
 ): Promise<Record<string, unknown>> {
-  const ai = await resolveAiConfig(db, orgId);
-  if (!ai.apiKey) return assets;
+  if (!orgId) return assets;
 
   const system =
     "You write short, warm captions for an Indian school's social posts. " +
@@ -47,19 +47,20 @@ export async function enhanceCaptionsWithAi(
     (ctx.description ? `Details: ${ctx.description}\n` : "") +
     "Write one caption per channel.";
 
+  // Governed (timeout + rate-limit + spend-cap + ai_call_log); null text →
+  // no live answer → keep deterministic captions.
+  const text = await governedModelText(db, {
+    organizationId: orgId,
+    schoolId,
+    userId,
+    surface: "promotion_captions",
+  }, { system, messages: [{ role: "user", content: user }], maxTokens: 400 });
+  if (!text) return assets;
+
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) return assets;
   let parsed: Record<string, unknown> | null = null;
   try {
-    const result = await callClaude({
-      system,
-      messages: [{ role: "user", content: user }],
-      maxTokens: 400,
-      provider: ai.provider,
-      model: ai.model,
-      apiKey: ai.apiKey,
-    });
-    if (result.refused || !result.text) return assets;
-    const match = result.text.match(/\{[\s\S]*\}/);
-    if (!match) return assets;
     parsed = asObject(JSON.parse(match[0]));
   } catch {
     return assets; // safe fallback

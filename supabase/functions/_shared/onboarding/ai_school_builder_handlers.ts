@@ -38,11 +38,13 @@ export async function handleAiPrefillStartupOnboarding(
   try {
     const baseline = buildSchoolBlueprint(brief);
     const blueprint = await withTenantContext(config, auth.claims, async (db) => {
-      const ai = await resolveAiConfig(db, organizationIdFromClaims(auth.claims));
+      const orgId = organizationIdFromClaims(auth.claims);
+      const ai = await resolveAiConfig(db, orgId);
       return await enrichSchoolBlueprintWithClaude(baseline, brief, ai.apiKey, {
         provider: ai.provider,
         model: ai.model,
-      });
+        // Governed path (org-scoped: proposing a not-yet-provisioned school).
+      }, { db, organizationId: orgId, schoolId: null, userId: auth.claims.sub });
     });
 
     return jsonResponse(envelope({

@@ -9,6 +9,7 @@
 // deterministic snapshot unchanged — enrichment is strictly additive and safe.
 
 import { type AiProvider, callClaude, claudeModel } from "../ai/anthropic_client.ts";
+import { type Governance, governedTextFor } from "../ai/model_gateway.ts";
 import type { ParentInsightSnapshot } from "./parent_insights_service.ts";
 
 const ENRICH_MAX_TOKENS = 900;
@@ -73,9 +74,8 @@ export async function enrichParentInsightWithClaude(
   snapshot: ParentInsightSnapshot,
   apiKey?: string,
   opts?: { provider?: AiProvider; model?: string },
+  governance?: Governance,
 ): Promise<ParentInsightSnapshot> {
-  if (!apiKey) return snapshot;
-
   const userMessage = [
     `Rewrite this student progress snapshot in language: ${snapshot.language}.`,
     `Period: ${snapshot.period}.`,
@@ -91,20 +91,11 @@ export async function enrichParentInsightWithClaude(
     }),
   ].join("\n");
 
-  try {
-    const result = await callClaude({
-      apiKey,
-      provider: opts?.provider,
-      model: opts?.model ?? claudeModel(),
-      maxTokens: ENRICH_MAX_TOKENS,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userMessage }],
-    });
-    if (result.refused) return snapshot;
-
-    const parsed = parseJsonObject(result.text);
+  // Parse the model text and overlay only the prose fields (numbers untouched);
+  // any parse failure returns the deterministic snapshot unchanged.
+  const applyEnrichment = (text: string): ParentInsightSnapshot => {
+    const parsed = parseJsonObject(text);
     if (!parsed) return snapshot;
-
     return {
       ...snapshot,
       progressSummary: asString(parsed.progressSummary, snapshot.progressSummary),
@@ -121,6 +112,30 @@ export async function enrichParentInsightWithClaude(
         snapshot.teacherRemarksSummary,
       ),
     };
+  };
+
+  if (governance) {
+    const text = await governedTextFor(governance, "parent_insights", {
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content: userMessage }],
+      maxTokens: ENRICH_MAX_TOKENS,
+    });
+    return text ? applyEnrichment(text) : snapshot;
+  }
+
+  if (!apiKey) return snapshot;
+
+  try {
+    const result = await callClaude({
+      apiKey,
+      provider: opts?.provider,
+      model: opts?.model ?? claudeModel(),
+      maxTokens: ENRICH_MAX_TOKENS,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content: userMessage }],
+    });
+    if (result.refused) return snapshot;
+    return applyEnrichment(result.text);
   } catch {
     return snapshot;
   }

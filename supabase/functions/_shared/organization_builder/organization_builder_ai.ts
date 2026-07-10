@@ -7,6 +7,7 @@
 // deterministic baseline unchanged — refinement is strictly additive and safe.
 
 import { type AiProvider, callClaude, claudeModel } from "../ai/anthropic_client.ts";
+import { type Governance, governedTextFor } from "../ai/model_gateway.ts";
 import type { InterviewRecommendation } from "./organization_builder_repository.ts";
 
 const RECOMMEND_MAX_TOKENS = 320;
@@ -100,9 +101,9 @@ export async function recommendForStep(
   input: RecommendInput,
   apiKey?: string,
   opts?: { provider?: AiProvider; model?: string },
+  governance?: Governance,
 ): Promise<InterviewRecommendation> {
   const baseline = baselineRecommendation(input.packId, input.packType, input.stepIndex);
-  if (!apiKey) return baseline;
 
   const focus = STEP_FOCUS[input.stepIndex] ?? "the configuration so far";
   const userMessage = [
@@ -112,6 +113,26 @@ export async function recommendForStep(
     JSON.stringify(input.answers),
     "Return the recommendation JSON now.",
   ].join("\n");
+
+  const applyRecommendation = (text: string): InterviewRecommendation => {
+    const parsed = parseJsonObject(text);
+    if (!parsed) return baseline;
+    const title = typeof parsed.title === "string" ? parsed.title.trim() : "";
+    const detail = typeof parsed.detail === "string" ? parsed.detail.trim() : "";
+    if (!title || !detail) return baseline;
+    return { id: baseline.id, title: title.slice(0, 80), detail: detail.slice(0, 280), confidence: 0.82 };
+  };
+
+  if (governance) {
+    const text = await governedTextFor(governance, "org_builder", {
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content: userMessage }],
+      maxTokens: RECOMMEND_MAX_TOKENS,
+    });
+    return text ? applyRecommendation(text) : baseline;
+  }
+
+  if (!apiKey) return baseline;
 
   try {
     const result = await callClaude({
@@ -123,17 +144,7 @@ export async function recommendForStep(
       messages: [{ role: "user", content: userMessage }],
     });
     if (result.refused) return baseline;
-    const parsed = parseJsonObject(result.text);
-    if (!parsed) return baseline;
-    const title = typeof parsed.title === "string" ? parsed.title.trim() : "";
-    const detail = typeof parsed.detail === "string" ? parsed.detail.trim() : "";
-    if (!title || !detail) return baseline;
-    return {
-      id: baseline.id,
-      title: title.slice(0, 80),
-      detail: detail.slice(0, 280),
-      confidence: 0.82,
-    };
+    return applyRecommendation(result.text);
   } catch {
     return baseline;
   }

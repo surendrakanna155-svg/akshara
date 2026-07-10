@@ -13,6 +13,7 @@
 // deterministic blueprint unchanged — enrichment is strictly additive and safe.
 
 import { type AiProvider, callClaude, claudeModel } from "../ai/anthropic_client.ts";
+import { type Governance, governedTextFor } from "../ai/model_gateway.ts";
 import type { StartupOnboardingPayload } from "./startup_onboarding_repository.ts";
 import { GRADE_LADDER, type SchoolBlueprint, type SchoolBrief } from "./ai_school_builder_service.ts";
 
@@ -117,9 +118,8 @@ export async function enrichSchoolBlueprintWithClaude(
   brief: SchoolBrief,
   apiKey?: string,
   opts?: { provider?: AiProvider; model?: string },
+  governance?: Governance,
 ): Promise<SchoolBlueprint> {
-  if (!apiKey) return baseline;
-
   const userMessage = [
     "Brief from the school founder:",
     JSON.stringify({
@@ -146,18 +146,8 @@ export async function enrichSchoolBlueprintWithClaude(
     "Return the refined JSON object now.",
   ].join("\n");
 
-  try {
-    const result = await callClaude({
-      apiKey,
-      provider: opts?.provider,
-      model: opts?.model ?? claudeModel(),
-      maxTokens: ENRICH_MAX_TOKENS,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userMessage }],
-    });
-    if (result.refused) return baseline;
-
-    const parsed = parseJsonObject(result.text);
+  const applyBlueprint = (text: string): SchoolBlueprint => {
+    const parsed = parseJsonObject(text);
     if (!parsed) return baseline;
 
     const feeModelRaw = asString(parsed.feeModel, "").toLowerCase().replace(/\s+/g, "_");
@@ -180,6 +170,30 @@ export async function enrichSchoolBlueprintWithClaude(
       rationale: asString(parsed.rationale, baseline.rationale),
       warnings: baseline.warnings,
     };
+  };
+
+  if (governance) {
+    const text = await governedTextFor(governance, "school_builder", {
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content: userMessage }],
+      maxTokens: ENRICH_MAX_TOKENS,
+    });
+    return text ? applyBlueprint(text) : baseline;
+  }
+
+  if (!apiKey) return baseline;
+
+  try {
+    const result = await callClaude({
+      apiKey,
+      provider: opts?.provider,
+      model: opts?.model ?? claudeModel(),
+      maxTokens: ENRICH_MAX_TOKENS,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content: userMessage }],
+    });
+    if (result.refused) return baseline;
+    return applyBlueprint(result.text);
   } catch {
     return baseline;
   }

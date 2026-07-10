@@ -153,7 +153,7 @@ export async function handleGeneratePromotionAssets(
         subjectType: current.subject_type,
         title: current.title,
         description: current.description,
-      });
+      }, schoolIdFromClaims(auth.claims), auth.claims.sub);
       const updated = await generateAndStoreAssets(db, promotionId, assets);
       await emitMutationAudit(
         db,

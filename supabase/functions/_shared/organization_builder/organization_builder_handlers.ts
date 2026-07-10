@@ -192,6 +192,8 @@ export function handleSaveStep(
       },
       ai.apiKey,
       { provider: ai.provider, model: ai.model },
+      // Governed path (org-scoped: org-builder has no school context).
+      { db, organizationId: orgId, schoolId: null, userId: claims.sub },
     );
     // Prepend the fresh rec, drop any prior rec for the same step (stable id).
     const recommendations = [rec, ...existing.recommendations.filter((r) => r.id !== rec.id)];
