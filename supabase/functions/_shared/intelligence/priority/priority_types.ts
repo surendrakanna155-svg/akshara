@@ -38,12 +38,16 @@ export type Persona =
   | "finance"
   | "admin";
 
-/** Personas the W2.0a feed route serves today (school-scoped / aggregate). */
+/** Personas the feed route serves today. W2.0a shipped the school-scoped /
+ * aggregate personas; the W2 persona rollout adds the per-user-scoped ones in
+ * order (Teacher → Parent → Student), each behind its own scope gate. Adding a
+ * persona here also lifts the `resolvePersonaParam` 422 for it. */
 export const W2_0_SUPPORTED_PERSONAS: readonly Persona[] = [
   "principal",
   "finance",
   "director",
   "admin",
+  "teacher",
 ] as const;
 
 /** Compliance / impact class — the qualitative severity axis (doc 04 §3.2). */

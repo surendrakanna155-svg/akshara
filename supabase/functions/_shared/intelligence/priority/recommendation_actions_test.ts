@@ -45,6 +45,22 @@ Deno.test("finance-tagged analytics risk routes to recovery, others to analytics
   assertEquals(other?.deepLink, "/analytics/dashboard");
 });
 
+Deno.test("teacher actions require confirmation and deep-link to the right surface", () => {
+  const att = actionForItem(item({ source: "teacher_attendance", itemKey: "teacher:attendance:8-A" }));
+  assertEquals(att?.deepLink, "/teacher/attendance");
+  assertEquals(att?.payload, { classId: "class_8-A", classLabel: "8-A" });
+  assertEquals(att?.requiresConfirmation, true);
+
+  const hw = actionForItem(item({ source: "teacher_homework", itemKey: "teacher:homework:hw-9" }));
+  assertEquals(hw?.deepLink, "/teacher/homework/hw-9");
+  assertEquals(hw?.payload, { homeworkId: "hw-9" });
+
+  const exam = actionForItem(item({ source: "teacher_exam", itemKey: "teacher:exam:ex-3", type: "deadline" }));
+  assertEquals(exam?.deepLink, "/teacher/exams/ex-3/marks");
+  assertEquals(exam?.payload, { examId: "ex-3" });
+  assertEquals(exam?.requiresConfirmation, true);
+});
+
 Deno.test("an unknown source yields no action (informational only)", () => {
   assertEquals(actionForItem(item({ source: "some_future_source" })), undefined);
 });

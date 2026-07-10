@@ -17,6 +17,7 @@ import {
   getPersonaMemory,
 } from "../../ai/ai_persona_memory_repository.ts";
 import { collectRawItems, type PrioritySourceInputs } from "./priority_sources.ts";
+import { loadTeacherFeedSources } from "./teacher_sources.ts";
 import type { LearnedWeights, Persona, RawPriorityItem } from "./priority_types.ts";
 
 export interface PersonaFeedContext {
@@ -28,14 +29,20 @@ export interface PersonaFeedContext {
   degraded: boolean;
 }
 
-/** Load the full feed context for `persona` under the current tenant scope.
- * RBAC is the real wall (doc 02 §5): each source is loaded ONLY if the caller
- * holds its permission; a director never loads per-student rows. */
-export async function loadPersonaFeedContext(
+interface RawSourceResult {
+  rawItems: RawPriorityItem[];
+  degraded: boolean;
+}
+
+/** School-scoped / aggregate personas (principal, finance, director, admin):
+ * the W2.0a analytics + student-risk sources, each loaded ONLY if the caller
+ * holds its permission (RBAC is the real wall, doc 02 §5 — a director never
+ * loads per-student rows). */
+async function loadSchoolFeedSources(
   db: TenantQueryClient,
   claims: AccessTokenClaims,
   persona: Persona,
-): Promise<PersonaFeedContext> {
+): Promise<RawSourceResult> {
   const orgId = organizationIdFromClaims(claims);
   const schoolId = schoolIdFromClaims(claims);
   const perms = claims.permissions;
@@ -73,6 +80,32 @@ export async function loadPersonaFeedContext(
     }));
   }
 
+  return {
+    rawItems: collectRawItems(inputs),
+    // Director intentionally has no risk source, so its absence is not degraded.
+    degraded: !canViewAnalytics || (persona !== "director" && !canViewRisk),
+  };
+}
+
+/** The one place that turns a request into a scored-feed context, for BOTH the
+ * priority route and the recommendation route. Dispatches raw-item collection by
+ * persona class (school-aggregate vs. per-user-scoped), then applies the shared
+ * Persona-Memory tail (learned weights + dismissed keys) uniformly — memory is
+ * keyed on `claims.sub`, so the tail is identical for every persona. Runs INSIDE
+ * an existing tenant transaction (RLS applied). Deterministic, zero model calls. */
+export async function loadPersonaFeedContext(
+  db: TenantQueryClient,
+  claims: AccessTokenClaims,
+  persona: Persona,
+  nowIso: string,
+): Promise<PersonaFeedContext> {
+  const orgId = organizationIdFromClaims(claims);
+  const schoolId = schoolIdFromClaims(claims);
+
+  const sources: RawSourceResult = persona === "teacher"
+    ? await loadTeacherFeedSources(db, claims, nowIso)
+    : await loadSchoolFeedSources(db, claims, persona);
+
   // Persona memory personalizes ordering (learned weights) and hides dismissed
   // items. Best-effort: an empty/absent row yields neutral defaults, so the feed
   // is identical to the un-personalized one for a first-time user.
@@ -80,10 +113,9 @@ export async function loadPersonaFeedContext(
 
   return {
     persona,
-    rawItems: collectRawItems(inputs),
+    rawItems: sources.rawItems,
     weights: deriveLearnedWeights(memory),
     dismissedKeys: dismissedKeysOf(memory),
-    // Director intentionally has no risk source, so its absence is not degraded.
-    degraded: !canViewAnalytics || (persona !== "director" && !canViewRisk),
+    degraded: sources.degraded,
   };
 }

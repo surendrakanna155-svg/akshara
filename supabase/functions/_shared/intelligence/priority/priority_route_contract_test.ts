@@ -58,17 +58,39 @@ Deno.test("W2.0a: default persona (none supplied) is principal and matches", asy
   assertEquals(res.status, 503);
 });
 
-Deno.test("W2.0a: an unsupported persona is rejected 422 BEFORE the DB", async () => {
-  // teacher/parent/student are per-user-scoped personas — not served by W2.0a.
-  const res = await call("GET", "/intelligence/priorities?persona=teacher", ["viewAnalytics"]);
+Deno.test("W2 rollout: a not-yet-shipped persona is rejected 422 BEFORE the DB", async () => {
+  // parent/student ship in later rollout waves — still rejected in the teacher wave.
+  const res = await call("GET", "/intelligence/priorities?persona=parent", ["viewAnalytics"]);
   assertEquals(res.status, 422);
   const env = await res.json();
   assertEquals(env.error.code, "VALIDATION_ERROR");
 });
 
-Deno.test("W2.0a: an unknown persona string is rejected 422", async () => {
+Deno.test("W2 rollout: an unknown persona string is rejected 422", async () => {
   const res = await call("GET", "/intelligence/priorities?persona=wizard", ["viewAnalytics"]);
   assertEquals(res.status, 422);
+});
+
+Deno.test("W2 teacher: persona=teacher with school scope reaches the DB (503)", async () => {
+  // Teacher is a school-scope staff session; the feed self-scopes to claims.sub.
+  const res = await call("GET", "/intelligence/priorities?persona=teacher", ["viewAdminHub"], {
+    role: "teacher",
+    role_slugs: ["teacher"],
+    primary_role: "teacher",
+  });
+  assertEquals(res.status, 503);
+});
+
+Deno.test("W2 teacher: persona=teacher from a non-school scope is forbidden (403)", async () => {
+  // A parent/student session must not pull the teacher feed.
+  const res = await call("GET", "/intelligence/priorities?persona=teacher", ["viewSis"], {
+    scope: "parent",
+    role: "parent",
+    role_slugs: ["parent"],
+    primary_role: "parent",
+    child_ids: ["stu-1"],
+  });
+  assertEquals(res.status, 403);
 });
 
 Deno.test("W2.0a: a non-school scope is forbidden (403)", async () => {

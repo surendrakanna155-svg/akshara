@@ -25,6 +25,11 @@ function studentIdFromKey(itemKey: string): string | null {
   return m ? m[1]! : null;
 }
 
+/** The suffix after a fixed itemKey prefix (the entity id), or null. */
+function suffixAfter(itemKey: string, prefix: string): string | null {
+  return itemKey.startsWith(prefix) ? itemKey.slice(prefix.length) : null;
+}
+
 /** Map a priority item to its pre-staged one-click action (or undefined when
  * the item is informational and carries no single next step). Keyed on the
  * generator `source` so it stays stable as titles/wording evolve. */
@@ -77,6 +82,34 @@ export function actionForItem(item: RawPriorityItem): PriorityAction | undefined
           payload: {},
           requiresConfirmation: true,
         };
+    // ---- Teacher (own-class scope) ----
+    case "teacher_attendance": {
+      const classLabel = suffixAfter(item.itemKey, "teacher:attendance:");
+      return {
+        label: "Mark attendance",
+        deepLink: "/teacher/attendance",
+        payload: classLabel ? { classId: `class_${classLabel}`, classLabel } : {},
+        requiresConfirmation: true,
+      };
+    }
+    case "teacher_homework": {
+      const homeworkId = suffixAfter(item.itemKey, "teacher:homework:");
+      return {
+        label: "Review submissions",
+        deepLink: homeworkId ? `/teacher/homework/${homeworkId}` : "/teacher/homework",
+        payload: homeworkId ? { homeworkId } : {},
+        requiresConfirmation: true,
+      };
+    }
+    case "teacher_exam": {
+      const examId = suffixAfter(item.itemKey, "teacher:exam:");
+      return {
+        label: "Enter marks",
+        deepLink: examId ? `/teacher/exams/${examId}/marks` : "/teacher/exams",
+        payload: examId ? { examId } : {},
+        requiresConfirmation: true,
+      };
+    }
     default:
       return undefined;
   }

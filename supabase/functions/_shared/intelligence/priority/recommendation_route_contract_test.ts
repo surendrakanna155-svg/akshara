@@ -51,9 +51,18 @@ Deno.test("W2.0b: recommendations feed matches the router (reaches DB → 503)",
   assertEquals(res.status, 503);
 });
 
-Deno.test("W2.0b: recommendations rejects an unsupported persona (422)", async () => {
+Deno.test("W2.0b: recommendations rejects a not-yet-shipped persona (422)", async () => {
   const res = await call("GET", "/intelligence/recommendations?persona=parent", ["viewAnalytics"]);
   assertEquals(res.status, 422);
+});
+
+Deno.test("W2 teacher: recommendations for persona=teacher reach the DB (503)", async () => {
+  const res = await call("GET", "/intelligence/recommendations?persona=teacher", ["viewAdminHub"], undefined, {
+    role: "teacher",
+    role_slugs: ["teacher"],
+    primary_role: "teacher",
+  });
+  assertEquals(res.status, 503);
 });
 
 Deno.test("W2.0b: recommendations rejects a non-school scope (403)", async () => {

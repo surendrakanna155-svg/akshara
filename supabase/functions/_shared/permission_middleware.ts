@@ -119,6 +119,30 @@ export function requireParentInsightsScope(
   return null;
 }
 
+/**
+ * The parent priority feed is the parent's OWN feed: it must come from a genuine
+ * parent-scope session (children resolved from `claims.child_ids`), never a
+ * school-staff session. Distinct from `requireParentInsightsScope`, which also
+ * admits staff so they can view a child's insights.
+ */
+export function requireParentSelfScope(claims: AccessTokenClaims): Response | null {
+  if (claims.scope !== "parent" || !claims.school_id) {
+    return errorEnvelope("FORBIDDEN", "Parent feed requires parent scope", 403);
+  }
+  return null;
+}
+
+/**
+ * The student priority feed is the student's OWN feed: a genuine student-scope
+ * session with a resolved `student_id`. School staff never satisfy this.
+ */
+export function requireStudentSelfScope(claims: AccessTokenClaims): Response | null {
+  if (claims.scope !== "student" || !claims.school_id || !claims.student_id) {
+    return errorEnvelope("FORBIDDEN", "Student feed requires student scope", 403);
+  }
+  return null;
+}
+
 export function organizationIdFromClaims(claims: AccessTokenClaims): string {
   return claims.tenant_id;
 }

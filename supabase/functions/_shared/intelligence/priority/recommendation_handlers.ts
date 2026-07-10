@@ -28,7 +28,7 @@ import {
 import { buildFeed } from "./priority_engine.ts";
 import { loadPersonaFeedContext } from "./priority_feed_service.ts";
 import { actionForItem } from "./recommendation_actions.ts";
-import { parseFeedLimit, resolvePersonaParam } from "./priority_handlers.ts";
+import { parseFeedLimit, requirePriorityFeedScope, resolvePersonaParam } from "./priority_handlers.ts";
 import { PRIORITY_ITEM_TYPES, type PriorityItemType } from "./priority_types.ts";
 
 const FEEDBACK_ACTIONS: readonly FeedbackAction[] = ["accept", "dismiss", "suppress"] as const;
@@ -46,18 +46,19 @@ function isFeedbackAction(v: unknown): v is FeedbackAction {
 export async function handleRecommendationFeed(req: Request, config: AppConfig): Promise<Response> {
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
-  const denied = requireSchoolOperationalScope(auth.claims);
-  if (denied) return denied;
 
   const url = new URL(req.url);
   const persona = resolvePersonaParam(url.searchParams.get("persona"));
   if (persona instanceof Response) return persona;
+  const denied = requirePriorityFeedScope(auth.claims, persona);
+  if (denied) return denied;
   const limit = parseFeedLimit(url.searchParams.get("limit"));
 
   try {
+    const nowIso = new Date().toISOString();
     const ctx = await withTenantContext(config, auth.claims, (db) =>
-      loadPersonaFeedContext(db, auth.claims, persona));
-    const feed = buildFeed(ctx.rawItems, persona, new Date().toISOString(), {
+      loadPersonaFeedContext(db, auth.claims, persona, nowIso));
+    const feed = buildFeed(ctx.rawItems, persona, nowIso, {
       weights: ctx.weights,
       dismissedKeys: ctx.dismissedKeys,
       limit,
