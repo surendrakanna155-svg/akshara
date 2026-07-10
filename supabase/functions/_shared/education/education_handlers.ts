@@ -419,7 +419,12 @@ export async function handleGenerateQuestionPaper(req: Request, config: AppConfi
         body.chapters ?? [],
       );
       const ai = await resolveAiConfig(db, orgId);
-      const generated = await generateQuestionPaper(db, body, ai);
+      const generated = await generateQuestionPaper(db, body, ai, undefined, {
+        db,
+        organizationId: orgId,
+        schoolId,
+        userId: auth.claims.sub,
+      });
       const saved = await createQuestionPaper(db, orgId, schoolId, {
         academicYearId: body.academicYearId,
         academicYearLabel: body.academicYearLabel,
@@ -762,6 +767,12 @@ export async function handleRegeneratePaperItem(
       const result = await regeneratePaperItem(db, paperId, itemId, {
         chapter: body?.chapter,
         ai,
+        governance: {
+          db,
+          organizationId: orgId,
+          schoolId: schoolIdFromClaims(auth.claims),
+          userId: auth.claims.sub,
+        },
       });
       if (result.ok) {
         await emitMutationAudit(

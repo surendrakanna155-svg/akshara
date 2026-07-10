@@ -23,6 +23,7 @@ import {
 } from "./education_exam_profile.ts";
 import { generateAiCandidatesForGaps } from "./education_ai_question_gapfill.ts";
 import { aiApiKey, aiProvider, claudeModel } from "../ai/anthropic_client.ts";
+import type { Governance } from "../ai/model_gateway.ts";
 import type { AiRuntimeConfig } from "../ai/ai_settings.ts";
 import {
   applyRegeneratedPaperItem,
@@ -99,7 +100,7 @@ export async function regeneratePaperItem(
   client: TenantQueryClient,
   paperId: string,
   itemId: string,
-  opts: { chapter?: string; ai?: AiRuntimeConfig },
+  opts: { chapter?: string; ai?: AiRuntimeConfig; governance?: Governance },
 ): Promise<RegeneratePaperItemResult> {
   const found = await getPaperItem(client, paperId, itemId);
   if (!found) return { ok: false, reason: "not_found" };
@@ -136,6 +137,7 @@ export async function regeneratePaperItem(
     },
     aiConfig.apiKey,
     { provider: aiConfig.provider, model: aiConfig.model },
+    opts.governance,
   );
   const candidate = candidates[0];
   if (!candidate) return { ok: false, reason: "no_candidate" };
@@ -169,6 +171,7 @@ export async function generateQuestionPaper(
   input: GenerateQuestionPaperInput,
   ai?: AiRuntimeConfig,
   profile?: ExamProfile,
+  governance?: Governance,
 ): Promise<PaperGenerationResult> {
   const programTrack: EduProgramTrack = input.programTrack ?? "board";
 
@@ -247,6 +250,7 @@ export async function generateQuestionPaper(
       },
       aiConfig.apiKey,
       { provider: aiConfig.provider, model: aiConfig.model },
+      governance,
     );
     for (const c of candidates) {
       byIndex.set(c.slotIndex, {

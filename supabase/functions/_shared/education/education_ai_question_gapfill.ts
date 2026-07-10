@@ -13,6 +13,7 @@
 // data is ever sent; the prompt carries class-level syllabus scope only.
 
 import { type AiProvider, callClaude, claudeModel } from "../ai/anthropic_client.ts";
+import { type Governance, governedTextFor } from "../ai/model_gateway.ts";
 import { computeQuestionFingerprint } from "./education_fingerprint.ts";
 import type { BlueprintSlot } from "./education_blueprint_solver.ts";
 import {
@@ -177,26 +178,18 @@ export async function generateAiCandidatesForGaps(
   scope: GapFillScope,
   apiKey?: string,
   opts?: { provider?: AiProvider; model?: string },
+  governance?: Governance,
 ): Promise<AiQuestionCandidate[]> {
-  if (!apiKey || gaps.length === 0) return [];
+  if (gaps.length === 0) return [];
 
   const batch = gaps.slice(0, MAX_GAPS_PER_CALL);
   const byIndex = new Map(batch.map((g) => [g.index, g]));
 
-  try {
-    const result = await callClaude({
-      apiKey,
-      provider: opts?.provider,
-      model: opts?.model ?? claudeModel(),
-      maxTokens: GAPFILL_MAX_TOKENS,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: buildUserMessage(batch, scope) }],
-    });
-    if (result.refused) return [];
-
-    const rawList = parseQuestionsArray(result.text);
+  // Validate the model text into bank-safe candidates (hallucinated slots and
+  // per-item validation failures are dropped, never fabricated).
+  const buildCandidates = (text: string): AiQuestionCandidate[] => {
+    const rawList = parseQuestionsArray(text);
     if (!rawList) return [];
-
     const seen = new Set<string>();
     const candidates: AiQuestionCandidate[] = [];
     for (const raw of rawList) {
@@ -210,6 +203,30 @@ export async function generateAiCandidatesForGaps(
       candidates.push(validated);
     }
     return candidates;
+  };
+
+  if (governance) {
+    const text = await governedTextFor(governance, "education_gapfill", {
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content: buildUserMessage(batch, scope) }],
+      maxTokens: GAPFILL_MAX_TOKENS,
+    });
+    return text ? buildCandidates(text) : [];
+  }
+
+  if (!apiKey) return [];
+
+  try {
+    const result = await callClaude({
+      apiKey,
+      provider: opts?.provider,
+      model: opts?.model ?? claudeModel(),
+      maxTokens: GAPFILL_MAX_TOKENS,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content: buildUserMessage(batch, scope) }],
+    });
+    if (result.refused) return [];
+    return buildCandidates(result.text);
   } catch {
     return [];
   }
