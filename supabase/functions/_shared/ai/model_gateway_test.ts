@@ -421,3 +421,110 @@ Deno.test("runGateway: telemetry failure never breaks the user path", async () =
   assertEquals(r.text, "real answer");
   clearLimitEnv();
 });
+
+// ─── A5: atomic reservation path ─────────────────────────────────────────────
+
+function wireReserve(
+  deps: GatewayDeps,
+  result: { allow: true; reservationId: string } | {
+    allow: false;
+    reason: "rate_user" | "rate_school" | "spend_cap";
+  } | Error,
+): {
+  reserveCalls: Array<{ estimatedCostMicros: number; surface: string }>;
+  finalized: Array<{ id: string; consumed: boolean; costMicros: number }>;
+} {
+  const reserveCalls: Array<{ estimatedCostMicros: number; surface: string }> = [];
+  const finalized: Array<{ id: string; consumed: boolean; costMicros: number }> = [];
+  deps.reserve = (args) => {
+    reserveCalls.push({ estimatedCostMicros: args.estimatedCostMicros, surface: args.surface });
+    if (result instanceof Error) return Promise.reject(result);
+    return Promise.resolve(result);
+  };
+  deps.finalizeReservation = (id, outcome) => {
+    finalized.push({ id, consumed: outcome.consumed, costMicros: outcome.costMicros });
+    return Promise.resolve();
+  };
+  return { reserveCalls, finalized };
+}
+
+Deno.test("runGateway A5: reservation admits → model called, consumed with the real cost", async () => {
+  clearLimitEnv();
+  const { deps, records, modelCalls } = makeDeps({});
+  const { reserveCalls, finalized } = wireReserve(deps, { allow: true, reservationId: "res-1" });
+  const r = await runGateway(CTX, { system: "s", messages: [] }, "FB", deps);
+  assertEquals(r.ok, true);
+  assertEquals(modelCalls(), 1);
+  assertEquals(reserveCalls.length, 1);
+  assert(reserveCalls[0]!.estimatedCostMicros > 0, "pre-call estimate must be conservative, not 0");
+  assertEquals(finalized, [{
+    id: "res-1",
+    consumed: true,
+    costMicros: estimateCostMicros("claude-opus-4-8", OK_RESULT.usage),
+  }]);
+  assertEquals(records[0]!.outcome, "ok");
+  clearLimitEnv();
+});
+
+Deno.test("runGateway A5: reservation denial maps to the matching fallback outcome, no model call", async () => {
+  clearLimitEnv();
+  for (
+    const [reason, outcome] of [
+      ["rate_user", "fallback_rate_user"],
+      ["rate_school", "fallback_rate_school"],
+      ["spend_cap", "fallback_spend_cap"],
+    ] as const
+  ) {
+    const { deps, records, modelCalls } = makeDeps({});
+    const { finalized } = wireReserve(deps, { allow: false, reason });
+    const r = await runGateway(CTX, { system: "s", messages: [] }, "FB", deps);
+    assertEquals(r.text, "FB");
+    assertEquals(r.outcome, outcome);
+    assertEquals(modelCalls(), 0);
+    assertEquals(finalized.length, 0, "nothing to finalize on a denial");
+    assertEquals(records[0]!.outcome, outcome);
+  }
+  clearLimitEnv();
+});
+
+Deno.test("runGateway A5: reservation infrastructure failure degrades to the legacy window check", async () => {
+  clearLimitEnv();
+  // Legacy usage says over-limit → the call must STILL be denied via readUsage.
+  const { deps, modelCalls } = makeDeps({ usage: { userCallsLastHour: 999 } });
+  wireReserve(deps, new Error("reservation db down"));
+  const r = await runGateway(CTX, { system: "s", messages: [] }, "FB", deps);
+  assertEquals(r.outcome, "fallback_rate_user");
+  assertEquals(modelCalls(), 0);
+  clearLimitEnv();
+});
+
+Deno.test("runGateway A5: timeout releases the reservation (nothing billed)", async () => {
+  clearLimitEnv();
+  const hanging = (input: { signal?: AbortSignal }) =>
+    new Promise<ClaudeCallResult>((_, reject) => {
+      input.signal?.addEventListener("abort", () => {
+        const e = new Error("aborted");
+        e.name = "AbortError";
+        reject(e);
+      });
+    });
+  const { deps } = makeDeps({ callModel: hanging, timeoutMs: 10 });
+  const { finalized } = wireReserve(deps, { allow: true, reservationId: "res-t" });
+  const r = await runGateway(CTX, { system: "s", messages: [] }, "FB", deps);
+  assertEquals(r.outcome, "fallback_timeout");
+  assertEquals(finalized, [{ id: "res-t", consumed: false, costMicros: 0 }]);
+  clearLimitEnv();
+});
+
+Deno.test("runGateway A5: refusal consumes the reservation (tokens were billed)", async () => {
+  clearLimitEnv();
+  const refusal = () =>
+    Promise.resolve({ ...OK_RESULT, refused: true } as ClaudeCallResult);
+  const { deps } = makeDeps({ callModel: refusal });
+  const { finalized } = wireReserve(deps, { allow: true, reservationId: "res-r" });
+  const r = await runGateway(CTX, { system: "s", messages: [] }, "FB", deps);
+  assertEquals(r.outcome, "refused");
+  assertEquals(finalized.length, 1);
+  assertEquals(finalized[0]!.consumed, true);
+  clearLimitEnv();
+});

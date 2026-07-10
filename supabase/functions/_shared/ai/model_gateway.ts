@@ -36,6 +36,14 @@ import {
   lookupResponseCache,
   writeResponseCache,
 } from "./ai_response_cache_repository.ts";
+import {
+  consumeReservation,
+  releaseReservation,
+  type ReserveArgs,
+  type ReserveResult,
+  reserveOutOfBand,
+} from "./ai_call_reservations_repository.ts";
+import { logAiDegradation } from "./ai_telemetry.ts";
 import { type GuardOptions, guardModelReply } from "./output_guard.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 
@@ -127,6 +135,23 @@ export function estimateCostMicros(model: string, usage: ClaudeUsage | null): nu
     Math.max(0, usage.inputTokens) * p.inMicrosPerToken +
       Math.max(0, usage.outputTokens) * p.outMicrosPerToken,
   );
+}
+
+/** Matches anthropic_client's `maxTokens ?? 1024` default. */
+const DEFAULT_MAX_OUTPUT_TOKENS = 1024;
+
+/** Pre-call worst-case cost estimate for the atomic reservation: prompt size
+ * approximated at 4 chars/token, output at the request's maxTokens ceiling.
+ * Deliberately conservative — the reservation is finalized with the real
+ * post-call estimate, so an over-estimate only over-blocks near the cap for
+ * the seconds the call is in flight. */
+export function estimateReservationMicros(model: string, input: GatewayInput): number {
+  const p = priceFor(model);
+  const promptChars = input.system.length +
+    input.messages.reduce((sum, m) => sum + m.content.length, 0);
+  const inputTokens = Math.ceil(promptChars / 4);
+  const outputTokens = Math.max(1, Math.trunc(input.maxTokens ?? DEFAULT_MAX_OUTPUT_TOKENS));
+  return Math.round(inputTokens * p.inMicrosPerToken + outputTokens * p.outMicrosPerToken);
 }
 
 // ─── Decision (pure) ─────────────────────────────────────────────────────────
@@ -253,6 +278,16 @@ export interface GatewayDeps {
   timeoutMs: number;
   /** Present only when the caller supplied a cache key. */
   cache?: GatewayCacheDeps;
+  /** Atomic pre-call quota reservation (A5). When present it REPLACES the
+   * read-then-decide window check with a race-free admit; when absent (or
+   * failing) the gateway degrades to the legacy readUsage+decideGateway path. */
+  reserve?: (args: ReserveArgs) => Promise<ReserveResult>;
+  /** Finalize a reservation on the caller's own transaction: consumed with the
+   * real cost when tokens were billed, released when the call cost nothing. */
+  finalizeReservation?: (
+    reservationId: string,
+    outcome: { consumed: boolean; costMicros: number },
+  ) => Promise<void>;
 }
 
 function hoursAgoIso(now: Date, hours: number): string {
@@ -283,6 +318,10 @@ export function gatewayDepsFor(
   opts?: { timeoutMs?: number; cache?: GatewayCacheConfig },
 ): GatewayDeps {
   const cacheCfg = opts?.cache;
+  // The reservation rides its own immediate-commit connection; wire it only
+  // when the tenant DB is configured (unit tests with fake deps stay on the
+  // legacy path with zero noise).
+  const reservationsConfigured = !!Deno.env.get("ERP_TENANT_DATABASE_URL");
   return {
     resolveConfig: (orgId) => resolveAiConfig(db, orgId),
     readUsage: (scope, userId, now) => defaultReadUsage(db, scope, userId, now),
@@ -290,6 +329,13 @@ export function gatewayDepsFor(
     callModel: callClaude,
     now: () => new Date(),
     timeoutMs: opts?.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    reserve: reservationsConfigured ? (args) => reserveOutOfBand(args) : undefined,
+    finalizeReservation: reservationsConfigured
+      ? (reservationId, outcome) =>
+        outcome.consumed
+          ? consumeReservation(db, reservationId, outcome.costMicros)
+          : releaseReservation(db, reservationId)
+      : undefined,
     cache: cacheCfg
       ? {
         lookup: (scope) => lookupResponseCache(db, scope, cacheCfg.key),
@@ -330,8 +376,30 @@ function baseEntry(
 async function safeRecord(deps: GatewayDeps, entry: AiCallLogEntry): Promise<void> {
   try {
     await deps.record(entry);
-  } catch {
-    // swallow — an unlogged call is preferable to a failed user action
+  } catch (err) {
+    // swallow — an unlogged call is preferable to a failed user action — but
+    // an operator must be able to see the undercount (P2-8).
+    logAiDegradation("gateway.record", err, {
+      surface: entry.surface,
+      outcome: entry.outcome,
+    });
+  }
+}
+
+/** Best-effort reservation finalization: consumed (with the real cost) in the
+ * same transaction that records the call, released when nothing was billed.
+ * The pending-TTL sweep is the backstop if this fails. */
+async function settleReservation(
+  deps: GatewayDeps,
+  reservationId: string | null,
+  consumed: boolean,
+  costMicros: number,
+): Promise<void> {
+  if (!reservationId || !deps.finalizeReservation) return;
+  try {
+    await deps.finalizeReservation(reservationId, { consumed, costMicros });
+  } catch (err) {
+    logAiDegradation("gateway.finalize_reservation", err);
   }
 }
 
@@ -366,36 +434,72 @@ export async function runGateway(
           usage: null,
         };
       }
-    } catch {
+    } catch (err) {
       // treat as a miss
+      logAiDegradation("gateway.cache_lookup", err, { surface: ctx.surface });
     }
   }
 
   let cfg: AiRuntimeConfig;
   try {
     cfg = await deps.resolveConfig(ctx.organizationId);
-  } catch {
+  } catch (err) {
+    logAiDegradation("gateway.resolve_config", err, { surface: ctx.surface });
     cfg = { provider: "anthropic", model: "", apiKey: undefined, source: "env" };
   }
   const limits = resolveLimits(cfg.rawConfig);
   const hasKey = !!cfg.apiKey;
 
-  let usage: GatewayUsage = {
-    userCallsLastHour: 0,
-    schoolCallsToday: 0,
-    monthSpendMicros: 0,
-  };
-  if (hasKey) {
-    try {
-      usage = await deps.readUsage(scope, ctx.userId ?? null, now);
-    } catch {
-      // Usage unreadable → do not block the user; the call is still logged so
-      // the next window accounts for it. Worst case remains provider-bounded.
-      usage = { userCallsLastHour: 0, schoolCallsToday: 0, monthSpendMicros: 0 };
+  // Admission control. Preferred: the atomic reservation (A5) — committed
+  // out-of-band BEFORE the provider call, so concurrent requests can never
+  // pass the same window check together. Fallback (reservation dep absent or
+  // its infrastructure failing): the legacy read-then-decide window check —
+  // availability over strictness, but the degradation is logged loudly.
+  let reservationId: string | null = null;
+  let decision: GatewayDecision;
+  if (!hasKey) {
+    decision = { allow: false, reason: "no_key" };
+  } else {
+    let reserveDenied: GatewayDenyReason | null = null;
+    if (deps.reserve) {
+      try {
+        const r = await deps.reserve({
+          scope,
+          userId: ctx.userId ?? null,
+          surface: ctx.surface,
+          estimatedCostMicros: estimateReservationMicros(cfg.model, input),
+          limits,
+          now,
+        });
+        if (r.allow) reservationId = r.reservationId;
+        else reserveDenied = r.reason;
+      } catch (err) {
+        logAiDegradation("gateway.reserve", err, { surface: ctx.surface });
+      }
+    }
+    if (reservationId) {
+      decision = { allow: true };
+    } else if (reserveDenied) {
+      decision = { allow: false, reason: reserveDenied };
+    } else {
+      let usage: GatewayUsage = {
+        userCallsLastHour: 0,
+        schoolCallsToday: 0,
+        monthSpendMicros: 0,
+      };
+      try {
+        usage = await deps.readUsage(scope, ctx.userId ?? null, now);
+      } catch (err) {
+        // Usage unreadable → do not block the user; the call is still logged
+        // so the next window accounts for it. Worst case remains
+        // provider-bounded — but say so where an operator can see it (P2-8).
+        logAiDegradation("gateway.read_usage", err, { surface: ctx.surface });
+        usage = { userCallsLastHour: 0, schoolCallsToday: 0, monthSpendMicros: 0 };
+      }
+      decision = decideGateway(hasKey, limits, usage);
     }
   }
 
-  const decision = decideGateway(hasKey, limits, usage);
   if (!decision.allow) {
     const outcome = denyOutcome(decision.reason!);
     await safeRecord(deps, {
@@ -440,6 +544,7 @@ export async function runGateway(
     const estimatedCostMicros = estimateCostMicros(model, result.usage);
 
     if (result.refused) {
+      await settleReservation(deps, reservationId, true, estimatedCostMicros);
       await safeRecord(deps, {
         ...baseEntry(ctx, cfg),
         model,
@@ -471,6 +576,7 @@ export async function runGateway(
       const guardContext = [input.system, ...input.messages.map((m) => m.content)].join("\n");
       const verdict = guardModelReply(result.text, guardContext, guardOpts);
       if (!verdict.ok) {
+        await settleReservation(deps, reservationId, true, estimatedCostMicros);
         await safeRecord(deps, {
           ...baseEntry(ctx, cfg),
           model,
@@ -501,10 +607,12 @@ export async function runGateway(
       try {
         await deps.cache.write(scope, ctx.surface, result.text, model, outputTokens);
         cacheWritten = true;
-      } catch {
+      } catch (err) {
         // caching is best-effort; never fail the served answer
+        logAiDegradation("gateway.cache_write", err, { surface: ctx.surface });
       }
     }
+    await settleReservation(deps, reservationId, true, estimatedCostMicros);
     await safeRecord(deps, {
       ...baseEntry(ctx, cfg),
       model,
@@ -531,6 +639,8 @@ export async function runGateway(
       (err instanceof Error && err.name === "AbortError");
     const outcome: AiCallOutcome = aborted ? "fallback_timeout" : "fallback_error";
     const latencyMs = Math.max(0, deps.now().getTime() - started);
+    // No tokens were billed on a timeout/transport failure — free the slot.
+    await settleReservation(deps, reservationId, false, 0);
     await safeRecord(deps, {
       ...baseEntry(ctx, cfg),
       outcome,
