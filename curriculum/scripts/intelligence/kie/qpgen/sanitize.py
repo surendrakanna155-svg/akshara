@@ -21,7 +21,18 @@ _BOILERPLATE = {
     "pause and ponder", "a step further", "threads of curiosity", "probe and ponder",
     "be a scientist", "happy investigating", "our scientific heritage", "bridging science and society",
     "questions", "test yourself", "did you know", "points to remember", "summary and review",
+    "examples", "solved examples", "try these", "think about it", "case study",
 }
+# whole-word tokens that mark a sentence fragment, not a concept name
+_SENTENCE_WORDS = {
+    "while", "they", "we", "it", "its", "this", "that", "these", "those", "can", "cannot",
+    "do", "does", "did", "not", "is", "are", "was", "were", "has", "have", "had", "when",
+    "which", "who", "whom", "whose", "if", "then", "than", "because", "however", "therefore",
+    "one", "you", "your", "their", "them", "none", "been", "being", "will", "would", "should",
+    "could", "may", "might", "he", "she", "but", "so", "also", "here", "there", "let",
+}
+_MID_ARTICLES = {"The", "A", "An", "This", "These"}
+MAX_WORDS = 5
 _BOILERPLATE_PREFIX = ("activity ", "chapter ", "unit ", "exercise ", "fig", "figure ",
                        "table ", "example ", "section ", "part ", "q.", "question ")
 
@@ -83,7 +94,17 @@ def is_clean_concept(title: Optional[str]) -> bool:
         return False
     if _looks_like_ocr_garbage(t):
         return False
+    words = _WORD.findall(t)
     # at least one real word of length >= 3
-    if not any(len(w) >= 3 for w in _WORD.findall(t)):
+    if not any(len(w) >= 3 for w in words):
+        return False
+    # sentence-fragment guards (phase-5 sometimes captures a clause, not a concept name)
+    if len(words) > MAX_WORDS:
+        return False
+    lw = [w.lower() for w in words]
+    if any(w in _SENTENCE_WORDS for w in lw):
+        return False
+    # a capitalized article/determiner in a non-initial position ⇒ concatenated clauses
+    if any(w in _MID_ARTICLES for w in words[1:]):
         return False
     return True
