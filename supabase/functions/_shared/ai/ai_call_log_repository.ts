@@ -95,6 +95,28 @@ export async function countUserCallsSince(
   return Number(rows[0]?.n ?? 0);
 }
 
+/** Count a user's gateway calls on ONE surface in [sinceIso, now) — the
+ * substrate for the per-role daily open-chat quota (W2 governance). No-key
+ * fallbacks excluded (an unconfigured key must not burn a user's quota). */
+export async function countUserSurfaceCallsSince(
+  db: TenantQueryClient,
+  scope: AiTenantScope,
+  userId: string,
+  surface: string,
+  sinceIso: string,
+): Promise<number> {
+  const rows = await db.queryObject<{ n: number }>(
+    `SELECT count(*)::int AS n
+       FROM ai_call_log
+      WHERE organization_id = $1 AND school_id IS NOT DISTINCT FROM $2 AND user_id = $3
+        AND surface = $4
+        AND created_at >= $5
+        AND outcome <> 'fallback_no_key'`,
+    [scope.organizationId, scope.schoolId, userId, surface, sinceIso],
+  );
+  return Number(rows[0]?.n ?? 0);
+}
+
 /** Count this school's gateway calls in [sinceIso, now) — the per-school token
  * bucket. No-key fallbacks excluded (see {@link countUserCallsSince}). */
 export async function countSchoolCallsSince(

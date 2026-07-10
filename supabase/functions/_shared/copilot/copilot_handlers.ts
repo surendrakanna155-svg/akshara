@@ -13,6 +13,7 @@ import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { loadCopilotContext } from "./copilot_context_engine.ts";
 import { generateCopilotResponse } from "./copilot_llm_client.ts";
 import { classifyDomain, SCHOOL_ASSISTANT_REFUSAL } from "../ai/domain_gate.ts";
+import { checkCopilotQuota, copilotQuotaMessage } from "../ai/ai_copilot_quota.ts";
 import { resolveAiConfig } from "../ai/ai_settings.ts";
 import { getAiEconomics } from "../ai/ai_economics_service.ts";
 import { buildSystemPrompt } from "./copilot_prompt_orchestrator.ts";
@@ -324,6 +325,42 @@ export async function handleSendMessage(
           },
         }, req);
         return { userMessage, assistantMessage: refusal, model: "none", stub: false };
+      }
+
+      // W2 governance (doc 10 §8, owner-locked rule 9): per-role daily open-chat
+      // quota. Model-path turns today vs the role's limit; over → a graceful,
+      // deterministic, ZERO-token refusal (checked AFTER the free domain gate so
+      // off-domain turns never consume a user's quota).
+      const quota = await checkCopilotQuota(
+        db,
+        { organizationId: orgId, schoolId },
+        auth.claims.sub,
+        auth.claims.primary_role,
+        new Date(),
+      );
+      if (!quota.allowed) {
+        const limited = await appendCopilotMessage(
+          db,
+          orgId,
+          schoolId,
+          sessionId,
+          "assistant",
+          copilotQuotaMessage(quota.limit),
+          { quotaExceeded: true, model: "none", stub: false },
+        );
+        await recordServerAuditEvent(db, auth.claims, {
+          eventType: "aiCopilotResponse",
+          category: "workflow",
+          entityType: "ai_copilot_session",
+          entityId: sessionId,
+          metadata: {
+            assistantType: session.assistant_type,
+            quotaExceeded: "true",
+            used: String(quota.used),
+            limit: String(quota.limit),
+          },
+        }, req);
+        return { userMessage, assistantMessage: limited, model: "none", stub: false };
       }
 
       const ai = await resolveAiConfig(db, orgId);
