@@ -24,3 +24,33 @@ Deno.test("fingerprintQuestion is idempotent and folds all-stopword/empty input"
   assertEquals(fingerprintQuestion(""), "");
   assertEquals(fingerprintQuestion("the is of a for"), "");
 });
+
+// audit F1 — relational/comparative operand order must NOT collide.
+Deno.test("fingerprintQuestion distinguishes reversed comparisons (F1)", () => {
+  assert(
+    fingerprintQuestion("Is class 5 bigger than class 6?") !==
+      fingerprintQuestion("Is class 6 bigger than class 5?"),
+  );
+  assert(
+    fingerprintQuestion("Is Aarav absent more than Priya?") !==
+      fingerprintQuestion("Is Priya absent more than Aarav?"),
+  );
+});
+
+Deno.test("fingerprintQuestion distinguishes reversed transitive relations (F1)", () => {
+  assert(
+    fingerprintQuestion("Did the vendor pay the school?") !==
+      fingerprintQuestion("Did the school pay the vendor?"),
+  );
+});
+
+// F1 fix must not regress the paraphrase-collapse win for non-relational lookups.
+Deno.test("fingerprintQuestion still collapses non-relational paraphrases after F1", () => {
+  assertEquals(
+    fingerprintQuestion("When is Aarav's fee due?"),
+    fingerprintQuestion("fee due for Aarav"),
+  );
+  // A relational question stays order-sensitive and idempotent.
+  const rel = fingerprintQuestion("Is class 5 bigger than class 6?");
+  assertEquals(fingerprintQuestion(rel), rel);
+});
