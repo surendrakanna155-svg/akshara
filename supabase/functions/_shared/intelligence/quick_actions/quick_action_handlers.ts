@@ -8,7 +8,8 @@
 
 import type { AppConfig } from "../../config.ts";
 import { envelope, errorEnvelope, jsonResponse } from "../../http.ts";
-import { authenticateRequest, requireSchoolOperationalScope } from "../../permission_middleware.ts";
+import { authenticateRequest } from "../../permission_middleware.ts";
+import { requirePriorityFeedScope } from "../priority/priority_handlers.ts";
 import { isPersona, quickActionsFor } from "./quick_action_catalog.ts";
 
 /** GET /intelligence/quick-actions — persona quick actions the caller may use. */
@@ -16,14 +17,18 @@ export function handleQuickActions(req: Request, config: AppConfig): Promise<Res
   return (async () => {
     const auth = await authenticateRequest(req, config);
     if (!auth.ok) return auth.response;
-    const denied = requireSchoolOperationalScope(auth.claims);
-    if (denied) return denied;
 
     const url = new URL(req.url);
     const personaParam = (url.searchParams.get("persona") ?? "").toLowerCase();
     if (!isPersona(personaParam)) {
       return errorEnvelope("VALIDATION_ERROR", "a valid persona query param is required", 422);
     }
+    // Persona-aware scope gate (identical to the feed route): a parent/student
+    // persona requires a genuine parent/student session, everything else a school
+    // session. Previously this used requireSchoolOperationalScope unconditionally,
+    // which 403'd real parents/students from their own quick actions.
+    const denied = requirePriorityFeedScope(auth.claims, personaParam);
+    if (denied) return denied;
 
     const items = quickActionsFor(personaParam, auth.claims.permissions).map((a) => ({
       id: a.id,

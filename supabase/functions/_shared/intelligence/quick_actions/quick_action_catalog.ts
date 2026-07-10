@@ -67,7 +67,10 @@ export const QUICK_ACTIONS: readonly QuickAction[] = [
     personas: ["principal", "admin", "finance"],
     tier: "t1",
     requiredPermission: "viewFinance",
-    resolver: { kind: "endpoint", target: "/analytics/dashboard" },
+    // Target must be reachable by the SAME permission it is gated on: the finance
+    // dashboard requires viewFinance (the analytics dashboard requires viewAnalytics,
+    // which a finance persona does not hold → tap-time 403).
+    resolver: { kind: "endpoint", target: "/finance/dashboard" },
   },
   {
     id: "principal_school_health",
@@ -92,8 +95,12 @@ export const QUICK_ACTIONS: readonly QuickAction[] = [
     label: "Attendance summary",
     personas: ["teacher"],
     tier: "t1",
-    requiredPermission: "viewAcademicAttendance",
-    resolver: { kind: "endpoint", target: "/analytics/dashboard" },
+    // Teachers hold viewAdminHub (gates the teacher mobile reads); they do NOT
+    // hold viewAnalytics, and "viewAcademicAttendance" was a nonexistent slug —
+    // the action could never be returned and its old /analytics/dashboard target
+    // was unreachable by a teacher anyway. Point at the teacher-scoped route.
+    requiredPermission: "viewAdminHub",
+    resolver: { kind: "endpoint", target: "/teacher/attendance/classes" },
   },
   {
     id: "teacher_weak_chapters",
@@ -134,7 +141,9 @@ export const QUICK_ACTIONS: readonly QuickAction[] = [
     label: "Homework summary",
     personas: ["parent"],
     tier: "t1",
-    resolver: { kind: "endpoint", target: "/parent/homework/summary" },
+    // /parent/homework/summary does not exist (404); the real parent homework
+    // read is /parent/homework.
+    resolver: { kind: "endpoint", target: "/parent/homework" },
   },
   {
     id: "parent_explain_attendance",
@@ -165,7 +174,9 @@ export const QUICK_ACTIONS: readonly QuickAction[] = [
     label: "Explain fee due",
     personas: ["parent"],
     tier: "t1",
-    resolver: { kind: "endpoint", target: "/parent/fees/summary" },
+    // /parent/fees/summary does not exist (404); the real parent fees read is
+    // /parent/fees.
+    resolver: { kind: "endpoint", target: "/parent/fees" },
   },
 ] as const;
 

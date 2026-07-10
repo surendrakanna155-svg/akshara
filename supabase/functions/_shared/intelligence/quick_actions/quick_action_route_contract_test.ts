@@ -56,12 +56,30 @@ Deno.test("W2-GATE-2: a missing persona is rejected (422)", async () => {
   assertEquals(res.status, 422);
 });
 
-Deno.test("W2-GATE-2: a non-school scope is forbidden (403)", async () => {
+Deno.test("W2-GATE-2: a school persona from a non-school scope is forbidden (403)", async () => {
   const res = await call(
     "/intelligence/quick-actions?persona=principal",
     ["viewAnalytics"],
     { scope: "organization", school_id: null },
   );
+  assertEquals(res.status, 403);
+});
+
+Deno.test("P1-1: a parent session CAN reach its own quick actions (200)", async () => {
+  // Regression: previously requireSchoolOperationalScope 403'd real parents.
+  const res = await call(
+    "/intelligence/quick-actions?persona=parent",
+    ["viewSis"],
+    { scope: "parent", role: "parent", role_slugs: ["parent"], primary_role: "parent", child_ids: ["stu-1"] },
+  );
+  assertEquals(res.status, 200);
+  const env = await res.json();
+  assertEquals(env.data.persona, "parent");
+  assert(env.data.items.some((i: { id: string }) => i.id === "parent_homework_summary"));
+});
+
+Deno.test("P1-1: a school (staff) session cannot pull parent quick actions (403)", async () => {
+  const res = await call("/intelligence/quick-actions?persona=parent", ["viewAnalytics"]);
   assertEquals(res.status, 403);
 });
 
