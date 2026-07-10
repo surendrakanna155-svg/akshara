@@ -16,9 +16,9 @@
 
 1. **P3-AI-3 — W2 Hardening & Closure** (ERP/AI lane, `supabase/functions/_shared/intelligence/**` + `lib/features/**` AI surfaces).
    Pipeline (mandatory): Implementation → **Hardening → Repeated audit → Regression → Re-audit** → Production certification.
-   Round status: rollout-audit P0-1/P1-1/P1-2 fixed (`ce1e886f`/`cf32d1ab`/`7224782d`); **next = audit round 2** (then fix → regression → round 3 → …).
-   Also closes: W2.1 (ops-gated) · W2.7 ops worklists · W2.8 pgvector · W2.9 truth-in-naming (or explicit owner re-scope) · teacher-exam subject scoping · cost-panel binding.
-   **Exit = consecutive rounds find no meaningful (P0/P1) issues.** ⚠ In-flight uncommitted: `priority_engine.ts` (+test) — land or revert before the round closes.
+   Round status: round 1 fixes (`ce1e886f`/`cf32d1ab`/`7224782d`) → implementation tail landed 2026-07-11 (`3ac4b3aa`→`6e7cd8da`: subject scoping · **W2.7 ✅** · **A5 atomic reservation ✅** · **A6 fences ✅** · **cost-panel binding ✅**) → **audit round 2** (1 P0 + 4 P1 + 8 P2, all fixed `183dd71d`→`56513090`) → **round 3 verification: all 15 VERIFIED-FIXED, 0 new P0/P1/P2** = 1 consecutive clean round.
+   Still open in this wave: W2.1 briefs/digests (auto-fire stays ops-gated) · W2.8 pgvector Stage-2 · W2.9 truth-in-naming · quick-action routing/accept-suppress UI (P2-1/6 + W2.7 deep-links) · search pagination + categories; then the next audit round.
+   **Exit = consecutive rounds find no meaningful (P0/P1) issues.** (The earlier `priority_engine.ts` in-flight warning was stale — that work landed as `40118d6f`.)
 2. **K-2 — QP Engine Hardening Program** (Knowledge lane, `curriculum/**` — disjoint from ERP).
    Round status: audit (2 P0 + 4 P1) → R1–R9 → prod-readiness cert **GO (scoped)** → Phase-1 sanitizer hardening landed (`835f39e4`).
    Continue: OCR artifact cleanup · **deterministic template expansion** · **Blueprint Library (CBSE·AP·TS·NEET·JEE Main·JEE Advanced)** · graph-degree · recency · difficulty/Bloom · MCQ + gated-AI validation.
