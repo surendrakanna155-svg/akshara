@@ -94,6 +94,15 @@ class TestEngine(unittest.TestCase):
         with self.assertRaises(ScopeEmptyError):
             self.eng.generate(PaperRequest(exam="NEET", chapters=("no such chapter here",)))
 
+    def test_unknown_blueprint_preset_is_graceful(self):
+        # P1-3: unknown preset → QpGenError with the valid list, NOT an uncaught KeyError
+        try:
+            self.eng.generate(PaperRequest(exam="NEET", blueprint_preset="does_not_exist"))
+            self.fail("expected QpGenError")
+        except QpGenError as exc:
+            self.assertIn("does_not_exist", str(exc))
+            self.assertIn("available presets", str(exc))
+
 
 def _scope_codes(conn):
     from kie.qpgen import scope

@@ -16,7 +16,7 @@ from typing import List, Optional
 
 from kie import config
 from kie.qpgen import (assemble, blueprint as bp_mod, materialize, pool as pool_mod,
-                       scope as scope_mod, select as select_mod, validate)
+                       presets, scope as scope_mod, select as select_mod, validate)
 from kie.qpgen.models import GeneratedPaper, PaperRequest
 
 
@@ -47,7 +47,12 @@ class QuestionPaperEngine:
             scope = scope_mod.resolve_scope(conn, request)
 
             # 2) blueprint + structural validation + feasibility
-            blueprint = bp_mod.resolve_blueprint(request, scope.exam_profile)
+            try:
+                blueprint = bp_mod.resolve_blueprint(request, scope.exam_profile)
+            except KeyError as exc:
+                raise QpGenError(
+                    f"unknown blueprint preset {request.blueprint_preset!r}; "
+                    f"available presets: {sorted(presets.BLUEPRINT_PRESETS)}") from exc
             errs = bp_mod.validate_blueprint(blueprint)
             if errs:
                 raise QpGenError(f"invalid blueprint {blueprint.name}: {errs}")
