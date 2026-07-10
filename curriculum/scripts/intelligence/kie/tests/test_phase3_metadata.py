@@ -61,6 +61,35 @@ class TestSections(unittest.TestCase):
         self.assertEqual(phase3_metadata.detect_sections(PAGES), phase3_metadata.detect_sections(PAGES))
 
 
+class TestCatalogMetadata(unittest.TestCase):
+    """Deterministic document-level JEE/NEET facets from the source path."""
+
+    def test_doctype(self):
+        self.assertEqual(phase3_metadata.classify_doctype(
+            "NEET/2018/NEET_2018_mirror_C_answer-key-2018.pdf", "pdf"), "answer_key")
+        self.assertEqual(phase3_metadata.classify_doctype(
+            "AIIMS/2007/AIIMS_2007_mirror_A_solved-paper-solution.pdf", "pdf"), "solution")
+        self.assertEqual(phase3_metadata.classify_doctype(
+            "JEE_Main/2016/JEE_Main_2016_Question-Paper-H2.pdf", "pdf"), "previous_paper")
+        self.assertEqual(phase3_metadata.classify_doctype("NCERT/Class_06/book.zip", "archive"), "textbook")
+
+    def test_source_authority_provider(self):
+        self.assertEqual(phase3_metadata.classify_source("JEE_Main/JEE_Main_2025_official_NTA_1.pdf"),
+                         ("official", "NTA"))
+        self.assertEqual(phase3_metadata.classify_source("NEET/NEET_2018_mirror_Careers360_key.pdf"),
+                         ("mirror", "Careers360"))
+        self.assertEqual(phase3_metadata.classify_source("x/random.pdf"), ("unknown", None))
+
+    def test_language_class_session_stream(self):
+        self.assertEqual(phase3_metadata.detect_language("NEET_2018_answer-key-Marathi.pdf"), "Marathi")
+        self.assertEqual(phase3_metadata.detect_language("NEET_2018_key.pdf"), "English")
+        self.assertEqual(phase3_metadata.classify_class_level("NCERT/Class_07/x.zip"), "Class 7")
+        self.assertIsNotNone(phase3_metadata.detect_session("NEET-key-Set-CC.pdf"))
+        self.assertEqual(phase3_metadata.stream_for("NEET", "NEET/x.pdf"), "Medical")
+        self.assertEqual(phase3_metadata.stream_for("JEE_Main", "JEE_Main/x.pdf"), "Engineering")
+        self.assertEqual(phase3_metadata.stream_for("Practice_Resources", "Practice_Resources/NEET/x.pdf"), "Medical")
+
+
 class TestRun(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
@@ -103,6 +132,18 @@ class TestRun(unittest.TestCase):
         subj = self.conn.execute("SELECT subject FROM source_documents WHERE doc_id=?", (self.did,)).fetchone()["subject"]
         self.assertEqual(subj, "Physics")
         self.assertEqual(ledger.get(self.conn, self.did, "metadata")[0], "done")
+
+    def test_run_persists_catalog_metadata(self):
+        phase3_metadata.run(self.conn)
+        r = self.conn.execute("SELECT doc_type, language FROM source_documents WHERE doc_id=?",
+                              (self.did,)).fetchone()
+        self.assertEqual(r["language"], "English")
+        self.assertIsNotNone(r["doc_type"])
+        dm = self.conn.execute("SELECT * FROM document_metadata WHERE doc_id=?", (self.did,)).fetchone()
+        self.assertIsNotNone(dm)
+        self.assertEqual(dm["stream"], "Foundation")            # NCERT → Foundation
+        self.assertIsNotNone(dm["title"])
+        self.assertGreaterEqual(dm["confidence"], 0.0)
 
     def test_idempotent(self):
         phase3_metadata.run(self.conn)

@@ -79,6 +79,22 @@ CREATE TABLE IF NOT EXISTS document_sections (
 );
 CREATE INDEX IF NOT EXISTS idx_sections_doc ON document_sections(doc_id);
 
+-- ── Phase 3: document-level catalog metadata (JEE/NEET facets, deterministic) ────
+-- Derived from source path + archive provenance + parsed structure. doc_type,
+-- language and class_label live on source_documents (existing columns); the facets
+-- with no home there land here. All deterministic — no LLM.
+CREATE TABLE IF NOT EXISTS document_metadata (
+  doc_id           TEXT PRIMARY KEY REFERENCES source_documents(doc_id),
+  stream           TEXT,     -- Medical | Engineering | Foundation | Both
+  source_authority TEXT,     -- official | mirror | third_party | unknown
+  provider         TEXT,     -- NTA | Careers360 | Embibe | AskIITians | ...
+  session          TEXT,     -- Set-CC | Shift-2 | Morning | H2 | ...
+  content_profile  TEXT,     -- question_paper | solutions | theory | reference | mixed
+  title            TEXT,
+  confidence       REAL,     -- 0..1 fraction of core facets resolved
+  created_at       TEXT NOT NULL
+);
+
 -- ── Phase 4: structure-aware chunks + FTS5 lexical index ────────────────────────
 CREATE TABLE IF NOT EXISTS chunks (
   chunk_id     TEXT PRIMARY KEY,              -- <doc_id>#<ordinal>
