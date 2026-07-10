@@ -77,3 +77,36 @@ Deno.test("guardModelReply rejects an over-length reply", () => {
     { ok: false, reason: "length" },
   );
 });
+
+// ─── Audit round 2: sentinel fidelity + derived-percent allowance ────────────
+
+Deno.test("guard catches an echo of the REAL fence sentinel (P3-1)", () => {
+  const r = guardModelReply(
+    "Here is data: ⟦UNTRUSTED_DATA⟧ leak ⟦/UNTRUSTED_DATA⟧",
+    "context without sentinels",
+  );
+  assertEquals(r.ok, false);
+  assertEquals(r.reason, "injection");
+});
+
+Deno.test("allowDerivedPercents: derived ratio passes, fabricated currency still fails (P2-2)", () => {
+  const context = "schools: 5, needing attention: 2, revenue ₹1,20,000";
+  // "40%" is derived from 2-of-5 — legitimate narrative math.
+  const derived = guardModelReply(
+    "2 of 5 schools need attention (40%).",
+    context,
+    { allowDerivedPercents: true },
+  );
+  assertEquals(derived.ok, true);
+  // Without the allowance the same reply is rejected (the old behavior).
+  const strict = guardModelReply("2 of 5 schools need attention (40%).", context);
+  assertEquals(strict.ok, false);
+  // Currency is still strictly grounded even with the allowance.
+  const fabricated = guardModelReply(
+    "Revenue reached ₹9,99,999 (40%).",
+    context,
+    { allowDerivedPercents: true },
+  );
+  assertEquals(fabricated.ok, false);
+  assertEquals(fabricated.reason, "number");
+});

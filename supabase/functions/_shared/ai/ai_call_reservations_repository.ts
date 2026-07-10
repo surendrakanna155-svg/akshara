@@ -28,7 +28,7 @@
 
 import { Pool } from "https://deno.land/x/postgres@v0.19.3/mod.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
-import type { AiTenantScope } from "./ai_call_log_repository.ts";
+import { type AiTenantScope, RATE_WINDOW_OUTCOME_FILTER } from "./ai_call_log_repository.ts";
 
 /** Structurally identical to model_gateway's GatewayLimits (kept local to
  * avoid an import cycle; 0 = unlimited, matching decideGateway). */
@@ -92,7 +92,8 @@ function isoBefore(now: Date, ms: number): string {
   return new Date(now.getTime() - ms).toISOString();
 }
 
-function monthStartIso(now: Date): string {
+/** UTC calendar-month start — the spend-cap window shared with the gateway. */
+export function monthStartIso(now: Date): string {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
 }
 
@@ -128,7 +129,7 @@ export async function runReservation(
               (SELECT count(*) FROM ai_call_log
                 WHERE organization_id = $1 AND school_id IS NOT DISTINCT FROM $2
                   AND user_id = $3 AND created_at >= $9
-                  AND outcome <> 'fallback_no_key')
+                  AND ${RATE_WINDOW_OUTCOME_FILTER})
             + (SELECT count(*) FROM ai_call_reservations
                 WHERE organization_id = $1 AND school_id IS NOT DISTINCT FROM $2
                   AND user_id = $3 AND status = 'pending' AND created_at >= $12)
@@ -137,7 +138,7 @@ export async function runReservation(
               (SELECT count(*) FROM ai_call_log
                 WHERE organization_id = $1 AND school_id IS NOT DISTINCT FROM $2
                   AND created_at >= $10
-                  AND outcome <> 'fallback_no_key')
+                  AND ${RATE_WINDOW_OUTCOME_FILTER})
             + (SELECT count(*) FROM ai_call_reservations
                 WHERE organization_id = $1 AND school_id IS NOT DISTINCT FROM $2
                   AND status = 'pending' AND created_at >= $12)
@@ -178,13 +179,13 @@ export async function runReservation(
     `SELECT
        ((SELECT count(*) FROM ai_call_log
           WHERE organization_id = $1 AND school_id IS NOT DISTINCT FROM $2
-            AND user_id = $3 AND created_at >= $4 AND outcome <> 'fallback_no_key')
+            AND user_id = $3 AND created_at >= $4 AND ${RATE_WINDOW_OUTCOME_FILTER})
       + (SELECT count(*) FROM ai_call_reservations
           WHERE organization_id = $1 AND school_id IS NOT DISTINCT FROM $2
             AND user_id = $3 AND status = 'pending' AND created_at >= $7))::int AS user_calls,
        ((SELECT count(*) FROM ai_call_log
           WHERE organization_id = $1 AND school_id IS NOT DISTINCT FROM $2
-            AND created_at >= $5 AND outcome <> 'fallback_no_key')
+            AND created_at >= $5 AND ${RATE_WINDOW_OUTCOME_FILTER})
       + (SELECT count(*) FROM ai_call_reservations
           WHERE organization_id = $1 AND school_id IS NOT DISTINCT FROM $2
             AND status = 'pending' AND created_at >= $7))::int AS school_calls,
@@ -238,13 +239,22 @@ export async function reserveOutOfBand(args: ReserveArgs): Promise<ReserveResult
   try {
     await client.queryObject`BEGIN`;
     try {
-      // Accounting context: the org wall for RLS plus the school bucket for
-      // the read policy. scope 'school' with a NULL school selects the org
-      // bucket (IS NOT DISTINCT FROM semantics in the policies).
+      // Accounting context: the org wall for RLS plus the bucket for the
+      // ai_call_log_tenant_scope read policy (migration 20260869) — a school
+      // bucket reads as a school session, the org bucket (school NULL) reads
+      // as an organization session.
       await client.queryObject(
-        `SELECT app.set_request_context($1::uuid, 'school', $2::uuid, $3::uuid, NULL, NULL, NULL)`,
-        [args.scope.organizationId, args.userId ?? ACCOUNTING_USER, args.scope.schoolId],
+        `SELECT app.set_request_context($1::uuid, $2, $3::uuid, $4::uuid, NULL, NULL, NULL)`,
+        [
+          args.scope.organizationId,
+          args.scope.schoolId === null ? "organization" : "school",
+          args.userId ?? ACCOUNTING_USER,
+          args.scope.schoolId,
+        ],
       );
+      // A waiter here holds a pool connection; bound the wait so a hot bucket
+      // degrades to the legacy check instead of starving the 3-slot pool.
+      await client.queryObject(`SET LOCAL lock_timeout = '2s'`);
       // Serialize competing reservations for this bucket; released on COMMIT.
       await client.queryObject(
         `SELECT pg_advisory_xact_lock(hashtextextended($1 || ':' || coalesce($2, 'org'), 42))`,

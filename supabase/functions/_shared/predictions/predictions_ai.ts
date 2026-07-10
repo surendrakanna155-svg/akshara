@@ -57,7 +57,7 @@ export async function narratePredictionsWithClaude(
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: userMessage }],
     maxTokens: NARRATIVE_MAX_TOKENS,
-    guard: true,
+    guard: { allowDerivedPercents: true },
   });
   const trimmed = (text ?? "").trim();
   return trimmed.length > 0 ? trimmed : baseline;

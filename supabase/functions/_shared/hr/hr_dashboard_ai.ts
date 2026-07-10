@@ -65,7 +65,7 @@ export async function generateHrInsightWithClaude(
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: userMessage }],
     maxTokens: INSIGHT_MAX_TOKENS,
-    guard: true,
+    guard: { allowDerivedPercents: true },
   });
   const trimmed = (text ?? "").trim();
   return trimmed.length > 0 ? trimmed : deterministic;

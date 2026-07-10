@@ -76,8 +76,9 @@ export async function refineExecutiveSummaryWithClaude(
     messages: [{ role: "user", content: userMessage }],
     maxTokens: REFINE_MAX_TOKENS,
     // Output-side twin (F3): a reply that echoes injection or fabricates
-    // numbers is discarded — the deterministic summary is served instead.
-    guard: true,
+    // currency is discarded — the deterministic summary is served instead.
+    // Derived percentages ("2 of 5 schools — 40%") are legitimate prose math.
+    guard: { allowDerivedPercents: true },
   });
   const trimmed = (text ?? "").trim();
   return trimmed.length > 0 ? trimmed : deterministicSummary;

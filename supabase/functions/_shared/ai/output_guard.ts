@@ -26,6 +26,11 @@ export interface GuardResult {
 export interface GuardOptions {
   /** Hard character cap on the reply (default 8000 ≈ well past any bounded T3). */
   maxChars?: number;
+  /** Narrative surfaces legitimately DERIVE percentages from injected counts
+   * ("2 of 5 schools (40%)"); enforcing PERCENT_RE there discards correct
+   * replies constantly (audit P2-2). When set, only currency amounts must
+   * appear verbatim in the context; percentages are exempt. */
+  allowDerivedPercents?: boolean;
 }
 
 const DEFAULT_MAX_CHARS = 8000;
@@ -42,7 +47,12 @@ const INJECTION_MARKERS = [
   "you are now",
   "new instructions:",
   "system prompt",
-  "<<untrusted", // our own fence sentinel must never appear in output
+  // Our own fence sentinels must never appear in output. The real sentinels
+  // are ⟦UNTRUSTED_DATA⟧ / ⟦/UNTRUSTED_DATA⟧ (prompt_safety.ts) — the
+  // underscore form below matches both, lowercased (audit P3-1: the earlier
+  // "<<untrusted"/"untrusted-data" guesses matched neither and were dead).
+  "untrusted_data",
+  "<<untrusted",
   "untrusted-data",
 ];
 
@@ -106,7 +116,8 @@ export function guardModelReply(
   }
 
   const ctxNums = contextNumbers(context);
-  for (const re of [CURRENCY_RE, PERCENT_RE]) {
+  const numberChecks = opts?.allowDerivedPercents ? [CURRENCY_RE] : [CURRENCY_RE, PERCENT_RE];
+  for (const re of numberChecks) {
     for (const m of reply.matchAll(re)) {
       if (!ctxNums.has(normalizeNumber(m[1]!))) return { ok: false, reason: "number" };
     }

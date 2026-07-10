@@ -45,8 +45,9 @@ export async function enhanceCaptionsWithAi(
     "Use only the facts given. No new claims, no emojis spam, max ~200 characters each. " +
     "Reply ONLY with compact JSON: {\"poster\":\"\",\"whatsapp\":\"\",\"instagram\":\"\",\"facebook\":\"\"}. " +
     UNTRUSTED_DATA_PREAMBLE;
-  // Title/description are staff-typed free text — fenced (P2-5 / AI-5).
-  const user = `Type: ${ctx.subjectType}\n` +
+  // Title/description AND subjectType are request-body free text — fenced
+  // (P2-5 / AI-5; subjectType has no enum validation upstream).
+  const user = fenceUntrusted("Type", ctx.subjectType) + "\n" +
     fenceUntrusted("Title", ctx.title) + "\n" +
     (ctx.description ? fenceUntrusted("Details", ctx.description) + "\n" : "") +
     "Write one caption per channel.";

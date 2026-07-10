@@ -38,6 +38,7 @@ import {
 } from "./ai_response_cache_repository.ts";
 import {
   consumeReservation,
+  monthStartIso,
   releaseReservation,
   type ReserveArgs,
   type ReserveResult,
@@ -294,10 +295,6 @@ function hoursAgoIso(now: Date, hours: number): string {
   return new Date(now.getTime() - hours * 3_600_000).toISOString();
 }
 
-function monthStartIso(now: Date): string {
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
-}
-
 async function defaultReadUsage(
   db: TenantQueryClient,
   scope: AiTenantScope,
@@ -310,6 +307,25 @@ async function defaultReadUsage(
     sumSchoolCostMicrosSince(db, scope, monthStartIso(now)),
   ]);
   return { userCallsLastHour, schoolCallsToday, monthSpendMicros };
+}
+
+/** Run a telemetry write inside a savepoint so a DB-level failure cannot
+ * poison the caller's request transaction (audit P2-3): without this, a
+ * failed INSERT aborts the surrounding Postgres transaction and every LATER
+ * handler write fails with "current transaction is aborted" despite the
+ * catch — turning a served model answer into a user-facing 500. */
+async function withTelemetrySavepoint(
+  db: TenantQueryClient,
+  fn: () => Promise<void>,
+): Promise<void> {
+  await db.queryObject("SAVEPOINT ai_telemetry");
+  try {
+    await fn();
+    await db.queryObject("RELEASE SAVEPOINT ai_telemetry");
+  } catch (err) {
+    await db.queryObject("ROLLBACK TO SAVEPOINT ai_telemetry");
+    throw err;
+  }
 }
 
 /** Build the production deps bound to a tenant DB client. */
@@ -325,16 +341,17 @@ export function gatewayDepsFor(
   return {
     resolveConfig: (orgId) => resolveAiConfig(db, orgId),
     readUsage: (scope, userId, now) => defaultReadUsage(db, scope, userId, now),
-    record: (entry) => recordAiCall(db, entry),
+    record: (entry) => withTelemetrySavepoint(db, () => recordAiCall(db, entry)),
     callModel: callClaude,
     now: () => new Date(),
     timeoutMs: opts?.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     reserve: reservationsConfigured ? (args) => reserveOutOfBand(args) : undefined,
     finalizeReservation: reservationsConfigured
       ? (reservationId, outcome) =>
-        outcome.consumed
-          ? consumeReservation(db, reservationId, outcome.costMicros)
-          : releaseReservation(db, reservationId)
+        withTelemetrySavepoint(db, () =>
+          outcome.consumed
+            ? consumeReservation(db, reservationId, outcome.costMicros)
+            : releaseReservation(db, reservationId))
       : undefined,
     cache: cacheCfg
       ? {
@@ -544,7 +561,6 @@ export async function runGateway(
     const estimatedCostMicros = estimateCostMicros(model, result.usage);
 
     if (result.refused) {
-      await settleReservation(deps, reservationId, true, estimatedCostMicros);
       await safeRecord(deps, {
         ...baseEntry(ctx, cfg),
         model,
@@ -556,6 +572,10 @@ export async function runGateway(
         cacheWritten: false,
         fallbackUsed: true,
       });
+      // Record-then-consume: if the consume is lost the reservation stays
+      // pending until the TTL sweep (over-count, conservative) — never the
+      // uncapped direction.
+      await settleReservation(deps, reservationId, true, estimatedCostMicros);
       return {
         text: fallbackText,
         ok: false,
@@ -576,7 +596,6 @@ export async function runGateway(
       const guardContext = [input.system, ...input.messages.map((m) => m.content)].join("\n");
       const verdict = guardModelReply(result.text, guardContext, guardOpts);
       if (!verdict.ok) {
-        await settleReservation(deps, reservationId, true, estimatedCostMicros);
         await safeRecord(deps, {
           ...baseEntry(ctx, cfg),
           model,
@@ -588,6 +607,7 @@ export async function runGateway(
           cacheWritten: false,
           fallbackUsed: true,
         });
+        await settleReservation(deps, reservationId, true, estimatedCostMicros);
         return {
           text: fallbackText,
           ok: false,
@@ -612,7 +632,6 @@ export async function runGateway(
         logAiDegradation("gateway.cache_write", err, { surface: ctx.surface });
       }
     }
-    await settleReservation(deps, reservationId, true, estimatedCostMicros);
     await safeRecord(deps, {
       ...baseEntry(ctx, cfg),
       model,
@@ -624,6 +643,7 @@ export async function runGateway(
       cacheWritten,
       fallbackUsed: false,
     });
+    await settleReservation(deps, reservationId, true, estimatedCostMicros);
     return {
       text: result.text,
       ok: true,
@@ -639,8 +659,6 @@ export async function runGateway(
       (err instanceof Error && err.name === "AbortError");
     const outcome: AiCallOutcome = aborted ? "fallback_timeout" : "fallback_error";
     const latencyMs = Math.max(0, deps.now().getTime() - started);
-    // No tokens were billed on a timeout/transport failure — free the slot.
-    await settleReservation(deps, reservationId, false, 0);
     await safeRecord(deps, {
       ...baseEntry(ctx, cfg),
       outcome,
@@ -651,6 +669,8 @@ export async function runGateway(
       cacheWritten: false,
       fallbackUsed: true,
     });
+    // No tokens were billed on a timeout/transport failure — free the slot.
+    await settleReservation(deps, reservationId, false, 0);
     return {
       text: fallbackText,
       ok: false,

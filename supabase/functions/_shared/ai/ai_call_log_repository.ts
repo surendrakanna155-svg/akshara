@@ -44,6 +44,15 @@ export interface AiTenantScope {
   schoolId: string | null;
 }
 
+/** Rate windows count only attempts that reached (or tried to reach) the
+ * provider. Pure gate denials are excluded — otherwise a user who is already
+ * rate-limited keeps logging denial rows that fill the SCHOOL's daily window,
+ * letting one hammering client lock every user in the school out of AI until
+ * 24h of silence (audit P1-2, self-sustaining DoS amplification). Spend sums
+ * are unaffected (denials carry zero cost). */
+export const RATE_WINDOW_OUTCOME_FILTER =
+  "outcome NOT IN ('fallback_no_key', 'fallback_rate_user', 'fallback_rate_school', 'fallback_spend_cap')";
+
 /** Insert one telemetry row. Never throws into the caller's happy path — the
  * gateway wraps this so a logging failure can degrade to "unlogged" without
  * failing the user's request. */
@@ -89,7 +98,7 @@ export async function countUserCallsSince(
        FROM ai_call_log
       WHERE organization_id = $1 AND school_id IS NOT DISTINCT FROM $2 AND user_id = $3
         AND created_at >= $4
-        AND outcome <> 'fallback_no_key'`,
+        AND ${RATE_WINDOW_OUTCOME_FILTER}`,
     [scope.organizationId, scope.schoolId, userId, sinceIso],
   );
   return Number(rows[0]?.n ?? 0);
@@ -111,7 +120,7 @@ export async function countUserSurfaceCallsSince(
       WHERE organization_id = $1 AND school_id IS NOT DISTINCT FROM $2 AND user_id = $3
         AND surface = $4
         AND created_at >= $5
-        AND outcome <> 'fallback_no_key'`,
+        AND ${RATE_WINDOW_OUTCOME_FILTER}`,
     [scope.organizationId, scope.schoolId, userId, surface, sinceIso],
   );
   return Number(rows[0]?.n ?? 0);
@@ -129,7 +138,7 @@ export async function countSchoolCallsSince(
        FROM ai_call_log
       WHERE organization_id = $1 AND school_id IS NOT DISTINCT FROM $2
         AND created_at >= $3
-        AND outcome <> 'fallback_no_key'`,
+        AND ${RATE_WINDOW_OUTCOME_FILTER}`,
     [scope.organizationId, scope.schoolId, sinceIso],
   );
   return Number(rows[0]?.n ?? 0);
