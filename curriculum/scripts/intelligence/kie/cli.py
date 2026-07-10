@@ -17,6 +17,7 @@ import sys
 
 from kie import (config, phase1_verify, phase2_parse, phase3_metadata, phase4_chunk,
                  phase5_concept, phase6_graph, phase7_questions, store)
+from kie.curate import cleanup as knowledge_cleanup
 
 # Ordered pipeline after Phase-1 verification. Each maps to an existing phase run().
 PIPELINE = ("parse", "metadata", "chunk", "concept", "graph", "questions")
@@ -70,6 +71,17 @@ def cmd_run(args) -> int:
     return 1 if failed else 0
 
 
+def cmd_clean(args) -> int:
+    config.ensure_dirs()
+    conn = store.open_store(args.db)
+    try:
+        summary = knowledge_cleanup.run(conn, dry_run=args.dry_run)
+    finally:
+        conn.close()
+    print(json.dumps(summary, indent=2, sort_keys=True))
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="kie", description="Knowledge Intelligence Engine")
     sub = ap.add_subparsers(dest="phase", required=True)
@@ -85,6 +97,11 @@ def main(argv=None) -> int:
     r.add_argument("--force", action="store_true", help="ignore the ledger and reprocess")
     r.add_argument("--db", default=None, help="SQLite store path (default: knowledge/kie/kie.db)")
     r.set_defaults(func=cmd_run)
+
+    c = sub.add_parser("clean", help="Knowledge Layer Phase 1 — deterministic concept cleanup")
+    c.add_argument("--dry-run", action="store_true", help="preview impact; write nothing")
+    c.add_argument("--db", default=None, help="SQLite store path (default: knowledge/kie/kie.db)")
+    c.set_defaults(func=cmd_clean)
 
     args = ap.parse_args(argv)
     return args.func(args)
