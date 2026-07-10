@@ -28,9 +28,13 @@ class _CountingProvider:
 
     def author(self, spec):
         self.calls += 1
+        # a well-formed MCQ: exactly four distinct options with the answer among them
+        # (what a governed provider must return to pass the objective-validation gate).
         return {"stem": f"Which statement about {spec['concept_title']} is correct?",
-                "answer": "Option A", "options": ["A", "B", "C", "D"],
-                "solution": "A is correct."}
+                "answer": "Statement I only",
+                "options": ["Statement I only", "Statement II only",
+                            "Both I and II", "Neither I nor II"],
+                "solution": "Statement I only is correct."}
 
 
 class _RogueProvider:

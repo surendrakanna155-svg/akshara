@@ -59,6 +59,42 @@ def validate_slot(slot: QuestionSlot, scope: SyllabusScope) -> List[str]:
     # doubled capital, glued caps-run, doubled punctuation) must never reach the paper.
     if slot.status == SlotStatus.FILLED and not sanitize.stem_quality_ok(slot.stem):
         v.append("LOW_QUALITY_STEM: stem carries OCR/extraction artifacts")
+    # OBJECTIVE STRUCTURE: a FILLED objective item (template OR gated AI — the SAME gate) must be
+    # structurally sound; a malformed MCQ/assertion-reason/numerical/match never reaches the paper.
+    if slot.status == SlotStatus.FILLED and slot.question_type in _OBJECTIVE_TYPES:
+        v += _objective_violations(slot)
+    return v
+
+
+_OBJECTIVE_TYPES = (QuestionType.MCQ, QuestionType.NUMERICAL,
+                    QuestionType.ASSERTION_REASON, QuestionType.MATCH)
+_FOUR_OPTION_TYPES = (QuestionType.MCQ, QuestionType.ASSERTION_REASON)
+
+
+def _objective_violations(slot: QuestionSlot) -> List[str]:
+    """Structural validation for a FILLED objective item. Applies identically to deterministic
+    template output and gated-AI output — nothing malformed ships."""
+    v: List[str] = []
+    qt = slot.question_type
+    answer = (slot.answer or "").strip()
+    if qt in _FOUR_OPTION_TYPES:
+        opts = slot.options
+        if not isinstance(opts, list) or len(opts) != 4:
+            return [f"BAD_OPTION_COUNT: {qt} needs exactly 4 options"]
+        norm = [(o or "").strip() for o in opts]
+        if any(not o for o in norm):
+            v.append("MALFORMED_OPTION: a blank/empty option is present")
+        if len(set(norm)) != len(norm):
+            v.append("DUPLICATE_OPTIONS: the four options are not all distinct")
+        if not answer:
+            v.append("NO_ANSWER: objective item has no marked answer")
+        elif answer not in norm:
+            v.append("ANSWER_NOT_IN_OPTIONS: the correct answer is not among the options")
+        elif norm.count(answer) != 1:
+            v.append("AMBIGUOUS_ANSWER: the correct answer matches more than one option")
+    else:  # NUMERICAL / MATCH — need a concrete answer key (options optional)
+        if not answer:
+            v.append(f"NO_ANSWER: {qt} item has no answer")
     return v
 
 
