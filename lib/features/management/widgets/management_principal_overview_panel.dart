@@ -7,6 +7,8 @@ import '../../../shared/widgets/widgets.dart';
 import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
+import '../../adaptive_ai/adaptive_ai_models.dart';
+import '../../adaptive_ai/widgets/adaptive_priority_feed.dart';
 import '../management_models.dart';
 
 /// Principal command overview — health, priorities, summaries, quick actions.
@@ -72,6 +74,14 @@ class ManagementPrincipalOverviewPanel extends StatelessWidget {
           ...priorities,
           const SizedBox(height: AksharaSpacing.s4),
         ],
+        // W2 Adaptive AI — the backend priority/recommendation feed (self-hiding
+        // when empty; deterministic, explainable, RBAC-scoped). The pre-staged
+        // action navigates to the module for the human to act — AI never executes.
+        AdaptivePriorityFeedSection(
+          persona: 'principal',
+          onOpenAction: _openAdaptiveAction,
+        ),
+        const SizedBox(height: AksharaSpacing.s4),
         const AksharaSectionHeader(title: 'Quick actions'),
         const SizedBox(height: AksharaSpacing.s3),
         AksharaQuickActionGrid(
@@ -120,6 +130,23 @@ class ManagementPrincipalOverviewPanel extends StatelessWidget {
         const SizedBox(height: AksharaSpacing.s6),
       ],
     );
+  }
+
+  /// Map an Adaptive AI recommendation's (logical) deep link to the principal's
+  /// management route. The human lands on the module and acts there — the AI
+  /// only navigated, it never executed the action.
+  void _openAdaptiveAction(BuildContext context, AdaptiveAction action) {
+    final link = action.deepLink;
+    final route = link.startsWith('/finance')
+        ? RouteNames.managementFinance
+        : link.startsWith('/analytics')
+            ? RouteNames.managementAnalytics
+            : link.startsWith('/timetable')
+                ? RouteNames.managementTimetable
+                : link.contains('approval')
+                    ? RouteNames.managementApprovals
+                    : RouteNames.managementIntelligence;
+    context.go(route);
   }
 
   List<Widget> _priorities(BuildContext context) {
