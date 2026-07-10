@@ -52,13 +52,19 @@ export interface GatewayLimits {
   monthlySpendCapMicros: number;
 }
 
-/** Conservative defaults: rate limits ON (bounding worst-case spend even with
- * no $ cap configured — this is the AI-1 mitigation), $ cap OFF until an admin
- * sets one in the provider config or via env. */
+/** Conservative defaults: rate limits ON, and a non-zero monthly $ backstop ON
+ * by default (P1-3). The backstop is deliberately GENEROUS — well above realistic
+ * per-school usage under the daily rate limit, even Opus-heavy — so it never
+ * throttles legitimate use, but it is a hard ceiling that bounds any runaway
+ * (misconfig / pricing spike / concurrent-burst overage) to cap + one window
+ * instead of the previous UNLIMITED dollar exposure. Tune per pricing plan via
+ * the per-school provider config (`ai_monthly_spend_cap_micros`) or the
+ * `AI_MONTHLY_SPEND_CAP_MICROS` env var, both of which override this. Unit is
+ * micro-USD (1 USD = 1_000_000); 1_000_000_000 = US$1,000 / school / month. */
 export const DEFAULT_LIMITS: GatewayLimits = {
   userCallsPerHour: 30,
   schoolCallsPerDay: 500,
-  monthlySpendCapMicros: 0,
+  monthlySpendCapMicros: 1_000_000_000,
 };
 
 function positiveNum(value: unknown, fallback: number): number {

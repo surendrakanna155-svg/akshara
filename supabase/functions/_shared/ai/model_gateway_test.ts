@@ -133,6 +133,14 @@ Deno.test("resolveLimits: defaults when no config or env", () => {
   clearLimitEnv();
 });
 
+Deno.test("P1-3: a non-zero monthly spend backstop ships by default", () => {
+  // Regression guard: the dollar cap must never silently return to 0 (unlimited).
+  assert(DEFAULT_LIMITS.monthlySpendCapMicros > 0);
+  clearLimitEnv();
+  assert(resolveLimits(null).monthlySpendCapMicros > 0);
+  clearLimitEnv();
+});
+
 Deno.test("resolveLimits: config overrides env overrides default", () => {
   clearLimitEnv();
   Deno.env.set("AI_RATE_USER_PER_HOUR", "7");
