@@ -29,6 +29,7 @@ interface StudentRow {
   class_name: string | null;
   section_name: string | null;
   roll_number: string | null;
+  total_matches: number;
 }
 
 /** Fetch student candidates whose identity fields match `query`. Prefix match on
@@ -47,7 +48,8 @@ export async function searchStudents(
   const rows = await db.queryObject<StudentRow>(
     `SELECT s.id::text AS id, s.display_name, s.student_code, s.status,
             sp.admission_number, sp.public_student_id,
-            e.class_name, e.section_name, e.roll_number
+            e.class_name, e.section_name, e.roll_number,
+            count(*) OVER()::int AS total_matches
        FROM students s
        LEFT JOIN student_profiles sp ON sp.student_id = s.id
        LEFT JOIN sis_student_enrollments e
@@ -90,7 +92,8 @@ export async function searchStudents(
     status: r.status,
   }));
 
-  return { candidates, total: candidates.length };
+  // total = all matches (window count before LIMIT), not the post-cap slice.
+  return { candidates, total: rows[0]?.total_matches ?? candidates.length };
 }
 
 interface StaffRow {
@@ -100,6 +103,7 @@ interface StaffRow {
   email: string | null;
   phone: string | null;
   status: string;
+  total_matches: number;
 }
 
 /** Fetch staff candidates by name/code/contact. Requires viewEmployees (gated in
@@ -114,7 +118,8 @@ export async function searchStaff(
   const cap = candidateCap(displayLimit);
   const q = query.trim();
   const rows = await db.queryObject<StaffRow>(
-    `SELECT id::text AS id, display_name, employee_code, email, phone, status
+    `SELECT id::text AS id, display_name, employee_code, email, phone, status,
+            count(*) OVER()::int AS total_matches
        FROM employees
       WHERE organization_id = $1 AND school_id = $2
         AND (
@@ -144,7 +149,7 @@ export async function searchStaff(
     phone: r.phone,
     status: r.status,
   }));
-  return { candidates, total: candidates.length };
+  return { candidates, total: rows[0]?.total_matches ?? candidates.length };
 }
 
 interface AdmissionRow {
@@ -154,6 +159,7 @@ interface AdmissionRow {
   class_label: string | null;
   phone: string | null;
   stage: string;
+  total_matches: number;
 }
 
 /** Fetch admission-lead candidates by student/parent name or phone. Requires
@@ -168,7 +174,8 @@ export async function searchAdmissionsLeads(
   const cap = candidateCap(displayLimit);
   const q = query.trim();
   const rows = await db.queryObject<AdmissionRow>(
-    `SELECT id::text AS id, student_name, parent_name, class_label, phone, stage
+    `SELECT id::text AS id, student_name, parent_name, class_label, phone, stage,
+            count(*) OVER()::int AS total_matches
        FROM admissions_leads
       WHERE organization_id = $1 AND school_id = $2
         AND (
@@ -196,5 +203,5 @@ export async function searchAdmissionsLeads(
     phone: r.phone,
     stage: r.stage,
   }));
-  return { candidates, total: candidates.length };
+  return { candidates, total: rows[0]?.total_matches ?? candidates.length };
 }
