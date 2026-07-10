@@ -38,12 +38,17 @@ class AdaptivePriorityFeedSection extends ConsumerWidget {
     return async.maybeWhen(
       data: (feed) => feed.isEmpty
           ? const SizedBox.shrink()
-          : _section(context, ref, feed.items.take(maxItems).toList()),
+          : _section(context, ref, feed.items.take(maxItems).toList(), feed.degraded),
       orElse: () => const SizedBox.shrink(),
     );
   }
 
-  Widget _section(BuildContext context, WidgetRef ref, List<AdaptivePriorityItem> items) {
+  Widget _section(
+    BuildContext context,
+    WidgetRef ref,
+    List<AdaptivePriorityItem> items,
+    bool degraded,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -54,6 +59,18 @@ class AdaptivePriorityFeedSection extends ConsumerWidget {
             Text(title, style: context.aksharaText.titleSmall),
           ],
         ),
+        // P2-2: honest partial-feed signal — the backend marks a feed `degraded`
+        // when a source was skipped for lack of permission, so the list is a
+        // subset. Surface it rather than silently showing a partial list as whole.
+        if (degraded) ...[
+          const SizedBox(height: AksharaSpacing.s1),
+          Text(
+            'Showing partial results — some data needs additional access.',
+            style: context.aksharaText.bodySmall.copyWith(
+              color: context.colors.onSurfaceVariant,
+            ),
+          ),
+        ],
         const SizedBox(height: AksharaSpacing.s2),
         for (final item in items) ...[
           _AdaptiveRecommendationTile(
