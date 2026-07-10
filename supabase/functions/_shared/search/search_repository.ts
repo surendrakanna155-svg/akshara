@@ -61,7 +61,19 @@ export async function searchStudents(
           OR lower(sp.public_student_id) LIKE lower($3) || '%'
           OR lower(e.roll_number) = lower($3)
         )
-      ORDER BY s.display_name
+      -- Fetch in MATCH-PRIORITY order (mirrors classifyStudentMatch) so the LIMIT
+      -- keeps the highest-priority matches. Ordering by name alone truncated an
+      -- exact admission#/ID match whose name sorts late — the #1 search promise.
+      ORDER BY
+        CASE
+          WHEN lower(sp.admission_number) LIKE lower($3) || '%' THEN 0
+          WHEN lower(s.student_code) LIKE lower($3) || '%'
+            OR lower(sp.public_student_id) LIKE lower($3) || '%' THEN 1
+          WHEN lower(e.roll_number) = lower($3) THEN 3
+          WHEN lower(s.display_name) LIKE lower($3) || '%' THEN 4
+          ELSE 5
+        END,
+        s.display_name
       LIMIT $4`,
     [organizationId, schoolId, q, cap],
   );
@@ -112,7 +124,15 @@ export async function searchStaff(
           OR lower(email) LIKE lower($3) || '%'
           OR replace(phone, ' ', '') LIKE '%' || replace($3, ' ', '') || '%'
         )
-      ORDER BY display_name
+      ORDER BY
+        CASE
+          WHEN lower(employee_code) LIKE lower($3) || '%' THEN 1
+          WHEN replace(phone, ' ', '') LIKE '%' || replace($3, ' ', '') || '%'
+            OR lower(email) LIKE lower($3) || '%' THEN 2
+          WHEN lower(display_name) LIKE lower($3) || '%' THEN 4
+          ELSE 5
+        END,
+        display_name
       LIMIT $4`,
     [organizationId, schoolId, q, cap],
   );
@@ -157,7 +177,14 @@ export async function searchAdmissionsLeads(
           OR lower(parent_name) LIKE lower($3) || '%'
           OR replace(phone, ' ', '') LIKE '%' || replace($3, ' ', '') || '%'
         )
-      ORDER BY student_name
+      ORDER BY
+        CASE
+          WHEN replace(phone, ' ', '') LIKE '%' || replace($3, ' ', '') || '%' THEN 2
+          WHEN lower(student_name) LIKE lower($3) || '%'
+            OR lower(parent_name) LIKE lower($3) || '%' THEN 4
+          ELSE 5
+        END,
+        student_name
       LIMIT $4`,
     [organizationId, schoolId, q, cap],
   );
