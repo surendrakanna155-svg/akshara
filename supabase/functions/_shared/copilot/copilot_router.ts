@@ -1,6 +1,7 @@
 import type { AppConfig } from "../config.ts";
 import { errorEnvelope } from "../http.ts";
 import {
+  handleAiEconomics,
   handleCreateSession,
   handleGetSession,
   handleListAssistants,
@@ -21,6 +22,9 @@ export function matchCopilotRoute(
   }
   if (path === "/copilot/suggestions" && method === "GET") {
     return { handler: handleListSuggestions, args: [] };
+  }
+  if (path === "/copilot/economics" && method === "GET") {
+    return { handler: handleAiEconomics, args: [] };
   }
   if (path === "/copilot/sessions" && method === "GET") {
     return { handler: handleListSessions, args: [] };

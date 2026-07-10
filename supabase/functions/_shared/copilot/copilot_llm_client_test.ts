@@ -22,6 +22,32 @@ function fakeGatewayDb(cacheHit?: { payload: string; model: string }): TenantQue
 
 const GATEWAY_CTX = { organizationId: "org-1", schoolId: "s1", userId: "u-1" };
 
+/** Stateful cache fake: write-through persists, keyed by the cache_key param, so
+ * a paraphrase that mints the same key hits on the second call. */
+function statefulCacheDb(): TenantQueryClient {
+  const store = new Map<string, { payload: string; model: string }>();
+  return {
+    queryObject: (sql: string, params?: unknown[]) => {
+      if (sql.includes("count(*)")) return Promise.resolve([{ n: 0 }]);
+      if (sql.includes("sum(")) return Promise.resolve([{ total: 0 }]);
+      const s = sql.trimStart();
+      if (s.startsWith("SELECT") && sql.includes("FROM ai_response_cache")) {
+        const hit = store.get(params?.[2] as string);
+        return Promise.resolve(hit ? [{ id: "c1", payload: hit.payload, model: hit.model }] : []);
+      }
+      if (s.startsWith("INSERT") && sql.includes("ai_response_cache")) {
+        store.set(params?.[2] as string, {
+          payload: params?.[5] as string,
+          model: params?.[7] as string,
+        });
+        return Promise.resolve([]);
+      }
+      return Promise.resolve([]);
+    },
+    // deno-lint-ignore no-explicit-any
+  } as any as TenantQueryClient;
+}
+
 function clearAiKeyEnv() {
   for (const k of ["AI_PROVIDER", "ANTHROPIC_API_KEY", "OPENROUTER_API_KEY", "AI_RATE_USER_PER_HOUR", "AI_RATE_SCHOOL_PER_DAY", "AI_MONTHLY_SPEND_CAP_MICROS"]) {
     Deno.env.delete(k);
@@ -126,6 +152,48 @@ Deno.test("gateway path: a cache hit is served with zero model calls (W1.2b)", a
     assertEquals(result.stub, false);
     assertEquals(result.content, "cached: 3 fees due");
     assertEquals(result.model, "claude-opus-4-8");
+  } finally {
+    globalThis.fetch = original;
+    clearAiKeyEnv();
+  }
+});
+
+Deno.test("gateway path: a paraphrase hits the same cache entry (W1.5 fingerprint)", async () => {
+  clearAiKeyEnv();
+  Deno.env.set("ANTHROPIC_API_KEY", "sk-ant-test");
+  const db = statefulCacheDb();
+  let fetchCalls = 0;
+  const original = globalThis.fetch;
+  globalThis.fetch = (() => {
+    fetchCalls++;
+    return Promise.resolve(
+      new Response(
+        JSON.stringify({
+          content: [{ type: "text", text: "Aarav's fee is due 2026-07-15." }],
+          model: "claude-opus-4-8",
+          stop_reason: "end_turn",
+          usage: { input_tokens: 10, output_tokens: 8 },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+  }) as unknown as typeof fetch;
+  try {
+    const first = await generateCopilotResponse({
+      ...baseInput("sk-ant-test"),
+      userMessage: "When is Aarav's fee due?",
+      db,
+      gatewayContext: GATEWAY_CTX,
+    });
+    const second = await generateCopilotResponse({
+      ...baseInput("sk-ant-test"),
+      userMessage: "fee due for Aarav??", // paraphrase → same fingerprint → same key
+      db,
+      gatewayContext: GATEWAY_CTX,
+    });
+    assertEquals(first.stub, false);
+    assertEquals(second.content, first.content);
+    assertEquals(fetchCalls, 1); // second served from cache, model called only once
   } finally {
     globalThis.fetch = original;
     clearAiKeyEnv();

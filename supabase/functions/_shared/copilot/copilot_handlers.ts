@@ -13,6 +13,7 @@ import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { loadCopilotContext } from "./copilot_context_engine.ts";
 import { generateCopilotResponse } from "./copilot_llm_client.ts";
 import { resolveAiConfig } from "../ai/ai_settings.ts";
+import { getAiEconomics } from "../ai/ai_economics_service.ts";
 import { buildSystemPrompt } from "./copilot_prompt_orchestrator.ts";
 import {
   appendCopilotMessage,
@@ -43,6 +44,26 @@ function requireCopilotRun(claims: Parameters<typeof requirePermission>[0]): Res
 
 function assistantForType(type: string): (typeof COPILOT_ASSISTANTS)[number] | null {
   return COPILOT_ASSISTANTS.find((a) => a.type === type) ?? null;
+}
+
+/** GET /copilot/economics — the N10 AI cost panel: this school's month-to-date
+ * spend vs cap, calls by outcome/surface, cache hit ratio and tokens saved. */
+export async function handleAiEconomics(req: Request, config: AppConfig): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireCopilotView(auth.claims);
+  if (denied) return denied;
+  try {
+    const economics = await withTenantContext(config, auth.claims, (db) =>
+      getAiEconomics(db, {
+        organizationId: organizationIdFromClaims(auth.claims),
+        schoolId: schoolIdFromClaims(auth.claims)!,
+      }));
+    return jsonResponse(envelope(economics));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    return errorEnvelope("INTERNAL_ERROR", String(error), 500);
+  }
 }
 
 function sessionToApi(row: Awaited<ReturnType<typeof listCopilotSessions>>[number]) {

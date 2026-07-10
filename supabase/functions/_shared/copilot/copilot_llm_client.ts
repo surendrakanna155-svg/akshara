@@ -9,6 +9,7 @@ import {
 } from "../ai/anthropic_client.ts";
 import { callModelGateway } from "../ai/model_gateway.ts";
 import { mintCacheKey } from "../ai/ai_response_cache_repository.ts";
+import { fingerprintQuestion } from "../ai/intent_fingerprint.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 
 export interface CopilotGenerationInput {
@@ -85,16 +86,21 @@ export async function generateCopilotResponse(
       input.userMessage,
       input.context,
     );
-    // Tier-2 cache key over the full prompt signature: two identical requests
-    // (same school context + question + model) share one generation; any change
-    // to the injected facts changes the key, so a hit never serves stale data.
+    // Tier-2 cache key over the prompt signature. The current question is
+    // fingerprinted (W1.5) so paraphrases share one generation; the system
+    // prompt embeds the live facts, so any data change still busts the key and
+    // a hit never serves stale data.
+    const keyMessages = [
+      ...boundHistory(input.history).map((m) => ({ role: m.role, content: m.content })),
+      { role: "user" as const, content: fingerprintQuestion(input.userMessage) },
+    ];
     const cacheKey = await mintCacheKey({
       surface: "copilot",
       schoolId: input.gatewayContext.schoolId,
       language: "english",
       model: input.model ?? "",
       system: input.systemPrompt,
-      messages,
+      messages: keyMessages,
     });
     const gw = await callModelGateway(
       input.db,
