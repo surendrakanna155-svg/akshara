@@ -13,6 +13,7 @@ Rules (all deterministic + reproducible for a given seed):
 from __future__ import annotations
 
 import hashlib
+import math
 from dataclasses import dataclass, field
 from typing import Dict, List
 
@@ -29,27 +30,48 @@ class SelectionResult:
     used_concepts: set = field(default_factory=set)
 
 
+# importance tiers: within a tier the SEED decides order, so different seeds pick different
+# (equally-important) concepts → cross-paper variety WITHOUT sacrificing importance ordering.
+IMPORTANCE_TIERS = 4
+
+
 def _seed_hash(concept_code: str, seed: int) -> int:
     return int(hashlib.sha256(f"{concept_code}|{seed}".encode()).hexdigest()[:12], 16)
 
 
-def _priority(cand: Candidate, seed: int, subject_usage: Dict[str, int]):
-    """Lower = picked first. Balance subjects, then exam-importance, then centrality, then
-    a stable seeded tie-break (reproducible variety across seeds)."""
+def _tier_map(cands: List[Candidate], n: int = IMPORTANCE_TIERS) -> Dict[str, int]:
+    """Bucket candidates of one type into n equal-size importance tiers by frequency RANK
+    (tier 0 = top quantile of exam-importance). Rank-based (not ratio-to-max) so a power-law
+    frequency distribution still spreads concepts across tiers — giving the seed real room to
+    vary selection within a tier while keeping quality (tier 0 stays the most important)."""
+    ordered = sorted(cands, key=lambda c: (-c.frequency, c.concept_code))
+    size = max(1, math.ceil(len(ordered) / n))
+    return {c.key: min(n - 1, i // size) for i, c in enumerate(ordered)}
+
+
+def _priority(cand: Candidate, seed: int, subject_usage: Dict[str, int], tier: int):
+    """Lower = picked first: balance subjects → importance tier → SEEDED order (variety) →
+    frequency within tier → stable id. The seed now drives selection, not just final ties."""
     return (
-        subject_usage.get(cand.subject, 0),   # prefer under-represented subject
-        -cand.frequency,                       # exam-important first
-        -cand.graph_degree,                    # well-connected concepts first
-        _seed_hash(cand.concept_code, seed),   # deterministic variety
-        cand.concept_code,                     # final stable tie-break
+        subject_usage.get(cand.subject, 0),   # per-paper subject balance
+        tier,                                  # importance tier (quality preserved)
+        _seed_hash(cand.concept_code, seed),   # SEED drives which concepts of a tier are chosen
+        -cand.frequency,                       # within tier+seed, prefer higher frequency
+        cand.concept_code,                     # final stable tie-break (reproducible)
     )
 
 
 def select(blueprint: Blueprint, pool: List[Candidate], request: PaperRequest,
            scope: SyllabusScope) -> SelectionResult:
+    exclude = set(request.exclude_concepts or ())
     by_type: Dict[str, List[Candidate]] = {}
     for c in pool:
+        if c.concept_code in exclude:          # cross-paper non-overlap (Set A/B / series)
+            continue
         by_type.setdefault(c.question_type, []).append(c)
+    tier_of: Dict[str, int] = {}
+    for cands in by_type.values():
+        tier_of.update(_tier_map(cands))
 
     res = SelectionResult()
     subject_usage: Dict[str, int] = {}
@@ -68,7 +90,7 @@ def select(blueprint: Blueprint, pool: List[Candidate], request: PaperRequest,
             bucket = pref if pref else remaining
             if not pref and cell.difficulty:
                 relaxed += 1
-            best = min(bucket, key=lambda c: _priority(c, request.seed, subject_usage))
+            best = min(bucket, key=lambda c: _priority(c, request.seed, subject_usage, tier_of[c.key]))
             number += 1
             picked += 1
             res.used_concepts.add(best.concept_code)

@@ -10,8 +10,9 @@ request opts in AND authorization is set.
 from __future__ import annotations
 
 import sqlite3
+from dataclasses import replace
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 from kie import config
 from kie.qpgen import (assemble, blueprint as bp_mod, materialize, pool as pool_mod,
@@ -79,6 +80,23 @@ class QuestionPaperEngine:
         finally:
             if owned:
                 conn.close()
+
+    def generate_series(self, request: PaperRequest, count: int) -> List[GeneratedPaper]:
+        """Generate `count` papers guaranteed to share NO concepts (Set A/B/…, per-student sets).
+
+        Each paper excludes every concept used by the earlier papers in the series, so
+        uniqueness is absolute — while each individual paper still respects scope, blueprint,
+        grade isolation, and subject balance. Deterministic + reproducible for a given request;
+        if the in-scope pool is exhausted, later papers shrink (reported), never duplicate.
+        """
+        papers: List[GeneratedPaper] = []
+        used: set = set(request.exclude_concepts or ())
+        for i in range(count):
+            req = replace(request, seed=request.seed + i, exclude_concepts=tuple(sorted(used)))
+            paper = self.generate(req)
+            papers.append(paper)
+            used |= {s.concept_code for s in paper.slots}
+        return papers
 
     # convenience renderers
     def render_markdown(self, paper: GeneratedPaper) -> str:

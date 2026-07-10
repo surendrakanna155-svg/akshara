@@ -68,7 +68,8 @@ class PaperRequest:
     blueprint_preset: Optional[str] = None      # named preset; else `blueprint` is used
     difficulty_mix: Optional[Dict[str, float]] = None  # soft target, e.g. {easy:.3,medium:.5,hard:.2}
     title: Optional[str] = None
-    seed: int = 0                               # deterministic tie-break seed (reproducible)
+    seed: int = 0                               # deterministic seed — different seeds → different papers
+    exclude_concepts: tuple = ()                # concept_codes to avoid (cross-paper non-overlap / Set A/B)
     allow_ai_fill: bool = False                 # gated; AI is NEVER called unless True AND authorized
 
 
