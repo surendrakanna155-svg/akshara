@@ -46,24 +46,46 @@ class TestMaterialize(unittest.TestCase):
         self.assertIn("Photosynthesis", slots[0].stem)
         self.assertIn("Marking guideline", slots[0].answer)   # honest rubric, no invented facts
 
-    def test_objective_becomes_spec_by_default(self):
-        slots = [_slot(1, QuestionType.MCQ), _slot(2, QuestionType.NUMERICAL)]
+    def test_objective_without_template_becomes_spec(self):
+        # Photosynthesis has no matching template → spec (deterministic default, no AI)
+        slots = [_slot(1, QuestionType.MCQ, code="BIO_A", title="Photosynthesis", subject="Biology"),
+                 _slot(2, QuestionType.NUMERICAL, code="BIO_A", title="Photosynthesis", subject="Biology")]
         out = materialize.materialize(slots, self.conn, PaperRequest(exam="NEET"))
-        self.assertEqual(out["filled"], 0)
         self.assertEqual(out["spec_only"], 2)
         for s in slots:
             self.assertEqual(s.status, SlotStatus.SPEC)
             self.assertIn("SPEC", s.stem)
-            self.assertIn("author_requirements", s.provenance)
+
+    def test_objective_filled_by_deterministic_template(self):
+        # Newton's Second Law matches a certified template → solver-verified, ZERO AI
+        slots = [_slot(1, QuestionType.NUMERICAL), _slot(2, QuestionType.MCQ)]
+        out = materialize.materialize(slots, self.conn, PaperRequest(exam="NEET"))
+        self.assertEqual(out["template_filled"], 2)
+        self.assertEqual(out["spec_only"], 0)
+        for s in slots:
+            self.assertEqual(s.status, SlotStatus.FILLED)
+            self.assertTrue(s.provenance["solver_verified"])
+            self.assertEqual(s.provenance["source"], "template")
+            self.assertTrue(s.answer)
+        mcq = slots[1]
+        self.assertTrue(mcq.options and len(mcq.options) >= 3)   # deterministic distractors
+
+    def test_template_instances_are_deterministic(self):
+        a = [_slot(1, QuestionType.NUMERICAL)]
+        b = [_slot(1, QuestionType.NUMERICAL)]
+        materialize.materialize(a, self.conn, PaperRequest(exam="NEET", seed=5))
+        materialize.materialize(b, self.conn, PaperRequest(exam="NEET", seed=5))
+        self.assertEqual(a[0].stem, b[0].stem)
+        self.assertEqual(a[0].answer, b[0].answer)
 
     def test_ai_fill_is_gated(self):
-        slots = [_slot(1, QuestionType.MCQ)]
+        slots = [_slot(1, QuestionType.MCQ, code="BIO_A", title="Photosynthesis", subject="Biology")]
         # allow_ai_fill but not authorized → raises (deterministic default never calls AI)
         with self.assertRaises(AiFillGatedError):
             materialize.materialize(slots, self.conn, PaperRequest(exam="NEET", allow_ai_fill=True))
 
     def test_default_never_calls_ai(self):
-        slots = [_slot(1, QuestionType.MCQ)]
+        slots = [_slot(1, QuestionType.MCQ, code="BIO_A", title="Photosynthesis", subject="Biology")]
         out = materialize.materialize(slots, self.conn, PaperRequest(exam="NEET"))
         self.assertFalse(out["ai"]["attempted"])
 

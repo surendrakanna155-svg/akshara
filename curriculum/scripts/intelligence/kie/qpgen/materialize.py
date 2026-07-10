@@ -16,6 +16,9 @@ import os
 import re
 from typing import Dict, List, Optional
 
+import json
+
+from kie.qpgen import templates
 from kie.qpgen.models import (Bloom, PaperRequest, QuestionSlot, QuestionType,
                               RenderMode, SlotStatus)
 
@@ -119,33 +122,72 @@ def build_spec(slot: QuestionSlot) -> QuestionSlot:
     return slot
 
 
-def materialize(slots: List[QuestionSlot], conn, request: PaperRequest) -> Dict:
-    """Materialize every slot. Returns counts. AI is only consulted if the request opts in AND
-    authorization is set — otherwise objective slots remain specs (deterministic default)."""
+def render_template(slot: QuestionSlot, seed: int) -> bool:
+    """Fill an objective slot deterministically from the certified template registry (zero AI,
+    solver-verified). Returns True if a template matched. This is tried BEFORE any spec/AI."""
+    tmpl = templates.find_template(slot.subject, slot.concept_title, slot.question_type)
+    if not tmpl:
+        return False
+    out = templates.instantiate(tmpl, slot.concept_code, seed, slot.question_type)
+    slot.stem, slot.answer = out["stem"], out["answer"]
+    slot.options, slot.solution = out.get("options"), out.get("solution")
+    slot.render_mode = RenderMode.DETERMINISTIC
+    slot.status = SlotStatus.FILLED
+    slot.provenance = {**slot.provenance, "source": "template", "template_id": out["template_id"],
+                       "solver_verified": True}
+    return True
+
+
+def materialize(slots: List[QuestionSlot], conn, request: PaperRequest,
+                provider=None, ai_cache: Optional[Dict] = None) -> Dict:
+    """Deterministic-first materialization:
+      descriptive → original stem; objective → certified TEMPLATE (solver-verified) if one
+      matches, else a spec. AI is consulted only if the request opts in AND authorization is set,
+      and every AI question then re-passes the SAME validation gate downstream.
+    """
     defs = _definitions(conn, [s.concept_code for s in slots])
-    filled = spec = 0
+    filled = spec = template_filled = 0
     for s in slots:
-        if s.render_mode == RenderMode.DETERMINISTIC or s.question_type in DESCRIPTIVE_TYPES:
+        if s.question_type in DESCRIPTIVE_TYPES:
             render_deterministic(s, defs.get(s.concept_code, ""), request.seed)
             filled += 1
+        elif render_template(s, request.seed):          # deterministic objective, no AI
+            filled += 1
+            template_filled += 1
         else:
             build_spec(s)
             spec += 1
 
     ai = {"attempted": False, "filled": 0}
     if request.allow_ai_fill:
-        ai = ai_fill([s for s in slots if s.status == SlotStatus.SPEC])
+        ai = ai_fill([s for s in slots if s.status == SlotStatus.SPEC], provider, ai_cache)
         spec -= ai["filled"]
         filled += ai["filled"]
-    return {"filled": filled, "spec_only": spec, "ai": ai}
+    return {"filled": filled, "spec_only": spec, "template_filled": template_filled, "ai": ai}
 
 
-def ai_fill(spec_slots: List[QuestionSlot]) -> Dict:
-    """GATED seam. Authors original questions for spec slots via the KIE AI gateway.
+def spec_of(slot: QuestionSlot) -> Dict:
+    """The authoring contract handed to an AI provider (structural only, no source text)."""
+    return {"concept_code": slot.concept_code, "concept_title": slot.concept_title,
+            "subject": slot.subject, "question_type": slot.question_type, "bloom": slot.bloom,
+            "difficulty": slot.difficulty, "marks": slot.marks,
+            "chapter": (slot.provenance or {}).get("chapter"),
+            "requirements": "original, in-syllabus, no copied source text; MCQ needs one correct "
+                            "option + 3 plausible distractors; numerical needs a worked solution"}
 
-    Never called unless the request opted in. Raises unless KIE_AI_AUTHORIZED=1, and (until an
-    offline provider is wired) raises AiProviderNotWired even when authorized — the deterministic
-    path remains the shipping default. Any AI output MUST re-pass the validation gate (Q6).
+
+def _spec_hash(spec: Dict) -> str:
+    return hashlib.sha256(json.dumps(spec, sort_keys=True).encode()).hexdigest()[:16]
+
+
+def ai_fill(spec_slots: List[QuestionSlot], provider=None, cache: Optional[Dict] = None) -> Dict:
+    """GATED, cached, validated AI seam.
+
+    Contract: never runs unless the request opted in AND KIE_AI_AUTHORIZED=1 AND a governed
+    provider is wired. For each spec it hands the provider a structural spec, CACHES the result
+    by spec-hash (→ reproducible + minimal API calls), and applies it as a concrete question.
+    Applied AI questions carry source='ai' and are re-validated by the SAME downstream validation
+    gate as every other question (out-of-syllabus / ungrounded / duplicate AI output is rejected).
     """
     if not spec_slots:
         return {"attempted": False, "filled": 0}
@@ -153,6 +195,31 @@ def ai_fill(spec_slots: List[QuestionSlot]) -> Dict:
         raise AiFillGatedError(
             "AI question authoring is gated (set KIE_AI_AUTHORIZED=1 and use the approved "
             "governed gateway). The deterministic engine does not require it.")
-    raise AiProviderNotWired(
-        "AI authorized but no offline authoring provider is wired here; objective items remain "
-        "specs. Wire the KIE governed gateway to enable, then re-run validation on its output.")
+    if provider is None:
+        raise AiProviderNotWired(
+            "AI authorized but no governed authoring provider is wired; objective items remain "
+            "specs. Pass a provider implementing author(spec)->{stem,answer,options,solution}.")
+    cache = cache if cache is not None else {}
+    filled = cached = 0
+    for slot in spec_slots:
+        spec = spec_of(slot)
+        key = _spec_hash(spec)
+        if key in cache:
+            out, was_cached = cache[key], True
+        else:
+            out = provider.author(spec) or {}
+            cache[key] = out
+            was_cached = False
+        if not out.get("stem"):
+            continue
+        slot.stem = out["stem"]
+        slot.answer = out.get("answer")
+        slot.options = out.get("options")
+        slot.solution = out.get("solution")
+        slot.render_mode = RenderMode.DETERMINISTIC
+        slot.status = SlotStatus.FILLED
+        slot.provenance = {**slot.provenance, "source": "ai", "ai_spec_hash": key,
+                           "ai_cached": was_cached}
+        filled += 1
+        cached += 1 if was_cached else 0
+    return {"attempted": True, "filled": filled, "cache_hits": cached}

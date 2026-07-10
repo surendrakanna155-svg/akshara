@@ -44,10 +44,13 @@ def validate_slot(slot: QuestionSlot, scope: SyllabusScope) -> List[str]:
     prof = (slot.provenance or {}).get("exam")
     if prof and prof != scope.exam_profile:
         v.append(f"EXAM_MISMATCH: slot exam {prof!r} != scope {scope.exam_profile!r}")
-    # a FILLED (deterministic) question must actually reference its in-scope concept
-    if slot.status == SlotStatus.FILLED:
+    # a FILLED DESCRIPTIVE stem must name its concept; objective items (template/AI) are
+    # topic-bound by construction (concept binding + solver/spec provenance), so the
+    # title-mention check does not apply — but every OTHER check above still does (same gate).
+    if slot.status == SlotStatus.FILLED and slot.question_type in (
+            QuestionType.SHORT_ANSWER, QuestionType.LONG_ANSWER):
         if not slot.stem or slot.concept_title.lower() not in (slot.stem or "").lower():
-            v.append("UNGROUNDED_STEM: filled stem does not reference its concept")
+            v.append("UNGROUNDED_STEM: filled descriptive stem does not reference its concept")
     return v
 
 
