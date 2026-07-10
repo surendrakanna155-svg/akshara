@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Dict, Optional
 
+from kie.qpgen import blueprints
 from kie.qpgen.models import Blueprint, BlueprintCell, Difficulty, QuestionType, Subject
 
 # ── exam profiles (subjects + which source_documents.exam rows count as in-profile) ──
@@ -110,10 +111,12 @@ def _mixed_practice() -> Blueprint:
     )
 
 
+# quick practice blueprints (small, fully materializable) + the authentic examination library
 BLUEPRINT_PRESETS = {
     "objective_45": _neet_style,
     "descriptive_40": _cbse_style_descriptive,
     "mixed_50": _mixed_practice,
+    **blueprints.AUTHENTIC_BLUEPRINTS,
 }
 
 

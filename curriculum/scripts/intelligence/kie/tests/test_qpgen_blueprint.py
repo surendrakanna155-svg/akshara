@@ -46,7 +46,12 @@ class TestBlueprint(unittest.TestCase):
             self.assertGreater(bp.total_questions, 0)
 
     def test_default_blueprint_by_profile(self):
-        self.assertEqual(blueprint.default_blueprint_name("NEET"), "objective_45")
+        # each competitive profile now defaults to its AUTHENTIC examination blueprint;
+        # FOUNDATION (whole corpus, no single real exam) keeps the mixed practice blueprint.
+        self.assertEqual(blueprint.default_blueprint_name("NEET"), "neet")
+        self.assertEqual(blueprint.default_blueprint_name("JEE_MAIN"), "jee_main")
+        self.assertEqual(blueprint.default_blueprint_name("JEE_ADVANCED"), "jee_advanced")
+        self.assertEqual(blueprint.default_blueprint_name("AIIMS"), "neet")
         self.assertEqual(blueprint.default_blueprint_name("FOUNDATION"), "mixed_50")
 
     def test_validate_catches_bad_cells(self):

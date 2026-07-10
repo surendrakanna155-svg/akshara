@@ -78,10 +78,16 @@ class BlueprintCell:
     section: str
     question_type: str
     marks_each: int
-    count: int
+    count: int                                  # number of questions that COUNT toward marks
     bloom: Optional[str] = None
     difficulty: Optional[str] = None
     note: Optional[str] = None
+    subject: Optional[str] = None               # bind this cell to one subject (per-subject
+                                                #   sections, e.g. NEET "Physics · Section A")
+    topic: Optional[str] = None                 # optional chapter/topic hint (weightage / display)
+    choose: Optional[int] = None                # internal choice: this cell is "attempt any `count`
+                                                #   of `choose` printed" (rendered as an instruction;
+                                                #   marks stay count·marks_each so totals are official)
 
     @property
     def total_marks(self) -> int:
@@ -93,6 +99,10 @@ class Blueprint:
     name: str
     cells: List[BlueprintCell] = field(default_factory=list)
     instructions: List[str] = field(default_factory=list)
+    exam: Optional[str] = None                  # authentic exam label (e.g. "NEET (UG)")
+    duration_min: Optional[int] = None          # official duration in minutes
+    negative_marking: Optional[str] = None       # e.g. "-1 per incorrect answer" (None ⇒ no negative)
+    weightage: Optional[Dict[str, int]] = None   # chapter/topic → target % (display + Phase-4 target)
 
     @property
     def total_questions(self) -> int:

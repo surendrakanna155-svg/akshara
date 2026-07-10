@@ -23,10 +23,17 @@ class BlueprintError(ValueError):
     pass
 
 
+# each certified exam profile defaults to its AUTHENTIC examination blueprint; FOUNDATION (the
+# whole 6–12 corpus, no single real exam) keeps the mixed practice blueprint.
+_PROFILE_DEFAULT_BLUEPRINT = {
+    "NEET": "neet", "AIIMS": "neet",
+    "JEE_MAIN": "jee_main", "JEE_ADVANCED": "jee_advanced",
+    "FOUNDATION": "mixed_50",
+}
+
+
 def default_blueprint_name(exam_profile: str) -> str:
-    if exam_profile in ("NEET", "AIIMS", "JEE_MAIN", "JEE_ADVANCED"):
-        return "objective_45"
-    return "mixed_50"
+    return _PROFILE_DEFAULT_BLUEPRINT.get(exam_profile, "mixed_50")
 
 
 def resolve_blueprint(request: PaperRequest, exam_profile: str) -> Blueprint:

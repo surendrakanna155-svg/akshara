@@ -82,7 +82,11 @@ def select(blueprint: Blueprint, pool: List[Candidate], request: PaperRequest,
     number = 0
 
     for ci, cell in enumerate(blueprint.cells):
-        available = [c for c in by_type.get(cell.question_type, []) if c.concept_code not in res.used_concepts]
+        # a subject-bound cell (e.g. NEET "Physics · Section A") draws ONLY from that subject,
+        # so per-subject exam sections stay coherent; unbound cells draw from all subjects.
+        available = [c for c in by_type.get(cell.question_type, [])
+                     if c.concept_code not in res.used_concepts
+                     and (not cell.subject or c.subject == cell.subject)]
         picked = 0
         relaxed = {"difficulty": 0, "bloom": 0}
         for _ in range(cell.count):
