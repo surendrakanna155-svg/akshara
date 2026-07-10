@@ -49,6 +49,7 @@ export const W2_0_SUPPORTED_PERSONAS: readonly Persona[] = [
   "admin",
   "teacher",
   "parent",
+  "student",
 ] as const;
 
 /** Compliance / impact class — the qualitative severity axis (doc 04 §3.2). */

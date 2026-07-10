@@ -58,20 +58,32 @@ Deno.test("W2.0a: default persona (none supplied) is principal and matches", asy
   assertEquals(res.status, 503);
 });
 
-Deno.test("W2 rollout: a not-yet-shipped persona is rejected 422 BEFORE the DB", async () => {
-  // student ships in a later rollout wave — still rejected in the parent wave.
-  const res = await call("GET", "/intelligence/priorities?persona=student", ["viewSis"], {
-    scope: "student", role: "student", role_slugs: ["student"], primary_role: "student",
-    student_id: "stu-1",
-  });
+Deno.test("W2 rollout: an unknown persona string is rejected 422 BEFORE the DB", async () => {
+  const res = await call("GET", "/intelligence/priorities?persona=wizard", ["viewAnalytics"]);
   assertEquals(res.status, 422);
   const env = await res.json();
   assertEquals(env.error.code, "VALIDATION_ERROR");
 });
 
-Deno.test("W2 rollout: an unknown persona string is rejected 422", async () => {
-  const res = await call("GET", "/intelligence/priorities?persona=wizard", ["viewAnalytics"]);
-  assertEquals(res.status, 422);
+Deno.test("W2 student: persona=student with student scope reaches the DB (503)", async () => {
+  const res = await call("GET", "/intelligence/priorities?persona=student", ["viewSis"], {
+    scope: "student", role: "student", role_slugs: ["student"], primary_role: "student",
+    student_id: "stu-1",
+  });
+  assertEquals(res.status, 503);
+});
+
+Deno.test("W2 student: persona=student from a school (staff) scope is forbidden (403)", async () => {
+  const res = await call("GET", "/intelligence/priorities?persona=student", ["viewAnalytics"]);
+  assertEquals(res.status, 403);
+});
+
+Deno.test("W2 student: persona=student with parent scope (no student_id) is forbidden (403)", async () => {
+  const res = await call("GET", "/intelligence/priorities?persona=student", ["viewSis"], {
+    scope: "parent", role: "parent", role_slugs: ["parent"], primary_role: "parent",
+    child_ids: ["stu-1"],
+  });
+  assertEquals(res.status, 403);
 });
 
 Deno.test("W2 teacher: persona=teacher with school scope reaches the DB (503)", async () => {

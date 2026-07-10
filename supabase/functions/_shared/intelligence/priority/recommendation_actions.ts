@@ -129,6 +129,21 @@ export function actionForItem(item: RawPriorityItem): PriorityAction | undefined
         requiresConfirmation: true,
       };
     }
+    // ---- Student (self scope) ----
+    case "student_homework":
+      return {
+        label: "Open homework",
+        deepLink: "/student/homework",
+        payload: {},
+        requiresConfirmation: true,
+      };
+    case "student_attendance":
+      return {
+        label: "View attendance",
+        deepLink: "/student/attendance",
+        payload: {},
+        requiresConfirmation: true,
+      };
     default:
       return undefined;
   }

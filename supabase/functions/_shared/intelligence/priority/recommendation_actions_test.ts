@@ -72,6 +72,15 @@ Deno.test("parent actions deep-link to the child-scoped surface with the child i
   assertEquals(fees?.payload, { activeChildId: "stu-7" });
 });
 
+Deno.test("student actions deep-link to the student's own surfaces", () => {
+  const hw = actionForItem(item({ source: "student_homework", itemKey: "student:homework:h1", type: "exception" }));
+  assertEquals(hw?.deepLink, "/student/homework");
+  assertEquals(hw?.requiresConfirmation, true);
+
+  const att = actionForItem(item({ source: "student_attendance", itemKey: "student:attendance" }));
+  assertEquals(att?.deepLink, "/student/attendance");
+});
+
 Deno.test("an unknown source yields no action (informational only)", () => {
   assertEquals(actionForItem(item({ source: "some_future_source" })), undefined);
 });
