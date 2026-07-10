@@ -66,7 +66,27 @@ class TestSelect(unittest.TestCase):
         bp = Blueprint("t", cells=[BlueprintCell("A", QuestionType.MCQ, 4, 5, difficulty=Difficulty.HARD)])
         r = select.select(bp, self.pool, PaperRequest(exam="NEET"), self.scope)
         self.assertEqual(len(r.slots), 5)
-        self.assertTrue(any("relaxed difficulty" in n for n in r.notes))
+        self.assertTrue(any("difficulty relaxed" in n for n in r.notes))
+
+    def test_honest_difficulty_labels(self):
+        # P1-2: slots carry their ACTUAL difficulty, not the requested one; relaxed slots are marked
+        bp = Blueprint("t", cells=[BlueprintCell("A", QuestionType.MCQ, 4, 5, difficulty=Difficulty.HARD)])
+        r = select.select(bp, self.pool, PaperRequest(exam="NEET"), self.scope)
+        # some slots were relaxed to non-hard → their label must be the real difficulty, not "hard"
+        relaxed = [s for s in r.slots if not s.provenance["difficulty_met"]]
+        self.assertTrue(relaxed)
+        for s in relaxed:
+            self.assertNotEqual(s.difficulty, Difficulty.HARD)          # honest label
+            self.assertEqual(s.provenance["requested_difficulty"], Difficulty.HARD)
+
+    def test_honest_bloom_selection_and_labels(self):
+        # P1-1: bloom is SELECTED-for and labelled from the candidate, not stamped from the cell
+        bp = Blueprint("t", cells=[BlueprintCell("A", QuestionType.MCQ, 4, 3, bloom="apply")])
+        r = select.select(bp, self.pool, PaperRequest(exam="NEET"), self.scope)
+        for s in r.slots:
+            self.assertIn(s.bloom, ("apply", "understand"))            # a real candidate bloom
+            self.assertEqual(s.provenance["requested_bloom"], "apply")
+            self.assertEqual(s.provenance["bloom_met"], s.bloom == "apply")
 
     def test_shortfall_reported_not_padded(self):
         bp = Blueprint("t", cells=[BlueprintCell("A", QuestionType.MCQ, 4, 50)])  # only 10 concepts

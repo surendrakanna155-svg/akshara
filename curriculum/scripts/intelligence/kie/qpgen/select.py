@@ -80,36 +80,64 @@ def select(blueprint: Blueprint, pool: List[Candidate], request: PaperRequest,
     for ci, cell in enumerate(blueprint.cells):
         available = [c for c in by_type.get(cell.question_type, []) if c.concept_code not in res.used_concepts]
         picked = 0
-        relaxed = 0
+        relaxed = {"difficulty": 0, "bloom": 0}
         for _ in range(cell.count):
-            # matching difficulty first, then relax
             remaining = [c for c in available if c.concept_code not in res.used_concepts]
             if not remaining:
                 break
-            pref = [c for c in remaining if not cell.difficulty or c.difficulty == cell.difficulty]
-            bucket = pref if pref else remaining
-            if not pref and cell.difficulty:
-                relaxed += 1
+            # SELECT for the requested difficulty AND bloom (graceful degradation, not stamping)
+            bucket, relaxed_here = _preference_bucket(remaining, cell)
+            for k in relaxed_here:
+                relaxed[k] += 1
             best = min(bucket, key=lambda c: _priority(c, request.seed, subject_usage, tier_of[c.key]))
             number += 1
             picked += 1
             res.used_concepts.add(best.concept_code)
             subject_usage[best.subject] = subject_usage.get(best.subject, 0) + 1
+            # LABEL with the candidate's ACTUAL bloom/difficulty (honest), record the target too
             res.slots.append(QuestionSlot(
                 number=number, section=cell.section, concept_code=best.concept_code,
                 concept_title=best.concept_title, subject=best.subject, question_type=best.question_type,
-                marks=cell.marks_each, bloom=cell.bloom or best.bloom,
-                difficulty=cell.difficulty or best.difficulty, render_mode=best.render_mode,
-                status=SlotStatus.SPEC,
+                marks=cell.marks_each, bloom=best.bloom, difficulty=best.difficulty,
+                render_mode=best.render_mode, status=SlotStatus.SPEC,
                 provenance={"frequency": best.frequency, "years": best.years, "source": best.source,
                             "pattern_id": best.pattern_id, "exam": scope.exam_profile,
-                            "graph_degree": best.graph_degree}))
+                            "graph_degree": best.graph_degree,
+                            "requested_difficulty": cell.difficulty, "requested_bloom": cell.bloom,
+                            "difficulty_met": (not cell.difficulty) or best.difficulty == cell.difficulty,
+                            "bloom_met": (not cell.bloom) or best.bloom == cell.bloom}))
         if picked < cell.count:
             res.shortfalls.append(
                 f"cell[{ci}] {cell.section}/{cell.question_type} x{cell.count}: filled {picked} "
                 f"(short {cell.count - picked} — pool exhausted after concept de-dup)")
-        if relaxed:
-            res.notes.append(
-                f"cell[{ci}] {cell.section}/{cell.question_type}: relaxed difficulty on {relaxed} "
-                f"(requested {cell.difficulty})")
+        for constraint, n in relaxed.items():
+            if n:
+                requested = getattr(cell, constraint)
+                res.notes.append(
+                    f"cell[{ci}] {cell.section}/{cell.question_type}: {constraint} relaxed on {n}/"
+                    f"{cell.count} (requested {requested}; scope lacked enough matching candidates)")
     return res
+
+
+def _preference_bucket(remaining: List[Candidate], cell):
+    """Graceful degradation: prefer candidates matching BOTH difficulty and bloom; else match
+    difficulty only (bloom relaxed); else bloom only (difficulty relaxed); else any (both
+    relaxed). Returns (bucket, tuple_of_relaxed_constraints)."""
+    def diff_ok(c):
+        return (not cell.difficulty) or c.difficulty == cell.difficulty
+
+    def bloom_ok(c):
+        return (not cell.bloom) or c.bloom == cell.bloom
+
+    both = [c for c in remaining if diff_ok(c) and bloom_ok(c)]
+    if both:
+        return both, ()
+    if cell.difficulty:
+        d = [c for c in remaining if diff_ok(c)]
+        if d:
+            return d, ("bloom",) if cell.bloom else ()
+    if cell.bloom:
+        b = [c for c in remaining if bloom_ok(c)]
+        if b:
+            return b, ("difficulty",) if cell.difficulty else ()
+    return remaining, tuple(k for k in ("difficulty", "bloom") if getattr(cell, k))
