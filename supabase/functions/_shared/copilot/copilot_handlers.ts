@@ -23,6 +23,7 @@ import {
   getCopilotSession,
   listCopilotMessages,
   listCopilotSessions,
+  updateSessionRollingSummary,
   updateSessionTitle,
 } from "./copilot_repository.ts";
 import {
@@ -322,6 +323,18 @@ export async function handleSendMessage(
         generation.content,
         { model: generation.model, stub: generation.stub },
       );
+
+      // F5: persist the deterministic rolling summary of the turns dropped from
+      // the window, so long conversations keep condensed context (not silently
+      // lost). Best-effort — never fail the reply on a summary write.
+      if (generation.summarizedCount && generation.summarizedCount > 0) {
+        await updateSessionRollingSummary(
+          db,
+          sessionId,
+          generation.rollingSummary ?? "",
+          generation.summarizedCount,
+        );
+      }
 
       if (session.title === "New conversation" && content.length <= 120) {
         await updateSessionTitle(db, sessionId, content);

@@ -35,6 +35,12 @@ export interface CopilotGenerationResult {
   content: string;
   model: string;
   stub: boolean;
+  /** Deterministic summary of the turns dropped from the window (F5), for the
+   * handler to persist to ai_copilot_sessions.rolling_summary. Undefined when
+   * nothing was dropped. */
+  rollingSummary?: string;
+  /** How many older turns the summary condenses. */
+  summarizedCount?: number;
 }
 
 const COPILOT_MAX_TOKENS = 1024;
@@ -47,6 +53,39 @@ export const MAX_HISTORY_TURNS = 12;
 
 export function boundHistory<T>(history: T[], maxTurns = MAX_HISTORY_TURNS): T[] {
   return history.length <= maxTurns ? history : history.slice(history.length - maxTurns);
+}
+
+const SUMMARY_STOPWORDS = new Set([
+  "the", "and", "for", "are", "was", "were", "you", "your", "our", "this",
+  "that", "with", "have", "has", "can", "could", "would", "please", "what",
+  "when", "who", "how", "why", "which", "show", "tell", "give", "list",
+  "about", "any", "there", "here", "from", "into", "does", "did", "not",
+]);
+
+/** Deterministic summary of the older turns dropped by boundHistory (W1.3/F5):
+ * long-conversation context is condensed, not silently lost. Zero model calls —
+ * the turn count plus the salient non-stopword keywords from the dropped USER
+ * turns. Numbers are intentionally excluded (the reply's numbers are grounded
+ * against the live facts, not a lossy history summary). */
+export function summarizeCopilotHistory(
+  dropped: Array<{ role: "user" | "assistant"; content: string }>,
+): string {
+  if (dropped.length === 0) return "";
+  const seen = new Set<string>();
+  const keywords: string[] = [];
+  for (const m of dropped) {
+    if (m.role !== "user") continue;
+    const toks = m.content.toLowerCase().replace(/[^\p{L}\s]/gu, " ").split(/\s+/);
+    for (const tok of toks) {
+      if (tok.length < 3 || SUMMARY_STOPWORDS.has(tok) || seen.has(tok)) continue;
+      seen.add(tok);
+      keywords.push(tok);
+      if (keywords.length >= 16) break;
+    }
+    if (keywords.length >= 16) break;
+  }
+  const topics = keywords.length > 0 ? keywords.join(", ") : "general school queries";
+  return `${dropped.length} earlier message(s) in this conversation covered: ${topics}.`;
 }
 
 /** School-level cache entity tags this assistant's answers depend on, so the
@@ -98,10 +137,25 @@ const REFUSAL_REPLY =
 export async function generateCopilotResponse(
   input: CopilotGenerationInput,
 ): Promise<CopilotGenerationResult> {
+  const bounded = boundHistory(input.history);
   const messages: ClaudeMessage[] = [
-    ...boundHistory(input.history).map((m) => ({ role: m.role, content: m.content })),
+    ...bounded.map((m) => ({ role: m.role, content: m.content })),
     { role: "user" as const, content: input.userMessage },
   ];
+
+  // F5: condense the dropped older prefix into a deterministic rolling summary
+  // and fold it into the system prompt (used for BOTH the model call AND the
+  // cache key), so long-conversation context is summarized, not silently lost —
+  // and two conversations with the same last-K but a different history don't
+  // collide on the cache key.
+  const summarizedCount = Math.max(0, input.history.length - MAX_HISTORY_TURNS);
+  const rollingSummary = summarizedCount > 0
+    ? summarizeCopilotHistory(input.history.slice(0, summarizedCount))
+    : "";
+  const effectiveSystem = rollingSummary
+    ? `${input.systemPrompt}\n\n[Earlier conversation summary]\n${rollingSummary}`
+    : input.systemPrompt;
+  const summaryFields = summarizedCount > 0 ? { rollingSummary, summarizedCount } : {};
 
   // Governed path: route through the Model Gateway when a tenant db + context
   // are supplied (production). Adds timeout/rate-limit/spend-cap/telemetry while
@@ -119,7 +173,7 @@ export async function generateCopilotResponse(
     // prompt embeds the live facts, so any data change still busts the key and
     // a hit never serves stale data.
     const keyMessages = [
-      ...boundHistory(input.history).map((m) => ({ role: m.role, content: m.content })),
+      ...bounded.map((m) => ({ role: m.role, content: m.content })),
       { role: "user" as const, content: fingerprintQuestion(input.userMessage) },
     ];
     const cacheKey = await mintCacheKey({
@@ -127,7 +181,7 @@ export async function generateCopilotResponse(
       schoolId: input.gatewayContext.schoolId,
       language: "english",
       model: input.model ?? "",
-      system: input.systemPrompt,
+      system: effectiveSystem,
       messages: keyMessages,
     });
     const gw = await callModelGateway(
@@ -138,7 +192,7 @@ export async function generateCopilotResponse(
         userId: input.gatewayContext.userId ?? null,
         surface: "copilot",
       },
-      { system: input.systemPrompt, messages, maxTokens: COPILOT_MAX_TOKENS, guard: true },
+      { system: effectiveSystem, messages, maxTokens: COPILOT_MAX_TOKENS, guard: true },
       stub,
       {
         cache: {
@@ -149,9 +203,11 @@ export async function generateCopilotResponse(
         },
       },
     );
-    if (gw.refused) return { content: REFUSAL_REPLY, model: gw.model || "akshara-ai", stub: false };
-    if (gw.ok) return { content: gw.text, model: gw.model, stub: false };
-    return { content: stub, model: "akshara-stub", stub: true };
+    if (gw.refused) {
+      return { content: REFUSAL_REPLY, model: gw.model || "akshara-ai", stub: false, ...summaryFields };
+    }
+    if (gw.ok) return { content: gw.text, model: gw.model, stub: false, ...summaryFields };
+    return { content: stub, model: "akshara-stub", stub: true, ...summaryFields };
   }
 
   // No tenant governance context (e.g. no db/gatewayContext supplied) — never
@@ -164,5 +220,6 @@ export async function generateCopilotResponse(
     ),
     model: "akshara-stub",
     stub: true,
+    ...summaryFields,
   };
 }

@@ -142,6 +142,25 @@ export async function updateSessionTitle(
   );
 }
 
+/** Persist the deterministic rolling summary of a session's older turns (F5).
+ * Best-effort: the summary condenses already-persisted messages, so a write
+ * failure never affects correctness. */
+export async function updateSessionRollingSummary(
+  db: TenantQueryClient,
+  sessionId: string,
+  summary: string,
+  summarizedCount: number,
+): Promise<void> {
+  await db.queryObject(
+    `UPDATE ai_copilot_sessions
+        SET rolling_summary = $2,
+            summarized_message_count = $3,
+            summary_updated_at = timezone('utc', now())
+      WHERE id = $1`,
+    [sessionId, summary, Math.trunc(summarizedCount)],
+  );
+}
+
 export function claimsHasPermission(claims: AccessTokenClaims, slug: string): boolean {
   return claims.permissions?.includes(slug) ?? false;
 }

@@ -1,5 +1,10 @@
 import { assert, assertEquals } from "jsr:@std/assert@1";
-import { boundHistory, generateCopilotResponse, MAX_HISTORY_TURNS } from "./copilot_llm_client.ts";
+import {
+  boundHistory,
+  generateCopilotResponse,
+  MAX_HISTORY_TURNS,
+  summarizeCopilotHistory,
+} from "./copilot_llm_client.ts";
 import type { CopilotContextBundle } from "./copilot_context_engine.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 
@@ -298,4 +303,50 @@ Deno.test("gateway path: an ungrounded number in the reply is guarded → stub (
     globalThis.fetch = original;
     clearAiKeyEnv();
   }
+});
+
+Deno.test("summarizeCopilotHistory condenses dropped turns deterministically (F5)", () => {
+  assertEquals(summarizeCopilotHistory([]), "");
+  const dropped = [
+    { role: "user" as const, content: "What are the pending fees for class 6?" },
+    { role: "assistant" as const, content: "Here is the breakdown." },
+    { role: "user" as const, content: "And the attendance summary?" },
+  ];
+  const s = summarizeCopilotHistory(dropped);
+  assert(s.startsWith("3 earlier message(s)"));
+  assert(s.includes("fees"));
+  assert(s.includes("attendance"));
+  // Only keywords from USER turns are kept (assistant-turn word excluded).
+  assertEquals(s.includes("breakdown"), false);
+  assertEquals(summarizeCopilotHistory(dropped), s); // deterministic
+});
+
+Deno.test("gateway path: a long history yields a rolling summary to persist (F5)", async () => {
+  clearAiKeyEnv(); // no key → stub path, but summary fields are still computed
+  const history = Array.from({ length: MAX_HISTORY_TURNS + 5 }, (_, i) => ({
+    role: (i % 2 === 0 ? "user" : "assistant") as "user" | "assistant",
+    content: i % 2 === 0 ? `question ${i} about admissions` : `answer ${i}`,
+  }));
+  const result = await generateCopilotResponse({
+    ...baseInput(),
+    history,
+    db: fakeGatewayDb(),
+    gatewayContext: GATEWAY_CTX,
+  });
+  assertEquals(result.summarizedCount, 5); // history.length - MAX_HISTORY_TURNS
+  assert((result.rollingSummary ?? "").startsWith("5 earlier message(s)"));
+  clearAiKeyEnv();
+});
+
+Deno.test("gateway path: a short history has no rolling summary (F5)", async () => {
+  clearAiKeyEnv();
+  const result = await generateCopilotResponse({
+    ...baseInput(),
+    history: [{ role: "user", content: "hi" }],
+    db: fakeGatewayDb(),
+    gatewayContext: GATEWAY_CTX,
+  });
+  assertEquals(result.summarizedCount, undefined);
+  assertEquals(result.rollingSummary, undefined);
+  clearAiKeyEnv();
 });
