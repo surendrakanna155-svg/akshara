@@ -32,6 +32,7 @@ import 'interfaces/transport_repository.dart';
 import 'interfaces/parent_repository.dart';
 import 'interfaces/teacher_repository.dart';
 import 'interfaces/student_repository.dart';
+import 'interfaces/adaptive_ai_repository.dart';
 import 'interfaces/copilot_repository.dart';
 import 'interfaces/education_repository.dart';
 import 'interfaces/intelligence_repository.dart';
@@ -66,8 +67,10 @@ import 'mock/mock_restaurant_repository.dart';
 import 'mock/mock_accommodation_repository.dart';
 import 'mock/mock_white_label_platform_repository.dart';
 import 'interfaces/communication_repository.dart';
+import 'api/adaptive_ai/hybrid_adaptive_ai_repository.dart';
 import 'api/copilot/hybrid_copilot_repository.dart';
 import '../ai/ai_inference_providers.dart';
+import 'mock/mock_adaptive_ai_repository.dart';
 import 'mock/mock_copilot_repository.dart';
 import 'mock/mock_education_repository.dart';
 import 'mock/mock_intelligence_repository.dart';
@@ -303,6 +306,17 @@ final copilotRepositoryProvider = Provider<CopilotRepository>((ref) {
   return MockCopilotRepository(
     pipeline: ref.watch(aiInferencePipelineProvider),
   );
+});
+
+/// Adaptive AI (W2) — backend Priority/Recommendation feed, Quick Actions and
+/// Universal Search. Hybrid when the flag is on (fail-soft to empty), else Mock.
+final adaptiveAiRepositoryProvider = Provider<AdaptiveAiRepository>((ref) {
+  if (isModuleApiEnabled(ref, adaptiveAiApiEnabledProvider)) {
+    return HybridAdaptiveAiRepository(
+      api: ref.read(apiAdaptiveAiRepositoryProvider),
+    );
+  }
+  return MockAdaptiveAiRepository();
 });
 
 final timetableRepositoryProvider = Provider<TimetableRepository>((ref) {

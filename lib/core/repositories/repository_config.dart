@@ -196,6 +196,16 @@ final aiCopilotApiEnabledProvider = Provider<bool>((ref) {
   );
 });
 
+/// Adaptive AI (W2) — the backend Priority/Recommendation feed, Quick Actions
+/// and Universal Search. Gated behind the global API-mode switch.
+final adaptiveAiApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'ADAPTIVE_AI_API_ENABLED',
+    defaultValue: false,
+  );
+});
+
 final alumniApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
   return const bool.fromEnvironment('ALUMNI_API_ENABLED', defaultValue: false);

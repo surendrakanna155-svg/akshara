@@ -44,6 +44,8 @@ import 'teacher/api_teacher_repository.dart';
 import 'teacher/remote/teacher_remote_datasource.dart';
 import 'student/api_student_repository.dart';
 import 'student/remote/student_remote_datasource.dart';
+import 'adaptive_ai/api_adaptive_ai_repository.dart';
+import 'adaptive_ai/remote/adaptive_ai_remote_datasource.dart';
 import 'copilot/api_copilot_repository.dart';
 import 'copilot/remote/copilot_remote_datasource.dart';
 import 'timetable/api_timetable_repository.dart';
@@ -247,6 +249,16 @@ final copilotRemoteDataSourceProvider = Provider<CopilotRemoteDataSource>(
 final apiCopilotRepositoryProvider = Provider<ApiCopilotRepository>(
   (ref) => ApiCopilotRepository(
     remote: ref.watch(copilotRemoteDataSourceProvider),
+  ),
+);
+
+final adaptiveAiRemoteDataSourceProvider = Provider<AdaptiveAiRemoteDataSource>(
+  (ref) => AdaptiveAiRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final apiAdaptiveAiRepositoryProvider = Provider<ApiAdaptiveAiRepository>(
+  (ref) => ApiAdaptiveAiRepository(
+    remote: ref.watch(adaptiveAiRemoteDataSourceProvider),
   ),
 );
 
