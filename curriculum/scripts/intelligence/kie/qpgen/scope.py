@@ -13,7 +13,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Dict, FrozenSet, List, Optional
 
-from kie.qpgen import presets, sanitize
+from kie.qpgen import chapters, presets, sanitize
 from kie.qpgen.models import PaperRequest, Subject
 
 _CLASS_RE = re.compile(r"class\s*(\d{1,2})", re.I)
@@ -67,6 +67,7 @@ class ConceptRef:
     is_named_law: bool
     has_definition: bool
     grade: Optional[int] = None   # resolved grade of the evidencing document
+    chapter: Optional[str] = None  # canonical syllabus chapter (chapters.resolve_chapter)
 
 
 @dataclass
@@ -163,13 +164,15 @@ def resolve_scope(conn, request: PaperRequest) -> SyllabusScope:
         if not _grade_in_band(r["doc_class"], doc_exam, grade_lo, grade_hi):
             continue
         grade_kept += 1
-        # chapter filter (optional, strict): title must match a requested chapter term
-        if chapter_terms and not any(term in title.lower() for term in chapter_terms):
+        chapter = chapters.resolve_chapter(r["subject_domain"], title)
+        # chapter filter (optional): match the canonical chapter OR the title (robust to phrasing)
+        if chapter_terms and not (any(term in chapter.lower() for term in chapter_terms)
+                                  or any(term in title.lower() for term in chapter_terms)):
             continue
         base = 3 if is_law else (2 if has_def else 0)
         concepts[code] = ConceptRef(code, title, r["subject_domain"], doc_exam,
                                     evidence=f + base, is_named_law=is_law, has_definition=has_def,
-                                    grade=doc_grade(r["doc_class"], doc_exam))
+                                    grade=doc_grade(r["doc_class"], doc_exam), chapter=chapter)
 
     if not concepts:
         raise ScopeEmptyError(
@@ -183,6 +186,7 @@ def resolve_scope(conn, request: PaperRequest) -> SyllabusScope:
         "grade_in_band": grade_kept, "in_scope": len(concepts),
         "by_subject": _count_by(concepts.values(), lambda c: c.subject),
         "by_grade": _count_by(concepts.values(), lambda c: c.grade),
+        "by_chapter": _count_by(concepts.values(), lambda c: c.chapter),
     }
     return SyllabusScope(profile, sorted(subjects), concepts, chapter_terms, stats)
 

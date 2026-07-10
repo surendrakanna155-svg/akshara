@@ -49,11 +49,14 @@ def _tier_map(cands: List[Candidate], n: int = IMPORTANCE_TIERS) -> Dict[str, in
     return {c.key: min(n - 1, i // size) for i, c in enumerate(ordered)}
 
 
-def _priority(cand: Candidate, seed: int, subject_usage: Dict[str, int], tier: int):
-    """Lower = picked first: balance subjects → importance tier → SEEDED order (variety) →
-    frequency within tier → stable id. The seed now drives selection, not just final ties."""
+def _priority(cand: Candidate, seed: int, subject_usage: Dict[str, int],
+              chapter_usage: Dict[str, int], tier: int):
+    """Lower = picked first: balance subjects → balance chapters → importance tier → SEEDED
+    order (variety) → frequency → stable id. Subject and chapter coverage are balanced first,
+    so every paper spreads across the syllabus; the seed drives variety within a tier."""
     return (
-        subject_usage.get(cand.subject, 0),   # per-paper subject balance
+        subject_usage.get(cand.subject, 0),    # per-paper subject balance
+        chapter_usage.get(cand.chapter, 0),    # per-paper chapter/topic balance
         tier,                                  # importance tier (quality preserved)
         _seed_hash(cand.concept_code, seed),   # SEED drives which concepts of a tier are chosen
         -cand.frequency,                       # within tier+seed, prefer higher frequency
@@ -75,6 +78,7 @@ def select(blueprint: Blueprint, pool: List[Candidate], request: PaperRequest,
 
     res = SelectionResult()
     subject_usage: Dict[str, int] = {}
+    chapter_usage: Dict[str, int] = {}
     number = 0
 
     for ci, cell in enumerate(blueprint.cells):
@@ -89,11 +93,13 @@ def select(blueprint: Blueprint, pool: List[Candidate], request: PaperRequest,
             bucket, relaxed_here = _preference_bucket(remaining, cell)
             for k in relaxed_here:
                 relaxed[k] += 1
-            best = min(bucket, key=lambda c: _priority(c, request.seed, subject_usage, tier_of[c.key]))
+            best = min(bucket, key=lambda c: _priority(c, request.seed, subject_usage,
+                                                       chapter_usage, tier_of[c.key]))
             number += 1
             picked += 1
             res.used_concepts.add(best.concept_code)
             subject_usage[best.subject] = subject_usage.get(best.subject, 0) + 1
+            chapter_usage[best.chapter] = chapter_usage.get(best.chapter, 0) + 1
             # LABEL with the candidate's ACTUAL bloom/difficulty (honest), record the target too
             res.slots.append(QuestionSlot(
                 number=number, section=cell.section, concept_code=best.concept_code,
@@ -102,7 +108,7 @@ def select(blueprint: Blueprint, pool: List[Candidate], request: PaperRequest,
                 render_mode=best.render_mode, status=SlotStatus.SPEC,
                 provenance={"frequency": best.frequency, "years": best.years, "source": best.source,
                             "pattern_id": best.pattern_id, "exam": scope.exam_profile,
-                            "graph_degree": best.graph_degree,
+                            "graph_degree": best.graph_degree, "chapter": best.chapter,
                             "requested_difficulty": cell.difficulty, "requested_bloom": cell.bloom,
                             "difficulty_met": (not cell.difficulty) or best.difficulty == cell.difficulty,
                             "bloom_met": (not cell.bloom) or best.bloom == cell.bloom}))

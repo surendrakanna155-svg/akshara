@@ -34,6 +34,7 @@ class Candidate:
     graph_degree: int = 0
     pattern_id: str = None
     evidence: int = 0        # scope evidence strength (for weighting)
+    chapter: str = None      # canonical syllabus chapter (for coverage balancing)
 
 
 def _graph_degrees(conn, codes: List[str]) -> Dict[str, int]:
@@ -106,7 +107,7 @@ def build_pool(conn, scope: SyllabusScope) -> List[Candidate]:
             question_type=qtype, bloom=p["bloom"] or Bloom.UNDERSTAND,
             difficulty=p["difficulty"] or Difficulty.MEDIUM, frequency=p["f"], years=_years(p["years"]),
             render_mode=RenderMode.SPEC_ONLY, source="pattern", graph_degree=degrees.get(code, 0),
-            pattern_id=p["pattern_id"], evidence=cref.evidence))
+            pattern_id=p["pattern_id"], evidence=cref.evidence, chapter=cref.chapter))
 
     # descriptive candidates — one short + one long per in-scope concept (deterministic)
     for code, cref in scope.concepts.items():
@@ -118,7 +119,7 @@ def build_pool(conn, scope: SyllabusScope) -> List[Candidate]:
                 key=f"{code}|{qtype}", concept_code=code, concept_title=cref.title, subject=cref.subject,
                 question_type=qtype, bloom=bloom, difficulty=diff, frequency=cref.evidence, years=[],
                 render_mode=RenderMode.DETERMINISTIC, source="concept",
-                graph_degree=degrees.get(code, 0), evidence=cref.evidence))
+                graph_degree=degrees.get(code, 0), evidence=cref.evidence, chapter=cref.chapter))
     return out
 
 
