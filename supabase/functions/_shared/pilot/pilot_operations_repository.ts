@@ -2863,12 +2863,13 @@ export async function listTeacherUpcomingExams(
   const rows = await db.queryObject<{
     id: string;
     title: string;
+    subject: string;
     grade: string;
     section_name: string;
     date_label: string;
     max_marks: number;
   }>(
-    `SELECT id, title, grade, section_name, date_label, max_marks
+    `SELECT id, title, subject, grade, section_name, date_label, max_marks
        FROM exam_sessions
       WHERE organization_id = $1 AND school_id = $2
         AND phase <> 'published'
@@ -2880,6 +2881,7 @@ export async function listTeacherUpcomingExams(
   const all = rows.map((r) => ({
     id: r.id,
     title: r.title,
+    subject: r.subject,
     classLabel: `${r.grade}-${r.section_name}`,
     dateLabel: r.date_label,
     maxMarks: r.max_marks,

@@ -173,6 +173,7 @@ Deno.test("listTeacherUpcomingExams maps real exam_sessions to client shape", as
           {
             id: "exam_5",
             title: "Unit Test 3",
+            subject: "Mathematics",
             grade: "8",
             section_name: "A",
             date_label: "20 Jul 2026",
@@ -190,6 +191,7 @@ Deno.test("listTeacherUpcomingExams maps real exam_sessions to client shape", as
   assertEquals(result.items[0], {
     id: "exam_5",
     title: "Unit Test 3",
+    subject: "Mathematics",
     classLabel: "8-A",
     dateLabel: "20 Jul 2026",
     maxMarks: 50,

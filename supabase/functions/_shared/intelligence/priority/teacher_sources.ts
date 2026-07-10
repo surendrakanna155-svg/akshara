@@ -56,6 +56,13 @@ export interface TeacherExamInput {
   title: string;
   classLabel: string;
   maxMarks: number;
+  subject: string;
+  /** Whether THIS teacher teaches the exam's subject in that class, derived by
+   * the loader from the teacher's own timetable (class,subject) pairs.
+   * `undefined` = the timetable carries no subject data for that class, so
+   * ownership is unknowable — keep the item with neutral framing rather than
+   * dropping a real obligation. */
+  subjectOwned?: boolean;
 }
 
 // ─── Pure generators ─────────────────────────────────────────────────────────
@@ -112,24 +119,32 @@ export function teacherHomeworkItems(homework: TeacherHomeworkInput[]): RawPrior
     });
 }
 
-/** (3) Exams in the teacher's classes (sections) not yet published → a
- * marks-entry deadline. The upstream read is section-scoped (grade+section),
- * not subject-owner-scoped, so the framing is deliberately neutral — it states
- * the exam is awaiting marks rather than asserting it is THIS teacher's task;
- * the marks-entry screen enforces its own per-subject RBAC. No reliable ISO date
- * on the session, so severity (not a clock) carries the urgency. */
+/** (3) Exams in the teacher's classes not yet published → a marks-entry
+ * deadline, subject-scoped (audit P2): the upstream read is section-scoped
+ * (grade+section), so the loader marks each exam `subjectOwned` from the
+ * teacher's own timetable (class,subject) pairs. Owned → direct framing;
+ * not owned → dropped (it is a co-teacher's exam); unknown (no subject data
+ * for that class) → kept with the previous neutral framing, since dropping a
+ * real obligation is worse than a soft nudge. The marks-entry screen enforces
+ * its own per-subject RBAC either way. No reliable ISO date on the session, so
+ * severity (not a clock) carries the urgency. */
 export function teacherExamItems(exams: TeacherExamInput[]): RawPriorityItem[] {
-  return exams.map((e) => ({
-    itemKey: `teacher:exam:${e.examId}`,
-    type: "deadline" as const,
-    title: `Marks entry — ${e.title}`,
-    detail: `${e.title} for ${e.classLabel} is awaiting marks entry and publication ` +
-      `(max ${e.maxMarks}). If you teach this exam, complete and verify the marks.`,
-    personas: TEACHER,
-    entityTags: [`exam:${e.examId}`, "teacher:exam"],
-    factors: { impactClass: "elevated" as const },
-    source: "teacher_exam",
-  }));
+  return exams
+    .filter((e) => e.subjectOwned !== false)
+    .map((e) => ({
+      itemKey: `teacher:exam:${e.examId}`,
+      type: "deadline" as const,
+      title: `Marks entry — ${e.title}`,
+      detail: e.subjectOwned
+        ? `${e.title} (${e.subject}) for ${e.classLabel} is awaiting marks entry and ` +
+          `publication (max ${e.maxMarks}). Complete and verify the marks.`
+        : `${e.title} for ${e.classLabel} is awaiting marks entry and publication ` +
+          `(max ${e.maxMarks}). If you teach this exam, complete and verify the marks.`,
+      personas: TEACHER,
+      entityTags: [`exam:${e.examId}`, "teacher:exam"],
+      factors: { impactClass: "elevated" as const },
+      source: "teacher_exam",
+    }));
 }
 
 export interface TeacherSourceInputs {
@@ -175,12 +190,32 @@ function toHomeworkInput(h: Record<string, unknown>, nowIso: string): TeacherHom
   };
 }
 
-function toExamInput(e: Record<string, unknown>): TeacherExamInput {
+/** Case/whitespace-insensitive subject key. Exam `subject` and timetable
+ * `subject_label` are free-text authored by different flows; normalizing
+ * casing/spacing is as far as we can safely go — a genuinely different label
+ * (e.g. "Maths" vs "Mathematics") reads as not-owned, which only costs a feed
+ * nudge, never marks-entry access. */
+function subjectKey(s: string): string {
+  return s.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function toExamInput(
+  e: Record<string, unknown>,
+  subjectsByClass: Map<string, Set<string>>,
+): TeacherExamInput {
+  const classLabel = String(e.classLabel ?? "");
+  const subject = String(e.subject ?? "");
+  const taught = subjectsByClass.get(classLabel);
+  const subjectOwned = taught === undefined || taught.size === 0 || subject.trim() === ""
+    ? undefined
+    : taught.has(subjectKey(subject));
   return {
     examId: String(e.id ?? ""),
     title: String(e.title ?? "Exam"),
-    classLabel: String(e.classLabel ?? ""),
+    classLabel,
     maxMarks: Number(e.maxMarks ?? 0),
+    subject,
+    subjectOwned,
   };
 }
 
@@ -208,10 +243,22 @@ export async function loadTeacherFeedSources(
     pageSize: 8,
   });
 
+  // The attendance read is grouped by (class, subject) in the teacher's own
+  // timetable — reuse it as the "which subjects do I teach in this class"
+  // authority for subject-scoping exams (audit P2), instead of a new raw query.
+  const subjectsByClass = new Map<string, Set<string>>();
+  for (const item of attendance.items) {
+    const input = toAttendanceInput(item);
+    if (input.subject.trim() === "") continue;
+    const set = subjectsByClass.get(input.classLabel) ?? new Set<string>();
+    set.add(subjectKey(input.subject));
+    subjectsByClass.set(input.classLabel, set);
+  }
+
   const inputs: TeacherSourceInputs = {
     attendanceClasses: attendance.items.map(toAttendanceInput),
     homework: homework.items.map((h) => toHomeworkInput(h, nowIso)),
-    exams: exams.items.map(toExamInput),
+    exams: exams.items.map((e) => toExamInput(e, subjectsByClass)),
   };
   return { rawItems: collectTeacherRawItems(inputs), degraded: false };
 }
