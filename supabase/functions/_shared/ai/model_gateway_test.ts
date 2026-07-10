@@ -47,8 +47,16 @@ function makeDeps(o: {
   usage?: Partial<GatewayUsage>;
   callModel?: (input: { signal?: AbortSignal }) => Promise<ClaudeCallResult>;
   timeoutMs?: number;
-} = {}): { deps: GatewayDeps; records: AiCallLogEntry[]; modelCalls: () => number } {
+  cacheHit?: { payload: string; model: string } | null;
+  withCache?: boolean;
+} = {}): {
+  deps: GatewayDeps;
+  records: AiCallLogEntry[];
+  modelCalls: () => number;
+  cacheWrites: Array<{ payload: string; model: string }>;
+} {
   const records: AiCallLogEntry[] = [];
+  const cacheWrites: Array<{ payload: string; model: string }> = [];
   let calls = 0;
   const apiKey = "apiKey" in o ? o.apiKey ?? undefined : "sk-test";
   const cfg: AiRuntimeConfig = {
@@ -80,7 +88,16 @@ function makeDeps(o: {
     now: () => new Date(1_700_000_000_000),
     timeoutMs: o.timeoutMs ?? 20_000,
   };
-  return { deps, records, modelCalls: () => calls };
+  if (o.withCache || o.cacheHit !== undefined) {
+    deps.cache = {
+      lookup: () => Promise.resolve(o.cacheHit ?? null),
+      write: (_scope, _surface, payload, model) => {
+        cacheWrites.push({ payload, model });
+        return Promise.resolve();
+      },
+    };
+  }
+  return { deps, records, modelCalls: () => calls, cacheWrites };
 }
 
 // ─── estimateCostMicros ──────────────────────────────────────────────────────
@@ -263,6 +280,34 @@ Deno.test("runGateway: result carries the resolved model on success and denial",
   assertEquals(ok.model, "claude-opus-4-8");
   const noKey = await runGateway(CTX, { system: "s", messages: [] }, "FB", makeDeps({ apiKey: null }).deps);
   assertEquals(noKey.model, "claude-opus-4-8"); // configured model even when the key is absent
+  clearLimitEnv();
+});
+
+Deno.test("runGateway: cache hit → served free (fromCache), no model call, no log", async () => {
+  clearLimitEnv();
+  const { deps, records, modelCalls } = makeDeps({
+    cacheHit: { payload: "cached answer", model: "claude-opus-4-8" },
+  });
+  const r = await runGateway(CTX, { system: "s", messages: [] }, "FB", deps);
+  assertEquals(r.fromCache, true);
+  assertEquals(r.ok, true);
+  assertEquals(r.text, "cached answer");
+  assertEquals(modelCalls(), 0);
+  assertEquals(records.length, 0); // no ai_call_log row for a cache hit
+  clearLimitEnv();
+});
+
+Deno.test("runGateway: cache miss → model called + write-through of the answer", async () => {
+  clearLimitEnv();
+  const { deps, records, modelCalls, cacheWrites } = makeDeps({ cacheHit: null });
+  const r = await runGateway(CTX, { system: "s", messages: [] }, "FB", deps);
+  assertEquals(r.fromCache, false);
+  assertEquals(r.ok, true);
+  assertEquals(r.text, "real answer");
+  assertEquals(modelCalls(), 1);
+  assertEquals(records[0].outcome, "ok");
+  assertEquals(cacheWrites.length, 1);
+  assertEquals(cacheWrites[0].payload, "real answer");
   clearLimitEnv();
 });
 

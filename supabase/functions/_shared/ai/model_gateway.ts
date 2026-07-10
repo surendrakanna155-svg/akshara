@@ -32,6 +32,10 @@ import {
   recordAiCall,
   sumSchoolCostMicrosSince,
 } from "./ai_call_log_repository.ts";
+import {
+  lookupResponseCache,
+  writeResponseCache,
+} from "./ai_response_cache_repository.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 
 export const DEFAULT_TIMEOUT_MS = 20_000;
@@ -194,9 +198,31 @@ export interface GatewayCallResult {
   fallbackUsed: boolean;
   outcome: AiCallOutcome;
   refused: boolean;
+  /** True when served from the Tier-2 response cache (no model call, no cost). */
+  fromCache: boolean;
   /** The resolved/served model id (provider-returned on success, else configured). */
   model: string;
   usage: ClaudeUsage | null;
+}
+
+/** Optional Tier-2 response-cache seam. */
+export interface GatewayCacheDeps {
+  lookup: (scope: AiTenantScope) => Promise<{ payload: string; model: string } | null>;
+  write: (
+    scope: AiTenantScope,
+    surface: string,
+    payload: string,
+    model: string,
+    tokensSaved: number,
+  ) => Promise<void>;
+}
+
+/** Per-call cache configuration (the key is minted by the caller/Context Engine). */
+export interface GatewayCacheConfig {
+  key: string;
+  entityTags?: string[];
+  ttlSeconds?: number;
+  language?: string;
 }
 
 /** Injectable seam so the wrapper is testable without a DB or network. */
@@ -211,6 +237,8 @@ export interface GatewayDeps {
   callModel: typeof callClaude;
   now: () => Date;
   timeoutMs: number;
+  /** Present only when the caller supplied a cache key. */
+  cache?: GatewayCacheDeps;
 }
 
 function hoursAgoIso(now: Date, hours: number): string {
@@ -238,8 +266,9 @@ async function defaultReadUsage(
 /** Build the production deps bound to a tenant DB client. */
 export function gatewayDepsFor(
   db: TenantQueryClient,
-  opts?: { timeoutMs?: number },
+  opts?: { timeoutMs?: number; cache?: GatewayCacheConfig },
 ): GatewayDeps {
+  const cacheCfg = opts?.cache;
   return {
     resolveConfig: (orgId) => resolveAiConfig(db, orgId),
     readUsage: (scope, userId, now) => defaultReadUsage(db, scope, userId, now),
@@ -247,6 +276,22 @@ export function gatewayDepsFor(
     callModel: callClaude,
     now: () => new Date(),
     timeoutMs: opts?.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    cache: cacheCfg
+      ? {
+        lookup: (scope) => lookupResponseCache(db, scope, cacheCfg.key),
+        write: (scope, surface, payload, model, tokensSaved) =>
+          writeResponseCache(db, scope, {
+            cacheKey: cacheCfg.key,
+            surface,
+            language: cacheCfg.language ?? "english",
+            payload,
+            entityTags: cacheCfg.entityTags ?? [],
+            model,
+            tokensSaved,
+            ttlSeconds: cacheCfg.ttlSeconds,
+          }),
+      }
+      : undefined,
   };
 }
 
@@ -288,6 +333,29 @@ export async function runGateway(
     schoolId: ctx.schoolId,
   };
   const now = deps.now();
+
+  // Tier-2: a cache hit is free — served before config/limits/model, no
+  // ai_call_log row (the cache's own hit_count tracks it). A lookup failure is
+  // treated as a miss so the live path still runs.
+  if (deps.cache) {
+    try {
+      const hit = await deps.cache.lookup(scope);
+      if (hit) {
+        return {
+          text: hit.payload,
+          ok: true,
+          fallbackUsed: false,
+          outcome: "ok",
+          refused: false,
+          fromCache: true,
+          model: hit.model,
+          usage: null,
+        };
+      }
+    } catch {
+      // treat as a miss
+    }
+  }
 
   let cfg: AiRuntimeConfig;
   try {
@@ -332,6 +400,7 @@ export async function runGateway(
       fallbackUsed: true,
       outcome,
       refused: false,
+      fromCache: false,
       model: cfg.model,
       usage: null,
     };
@@ -371,9 +440,18 @@ export async function runGateway(
         fallbackUsed: true,
         outcome: "refused",
         refused: true,
+        fromCache: false,
         model,
         usage: result.usage,
       };
+    }
+    // Write-through: this validated answer becomes a Tier-2 asset (doc 01 §2).
+    if (deps.cache) {
+      try {
+        await deps.cache.write(scope, ctx.surface, result.text, model, result.usage?.outputTokens ?? 0);
+      } catch {
+        // caching is best-effort; never fail the served answer
+      }
     }
     return {
       text: result.text,
@@ -381,6 +459,7 @@ export async function runGateway(
       fallbackUsed: false,
       outcome: "ok",
       refused: false,
+      fromCache: false,
       model,
       usage: result.usage,
     };
@@ -405,6 +484,7 @@ export async function runGateway(
       fallbackUsed: true,
       outcome,
       refused: false,
+      fromCache: false,
       model: cfg.model,
       usage: null,
     };
@@ -423,7 +503,7 @@ export function callModelGateway(
   ctx: GatewayContext,
   input: GatewayInput,
   fallbackText: string,
-  opts?: { timeoutMs?: number },
+  opts?: { timeoutMs?: number; cache?: GatewayCacheConfig },
 ): Promise<GatewayCallResult> {
   return runGateway(ctx, input, fallbackText, gatewayDepsFor(db, opts));
 }
