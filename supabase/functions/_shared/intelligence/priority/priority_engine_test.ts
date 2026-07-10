@@ -72,12 +72,26 @@ Deno.test("learned weight is clamped and defaults to neutral", () => {
   assertEquals(clampLearnedWeight(Number.NaN), DEFAULT_LEARNED_WEIGHT);
 });
 
-Deno.test("normalizeScore maps onto a 0–100 scale calibrated to the neutral band", () => {
-  assertEquals(normalizeScore(1.0), 0); // neutral RAW_MIN
-  assertEquals(normalizeScore(13.5), 100); // neutral RAW_MAX
+Deno.test("normalizeScore maps onto a 0–100 scale calibrated to the reachable neutral band", () => {
+  assertEquals(normalizeScore(1.0), 0); // RAW_MIN
+  assertEquals(normalizeScore(9.0), 100); // reachable RAW_MAX (max urgency × max impact)
   assertEquals(normalizeScore(0.5), 0); // below-neutral (down-weighted) clamps to 0
-  assertEquals(normalizeScore(27), 100); // above-neutral (up-weighted) clamps to 100
-  assert(normalizeScore(10) > 0 && normalizeScore(10) < 100);
+  assertEquals(normalizeScore(13.5), 100); // age-boosted/up-weighted amplifier → clamps to 100
+  assert(normalizeScore(5) > 0 && normalizeScore(5) < 100);
+});
+
+Deno.test("P1-4: a maximally-severe item reaches the critical band WITHOUT waitingDays", () => {
+  // Regression guard: previously ageBoost was pinned at 1.0 (no generator sets
+  // waitingDays) so the ceiling was 64 and counts.critical was always 0.
+  const overdueCritical = scorePriorityItem(
+    item({ factors: { dueInDays: -1, impactClass: "critical" } }),
+  );
+  assert(overdueCritical.score >= 75, `expected >=75, got ${overdueCritical.score}`);
+  // A high-impact due-soon item is also critical.
+  const dueSoonBig = scorePriorityItem(
+    item({ factors: { dueInDays: 0, moneyAtStakeMinor: 100_000_00 } }),
+  );
+  assert(dueSoonBig.score >= 75, `expected >=75, got ${dueSoonBig.score}`);
 });
 
 // ─── scorePriorityItem ───────────────────────────────────────────────────────
@@ -178,7 +192,8 @@ Deno.test("buildFeed honours the limit and reports counts", () => {
 
 Deno.test("buildFeed counts a >=75 score as critical", () => {
   const items = [
-    item({ itemKey: "crit", factors: { dueInDays: -1, impactClass: "critical", waitingDays: 20 } }),
+    // Severity alone reaches critical (no waitingDays crutch) after P1-4.
+    item({ itemKey: "crit", factors: { dueInDays: -1, impactClass: "critical" } }),
     item({ itemKey: "calm", factors: { impactClass: "routine" } }),
   ];
   const feed = buildFeed(items, "principal", NOW);

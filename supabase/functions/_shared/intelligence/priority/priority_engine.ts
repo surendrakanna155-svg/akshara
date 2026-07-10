@@ -35,12 +35,18 @@ const IMPACT_MAX = 3.0;
 const AGE_MIN = 1.0;
 const AGE_MAX = 1.5;
 
-// The 0–100 display scale is calibrated to the NEUTRAL (default-weight) band so
-// an un-learned feed still spans the full range and the ≥75 "critical" band is
-// reachable. Learning (weight 0.5–2.0) then pushes items past these bounds and
-// clamps — i.e. a down-weighted item sinks toward 0, an up-weighted one pins 100.
+// The 0–100 display scale is calibrated to the reachable NEUTRAL (default-weight)
+// band so a maximally-severe un-learned item (max urgency × max impact) maps to
+// ~100 and the ≥75 "critical" band is reachable from severity alone. The age
+// boost (waitingDays) and learning (weight 0.5–2.0) are OPTIONAL amplifiers on
+// top of this baseline: when present they push a raw score past RAW_MAX and it
+// clamps to 100 (a down-weighted item likewise sinks toward 0). NOTE: RAW_MAX
+// deliberately uses AGE_MIN, not AGE_MAX — an earlier AGE_MAX calibration made
+// the ceiling 13.5 while no generator sets waitingDays, so the realized ceiling
+// was only 9.0 → normalizeScore(9)=64 and "critical" (≥75) was UNREACHABLE on
+// every real feed. Calibrating to the reachable max fixes that.
 const RAW_MIN = URGENCY_MIN * IMPACT_MIN * AGE_MIN * DEFAULT_LEARNED_WEIGHT; // 1.0
-const RAW_MAX = URGENCY_MAX * IMPACT_MAX * AGE_MAX * DEFAULT_LEARNED_WEIGHT; // 13.5
+const RAW_MAX = URGENCY_MAX * IMPACT_MAX * AGE_MIN * DEFAULT_LEARNED_WEIGHT; // 9.0
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
