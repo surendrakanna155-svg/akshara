@@ -226,6 +226,7 @@ class SearchGroupDto {
     required this.label,
     required this.results,
     required this.total,
+    this.offset = 0,
   });
 
   factory SearchGroupDto.fromJson(Map<String, dynamic> json) {
@@ -234,6 +235,7 @@ class SearchGroupDto {
       label: _str(json['label']),
       results: _items(json, 'results').map(SearchResultItemDto.fromJson).toList(),
       total: _int(json['total']),
+      offset: _int(json['offset']),
     );
   }
 
@@ -241,6 +243,7 @@ class SearchGroupDto {
   final String label;
   final List<SearchResultItemDto> results;
   final int total;
+  final int offset;
 }
 
 class UniversalSearchResultDto {

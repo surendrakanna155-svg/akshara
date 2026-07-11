@@ -62,6 +62,7 @@ class _FakeAdaptiveAiRepository implements AdaptiveAiRepository {
     required RepositoryQuery query,
     required String term,
     int? limit,
+    int? offset,
   }) async =>
       UniversalSearchResult.empty(term);
 }

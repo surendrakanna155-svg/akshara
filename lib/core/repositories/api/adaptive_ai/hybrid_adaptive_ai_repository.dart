@@ -95,9 +95,10 @@ class HybridAdaptiveAiRepository implements AdaptiveAiRepository {
     required RepositoryQuery query,
     required String term,
     int? limit,
+    int? offset,
   }) async {
     try {
-      return await _api.universalSearch(query: query, term: term, limit: limit);
+      return await _api.universalSearch(query: query, term: term, limit: limit, offset: offset);
     } catch (error, stack) {
       _logFailure('universalSearch', error, stack);
       return UniversalSearchResult.empty(term);
