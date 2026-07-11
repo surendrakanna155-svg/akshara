@@ -64,7 +64,7 @@ class StaffAttendanceController {
     } on StaffAttendanceRejected catch (e) {
       // Map the server verdict to the right banner (location vs face reason).
       return e.isFaceReason
-          ? StaffCheckOutcome.faceBlocked(e.message)
+          ? StaffCheckOutcome.faceBlocked(e.message, code: e.code)
           : StaffCheckOutcome.locationBlocked(e.message);
     } catch (e) {
       return StaffCheckOutcome.failed(e.toString());

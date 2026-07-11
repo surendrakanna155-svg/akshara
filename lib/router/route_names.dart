@@ -86,6 +86,11 @@ abstract final class RouteNames {
   static const String aiAssistantSettings = '/settings/ai-assistant';
   static const String appearanceSettings = '/settings/appearance';
   static const String syncCenter = '/sync-center';
+  // Attendance auth device layer (Slice 3) — full-screen flows pushed via
+  // GoRouter from non-widget code (MlkitFaceCaptureSource), mirroring the
+  // goRouterProvider.push(...) pattern used for syncCenter above.
+  static const String staffFaceCapture = '/staff-attendance/face-capture';
+  static const String staffFaceEnrollment = '/staff-attendance/face-enrollment';
   static const String education = '/education';
   static const String intelligence = '/intelligence';
   static const String aiPredictions = '/intelligence/predictions';

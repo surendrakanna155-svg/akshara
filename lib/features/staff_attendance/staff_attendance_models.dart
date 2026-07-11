@@ -44,21 +44,30 @@ class AttendanceLocationFix {
 /// A live face capture: an on-device embedding + a liveness verdict. The SERVER
 /// performs the authoritative CV match against the enrolled reference — the
 /// client cannot assert a match itself.
+///
+/// [modelTag] identifies the on-device embedder (e.g. `mobilefacenet-v1`,
+/// [MobileFaceNetEmbedder.modelTag] in device/face_embedder.dart) that produced
+/// [embedding]. Slice 2: when both this and the enrolled reference's model tag
+/// are non-empty and differ, the server 422s FACE_EMBEDDING_MISMATCH ("re-enrol")
+/// instead of silently comparing embeddings from two different model spaces.
 class FaceCapture {
   const FaceCapture({
     required this.embedding,
     required this.livenessPassed,
     this.captureRef,
+    this.modelTag = '',
   });
 
   final List<double> embedding;
   final bool livenessPassed;
   final String? captureRef;
+  final String modelTag;
 
   Map<String, dynamic> toJson() => {
         'embedding': embedding,
         'livenessPassed': livenessPassed,
         if (captureRef != null) 'captureRef': captureRef,
+        'modelTag': modelTag,
       };
 }
 
@@ -110,7 +119,7 @@ class StaffCheckRecord {
 enum StaffCheckStatus { recorded, locationBlocked, faceBlocked, failed }
 
 class StaffCheckOutcome {
-  const StaffCheckOutcome._(this.status, {this.record, this.message});
+  const StaffCheckOutcome._(this.status, {this.record, this.message, this.code});
 
   factory StaffCheckOutcome.recorded(StaffCheckRecord record) =>
       StaffCheckOutcome._(StaffCheckStatus.recorded, record: record);
@@ -119,9 +128,11 @@ class StaffCheckOutcome {
   factory StaffCheckOutcome.locationBlocked(String? message) =>
       StaffCheckOutcome._(StaffCheckStatus.locationBlocked, message: message);
 
-  /// Face step failed — NOTHING was written or audited.
-  factory StaffCheckOutcome.faceBlocked(String? message) =>
-      StaffCheckOutcome._(StaffCheckStatus.faceBlocked, message: message);
+  /// Face step failed — NOTHING was written or audited. [code] carries the raw
+  /// server `STAFF_ATTENDANCE_*` reason (when the block came from a server
+  /// rejection) so the UI can offer a targeted fix — e.g. [isNotEnrolled].
+  factory StaffCheckOutcome.faceBlocked(String? message, {String? code}) =>
+      StaffCheckOutcome._(StaffCheckStatus.faceBlocked, message: message, code: code);
 
   factory StaffCheckOutcome.failed(String message) =>
       StaffCheckOutcome._(StaffCheckStatus.failed, message: message);
@@ -129,8 +140,16 @@ class StaffCheckOutcome {
   final StaffCheckStatus status;
   final StaffCheckRecord? record;
   final String? message;
+  final String? code;
 
   bool get isRecorded => status == StaffCheckStatus.recorded;
+
+  /// True when the face step was blocked specifically because the staff member
+  /// has no enrolled reference face yet (Slice 3 — drives the "Enrol my face"
+  /// affordance on [StaffCheckInCard]).
+  bool get isNotEnrolled =>
+      status == StaffCheckStatus.faceBlocked &&
+      code == 'STAFF_ATTENDANCE_FACE_NOT_ENROLLED';
 }
 
 /// Raised by the write seam when the SERVER rejects the attendance chain (422).

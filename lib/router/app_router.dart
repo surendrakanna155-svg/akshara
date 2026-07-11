@@ -86,6 +86,9 @@ import 'admissions_navigation.dart';
 import 'finance_navigation.dart';
 import '../features/settings/appearance_settings_screen.dart';
 import '../core/reliability/sync_center/sync_center_screen.dart';
+import '../features/staff_attendance/device/face_embedder.dart';
+import '../features/staff_attendance/device/mlkit_face_capture.dart';
+import '../features/staff_attendance/face_enrollment_screen.dart';
 import 'copilot_navigation.dart';
 import 'education_navigation.dart';
 import 'intelligence_navigation.dart';
@@ -241,6 +244,25 @@ GoRouter createAppRouter({
         path: RouteNames.syncCenter,
         name: 'syncCenter',
         builder: (context, state) => const SyncCenterScreen(),
+      ),
+      // Attendance auth device layer (Slice 3). Pushed both from non-widget
+      // code (MlkitFaceCaptureSource, via goRouterProvider.push — see
+      // lib/app/app.dart's SyncBanner for the same pattern) and directly from
+      // FaceEnrollmentScreen's own onPressed via context.push.
+      GoRoute(
+        path: RouteNames.staffFaceCapture,
+        name: 'staffFaceCapture',
+        builder: (context, state) {
+          final extra = state.extra;
+          return FaceCaptureScreen(
+            embedder: extra is FaceEmbedder ? extra : null,
+          );
+        },
+      ),
+      GoRoute(
+        path: RouteNames.staffFaceEnrollment,
+        name: 'staffFaceEnrollment',
+        builder: (context, state) => const FaceEnrollmentScreen(),
       ),
       GoRoute(
         path: RouteNames.aiAssistant,

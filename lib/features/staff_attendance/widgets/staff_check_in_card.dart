@@ -10,10 +10,20 @@ import '../staff_attendance_models.dart';
 /// Takes a deferred [onRecord] callback (rather than a pre-built controller) so
 /// the host resolves the heavy reliability/biometric stack lazily — only on tap,
 /// never at screen-build time.
+///
+/// [onOpenEnrollment] (Slice 3), when provided, surfaces a settings-style entry
+/// point to `FaceEnrollmentScreen` at all times, PLUS a prominent "Enrol my
+/// face" call-to-action when the last outcome was specifically a
+/// `FACE_NOT_ENROLLED` rejection ([StaffCheckOutcome.isNotEnrolled]).
 class StaffCheckInCard extends StatefulWidget {
-  const StaffCheckInCard({super.key, required this.onRecord});
+  const StaffCheckInCard({
+    super.key,
+    required this.onRecord,
+    this.onOpenEnrollment,
+  });
 
   final Future<StaffCheckOutcome> Function(StaffCheckEvent event) onRecord;
+  final VoidCallback? onOpenEnrollment;
 
   @override
   State<StaffCheckInCard> createState() => _StaffCheckInCardState();
@@ -52,7 +62,19 @@ class _StaffCheckInCardState extends State<StaffCheckInCard> {
               children: [
                 const Icon(Icons.location_on),
                 const SizedBox(width: 8),
-                Text('My attendance', style: theme.textTheme.titleMedium),
+                Expanded(
+                  child: Text('My attendance', style: theme.textTheme.titleMedium),
+                ),
+                // Slice 3 — always-available settings-style entry point to
+                // manage the enrolled reference face (separate from the
+                // FACE_NOT_ENROLLED call-to-action below).
+                if (widget.onOpenEnrollment != null)
+                  IconButton(
+                    key: const Key('staff-attendance-manage-face-button'),
+                    tooltip: 'Manage face enrollment',
+                    icon: const Icon(Icons.settings_outlined),
+                    onPressed: widget.onOpenEnrollment,
+                  ),
               ],
             ),
             const SizedBox(height: 4),
@@ -98,6 +120,21 @@ class _StaffCheckInCardState extends State<StaffCheckInCard> {
             if (_last != null) ...[
               const SizedBox(height: 12),
               _StatusBanner(outcome: _last!, event: _lastEvent),
+              // Slice 3 — the server rejected check-in specifically because
+              // this staff member has no enrolled reference face yet. Offer
+              // the fix inline rather than leaving them stuck on a banner.
+              if (_last!.isNotEnrolled && widget.onOpenEnrollment != null) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FilledButton.tonalIcon(
+                    key: const Key('staff-check-in-enrol-now-button'),
+                    onPressed: widget.onOpenEnrollment,
+                    icon: const Icon(Icons.face_retouching_natural),
+                    label: const Text('Enrol my face'),
+                  ),
+                ),
+              ],
             ],
           ],
         ),

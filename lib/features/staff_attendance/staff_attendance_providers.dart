@@ -1,24 +1,53 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/audit/audit_provider.dart';
 import '../../core/network/dio_provider.dart';
+import '../../core/providers/router_provider.dart';
 import '../../core/reliability/reliability_providers.dart';
 import '../../core/tenant/tenant_provider.dart';
 import 'attendance_capture_sources.dart';
+import 'device/geolocator_location_source.dart';
+import 'device/mlkit_face_capture.dart';
+import 'face_enrollment_datasource.dart';
 import 'staff_attendance_controller.dart';
 import 'staff_attendance_remote_datasource.dart';
 
-/// Fresh-GPS source (anti-mock, high-accuracy). The concrete geolocator adapter is
-/// wired on a device build; until then it fails loudly (never a silent pass) —
+/// True on the two platforms with real geolocator/camera/ML Kit/tflite plugin
+/// support. Web/desktop (incl. the widget-test harness, which runs on the VM's
+/// `TargetPlatform`, not Android/iOS) keep the fail-loud Pending placeholders —
 /// see docs/ATTENDANCE_AUTH_DESIGN_DECISION.md §8 (device-gated residual).
+bool get _hasDeviceCaptureSupport =>
+    !kIsWeb &&
+    (defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS);
+
+/// Fresh-GPS source (anti-mock, high-accuracy). Wired to the real geolocator
+/// adapter on Android/iOS (Slice 3); elsewhere it fails loudly (never a silent
+/// pass) — see docs/ATTENDANCE_AUTH_DESIGN_DECISION.md §8 (device-gated residual).
 final attendanceLocationSourceProvider = Provider<AttendanceLocationSource>(
-  (ref) => const DeviceAdapterPendingLocationSource(),
+  (ref) => _hasDeviceCaptureSupport
+      ? const GeolocatorLocationSource()
+      : const DeviceAdapterPendingLocationSource(),
 );
 
-/// Live camera face source (embedding + liveness). The concrete camera+ML adapter
-/// is wired on a device build; until then it fails loudly.
+/// Live camera face source (embedding + liveness). Wired to the real
+/// camera + ML Kit + MobileFaceNet adapter on Android/iOS (Slice 3); elsewhere
+/// it fails loudly. Construction does no plugin work either way, so building
+/// this provider stays safe in widget tests.
 final faceCaptureSourceProvider = Provider<FaceCaptureSource>(
-  (ref) => const DeviceAdapterPendingFaceSource(),
+  (ref) => _hasDeviceCaptureSupport
+      ? MlkitFaceCaptureSource(router: () => ref.read(goRouterProvider))
+      : const DeviceAdapterPendingFaceSource(),
+);
+
+/// Self-service face-enrollment datasource (Slice 3): enrol / read status /
+/// revoke the CALLER's own reference face. See face_enrollment_datasource.dart.
+final faceEnrollmentDataSourceProvider = Provider<FaceEnrollmentDataSource>(
+  (ref) => FaceEnrollmentDataSource(
+    dio: ref.watch(dioProvider),
+    query: ref.watch(repositoryQueryProvider),
+  ),
 );
 
 /// Composes the staff attendance controller (B4): GPS geofence + live camera face
