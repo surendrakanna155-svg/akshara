@@ -11,7 +11,17 @@ import type { AiTenantScope } from "./ai_call_log_repository.ts";
 import { logAiDegradation } from "./ai_telemetry.ts";
 
 /** Cosine-distance ceiling for a semantic hit (doc 03 §3.2: tuned at pilot).
- * 0 = identical direction; conservative default keeps false-serves rare. */
+ * 0 = identical direction; conservative default keeps false-serves rare.
+ *
+ * ⚠ ACTIVATION GATE (audit round 4, P3-a): before enabling Stage-2 in a live
+ * deployment, validate this ceiling against a NAME-SWAPPED corpus ("When is
+ * Aarav's fee due?" vs "…Diya's…") — near-identical phrasings that differ
+ * only by entity must NOT fall inside the ceiling, or a student could be
+ * served another student's cached answer (school-walled, but still wrong).
+ * Fact-staleness is covered where events fire entity-tag invalidation (the
+ * join requires a LIVE ai_response_cache row); the TTL is the backstop for
+ * facts without event coverage. This tuning item rides the LIVE-1 ledger
+ * next to the embeddings key + pgvector provisioning. */
 export function semanticMaxDistance(): number {
   const raw = Number(Deno.env.get("AI_SEMANTIC_CACHE_MAX_DISTANCE") ?? "");
   return Number.isFinite(raw) && raw > 0 && raw <= 1 ? raw : 0.12;

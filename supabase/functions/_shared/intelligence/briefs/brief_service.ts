@@ -87,15 +87,48 @@ export function assembleBriefSections(items: ScoredPriorityItem[]): BriefSection
   return sections;
 }
 
-/** PURE: the shared-generation cache key — deliberately NO user id for the
- * principal pulse (school-shared) and the teacher's own id for the class
- * brief (v1 sharing boundary). One row per persona/scope/IST-day. */
+/** The per-source permissions the school-persona brief composes from. The
+ * narrative a caller may READ must have been generated under the same source
+ * set — this is the RBAC dimension of the shared-generation key (audit round
+ * 4 P1: "AI inherits ERP RBAC EXACTLY" means the reader's permissions, not
+ * the generator's). */
+export const BRIEF_SOURCE_PERMISSIONS: readonly string[] = [
+  "viewAnalytics",
+  "viewStudentRisk",
+  "viewFinance",
+  "viewInventory",
+  "viewTransport",
+  "viewHr",
+  "viewLibrary",
+] as const;
+
+/** Stable short signature of the caller's brief-relevant permission subset.
+ * Same subset ⇒ same signature ⇒ shared narrative; any difference ⇒ a
+ * separate cache entry generated from that caller's OWN gated sections. */
+export async function briefPermissionSignature(permissions: string[]): Promise<string> {
+  const subset = BRIEF_SOURCE_PERMISSIONS.filter((p) => permissions.includes(p));
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(subset.join(",")),
+  );
+  return Array.from(new Uint8Array(digest))
+    .slice(0, 6)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/** PURE: the shared-generation cache key. NO user id for the principal pulse
+ * — sharing is bounded by (school, persona, IST day, PERMISSION SIGNATURE),
+ * so prose is only ever served to readers whose own RBAC spans the exact
+ * source set it was generated from. Teacher briefs additionally carry the
+ * user id in scopeKey (personal class set). */
 export function briefCacheKey(
   persona: BriefPersona,
   scopeKey: string,
   istDate: string,
+  permissionSignature: string,
 ): string {
-  return `brief:${persona}:${scopeKey}:${istDate}`;
+  return `brief:${persona}:${scopeKey}:${permissionSignature}:${istDate}`;
 }
 
 const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
@@ -157,10 +190,13 @@ export async function loadDailyBrief(
   });
   const sections = assembleBriefSections(feed.items);
 
-  // Shared-generation boundary: principal pulse is school-shared; the teacher
-  // brief shares per teacher (their class set is personal in v1).
+  // Shared-generation boundary: principal pulse is school-shared WITHIN a
+  // permission cohort; the teacher brief shares per teacher (their class set
+  // is personal in v1). The permission signature keeps a reader from ever
+  // being served prose derived from sources their own RBAC excludes.
   const scopeKey = persona === "principal" ? "school" : `user:${claims.sub}`;
-  const cacheKey = briefCacheKey(persona, scopeKey, istDate);
+  const signature = await briefPermissionSignature(claims.permissions);
+  const cacheKey = briefCacheKey(persona, scopeKey, istDate, signature);
   const scope = { organizationId: orgId, schoolId };
 
   let narrative: string | null = null;
@@ -191,12 +227,18 @@ export async function loadDailyBrief(
         },
       );
       if (narrative) {
+        // Inherit the sections' entity tags so event-coupled invalidation
+        // (doc 03 §3.5) kills the prose when its underlying facts change —
+        // the 04:00 TTL is only the backstop (audit round 4, P3-b).
+        const factTags = Array.from(
+          new Set(feed.items.flatMap((i) => i.entityTags)),
+        ).slice(0, 32);
         await writeResponseCache(db, scope, {
           cacheKey,
           surface: "daily_brief",
           language: "english",
           payload: narrative,
-          entityTags: ["brief:daily"],
+          entityTags: ["brief:daily", ...factTags],
           model: "",
           tokensSaved: 0,
           ttlSeconds: secondsToNextIstPrewarm(nowIso),

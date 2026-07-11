@@ -176,13 +176,27 @@ export async function handleBriefPrewarm(req: Request, config: AppConfig): Promi
         500,
       );
     }
+    // Bound the sequential LLM loop per invocation (each warm can take up to
+    // the 20s gateway timeout — an unbounded platform-wide sweep would blow
+    // the edge wall-clock and silently warm only a prefix; audit round 4
+    // P3-b). `offset`+`remaining` let the cron continue across invocations.
+    const url = new URL(req.url);
+    const sweepOffset = Math.max(0, parseInt(url.searchParams.get("offset") ?? "0", 10) || 0);
+    const sweepLimit = Math.min(
+      100,
+      Math.max(1, parseInt(url.searchParams.get("limit") ?? "25", 10) || 25),
+    );
+    const batch = targets.slice(sweepOffset, sweepOffset + sweepLimit);
     const results: PrewarmSchoolResult[] = [];
-    for (const t of targets) {
+    for (const t of batch) {
       results.push(await warmSchoolPulse(config, t.orgId, t.schoolId));
     }
     return jsonResponse(envelope({
       cron: true,
       schoolsConsidered: targets.length,
+      offset: sweepOffset,
+      processed: batch.length,
+      remaining: Math.max(0, targets.length - sweepOffset - batch.length),
       warmed: results.filter((r) => r.warmed).length,
       failures: results.filter((r) => r.error).length,
       results,

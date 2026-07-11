@@ -137,6 +137,12 @@ class AdaptiveSearchExtraNotifier extends AutoDisposeFamilyNotifier<AdaptiveSear
 
   Future<void> loadMore({required String category, required int nextOffset}) async {
     if (state.loadingCategory != null) return; // one in-flight fetch at a time
+    // A term change mid-flight disposes this family instance (autoDispose
+    // keyed by term); writing state after disposal throws a framework error.
+    // Track disposal and drop the late resolution instead (audit round 4,
+    // P3-c).
+    var disposed = false;
+    ref.onDispose(() => disposed = true);
     state = state._loading(category);
     try {
       final repo = ref.read(adaptiveAiRepositoryProvider);
@@ -147,6 +153,7 @@ class AdaptiveSearchExtraNotifier extends AutoDisposeFamilyNotifier<AdaptiveSear
         offset: nextOffset,
         limit: 6,
       );
+      if (disposed) return;
       SearchGroup? group;
       for (final g in result.groups) {
         if (g.category == category) {
@@ -158,7 +165,7 @@ class AdaptiveSearchExtraNotifier extends AutoDisposeFamilyNotifier<AdaptiveSear
     } catch (_) {
       // Fail soft (same posture as HybridAdaptiveAiRepository): a blip just
       // means "Show more" silently didn't add a page; base results still render.
-      state = state._idle();
+      if (!disposed) state = state._idle();
     }
   }
 }
