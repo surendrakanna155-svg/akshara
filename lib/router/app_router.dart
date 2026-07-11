@@ -2469,18 +2469,33 @@ bool _isSharedSettingsRoute(String location) {
   return location == RouteNames.appearanceSettings;
 }
 
+/// The standalone staff Face ID capture/enrolment routes (audit R3): they are
+/// pushed from the HR attendance screen (admin ERP shell) but registered as
+/// top-level routes, so they must carry the same wall themselves — otherwise a
+/// parent/student could deep-link into staff-only camera UI by URL. Server
+/// RBAC already denies the writes; this closes the client-side exposure.
+bool _isStaffAttendanceDeviceRoute(String location) {
+  return location == RouteNames.staffFaceCapture ||
+      location == RouteNames.staffFaceEnrollment;
+}
+
 bool _isProtectedRoute(String location) {
   return location.startsWith('/parent') ||
       location.startsWith('/teacher') ||
       location.startsWith('/student') ||
       _isAiAssistantRoute(location) ||
       _isSharedSettingsRoute(location) ||
+      _isStaffAttendanceDeviceRoute(location) ||
       isAdminErpRoute(location);
 }
 
 bool _canAccessRoute(AuthState auth, String location) {
   if (_isAiAssistantRoute(location) || _isSharedSettingsRoute(location)) {
     return auth.isAuthenticated;
+  }
+  // Same wall as the HR attendance screen these are pushed from.
+  if (_isStaffAttendanceDeviceRoute(location)) {
+    return canAccessAdminErpShell(auth);
   }
 
   if (isAdminErpRoute(location)) {

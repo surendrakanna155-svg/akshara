@@ -71,7 +71,8 @@ class FaceCapture {
       };
 }
 
-/// A recorded (or optimistically-queued) staff check-in/out.
+/// A recorded staff check-in/out (always a confirmed server write — the
+/// check-in operation is online-only; there is no queued/optimistic state).
 class StaffCheckRecord {
   const StaffCheckRecord({
     required this.id,

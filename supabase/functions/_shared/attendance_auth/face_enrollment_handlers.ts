@@ -56,7 +56,19 @@ function resolveTarget(
   body: Record<string, unknown> | null,
 ): { userId: string } | Response {
   const raw = body?.targetUserId ?? body?.target_user_id;
-  const targetUserId = raw != null ? String(raw).trim() : "";
+  // Only a plain string is a candidate target; an object/array coerced via
+  // String() would flow a non-UUID into the query and surface as a raw 500
+  // (audit R3 P3) — reject the shape as a typed 422 instead. resolveTarget is
+  // called before the handlers' try blocks, so this returns a Response (the
+  // function's existing denial pattern) rather than throwing.
+  if (raw != null && typeof raw !== "string") {
+    return errorEnvelope(
+      "ATTENDANCE_AUTH_TARGET_INVALID",
+      "targetUserId must be a string user id",
+      422,
+    );
+  }
+  const targetUserId = raw != null ? raw.trim() : "";
   const selfId = claims.sub;
   if (!targetUserId || targetUserId === selfId) {
     return { userId: selfId };
