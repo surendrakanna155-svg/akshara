@@ -14,11 +14,14 @@
 
 **Active waves (parallel, disjoint ownership — never two implementation agents on one module):**
 
-1. **P3-AI-3 — W2 Hardening & Closure** (ERP/AI lane, `supabase/functions/_shared/intelligence/**` + `lib/features/**` AI surfaces).
-   Pipeline (mandatory): Implementation → **Hardening → Repeated audit → Regression → Re-audit** → Production certification.
-   Round status: round 1 fixes (`ce1e886f`/`cf32d1ab`/`7224782d`) → implementation tail landed 2026-07-11 (`3ac4b3aa`→`6e7cd8da`: subject scoping · **W2.7 ✅** · **A5 atomic reservation ✅** · **A6 fences ✅** · **cost-panel binding ✅**) → **audit round 2** (1 P0 + 4 P1 + 8 P2, all fixed `183dd71d`→`56513090`) → **round 3 verification: all 15 VERIFIED-FIXED, 0 new P0/P1/P2** = 1 consecutive clean round.
-   Still open in this wave: W2.1 briefs/digests (auto-fire stays ops-gated) · W2.8 pgvector Stage-2 · W2.9 truth-in-naming · quick-action routing/accept-suppress UI (P2-1/6 + W2.7 deep-links) · search pagination + categories; then the next audit round.
-   **Exit = consecutive rounds find no meaningful (P0/P1) issues.** (The earlier `priority_engine.ts` in-flight warning was stale — that work landed as `40118d6f`.)
+1. **P3-AI-3 — W2 Hardening & Closure**: 🔶→**HARDENING EXIT MET 2026-07-11** (pending only P7 for 🟩).
+   Full W2 surface landed: W2.0a/b · W2-GATE · W2.S · W2.2–2.6 · **W2.1** (briefs/digests, prewarm cron ops-gated) · **W2.7** (ops worklists + client deep-links) · **W2.8** (pgvector semantic cache, 3-layer dormant: guarded migration/runtime probe/env-gated embedder) · **W2.9** (truth-in-naming, closes AI-6) · full audit tail (atomic quota reservation A5 · injection fences A6 · cost-panel A2 · quick-action UX A3 · search pagination+categories A4 · teacher-exam scoping A1).
+   Audit rounds: R2 (1 P0 + 4 P1 + 8 P2 → fixed) → R3 **clean** → new-batch R4 (1 P1 RBAC-cohort narrative + 1 P2 finance paging + 3 P3 → fixed `df47a768`) → R5 verify (all fixed; found P2 cron-cohort + P3 sweep-order → fixed `34ccbdbd`) → **R6 verify clean = 2nd consecutive clean round → EXIT**.
+   Owner/ops residue on P0-LIVE-1 (not code): migrations `20260867`+…`20260876` deploy before W2 flag · pgvector provisioning + `AI_EMBEDDINGS_API_KEY` + Stage-2 name-swap threshold tuning · `INTERNAL_CRON_TOKEN` for brief-prewarm + drain crons.
+
+1b. **P1-PROD-22 — Staff Face ID attendance** ← **NOW THE ACTIVE BUILD** (Must-Before-GA; frozen design `docs/ATTENDANCE_AUTH_DESIGN_DECISION.md`: GPS geofence → anti-mock → live-camera face, server-authoritative embedding match + liveness; NEVER OS biometric; manual-request fallback only).
+   **SDK decision (2026-07-11, per owner 'proven SDK, no custom recognition'):** `google_mlkit_face_detection` (detection/landmarks/eye-open liveness) + pretrained MobileFaceNet via `tflite_flutter` (on-device embedding — only the float vector leaves the device); server computes cosine vs enrolled reference. Slices: enrollment (reference embedding per staff, replaceable) → geofence+anti-mock chain → check-in/out + manual-request fallback → server match endpoint + migrations + RBAC + tests.
+   ⚠ ERP lane works in linked worktree `Akshara_ERP-drp` (shared-dir branch collisions ×2 on 2026-07-11).
 2. **K-2 — QP Engine Hardening Program** (Knowledge lane, `curriculum/**` — disjoint from ERP).
    Round status: audit (2 P0 + 4 P1) → R1–R9 → prod-readiness cert **GO (scoped)** → Phase-1 sanitizer hardening landed (`835f39e4`).
    Continue: OCR artifact cleanup · **deterministic template expansion** · **Blueprint Library (CBSE·AP·TS·NEET·JEE Main·JEE Advanced)** · graph-degree · recency · difficulty/Bloom · MCQ + gated-AI validation.
