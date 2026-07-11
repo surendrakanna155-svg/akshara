@@ -102,12 +102,18 @@ class TestAuthenticGeneration(unittest.TestCase):
         self.assertEqual(sum(s.marks for s in paper.slots), paper.total_marks)
         self.assertLessEqual(paper.total_marks, 720)
 
-    def test_render_surfaces_pattern_and_choice(self):
+    def test_render_surfaces_pattern_and_coverage(self):
+        # NEW render-honesty contract: authentic pattern label + negative marking always show;
+        # this synthetic corpus is all-conceptual (no templates), so every MCQ is honestly routed
+        # to the authoring worklist and the header states 0 print-ready — a spec is NEVER printed
+        # as a student question.
         paper = self.eng.generate(PaperRequest(exam="NEET", blueprint_preset="neet", seed=1))
         md = self.eng.render_markdown(paper)
         self.assertIn("NEET (UG)", md)                    # authentic pattern label
         self.assertIn("Negative marking", md)
-        self.assertIn("Attempt any", md)                  # internal-choice note surfaced
+        self.assertIn("Deterministic coverage", md)       # honest coverage line
+        self.assertIn("requiring authoring", md)          # specs go to the worklist, not the body
+        self.assertNotIn("[SPEC", md)                     # no authoring stub in the printed paper
 
     def test_deterministic(self):
         a = self.eng.generate(PaperRequest(exam="NEET", blueprint_preset="neet", seed=7))
