@@ -103,11 +103,11 @@ def _priority(cand: Candidate, seed: int, subject_usage: Dict[str, int],
     is balanced first; then we prefer concepts we can actually fill deterministically; chapter
     coverage and the seed still drive diversity/variety among equally-fillable candidates."""
     return (
-        subject_usage.get(cand.subject, 0),    # per-paper subject balance (diversity first)
-        _fill_rank(cand, fillable or {}),      # prefer template > definition > other > unfillable
-        chapter_usage.get(cand.chapter, 0),    # per-paper chapter/topic balance (diversity)
+        _fill_rank(cand, fillable or {}),      # prefer deterministically-fillable content (completeness)
+        subject_usage.get(cand.subject, 0),    # …then balance SUBJECTS among the fillable set (diversity)
+        chapter_usage.get(cand.chapter, 0),    # …then balance CHAPTERS among the fillable set (diversity)
         tier,                                  # importance tier (graph + recency + evidence + freq)
-        _seed_hash(cand.concept_code, seed),   # SEED drives which concepts of a tier are chosen
+        _seed_hash(cand.concept_code, seed),   # SEED drives which concepts of a tier are chosen (variety)
         -round(score, 6),                      # within tier+seed, prefer higher composite importance
         cand.concept_code,                     # final stable tie-break (reproducible)
     )

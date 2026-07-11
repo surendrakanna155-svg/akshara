@@ -40,15 +40,21 @@ class FillRankTest(unittest.TestCase):
         p_empty = sel._priority(empty_c, 1, su, cu, 0, 10.0, fm)
         self.assertLess(p_fill, p_empty)                       # fillable picked first
 
-    def test_subject_balance_still_wins_over_fill(self):
-        # an unfillable candidate in an under-used subject beats a fillable one in an over-used subject
+    def test_fill_is_primary_subject_balance_among_fillable(self):
+        # completeness first: a fillable concept beats an unfillable one even in an over-used
+        # subject (so full papers are reachable); subject balance is preserved AMONG fillable.
         fill_over = _cand("f", "Physics", "Mechanics")
         empty_under = _cand("e", "Chemistry", "Physical Chemistry")
         fm = {fill_over.key: 0}
-        su = {"Physics": 3, "Chemistry": 0}                    # Physics already used 3×
-        p_fill = sel._priority(fill_over, 1, su, {}, 0, 10.0, fm)
-        p_empty = sel._priority(empty_under, 1, su, {}, 0, 10.0, fm)
-        self.assertLess(p_empty, p_fill)                       # subject balance preserved
+        su = {"Physics": 3, "Chemistry": 0}
+        self.assertLess(sel._priority(fill_over, 1, su, {}, 0, 10.0, fm),
+                        sel._priority(empty_under, 1, su, {}, 0, 10.0, fm))   # fillable wins
+        # but among two EQUALLY-fillable candidates, the under-used subject wins (diversity kept)
+        fill_phys = _cand("fp", "Physics", "Mechanics")
+        fill_chem = _cand("fc", "Chemistry", "Physical Chemistry")
+        fm2 = {fill_phys.key: 0, fill_chem.key: 0}
+        self.assertLess(sel._priority(fill_chem, 1, su, {}, 0, 10.0, fm2),
+                        sel._priority(fill_phys, 1, su, {}, 0, 10.0, fm2))    # balance among fillable
 
 
 class FillAwareSelectTest(unittest.TestCase):

@@ -93,7 +93,7 @@ def _stem_artifacts(stem: str) -> List[str]:
     if re.search(r"\b(the|is|was|of|and|to|in)(time|transferred|rate|the|energy|which|work)\b",
                  (stem or ""), re.I):
         out.append("glued_word")
-    if re.search(r"\w{16,}", stem or ""):
+    if re.search(r"[A-Za-z]{18,}", stem or ""):   # real terms (electronegativity=17) stay under 18
         out.append("overlong_token")
     if "  " in (stem or ""):
         out.append("double_space")
@@ -127,9 +127,15 @@ class PaperAudit:
     diff_relaxed: int = 0
     filled_answerable: int = 0
     printed_specs: int = 0              # filled stems still carrying a [SPEC] marker
+    bloom_met: int = 0                  # printed slots whose bloom matched the request
+    bloom_relaxed: int = 0             # printed slots whose bloom was relaxed
+    diff_met_printed: int = 0
+    diff_relaxed_printed: int = 0
     printable_clean: bool = False       # every filled slot is real (0 rewrite in printed body)
     teacher_ready_full: bool = False    # printable_clean AND >=90% of blueprint filled
     filled_stem_keys: list = field(default_factory=list)   # for cross-paper repetition
+    printed_concepts: list = field(default_factory=list)   # for concept diversity
+    printed_chapters: list = field(default_factory=list)   # for chapter diversity
 
 
 def audit_paper(config: str, seed: int, paper) -> PaperAudit:
@@ -139,7 +145,8 @@ def audit_paper(config: str, seed: int, paper) -> PaperAudit:
     """
     a = PaperAudit(config=config, seed=seed)
     a.slots = len(paper.slots)
-    a.blueprint_count = len(paper.slots)                 # blueprint positions (post-validation)
+    # INTENDED blueprint size (includes shortfall-dropped positions) → honest completeness
+    a.blueprint_count = paper.provenance.get("blueprint_total_questions") or len(paper.slots)
     a.filled = sum(1 for s in paper.slots if s.status == SlotStatus.FILLED)
     a.spec = sum(1 for s in paper.slots if s.status == SlotStatus.SPEC)
     printed = [s for s in paper.slots if is_student_printable(s)]
@@ -178,8 +185,17 @@ def audit_paper(config: str, seed: int, paper) -> PaperAudit:
             a.obj_filled += 1
         if (prov.get("chapter") or "").lower().startswith("general") or not prov.get("chapter"):
             a.general_chapter += 1
+        # Bloom / difficulty honesty on the PRINTED body
+        if "bloom_met" in prov:
+            (setattr(a, "bloom_met", a.bloom_met + 1) if prov["bloom_met"]
+             else setattr(a, "bloom_relaxed", a.bloom_relaxed + 1))
+        if "difficulty_met" in prov:
+            (setattr(a, "diff_met_printed", a.diff_met_printed + 1) if prov["difficulty_met"]
+             else setattr(a, "diff_relaxed_printed", a.diff_relaxed_printed + 1))
         a.filled_answerable += 1
         a.filled_stem_keys.append(re.sub(r"\d+", "#", stem.lower()).strip())
+        a.printed_concepts.append(s.concept_code)
+        a.printed_chapters.append(prov.get("chapter") or "General")
 
     a.desc_filled = sum(1 for s in printed if s.question_type in DESCRIPTIVE)
 
@@ -245,13 +261,21 @@ def summarize(audits: List[PaperAudit]) -> Dict:
     def s(attr):
         return sum(getattr(a, attr) for a in served)
 
-    # cross-paper repetition
+    # cross-paper repetition + diversity (over the printed student body)
     stem_ct = Counter()
+    printed_concepts, printed_chapters = [], []
     for a in served:
         for k in a.filled_stem_keys:
             stem_ct[k] += 1
+        printed_concepts += a.printed_concepts
+        printed_chapters += a.printed_chapters
     clones = sum(v for v in stem_ct.values() if v > 1)
     total_answerable = s("filled_answerable")
+    distinct_concepts = len(set(printed_concepts))
+    distinct_chapters = len(set(printed_chapters))
+    # most-repeated printed concept across papers (repetition signal)
+    concept_reuse = Counter(printed_concepts)
+    top_reuse = concept_reuse.most_common(1)[0][1] if concept_reuse else 0
 
     def pct(n, d):
         return round(100 * n / d, 1) if d else None
@@ -277,7 +301,17 @@ def summarize(audits: List[PaperAudit]) -> Dict:
         "d2_objective_filled_pct": pct(obj_filled, obj_total),
         "d4_desc_printed_real_pct": pct(desc_real, desc_filled),   # printed descriptive w/ real key
         "d5_general_chapter_pct_printed": pct(s("general_chapter"), printed_total),
-        "d9_difficulty_met_pct": pct(s("diff_met"), s("diff_met") + s("diff_relaxed")),
+        "d9_difficulty_met_pct_all": pct(s("diff_met"), s("diff_met") + s("diff_relaxed")),
+        "difficulty_met_pct_printed": pct(s("diff_met_printed"),
+                                          s("diff_met_printed") + s("diff_relaxed_printed")),
+        "bloom_met_pct_printed": pct(s("bloom_met"), s("bloom_met") + s("bloom_relaxed")),
+        "difficulty_relaxed_printed": s("diff_relaxed_printed"),
+        "bloom_relaxed_printed": s("bloom_relaxed"),
+        # diversity + repetition over the PRINTED student body
+        "distinct_concepts_printed": distinct_concepts,
+        "concept_diversity_pct": pct(distinct_concepts, total_answerable),
+        "distinct_chapters_printed": distinct_chapters,
+        "max_single_concept_reuse_across_papers": top_reuse,
         "d11_clone_answerable": clones,
         "d11_answerable_total": total_answerable,
         # ── EXIT-GATE counters (measured over the PRINTED student body; each must be 0) ──

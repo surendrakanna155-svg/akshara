@@ -49,7 +49,11 @@ _FRAGMENT_CLAUSE = re.compile(r"\b(was|were|led to|discovered|formulated)\b|\bhi
 
 def _title_fragment(title: str) -> bool:
     t = title or ""
-    return bool(_FRAGMENT_MERGED.search(t) or _FRAGMENT_CLAUSE.search(t))
+    if _FRAGMENT_MERGED.search(t) or _FRAGMENT_CLAUSE.search(t):
+        return True
+    # an over-long token is an OCR word-merge ("expressedsequences"); real terms
+    # ("electronegativity"=17, "characteristics"=15) stay under 18.
+    return any(len(tok) >= 18 for tok in t.split())
 
 
 def _real_key(answer) -> bool:
@@ -140,7 +144,10 @@ def assemble(request: PaperRequest, scope: SyllabusScope, blueprint: Blueprint,
                     "instructions": blueprint.instructions, "exam": blueprint.exam,
                     "duration_min": blueprint.duration_min,
                     "negative_marking": blueprint.negative_marking,
-                    "weightage": blueprint.weightage, "section_notes": section_notes})
+                    "weightage": blueprint.weightage, "section_notes": section_notes,
+                    # intended blueprint size, so coverage is honest even when a cell was a
+                    # shortfall (produced fewer slots than the blueprint asked for).
+                    "blueprint_total_questions": blueprint.total_questions})
     return paper
 
 
@@ -193,14 +200,16 @@ def render_markdown(paper: GeneratedPaper) -> str:
     printable = [s for s in paper.slots if is_student_printable(s)]
     pending = [s for s in paper.slots if not is_student_printable(s)]
 
-    # honest coverage line — the teacher sees exactly how much is ready to print
-    total = len(paper.slots)
-    cov = (f"**Deterministic coverage (AI OFF):** {len(printable)} of {total} blueprint "
-           f"question{'s' if total != 1 else ''} are ready to print with a complete answer key. ")
-    if pending:
-        cov += (f"The remaining {len(pending)} could not be produced deterministically from the "
-                f"certified corpus and are listed under *Items requiring authoring* (they are NOT "
-                f"part of the student paper).")
+    # honest coverage line — measured against the INTENDED blueprint size (so dropped shortfall
+    # slots are counted as missing, not silently excluded from the denominator).
+    intended = paper.provenance.get("blueprint_total_questions") or len(paper.slots)
+    missing = max(0, intended - len(printable))
+    cov = (f"**Deterministic coverage (AI OFF):** {len(printable)} of {intended} blueprint "
+           f"question{'s' if intended != 1 else ''} are ready to print with a complete answer key. ")
+    if missing:
+        cov += (f"The remaining {missing} could not be produced deterministically from the certified "
+                f"corpus (authoring stubs and/or blueprint positions the corpus could not supply) and "
+                f"are NOT part of the student paper — see *Items requiring authoring* / *Generation Notes*.")
     else:
         cov += "The paper is complete."
     L += [cov, ""]
