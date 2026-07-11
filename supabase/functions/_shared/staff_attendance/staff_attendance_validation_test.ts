@@ -3,8 +3,6 @@
 
 import { assert, assertEquals, assertThrows } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import {
-  cosineSimilarity,
-  FACE_MATCH_THRESHOLD,
   type GeofenceConfig,
   haversineMeters,
   parseStaffCheckBody,
@@ -12,6 +10,10 @@ import {
   validateLocation,
   verifyFace,
 } from "./staff_attendance_validation.ts";
+import {
+  cosineSimilarity,
+  DEFAULT_FACE_MATCH_THRESHOLD,
+} from "../attendance_auth/face_match.ts";
 
 const SCHOOL_LAT = 17.4500;
 const SCHOOL_LNG = 78.3900;
@@ -42,10 +44,40 @@ Deno.test("haversine: same point is 0m; ~1 arc-minute lat ≈ 1.85km", () => {
   assert(km > 111 && km < 111.4, `got ${km}`);
 });
 
-Deno.test("cosineSimilarity: identical=1, opposite=-1, mismatched dims throws", () => {
+Deno.test("cosineSimilarity (shared): identical=1, opposite=-1, mismatched dims fails closed to 0", () => {
   assertEquals(Math.round(cosineSimilarity([1, 0, 0], [1, 0, 0])), 1);
   assertEquals(Math.round(cosineSimilarity([1, 0], [-1, 0])), -1);
-  assertThrows(() => cosineSimilarity([1, 2, 3], [1, 2]), StaffAttendanceValidationError);
+  assertEquals(cosineSimilarity([1, 2, 3], [1, 2]), 0);
+});
+
+Deno.test("verifyFace: dimension mismatch is a re-enrol error (FACE_EMBEDDING_MISMATCH), not FACE_NO_MATCH", () => {
+  const e = assertThrows(
+    () =>
+      verifyFace(
+        { embedding: [1, 2, 3], livenessPassed: true, captureRef: null, modelTag: "" },
+        { embedding: [1, 2] },
+      ),
+    StaffAttendanceValidationError,
+  );
+  assertEquals((e as StaffAttendanceValidationError).code, "FACE_EMBEDDING_MISMATCH");
+});
+
+Deno.test("verifyFace: capture/enrollment model-tag mismatch is a re-enrol error; blank tags skip the check", () => {
+  const ref = [0.9, 0.1, 0.2, 0.05];
+  const e = assertThrows(
+    () =>
+      verifyFace(
+        { embedding: ref, livenessPassed: true, captureRef: null, modelTag: "mobilefacenet-v2" },
+        { embedding: ref, modelTag: "mobilefacenet-v1" },
+      ),
+    StaffAttendanceValidationError,
+  );
+  assertEquals((e as StaffAttendanceValidationError).code, "FACE_EMBEDDING_MISMATCH");
+  // Legacy rows / captures without a tag: match proceeds on cosine alone.
+  assert(verifyFace(
+    { embedding: ref, livenessPassed: true, captureRef: null, modelTag: "" },
+    { embedding: ref, modelTag: "mobilefacenet-v1" },
+  ).matched);
 });
 
 Deno.test("validateLocation: passes inside geofence with a fresh, accurate, non-mock fix", () => {
@@ -84,7 +116,11 @@ Deno.test("validateLocation: OUTSIDE geofence (>100m away) is rejected", () => {
 Deno.test("verifyFace: liveness must pass", () => {
   const ref = [1, 0, 0, 0];
   const e = assertThrows(
-    () => verifyFace({ embedding: ref, livenessPassed: false, captureRef: null }, ref),
+    () =>
+      verifyFace(
+        { embedding: ref, livenessPassed: false, captureRef: null, modelTag: "" },
+        { embedding: ref },
+      ),
     StaffAttendanceValidationError,
   );
   assertEquals((e as StaffAttendanceValidationError).code, "LIVENESS_FAILED");
@@ -92,12 +128,19 @@ Deno.test("verifyFace: liveness must pass", () => {
 
 Deno.test("verifyFace: matching face above threshold passes; a different face is rejected", () => {
   const ref = [0.9, 0.1, 0.2, 0.05];
-  const same = verifyFace({ embedding: ref, livenessPassed: true, captureRef: null }, ref);
+  const same = verifyFace(
+    { embedding: ref, livenessPassed: true, captureRef: null, modelTag: "" },
+    { embedding: ref },
+  );
   assert(same.matched);
-  assert(same.score >= FACE_MATCH_THRESHOLD);
+  assert(same.score >= DEFAULT_FACE_MATCH_THRESHOLD);
 
   const e = assertThrows(
-    () => verifyFace({ embedding: [0.05, 0.9, 0.1, 0.9], livenessPassed: true, captureRef: null }, ref),
+    () =>
+      verifyFace(
+        { embedding: [0.05, 0.9, 0.1, 0.9], livenessPassed: true, captureRef: null, modelTag: "" },
+        { embedding: ref },
+      ),
     StaffAttendanceValidationError,
   );
   assertEquals((e as StaffAttendanceValidationError).code, "FACE_NO_MATCH");

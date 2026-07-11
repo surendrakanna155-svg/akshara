@@ -4,11 +4,10 @@
 //   face verification (server-authoritative CV match vs enrolled reference).
 // Device biometric is NOT part of this chain (login-only).
 
+import { cosineSimilarity, faceMatchThreshold } from "../attendance_auth/face_match.ts";
+
 export type StaffCheckEventType = "check_in" | "check_out";
 const EVENT_TYPES: readonly StaffCheckEventType[] = ["check_in", "check_out"];
-
-/** Server-side face-match acceptance threshold (cosine similarity). */
-export const FACE_MATCH_THRESHOLD = 0.82;
 
 export class StaffAttendanceValidationError extends Error {
   readonly code: string;
@@ -31,6 +30,11 @@ export interface AttendanceFace {
   embedding: number[];
   livenessPassed: boolean;
   captureRef: string | null;
+  /** Which on-device model produced the live embedding (e.g. mobilefacenet-v1).
+   * Compared against the enrolled reference's model_tag when both are set —
+   * cross-model cosine scores are meaningless, so a mismatch must be a
+   * re-enrol error, not a confusing FACE_NO_MATCH. */
+  modelTag: string;
 }
 
 export interface ParsedStaffCheck {
@@ -63,24 +67,6 @@ export function haversineMeters(
   const a = Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
-}
-
-/** Cosine similarity of two equal-length vectors; 0 if either is degenerate. */
-export function cosineSimilarity(a: number[], b: number[]): number {
-  if (a.length === 0 || a.length !== b.length) {
-    throw new StaffAttendanceValidationError(
-      "FACE_EMBEDDING_MISMATCH",
-      "Face embedding dimension mismatch",
-    );
-  }
-  let dot = 0, na = 0, nb = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i]! * b[i]!;
-    na += a[i]! * a[i]!;
-    nb += b[i]! * b[i]!;
-  }
-  if (na === 0 || nb === 0) return 0;
-  return dot / (Math.sqrt(na) * Math.sqrt(nb));
 }
 
 function num(v: unknown): number | null {
@@ -151,6 +137,7 @@ export function parseStaffCheckBody(
       captureRef: faceObj.captureRef != null || faceObj.capture_ref != null
         ? String(faceObj.captureRef ?? faceObj.capture_ref)
         : null,
+      modelTag: String(faceObj.modelTag ?? faceObj.model_tag ?? "").trim(),
     },
     staffName: String(body.staffName ?? body.staff_name ?? "").trim(),
     employeeRef: body.employeeRef != null || body.employee_ref != null
@@ -219,12 +206,15 @@ export interface FaceVerdict {
 
 /**
  * Server-authoritative face verification: liveness gate + CV match of the live
- * embedding against the enrolled reference. Throws on liveness fail or no-match.
+ * embedding against the enrolled reference (shared clamped cosine from
+ * attendance_auth/face_match.ts; threshold env-tunable via
+ * FACE_MATCH_MIN_SIMILARITY). Throws on liveness fail, model/dimension
+ * mismatch (re-enrol, not a lookalike rejection), or no-match.
  */
 export function verifyFace(
   face: AttendanceFace,
-  referenceEmbedding: number[],
-  threshold: number = FACE_MATCH_THRESHOLD,
+  reference: { embedding: number[]; modelTag?: string },
+  threshold: number = faceMatchThreshold(),
 ): FaceVerdict {
   if (!face.livenessPassed) {
     throw new StaffAttendanceValidationError(
@@ -232,7 +222,23 @@ export function verifyFace(
       "Liveness check failed — hold your face to the live camera",
     );
   }
-  const score = cosineSimilarity(face.embedding, referenceEmbedding);
+  const refModel = (reference.modelTag ?? "").trim();
+  if (face.modelTag && refModel && face.modelTag !== refModel) {
+    throw new StaffAttendanceValidationError(
+      "FACE_EMBEDDING_MISMATCH",
+      "Your capture used a different face model than your enrollment — re-enrol your face",
+    );
+  }
+  if (
+    face.embedding.length === 0 ||
+    face.embedding.length !== reference.embedding.length
+  ) {
+    throw new StaffAttendanceValidationError(
+      "FACE_EMBEDDING_MISMATCH",
+      "Face embedding dimension mismatch — re-enrol your face",
+    );
+  }
+  const score = cosineSimilarity(face.embedding, reference.embedding);
   if (score < threshold) {
     throw new StaffAttendanceValidationError(
       "FACE_NO_MATCH",

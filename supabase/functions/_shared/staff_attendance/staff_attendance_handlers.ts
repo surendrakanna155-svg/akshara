@@ -21,14 +21,17 @@ import { staffAttendanceAudit } from "../audit/mutation_audit_catalog.ts";
 import {
   createAttendanceRequest,
   decideAttendanceRequest,
-  enrollFace,
-  getActiveEnrollment,
   getGeofenceConfig,
   recordStaffCheckIn,
   StaffAttendanceValidationError,
   staffCheckInToApi,
   upsertGeofenceConfig,
 } from "./staff_check_in_repository.ts";
+import {
+  enrollFace,
+  FaceEnrollmentValidationError,
+  getActiveEnrollment,
+} from "../attendance_auth/face_enrollment_repository.ts";
 import {
   parseStaffCheckBody,
   validateLocation,
@@ -105,7 +108,11 @@ export async function handleRecordStaffCheckIn(
       // 2. Location: anti-mock -> accuracy -> freshness -> inside-geofence.
       const loc = validateLocation(parsed.location, cfg, nowMs);
       // 3. Face: liveness + server-side CV match vs the enrolled reference.
-      const reference = await getActiveEnrollment(db, userId);
+      const reference = await getActiveEnrollment(
+        db,
+        { organizationId, schoolId },
+        userId,
+      );
       if (!reference) {
         throw new StaffAttendanceValidationError(
           "FACE_NOT_ENROLLED",
@@ -149,6 +156,9 @@ export async function handleRecordStaffCheckIn(
 }
 
 // ── POST /staff-attendance/enroll-face ───────────────────────────────────────
+// Self-service twin of POST /attendance-auth/face/enroll: same governed write
+// path (attendance_auth repository — one validation bound, one revoke-then-
+// insert), kept at this route for the staff self-enrolment client flow.
 export async function handleEnrollFace(req: Request, config: AppConfig): Promise<Response> {
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
@@ -157,39 +167,34 @@ export async function handleEnrollFace(req: Request, config: AppConfig): Promise
 
   try {
     const body = await readJson<Record<string, unknown>>(req);
-    const embRaw = body?.embedding;
-    if (!Array.isArray(embRaw) || embRaw.length < 32) {
-      throw new StaffAttendanceValidationError(
-        "FACE_REQUIRED",
-        "embedding (a live-capture face vector, >=32 dims) is required",
-      );
-    }
-    const embedding = embRaw.map((v) => {
-      const n = Number(v);
-      if (!Number.isFinite(n)) {
-        throw new StaffAttendanceValidationError("FACE_REQUIRED", "embedding must be numeric");
-      }
-      return n;
-    });
     const claims = auth.claims;
     const organizationId = organizationIdFromClaims(claims);
     const schoolId = schoolIdFromClaims(claims);
     const userId = subjectOf(claims);
 
     const result = await withTenantContext(config, claims, async (db) => {
-      const enr = await enrollFace(db, organizationId, schoolId, userId, embedding);
+      const enr = await enrollFace(db, { organizationId, schoolId }, {
+        userId,
+        embedding: body?.embedding,
+        modelTag: String(body?.modelTag ?? body?.model_tag ?? "").trim(),
+        enrolledBy: userId,
+      });
       const spec = staffAttendanceAudit.faceEnrolled(enr.id, userId);
       await recordMutationAudit(db, claims, spec.audit, spec.domain, req);
       return enr;
     });
     return jsonResponse(envelope({
       id: result.id,
-      embeddingDim: result.embeddingDim,
-      enrolledAt: result.enrolledAt,
+      embeddingDim: result.embeddingDims,
+      modelTag: result.modelTag,
+      enrolledAt: result.createdAt,
     }));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse();
     if (error instanceof StaffAttendanceValidationError) return validationResponse(error);
+    if (error instanceof FaceEnrollmentValidationError) {
+      return errorEnvelope(`STAFF_ATTENDANCE_${error.code}`, error.message, 422);
+    }
     throw error;
   }
 }

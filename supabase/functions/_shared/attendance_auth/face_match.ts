@@ -17,8 +17,10 @@ export const MAX_SIMILARITY_THRESHOLD = 0.99;
 
 /** Conservative default acceptance threshold (cosine similarity). Tunable per
  * deployment via FACE_MATCH_MIN_SIMILARITY, always clamped to
- * [MIN_SIMILARITY_THRESHOLD, MAX_SIMILARITY_THRESHOLD]. */
-export const DEFAULT_FACE_MATCH_THRESHOLD = 0.8;
+ * [MIN_SIMILARITY_THRESHOLD, MAX_SIMILARITY_THRESHOLD]. 0.82 preserves the
+ * value the live check-in chain (B4) has enforced since 20260820 — SLICE 2
+ * unified both stacks on this module rather than keeping two constants. */
+export const DEFAULT_FACE_MATCH_THRESHOLD = 0.82;
 
 /**
  * Cosine similarity of two equal-length vectors, in [-1, 1] for well-formed

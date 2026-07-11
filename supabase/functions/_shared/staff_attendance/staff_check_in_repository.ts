@@ -94,60 +94,13 @@ export async function upsertGeofenceConfig(
 }
 
 // ── Face enrollment ──────────────────────────────────────────────────────────
-// staff_face_enrollments is now the SHARED P1-PROD-22 table owned by
+// staff_face_enrollments is the SHARED P1-PROD-22 table owned EXCLUSIVELY by
 // _shared/attendance_auth/face_enrollment_repository.ts (migration 20260877
-// evolved it from this module's original self-only shape: `active` boolean ->
-// `status` lifecycle, embedding JSONB -> REAL[], embedding_dim -> embedding_dims).
-// These two functions keep their ORIGINAL external signatures (unchanged call
-// sites in staff_attendance_handlers.ts) and just speak the new column shape —
-// the check-in verification chain itself is untouched (SLICE 2 territory).
-export async function getActiveEnrollment(
-  db: TenantQueryClient,
-  userId: string,
-): Promise<number[] | null> {
-  const rows = await db.queryObject<{ embedding: number[] }>(
-    `SELECT embedding
-       FROM staff_face_enrollments
-      WHERE organization_id = app_current_tenant_id()
-        AND school_id = app_current_school_id()
-        AND user_id = $1
-        AND status = 'active'
-      LIMIT 1`,
-    [userId],
-  );
-  const r = rows[0];
-  if (!r) return null;
-  // embedding is stored as REAL[]; the driver returns it as a parsed number array.
-  return Array.isArray(r.embedding) ? r.embedding.map(Number) : null;
-}
-
-export async function enrollFace(
-  db: TenantQueryClient,
-  organizationId: string,
-  schoolId: string,
-  userId: string,
-  embedding: number[],
-): Promise<{ id: string; embeddingDim: number; enrolledAt: string }> {
-  // Replace: revoke any prior active enrollment, then insert the new one.
-  await db.queryObject(
-    `UPDATE staff_face_enrollments
-        SET status = 'revoked', revoked_at = timezone('utc', now()), revoked_by = $1,
-            updated_at = timezone('utc', now())
-      WHERE organization_id = app_current_tenant_id()
-        AND school_id = app_current_school_id()
-        AND user_id = $1 AND status = 'active'`,
-    [userId],
-  );
-  const id = `face_enr_${crypto.randomUUID()}`;
-  const rows = await db.queryObject<{ created_at: string }>(
-    `INSERT INTO staff_face_enrollments (
-       id, organization_id, school_id, user_id, embedding, embedding_dims, enrolled_by, status
-     ) VALUES ($1,$2,$3,$4,$5::real[],$6,$4,'active')
-     RETURNING created_at`,
-    [id, organizationId, schoolId, userId, embedding, embedding.length],
-  );
-  return { id, embeddingDim: embedding.length, enrolledAt: rows[0]!.created_at };
-}
+// evolved it from this module's original self-only shape). This module's
+// former getActiveEnrollment/enrollFace duplicates were REMOVED in SLICE 2 —
+// staff_attendance_handlers.ts now calls the attendance_auth repository
+// directly, so there is exactly one write path (revoke-then-insert) and one
+// validation bound (64..1024 dims, matching the DB CHECK).
 
 // ── Check-in ledger ──────────────────────────────────────────────────────────
 export interface RecordStaffCheckInput {

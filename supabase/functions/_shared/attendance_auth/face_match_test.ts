@@ -42,10 +42,10 @@ Deno.test("cosineSimilarity: scale-invariant (same direction, different magnitud
   assertAlmostEquals(cosineSimilarity([1, 1, 1], [2, 2, 2]), 1, 1e-12);
 });
 
-Deno.test("faceMatchThreshold: no env → conservative default (0.80)", () => {
+Deno.test("faceMatchThreshold: no env → conservative default (0.82, the live B4 chain value)", () => {
   Deno.env.delete("FACE_MATCH_MIN_SIMILARITY");
   assertEquals(faceMatchThreshold(), DEFAULT_FACE_MATCH_THRESHOLD);
-  assertEquals(faceMatchThreshold(), 0.8);
+  assertEquals(faceMatchThreshold(), 0.82);
 });
 
 Deno.test("faceMatchThreshold: a valid in-band override is honoured", () => {
