@@ -219,6 +219,11 @@ export async function generateCopilotResponse(
           entityTags: copilotCacheTags(input.assistantType),
           ttlSeconds: 86_400,
           language: "english",
+          // W2.8 Stage-2: an exact-fingerprint miss falls through to an
+          // embedding-nearest lookup over the same cached answers (dormant
+          // until an embeddings key + pgvector are provisioned).
+          semanticText: input.userMessage,
+          semanticSurface: "copilot",
         },
       },
     );

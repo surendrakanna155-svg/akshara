@@ -45,6 +45,16 @@ import {
   reserveOutOfBand,
 } from "./ai_call_reservations_repository.ts";
 import { logAiDegradation } from "./ai_telemetry.ts";
+import { embeddingsConfigured, embedText } from "./embeddings_client.ts";
+import {
+  findNearestCachedResponse,
+  findStoredEmbedding,
+  questionHash,
+  semanticCacheAvailable,
+  semanticMaxDistance,
+  storeSemanticEmbedding,
+  vectorLiteral,
+} from "./ai_semantic_cache_repository.ts";
 import { type GuardOptions, guardModelReply } from "./output_guard.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 
@@ -263,6 +273,14 @@ export interface GatewayCacheConfig {
   entityTags?: string[];
   ttlSeconds?: number;
   language?: string;
+  /** W2.8 Stage-2: the raw question text. When present (and an embeddings
+   * provider + the pgvector substrate are available), an exact-key miss falls
+   * through to an embedding-nearest lookup over the same cached answers, and
+   * a write-through also stores the question's embedding. Absent ⇒ Stage-1
+   * behavior exactly as before. */
+  semanticText?: string;
+  /** Surface filter for the Stage-2 read (defaults to "copilot"). */
+  semanticSurface?: string;
 }
 
 /** Injectable seam so the wrapper is testable without a DB or network. */
@@ -354,24 +372,95 @@ export function gatewayDepsFor(
             : releaseReservation(db, reservationId))
       : undefined,
     cache: cacheCfg
-      ? {
-        lookup: (scope) => lookupResponseCache(db, scope, cacheCfg.key),
-        // Savepoint-wrapped like record/finalize: a DB-level cache-write
-        // failure must degrade to "not cached", never abort the request
-        // transaction (round-3 N2).
-        write: (scope, surface, payload, model, tokensSaved) =>
-          withTelemetrySavepoint(db, () =>
-            writeResponseCache(db, scope, {
-            cacheKey: cacheCfg.key,
-            surface,
-            language: cacheCfg.language ?? "english",
-            payload,
-            entityTags: cacheCfg.entityTags ?? [],
-            model,
-            tokensSaved,
-            ttlSeconds: cacheCfg.ttlSeconds,
-          })),
-      }
+      ? (() => {
+        // W2.8 Stage-2 state shared between lookup and write so the question
+        // is embedded at most once per request.
+        let semanticVector: string | null = null;
+        let semanticHash: string | null = null;
+        const semanticEligible = () =>
+          !!cacheCfg.semanticText && embeddingsConfigured();
+
+        const semanticLookup = async (
+          scope: AiTenantScope,
+        ): Promise<{ payload: string; model: string } | null> => {
+          // The substrate is school-scoped; org-bucket calls stay Stage-1.
+          if (!semanticEligible() || scope.schoolId === null) return null;
+          try {
+            if (!(await semanticCacheAvailable(db))) return null;
+            semanticHash = await questionHash(cacheCfg.semanticText!);
+            semanticVector = await findStoredEmbedding(db, scope, semanticHash);
+            if (!semanticVector) {
+              const embedded = await embedText(cacheCfg.semanticText!);
+              if (!embedded) return null;
+              semanticVector = vectorLiteral(embedded);
+            }
+            const hit = await findNearestCachedResponse(db, scope, {
+              surface: cacheCfg.semanticSurface ?? "copilot",
+              language: cacheCfg.language ?? "english",
+              embedding: semanticVector,
+              maxDistance: semanticMaxDistance(),
+            });
+            return hit ? { payload: hit.payload, model: hit.model } : null;
+          } catch (err) {
+            logAiDegradation("semantic_cache.lookup", err);
+            return null;
+          }
+        };
+
+        return {
+          lookup: async (scope: AiTenantScope) => {
+            const exact = await lookupResponseCache(db, scope, cacheCfg.key);
+            if (exact) return exact;
+            return await semanticLookup(scope);
+          },
+          // Savepoint-wrapped like record/finalize: a DB-level cache-write
+          // failure must degrade to "not cached", never abort the request
+          // transaction (round-3 N2).
+          write: async (
+            scope: AiTenantScope,
+            surface: string,
+            payload: string,
+            model: string,
+            tokensSaved: number,
+          ) => {
+            await withTelemetrySavepoint(db, () =>
+              writeResponseCache(db, scope, {
+                cacheKey: cacheCfg.key,
+                surface,
+                language: cacheCfg.language ?? "english",
+                payload,
+                entityTags: cacheCfg.entityTags ?? [],
+                model,
+                tokensSaved,
+                ttlSeconds: cacheCfg.ttlSeconds,
+              }));
+            // Stage-2 write-through: store the question's embedding keyed to
+            // this cache entry. Best-effort and savepointed; reuses the
+            // vector computed during lookup when present.
+            if (semanticEligible() && scope.schoolId !== null) {
+              try {
+                if (!(await semanticCacheAvailable(db))) return;
+                semanticHash ??= await questionHash(cacheCfg.semanticText!);
+                if (!semanticVector) {
+                  const embedded = await embedText(cacheCfg.semanticText!);
+                  if (!embedded) return;
+                  semanticVector = vectorLiteral(embedded);
+                }
+                await withTelemetrySavepoint(db, () =>
+                  storeSemanticEmbedding(db, scope, {
+                    cacheKey: cacheCfg.key,
+                    surface,
+                    language: cacheCfg.language ?? "english",
+                    questionHash: semanticHash!,
+                    embedding: semanticVector!,
+                  }));
+              } catch (err) {
+                logAiDegradation("semantic_cache.write", err);
+              }
+            }
+          },
+        };
+      })()
       : undefined,
   };
 }
