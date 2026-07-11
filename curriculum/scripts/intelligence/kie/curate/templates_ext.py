@@ -239,6 +239,81 @@ def build_families(Template, num_family, mcq_options, p, n, QT):
                 "answer": f"{n(rq)}", "solution": f"RQ = volume of CO₂ released ÷ volume of O₂ consumed = {co2}/{o2} = {n(rq)}.",
                 "distractors": [f"{n(o2/co2)}", f"{n(co2*o2)}", f"{n(co2-o2)}"]}
 
+    # ════════════════════════════════════════════════════════════════════════════════
+    # Phase 7 batch — families targeting the corpus's actual HIGH-FREQUENCY computable
+    # concepts that the Phase-4 library missed (measured on the live KIE: Equilibrium 317,
+    # Probability 102, Integers 96, Magnetic Flux 76, Circles 56, gravitational force 48,
+    # Perimeter/Triangle/Parallelogram/Median). Bindings use the concepts' ACTUAL tagged
+    # titles/subjects (a generic single-word group is fine here: the instance is always a
+    # solver-verified, in-syllabus, original question about that topic). All clean-number.
+    # ════════════════════════════════════════════════════════════════════════════════
+    def g_gravitational_force(cc, s):
+        m = p(cc, s, "m", 2, 50); g = 10; w = m * g              # solver: F = m·g near Earth
+        return {"stem": f"A body of mass {m} kg is near the Earth's surface (take g = 10 m/s²). "
+                        f"Calculate the gravitational force (weight) acting on it.",
+                "answer": f"{n(w)} N", "solution": f"F = m·g = {m} × 10 = {n(w)} N.",
+                "distractors": [f"{n(m)} N", f"{n(m+g)} N", f"{n(m*9)} N"]}
+
+    def g_magnetic_flux(cc, s):
+        b = p(cc, s, "b", 2, 12); a = p(cc, s, "a", 2, 10); phi = b * a   # solver: Φ = B·A (⊥)
+        return {"stem": f"A uniform magnetic field of {b} T acts perpendicular to a plane surface of "
+                        f"area {a} m². Calculate the magnetic flux through it.",
+                "answer": f"{n(phi)} Wb", "solution": f"Φ = B·A = {b} × {a} = {n(phi)} Wb.",
+                "distractors": [f"{n(b+a)} Wb", f"{n(b)} Wb", f"{n(a)} Wb"]}
+
+    def g_equilibrium_kc(cc, s):
+        a = p(cc, s, "a", 1, 6); k = p(cc, s, "k", 2, 9); b = a * k       # solver: Kc = [B]/[A]
+        return {"stem": f"For the reversible reaction A ⇌ B, the equilibrium concentrations are "
+                        f"[A] = {a} mol/L and [B] = {b} mol/L. Calculate the equilibrium constant Kc.",
+                "answer": f"{n(k)}", "solution": f"Kc = [B]/[A] = {b}/{a} = {n(k)}.",
+                "distractors": [f"{n(a/b)}", f"{n(a*b)}", f"{n(a+b)}"]}
+
+    def g_probability(cc, s):
+        r = p(cc, s, "r", 2, 9); bl = p(cc, s, "b", 2, 9); tot = r + bl   # solver: P = fav/total
+        return {"stem": f"A bag contains {r} red and {bl} blue balls of the same size. One ball is drawn "
+                        f"at random. What is the probability that it is red?",
+                "answer": f"{r}/{tot}", "solution": f"P(red) = red/total = {r}/{r}+{bl} = {r}/{tot}.",
+                "distractors": [f"{bl}/{tot}", f"{r}/{bl}", f"{tot}/{r}"]}
+
+    def g_integer_eval(cc, s):
+        a = p(cc, s, "a", 3, 15); b = p(cc, s, "b", 2, 12); v = (-a) * b  # solver: (−a)×b
+        return {"stem": f"Evaluate the product of the integers (−{a}) and (+{b}).",
+                "answer": f"{n(v)}", "solution": f"(−{a}) × (+{b}) = −({a}×{b}) = {n(v)}.",
+                "distractors": [f"{n(a*b)}", f"{n(-(a+b))}", f"{n(a-b)}"]}
+
+    def g_circle_area(cc, s):
+        m = p(cc, s, "m", 1, 6); rad = 7 * m; area = (22 * rad * rad) // 7  # solver: πr², π=22/7
+        return {"stem": f"A circle has a radius of {rad} cm. Taking π = 22/7, calculate its area.",
+                "answer": f"{n(area)} cm²", "solution": f"Area = πr² = (22/7) × {rad}² = {n(area)} cm².",
+                "distractors": [f"{n(2*22*rad//7)} cm²", f"{n(area*2)} cm²", f"{n(rad*rad)} cm²"]}
+
+    def g_triangle_area(cc, s):
+        base = p(cc, s, "b", 4, 20) * 2; h = p(cc, s, "h", 3, 18); ar = base * h // 2  # ½·b·h
+        return {"stem": f"A triangle has a base of {base} cm and a height of {h} cm. Calculate its area.",
+                "answer": f"{n(ar)} cm²", "solution": f"Area = ½ × base × height = ½ × {base} × {h} = {n(ar)} cm².",
+                "distractors": [f"{n(base*h)} cm²", f"{n(base+h)} cm²", f"{n((base+h)*2)} cm²"]}
+
+    def g_perimeter_rect(cc, s):
+        l = p(cc, s, "l", 4, 30); b = p(cc, s, "b", 3, 25); per = 2 * (l + b)   # solver: 2(l+b)
+        return {"stem": f"A rectangle has length {l} cm and breadth {b} cm. Calculate its perimeter.",
+                "answer": f"{n(per)} cm", "solution": f"Perimeter = 2(l + b) = 2({l} + {b}) = {n(per)} cm.",
+                "distractors": [f"{n(l*b)} cm", f"{n(l+b)} cm", f"{n(2*l+b)} cm"]}
+
+    def g_parallelogram_area(cc, s):
+        base = p(cc, s, "b", 4, 25); h = p(cc, s, "h", 3, 18); ar = base * h    # solver: b·h
+        return {"stem": f"A parallelogram has a base of {base} cm and a corresponding height of {h} cm. "
+                        f"Calculate its area.",
+                "answer": f"{n(ar)} cm²", "solution": f"Area = base × height = {base} × {h} = {n(ar)} cm².",
+                "distractors": [f"{n(base+h)} cm²", f"{n(base*h//2)} cm²", f"{n(2*(base+h))} cm²"]}
+
+    def g_median_odd(cc, s):
+        a = p(cc, s, "a", 1, 9); step = p(cc, s, "d", 1, 6)
+        vals = [a, a + step, a + 2 * step, a + 3 * step, a + 4 * step]      # 5 sorted values
+        med = vals[2]                                                        # solver: middle term
+        return {"stem": f"Find the median of the data set: {', '.join(str(v) for v in vals)}.",
+                "answer": f"{n(med)}", "solution": f"Odd count (5): median = 3rd value = {n(med)}.",
+                "distractors": [f"{n(sum(vals)//5)}", f"{n(vals[0])}", f"{n(vals[-1])}"]}
+
     return [
         # Physics
         num_family("phy_parallel_resistance", "Physics",
@@ -289,4 +364,26 @@ def build_families(Template, num_family, mcq_options, p, n, QT):
                    (("number of gametes",), ("gamete", "heterozygous"), ("independently assorting",)), g_gametes),
         num_family("bio_respiratory_quotient", "Biology",
                    (("respiratory quotient",), ("rq value",)), g_resp_quotient),
+        # ── Phase 7 batch: high-frequency computable concepts (measured on live KIE) ──
+        num_family("phy_gravitational_force", "Physics",
+                   (("gravitational force",), ("law of gravitation",), ("force of gravity",)),
+                   g_gravitational_force),
+        num_family("phy_magnetic_flux", "Physics",
+                   (("magnetic flux",), ("flux", "magnetic")), g_magnetic_flux),
+        num_family("chem_equilibrium_kc", "Chemistry",
+                   (("equilibrium",),), g_equilibrium_kc),
+        num_family("math_probability", "Mathematics",
+                   (("probability",),), g_probability),
+        num_family("math_integer_ops", "Mathematics",
+                   (("integer",),), g_integer_eval),
+        num_family("math_circle_measure", "Mathematics",
+                   (("circle",),), g_circle_area),
+        num_family("math_triangle_measure", "Mathematics",
+                   (("triangle",),), g_triangle_area),
+        num_family("math_perimeter_rect", "Mathematics",
+                   (("perimeter",),), g_perimeter_rect),
+        num_family("math_parallelogram_area", "Mathematics",
+                   (("parallelogram",),), g_parallelogram_area),
+        num_family("math_median_odd", "Mathematics",
+                   (("median",),), g_median_odd),
     ]
