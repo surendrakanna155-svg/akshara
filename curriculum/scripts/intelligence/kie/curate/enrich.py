@@ -210,6 +210,24 @@ _OF_MERGE = re.compile(r"^of[b-eg-z][a-z]{4,}$")
 _MERGE_MAX_TOKEN = 18
 
 
+_CONSONANT_RUN = re.compile(r"[bcdfghjklmnpqrstvwxzBCDFGHJKLMNPQRSTVWXZ]{6,}")
+_VOWEL = re.compile(r"[AEIOUaeiou]")
+
+
+def _sentence_ocr_garbage(sentence: str) -> bool:
+    """Sentence-level OCR-garbage check using ONLY reliable, false-positive-free signals
+    (6+ consonant run; a 4+ letter word with no vowel). Deliberately does NOT use the
+    title-oriented repeated-letter ratio in sanitize._looks_like_ocr_garbage, which
+    false-positives on ordinary words ('passes', 'assess', 'possess') — that gate is for
+    short concept titles, not prose sentences, and silently killed valid definitions."""
+    if _CONSONANT_RUN.search(sentence):
+        return True
+    for tok in re.findall(r"[A-Za-z]+", sentence):
+        if len(tok) >= 4 and not _VOWEL.search(tok):
+            return True
+    return False
+
+
 def _looks_merged(sentence: str) -> bool:
     """True if the sentence carries a likely OCR merged-word artefact (deterministic proxy).
     Precision-first and conservative: only unambiguous signals, so real long science terms
@@ -223,24 +241,65 @@ def _looks_merged(sentence: str) -> bool:
     return False
 
 
-def _definition_from_text(title: str, text: str) -> Optional[str]:
-    """Return a clean definitional sentence for `title` found in `text`, else None.
+# Definitional predicate HEADS — the noun a concept "is a/the ___". Lets the miner accept the
+# common textbook copula ("Resistance is the opposition ...", "Light is an electromagnetic wave")
+# WITHOUT the risky plain-copula false positives ("... is the reason ...", "... is an example ...").
+# Closed, high-precision set of "what a thing IS" heads. Content data — extend freely.
+_DEF_HEADS = frozenset((
+    "bending", "process", "phenomenon", "measure", "measurement", "ratio", "rate", "amount",
+    "property", "force", "number", "branch", "study", "tendency", "ability", "flow", "movement",
+    "transfer", "change", "form", "type", "kind", "state", "region", "layer", "part", "point",
+    "sum", "product", "quantity", "capacity", "condition", "reaction", "method", "technique",
+    "law", "principle", "rule", "theorem", "energy", "power", "pressure", "distance", "path",
+    "field", "current", "unit", "device", "instrument", "substance", "compound", "element",
+    "mixture", "solution", "cell", "organ", "tissue", "structure", "system", "gland", "vessel",
+    "bond", "angle", "line", "curve", "set", "function", "vector", "matrix", "series", "opposition",
+    "loss", "gain", "increase", "decrease", "resistance", "group", "collection", "arrangement",
+    "phenomena", "value", "constant", "factor", "term", "expression", "equation", "wave", "ray",
+))
+# subject may be preceded by a leading article ("The refraction ...")
+_LEAD_ART = re.compile(r"^(the|a|an)\s+", re.I)
+# broadened definitional copula: "is/are a/an/the <predicate>"
+_COPULA_DEF = re.compile(r"^(?:is|are)\s+(?:a|an|the)\s+(.+)$", re.I)
 
-    STRICT and precision-first: a wrong model answer is worse than the honest
-    marking-guideline fallback, so anything not clearly a complete, clean, factual
-    definition is skipped. Verbatim (facts only) + capitalised title."""
-    tl = title.lower()
+
+def _definition_from_text(title: str, text: str, aliases=()) -> Optional[str]:
+    """Return a clean definitional sentence for `title` (or one of its `aliases`) in `text`, else
+    None. Precision-first: a wrong model answer is worse than the honest marking-guideline
+    fallback, so anything not clearly a complete, clean, factual definition is skipped. Verbatim
+    (facts only) + capitalised subject.
+
+    Recall improvements (2026-07-11 Content Density Phase 1) that KEEP precision: the concept may
+    be the subject at the sentence start OR after a leading article; a STRONG connective OR the
+    'is/are a/an/the <definitional-head-noun>' copula is accepted; matching is tried for the title
+    and any evidence-backed aliases."""
+    subjects = [s.lower() for s in ((title,) + tuple(aliases)) if s and len(s.strip()) >= 4]
     for raw in _SENT_SPLIT.split(text):
         s = re.sub(r"\s+", " ", raw).strip()
         low = s.lower()
-        if not low.startswith(tl):                          # title must be the subject
+        stripped = _LEAD_ART.sub("", low)                   # allow "The <concept> ..."
+        matched = next((sub for sub in subjects
+                        if low.startswith(sub) or stripped.startswith(sub)), None)
+        if not matched:
             continue
-        after = low[len(tl):].lstrip(" ,")
+        base = low if low.startswith(matched) else stripped
+        after = base[len(matched):].lstrip(" ,")
         connective = next((c for c in _STRONG if after.startswith(c)), None)
-        if not connective:                                  # require a strong connective
-            continue
+        if connective:
+            body = after[len(connective):].strip(" ,.")
+        else:                                               # broadened copula path
+            m = _COPULA_DEF.match(after)
+            if not m:
+                continue
+            pred = m.group(1)
+            # the predicate must NAME what the concept is: a definitional head noun in the first
+            # few words (handles "electromagnetic wave", "balanced chemical equation"), not a
+            # usage opener ("reason", "example", "result").
+            head_words = re.findall(r"[a-z]+", pred.lower())[:3]
+            if not any(w in _DEF_HEADS for w in head_words):
+                continue
+            body = pred.strip(" ,.")
         # the definition body must be substantive (not a truncated clause)
-        body = after[len(connective):].strip(" ,.")
         body_words = re.findall(r"[A-Za-z][A-Za-z'\-]*", body)
         if len(body_words) < _DEF_BODY_MIN_WORDS or len(body) < _DEF_BODY_MIN_CHARS:
             continue
@@ -254,12 +313,12 @@ def _definition_from_text(title: str, text: str) -> Optional[str]:
             continue
         if len(_MULTI_DIGIT.findall(s)) > 2:               # a real short definition is word-heavy
             continue
-        if sanitize._looks_like_ocr_garbage(s) or _looks_merged(s):
+        if _sentence_ocr_garbage(s) or _looks_merged(s):
             continue
         # final gate: the engine's OWN model-answer completeness check
         if not materialize.usable_definition(s):
             continue
-        # present the title with a capital (kept verbatim otherwise — a factual statement)
+        # present with a capital (kept verbatim otherwise — a factual statement)
         return s[0].upper() + s[1:]
     return None
 
@@ -300,18 +359,37 @@ def demote_garbled_definitions(conn) -> int:
     return n
 
 
+def _aliases_of(raw_reference_facts) -> tuple:
+    """Evidence-backed alias surface-forms (named laws/principles) for a concept, so a chunk that
+    phrases the definition with an alias ("Huygens' principle") still matches. Grounded only."""
+    try:
+        facts = json.loads(raw_reference_facts or "[]")
+    except (ValueError, TypeError):
+        return ()
+    out = []
+    for f in facts if isinstance(facts, list) else ():
+        e = (f.get("expression") or "").strip() if isinstance(f, dict) else ""
+        if e and e not in out:
+            out.append(e)
+    return tuple(out)
+
+
 def mine_definitions(conn) -> int:
     filled = 0
     for r in conn.execute(
-        "SELECT concept_code, title, definition FROM concepts WHERE status='active'"
+        "SELECT concept_code, title, definition, reference_facts FROM concepts WHERE status='active'"
     ).fetchall():
         if materialize.usable_definition(r["definition"] or ""):
             continue                                        # already has a usable definition
         title = (r["title"] or "").strip()
         if len(title) < 4:
             continue
-        for text in _candidate_chunks(conn, title):
-            definition = _definition_from_text(title, text)
+        aliases = _aliases_of(r["reference_facts"])
+        seen_texts = _candidate_chunks(conn, title)
+        for alias in aliases:                               # widen retrieval with alias phrases
+            seen_texts += _candidate_chunks(conn, alias, limit=8)
+        for text in seen_texts:
+            definition = _definition_from_text(title, text, aliases)
             if definition:
                 conn.execute("UPDATE concepts SET definition=? WHERE concept_code=?",
                              (definition, r["concept_code"]))

@@ -153,6 +153,42 @@ class DefinitionMiningTest(unittest.TestCase):
             self.assertFalse(materialize.usable_definition(d or ""),
                              f"{code} should NOT have gained a usable definition")
 
+    def test_broadened_copula_and_leading_article(self):
+        # Content Density Phase 1: accept "The X is the <head-noun> ..." (subject after article,
+        # broadened copula) — a real textbook definition the old strict miner missed.
+        _doc(self.conn, "d1", class_label="Class 10")
+        _concept(self.conn, "PHY_REF", "Refraction", doc="d1")
+        _chunk(self.conn, "c1", "d1",
+               "The refraction is the bending of light as it passes from one medium to another.")
+        enrich.run(self.conn)
+        d = self.conn.execute(
+            "SELECT definition FROM concepts WHERE concept_code='PHY_REF'").fetchone()["definition"]
+        self.assertTrue(materialize.usable_definition(d))
+        self.assertIn("bending of light", d)
+
+    def test_ocr_gate_does_not_reject_ordinary_words(self):
+        # regression: the title-oriented OCR heuristic false-positived on words like "passes"
+        # (repeated-letter ratio), silently killing valid definitions. The sentence-safe gate
+        # must NOT reject a clean definition containing such a word.
+        _doc(self.conn, "d1", class_label="Class 10")
+        _concept(self.conn, "PHY_RES", "Resistance", doc="d1")
+        _chunk(self.conn, "c1", "d1",
+               "Resistance is the opposition that a substance offers to the motion of electrons.")
+        enrich.run(self.conn)
+        d = self.conn.execute(
+            "SELECT definition FROM concepts WHERE concept_code='PHY_RES'").fetchone()["definition"]
+        self.assertTrue(materialize.usable_definition(d))
+
+    def test_rejects_usage_not_definition(self):
+        # broadened copula must still reject usage/example sentences (precision-first)
+        _doc(self.conn, "d1")
+        _concept(self.conn, "PHY_PWR", "Power", doc="d1")
+        _chunk(self.conn, "c1", "d1", "Power is the reason machines work faster than humans do.")
+        enrich.run(self.conn)
+        d = self.conn.execute(
+            "SELECT definition FROM concepts WHERE concept_code='PHY_PWR'").fetchone()["definition"]
+        self.assertFalse(materialize.usable_definition(d or ""))
+
     def test_rejects_relative_clause_fragment(self):
         _doc(self.conn, "d1")
         _concept(self.conn, "PHY_RAD", "Radioactivity", doc="d1")
