@@ -94,6 +94,13 @@ export async function upsertGeofenceConfig(
 }
 
 // ── Face enrollment ──────────────────────────────────────────────────────────
+// staff_face_enrollments is now the SHARED P1-PROD-22 table owned by
+// _shared/attendance_auth/face_enrollment_repository.ts (migration 20260877
+// evolved it from this module's original self-only shape: `active` boolean ->
+// `status` lifecycle, embedding JSONB -> REAL[], embedding_dim -> embedding_dims).
+// These two functions keep their ORIGINAL external signatures (unchanged call
+// sites in staff_attendance_handlers.ts) and just speak the new column shape —
+// the check-in verification chain itself is untouched (SLICE 2 territory).
 export async function getActiveEnrollment(
   db: TenantQueryClient,
   userId: string,
@@ -104,13 +111,13 @@ export async function getActiveEnrollment(
       WHERE organization_id = app_current_tenant_id()
         AND school_id = app_current_school_id()
         AND user_id = $1
-        AND active = TRUE
+        AND status = 'active'
       LIMIT 1`,
     [userId],
   );
   const r = rows[0];
   if (!r) return null;
-  // embedding is stored as JSONB (array of numbers); the driver returns it parsed.
+  // embedding is stored as REAL[]; the driver returns it as a parsed number array.
   return Array.isArray(r.embedding) ? r.embedding.map(Number) : null;
 }
 
@@ -121,23 +128,25 @@ export async function enrollFace(
   userId: string,
   embedding: number[],
 ): Promise<{ id: string; embeddingDim: number; enrolledAt: string }> {
-  // Replace: deactivate any prior active enrollment, then insert the new one.
+  // Replace: revoke any prior active enrollment, then insert the new one.
   await db.queryObject(
-    `UPDATE staff_face_enrollments SET active = FALSE
+    `UPDATE staff_face_enrollments
+        SET status = 'revoked', revoked_at = timezone('utc', now()), revoked_by = $1,
+            updated_at = timezone('utc', now())
       WHERE organization_id = app_current_tenant_id()
         AND school_id = app_current_school_id()
-        AND user_id = $1 AND active = TRUE`,
+        AND user_id = $1 AND status = 'active'`,
     [userId],
   );
   const id = `face_enr_${crypto.randomUUID()}`;
-  const rows = await db.queryObject<{ enrolled_at: string }>(
+  const rows = await db.queryObject<{ created_at: string }>(
     `INSERT INTO staff_face_enrollments (
-       id, organization_id, school_id, user_id, embedding, embedding_dim, active
-     ) VALUES ($1,$2,$3,$4,$5::jsonb,$6, TRUE)
-     RETURNING enrolled_at`,
-    [id, organizationId, schoolId, userId, JSON.stringify(embedding), embedding.length],
+       id, organization_id, school_id, user_id, embedding, embedding_dims, enrolled_by, status
+     ) VALUES ($1,$2,$3,$4,$5::real[],$6,$4,'active')
+     RETURNING created_at`,
+    [id, organizationId, schoolId, userId, embedding, embedding.length],
   );
-  return { id, embeddingDim: embedding.length, enrolledAt: rows[0]!.enrolled_at };
+  return { id, embeddingDim: embedding.length, enrolledAt: rows[0]!.created_at };
 }
 
 // ── Check-in ledger ──────────────────────────────────────────────────────────

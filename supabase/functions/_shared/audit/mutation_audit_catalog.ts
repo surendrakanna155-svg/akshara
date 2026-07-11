@@ -1900,3 +1900,47 @@ export const staffAttendanceAudit = {
     },
   }),
 };
+
+// ─── P1-PROD-22 SLICE 1 — Staff Face ID enrollment backend ───────────────────
+//
+// Distinct from staffAttendanceAudit.faceEnrolled (the original self-only B4
+// enrol-face path): this backs the governed /attendance-auth/face/* routes,
+// which additionally allow an HR-managed enrollment/revocation of ANOTHER
+// user's reference face — so every event carries both the enrollment's OWNER
+// (userId) and the ACTING user (actorUserId), which are the same value on a
+// self-service call and differ only on a manageHr-gated call.
+
+export const attendanceAuthAudit = {
+  faceEnrolled: (
+    enrollmentId: string,
+    userId: string,
+    actorUserId: string,
+  ): MutationAuditSpec => ({
+    ...workflow("attendanceAuthFaceEnrolled", "staff_face_enrollment", enrollmentId, {
+      userId,
+      actorUserId,
+    }),
+    domain: {
+      eventType: "attendance_auth.face.enrolled",
+      payload: { enrollmentId, userId, actorUserId },
+      sourceModule: "attendance_auth",
+      idempotencyKey: `attendance_auth.face.enrolled:${enrollmentId}`,
+    },
+  }),
+  faceRevoked: (
+    enrollmentId: string,
+    userId: string,
+    actorUserId: string,
+  ): MutationAuditSpec => ({
+    ...workflow("attendanceAuthFaceRevoked", "staff_face_enrollment", enrollmentId, {
+      userId,
+      actorUserId,
+    }),
+    domain: {
+      eventType: "attendance_auth.face.revoked",
+      payload: { enrollmentId, userId, actorUserId },
+      sourceModule: "attendance_auth",
+      idempotencyKey: `attendance_auth.face.revoked:${enrollmentId}`,
+    },
+  }),
+};

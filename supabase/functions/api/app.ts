@@ -20,6 +20,7 @@ import { routeSis } from "../_shared/sis/sis_router.ts";
 import { routeExamAdministration } from "../_shared/academics/exam_administration/exam_administration_router.ts";
 import { routeAttendance } from "../_shared/attendance/attendance_router.ts";
 import { routeStaffAttendance } from "../_shared/staff_attendance/staff_attendance_router.ts";
+import { routeAttendanceAuth } from "../_shared/attendance_auth/attendance_auth_router.ts";
 import { routeAcademic } from "../_shared/academic/academic_router.ts";
 import { routeTimetable } from "../_shared/timetable/timetable_router.ts";
 import { routeTransport } from "../_shared/transport/transport_router.ts";
@@ -99,6 +100,7 @@ export async function routeModuleRequest(
     routeExamAdministration,
     routeAttendance,
     routeStaffAttendance,
+    routeAttendanceAuth,
     routeAcademic,
     routeTimetable,
     // --- B2: optional modules gated by plan entitlement (402 PLAN_UPGRADE_REQUIRED) ---
