@@ -51,6 +51,9 @@ export interface SearchGroup {
   results: SearchResult[];
   /** How many candidates matched before the per-category display cap. */
   total: number;
+  /** The offset this page was fetched at (decision-consistent pagination: the
+   * client computes hasMore = offset + results.length < total). */
+  offset: number;
 }
 
 export interface SearchResponse {

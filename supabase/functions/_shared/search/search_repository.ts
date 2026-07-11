@@ -9,6 +9,9 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
 import type {
   AdmissionCandidate,
+  BroadcastCandidate,
+  ClassCandidate,
+  FinanceInvoiceCandidate,
   StaffCandidate,
   StudentCandidate,
 } from "./search_ranking.ts";
@@ -42,6 +45,7 @@ export async function searchStudents(
   schoolId: string,
   query: string,
   displayLimit: number,
+  offset = 0,
 ): Promise<{ candidates: StudentCandidate[]; total: number }> {
   const cap = candidateCap(displayLimit);
   const q = query.trim();
@@ -76,8 +80,8 @@ export async function searchStudents(
           ELSE 5
         END,
         s.display_name
-      LIMIT $4`,
-    [organizationId, schoolId, q, cap],
+      LIMIT $4 OFFSET $5`,
+    [organizationId, schoolId, q, cap, offset],
   );
 
   const candidates: StudentCandidate[] = rows.map((r) => ({
@@ -114,6 +118,7 @@ export async function searchStaff(
   schoolId: string,
   query: string,
   displayLimit: number,
+  offset = 0,
 ): Promise<{ candidates: StaffCandidate[]; total: number }> {
   const cap = candidateCap(displayLimit);
   const q = query.trim();
@@ -138,8 +143,8 @@ export async function searchStaff(
           ELSE 5
         END,
         display_name
-      LIMIT $4`,
-    [organizationId, schoolId, q, cap],
+      LIMIT $4 OFFSET $5`,
+    [organizationId, schoolId, q, cap, offset],
   );
   const candidates: StaffCandidate[] = rows.map((r) => ({
     id: r.id,
@@ -170,6 +175,7 @@ export async function searchAdmissionsLeads(
   schoolId: string,
   query: string,
   displayLimit: number,
+  offset = 0,
 ): Promise<{ candidates: AdmissionCandidate[]; total: number }> {
   const cap = candidateCap(displayLimit);
   const q = query.trim();
@@ -192,8 +198,8 @@ export async function searchAdmissionsLeads(
           ELSE 5
         END,
         student_name
-      LIMIT $4`,
-    [organizationId, schoolId, q, cap],
+      LIMIT $4 OFFSET $5`,
+    [organizationId, schoolId, q, cap, offset],
   );
   const candidates: AdmissionCandidate[] = rows.map((r) => ({
     id: r.id,
@@ -202,6 +208,169 @@ export async function searchAdmissionsLeads(
     classLabel: r.class_label,
     phone: r.phone,
     stage: r.stage,
+  }));
+  return { candidates, total: rows[0]?.total_matches ?? candidates.length };
+}
+
+interface FinanceInvoiceRow {
+  id: string;
+  invoice_number: string;
+  invoice_status: string;
+  due_date: string;
+  student_name: string;
+  total_matches: number;
+}
+
+/** Fetch invoice candidates by invoice number (prefix) or the billed student's
+ * display name (prefix/partial). Requires viewFinance (gated in the handler). */
+export async function searchFinanceInvoices(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  query: string,
+  displayLimit: number,
+  offset = 0,
+): Promise<{ candidates: FinanceInvoiceCandidate[]; total: number }> {
+  const cap = candidateCap(displayLimit);
+  const q = query.trim();
+  const rows = await db.queryObject<FinanceInvoiceRow>(
+    `SELECT fi.id::text AS id, fi.invoice_number, fi.invoice_status,
+            fi.due_date::text AS due_date, s.display_name AS student_name,
+            count(*) OVER()::int AS total_matches
+       FROM finance_invoices fi
+       JOIN students s ON s.id = fi.student_id
+      WHERE fi.organization_id = $1 AND fi.school_id = $2
+        AND (
+          lower(fi.invoice_number) LIKE lower($3) || '%'
+          OR lower(s.display_name) LIKE lower($3) || '%'
+          OR lower(s.display_name) LIKE '%' || lower($3) || '%'
+        )
+      ORDER BY
+        CASE
+          WHEN lower(fi.invoice_number) LIKE lower($3) || '%' THEN 1
+          WHEN lower(s.display_name) LIKE lower($3) || '%' THEN 4
+          ELSE 5
+        END,
+        s.display_name
+      LIMIT $4 OFFSET $5`,
+    [organizationId, schoolId, q, cap, offset],
+  );
+  const candidates: FinanceInvoiceCandidate[] = rows.map((r) => ({
+    id: r.id,
+    invoiceNumber: r.invoice_number,
+    invoiceStatus: r.invoice_status,
+    dueDate: r.due_date,
+    studentName: r.student_name,
+  }));
+  return { candidates, total: rows[0]?.total_matches ?? candidates.length };
+}
+
+interface BroadcastRow {
+  id: string;
+  title: string;
+  audience: string;
+  status: string;
+  total_matches: number;
+}
+
+/** Fetch broadcast candidates by title (prefix/partial). `school_id` is
+ * nullable on comm_broadcasts (org-wide broadcasts) — scope allows either the
+ * caller's school or an org-wide (NULL school_id) broadcast. Requires
+ * viewCommunications (gated in the handler). */
+export async function searchBroadcasts(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  query: string,
+  displayLimit: number,
+  offset = 0,
+): Promise<{ candidates: BroadcastCandidate[]; total: number }> {
+  const cap = candidateCap(displayLimit);
+  const q = query.trim();
+  const rows = await db.queryObject<BroadcastRow>(
+    `SELECT id::text AS id, title, audience, status,
+            count(*) OVER()::int AS total_matches
+       FROM comm_broadcasts
+      WHERE organization_id = $1 AND (school_id = $2 OR school_id IS NULL)
+        AND (
+          lower(title) LIKE lower($3) || '%'
+          OR lower(title) LIKE '%' || lower($3) || '%'
+        )
+      ORDER BY
+        CASE
+          WHEN lower(title) LIKE lower($3) || '%' THEN 4
+          ELSE 5
+        END,
+        title
+      LIMIT $4 OFFSET $5`,
+    [organizationId, schoolId, q, cap, offset],
+  );
+  const candidates: BroadcastCandidate[] = rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    audience: r.audience,
+    status: r.status,
+  }));
+  return { candidates, total: rows[0]?.total_matches ?? candidates.length };
+}
+
+interface ClassRow {
+  class_name: string;
+  section_name: string | null;
+  label: string;
+  enrollment_count: number;
+  total_matches: number;
+}
+
+/** Fetch distinct current (class, section) candidates by label match. Grouping
+ * happens BEFORE the WHERE/window so `total_matches` counts distinct matching
+ * labels, not enrollment rows. Requires viewSis (gated in the handler). */
+export async function searchClasses(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  query: string,
+  displayLimit: number,
+  offset = 0,
+): Promise<{ candidates: ClassCandidate[]; total: number }> {
+  const cap = candidateCap(displayLimit);
+  const q = query.trim();
+  const rows = await db.queryObject<ClassRow>(
+    `WITH labeled AS (
+       SELECT
+         class_name,
+         section_name,
+         CASE
+           WHEN section_name IS NOT NULL AND section_name <> '' THEN class_name || '-' || section_name
+           ELSE class_name
+         END AS label,
+         count(*)::int AS enrollment_count
+       FROM sis_student_enrollments
+      WHERE organization_id = $1 AND school_id = $2 AND is_current = true
+      GROUP BY class_name, section_name
+     )
+     SELECT class_name, section_name, label, enrollment_count,
+            count(*) OVER()::int AS total_matches
+       FROM labeled
+      WHERE
+        lower(label) = lower($3)
+        OR lower(class_name) LIKE lower($3) || '%'
+        OR lower(label) LIKE '%' || lower($3) || '%'
+      ORDER BY
+        CASE
+          WHEN lower(label) = lower($3) THEN 3
+          WHEN lower(class_name) LIKE lower($3) || '%' THEN 4
+          ELSE 5
+        END,
+        label
+      LIMIT $4 OFFSET $5`,
+    [organizationId, schoolId, q, cap, offset],
+  );
+  const candidates: ClassCandidate[] = rows.map((r) => ({
+    label: r.label,
+    className: r.class_name,
+    sectionName: r.section_name,
+    enrollmentCount: r.enrollment_count,
   }));
   return { candidates, total: rows[0]?.total_matches ?? candidates.length };
 }

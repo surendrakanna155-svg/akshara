@@ -3,14 +3,23 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import {
   type AdmissionCandidate,
+  type BroadcastCandidate,
   classifyAdmissionMatch,
+  classifyBroadcastMatch,
+  classifyClassMatch,
+  classifyFinanceInvoiceMatch,
   classifyStaffMatch,
   classifyStudentMatch,
+  type ClassCandidate,
+  type FinanceInvoiceCandidate,
   orderResults,
   type StaffCandidate,
   type StudentCandidate,
   studentSubtitle,
   toAdmissionResult,
+  toBroadcastResult,
+  toClassResult,
+  toFinanceInvoiceResult,
   toStaffResult,
   toStudentResult,
 } from "./search_ranking.ts";
@@ -124,4 +133,97 @@ Deno.test("toAdmissionResult carries class/parent/stage and a lead deep link", (
   assertEquals(r.category, "admissions");
   assertEquals(r.deepLink, "/admissions/leads/l1");
   assertEquals(r.subtitle, "Class 1 · Parent: Sita Rao · site visit");
+});
+
+// ─── Finance (invoices) ──────────────────────────────────────────────────────
+
+function invoice(over: Partial<FinanceInvoiceCandidate> = {}): FinanceInvoiceCandidate {
+  return {
+    id: "inv1",
+    invoiceNumber: "INV-2026-0042",
+    invoiceStatus: "issued",
+    dueDate: "2026-08-01",
+    studentName: "Ramesh Kumar",
+    ...over,
+  };
+}
+
+Deno.test("finance match ladder: invoice number prefix → student name prefix → partial", () => {
+  assertEquals(classifyFinanceInvoiceMatch(invoice(), "inv-2026"), "entity_id");
+  assertEquals(classifyFinanceInvoiceMatch(invoice(), "ramesh"), "name_prefix");
+  assertEquals(classifyFinanceInvoiceMatch(invoice(), "kumar"), "name_partial");
+});
+
+Deno.test("exact invoice number beats a student-name partial match", () => {
+  const byNumber = toFinanceInvoiceResult(invoice(), "inv-2026");
+  const byNamePartial = toFinanceInvoiceResult(invoice({ id: "inv2", invoiceNumber: "INV-2026-0099" }), "kumar");
+  const ordered = orderResults([byNamePartial, byNumber]);
+  assertEquals(ordered.map((r) => r.id), ["inv1", "inv2"]); // entity_id (1) before name_partial (5)
+});
+
+Deno.test("toFinanceInvoiceResult navigates to the invoice screen", () => {
+  const r = toFinanceInvoiceResult(invoice(), "inv-2026");
+  assertEquals(r.category, "finance");
+  assertEquals(r.title, "INV-2026-0042");
+  assertEquals(r.deepLink, "/finance/invoices/inv1");
+  assertEquals(r.subtitle, "Ramesh Kumar · issued · Due 2026-08-01");
+});
+
+// ─── Communications (broadcasts) ────────────────────────────────────────────
+
+function broadcast(over: Partial<BroadcastCandidate> = {}): BroadcastCandidate {
+  return { id: "b1", title: "Annual Day Celebration", audience: "all_parents", status: "sent", ...over };
+}
+
+Deno.test("broadcast match ladder: title prefix → title partial", () => {
+  assertEquals(classifyBroadcastMatch(broadcast(), "annual"), "name_prefix");
+  assertEquals(classifyBroadcastMatch(broadcast(), "celebration"), "name_partial");
+});
+
+Deno.test("broadcast prefix beats partial", () => {
+  const prefix = toBroadcastResult(broadcast(), "annual");
+  const partial = toBroadcastResult(broadcast({ id: "b2", title: "Sports Day Celebration" }), "celebration");
+  const ordered = orderResults([partial, prefix]);
+  assertEquals(ordered.map((r) => r.id), ["b1", "b2"]); // name_prefix (4) before name_partial (5)
+});
+
+Deno.test("toBroadcastResult navigates to the broadcast screen", () => {
+  const r = toBroadcastResult(broadcast(), "annual");
+  assertEquals(r.category, "communications");
+  assertEquals(r.deepLink, "/communications/broadcasts/b1");
+  assertEquals(r.subtitle, "all parents · sent");
+});
+
+// ─── Classes ─────────────────────────────────────────────────────────────────
+
+function klass(over: Partial<ClassCandidate> = {}): ClassCandidate {
+  return { label: "8-A", className: "8", sectionName: "A", enrollmentCount: 32, ...over };
+}
+
+Deno.test("class match ladder: exact label → class-name prefix → partial", () => {
+  assertEquals(classifyClassMatch(klass(), "8-a"), "roll_class");
+  assertEquals(classifyClassMatch(klass({ label: "8-B", sectionName: "B" }), "8"), "name_prefix");
+  assertEquals(classifyClassMatch(klass({ label: "10-A", className: "10", sectionName: "A" }), "0-a"), "name_partial");
+});
+
+Deno.test("class exact label beats a class-name prefix match", () => {
+  const exact = toClassResult(klass(), "8-a");
+  const prefix = toClassResult(klass({ label: "8-B", sectionName: "B" }), "8");
+  const ordered = orderResults([prefix, exact]);
+  assertEquals(ordered.map((r) => r.id), ["8-A", "8-B"]); // roll_class (3) before name_prefix (4)
+});
+
+Deno.test("toClassResult uses the composed label as id/title and navigates by label", () => {
+  const r = toClassResult(klass(), "8-a");
+  assertEquals(r.category, "classes");
+  assertEquals(r.id, "8-A");
+  assertEquals(r.title, "8-A");
+  assertEquals(r.deepLink, "/academics/classes/8-A");
+  assertEquals(r.subtitle, "Class · 32 enrolled");
+});
+
+Deno.test("toClassResult composes a bare label when there is no section", () => {
+  const r = toClassResult(klass({ label: "Nursery", className: "Nursery", sectionName: null }), "nurs");
+  assertEquals(r.title, "Nursery");
+  assertEquals(r.deepLink, "/academics/classes/Nursery");
 });
