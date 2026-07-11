@@ -39,7 +39,26 @@ EXAM_PROFILES: Dict[str, dict] = {
         "source_exams": ("NEET", "AIPMT", "AIIMS", "NTA_Sample", "JEE_Main",
                          "JEE_Advanced", "Practice_Resources", "NCERT"),
     },
+    # ── certified Class-X BOARD profiles (2026-07-11 Content Density CP3) ──────────────
+    # Real board profiles, admitted ONLY after their verified board corpus was ingested via
+    # the Intake Center. Grade band is fixed to Class 10 and source_exams to the board's own
+    # ingested category (+ NCERT, which IS the CBSE curriculum), so a board paper draws ONLY
+    # from that board's certified Class-X content — never from Class 11-12 foundation material.
+    "CBSE_X": {
+        "subjects": (Subject.PHYSICS, Subject.CHEMISTRY, Subject.BIOLOGY),
+        "grade_band": (10, 10),
+        "source_exams": ("CBSE_NCERT", "NCERT"),
+    },
+    "TS_X": {
+        "subjects": (Subject.PHYSICS, Subject.CHEMISTRY, Subject.BIOLOGY, Subject.MATHEMATICS),
+        "grade_band": (10, 10),
+        "source_exams": ("TS_SCERT",),
+    },
 }
+
+# Class-X board profiles that have a certified ingested corpus (used by the engine's board guard).
+# AP is deliberately absent — no verified AP Class-X source has been ingested (fails closed).
+CERTIFIED_BOARD_PROFILES = frozenset({"CBSE_X", "TS_X"})
 
 # Competitive-exam sources carry NO class_label in the corpus but ARE grade 11-12 by nature
 # (previous-year papers / practice). NCERT textbooks are the only class-labelled source.
@@ -53,6 +72,9 @@ BOARD_ALIASES = {
     "neet": "NEET", "aiims": "AIIMS", "jee": "JEE_MAIN", "jee main": "JEE_MAIN",
     "jee_main": "JEE_MAIN", "jee advanced": "JEE_ADVANCED", "jee_advanced": "JEE_ADVANCED",
     "foundation": "FOUNDATION", "ncert": "FOUNDATION",
+    # certified Class-X boards (ingested corpus)
+    "cbse_x": "CBSE_X", "cbse x": "CBSE_X", "cbse": "CBSE_X",
+    "ts_x": "TS_X", "ts x": "TS_X", "telangana": "TS_X", "ts_scert": "TS_X", "tsscert": "TS_X",
 }
 
 

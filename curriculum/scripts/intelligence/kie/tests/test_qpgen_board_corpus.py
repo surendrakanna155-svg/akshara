@@ -44,12 +44,18 @@ class BoardCorpusTest(unittest.TestCase):
     def tearDown(self):
         self.conn.close()
 
-    def test_class_x_board_blueprints_fail_closed(self):
+    def test_board_blueprint_under_foundation_fails_closed(self):
+        # a Class-X board blueprint requested under FOUNDATION (grade 6-12) is board/grade misuse
         for bp in ("cbse_x_science", "ts_scert_x_science", "ap_scert_x_science"):
             with self.assertRaises(ScopeError) as ctx:
                 self.eng.generate(PaperRequest(exam="FOUNDATION", blueprint_preset=bp, seed=1))
-            self.assertIn("Class-X board", str(ctx.exception))
-            self.assertIn("Class 11-12", str(ctx.exception))
+            self.assertIn("board profile", str(ctx.exception))
+
+    def test_ap_board_always_fails_closed(self):
+        # no verified AP Class-X corpus ingested → AP fails closed under any profile
+        with self.assertRaises(ScopeError) as ctx:
+            self.eng.generate(PaperRequest(exam="FOUNDATION", blueprint_preset="ap_scert_x_science", seed=1))
+        self.assertIn("AP_X", str(ctx.exception))
 
     def test_class_xii_board_still_supported(self):
         # Class XII physics is in the 11-12 band → must NOT be refused
@@ -57,9 +63,10 @@ class BoardCorpusTest(unittest.TestCase):
                                                subjects=("Physics",), seed=1))
         self.assertTrue(paper.total_questions > 0)
 
-    def test_guard_set_contains_only_class_x_boards(self):
-        self.assertEqual(engine_mod._CLASS_X_BOARD_NO_CORPUS,
-                         frozenset({"cbse_x_science", "ts_scert_x_science", "ap_scert_x_science"}))
+    def test_certified_board_profiles_are_cbse_and_ts_only(self):
+        from kie.qpgen import presets
+        self.assertEqual(presets.CERTIFIED_BOARD_PROFILES, frozenset({"CBSE_X", "TS_X"}))
+        self.assertNotIn("AP_X", presets.EXAM_PROFILES)
 
 
 if __name__ == "__main__":

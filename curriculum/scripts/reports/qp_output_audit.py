@@ -50,15 +50,18 @@ MATRIX = [
     ("jeemain_obj_math", dict(exam="JEE_MAIN", blueprint_preset="objective_45", subjects=("Mathematics",))),
     ("jeemain_desc_math",dict(exam="JEE_MAIN", blueprint_preset="descriptive_40", subjects=("Mathematics",))),
     ("jeeadv_full",      dict(exam="JEE_ADVANCED", blueprint_preset="jee_advanced")),
-    ("cbse_x_science",   dict(exam="FOUNDATION", blueprint_preset="cbse_x_science")),
+    # board Class-X configs now target their certified board profiles (CBSE_X, TS_X); AP has no
+    # ingested corpus and stays under FOUNDATION → correctly fails closed.
+    ("cbse_x_science",   dict(exam="CBSE_X", blueprint_preset="cbse_x_science")),
     ("cbse_xii_physics", dict(exam="FOUNDATION", blueprint_preset="cbse_xii_physics", subjects=("Physics",))),
     ("ap_x_science",     dict(exam="FOUNDATION", blueprint_preset="ap_scert_x_science")),
-    ("ts_x_science",     dict(exam="FOUNDATION", blueprint_preset="ts_scert_x_science")),
+    ("ts_x_science",     dict(exam="TS_X", blueprint_preset="ts_scert_x_science")),
     ("foundation_mixed", dict(exam="FOUNDATION", blueprint_preset="mixed_50")),
     ("foundation_desc",  dict(exam="FOUNDATION", blueprint_preset="descriptive_40")),
 ]
-# configs that request a class-X BOARD paper — must be served only from real board/grade corpus
-BOARD_CLASS_X_CONFIGS = {"cbse_x_science", "ap_x_science", "ts_x_science"}
+# class-X BOARD configs with NO ingested corpus → must still fail closed (board/grade misuse if served).
+# CBSE_X and TS_X now have certified board profiles/corpus, so they are legitimately served.
+BOARD_CLASS_X_CONFIGS = {"ap_x_science"}
 
 OBJECTIVE = {QuestionType.MCQ, QuestionType.NUMERICAL,
              QuestionType.ASSERTION_REASON, QuestionType.MATCH}

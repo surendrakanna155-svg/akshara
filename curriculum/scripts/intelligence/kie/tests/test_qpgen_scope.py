@@ -102,7 +102,10 @@ class TestScope(unittest.TestCase):
     def test_board_alias_resolves(self):
         self.assertEqual(presets.resolve_exam_profile(None, "neet", None), "NEET")
         self.assertEqual(presets.resolve_exam_profile("jee advanced", None, None), "JEE_ADVANCED")
-        self.assertIsNone(presets.resolve_exam_profile(None, "CBSE", None))
+        # certified Class-X boards now resolve (corpus ingested); unsupported boards stay None
+        self.assertEqual(presets.resolve_exam_profile(None, "CBSE", None), "CBSE_X")
+        self.assertEqual(presets.resolve_exam_profile(None, "Telangana", None), "TS_X")
+        self.assertIsNone(presets.resolve_exam_profile(None, "ICSE", None))
 
 
 class TestGradeIsolation(unittest.TestCase):
