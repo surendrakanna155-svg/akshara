@@ -82,7 +82,6 @@ class StaffCheckRecord {
     this.faceMatchScore,
     this.distanceM,
     this.eventTime,
-    this.pendingSync = false,
   });
 
   final String id;
@@ -93,9 +92,6 @@ class StaffCheckRecord {
   final double? faceMatchScore;
   final double? distanceM;
   final String? eventTime;
-
-  /// True when the write was queued offline (Sync Center surfaces it until confirmed).
-  final bool pendingSync;
 
   factory StaffCheckRecord.fromJson(Map<String, dynamic> json) {
     double? asDouble(dynamic v) => v == null ? null : (v as num).toDouble();
@@ -108,7 +104,6 @@ class StaffCheckRecord {
       faceMatchScore: asDouble(json['faceMatchScore'] ?? json['face_match_score']),
       distanceM: asDouble(json['distanceM'] ?? json['distance_m']),
       eventTime: (json['eventTime'] ?? json['event_time'])?.toString(),
-      pendingSync: json['pendingSync'] == true,
     );
   }
 }

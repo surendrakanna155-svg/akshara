@@ -57,7 +57,6 @@ class StaffAttendanceController {
           'eventType': event.apiValue,
           'method': record.method,
           if (record.faceMatchScore != null) 'faceMatchScore': record.faceMatchScore.toString(),
-          if (record.pendingSync) 'pendingSync': 'true',
         },
       );
       return StaffCheckOutcome.recorded(record);

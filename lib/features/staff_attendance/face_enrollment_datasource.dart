@@ -168,9 +168,11 @@ class FaceEnrollmentDataSource {
     }
   }
 
-  /// Maps a 422 error envelope to a typed rejection; else null.
+  /// Maps a 422 (validation) or 409 (concurrent-enrol ENROLLMENT_CONFLICT)
+  /// error envelope to a typed rejection; else null.
   FaceEnrollmentRejected? _asRejection(DioException e) {
-    if (e.response?.statusCode != 422) return null;
+    final status = e.response?.statusCode;
+    if (status != 422 && status != 409) return null;
     final data = e.response?.data;
     if (data is Map) {
       final error = data['error'];

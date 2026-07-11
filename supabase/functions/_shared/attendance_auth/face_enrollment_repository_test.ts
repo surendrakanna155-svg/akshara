@@ -94,6 +94,12 @@ Deno.test("validateEmbedding: an all-zeros vector is rejected (can never match â
   assertEquals((e as FaceEnrollmentValidationError).code, "EMBEDDING_INVALID");
 });
 
+Deno.test("validateEmbedding: a near-zero vector whose L2 norm underflows to 0 is rejected the same way (R2 P3)", () => {
+  const tiny = Array.from({ length: 64 }, () => 1e-200);
+  const e = assertThrows(() => validateEmbedding(tiny), FaceEnrollmentValidationError);
+  assertEquals((e as FaceEnrollmentValidationError).code, "EMBEDDING_INVALID");
+});
+
 Deno.test("validateEmbedding: boundary dims (64 and 1024) are accepted", () => {
   assertEquals(validateEmbedding(DIM64).length, 64);
   assertEquals(validateEmbedding(Array.from({ length: 1024 }, () => 0.5)).length, 1024);

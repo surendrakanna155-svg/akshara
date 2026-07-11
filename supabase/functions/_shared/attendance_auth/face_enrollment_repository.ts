@@ -62,11 +62,13 @@ export function validateEmbedding(embedding: unknown): number[] {
   });
   // A zero-magnitude reference can never match anything (cosine fails closed
   // to 0) — accepting it would permanently brick the user's check-in until a
-  // re-enrol. Reject it as invalid up front.
-  if (values.every((v) => v === 0)) {
+  // re-enrol. Test the squared L2 norm rather than the raw values so a
+  // near-zero vector whose norm UNDERFLOWS to 0 (e.g. all ~1e-200) is rejected
+  // the same way as literal zeros — cosine computes this exact sum.
+  if (values.reduce((sum, v) => sum + v * v, 0) === 0) {
     throw new FaceEnrollmentValidationError(
       "EMBEDDING_INVALID",
-      "embedding must not be a zero vector",
+      "embedding must not be a zero-magnitude vector",
     );
   }
   return values;

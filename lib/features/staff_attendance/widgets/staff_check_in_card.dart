@@ -157,9 +157,9 @@ class _StatusBanner extends StatelessWidget {
           scheme.secondaryContainer,
           scheme.onSecondaryContainer,
           Icons.check_circle,
-          outcome.record?.pendingSync == true
-              ? '${event?.label ?? 'Attendance'} queued — will sync when online.'
-              : '${event?.label ?? 'Attendance'} recorded.',
+          // Check-in is online-only (audit R1) — a recorded outcome is always
+          // a confirmed server write; there is no queued/pending state.
+          '${event?.label ?? 'Attendance'} recorded.',
         ),
       StaffCheckStatus.locationBlocked => (
           scheme.tertiaryContainer,

@@ -91,7 +91,6 @@ void main() {
 
       expect(record.id, 'chk_1');
       expect(record.faceMatched, isTrue);
-      expect(record.pendingSync, isFalse);
       expect(reliable.capturedType, 'staffAttendance.check');
       expect(
         (reliable.capturedBody?['face'] as Map?)?['modelTag'],
