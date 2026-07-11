@@ -16,7 +16,7 @@ class HospitalityIntelligenceScreen extends ConsumerWidget {
     final intel = ref.watch(restaurantIntelligenceProvider);
     return Scaffold(
       key: QaTestKeys.restaurantIntelligenceScreen,
-      appBar: AppBar(title: const Text('Intelligence')),
+      appBar: AppBar(title: const Text('Analytics')),
       body: intel.when(
         data: (data) => ListView(
           padding: const EdgeInsets.all(AksharaSpacing.s6),

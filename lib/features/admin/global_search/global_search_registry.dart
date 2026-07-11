@@ -76,7 +76,7 @@ abstract final class GlobalSearchRegistry {
       requiredPermission: Permission.viewManagement,
     ),
     GlobalSearchEntry(
-      label: 'Analytics & Intelligence',
+      label: 'Analytics Hub',
       route: RouteNames.managementIntelligence,
       module: 'Management',
       keywords: ['risk', 'trends', 'executive'],
@@ -177,14 +177,14 @@ abstract final class GlobalSearchRegistry {
       requiredPermission: Permission.viewCommunicationAnalytics,
     ),
     GlobalSearchEntry(
-      label: 'Exam Intelligence',
+      label: 'Exam Analytics',
       route: RouteNames.examIntelligence,
       module: 'Intelligence',
       keywords: ['exams', 'results'],
       requiredPermission: Permission.viewExamIntelligence,
     ),
     GlobalSearchEntry(
-      label: 'Student Success Intelligence',
+      label: 'Student Success Analytics',
       route: RouteNames.studentSuccessIntelligence,
       module: 'Intelligence',
       keywords: ['at-risk', 'success'],

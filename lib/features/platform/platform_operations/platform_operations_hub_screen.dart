@@ -167,7 +167,7 @@ class _PlatformOperationsHubScreenState
               TextButton(
                 key: QaTestKeys.platformOperationsTrustIntelligenceLink,
                 onPressed: () => context.go(RouteNames.organizationIntelligence),
-                child: const Text('Trust Intelligence'),
+                child: const Text('Trust Analytics'),
               ),
             ],
           ),
@@ -334,7 +334,7 @@ class _PlatformOperationsHubScreenState
           data: (value) => Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Error Intelligence',
+              Text('Error Analytics',
                   style: context.aksharaText.titleMedium),
               ...value.classifications.map(
                 (item) => ListTile(

@@ -28,7 +28,7 @@ import '../unified/unified_recommendation_intelligence.dart';
 import '../unified/unified_recommendations_provider.dart';
 import 'intelligence_recommendation_navigation.dart';
 
-/// Analytics & Intelligence hub — dashboard, health, risks, trends, principal summary (v7.6).
+/// Analytics Hub — dashboard, health, risks, trends, principal summary (v7.6).
 class IntelligenceHubScreen extends ConsumerStatefulWidget {
   const IntelligenceHubScreen({super.key});
 
@@ -58,7 +58,7 @@ class _IntelligenceHubScreenState extends ConsumerState<IntelligenceHubScreen>
     if (!ref.watch(intelligenceCanViewProvider)) {
       return const Scaffold(
         body: AksharaErrorState(
-          message: 'Analytics & Intelligence is not enabled for your role.',
+          message: 'Analytics Hub is not enabled for your role.',
           icon: Icons.lock_outline,
         ),
       );
@@ -67,7 +67,7 @@ class _IntelligenceHubScreenState extends ConsumerState<IntelligenceHubScreen>
     return AdminContentScaffold(
       breadcrumbs: const [
         AdminBreadcrumb(label: 'Management', route: '/management/dashboard'),
-        AdminBreadcrumb(label: 'Analytics & Intelligence'),
+        AdminBreadcrumb(label: 'Analytics Hub'),
       ],
       onMenuTap: adminShellMenuTap(context),
       scrollableBody: false,

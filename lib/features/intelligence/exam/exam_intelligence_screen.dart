@@ -62,7 +62,7 @@ class _ExamIntelligenceScreenState extends ConsumerState<ExamIntelligenceScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Exam & Academic Intelligence'),
+        title: const Text('Exam & Academic Analytics'),
         bottom: TabBar(
           controller: _tabs,
           isScrollable: true,

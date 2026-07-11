@@ -56,7 +56,7 @@ class _SchoolDiscoveryScreenState extends ConsumerState<SchoolDiscoveryScreen> {
     return Scaffold(
       key: QaTestKeys.schoolDiscoveryScreen,
       appBar: AppBar(
-        title: const Text('Smart School Configuration'),
+        title: const Text('Guided School Configuration'),
       ),
       body: SafeArea(
         child: Padding(

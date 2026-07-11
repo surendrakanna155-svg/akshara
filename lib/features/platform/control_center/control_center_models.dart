@@ -24,7 +24,7 @@ enum ControlCenterScreen {
 
   String get label => switch (this) {
         ControlCenterScreen.dashboard => 'Dashboard',
-        ControlCenterScreen.intelligence => 'Intelligence',
+        ControlCenterScreen.intelligence => 'Platform Analytics',
         ControlCenterScreen.schools => 'Schools',
         ControlCenterScreen.subscriptions => 'Subscriptions',
         ControlCenterScreen.billing => 'Billing',

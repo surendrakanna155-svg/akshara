@@ -19,7 +19,7 @@ import 'timetable_models.dart';
 import 'timetable_provider.dart';
 import 'timetable_workload_exporter.dart';
 
-/// Smart Timetable hub — dashboard, generation, conflicts, workload, publish (v7.5).
+/// Timetable Optimizer hub — dashboard, generation, conflicts, workload, publish (v7.5).
 class TimetableHubScreen extends ConsumerStatefulWidget {
   const TimetableHubScreen({super.key});
 
@@ -57,7 +57,7 @@ class _TimetableHubScreenState extends ConsumerState<TimetableHubScreen>
     return AdminContentScaffold(
       breadcrumbs: const [
         AdminBreadcrumb(label: 'Management', route: '/management/dashboard'),
-        AdminBreadcrumb(label: 'Smart Timetable'),
+        AdminBreadcrumb(label: 'Timetable Optimizer'),
       ],
       onMenuTap: adminShellMenuTap(context),
       body: Column(

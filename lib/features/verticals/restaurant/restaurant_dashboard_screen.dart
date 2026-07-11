@@ -55,7 +55,7 @@ class RestaurantDashboardScreen extends ConsumerWidget {
                 ElevatedButton(
                   key: QaTestKeys.restaurantNavLink('restaurantIntelligence'),
                   onPressed: () => context.go(RouteNames.restaurantIntelligence),
-                  child: const Text('Intelligence'),
+                  child: const Text('Analytics'),
                 ),
             ]),
           ],

@@ -11,7 +11,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../test_helpers.dart';
 
-/// QW3 · QA-F-052 — Smart School Configuration discovery wizard (FV-PLAT-14).
+/// QW3 · QA-F-052 — Guided School Configuration discovery wizard (FV-PLAT-14).
 /// `school_discovery_screen.dart` drives the school-type/curriculum/capability
 /// selection + the apply-configuration save. Covers: list/form render, option
 /// selection across the multi-step wizard, capability toggle, and a full
@@ -42,7 +42,7 @@ void main() {
         (tester) async {
       await _pump(tester);
 
-      expect(find.text('Smart School Configuration'), findsOneWidget);
+      expect(find.text('Guided School Configuration'), findsOneWidget);
       expect(find.byType(AksharaMultiStepForm), findsOneWidget);
       // Step 0 lists every selectable school type as a tappable option.
       for (final type in SchoolType.values) {

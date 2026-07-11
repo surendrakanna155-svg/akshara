@@ -81,7 +81,7 @@ class _IntelligenceScreenState extends ConsumerState<IntelligenceScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Akshara Intelligence'),
+        title: const Text('Akshara Analytics'),
         bottom: TabBar(
           controller: _tabs,
           isScrollable: true,
@@ -168,7 +168,7 @@ class _IntelligenceScreenState extends ConsumerState<IntelligenceScreen>
       padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         if (canGenerate) ...[
-          Text('AI Communication Assistant', style: context.aksharaText.titleMedium),
+          Text('Communication Assistant', style: context.aksharaText.titleMedium),
           const SizedBox(height: 8),
           _dropdown('Scenario', _scenario, CommunicationScenario.values, (v) {
             setState(() => _scenario = v);

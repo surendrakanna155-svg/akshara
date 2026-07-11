@@ -53,7 +53,7 @@ class _TrustIntelligenceHubScreenState
     }
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Organization Trust Intelligence'),
+        title: const Text('Organization Trust Analytics'),
         bottom: TabBar(
           controller: _tabs,
           isScrollable: true,

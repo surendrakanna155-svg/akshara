@@ -55,7 +55,7 @@ class HealthcareDashboardScreen extends ConsumerWidget {
                 ElevatedButton(
                   key: QaTestKeys.healthcareNavLink('healthcareIntelligence'),
                   onPressed: () => context.go(RouteNames.healthcareIntelligence),
-                  child: const Text('Intelligence'),
+                  child: const Text('Analytics'),
                 ),
             ]),
           ],

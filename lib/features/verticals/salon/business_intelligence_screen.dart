@@ -16,7 +16,7 @@ class BusinessIntelligenceScreen extends ConsumerWidget {
     final intel = ref.watch(salonIntelligenceProvider);
     return Scaffold(
       key: QaTestKeys.salonIntelligenceScreen,
-      appBar: AppBar(title: const Text('Intelligence')),
+      appBar: AppBar(title: const Text('Analytics')),
       body: intel.when(
         data: (data) => ListView(
           padding: const EdgeInsets.all(AksharaSpacing.s6),

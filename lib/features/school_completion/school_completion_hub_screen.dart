@@ -137,7 +137,7 @@ class SchoolCompletionHubScreen extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.meeting_room_outlined),
-            title: const Text('Timetable Intelligence'),
+            title: const Text('Timetable Analytics'),
             subtitle: const Text('Rooms, labs, exam timetable, scoring'),
             onTap: () => context.push(RouteNames.timetableIntelligence),
           ),

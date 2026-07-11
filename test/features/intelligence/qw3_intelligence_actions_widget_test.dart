@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../test_helpers.dart';
 
-/// QW3 · QA-F-060 — Akshara Intelligence generate-report + publish-to-parent
+/// QW3 · QA-F-060 — Akshara Analytics generate-report + publish-to-parent
 /// actions. `intelligence_screen.dart` was 0% lcov / never pumped. Covers the
 /// AI action surface: compute-risk generate, and the Parent Guidance
 /// generate→publish flow (publish ON → "published" parent-hub confirmation,
@@ -47,7 +47,7 @@ void main() {
     testWidgets('renders the five intelligence tabs', (tester) async {
       await _pump(tester);
 
-      expect(find.text('Akshara Intelligence'), findsOneWidget);
+      expect(find.text('Akshara Analytics'), findsOneWidget);
       expect(find.text('Student Risk'), findsOneWidget);
       expect(find.text('Parent Guidance'), findsOneWidget);
       expect(find.text('Principal Center'), findsOneWidget);

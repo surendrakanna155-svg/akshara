@@ -50,7 +50,7 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
     final canView = ref.watch(studentSuccessCanViewProvider);
     if (!canView) {
       return const Scaffold(
-        body: Center(child: Text('Student Success Intelligence permission required.')),
+        body: Center(child: Text('Student Success Analytics permission required.')),
       );
     }
 
@@ -72,7 +72,7 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
         return CopilotContextScope(
           route: RouteNames.studentSuccessIntelligence,
           module: 'intelligence',
-          screen: 'Student Success Intelligence',
+          screen: 'Student Success Analytics',
           kpis: [
             CopilotKpiSnapshot(
               id: 'students_analyzed',
@@ -139,7 +139,7 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
   }) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Student Success Intelligence'),
+        title: const Text('Student Success Analytics'),
         bottom: TabBar(
           controller: _tabs,
           isScrollable: true,

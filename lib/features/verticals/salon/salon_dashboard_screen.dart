@@ -55,7 +55,7 @@ class SalonDashboardScreen extends ConsumerWidget {
                 ElevatedButton(
                   key: QaTestKeys.salonNavLink('salonIntelligence'),
                   onPressed: () => context.go(RouteNames.salonIntelligence),
-                  child: const Text('Intelligence'),
+                  child: const Text('Analytics'),
                 ),
             ]),
           ],

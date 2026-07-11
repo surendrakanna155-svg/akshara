@@ -55,7 +55,7 @@ class AccommodationDashboardScreen extends ConsumerWidget {
                 ElevatedButton(
                   key: QaTestKeys.accommodationNavLink('accommodationIntelligence'),
                   onPressed: () => context.go(RouteNames.accommodationIntelligence),
-                  child: const Text('Intelligence'),
+                  child: const Text('Analytics'),
                 ),
                 ElevatedButton(
                   key: QaTestKeys.accommodationNavLink('hostelDashboard'),

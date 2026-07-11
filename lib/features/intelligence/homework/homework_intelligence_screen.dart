@@ -38,7 +38,7 @@ class _HomeworkIntelligenceScreenState extends ConsumerState<HomeworkIntelligenc
     final plan = ref.watch(homeworkIntelligencePlanProvider(planArgs));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Homework Intelligence')),
+      appBar: AppBar(title: const Text('Homework Analytics')),
       body: ListView(
         padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [

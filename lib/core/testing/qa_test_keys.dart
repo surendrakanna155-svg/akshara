@@ -2322,7 +2322,7 @@ abstract final class QaTestKeys {
   static const organizationBuilderProvisioningScreen =
       ValueKey<String>('organization_builder_provisioning_screen');
 
-  // FV-PLAT-14 Smart School Configuration
+  // FV-PLAT-14 Guided School Configuration
   static const schoolDiscoveryScreen =
       ValueKey<String>('school_discovery_screen');
   // B2 entitlement UI.

@@ -74,7 +74,7 @@ enum Permission {
   manageAcademicTimetable,
   publishAcademicTimetable,
 
-  // Analytics & Intelligence (v7.6)
+  // Analytics Hub (v7.6)
   viewAnalytics,
   viewSchoolHealth,
 

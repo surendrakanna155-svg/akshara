@@ -34,7 +34,7 @@ class _TimetableIntelligenceScreenState extends ConsumerState<TimetableIntellige
     final catalog = ref.watch(academicCatalogFutureProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Timetable Intelligence')),
+      appBar: AppBar(title: const Text('Timetable Analytics')),
       body: ErpAsyncBody(
         state: resolveErpAsync(catalog, isDataEmpty: (_) => false),
         loadingLabel: 'Loading',

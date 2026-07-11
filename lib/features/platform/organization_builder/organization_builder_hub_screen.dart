@@ -39,7 +39,7 @@ class OrganizationBuilderHubScreen extends ConsumerWidget {
             key: QaTestKeys.schoolDiscoveryHubCard,
             child: ListTile(
               leading: const Icon(Icons.tune_outlined),
-              title: const Text('Smart School Configuration'),
+              title: const Text('Guided School Configuration'),
               subtitle: const Text(
                 'FV-PLAT-14 — configure modules, curriculum, and operations model',
               ),

@@ -79,7 +79,7 @@ class _PlatformIntelligenceScreenState
     return CopilotContextScope(
       route: RouteNames.controlCenterIntelligence,
       module: 'control_center',
-      screen: 'Platform Intelligence',
+      screen: 'Platform Analytics',
       kpis: kpis,
       child: ControlCenterModuleScaffold(
         screen: ControlCenterScreen.intelligence,
