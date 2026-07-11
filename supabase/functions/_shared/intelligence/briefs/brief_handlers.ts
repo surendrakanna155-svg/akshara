@@ -71,10 +71,26 @@ export async function handleDailyBrief(req: Request, config: AppConfig): Promise
 
 // ─── Pre-warm ─────────────────────────────────────────────────────────────────
 
-/** Synthetic school-scoped claims for the cron warm pass. The pulse loader
- * gates every source on claims.permissions, so the cron actor carries exactly
- * the view-side permissions a principal's pulse composes from — read-only,
- * one school at a time, RLS-scoped like any school session. */
+/** The permission set the cron warms with. This MUST mirror the seeded
+ * PRINCIPAL role's brief-relevant grants (rbac_foundation + analytics +
+ * intelligence seeds: viewFinance/viewLibrary/viewHr/viewAnalytics/
+ * viewStudentRisk — the principal does NOT hold viewTransport or
+ * viewInventory), because the narrative cache is keyed by permission cohort
+ * (round-4 P1): warming any other subset writes prose no real principal can
+ * read — a wasted governed LLM call per school per night and a cold first
+ * login (round-5 P2). Drift here only degrades pre-warm, never correctness —
+ * the cohort key guarantees a mismatched reader generates their own. */
+const CRON_WARM_PERMISSIONS: readonly string[] = [
+  "viewAnalytics",
+  "viewStudentRisk",
+  "viewFinance",
+  "viewHr",
+  "viewLibrary",
+] as const;
+
+/** Synthetic school-scoped claims for the cron warm pass — read-only, one
+ * school at a time, RLS-scoped like any school session, carrying exactly the
+ * principal cohort's brief-relevant permissions (see above). */
 function cronClaimsForSchool(orgId: string, schoolId: string): AccessTokenClaims {
   return {
     sub: INTERNAL_CRON_ACTOR_ID,
@@ -84,15 +100,7 @@ function cronClaimsForSchool(orgId: string, schoolId: string): AccessTokenClaims
     role: INTERNAL_CRON_ROLE,
     role_slugs: [INTERNAL_CRON_ROLE],
     primary_role: INTERNAL_CRON_ROLE,
-    permissions: [
-      "viewAnalytics",
-      "viewStudentRisk",
-      "viewFinance",
-      "viewInventory",
-      "viewTransport",
-      "viewHr",
-      "viewLibrary",
-    ],
+    permissions: [...CRON_WARM_PERMISSIONS],
     permissions_version: 0,
     scope: "school",
     school_group_id: null,
@@ -146,16 +154,21 @@ async function listActiveSchools(
     .from("organizations")
     .select("id")
     .in("status", ["trial", "active"])
-    .is("deleted_at", null);
+    .is("deleted_at", null)
+    .order("id");
   if (orgs.error) throw new Error(`organizations lookup failed: ${orgs.error.message}`);
   const orgIds = ((orgs.data ?? []) as { id: string }[]).map((r) => r.id);
   if (orgIds.length === 0) return [];
 
+  // Stable order — the sweep's offset continuation depends on it (an
+  // unordered SELECT could skip or double-warm schools across invocations;
+  // round-5 P3).
   const schools = await client
     .from("schools")
     .select("id, organization_id")
     .in("organization_id", orgIds)
-    .is("deleted_at", null);
+    .is("deleted_at", null)
+    .order("id");
   if (schools.error) throw new Error(`schools lookup failed: ${schools.error.message}`);
   return ((schools.data ?? []) as { id: string; organization_id: string }[])
     .map((r) => ({ orgId: r.organization_id, schoolId: r.id }));
