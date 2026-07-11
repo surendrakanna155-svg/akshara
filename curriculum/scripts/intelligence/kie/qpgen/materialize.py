@@ -18,7 +18,7 @@ from typing import Dict, List, Optional
 
 import json
 
-from kie.qpgen import templates
+from kie.qpgen import chapters, sanitize, templates
 from kie.qpgen.models import (Bloom, PaperRequest, QuestionSlot, QuestionType,
                               RenderMode, SlotStatus)
 
@@ -172,15 +172,116 @@ def render_template(slot: QuestionSlot, seed: int) -> bool:
     return True
 
 
+def _definition_predicate(title: str, definition: str) -> Optional[str]:
+    """The definitional PREDICATE with the concept name removed, so it can be a quiz clue that
+    does NOT give away the answer. "Refraction is the bending of light …" → "the bending of light
+    …". Returns None if the definition does not begin with the concept as subject (can't hide the
+    answer safely → fail closed)."""
+    d = (definition or "").strip()
+    t = (title or "").strip()
+    low, tl = d.lower(), t.lower()
+    if not low.startswith(tl):
+        return None
+    rest = d[len(t):].lstrip()
+    m = re.match(r"(?:is|are|was|were)\s+", rest, re.I)
+    if not m:
+        return None
+    body = rest[m.end():].strip().rstrip(".")
+    return body if len(body) >= 12 else None
+
+
+_REPEAT_SUBSTR = re.compile(r"([a-z]{3,})\1", re.I)   # 'weakweak' — OCR concatenation
+
+
+def _good_distractor(title: str) -> bool:
+    """Stricter than is_clean_concept: a distractor must read as a clean concept NAME, so a
+    residual OCR-merged title ('Neutralacidalkal Istrongweakweakstrong') never becomes an option."""
+    for tok in title.split():
+        if len(tok) > 15:                                     # merged run (real terms rarely exceed 15)
+            return False
+    return not _REPEAT_SUBSTR.search(title)
+
+
+def _sibling_distractors(conn, slot: QuestionSlot, seed: int, k: int = 3) -> List[str]:
+    """Up to k plausible, DISTINCT distractor concept titles from the same subject + chapter
+    (grounded in the certified concept spine). Rejects near-synonyms of the answer (title overlap)
+    so exactly one option is correct. Deterministic (seeded)."""
+    subject = slot.subject
+    answer = slot.concept_title
+    a_low = answer.lower()
+    chapter = chapters.resolve_chapter(subject, answer)
+    rows = conn.execute(
+        "SELECT concept_code, title FROM concepts WHERE status='active' AND subject_domain=? "
+        "AND concept_code<>?", (subject, slot.concept_code)).fetchall()
+    same_chapter, same_subject = [], []
+    for r in rows:
+        title = sanitize.normalize_concept_title(r["title"])
+        if not sanitize.is_clean_concept(title) or not _good_distractor(title):
+            continue
+        tl = title.lower()
+        if tl == a_low or tl in a_low or a_low in tl:        # reject synonyms / substrings
+            continue
+        (same_chapter if chapters.resolve_chapter(subject, title) == chapter
+         else same_subject).append((r["concept_code"], title))
+    # prefer same-chapter distractors (most plausible), then top up with same-subject ones
+    def _pick(pool):
+        pool.sort(key=lambda ct: hashlib.sha256(f"{ct[0]}|{seed}".encode()).hexdigest())
+        return pool
+    picked, seen = [], set()
+    for _, title in _pick(same_chapter) + _pick(same_subject):
+        if title.lower() in seen:
+            continue
+        seen.add(title.lower())
+        picked.append(title)
+        if len(picked) >= k:
+            break
+    return picked
+
+
+def render_definition_match_mcq(slot: QuestionSlot, conn, definition: str, seed: int) -> bool:
+    """Grounded definition-match MCQ (2026-07-11 Content Density CP4): the concept's OWN verified
+    definition is the clue (concept name removed), the concept is the single correct answer, and
+    the distractors are DISTINCT sibling concepts from the same subject+chapter. No fabrication —
+    every option is a real certified concept and the clue is a verbatim grounded definition. Fails
+    CLOSED (returns False → slot stays a spec) unless there are exactly 4 distinct options with
+    exactly one correct answer. The downstream validation gate re-checks the same structure."""
+    if slot.question_type != QuestionType.MCQ:
+        return False
+    if not usable_definition(definition):
+        return False
+    clue = _definition_predicate(slot.concept_title, definition)
+    if not clue:
+        return False
+    answer = display_title(slot.concept_title)
+    distractors = _sibling_distractors(conn, slot, seed)
+    if len(distractors) < 3:
+        return False                                          # insufficient evidence → fail closed
+    options = [answer] + [display_title(d) for d in distractors[:3]]
+    norm = [o.strip() for o in options]
+    if len(set(norm)) != 4 or norm.count(answer.strip()) != 1:
+        return False                                          # ambiguous / duplicate → fail closed
+    rot = int(hashlib.sha256(f"{slot.concept_code}|{seed}|dm".encode()).hexdigest()[:4], 16) % 4
+    slot.options = options[rot:] + options[:rot]
+    slot.stem = f"Which of the following is best described as: “{clue}”?"
+    slot.answer = answer
+    slot.solution = f"{answer} is {clue}."
+    slot.render_mode = RenderMode.DETERMINISTIC
+    slot.status = SlotStatus.FILLED
+    slot.provenance = {**slot.provenance, "source": "definition_match",
+                       "grounded_definition": True}
+    return True
+
+
 def materialize(slots: List[QuestionSlot], conn, request: PaperRequest,
                 provider=None, ai_cache: Optional[Dict] = None) -> Dict:
     """Deterministic-first materialization:
-      descriptive → original stem; objective → certified TEMPLATE (solver-verified) if one
-      matches, else a spec. AI is consulted only if the request opts in AND authorization is set,
-      and every AI question then re-passes the SAME validation gate downstream.
+      descriptive → original stem; objective → certified TEMPLATE (solver-verified), else a
+      grounded DEFINITION-MATCH MCQ (concept's own definition + sibling distractors), else a spec.
+      AI is consulted only if the request opts in AND authorization is set, and every AI question
+      then re-passes the SAME validation gate downstream.
     """
     defs = _definitions(conn, [s.concept_code for s in slots])
-    filled = spec = template_filled = 0
+    filled = spec = template_filled = defmatch_filled = 0
     for s in slots:
         if s.question_type in DESCRIPTIVE_TYPES:
             render_deterministic(s, defs.get(s.concept_code, ""), request.seed)
@@ -188,6 +289,9 @@ def materialize(slots: List[QuestionSlot], conn, request: PaperRequest,
         elif render_template(s, request.seed):          # deterministic objective, no AI
             filled += 1
             template_filled += 1
+        elif render_definition_match_mcq(s, conn, defs.get(s.concept_code, ""), request.seed):
+            filled += 1
+            defmatch_filled += 1
         else:
             build_spec(s)
             spec += 1
@@ -197,7 +301,8 @@ def materialize(slots: List[QuestionSlot], conn, request: PaperRequest,
         ai = ai_fill([s for s in slots if s.status == SlotStatus.SPEC], provider, ai_cache)
         spec -= ai["filled"]
         filled += ai["filled"]
-    return {"filled": filled, "spec_only": spec, "template_filled": template_filled, "ai": ai}
+    return {"filled": filled, "spec_only": spec, "template_filled": template_filled,
+            "definition_match_filled": defmatch_filled, "ai": ai}
 
 
 def spec_of(slot: QuestionSlot) -> Dict:
