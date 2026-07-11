@@ -239,7 +239,9 @@ export function verifyFace(
     );
   }
   const score = cosineSimilarity(face.embedding, reference.embedding);
-  if (score < threshold) {
+  // Fail-closed comparison: `!(score >= threshold)` also rejects NaN, where
+  // `score < threshold` would fail OPEN (NaN compares false both ways).
+  if (!(score >= threshold)) {
     throw new StaffAttendanceValidationError(
       "FACE_NO_MATCH",
       "Face did not match your enrolled reference",

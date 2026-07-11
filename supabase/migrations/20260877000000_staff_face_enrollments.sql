@@ -92,8 +92,22 @@ DROP FUNCTION _mig_jsonb_to_real_array(JSONB);
 -- embedding_dim -> embedding_dims (naming) + tightened bounds (64..1024).
 ALTER TABLE staff_face_enrollments RENAME COLUMN embedding_dim TO embedding_dims;
 ALTER TABLE staff_face_enrollments DROP CONSTRAINT IF EXISTS face_enrollment_dim_check;
+
+-- The legacy B4 self-enroll path accepted >=32-dim vectors, so a live table may
+-- hold 32..63-dim rows; a bare BETWEEN check would be validated against them and
+-- ABORT this migration. Sub-64 ACTIVE rows are unusable under the new bound —
+-- revoke them (forcing a clean re-enrol, row kept as audit) and scope the CHECK
+-- to non-revoked rows so historical audit rows can never block it (nor block a
+-- later UPDATE that touches them).
+UPDATE staff_face_enrollments
+   SET status = 'revoked',
+       revoked_at = timezone('utc', now()),
+       updated_at = timezone('utc', now())
+ WHERE status = 'active' AND embedding_dims < 64;
+
 ALTER TABLE staff_face_enrollments
-  ADD CONSTRAINT face_enrollment_dim_check CHECK (embedding_dims BETWEEN 64 AND 1024);
+  ADD CONSTRAINT face_enrollment_dim_check
+  CHECK (status = 'revoked' OR embedding_dims BETWEEN 64 AND 1024);
 
 -- enrolled_at -> created_at (matches the created_at/updated_at convention used
 -- everywhere else in this codebase).

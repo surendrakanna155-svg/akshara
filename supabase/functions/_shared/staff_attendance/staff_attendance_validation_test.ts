@@ -146,6 +146,19 @@ Deno.test("verifyFace: matching face above threshold passes; a different face is
   assertEquals((e as StaffAttendanceValidationError).code, "FACE_NO_MATCH");
 });
 
+Deno.test("verifyFace: a non-finite (overflowed) reference fails CLOSED as FACE_NO_MATCH — never matched:true via NaN", () => {
+  const live = [0.9, 0.1, 0.2, 0.05];
+  const e = assertThrows(
+    () =>
+      verifyFace(
+        { embedding: live, livenessPassed: true, captureRef: null, modelTag: "" },
+        { embedding: [Infinity, 0.1, 0.2, 0.05] },
+      ),
+    StaffAttendanceValidationError,
+  );
+  assertEquals((e as StaffAttendanceValidationError).code, "FACE_NO_MATCH");
+});
+
 Deno.test("parseStaffCheckBody: rejects missing location / missing face; accepts a full body", () => {
   assertThrows(
     () => parseStaffCheckBody({ eventType: "check_in", face: { embedding: [1], livenessPassed: true } }),

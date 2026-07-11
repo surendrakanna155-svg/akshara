@@ -32,6 +32,12 @@ Deno.test("cosineSimilarity: empty vectors → 0", () => {
   assertEquals(cosineSimilarity([], []), 0);
 });
 
+Deno.test("cosineSimilarity: non-finite values (float4-overflow Infinity readback) → 0, fails closed — NaN must never flow into a threshold comparison", () => {
+  assertEquals(cosineSimilarity([Infinity, 0.5], [0.5, 0.5]), 0);
+  assertEquals(cosineSimilarity([0.5, 0.5], [-Infinity, 0.5]), 0);
+  assertEquals(cosineSimilarity([NaN, 0.5], [0.5, 0.5]), 0);
+});
+
 Deno.test("cosineSimilarity: zero (degenerate) vector → 0, fails closed", () => {
   assertEquals(cosineSimilarity([0, 0, 0], [1, 2, 3]), 0);
   assertEquals(cosineSimilarity([1, 2, 3], [0, 0, 0]), 0);

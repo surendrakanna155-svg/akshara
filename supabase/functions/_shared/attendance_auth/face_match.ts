@@ -45,13 +45,18 @@ export function cosineSimilarity(a: number[], b: number[]): number {
   // occasional floating-point overshoot (e.g. 1.0000000000000002 for
   // identical/parallel vectors) so callers can rely on the bound holding exactly.
   const raw = dot / (Math.sqrt(na) * Math.sqrt(nb));
+  // Non-finite input values (e.g. a float4-overflowed Infinity read back from
+  // the DB) make `raw` NaN — and Math.min/Math.max propagate NaN instead of
+  // clamping it, so `NaN < threshold` comparisons downstream would fail OPEN.
+  // An inconclusive comparison is a non-match: fail closed.
+  if (!Number.isFinite(raw)) return 0;
   return Math.min(1, Math.max(-1, raw));
 }
 
 /**
  * Resolves the live acceptance threshold: FACE_MATCH_MIN_SIMILARITY when set to
  * a finite number, clamped into [0.5, 0.99]; otherwise the conservative default
- * (0.80). Never throws.
+ * (0.82). Never throws.
  */
 export function faceMatchThreshold(): number {
   const envVal = Deno.env.get("FACE_MATCH_MIN_SIMILARITY");

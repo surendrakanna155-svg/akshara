@@ -62,8 +62,11 @@ Deno.test("20260877 gives status a lifecycle CHECK constraint (active|revoked)",
   assert(statements.includes("CHECK (status IN ('active', 'revoked'))"));
 });
 
-Deno.test("20260877 tightens embedding_dims to 64..1024", () => {
-  assert(statements.includes("CHECK (embedding_dims BETWEEN 64 AND 1024)"));
+Deno.test("20260877 tightens embedding_dims to 64..1024 for non-revoked rows only (legacy 32..63-dim rows must not abort the migration)", () => {
+  assert(statements.includes("CHECK (status = 'revoked' OR embedding_dims BETWEEN 64 AND 1024)"));
+  // Sub-64 ACTIVE legacy rows are revoked BEFORE the check is added — a bare
+  // BETWEEN constraint would be validated against them and roll the deploy back.
+  assert(statements.includes("WHERE status = 'active' AND embedding_dims < 64"));
 });
 
 Deno.test("20260877 grants no DELETE — revocation is an UPDATE, the row is kept as an audit record", () => {

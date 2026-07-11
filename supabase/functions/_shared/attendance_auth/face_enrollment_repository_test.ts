@@ -3,7 +3,7 @@
 // ai_semantic_cache_repository_test.ts): a plain object cast to TenantQueryClient
 // that records every call's SQL + args in order.
 
-import { assert, assertEquals } from "jsr:@std/assert@1";
+import { assert, assertEquals, assertThrows } from "jsr:@std/assert@1";
 import type { TenantQueryClient } from "../tenant_db.ts";
 import {
   type AttendanceAuthScope,
@@ -76,6 +76,22 @@ Deno.test("validateEmbedding: non-finite element → EMBEDDING_INVALID", () => {
     assert(e instanceof FaceEnrollmentValidationError);
     assertEquals(e.code, "EMBEDDING_INVALID");
   }
+});
+
+Deno.test("validateEmbedding: huge-magnitude values are rejected (would overflow float4 to Infinity → NaN cosine downstream)", () => {
+  const bad = [...DIM64];
+  bad[0] = 1e39;
+  const e = assertThrows(() => validateEmbedding(bad), FaceEnrollmentValidationError);
+  assertEquals((e as FaceEnrollmentValidationError).code, "EMBEDDING_INVALID");
+  const bad2 = [...DIM64];
+  bad2[10] = -1e7;
+  assertThrows(() => validateEmbedding(bad2), FaceEnrollmentValidationError);
+});
+
+Deno.test("validateEmbedding: an all-zeros vector is rejected (can never match — would brick the user)", () => {
+  const zeros = Array.from({ length: 64 }, () => 0);
+  const e = assertThrows(() => validateEmbedding(zeros), FaceEnrollmentValidationError);
+  assertEquals((e as FaceEnrollmentValidationError).code, "EMBEDDING_INVALID");
 });
 
 Deno.test("validateEmbedding: boundary dims (64 and 1024) are accepted", () => {

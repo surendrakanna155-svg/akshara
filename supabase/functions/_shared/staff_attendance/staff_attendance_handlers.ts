@@ -185,7 +185,10 @@ export async function handleEnrollFace(req: Request, config: AppConfig): Promise
     });
     return jsonResponse(envelope({
       id: result.id,
+      // embeddingDim kept for the original B4 contract; embeddingDims matches
+      // the /attendance-auth twin so the two enroll routes agree.
       embeddingDim: result.embeddingDims,
+      embeddingDims: result.embeddingDims,
       modelTag: result.modelTag,
       enrolledAt: result.createdAt,
     }));
@@ -193,7 +196,8 @@ export async function handleEnrollFace(req: Request, config: AppConfig): Promise
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse();
     if (error instanceof StaffAttendanceValidationError) return validationResponse(error);
     if (error instanceof FaceEnrollmentValidationError) {
-      return errorEnvelope(`STAFF_ATTENDANCE_${error.code}`, error.message, 422);
+      const status = error.code === "ENROLLMENT_CONFLICT" ? 409 : 422;
+      return errorEnvelope(`STAFF_ATTENDANCE_${error.code}`, error.message, status);
     }
     throw error;
   }

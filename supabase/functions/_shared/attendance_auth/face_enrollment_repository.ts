@@ -19,6 +19,12 @@ export interface AttendanceAuthScope {
 const MIN_EMBEDDING_DIMS = 64;
 const MAX_EMBEDDING_DIMS = 1024;
 
+/** Per-value magnitude cap. Real face embeddings are unit-scale (|v| ≲ 1);
+ * anything huge is garbage — and values ≥ ~3.4e38 would overflow the float4
+ * column to Infinity, making every later cosine read NaN. Rejecting here keeps
+ * non-finite values out of the database entirely. */
+const MAX_EMBEDDING_VALUE = 1e6;
+
 export class FaceEnrollmentValidationError extends Error {
   readonly code: string;
   constructor(code: string, message: string) {
@@ -44,16 +50,26 @@ export function validateEmbedding(embedding: unknown): number[] {
       `embedding must have between ${MIN_EMBEDDING_DIMS} and ${MAX_EMBEDDING_DIMS} dimensions`,
     );
   }
-  return embedding.map((v) => {
+  const values = embedding.map((v) => {
     const n = Number(v);
-    if (!Number.isFinite(n)) {
+    if (!Number.isFinite(n) || Math.abs(n) > MAX_EMBEDDING_VALUE) {
       throw new FaceEnrollmentValidationError(
         "EMBEDDING_INVALID",
-        "embedding values must all be finite numbers",
+        "embedding values must all be finite numbers of sane magnitude",
       );
     }
     return n;
   });
+  // A zero-magnitude reference can never match anything (cosine fails closed
+  // to 0) — accepting it would permanently brick the user's check-in until a
+  // re-enrol. Reject it as invalid up front.
+  if (values.every((v) => v === 0)) {
+    throw new FaceEnrollmentValidationError(
+      "EMBEDDING_INVALID",
+      "embedding must not be a zero vector",
+    );
+  }
+  return values;
 }
 
 export interface FaceEnrollmentRow {
@@ -146,24 +162,38 @@ export async function enrollFace(
   );
 
   const id = `face_enr_${crypto.randomUUID()}`;
-  const rows = await db.queryObject<EnrollmentSqlRow>(
-    `INSERT INTO staff_face_enrollments (
-       id, organization_id, school_id, user_id, embedding, embedding_dims,
-       model_tag, enrolled_by, status
-     ) VALUES ($1,$2,$3,$4,$5::real[],$6,$7,$8,'active')
-     RETURNING ${ENROLLMENT_COLUMNS}`,
-    [
-      id,
-      scope.organizationId,
-      scope.schoolId,
-      input.userId,
-      embedding,
-      embedding.length,
-      modelTag,
-      input.enrolledBy,
-    ],
-  );
-  return fromSqlRow(rows[0]!);
+  try {
+    const rows = await db.queryObject<EnrollmentSqlRow>(
+      `INSERT INTO staff_face_enrollments (
+         id, organization_id, school_id, user_id, embedding, embedding_dims,
+         model_tag, enrolled_by, status
+       ) VALUES ($1,$2,$3,$4,$5::real[],$6,$7,$8,'active')
+       RETURNING ${ENROLLMENT_COLUMNS}`,
+      [
+        id,
+        scope.organizationId,
+        scope.schoolId,
+        input.userId,
+        embedding,
+        embedding.length,
+        modelTag,
+        input.enrolledBy,
+      ],
+    );
+    return fromSqlRow(rows[0]!);
+  } catch (err) {
+    // Two overlapping enrolls for the same user both pass the revoke step,
+    // then the second INSERT trips the one-active-per-user partial unique
+    // index — surface it as a typed conflict, not a raw 500.
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("idx_staff_face_active") || msg.includes("duplicate key")) {
+      throw new FaceEnrollmentValidationError(
+        "ENROLLMENT_CONFLICT",
+        "Another enrolment for this user just completed — retry to replace it",
+      );
+    }
+    throw err;
+  }
 }
 
 /**

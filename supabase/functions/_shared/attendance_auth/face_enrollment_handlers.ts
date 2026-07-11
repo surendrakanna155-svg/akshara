@@ -40,7 +40,10 @@ function scopeOf(claims: AccessTokenClaims): AttendanceAuthScope {
 }
 
 function validationResponse(e: FaceEnrollmentValidationError): Response {
-  return errorEnvelope(`ATTENDANCE_AUTH_${e.code}`, e.message, 422);
+  // ENROLLMENT_CONFLICT is a lost race with a concurrent enrol, not a bad
+  // payload — 409 tells the client to simply retry.
+  const status = e.code === "ENROLLMENT_CONFLICT" ? 409 : 422;
+  return errorEnvelope(`ATTENDANCE_AUTH_${e.code}`, e.message, status);
 }
 
 /**
