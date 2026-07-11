@@ -31,6 +31,8 @@ from typing import Dict, List, Optional
 
 from kie.qpgen.engine import QuestionPaperEngine, QpGenError
 from kie.qpgen.models import PaperRequest, QuestionType, SlotStatus
+from kie.qpgen.scope import ScopeError
+from kie.qpgen.assemble import is_student_printable   # the engine's own print-ready gate
 
 # ── the fixed matrix (config_id -> request kwargs). 3 seeds each → 57 papers. ──────────────
 SEEDS = (11, 42, 777)
@@ -128,77 +130,62 @@ class PaperAudit:
 
 
 def audit_paper(config: str, seed: int, paper) -> PaperAudit:
+    """Measure the STUDENT-FACING output — what render_markdown actually prints — using the
+    engine's own is_student_printable() gate. Anything not printable is routed to the authoring
+    worklist (not a student question), so gate violations are counted ONLY over the printed body.
+    """
     a = PaperAudit(config=config, seed=seed)
-    filled_slots = [s for s in paper.slots if s.status == SlotStatus.FILLED]
     a.slots = len(paper.slots)
-    a.blueprint_count = paper.provenance.get("blueprint_target_count") or len(paper.slots)
-    a.filled = len(filled_slots)
+    a.blueprint_count = len(paper.slots)                 # blueprint positions (post-validation)
+    a.filled = sum(1 for s in paper.slots if s.status == SlotStatus.FILLED)
     a.spec = sum(1 for s in paper.slots if s.status == SlotStatus.SPEC)
+    printed = [s for s in paper.slots if is_student_printable(s)]
 
-    leak = False
+    # difficulty honesty over the whole paper (label vs requested; recorded in provenance)
     for s in paper.slots:
-        t = s.question_type
+        prov = s.provenance or {}
+        if "difficulty_met" in prov:
+            (a.__setattr__("diff_met", a.diff_met + 1) if prov["difficulty_met"]
+             else a.__setattr__("diff_relaxed", a.diff_relaxed + 1))
+        if s.question_type in OBJECTIVE:
+            a.obj_total += 1
+        if s.question_type in DESCRIPTIVE:
+            a.desc_total += 1
+
+    # ── gate checks over the PRINTED student body (each should be 0) ──
+    for s in printed:
         stem = s.stem or ""
         prov = s.provenance or {}
-        if t in OBJECTIVE:
-            a.obj_total += 1
-        if t in DESCRIPTIVE:
-            a.desc_total += 1
-        # difficulty honesty
-        if "difficulty_met" in prov:
-            if prov["difficulty_met"]:
-                a.diff_met += 1
-            else:
-                a.diff_relaxed += 1
-
-        if s.status != SlotStatus.FILLED:
-            continue
-        # ── printed-item checks (only FILLED reaches a student) ──
         if SPEC_MARK.search(stem):
-            leak = True                                   # a spec leaked into a filled stem
             a.printed_specs += 1
-        arts = _stem_artifacts(stem)
-        if arts:
+        if _stem_artifacts(stem):
             a.stem_artifacts += 1
-        # junk / broken concept title surfacing in the stem
         if _title_is_junk(s.concept_title):
             a.junk_titles += 1
-
-        if t in OBJECTIVE:
-            a.obj_filled += 1
-            if t == QuestionType.MCQ:
-                a.mcq_filled += 1
-                if not _mcq_options_ok(s):
-                    a.mcq_bad_options += 1
-                    leak = True
-            # a fabricated objective answer = template-source items are solver-verified; anything
-            # else claiming a filled objective answer without options/solution is suspect
-        if t in DESCRIPTIVE:
-            a.desc_filled += 1
+        if s.question_type == QuestionType.MCQ:
+            a.mcq_filled += 1
+            if not _mcq_options_ok(s):
+                a.mcq_bad_options += 1
+        if s.question_type in DESCRIPTIVE:
             if _is_generic_key(s.answer):
                 a.desc_generic += 1
-                leak = True                               # generic placeholder = needs rewrite
             elif _is_real_answer(s.answer):
                 a.desc_real += 1
-            else:
-                leak = True                               # filled but no usable key
-
+        if s.question_type in OBJECTIVE:
+            a.obj_filled += 1
         if (prov.get("chapter") or "").lower().startswith("general") or not prov.get("chapter"):
             a.general_chapter += 1
+        a.filled_answerable += 1
+        a.filled_stem_keys.append(re.sub(r"\d+", "#", stem.lower()).strip())
 
-        answerable = (not SPEC_MARK.search(stem) and _is_real_answer(s.answer)
-                      and (t not in FOUR_OPT or _mcq_options_ok(s)))
-        if answerable:
-            a.filled_answerable += 1
-            a.filled_stem_keys.append(re.sub(r"\d+", "#", stem.lower()).strip())
+    a.desc_filled = sum(1 for s in printed if s.question_type in DESCRIPTIVE)
 
-    # board/grade misuse: a Class-X board paper served from the 11-12 foundation corpus
-    if config in BOARD_CLASS_X_CONFIGS and a.filled + a.spec > 0:
-        a.board_misuse = True
-        leak = True
-
-    a.printable_clean = (a.filled_answerable == a.filled and a.filled > 0 and not leak)
-    coverage_ok = a.blueprint_count and a.filled >= 0.9 * a.blueprint_count
+    # a paper is print-ready (no rewrite of what is printed) iff it has printable content and
+    # ZERO gate violations in that content. board configs are refused upstream (never reach here).
+    a.printable_clean = (len(printed) > 0 and a.printed_specs == 0 and a.mcq_bad_options == 0
+                         and a.desc_generic == 0 and a.stem_artifacts == 0 and a.junk_titles == 0)
+    # teacher-ready (full) additionally requires near-complete blueprint coverage
+    coverage_ok = a.blueprint_count and len(printed) >= 0.9 * a.blueprint_count
     a.teacher_ready_full = a.printable_clean and bool(coverage_ok)
     return a
 
@@ -241,11 +228,9 @@ def run(db_path: str) -> Dict:
             try:
                 paper = eng.generate(PaperRequest(seed=seed, **kw))
                 audits.append(audit_paper(config, seed, paper))
-            except QpGenError as exc:
-                a = PaperAudit(config=config, seed=seed, ok=False, error=str(exc))
-                # a refusal is CORRECT for a class-X board with no real corpus
-                a.board_misuse = False
-                audits.append(a)
+            except (QpGenError, ScopeError) as exc:
+                # a refusal is CORRECT for a class-X board with no real corpus (fail closed)
+                audits.append(PaperAudit(config=config, seed=seed, ok=False, error=str(exc)))
     return summarize(audits)
 
 
@@ -270,42 +255,53 @@ def summarize(audits: List[PaperAudit]) -> Dict:
 
     obj_total, obj_filled = s("obj_total"), s("obj_filled")
     desc_filled, desc_generic, desc_real = s("desc_filled"), s("desc_generic"), s("desc_real")
+    printed_total = total_answerable
+    blueprint_total = sum(a.blueprint_count for a in served)
+
+    def cov(a):
+        return (a.filled_answerable / a.blueprint_count) if a.blueprint_count else 0
+
     metrics = {
         "papers_total": len(audits),
         "papers_served": len(served),
         "papers_refused": len(refused),
         "questions_total": tot_q,
-        "d1_answerable_pct": pct(total_answerable, tot_q),
+        # coverage of the STUDENT-facing (printed) body
+        "printed_questions_total": printed_total,
+        "print_coverage_pct": pct(printed_total, blueprint_total),
+        "d1_answerable_pct": pct(printed_total, tot_q),
         "d2_objective_spec_pct": pct(obj_total - obj_filled, obj_total),
         "d2_objective_filled_pct": pct(obj_filled, obj_total),
-        "d3_desc_generic_pct": pct(desc_generic, desc_filled),
-        "d4_desc_real_pct": pct(desc_real, desc_filled),
-        "d5_general_chapter_pct": pct(s("general_chapter"), s("filled")),
-        "d6_junk_title_count": s("junk_titles"),
-        "d7_mcq_bad_options": s("mcq_bad_options"),
-        "d7_mcq_filled": s("mcq_filled"),
-        "d8_stem_artifact_count": s("stem_artifacts"),
+        "d4_desc_printed_real_pct": pct(desc_real, desc_filled),   # printed descriptive w/ real key
+        "d5_general_chapter_pct_printed": pct(s("general_chapter"), printed_total),
         "d9_difficulty_met_pct": pct(s("diff_met"), s("diff_met") + s("diff_relaxed")),
         "d11_clone_answerable": clones,
         "d11_answerable_total": total_answerable,
-        "gate_student_specs": s("printed_specs") + desc_generic,   # any spec/placeholder printed
+        # ── EXIT-GATE counters (measured over the PRINTED student body; each must be 0) ──
+        "gate_student_specs": s("printed_specs") + s("desc_generic"),
         "gate_optionless_mcq": s("mcq_bad_options"),
         "gate_board_misuse_papers": sum(1 for a in served if a.board_misuse),
         "gate_stem_artifacts": s("stem_artifacts"),
-        "teacher_ready_full": sum(1 for a in served if a.teacher_ready_full),
-        "printable_clean": sum(1 for a in served if a.printable_clean),
+        "gate_junk_titles": s("junk_titles"),
+        # ── teacher-ready paper counts (the headline question) ──
+        "papers_printable_clean": sum(1 for a in served if a.printable_clean),   # printed body needs 0 rewrite
+        "teacher_ready_ge90pct": sum(1 for a in served if a.printable_clean and cov(a) >= 0.9),
+        "teacher_ready_ge50pct": sum(1 for a in served if a.printable_clean and cov(a) >= 0.5),
+        "teacher_ready_full_paper": sum(1 for a in served if a.printable_clean and cov(a) >= 0.999),
     }
-    per_config = defaultdict(lambda: {"served": 0, "ready_full": 0, "printable": 0, "refused": 0})
+    per_config = defaultdict(lambda: {"served": 0, "printable": 0, "printed_q": 0,
+                                      "blueprint_q": 0, "refused": 0})
     for a in audits:
         pc = per_config[a.config]
         if not a.ok:
             pc["refused"] += 1
             continue
         pc["served"] += 1
-        pc["ready_full"] += int(a.teacher_ready_full)
         pc["printable"] += int(a.printable_clean)
+        pc["printed_q"] += a.filled_answerable
+        pc["blueprint_q"] += a.blueprint_count
     return {"metrics": metrics, "per_config": dict(per_config),
-            "refusals": [f"{a.config}:s{a.seed}: {a.error[:80]}" for a in refused],
+            "refusals": [f"{a.config}:s{a.seed}: {a.error[:90]}" for a in refused],
             "papers": [vars(a) for a in audits]}
 
 
@@ -319,10 +315,10 @@ def main(argv=None):
     print("== QP CONTENT READINESS AUDIT ==")
     for k, v in m.items():
         print(f"  {k}: {v}")
-    print("\n-- teacher-ready by config (full / printable / served, refused) --")
+    print("\n-- by config: printed_q/blueprint_q  (printable papers / served, refused) --")
     for cfg, pc in result["per_config"].items():
-        print(f"  {cfg:20} full={pc['ready_full']} printable={pc['printable']} "
-              f"served={pc['served']} refused={pc['refused']}")
+        print(f"  {cfg:20} printed={pc['printed_q']:3}/{pc['blueprint_q']:3}  "
+              f"printable_papers={pc['printable']} served={pc['served']} refused={pc['refused']}")
     if result["refusals"]:
         print("\n-- refusals --")
         for r in result["refusals"]:

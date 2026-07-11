@@ -24,6 +24,12 @@ class QpGenError(RuntimeError):
     pass
 
 
+# Class-X *board* blueprints with no certified board/grade corpus (see the P1-4 guard in
+# generate()). The corpus is JEE/NEET Class 11-12 only, so these must fail closed rather than
+# be served from out-of-grade content. Class-XII board blueprints are in-band and NOT listed.
+_CLASS_X_BOARD_NO_CORPUS = frozenset({"cbse_x_science", "ts_scert_x_science", "ap_scert_x_science"})
+
+
 def _open_ro(db_path) -> sqlite3.Connection:
     conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
@@ -67,6 +73,22 @@ class QuestionPaperEngine:
             errs = bp_mod.validate_blueprint(blueprint)
             if errs:
                 raise QpGenError(f"invalid blueprint {blueprint.name}: {errs}")
+
+            # P1-4 HONEST BOARD SUPPORT (2026-07-11 QP Content Readiness remediation).
+            # The certified corpus is JEE/NEET Class 11-12 (concept_board_mappings is 100%
+            # FOUNDATION; no CBSE/AP/TS board mapping and no Class-X grade evidence exists).
+            # A Class-X *board* paper drawn from Class 11-12 knowledge is board/grade corpus
+            # misuse — so we FAIL CLOSED with an honest message rather than fabricate a
+            # Class-X board paper. (A Class-XII board scope, e.g. cbse_xii_physics, IS in the
+            # 11-12 band and remains supported.) Documented exception; reversible the moment a
+            # real board/grade corpus is ingested (remove the name from the set below).
+            if blueprint.name in _CLASS_X_BOARD_NO_CORPUS:
+                raise scope_mod.ScopeError(
+                    f"blueprint {blueprint.name!r} is a Class-X board paper, but the certified "
+                    f"corpus holds only JEE/NEET Class 11-12 knowledge (no CBSE/AP/Telangana "
+                    f"Class-X board/grade corpus). Refusing to generate a Class-X board paper "
+                    f"from Class 11-12 content. Ingest a certified Class-X board corpus to enable it.")
+
             availability = bp_mod.type_availability(conn, scope)
             warnings = list(bp_mod.feasibility(blueprint, availability))
 
