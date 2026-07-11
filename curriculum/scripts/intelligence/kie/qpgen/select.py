@@ -15,7 +15,7 @@ from __future__ import annotations
 import hashlib
 import math
 from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from kie.qpgen.models import Blueprint, PaperRequest, QuestionSlot, SlotStatus
 from kie.qpgen.pool import Candidate
@@ -83,14 +83,29 @@ def _tier_map(cands: List[Candidate], score_of: Dict[str, float], n: int = IMPOR
     return {c.key: min(n - 1, i // size) for i, c in enumerate(ordered)}
 
 
+def _fill_rank(cand: Candidate, fillable: Dict[str, int]) -> int:
+    """FILL-AWARENESS (2026-07-11 Content Density Phase 2). Lower = preferred. Ranks a candidate by
+    the STRENGTH of the deterministic, grounded content available to materialize it AS-IS (AI OFF):
+      0 solver-verified template · 1 grounded verified definition · 2 other validated capability ·
+      3 unfillable (would ship as an authoring spec).
+    fillable maps candidate.key → that rank; absent ⇒ unfillable (3). This lifts paper completeness
+    without touching syllabus/grade/subject boundaries or the difficulty/bloom bucket (applied
+    upstream), and it sits AFTER subject balance and does NOT reorder chapter/seed diversity among
+    equally-fillable candidates, so coverage diversity and seed variety are preserved."""
+    return fillable.get(cand.key, 3) if fillable else 0
+
+
 def _priority(cand: Candidate, seed: int, subject_usage: Dict[str, int],
-              chapter_usage: Dict[str, int], tier: int, score: float):
-    """Lower = picked first: balance subjects → balance chapters → importance tier → SEEDED
-    order (variety) → composite importance → stable id. Subject and chapter coverage are balanced
-    first, so every paper spreads across the syllabus; the seed drives variety within a tier."""
+              chapter_usage: Dict[str, int], tier: int, score: float,
+              fillable: Optional[Dict[str, int]] = None):
+    """Lower = picked first: balance subjects → prefer FILLABLE content → balance chapters →
+    importance tier → SEEDED order (variety) → composite importance → stable id. Subject coverage
+    is balanced first; then we prefer concepts we can actually fill deterministically; chapter
+    coverage and the seed still drive diversity/variety among equally-fillable candidates."""
     return (
-        subject_usage.get(cand.subject, 0),    # per-paper subject balance
-        chapter_usage.get(cand.chapter, 0),    # per-paper chapter/topic balance
+        subject_usage.get(cand.subject, 0),    # per-paper subject balance (diversity first)
+        _fill_rank(cand, fillable or {}),      # prefer template > definition > other > unfillable
+        chapter_usage.get(cand.chapter, 0),    # per-paper chapter/topic balance (diversity)
         tier,                                  # importance tier (graph + recency + evidence + freq)
         _seed_hash(cand.concept_code, seed),   # SEED drives which concepts of a tier are chosen
         -round(score, 6),                      # within tier+seed, prefer higher composite importance
@@ -99,7 +114,12 @@ def _priority(cand: Candidate, seed: int, subject_usage: Dict[str, int],
 
 
 def select(blueprint: Blueprint, pool: List[Candidate], request: PaperRequest,
-           scope: SyllabusScope) -> SelectionResult:
+           scope: SyllabusScope, fillable: Optional[Dict[str, int]] = None) -> SelectionResult:
+    """`fillable` (optional): candidate.key → fill-strength rank (0 template, 1 definition,
+    2 other, 3/absent unfillable), supplied by the engine which knows the materialization
+    capabilities. When provided, selection PREFERS fillable concepts (after subject balance) so a
+    paper ships complete deterministic content instead of authoring specs — without weakening
+    syllabus/grade/subject isolation, chapter diversity, bloom/difficulty, or seed determinism."""
     exclude = set(request.exclude_concepts or ())
     ref_year = _ref_year(pool)
     score_of: Dict[str, float] = {c.key: importance_score(c, ref_year) for c in pool}
@@ -134,7 +154,8 @@ def select(blueprint: Blueprint, pool: List[Candidate], request: PaperRequest,
             for k in relaxed_here:
                 relaxed[k] += 1
             best = min(bucket, key=lambda c: _priority(c, request.seed, subject_usage,
-                                                       chapter_usage, tier_of[c.key], score_of[c.key]))
+                                                       chapter_usage, tier_of[c.key], score_of[c.key],
+                                                       fillable))
             number += 1
             picked += 1
             res.used_concepts.add(best.concept_code)

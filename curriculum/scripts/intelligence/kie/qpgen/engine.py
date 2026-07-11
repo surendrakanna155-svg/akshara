@@ -42,6 +42,26 @@ def _open_ro(db_path) -> sqlite3.Connection:
     return conn
 
 
+def _fillable_map(conn, pool):
+    """candidate.key → deterministic fill-strength rank for fill-aware selection (Phase 2):
+      0 solver-verified template · 1 grounded verified definition (descriptive key OR
+      definition-match MCQ) · absent ⇒ unfillable (would ship as an authoring spec).
+    Mirrors exactly what materialize.materialize() can produce AS-IS with AI OFF, so selection's
+    preference never promises fill the materializer cannot deliver."""
+    from kie.qpgen import materialize, templates
+    from kie.qpgen.models import QuestionType
+    descriptive = (QuestionType.SHORT_ANSWER, QuestionType.LONG_ANSWER)
+    defs = materialize._definitions(conn, [c.concept_code for c in pool])
+    out = {}
+    for c in pool:
+        if templates.find_template(c.subject, c.concept_title, c.question_type) is not None:
+            out[c.key] = 0
+        elif materialize.usable_definition(defs.get(c.concept_code, "")) and (
+                c.question_type in descriptive or c.question_type == QuestionType.MCQ):
+            out[c.key] = 1
+    return out
+
+
 class QuestionPaperEngine:
     def __init__(self, conn: Optional[sqlite3.Connection] = None, db_path: Optional[Path] = None):
         self._conn = conn                         # injected (tests / callers own it)
@@ -100,7 +120,12 @@ class QuestionPaperEngine:
             warnings = list(bp_mod.feasibility(blueprint, availability))
 
             # 3) select (pool cached above) → 4) materialize
-            selection = select_mod.select(blueprint, pool, request, scope)
+            #    FILL-AWARENESS (Content Density Phase 2): tell selection which candidates can be
+            #    materialized deterministically AS-IS (AI OFF), ranked by content strength, so a
+            #    paper prefers fillable concepts over authoring specs — without weakening scope,
+            #    isolation, diversity, bloom/difficulty, or seed determinism.
+            fillable = _fillable_map(conn, pool)
+            selection = select_mod.select(blueprint, pool, request, scope, fillable=fillable)
             warnings += selection.shortfalls + selection.notes
             mat = materialize.materialize(selection.slots, conn, request)
 
