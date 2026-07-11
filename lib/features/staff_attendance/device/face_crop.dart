@@ -51,6 +51,17 @@ CropRect computeFaceCropRect({
   );
 }
 
+/// Bakes the JPEG EXIF orientation into the pixel data (audit R1, P2-1).
+///
+/// ML Kit's `InputImage.fromFilePath` honors the EXIF orientation tag, so its
+/// bounding boxes are in the ORIENTED space — but `img.decodeImage` returns the
+/// raw sensor pixels UNORIENTED. On devices that write orientation tags the two
+/// spaces diverge (rotated/mirrored), the crop lands on the wrong pixels, and
+/// the server match is guaranteed to fail. Baking first puts the decoded pixels
+/// into the same oriented space the bounding boxes were computed in.
+/// (No-op when the image carries no orientation tag / orientation == 1.)
+img.Image bakeStillOrientation(img.Image decoded) => img.bakeOrientation(decoded);
+
 /// Crops [crop] out of the decoded still [image], resizes it to the embedder's
 /// `size x size` input, and returns raw row-major RGB bytes. Impure (uses the
 /// `image` package's pixel codec) — the geometry itself is [computeFaceCropRect].

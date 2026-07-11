@@ -14,10 +14,11 @@ import 'staff_attendance_controller.dart';
 import 'staff_attendance_remote_datasource.dart';
 
 /// True on the two platforms with real geolocator/camera/ML Kit/tflite plugin
-/// support. Web/desktop (incl. the widget-test harness, which runs on the VM's
-/// `TargetPlatform`, not Android/iOS) keep the fail-loud Pending placeholders —
-/// see docs/ATTENDANCE_AUTH_DESIGN_DECISION.md §8 (device-gated residual).
-bool get _hasDeviceCaptureSupport =>
+/// support. Web/desktop keep the fail-loud Pending placeholders — see
+/// docs/ATTENDANCE_AUTH_DESIGN_DECISION.md §8 (device-gated residual).
+/// Public (audit R1 P3) so UI entry points (FaceEnrollmentScreen) gate their
+/// capture affordances with the exact same check the providers use.
+bool get attendanceDeviceCaptureSupported =>
     !kIsWeb &&
     (defaultTargetPlatform == TargetPlatform.android ||
         defaultTargetPlatform == TargetPlatform.iOS);
@@ -26,7 +27,7 @@ bool get _hasDeviceCaptureSupport =>
 /// adapter on Android/iOS (Slice 3); elsewhere it fails loudly (never a silent
 /// pass) — see docs/ATTENDANCE_AUTH_DESIGN_DECISION.md §8 (device-gated residual).
 final attendanceLocationSourceProvider = Provider<AttendanceLocationSource>(
-  (ref) => _hasDeviceCaptureSupport
+  (ref) => attendanceDeviceCaptureSupported
       ? const GeolocatorLocationSource()
       : const DeviceAdapterPendingLocationSource(),
 );
@@ -36,7 +37,7 @@ final attendanceLocationSourceProvider = Provider<AttendanceLocationSource>(
 /// it fails loudly. Construction does no plugin work either way, so building
 /// this provider stays safe in widget tests.
 final faceCaptureSourceProvider = Provider<FaceCaptureSource>(
-  (ref) => _hasDeviceCaptureSupport
+  (ref) => attendanceDeviceCaptureSupported
       ? MlkitFaceCaptureSource(router: () => ref.read(goRouterProvider))
       : const DeviceAdapterPendingFaceSource(),
 );

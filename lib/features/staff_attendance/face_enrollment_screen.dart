@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../router/route_names.dart';
 import '../../theme/theme_extensions.dart';
+import 'attendance_capture_sources.dart';
 import 'face_enrollment_datasource.dart';
 import 'staff_attendance_models.dart';
 import 'staff_attendance_providers.dart';
@@ -58,19 +59,33 @@ class _FaceEnrollmentScreenState extends ConsumerState<FaceEnrollmentScreen> {
 
   Future<void> _enrol() async {
     if (_busy) return;
+    // Audit R1 (P3): same gate the providers use — never push a camera screen
+    // on a platform without the camera/ML plugin stack.
+    if (!attendanceDeviceCaptureSupported) return;
     setState(() {
       _busy = true;
       _error = null;
       _notice = null;
     });
     try {
-      final face =
-          await context.push<FaceCapture?>(RouteNames.staffFaceCapture);
-      if (face == null) {
+      // Pops with FaceCapture | AttendanceCaptureException (terminal, e.g.
+      // FACE_MODEL_MISSING) | null (cancelled).
+      final captured =
+          await context.push<Object?>(RouteNames.staffFaceCapture);
+      if (captured is AttendanceCaptureException) {
+        if (!mounted) return;
+        setState(() {
+          _error = captured.message;
+          _busy = false;
+        });
+        return;
+      }
+      if (captured is! FaceCapture) {
         if (!mounted) return;
         setState(() => _busy = false);
         return;
       }
+      final face = captured;
       final result = await ref.read(faceEnrollmentDataSourceProvider).enroll(
             embedding: face.embedding,
             modelTag: face.modelTag,
@@ -168,9 +183,25 @@ class _FaceEnrollmentScreenState extends ConsumerState<FaceEnrollmentScreen> {
                         ),
                       ),
                     ),
+                  // Audit R1 (P3): capture is gated on the same Android/iOS
+                  // check the providers use — on other platforms the button is
+                  // disabled with an explanation instead of a camera screen
+                  // that can only error.
+                  if (!attendanceDeviceCaptureSupported)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        'Face enrolment needs the mobile app — open Akshara on '
+                        'your Android or iOS phone to enrol.',
+                        key: const Key('face-enrollment-unsupported'),
+                        style: context.aksharaText.bodySmall,
+                      ),
+                    ),
                   FilledButton.icon(
                     key: const Key('face-enrollment-enrol-button'),
-                    onPressed: _busy ? null : _enrol,
+                    onPressed: _busy || !attendanceDeviceCaptureSupported
+                        ? null
+                        : _enrol,
                     icon: const Icon(Icons.face_retouching_natural),
                     label: Text(enrolled ? 'Re-enrol my face' : 'Enrol my face'),
                   ),

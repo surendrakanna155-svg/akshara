@@ -119,6 +119,28 @@ void main() {
       expect(detector.passed, isTrue);
     });
 
+    test(
+        'audit R1: a closed→open HALF-cycle never passes — eyes must be seen '
+        'OPEN before the closed phase counts (full open→closed→open)', () {
+      final detector = LivenessDetector();
+
+      // Challenge entered with eyes already closed (e.g. a photo raised
+      // mid-transition): closed must NOT count yet…
+      detector.onFrame(_frontal(leftOpen: 0.05, rightOpen: 0.05));
+      // …so a following open frame must NOT complete a "blink".
+      final afterHalfCycle =
+          detector.onFrame(_frontal(leftOpen: 0.95, rightOpen: 0.95));
+      expect(afterHalfCycle, LivenessStage.blink);
+      expect(detector.passed, isFalse,
+          reason: 'closed→open is only half a blink');
+
+      // The open frame above starts a REAL cycle: closed then open completes it.
+      detector.onFrame(_frontal(leftOpen: 0.05, rightOpen: 0.05));
+      final done = detector.onFrame(_frontal(leftOpen: 0.95, rightOpen: 0.95));
+      expect(done, LivenessStage.done);
+      expect(detector.passed, isTrue);
+    });
+
     test('losing the face mid-blink resets the whole challenge', () {
       final detector = LivenessDetector();
       detector.onFrame(_frontal(leftOpen: 0.95, rightOpen: 0.95));

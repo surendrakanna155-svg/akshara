@@ -166,8 +166,26 @@ class StaffAttendanceRejected implements Exception {
   String toString() => 'StaffAttendanceRejected($code): $message';
 }
 
-/// The write seam for staff check-in. The real implementation routes through the
-/// reliability platform (offline-queueable); tests inject a fake.
+/// Raised by the write seam when the device is offline (audit R1). Per the
+/// FINAL design (docs/ATTENDANCE_AUTH_DESIGN_DECISION.md §4 — a FRESH location
+/// fix per event, server-enforced freshness window), a staff check-in can NEVER
+/// be queued for later replay: a drained queued event would be guaranteed-stale.
+/// The only offline path is the audited manual attendance request.
+class StaffAttendanceOffline implements Exception {
+  const StaffAttendanceOffline();
+
+  static const String userMessage =
+      "You're offline — attendance needs a live connection right now "
+      '(a saved check-in would be stale by the time it synced). '
+      'Try again when you are back online, or raise a manual attendance request.';
+
+  @override
+  String toString() => 'StaffAttendanceOffline: $userMessage';
+}
+
+/// The write seam for staff check-in. The real implementation routes through
+/// the reliability platform as an ONLINE-ONLY operation (never queued/optimistic
+/// — see [StaffAttendanceOffline]); tests inject a fake.
 abstract interface class StaffAttendanceWriter {
   Future<StaffCheckRecord> recordCheck({
     required StaffCheckEvent event,

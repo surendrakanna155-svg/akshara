@@ -66,6 +66,11 @@ class StaffAttendanceController {
       return e.isFaceReason
           ? StaffCheckOutcome.faceBlocked(e.message, code: e.code)
           : StaffCheckOutcome.locationBlocked(e.message);
+    } on StaffAttendanceOffline {
+      // Audit R1: check-in is online-only by design — a queued event would be
+      // guaranteed-stale on drain (server location-freshness window). Fail
+      // honestly with a clear next step, never an optimistic "recorded".
+      return StaffCheckOutcome.failed(StaffAttendanceOffline.userMessage);
     } catch (e) {
       return StaffCheckOutcome.failed(e.toString());
     }

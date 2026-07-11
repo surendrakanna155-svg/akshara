@@ -16,6 +16,7 @@ import 'camera_image_converter.dart';
 import 'face_crop.dart';
 import 'face_embedder.dart';
 import 'liveness_detector.dart';
+import 'still_face_validation.dart';
 
 /// Real [FaceCaptureSource] (Slice 3 device adapter): presents [FaceCaptureScreen]
 /// — front camera + live liveness challenge + on-device embedding — and turns
@@ -52,18 +53,21 @@ class MlkitFaceCaptureSource implements FaceCaptureSource {
       );
     }
 
-    final result = await _router().push<FaceCapture?>(
+    // The screen pops with: a FaceCapture on success, an
+    // AttendanceCaptureException for a terminal failure the user cannot fix
+    // by retrying (e.g. FACE_MODEL_MISSING — audit R1 P3-3, no dead-end
+    // screens), or null when the user cancels.
+    final result = await _router().push<Object?>(
       RouteNames.staffFaceCapture,
       extra: _embedder,
     );
-    if (result == null) {
-      throw const AttendanceCaptureException(
-        AttendanceCaptureStep.face,
-        'FACE_CAPTURE_CANCELLED',
-        'Face capture was cancelled.',
-      );
-    }
-    return result;
+    if (result is FaceCapture) return result;
+    if (result is AttendanceCaptureException) throw result;
+    throw const AttendanceCaptureException(
+      AttendanceCaptureStep.face,
+      'FACE_CAPTURE_CANCELLED',
+      'Face capture was cancelled.',
+    );
   }
 }
 
@@ -216,12 +220,22 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
       final file = await controller.takePicture();
       final bytes = await file.readAsBytes();
 
+      // Audit R1 (photo-swap guard): re-validate the STILL with the same
+      // rigor as the live challenge — exactly one face, frontal pose. A
+      // photo held up after liveness, or a second face leaning in, fails
+      // here and restarts the whole challenge (never passes).
       final stillFaces =
           await detector.processImage(InputImage.fromFilePath(file.path));
-      if (stillFaces.isEmpty) {
-        await _retryAfterError(
-          'Could not confirm the face in the photo. Try again.',
-        );
+      final verdict = validateStillFaces([
+        for (final f in stillFaces)
+          StillFaceObservation(
+            boundingBox: f.boundingBox,
+            headEulerAngleY: f.headEulerAngleY,
+            headEulerAngleZ: f.headEulerAngleZ,
+          ),
+      ]);
+      if (!verdict.isValid) {
+        await _retryAfterError(verdict.error!);
         return;
       }
 
@@ -232,13 +246,17 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
         );
         return;
       }
+      // Audit R1 (P2-1): ML Kit's fromFilePath honors EXIF orientation but the
+      // raw decode does not — bake the orientation so the bounding box and the
+      // pixels are in the same space before cropping.
+      final oriented = bakeStillOrientation(decoded);
 
       final crop = computeFaceCropRect(
-        imageWidth: decoded.width,
-        imageHeight: decoded.height,
-        boundingBox: stillFaces.first.boundingBox,
+        imageWidth: oriented.width,
+        imageHeight: oriented.height,
+        boundingBox: verdict.cropTarget!,
       );
-      final faceImage = cropAndResizeForEmbedder(decoded, crop);
+      final faceImage = cropAndResizeForEmbedder(oriented, crop);
       final embedding = await widget.embedder.embed(faceImage);
 
       if (!mounted) return;
@@ -250,12 +268,12 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
         ),
       );
     } on AttendanceCaptureException catch (e) {
-      // e.g. FACE_MODEL_MISSING — fail loud on-screen; never fabricate an
-      // embedding. The user must cancel out (mapped to FACE_CAPTURE_CANCELLED
-      // upstream) rather than silently "succeed".
+      // Terminal, non-retryable failure (e.g. FACE_MODEL_MISSING — the model
+      // cannot appear by retrying). Pop the typed exception so the source
+      // surfaces the proper face-blocked reason instead of freezing the user
+      // on a dead-end screen (audit R1 P3-3). NEVER a fabricated embedding.
       if (!mounted) return;
-      setState(() => _error = e.message);
-      _capturing = false;
+      Navigator.of(context).pop(e);
     } catch (e) {
       await _retryAfterError('Face capture failed. Try again.');
     }

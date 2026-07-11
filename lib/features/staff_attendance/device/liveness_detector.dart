@@ -73,6 +73,7 @@ class LivenessDetector {
   final int blinkWindowFrames;
 
   LivenessStage _stage = LivenessStage.seekFace;
+  bool _eyesOpenSeen = false;
   bool _eyesClosedSeen = false;
   int _blinkFrameCount = 0;
 
@@ -92,6 +93,7 @@ class LivenessDetector {
   /// Restarts the whole challenge from [LivenessStage.seekFace].
   void reset() {
     _stage = LivenessStage.seekFace;
+    _eyesOpenSeen = false;
     _eyesClosedSeen = false;
     _blinkFrameCount = 0;
   }
@@ -110,6 +112,7 @@ class LivenessDetector {
       // A face is present but not frontal — drop any in-progress blink
       // attempt; the challenge must happen while facing the camera.
       _stage = LivenessStage.holdStill;
+      _eyesOpenSeen = false;
       _eyesClosedSeen = false;
       _blinkFrameCount = 0;
       return _stage;
@@ -117,6 +120,7 @@ class LivenessDetector {
 
     if (_stage == LivenessStage.seekFace || _stage == LivenessStage.holdStill) {
       _stage = LivenessStage.blink;
+      _eyesOpenSeen = false;
       _eyesClosedSeen = false;
       _blinkFrameCount = 0;
     }
@@ -135,7 +139,13 @@ class LivenessDetector {
     final bothOpen =
         leftOpen >= eyeOpenThreshold && rightOpen >= eyeOpenThreshold;
 
-    if (!_eyesClosedSeen) {
+    // Audit R1 (P3): the full documented open→CLOSED→open cycle is required.
+    // Eyes must be seen OPEN first — otherwise a challenge entered with eyes
+    // already closed (e.g. a photo raised mid-transition) would pass on a mere
+    // closed→open half-cycle.
+    if (!_eyesOpenSeen) {
+      if (bothOpen) _eyesOpenSeen = true;
+    } else if (!_eyesClosedSeen) {
       if (bothClosed) _eyesClosedSeen = true;
     } else if (bothOpen) {
       _stage = LivenessStage.done;
@@ -145,6 +155,7 @@ class LivenessDetector {
     if (_blinkFrameCount > blinkWindowFrames) {
       // Timed out waiting for the cycle to complete — restart the challenge
       // (stay frontal, no need to re-seek the face) rather than fail forever.
+      _eyesOpenSeen = false;
       _eyesClosedSeen = false;
       _blinkFrameCount = 0;
     }
