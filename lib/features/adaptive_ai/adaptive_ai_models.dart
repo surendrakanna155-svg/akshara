@@ -27,6 +27,24 @@ class AdaptiveAction {
   final bool requiresConfirmation;
 }
 
+/// The four scoring factors behind a priority score (doc 04 §3.2 —
+/// `score = urgency × impact × ageBoost × learnedWeight`), always exposed so
+/// the UI can answer "why is this first?" beyond the one-line [reason].
+@immutable
+class AdaptiveFactorBreakdown {
+  const AdaptiveFactorBreakdown({
+    required this.urgency,
+    required this.impact,
+    required this.ageBoost,
+    required this.learnedWeight,
+  });
+
+  final double urgency;
+  final double impact;
+  final double ageBoost;
+  final double learnedWeight;
+}
+
 /// A scored, explainable priority item. `action` is present on recommendations,
 /// null on the raw priority feed.
 @immutable
@@ -39,6 +57,7 @@ class AdaptivePriorityItem {
     required this.score,
     required this.reason,
     this.action,
+    this.factorBreakdown,
   });
 
   final String itemKey;
@@ -54,6 +73,10 @@ class AdaptivePriorityItem {
   /// Human "why is this first?" one-liner (explainability rail).
   final String reason;
   final AdaptiveAction? action;
+
+  /// The raw factor multipliers behind [score] — null when the source
+  /// (envelope/mock) didn't carry one; the UI hides the expandable detail then.
+  final AdaptiveFactorBreakdown? factorBreakdown;
 
   bool get isCritical => score >= 75;
 }

@@ -9,6 +9,7 @@ import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../adaptive_ai/adaptive_ai_models.dart';
 import '../../adaptive_ai/widgets/adaptive_priority_feed.dart';
+import '../management_adaptive_action_routing.dart';
 import '../management_models.dart';
 
 /// Principal command overview — health, priorities, summaries, quick actions.
@@ -136,17 +137,7 @@ class ManagementPrincipalOverviewPanel extends StatelessWidget {
   /// management route. The human lands on the module and acts there — the AI
   /// only navigated, it never executed the action.
   void _openAdaptiveAction(BuildContext context, AdaptiveAction action) {
-    final link = action.deepLink;
-    final route = link.startsWith('/finance')
-        ? RouteNames.managementFinance
-        : link.startsWith('/analytics')
-            ? RouteNames.managementAnalytics
-            : link.startsWith('/timetable')
-                ? RouteNames.managementTimetable
-                : link.contains('approval')
-                    ? RouteNames.managementApprovals
-                    : RouteNames.managementIntelligence;
-    context.go(route);
+    context.go(managementAdaptiveActionRoute(action.deepLink));
   }
 
   List<Widget> _priorities(BuildContext context) {

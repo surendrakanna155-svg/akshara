@@ -5,6 +5,8 @@
 // deterministic content below it always shows. The pre-staged action opens a
 // screen for the human to act on — AI never executes (governance rail).
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -14,6 +16,11 @@ import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../adaptive_ai_models.dart';
 import '../adaptive_ai_providers.dart';
+
+/// The overflow-menu choices on a feed row (P2-6 audit). Dismiss folds the
+/// former standalone icon button in here to keep the dense row compact; Mute
+/// records `suppress` (learn not to resurface this item TYPE for the persona).
+enum _FeedItemMenuChoice { dismiss, suppress }
 
 class AdaptivePriorityFeedSection extends ConsumerWidget {
   const AdaptivePriorityFeedSection({
@@ -77,12 +84,30 @@ class AdaptivePriorityFeedSection extends ConsumerWidget {
             item: item,
             onOpen: onOpenAction == null || item.action == null
                 ? null
-                : () => onOpenAction!(context, item.action!),
+                : () {
+                    // Learning signal (doc 04 §4 / P12): acting on a
+                    // recommendation IS an accept. Fire-and-forget — the human
+                    // is already navigating, so this must never block or fail
+                    // the tap.
+                    unawaited(recordAdaptiveFeedback(
+                      ref,
+                      persona: persona,
+                      item: item,
+                      action: AdaptiveFeedbackAction.accept,
+                    ));
+                    onOpenAction!(context, item.action!);
+                  },
             onDismiss: () => recordAdaptiveFeedback(
               ref,
               persona: persona,
               item: item,
               action: AdaptiveFeedbackAction.dismiss,
+            ),
+            onSuppress: () => recordAdaptiveFeedback(
+              ref,
+              persona: persona,
+              item: item,
+              action: AdaptiveFeedbackAction.suppress,
             ),
           ),
           const SizedBox(height: AksharaSpacing.s2),
@@ -92,20 +117,31 @@ class AdaptivePriorityFeedSection extends ConsumerWidget {
   }
 }
 
-class _AdaptiveRecommendationTile extends StatelessWidget {
+class _AdaptiveRecommendationTile extends StatefulWidget {
   const _AdaptiveRecommendationTile({
     required this.item,
     required this.onOpen,
     required this.onDismiss,
+    required this.onSuppress,
   });
 
   final AdaptivePriorityItem item;
   final VoidCallback? onOpen;
   final VoidCallback onDismiss;
+  final VoidCallback onSuppress;
+
+  @override
+  State<_AdaptiveRecommendationTile> createState() => _AdaptiveRecommendationTileState();
+}
+
+class _AdaptiveRecommendationTileState extends State<_AdaptiveRecommendationTile> {
+  bool _breakdownExpanded = false;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final item = widget.item;
+    final breakdown = item.factorBreakdown;
     return AksharaSurfaceCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -128,36 +164,85 @@ class _AdaptiveRecommendationTile extends StatelessWidget {
                   ],
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.close, size: 18),
-                tooltip: 'Dismiss',
-                onPressed: onDismiss,
+              // Folds the former standalone "Dismiss" icon button into one
+              // compact overflow menu — the feed rows are dense, and Mute
+              // needs a home too (P2-6 audit).
+              PopupMenuButton<_FeedItemMenuChoice>(
+                icon: const Icon(Icons.more_vert, size: 18),
+                tooltip: 'More options',
+                onSelected: (choice) {
+                  switch (choice) {
+                    case _FeedItemMenuChoice.dismiss:
+                      widget.onDismiss();
+                    case _FeedItemMenuChoice.suppress:
+                      widget.onSuppress();
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(
+                    value: _FeedItemMenuChoice.dismiss,
+                    child: Text('Dismiss'),
+                  ),
+                  PopupMenuItem(
+                    value: _FeedItemMenuChoice.suppress,
+                    child: Text('Mute this type'),
+                  ),
+                ],
               ),
             ],
           ),
           const SizedBox(height: AksharaSpacing.s1),
-          Row(
-            children: [
-              // Explainability rail — always show WHY this surfaced.
-              Icon(Icons.info_outline, size: 13, color: colors.onSurfaceVariant),
-              const SizedBox(width: AksharaSpacing.s1),
-              Expanded(
-                child: Text(
-                  'Why: ${item.reason}',
-                  style: context.aksharaText.labelSmall.copyWith(color: colors.onSurfaceVariant),
+          InkWell(
+            onTap: breakdown == null ? null : () => setState(() => _breakdownExpanded = !_breakdownExpanded),
+            child: Row(
+              children: [
+                // Explainability rail — always show WHY this surfaced.
+                Icon(Icons.info_outline, size: 13, color: colors.onSurfaceVariant),
+                const SizedBox(width: AksharaSpacing.s1),
+                Expanded(
+                  child: Text(
+                    'Why: ${item.reason}',
+                    style: context.aksharaText.labelSmall.copyWith(color: colors.onSurfaceVariant),
+                  ),
                 ),
-              ),
-              if (onOpen != null && item.action != null)
-                TextButton(
-                  onPressed: onOpen,
-                  child: Text(item.action!.label),
-                ),
-            ],
+                if (breakdown != null)
+                  Icon(
+                    _breakdownExpanded ? Icons.expand_less : Icons.expand_more,
+                    size: 16,
+                    color: colors.onSurfaceVariant,
+                  ),
+                if (widget.onOpen != null && item.action != null)
+                  TextButton(
+                    onPressed: widget.onOpen,
+                    child: Text(item.action!.label),
+                  ),
+              ],
+            ),
           ),
+          if (_breakdownExpanded && breakdown != null) ...[
+            const SizedBox(height: AksharaSpacing.s1),
+            Padding(
+              padding: const EdgeInsets.only(left: AksharaSpacing.s5),
+              child: Text(
+                _formatFactorBreakdown(breakdown),
+                style: context.aksharaText.labelSmall.copyWith(color: colors.onSurfaceVariant),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
+}
+
+/// Renders the score factors as a compact "why is this first?" detail line,
+/// e.g. `urgency ×2.4 · impact ×3.0 · recency ×1.1 · learned ×1.0`.
+String _formatFactorBreakdown(AdaptiveFactorBreakdown breakdown) {
+  String fmt(double v) => '×${v.toStringAsFixed(1)}';
+  return 'urgency ${fmt(breakdown.urgency)} · '
+      'impact ${fmt(breakdown.impact)} · '
+      'recency ${fmt(breakdown.ageBoost)} · '
+      'learned ${fmt(breakdown.learnedWeight)}';
 }
 
 class _ScoreBadge extends StatelessWidget {

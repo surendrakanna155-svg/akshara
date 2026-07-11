@@ -13,6 +13,13 @@ class AdaptiveAiMapper {
         requiresConfirmation: dto.requiresConfirmation,
       );
 
+  AdaptiveFactorBreakdown toFactorBreakdown(AdaptiveFactorBreakdownDto dto) => AdaptiveFactorBreakdown(
+        urgency: dto.urgency,
+        impact: dto.impact,
+        ageBoost: dto.ageBoost,
+        learnedWeight: dto.learnedWeight,
+      );
+
   AdaptivePriorityItem toItem(AdaptivePriorityItemDto dto) => AdaptivePriorityItem(
         itemKey: dto.itemKey,
         type: dto.type,
@@ -21,6 +28,8 @@ class AdaptiveAiMapper {
         score: dto.score,
         reason: dto.reason,
         action: dto.action == null ? null : toAction(dto.action!),
+        factorBreakdown:
+            dto.factorBreakdown == null ? null : toFactorBreakdown(dto.factorBreakdown!),
       );
 
   AdaptiveFeed toFeed(AdaptiveFeedDto dto) => AdaptiveFeed(

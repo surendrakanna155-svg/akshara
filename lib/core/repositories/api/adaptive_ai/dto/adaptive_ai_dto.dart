@@ -23,6 +23,13 @@ int _int(dynamic v, [int fallback = 0]) {
   return fallback;
 }
 
+double _double(dynamic v, [double fallback = 1.0]) {
+  if (v is double) return v;
+  if (v is num) return v.toDouble();
+  if (v is String) return double.tryParse(v) ?? fallback;
+  return fallback;
+}
+
 String _str(dynamic v, [String fallback = '']) => v is String ? v : fallback;
 
 class AdaptiveActionDto {
@@ -50,6 +57,29 @@ class AdaptiveActionDto {
   final bool requiresConfirmation;
 }
 
+class AdaptiveFactorBreakdownDto {
+  const AdaptiveFactorBreakdownDto({
+    required this.urgency,
+    required this.impact,
+    required this.ageBoost,
+    required this.learnedWeight,
+  });
+
+  factory AdaptiveFactorBreakdownDto.fromJson(Map<String, dynamic> json) {
+    return AdaptiveFactorBreakdownDto(
+      urgency: _double(json['urgency']),
+      impact: _double(json['impact']),
+      ageBoost: _double(json['ageBoost']),
+      learnedWeight: _double(json['learnedWeight']),
+    );
+  }
+
+  final double urgency;
+  final double impact;
+  final double ageBoost;
+  final double learnedWeight;
+}
+
 class AdaptivePriorityItemDto {
   const AdaptivePriorityItemDto({
     required this.itemKey,
@@ -59,6 +89,7 @@ class AdaptivePriorityItemDto {
     required this.score,
     required this.reason,
     required this.action,
+    required this.factorBreakdown,
   });
 
   factory AdaptivePriorityItemDto.fromJson(Map<String, dynamic> json) {
@@ -72,6 +103,9 @@ class AdaptivePriorityItemDto {
       action: json['action'] is Map<String, dynamic>
           ? AdaptiveActionDto.fromJson(json['action'] as Map<String, dynamic>)
           : null,
+      factorBreakdown: json['factorBreakdown'] is Map<String, dynamic>
+          ? AdaptiveFactorBreakdownDto.fromJson(json['factorBreakdown'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -82,6 +116,7 @@ class AdaptivePriorityItemDto {
   final int score;
   final String reason;
   final AdaptiveActionDto? action;
+  final AdaptiveFactorBreakdownDto? factorBreakdown;
 }
 
 class AdaptiveFeedDto {

@@ -4,10 +4,12 @@ import 'package:akshara_erp/core/repositories/repository_query.dart';
 import 'package:akshara_erp/core/tenant/tenant_provider.dart';
 import 'package:akshara_erp/features/adaptive_ai/adaptive_ai_models.dart';
 import 'package:akshara_erp/features/copilot/widgets/copilot_ai_quick_actions.dart';
+import 'package:akshara_erp/router/route_names.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers/auth_test_overrides.dart';
@@ -89,5 +91,66 @@ void main() {
     expect(find.text('Open full copilot'), findsOneWidget);
     // The removed client stub reply dialog no longer exists as a concept here.
     expect(find.text('Continue in assistant'), findsNothing);
+  });
+
+  testWidgets(
+      'P2-1: a `kind: endpoint` (deterministic, tier t1) action navigates straight '
+      'to its mapped client screen — it never opens the copilot', (tester) async {
+    final repo = _FakeQuickActionsRepo(const [
+      AdaptiveQuickAction(
+        id: 'principal_fee_collection_summary',
+        label: 'Fee collection summary',
+        tier: 't1',
+        resolver: QuickActionResolver(kind: 'endpoint', target: '/finance/dashboard'),
+      ),
+    ]);
+
+    String? capturedLocation;
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => Consumer(
+            builder: (context, ref, _) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  onPressed: () => showCopilotQuickActionsMenu(context, ref, Offset.zero),
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: RouteNames.financeDashboard,
+          builder: (context, state) {
+            capturedLocation = state.uri.path;
+            return const Scaffold(body: Text('Finance dashboard'));
+          },
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          ...authStorageTestOverrides(prefs),
+          adaptiveAiRepositoryProvider.overrideWithValue(repo),
+          repositoryQueryProvider.overrideWithValue(RepositoryQuery.demo),
+        ],
+        child: MaterialApp.router(
+          theme: AksharaAppTheme.light(),
+          routerConfig: router,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Fee collection summary'));
+    await tester.pumpAndSettle();
+
+    expect(capturedLocation, RouteNames.financeDashboard);
+    expect(find.text('Finance dashboard'), findsOneWidget);
   });
 }

@@ -10,7 +10,7 @@ void main() {
   const query = RepositoryQuery.demo;
 
   group('Adaptive AI DTO ↔ backend contract', () {
-    test('parses a recommendations envelope (item + pre-staged action)', () {
+    test('parses a recommendations envelope (item + pre-staged action + factorBreakdown)', () {
       final env = {
         'data': {
           'persona': 'principal',
@@ -28,6 +28,12 @@ void main() {
                 'payload': {'studentId': 's1'},
                 'requiresConfirmation': true,
               },
+              'factorBreakdown': {
+                'urgency': 2.4,
+                'impact': 3.0,
+                'ageBoost': 1.1,
+                'learnedWeight': 1.0,
+              },
             },
           ],
           'counts': {'total': 1, 'critical': 1},
@@ -42,9 +48,15 @@ void main() {
       expect(feed.items.single.action!.deepLink, '/intelligence/risk/students/s1');
       expect(feed.items.single.action!.requiresConfirmation, isTrue);
       expect(feed.criticalCount, 1);
+      final breakdown = feed.items.single.factorBreakdown;
+      expect(breakdown, isNotNull);
+      expect(breakdown!.urgency, 2.4);
+      expect(breakdown.impact, 3.0);
+      expect(breakdown.ageBoost, 1.1);
+      expect(breakdown.learnedWeight, 1.0);
     });
 
-    test('a priority-feed item has no action', () {
+    test('a priority-feed item has no action and no factorBreakdown when the envelope omits one', () {
       final env = {
         'data': {
           'persona': 'finance',
@@ -57,6 +69,7 @@ void main() {
       };
       final feed = mapper.toFeed(AdaptiveFeedDto.fromEnvelopeData(parseAdaptiveEnvelope(env)));
       expect(feed.items.single.action, isNull);
+      expect(feed.items.single.factorBreakdown, isNull);
       expect(feed.degraded, isTrue);
     });
 
@@ -148,6 +161,13 @@ void main() {
 
       final parentActions = await repo.getQuickActions(query: query, persona: 'parent');
       expect(parentActions.every((a) => a.id.startsWith('parent_')), isTrue);
+    });
+
+    test('seeded items carry a plausible factorBreakdown (parity with the live envelope)', () async {
+      final repo = MockAdaptiveAiRepository();
+      final feed = await repo.getRecommendations(query: query, persona: 'principal');
+      expect(feed.items, isNotEmpty);
+      expect(feed.items.every((i) => i.factorBreakdown != null), isTrue);
     });
 
     test('search requires ≥2 chars', () async {

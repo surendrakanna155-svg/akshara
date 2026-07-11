@@ -176,6 +176,12 @@ class MockAdaptiveAiRepository implements AdaptiveAiRepository {
         score: 61,
         reason: 'elevated priority',
         action: act('Open recovery call queue', '/finance/recovery/call-queue'),
+        factorBreakdown: const AdaptiveFactorBreakdown(
+          urgency: 1.8,
+          impact: 2.0,
+          ageBoost: 1.2,
+          learnedWeight: 1.0,
+        ),
       ),
       AdaptivePriorityItem(
         itemKey: 'risk:student:stu-1',
@@ -185,6 +191,12 @@ class MockAdaptiveAiRepository implements AdaptiveAiRepository {
         score: 82,
         reason: 'critical severity',
         action: act('Review student risk', '/intelligence/risk/students/stu-1', {'studentId': 'stu-1'}),
+        factorBreakdown: const AdaptiveFactorBreakdown(
+          urgency: 2.4,
+          impact: 3.0,
+          ageBoost: 1.1,
+          learnedWeight: 1.0,
+        ),
       ),
       AdaptivePriorityItem(
         itemKey: 'ops:timetable',
@@ -194,6 +206,12 @@ class MockAdaptiveAiRepository implements AdaptiveAiRepository {
         score: 34,
         reason: 'elevated priority',
         action: act('Review timetable conflicts', '/timetable/conflicts'),
+        factorBreakdown: const AdaptiveFactorBreakdown(
+          urgency: 1.1,
+          impact: 1.5,
+          ageBoost: 1.0,
+          learnedWeight: 1.0,
+        ),
       ),
     ];
   }

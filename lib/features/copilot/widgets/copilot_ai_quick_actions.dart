@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../theme/spacing.dart';
@@ -8,6 +9,7 @@ import '../../adaptive_ai/adaptive_ai_models.dart';
 import '../../adaptive_ai/adaptive_ai_providers.dart';
 import '../copilot_navigation.dart';
 import '../copilot_provider.dart';
+import '../copilot_quick_action_routing.dart';
 import '../dock/copilot_dock_provider.dart';
 
 // W2 (P3-AI-2): the quick-action menu is now driven by the backend Quick Action
@@ -106,6 +108,18 @@ Future<void> executeCopilotQuickAction(
   if (action.id == _openFullCopilot.id) {
     openAssistant();
     return;
+  }
+
+  // P2-1 (audit): a `kind: 'endpoint'` action is already deterministic (tier
+  // t1, 0 tokens) — navigate straight to the client screen instead of staging
+  // a copilot prompt for it. An unmapped target falls back to the copilot path
+  // below, so a quick action never dead-ends.
+  if (action.resolver.kind == 'endpoint') {
+    final route = quickActionEndpointRoute(action);
+    if (route != null) {
+      context.go(route);
+      return;
+    }
   }
 
   // Stage a pre-filled prompt (the copilot resolver's prompt for generative

@@ -66,7 +66,12 @@ class _FakeAdaptiveAiRepository implements AdaptiveAiRepository {
       UniversalSearchResult.empty(term);
 }
 
-AdaptivePriorityItem _item(String key, {int score = 60, AdaptiveAction? action}) {
+AdaptivePriorityItem _item(
+  String key, {
+  int score = 60,
+  AdaptiveAction? action,
+  AdaptiveFactorBreakdown? factorBreakdown,
+}) {
   return AdaptivePriorityItem(
     itemKey: key,
     type: 'exception',
@@ -75,6 +80,7 @@ AdaptivePriorityItem _item(String key, {int score = 60, AdaptiveAction? action})
     score: score,
     reason: 'elevated priority',
     action: action,
+    factorBreakdown: factorBreakdown,
   );
 }
 
@@ -119,12 +125,16 @@ void main() {
     expect(find.text('Priorities for you'), findsNothing);
   });
 
-  testWidgets('dismiss records feedback and removes the item', (tester) async {
+  testWidgets('dismiss (via the overflow menu) records feedback and removes the item', (tester) async {
     final repo = _FakeAdaptiveAiRepository([_item('a'), _item('b')]);
     await _pump(tester, repo);
     expect(find.text('Item a'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Dismiss').first);
+    // P2-6: the standalone "Dismiss" icon button folded into a compact
+    // overflow menu (dense rows) that also carries "Mute this type".
+    await tester.tap(find.byIcon(Icons.more_vert).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Dismiss'));
     await tester.pumpAndSettle();
 
     expect(repo.feedbackLog, contains('AdaptiveFeedbackAction.dismiss:a'));
@@ -132,7 +142,23 @@ void main() {
     expect(find.text('Item b'), findsOneWidget);
   });
 
-  testWidgets('a recommendation with an action shows an Open button that navigates', (tester) async {
+  testWidgets('suppress ("Mute this type") records feedback and removes the item', (tester) async {
+    final repo = _FakeAdaptiveAiRepository([_item('a'), _item('b')]);
+    await _pump(tester, repo);
+
+    await tester.tap(find.byIcon(Icons.more_vert).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mute this type'));
+    await tester.pumpAndSettle();
+
+    expect(repo.feedbackLog, contains('AdaptiveFeedbackAction.suppress:a'));
+    expect(find.text('Item a'), findsNothing);
+    expect(find.text('Item b'), findsOneWidget);
+  });
+
+  testWidgets(
+      'a recommendation with an action shows an Open button that navigates '
+      'AND records an accept (learning signal, fire-and-forget)', (tester) async {
     AdaptiveAction? opened;
     final repo = _FakeAdaptiveAiRepository([
       _item('a', action: const AdaptiveAction(label: 'Open recovery call queue', deepLink: '/finance/recovery/call-queue')),
@@ -144,5 +170,42 @@ void main() {
     await tester.tap(button);
     await tester.pumpAndSettle();
     expect(opened?.deepLink, '/finance/recovery/call-queue');
+    expect(repo.feedbackLog, contains('AdaptiveFeedbackAction.accept:a'));
+  });
+
+  testWidgets('tapping the Why line toggles the factor-breakdown detail', (tester) async {
+    final repo = _FakeAdaptiveAiRepository([
+      _item(
+        'a',
+        factorBreakdown: const AdaptiveFactorBreakdown(
+          urgency: 2.4,
+          impact: 3.0,
+          ageBoost: 1.1,
+          learnedWeight: 1.0,
+        ),
+      ),
+    ]);
+    await _pump(tester, repo);
+
+    const detail = 'urgency ×2.4 · impact ×3.0 · recency ×1.1 · learned ×1.0';
+    expect(find.text(detail), findsNothing);
+
+    await tester.tap(find.textContaining('Why:'));
+    await tester.pumpAndSettle();
+    expect(find.text(detail), findsOneWidget);
+
+    await tester.tap(find.textContaining('Why:'));
+    await tester.pumpAndSettle();
+    expect(find.text(detail), findsNothing);
+  });
+
+  testWidgets('the Why line is not tappable when an item has no factor breakdown', (tester) async {
+    final repo = _FakeAdaptiveAiRepository([_item('a')]);
+    await _pump(tester, repo);
+
+    // No crash / no-op tap — nothing to expand.
+    await tester.tap(find.textContaining('Why:'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('urgency'), findsNothing);
   });
 }
