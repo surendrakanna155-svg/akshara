@@ -306,6 +306,38 @@ def build_families(Template, num_family, mcq_options, p, n, QT):
                 "answer": f"{n(ar)} cm²", "solution": f"Area = base × height = {base} × {h} = {n(ar)} cm².",
                 "distractors": [f"{n(base+h)} cm²", f"{n(base*h//2)} cm²", f"{n(2*(base+h))} cm²"]}
 
+    def g_magnetic_force_wire(cc, s):
+        b = p(cc, s, "b", 2, 9); i = p(cc, s, "i", 2, 10); l = p(cc, s, "l", 2, 8)
+        f = b * i * l                                                # solver: F = B·I·L
+        return {"stem": f"A straight wire of length {l} m carries a current of {i} A perpendicular to "
+                        f"a uniform magnetic field of {b} T. Calculate the force on the wire.",
+                "answer": f"{n(f)} N", "solution": f"F = B·I·L = {b} × {i} × {l} = {n(f)} N.",
+                "distractors": [f"{n(b+i+l)} N", f"{n(b*i)} N", f"{n(i*l)} N"]}
+
+    def g_electric_current(cc, s):
+        q = p(cc, s, "q", 2, 20) * p(cc, s, "k", 2, 6); t = p(cc, s, "t", 2, 10)
+        i = q / t if q % t == 0 else (q // t) or 1
+        q = i * t                                                    # keep it integer-clean
+        return {"stem": f"A charge of {n(q)} C flows through a conductor in {t} s. Calculate the "
+                        f"electric current.",
+                "answer": f"{n(i)} A", "solution": f"I = Q/t = {n(q)}/{t} = {n(i)} A.",
+                "distractors": [f"{n(q)} A", f"{n(q*t)} A", f"{n(t)} A"]}
+
+    def g_friction_force(cc, s):
+        mu10 = p(cc, s, "u", 2, 8); n_norm = p(cc, s, "N", 10, 90)
+        mu = mu10 / 10.0; fr = mu * n_norm                          # solver: f = μN
+        return {"stem": f"A block experiences a normal reaction of {n_norm} N on a surface whose "
+                        f"coefficient of friction is {mu}. Calculate the force of friction.",
+                "answer": f"{n(fr)} N", "solution": f"f = μN = {mu} × {n_norm} = {n(fr)} N.",
+                "distractors": [f"{n(n_norm)} N", f"{n(mu)} N", f"{n(n_norm/max(mu,0.1))} N"]}
+
+    def g_cuboid_volume_generic(cc, s):
+        a = p(cc, s, "a", 2, 12); b = p(cc, s, "b", 2, 12); c = p(cc, s, "c", 2, 12)
+        v = a * b * c                                                # solver: V = l·b·h
+        return {"stem": f"A cuboid has dimensions {a} cm × {b} cm × {c} cm. Calculate its volume.",
+                "answer": f"{n(v)} cm³", "solution": f"V = l × b × h = {a} × {b} × {c} = {n(v)} cm³.",
+                "distractors": [f"{n(a+b+c)} cm³", f"{n(2*(a*b+b*c+a*c))} cm³", f"{n(a*b)} cm³"]}
+
     def g_median_odd(cc, s):
         a = p(cc, s, "a", 1, 9); step = p(cc, s, "d", 1, 6)
         vals = [a, a + step, a + 2 * step, a + 3 * step, a + 4 * step]      # 5 sorted values
@@ -386,4 +418,15 @@ def build_families(Template, num_family, mcq_options, p, n, QT):
                    (("parallelogram",),), g_parallelogram_area),
         num_family("math_median_odd", "Mathematics",
                    (("median",),), g_median_odd),
+        # ── Phase 3 (Content Density) batch: remaining clean computable concepts ──
+        num_family("phy_magnetic_force_wire", "Physics",
+                   (("magnetic force",), ("force", "magnetic field"), ("force on a current",)),
+                   g_magnetic_force_wire),
+        num_family("phy_electric_current", "Physics",
+                   (("electric current",), ("current", "charge", "time")), g_electric_current),
+        num_family("phy_friction_force", "Physics",
+                   (("force of friction",), ("frictional force",), ("coefficient of friction",)),
+                   g_friction_force),
+        num_family("math_cuboid_volume_generic", "Mathematics",
+                   (("volume",), ("volumes",)), g_cuboid_volume_generic),
     ]
