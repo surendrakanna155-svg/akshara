@@ -1,0 +1,60 @@
+{
+  "inspected_segments": 5701,
+  "target_per_subject": 200,
+  "per_subject": {
+    "Physics": {
+      "inspected": 266,
+      "recovered_complete": 250,
+      "complete_recovery_pct": 94.0,
+      "with_answer_key": 114,
+      "numeric_items": 39,
+      "numeric_verified": 22,
+      "numeric_verify_pct": 56.4,
+      "nonnumeric_items": 75,
+      "item_models_qualified": 2,
+      "qualified_model_relations": [
+        "power_P=VI",
+        "ohm_R=V/I"
+      ]
+    },
+    "Chemistry": {
+      "inspected": 299,
+      "recovered_complete": 250,
+      "complete_recovery_pct": 83.6,
+      "with_answer_key": 111,
+      "numeric_items": 14,
+      "numeric_verified": 4,
+      "numeric_verify_pct": 28.6,
+      "nonnumeric_items": 97,
+      "item_models_qualified": 0,
+      "qualified_model_relations": []
+    },
+    "Biology": {
+      "inspected": 268,
+      "recovered_complete": 250,
+      "complete_recovery_pct": 93.3,
+      "with_answer_key": 108,
+      "numeric_items": 2,
+      "numeric_verified": 1,
+      "numeric_verify_pct": 50.0,
+      "nonnumeric_items": 106,
+      "item_models_qualified": 0,
+      "qualified_model_relations": []
+    },
+    "Mathematics": {
+      "inspected": 227,
+      "recovered_complete": 200,
+      "complete_recovery_pct": 88.1,
+      "with_answer_key": 97,
+      "numeric_items": 17,
+      "numeric_verified": 12,
+      "numeric_verify_pct": 70.6,
+      "nonnumeric_items": 80,
+      "item_models_qualified": 1,
+      "qualified_model_relations": [
+        "resistance_series"
+      ]
+    }
+  },
+  "no_subject_segments": 1807
+}

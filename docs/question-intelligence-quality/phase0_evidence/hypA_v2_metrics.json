@@ -1,0 +1,217 @@
+{
+  "seed": 20260712,
+  "per_subject": {
+    "Physics": {
+      "inspected": 266,
+      "recovered": 250,
+      "complete_recovery_pct": 94.0,
+      "numeric_items": 46,
+      "numeric_verified": 31,
+      "numeric_verify_pct": 67.4,
+      "nonnumeric_keyed": 71,
+      "item_models_qualified": 7,
+      "model_detail": [
+        [
+          "NUMERIC",
+          "V=IR",
+          12,
+          11
+        ],
+        [
+          "CONCEPTUAL_GENERIC",
+          "Physics:magnetic",
+          10,
+          10
+        ],
+        [
+          "CONCEPTUAL_GENERIC",
+          "Physics:misc",
+          7,
+          7
+        ],
+        [
+          "CONCEPTUAL_GENERIC",
+          "Physics:resistance",
+          5,
+          5
+        ],
+        [
+          "CONCEPTUAL_GENERIC",
+          "Physics:force",
+          5,
+          5
+        ],
+        [
+          "CONCEPTUAL_GENERIC",
+          "BIO_CHOOSE_THE_COR",
+          5,
+          5
+        ],
+        [
+          "CONCEPTUAL_GENERIC",
+          "Physics:circuit",
+          5,
+          4
+        ]
+      ]
+    },
+    "Chemistry": {
+      "inspected": 286,
+      "recovered": 250,
+      "complete_recovery_pct": 87.4,
+      "numeric_items": 19,
+      "numeric_verified": 8,
+      "numeric_verify_pct": 42.1,
+      "nonnumeric_keyed": 97,
+      "item_models_qualified": 6,
+      "model_detail": [
+        [
+          "DATA_MATCH",
+          "BIO_CHOOSE_THE_COR",
+          16,
+          12
+        ],
+        [
+          "CONCEPTUAL_GENERIC",
+          "BIO_CHOOSE_THE_COR",
+          8,
+          6
+        ],
+        [
+          "CONCEPTUAL_GENERIC",
+          "Chemistry:mole",
+          6,
+          6
+        ],
+        [
+          "CONCEPTUAL_GENERIC",
+          "Chemistry:misc",
+          11,
+          11
+        ],
+        [
+          "CONCEPTUAL_GENERIC",
+          "Chemistry:ion",
+          11,
+          7
+        ],
+        [
+          "PROCESS_SEQUENCE",
+          "BIO_CHOOSE_THE_COR",
+          5,
+          4
+        ]
+      ]
+    },
+    "Biology": {
+      "inspected": 261,
+      "recovered": 250,
+      "complete_recovery_pct": 95.8,
+      "numeric_items": 3,
+      "numeric_verified": 2,
+      "numeric_verify_pct": 66.7,
+      "nonnumeric_keyed": 94,
+      "item_models_qualified": 7,
+      "model_detail": [
+        [
+          "CONCEPTUAL_GENERIC",
+          "Biology:cell",
+          12,
+          10
+        ],
+        [
+          "CONCEPTUAL_GENERIC",
+          "BIO_CHOOSE_THE_COR",
+          7,
+          7
+        ],
+        [
+          "CONCEPTUAL_GENERIC",
+          "Biology:misc",
+          10,
+          7
+        ],
+        [
+          "CONCEPTUAL_GENERIC",
+          "BIO_PROTEINS",
+          5,
+          5
+        ],
+        [
+          "DATA_MATCH",
+          "BIO_REPLICATION",
+          5,
+          5
+        ],
+        [
+          "DATA_MATCH",
+          "BIO_CHOOSE_THE_COR",
+          12,
+          11
+        ],
+        [
+          "CONCEPTUAL_GENERIC",
+          "Biology:gene",
+          7,
+          7
+        ]
+      ]
+    },
+    "Mathematics": {
+      "inspected": 223,
+      "recovered": 200,
+      "complete_recovery_pct": 89.7,
+      "numeric_items": 35,
+      "numeric_verified": 21,
+      "numeric_verify_pct": 60.0,
+      "nonnumeric_keyed": 84,
+      "item_models_qualified": 7,
+      "model_detail": [
+        [
+          "NUMERIC",
+          "Rseries",
+          21,
+          19
+        ],
+        [
+          "CLASSIFICATION_TAXONOMIC",
+          "Mathematics:vector",
+          8,
+          8
+        ],
+        [
+          "CONCEPTUAL_GENERIC",
+          "Mathematics:circle",
+          22,
+          22
+        ],
+        [
+          "CONCEPTUAL_GENERIC",
+          "Mathematics:triangle",
+          6,
+          6
+        ],
+        [
+          "CONCEPTUAL_GENERIC",
+          "Mathematics:ratio",
+          19,
+          19
+        ],
+        [
+          "CONCEPTUAL_GENERIC",
+          "BRD_PHY_ce26529e8f59",
+          12,
+          12
+        ],
+        [
+          "DATA_MATCH",
+          "BIO_CHOOSE_THE_COR",
+          10,
+          10
+        ]
+      ]
+    }
+  },
+  "numeric_aggregate_verify_pct": 60.0,
+  "numeric_aggregate": "60/100"
+}

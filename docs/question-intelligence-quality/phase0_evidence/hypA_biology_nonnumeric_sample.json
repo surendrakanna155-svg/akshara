@@ -1,0 +1,782 @@
+[
+  {
+    "stem": "Given below are two statements: one is labelled as Assertion A and the other is labelled as Reason R.\nAssertion A: Endometrium is necessary for implantation of blastocyst.\nReason R: In the absence of fertilization, the corpus luteum degenerates that causes disintegration of endometrium.\nIn the light of the above statements, choose the correct answer from the options given below:",
+    "options": {
+      "1": "Both A and R are true but R is NOT the correct explanation of A.",
+      "2": "A is true but R is false.",
+      "3": "A is false but R is true.",
+      "4": "Both A and R are true and R is the correct explanation of A."
+    },
+    "key": 1,
+    "subject": "Biology",
+    "doc": "c2961d1494999666",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Match List I with List II.\nList I  List II\nA. Taenia I. Nephridia\nB. Paramoecium II. Contractile vacuole\nC. Periplaneta III. Flame cells\nD. Pheretima IV. Urecose gland\nChoose the correct answer from the options given below:",
+    "options": {
+      "1": "A-I, B-II, C-IV, D-III",
+      "2": "A-III, B-II, C-IV, D-I",
+      "3": "A-II, B-I, C-IV, D-III",
+      "4": "A-I, B-II, C-III, D-IV"
+    },
+    "key": 2,
+    "subject": "Biology",
+    "doc": "c2961d1494999666",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Given below are two statements:\nStatement I: Ligaments are dense irregular tissue.\nStatement II: Cartilage is dense regular tissue.\nIn the light of the above statements, choose the correct answer from the options given below:",
+    "options": {
+      "1": "Both Statement I and Statement II are false",
+      "2": "Statement I is true but Statement II is false",
+      "3": "Statement I is false but Statement II is true",
+      "4": "Both Statement I and Statement II are true"
+    },
+    "key": 1,
+    "subject": "Biology",
+    "doc": "c2961d1494999666",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Which of the following functions is carried out by cytoskeleton in a cell?",
+    "options": {
+      "1": "Protein synthesis",
+      "2": "Motility",
+      "3": "Transportation",
+      "4": "Nuclear division"
+    },
+    "key": 2,
+    "subject": "Biology",
+    "doc": "c2961d1494999666",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "The capacity to generate a whole plant from any cell of the plant is called:",
+    "options": {
+      "1": "Differentiation",
+      "2": "Somatic hybridization",
+      "3": "Totipotency",
+      "4": "Micropropagation"
+    },
+    "key": 3,
+    "subject": "Biology",
+    "doc": "62166f1aa401f43d",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Given below are two statements: one is labelled as Assertion A and the other is labelled as Reason R\nAssertion A : In equation \uf044rG = \u2013nFEcell\u2019 value of \uf044rG depends on n.\nReasons R : Ecell is an intensive property and \uf044rG is an extensive property.\nIn the light of the above statements, choose the correct answer from the options given below",
+    "options": {
+      "1": "Both A and R are true and R is NOT the correct explanation of A",
+      "2": "A is true but R is false",
+      "3": "A is false but R is true",
+      "4": "Both A and R are true and R is the correct explanation of A"
+    },
+    "key": 1,
+    "subject": "Biology",
+    "doc": "237b008798c6413a",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Which hormone promotes internode/petiole elongation in deep water rice?",
+    "options": {
+      "1": "Kinetin",
+      "2": "Ethylene",
+      "3": "2, 4-D",
+      "4": "GA3"
+    },
+    "key": 2,
+    "subject": "Biology",
+    "doc": "c2961d1494999666",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Expressed Sequence Tags (ESTs) refers to",
+    "options": {
+      "1": "All genes that are expressed as proteins.",
+      "2": "All genes whether expressed or unexpressed.",
+      "3": "Certain important expressed genes.",
+      "4": "All genes that are expressed as RNA."
+    },
+    "key": 4,
+    "subject": "Biology",
+    "doc": "c2961d1494999666",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Upon exposure to UV radiation, DNA stained with ethidium bromide will show",
+    "options": {
+      "1": "Bright blue colour",
+      "2": "Bright yellow colour",
+      "3": "Bright orange colour",
+      "4": "Bright red colour"
+    },
+    "key": 3,
+    "subject": "Biology",
+    "doc": "c2961d1494999666",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Which one of the following statements is correct?",
+    "options": {
+      "1": "All enzymes that utilise ATP in phosphate transfer require Ca as the cofactor",
+      "2": "The bone in human body is an inert and unchanging substance",
+      "3": "Mg plays roles in neuromuscular function and interneuronal transmission",
+      "4": "The daily requirement of Mg and Ca in the human body is estimated to be 0.2-0.3 g"
+    },
+    "key": 4,
+    "subject": "Biology",
+    "doc": "0bccaea7c8faf24b",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "As per ABO blood grouping system, the blood group of father is B+, mother is A+ and child is O+. Their respective genotype can be\nA. IBi/IAi/ii B. IBIB/IAIA/ii\nC. IAIB/iIA/IBi D. IAi/IBi/IAi\nE. iIB/iIA/IAIB\nChoose the most appropriate answer from the options given below :",
+    "options": {
+      "1": "B only",
+      "2": "C & B only",
+      "3": "D & E only",
+      "4": "A only"
+    },
+    "key": 4,
+    "subject": "Biology",
+    "doc": "80c9d538cef06959",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Auxin is used by gardeners to prepare weed-free lawns. But no damage is caused to grass as auxin",
+    "options": {
+      "1": "can help in cell division in grasses, to produce growth.",
+      "2": "promotes apical dominance.",
+      "3": "promotes abscission of mature leaves only.",
+      "4": "does not affect mature monocotyledonous plants."
+    },
+    "key": 4,
+    "subject": "Biology",
+    "doc": "102392748a53d44f",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "What is the fate of a piece of DNA carrying only gene of interest which is transferred into an alien organism?\nA. The piece of DNA would be able to multiply itself independently in the progeny cells of the organism.\nB. It may get integrated into the genome of the recipient.\nC. It may multiply and be inherited along with the host DNA.\nD. The alien piece of DNA is not an integral part of chromosome.\nE. It shows ability to replicate.\nChoose the correct answer from the options given below:",
+    "options": {
+      "1": "A and E only",
+      "2": "A and B only",
+      "3": "D and E only",
+      "4": "B and C only"
+    },
+    "key": 4,
+    "subject": "Biology",
+    "doc": "102392748a53d44f",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Match List I with List II :\nList I  List II\nA. Pleurobrachia I. Mollusca\nB. Radula II. Ctenophora\nC. Stomochord III. Osteichthyes\nD. Air bladder IV. Hemichordata\nChoose the correct answer from the options given below :",
+    "options": {
+      "1": "A-IV, B-III, C-II, D-I",
+      "2": "A-IV, B-II, C-III, D-I",
+      "3": "A-II, B-I, C-IV, D-III",
+      "4": "A-II, B-IV, C-I, D-III"
+    },
+    "key": 3,
+    "subject": "Biology",
+    "doc": "b41720ac4e834ad8",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Main steps in the formation of Recombinant DNA are given below. Arrange these steps in a correct\nsequence.\nA. Insertion of recombinant DNA into the host cell\nB. Cutting of DNA at specific location by restriction enzyme\nC. Isolation of desired DNA fragment\nD. Amplification of gene of interest using PCR\nChoose the correct answer from the options given below :",
+    "options": {
+      "1": "B, D, A, C",
+      "2": "B, C, D, A",
+      "3": "C, A, B, D",
+      "4": "C, B, D, A"
+    },
+    "key": 2,
+    "subject": "Biology",
+    "doc": "3fbe22df8ff96da2",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "In a plant, black seed color (BB/Bb) is dominant over white seed color (bb). In order to find out the genotype\nof the black seed plant, with which of the following genotype will you cross it?",
+    "options": {
+      "1": "Bb",
+      "2": "BB/Bb",
+      "3": "BB",
+      "4": "bb"
+    },
+    "key": 4,
+    "subject": "Biology",
+    "doc": "62166f1aa401f43d",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Which is of the following statements isincorrect?",
+    "options": {
+      "1": "Morels and truffles are edible delicacies.",
+      "2": "Claviceps is a source of many alkaloids",
+      "3": "Conidia are produced exogenously and",
+      "4": "Yeasts have filamentous bodies with long"
+    },
+    "key": 4,
+    "subject": "Biology",
+    "doc": "cfb7783eb2f31e7a",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Which of the following glucose transporters isinsulin-dependent?",
+    "options": {
+      "1": "GLUT I",
+      "2": "GLUT II",
+      "3": "GLUT III",
+      "4": "GLUT IV"
+    },
+    "key": 4,
+    "subject": "Biology",
+    "doc": "cfb7783eb2f31e7a",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Which of the following immune responses isresponsible for rejection of kidney graft?",
+    "options": {
+      "1": "Auto-immune response",
+      "2": "Humoral immune response",
+      "3": "Inflammatory immune response",
+      "4": "Cell-mediated immune response"
+    },
+    "key": 4,
+    "subject": "Biology",
+    "doc": "cfb7783eb2f31e7a",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Given below are two statements :\nStatement I : Bone marrow is the main lymphoid organ where all blood cells including lymphocytes are produced.\nStatement II : Both bone marrow and thymus provide micro environments for the development and maturation of T-lymphocytes.\nIn the light of above statements, choose the most appropriate answer from the options given below :",
+    "options": {
+      "1": "Statement I is correct but Statement II is incorrect.",
+      "2": "Statement I is incorrect but Statement II is correct.",
+      "3": "Both Statement I and Statement II are correct.",
+      "4": "Both Statement I and Statement II are incorrect."
+    },
+    "key": 3,
+    "subject": "Biology",
+    "doc": "61ec08208540be9e",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "As per ABO blood grouping system, the blood group of father is B+, mother is A+ and child is O+. Their respective genotype can be\nA. IBi/IAi/ii B. IBIB/IAIA/ii\nC. IAIB/iIA/IBi D. IAi/IBi/IAi\nE. iIB/iIA/IAIB\nChoose the most appropriate answer from the options given below :",
+    "options": {
+      "1": "D & E only",
+      "2": "A only",
+      "3": "B only",
+      "4": "C & B only"
+    },
+    "key": 2,
+    "subject": "Biology",
+    "doc": "b41720ac4e834ad8",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Match List I with List II :\nList I  List II\nA. Pleurobrachia I. Mollusca\nB. Radula II. Ctenophora\nC. Stomochord III. Osteichthyes\nD. Air bladder IV. Hemichordata\nChoose the correct answer from the options given below :",
+    "options": {
+      "1": "A-IV, B-II, C-III, D-I",
+      "2": "A-II, B-I, C-IV, D-III",
+      "3": "A-II, B-IV, C-I, D-III",
+      "4": "A-IV, B-III, C-II, D-I"
+    },
+    "key": 2,
+    "subject": "Biology",
+    "doc": "527fff829fb11e91",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Following are the stages of cell division :\nA. Gap 2 phase\nB. Cytokinesis\nC. Synthesis phase\nD. Karyokinesis\nE. Gap 1 phase\nChoose the correct sequence of stages from the options given below :",
+    "options": {
+      "1": "C-E-D-A-B",
+      "2": "E-B-D-A-C",
+      "3": "B-D-E-A-C",
+      "4": "E-C-A-D-B"
+    },
+    "key": 4,
+    "subject": "Biology",
+    "doc": "527fff829fb11e91",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Match List I with List II :\nList I List II\nA. Common cold I. Plasmodium\nB. Haemozoin II. Typhoid\nC. Widal test III. Rhinoviruses\nD. Allergy IV. Dust mites\nChoose the correct answer from the options given below :",
+    "options": {
+      "1": "A-II, B-IV, C-III, D-I",
+      "2": "A-I, B-III, C-II, D-IV",
+      "3": "A-III, B-I, C-II, D-IV",
+      "4": "A-IV, B-II, C-III, D-I"
+    },
+    "key": 3,
+    "subject": "Biology",
+    "doc": "527fff829fb11e91",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Which one of the following statements is correct?",
+    "options": {
+      "1": "The bone in human body is an inert and unchanging substance",
+      "2": "Mg plays roles in neuromuscular function and interneuronal transmission",
+      "3": "The daily requirement of Mg and Ca in the human body is estimated to be 0.2-0.3 g",
+      "4": "All enzymes that utilise ATP in phosphate transfer require Ca as the cofactor"
+    },
+    "key": 3,
+    "subject": "Biology",
+    "doc": "82ced7fd08b179f9",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Match List I with List II:\nList I  List II\nA. RNA polymerase III I. snRNPs\nB. Termination of transcription II. Promotor\nC. Splicing of Exons III. Rho factor\nD. TATA box  IV. SnRNAs, tRNA\nChoose the correct answer from the options given below :",
+    "options": {
+      "1": "A-III, B-IV, C-I, D-II",
+      "2": "A-IV, B-III, C-I, D-II",
+      "3": "A-II, B-IV, C-I, D-III",
+      "4": "A-III, B-II, C-IV, D-I"
+    },
+    "key": 2,
+    "subject": "Biology",
+    "doc": "62166f1aa401f43d",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Given below are two statements :\nStatement I : Bone marrow is the main lymphoid organ where all blood cells including lymphocytes are produced.\nStatement II : Both bone marrow and thymus provide micro environments for the development and maturation of T-lymphocytes.\nIn the light of above statements, choose the most appropriate answer from the options given below :",
+    "options": {
+      "1": "Statement I is correct but Statement II is incorrect.",
+      "2": "Statement I is incorrect but Statement II is correct.",
+      "3": "Both Statement I and Statement II are correct.",
+      "4": "Both Statement I and Statement II are incorrect."
+    },
+    "key": 3,
+    "subject": "Biology",
+    "doc": "62166f1aa401f43d",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Match List I with List II :\nList I  List II\nA. Typhoid I. Fungus\nB. Leishmaniasis II. Nematode\nC. Ringworm III. Protozoa\nD. Filariasis IV. Bacteria\nChoose the correct answer from the options given below:",
+    "options": {
+      "1": "A-IV, B-III, C-I, D-II",
+      "2": "A-III, B-I, C-IV, D-II",
+      "3": "A-II, B-IV, C-III, D-I",
+      "4": "A-I, B-III, C-II, D-IV"
+    },
+    "key": 1,
+    "subject": "Biology",
+    "doc": "d3596068a2bcf3f9",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Given below are two statements:\nStatement I: In prokaryotes, the positively charged DNA is held with some negatively charged proteins in a region called nucleoid.\nStatement II: In eukaryotes, the negatively charged DNA is wrapped around the positively charged histone octamer to form nucleosome.\nIn the light of the above statements, choose the correct answer from the options given below:",
+    "options": {
+      "1": "Both Statement I and Statement II are false.",
+      "2": "Statement I is correct but Statement II is false.",
+      "3": "Statement I is incorrect but Statement II is true.",
+      "4": "Both Statement I and Statement II are true."
+    },
+    "key": 3,
+    "subject": "Biology",
+    "doc": "237b008798c6413a",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "In which blood corpuscles, the HIV undergoes replication and produces progeny viruses?",
+    "options": {
+      "1": "B-lymphocytes",
+      "2": "Basophils",
+      "3": "Eosinophils",
+      "4": "TH cells"
+    },
+    "key": 4,
+    "subject": "Biology",
+    "doc": "237b008798c6413a",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Which hormone promotes internode/petiole elongation in deep water rice?",
+    "options": {
+      "1": "Kinetin",
+      "2": "Ethylene",
+      "3": "2, 4-D",
+      "4": "GA3"
+    },
+    "key": 2,
+    "subject": "Biology",
+    "doc": "18cd0e26d5fe73bd",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Large, colourful, fragrant flowers with nectar are seen in",
+    "options": {
+      "1": "Bird pollinated plants",
+      "2": "Bat pollinated plants",
+      "3": "Wind pollinated plants",
+      "4": "Insect pollinated plants"
+    },
+    "key": 4,
+    "subject": "Biology",
+    "doc": "18cd0e26d5fe73bd",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "In tissue culture experiments, leaf mesophyll cells are put in a culture medium to form callus. This phenomenon may be called as",
+    "options": {
+      "1": "Dedifferentiation",
+      "2": "Development",
+      "3": "Senescence",
+      "4": "Differentiation"
+    },
+    "key": 1,
+    "subject": "Biology",
+    "doc": "18cd0e26d5fe73bd",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "During the purification process for recombinant DNA technology, addition of chilled ethanol precipitates out",
+    "options": {
+      "1": "DNA",
+      "2": "Histones",
+      "3": "Polysaccharides",
+      "4": "RNA"
+    },
+    "key": 1,
+    "subject": "Biology",
+    "doc": "18cd0e26d5fe73bd",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "In gene gun method used to introduce alien DNA into host cells, microparticles of ________ metal are used.",
+    "options": {
+      "1": "Zinc",
+      "2": "Tungsten or gold",
+      "3": "Silver",
+      "4": "Copper"
+    },
+    "key": 2,
+    "subject": "Biology",
+    "doc": "18cd0e26d5fe73bd",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "The phenomenon of pleiotropism refers to",
+    "options": {
+      "1": "Presence of two alleles, each of the two genes controlling a single trait",
+      "2": "A single gene affecting multiple phenotypic expression",
+      "3": "More than two genes affecting a single character",
+      "4": "Presence of several alleles of a single gene controlling a single crossover"
+    },
+    "key": 2,
+    "subject": "Biology",
+    "doc": "18cd0e26d5fe73bd",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Match List I with List II :\nList I  List II\nA. M Phase I. Proteins are synthesized\nB. G2 Phase II. Inactive phase\nC. Quiescent stage  III. Interval between mitosis and initiation of DNA replication\nD. G1 Phase IV. Equational division\nChoose the correct answer from the options given below :",
+    "options": {
+      "1": "A-IV, B-I, C-II, D-III",
+      "2": "A-II, B-IV, C-I, D-III",
+      "3": "A-III, B-II, C-IV, D-I",
+      "4": "A-IV, B-II, C-I, D-III"
+    },
+    "key": 1,
+    "subject": "Biology",
+    "doc": "7bc31daa73c7c510",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Given below are two statements:\nStatement I : Gause\u2019s \u2018Competitive Exclusion Principle\u2019 states that two closely related species competing for the same resources cannot co-exist indefinitely and competitively inferior one will be eliminated eventually.\nStatement II : In general, carnivores are more adversely affected by competition than herbivores.\nIn the light of the above statements, choose the correct answer from the options given below:",
+    "options": {
+      "1": "Statement I is correct Statement II is false.",
+      "2": "Statement I is incorrect but Statement II is true.",
+      "3": "Both Statement I and Statement II are true.",
+      "4": "Both Statement I and Statement II are false."
+    },
+    "key": 1,
+    "subject": "Biology",
+    "doc": "7bc31daa73c7c510",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "How many different proteins does the ribosome consist of?",
+    "options": {
+      "1": "40",
+      "2": "20",
+      "3": "80",
+      "4": "60"
+    },
+    "key": 3,
+    "subject": "Biology",
+    "doc": "7bc31daa73c7c510",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Formation of interfascicular cambium from fully developed parenchyma cells is an example for",
+    "options": {
+      "1": "Dedifferentiation",
+      "2": "Maturation",
+      "3": "Differentiation",
+      "4": "Redifferentiation"
+    },
+    "key": 1,
+    "subject": "Biology",
+    "doc": "a4dabb22830dad5d",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "The cofactor of the enzyme carboxypeptidase is:",
+    "options": {
+      "1": "Flavin",
+      "2": "Haem",
+      "3": "Zinc",
+      "4": "Niacin"
+    },
+    "key": 3,
+    "subject": "Biology",
+    "doc": "a4dabb22830dad5d",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Bulliform cells are responsible for",
+    "options": {
+      "1": "Increased photosynthesis in monocots.",
+      "2": "Providing large spaces for storage of sugars.",
+      "3": "Inward curling of leaves in monocots.",
+      "4": "Protecting the plant from salt stress."
+    },
+    "key": 3,
+    "subject": "Biology",
+    "doc": "a4dabb22830dad5d",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Given below are two statements:\nStatement I: In prokaryotes, the positively charged DNA is held with some negatively charged proteins in a region called nucleoid.\nStatement II: In eukaryotes, the negatively charged DNA is wrapped around the positively charged histone octamer to form nucleosome.\nIn the light of the above statements, choose the correct answer from the options given below:",
+    "options": {
+      "1": "Both Statement I and Statement II are false.",
+      "2": "Statement I is correct but Statement II is false.",
+      "3": "Statement I is incorrect but Statement II is true.",
+      "4": "Both Statement I and Statement II are true."
+    },
+    "key": 3,
+    "subject": "Biology",
+    "doc": "24185fbbd91d57bf",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Match List I with List II :\nList I  List II\nA. Pons I. Provides additional space for Neurons, regulates posture and balance.\nB. Hypothalamus II. Controls respiration and gastric secretions.\nC. Medulla III. Connects different regions of the brain.\nD. Cerebellum IV. Neuro secretory cells\nChoose the correct answer from the options given below :",
+    "options": {
+      "1": "A-II, B-I, C-III, D-IV",
+      "2": "A-II, B-III, C-I, D-IV",
+      "3": "A-III, B-IV, C-II, D-I",
+      "4": "A-I, B-III, C-II, D-IV"
+    },
+    "key": 3,
+    "subject": "Biology",
+    "doc": "b41720ac4e834ad8",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Given below are certain cations. Using inorganic qualitative analysis, arrange them in increasing group number from 0 to VI.\nA. Al3+ B. Cu2+\nC. Ba2+ D. Co2+\nE. Mg2+\nChoose the correct answer from the options given below.",
+    "options": {
+      "1": "B, C, A, D, E",
+      "2": "E, C, D, B, A",
+      "3": "E, A, B, C, D",
+      "4": "B, A, D, C, E"
+    },
+    "key": 4,
+    "subject": "Biology",
+    "doc": "d6f0b5d79c4113f3",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "These are regarded as major causes of biodiversity loss:\nA. Over exploitation\nB. Co-extinction\nC. Mutation\nD. Habitat loss and fragmentation\nE. Migration\nChoose the correct option:",
+    "options": {
+      "1": "A, B, C and D only",
+      "2": "A, B and E only",
+      "3": "A, B and D only",
+      "4": "A, C and D only"
+    },
+    "key": 3,
+    "subject": "Biology",
+    "doc": "d3596068a2bcf3f9",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "The lactose present in the growth medium of bacteria is transported to the cell by the action of",
+    "options": {
+      "1": "Acetylase",
+      "2": "Permease",
+      "3": "Polymerase",
+      "4": "Beta-galactosidase"
+    },
+    "key": 2,
+    "subject": "Biology",
+    "doc": "d3596068a2bcf3f9",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "List of endangered species was released by",
+    "options": {
+      "1": "WWF",
+      "2": "FOAM",
+      "3": "IUCN",
+      "4": "GEAC"
+    },
+    "key": 3,
+    "subject": "Biology",
+    "doc": "d3596068a2bcf3f9",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Match List I with List II :\nList I  List II\nA. Exophthalmic goiter I. Excess secretion of cortisol, moon face & hypergylcemia.\nB. Acromegaly II. Hypo-secretion of thyroid hormone and stunted growth.\nC. Cushing\u2019s syndrome III. Hyper secretion of thyroid hormone & protruding eye balls.\nD. Cretinism IV. Excessive secretion of growth hormone.\nChoose the correct answer from the options given below :",
+    "options": {
+      "1": "A-IV, B-II, C-I, D-III",
+      "2": "A-III, B-IV, C-II, D-I",
+      "3": "A-III, B-IV, C-I, D-II",
+      "4": "A-I, B-III, C-II, D-IV"
+    },
+    "key": 3,
+    "subject": "Biology",
+    "doc": "a28c9ca8e47dfc32",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Identify the correct option (A), (B), (C), (D) with respect to spermatogenesis.",
+    "options": {
+      "1": "ICSH, Interstitial cells, Leydig cells, spermiogenesis.",
+      "2": "FSH, Sertoli cells, Leydig cells, spermatogenesis.",
+      "3": "ICSH, Leydig cells, Sertoli cells, spermatogenesis.",
+      "4": "FSH, Leydig cells, Sertoli cells, spermiogenesis."
+    },
+    "key": 4,
+    "subject": "Biology",
+    "doc": "a28c9ca8e47dfc32",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Given below are two statements:\nStatement I: Mitochondria and chloroplasts both double membranes bound organelles.\nStatement II: Inner membrane of mitochondria is relatively less permeable, as compared chloroplast.\nIn the light of the above statements, choose the mis appropriate answer from the options given below:",
+    "options": {
+      "1": "Both Statement I and Statement II are incorrect.",
+      "2": "Statement I is correct but Statement Il is incorrect.",
+      "3": "Statement I is incorrect but Statement Il is correct.",
+      "4": "Both Statement I and Statement II are correct."
+    },
+    "key": 2,
+    "subject": "Biology",
+    "doc": "a28c9ca8e47dfc32",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "",
+    "options": {
+      "1": "A, D and E only",
+      "2": "B and D only",
+      "3": "A, C and E only",
+      "4": "A-IV, B-III, C-II, D-I"
+    },
+    "key": 3,
+    "subject": "Biology",
+    "doc": "f5180e60a991c680",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "The cofactor of the enzyme carboxypeptidase is:",
+    "options": {
+      "1": "Niacin",
+      "2": "Flavin",
+      "3": "Haem",
+      "4": "Zinc"
+    },
+    "key": 4,
+    "subject": "Biology",
+    "doc": "efa14f8474cba85b",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "The capacity to generate a whole plant from any cell of the plant is called:",
+    "options": {
+      "1": "Micropropagation",
+      "2": "Differentiation",
+      "3": "Somatic hybridization",
+      "4": "Totipotency"
+    },
+    "key": 4,
+    "subject": "Biology",
+    "doc": "efa14f8474cba85b",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "The phenomenon of pleiotropism refers to",
+    "options": {
+      "1": "More than two genes affecting a single character",
+      "2": "Presence of several alleles of a single gene controlling a single crossover",
+      "3": "Presence of two alleles, each of the two genes controlling a single trait",
+      "4": "A single gene affecting multiple phenotypic expression"
+    },
+    "key": 4,
+    "subject": "Biology",
+    "doc": "0ecd08c950460d42",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Match List I with List II\nList-I  List-II\nA. Nucleolus I. Site of formation of glycolipid\nB. Centriole II. Organization like the\ncartwheel\nC. Leucoplasts III. Site for active\nribosomal RNA synthesis\nD. Golgi apparatus IV. For storing nutrients\nChoose the correct answer from the options given below:",
+    "options": {
+      "1": "A-I, B-II, C-III, D-IV",
+      "2": "A-III, B-II, C-IV, D-I",
+      "3": "A-II, B-III, C-I, D-IV",
+      "4": "A-III, B-IV, C-II, D-I"
+    },
+    "key": 2,
+    "subject": "Biology",
+    "doc": "b41720ac4e834ad8",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "List of endangered species was released by",
+    "options": {
+      "1": "IUCN",
+      "2": "GEAC",
+      "3": "WWF",
+      "4": "FOAM"
+    },
+    "key": 1,
+    "subject": "Biology",
+    "doc": "b41720ac4e834ad8",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "The lactose present in the growth medium of bacteria is transported to the cell by the action of",
+    "options": {
+      "1": "Polymerase",
+      "2": "Beta-galactosidase",
+      "3": "Acetylase",
+      "4": "Permease"
+    },
+    "key": 4,
+    "subject": "Biology",
+    "doc": "b41720ac4e834ad8",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "The cofactor of the enzyme carboxypeptidase is:",
+    "options": {
+      "1": "Haem",
+      "2": "Zinc",
+      "3": "Niacin",
+      "4": "Flavin"
+    },
+    "key": 2,
+    "subject": "Biology",
+    "doc": "b41720ac4e834ad8",
+    "lane": "NON_NUMERIC"
+  },
+  {
+    "stem": "Following are the stages of cell division :\nA. Gap 2 phase\nB. Cytokinesis\nC. Synthesis phase\nD. Karyokinesis\nE. Gap 1 phase\nChoose the correct sequence of stages from the options given below :",
+    "options": {
+      "1": "E-C-A-D-B",
+      "2": "C-E-D-A-B",
+      "3": "E-B-D-A-C",
+      "4": "B-D-E-A-C"
+    },
+    "key": 1,
+    "subject": "Biology",
+    "doc": "102392748a53d44f",
+    "lane": "NON_NUMERIC"
+  }
+]

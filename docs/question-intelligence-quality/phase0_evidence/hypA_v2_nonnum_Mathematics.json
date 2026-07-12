@@ -1,0 +1,362 @@
+[
+  {
+    "stem": "Which of the following is not a cloning vector?",
+    "options": {
+      "1": "YAC",
+      "2": "pBR322",
+      "3": "Probe",
+      "4": "BAC"
+    },
+    "key": 3,
+    "subject": "Mathematics",
+    "lane": "CLASSIFICATION_TAXONOMIC"
+  },
+  {
+    "stem": "The angular acceleration of a body, moving along the circumference of a circle, is",
+    "options": {
+      "1": "Along the radius, away from centre",
+      "2": "Along the radius towards the centre",
+      "3": "Along the tangent to its position",
+      "4": "Along the axis of rotation"
+    },
+    "key": 4,
+    "subject": "Mathematics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "A particle moving with velocity V\u0002\u0003 is acted by\nthree forces shown by the vector triangle PQR.The velocity of the particle will :\nP\nRQ",
+    "options": {
+      "1": "Remain constant",
+      "2": "Change according to the smallest force",
+      "3": "Increase",
+      "4": "Decrease"
+    },
+    "key": 1,
+    "subject": "Mathematics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "The ratio of frequencies of fundamental harmonic produced by an open pipe to that of closed pipe having the same length is",
+    "options": {
+      "1": "2 : 1",
+      "2": "1 : 3",
+      "3": "3 : 1",
+      "4": "1 : 2"
+    },
+    "key": 1,
+    "subject": "Mathematics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "A particle moving with velocity V\u0002\u0003 is acted by\nthree forces shown by the vector triangle PQR.The velocity of the particle will :\nP\nRQ",
+    "options": {
+      "1": "Increase",
+      "2": "Decrease",
+      "3": "Remain constant",
+      "4": "Change according to the smallest force"
+    },
+    "key": 3,
+    "subject": "Mathematics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "Two particles A and B are moving in uniformcircular motion in concentric circles of radii rAand rB with speed vA and vB respectively. Theirtime period of rotation is the same. The ratio ofangular speed of A to that of B will be :",
+    "options": {
+      "1": "rA : rB",
+      "2": "vA : vB",
+      "3": "rB : rA",
+      "4": "1 : 1"
+    },
+    "key": 4,
+    "subject": "Mathematics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "The angular acceleration of a body, moving along the circumference of a circle, is",
+    "options": {
+      "1": "Along the radius towards the centre",
+      "2": "Along the tangent to its position",
+      "3": "Along the axis of rotation",
+      "4": "Along the radius, away from centre"
+    },
+    "key": 3,
+    "subject": "Mathematics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "For a p-type semiconductor, which of thefollowing statements is true ?",
+    "options": {
+      "1": "Electrons are the majority carriers and",
+      "2": "Electrons are the majority carriers and",
+      "3": "Holes are the majority carriers and",
+      "4": "Holes are the majority carriers and"
+    },
+    "key": 3,
+    "subject": "Mathematics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "An unpolarised light beam strikes a glass surface at Brewster's angle. Then",
+    "options": {
+      "1": "The refracted light will be completely polarised.",
+      "2": "Both the reflected and refracted light will be completely polarised.",
+      "3": "The reflected light will be completely polarised but the refracted light will be partially polarised.",
+      "4": "The reflected light will be partially polarised."
+    },
+    "key": 3,
+    "subject": "Mathematics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "The angular acceleration of a body, moving along the circumference of a circle, is",
+    "options": {
+      "1": "Along the axis of rotation",
+      "2": "Along the radius, away from centre",
+      "3": "Along the radius towards the centre",
+      "4": "Along the tangent to its position"
+    },
+    "key": 1,
+    "subject": "Mathematics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "The ratio of frequencies of fundamental harmonic produced by an open pipe to that of closed pipe having the same length is",
+    "options": {
+      "1": "1 : 3",
+      "2": "3 : 1",
+      "3": "1 : 2",
+      "4": "2 : 1"
+    },
+    "key": 4,
+    "subject": "Mathematics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "A particle moving with velocity V\u0002\u0003 is acted by\nthree forces shown by the vector triangle PQR.The velocity of the particle will :\nP\nRQ",
+    "options": {
+      "1": "Change according to the smallest force",
+      "2": "Increase",
+      "3": "Decrease",
+      "4": "Remain constant"
+    },
+    "key": 4,
+    "subject": "Mathematics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "The ratio of frequencies of fundamental harmonic produced by an open pipe to that of closed pipe having the same length is",
+    "options": {
+      "1": "1 : 2",
+      "2": "2 : 1",
+      "3": "1 : 3",
+      "4": "3 : 1"
+    },
+    "key": 2,
+    "subject": "Mathematics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "A mass m is attached to a thin wire andwhirled in a vertical circle. The wire is mostlikely to break when:",
+    "options": {
+      "1": "The mass is at the highest point",
+      "2": "The wire is horizontal",
+      "3": "The mass is at the lowest point",
+      "4": "Inclined at an angle of 60° from vertical"
+    },
+    "key": 3,
+    "subject": "Mathematics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "The angular acceleration of a body, moving along the circumference of a circle, is",
+    "options": {
+      "1": "Along the radius towards the centre",
+      "2": "Along the tangent to its position",
+      "3": "Along the axis of rotation",
+      "4": "Along the radius, away from centre"
+    },
+    "key": 3,
+    "subject": "Mathematics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "Which of the following is not a cloning vector?",
+    "options": {
+      "1": "YAC",
+      "2": "pBR322",
+      "3": "Probe",
+      "4": "BAC"
+    },
+    "key": 3,
+    "subject": "Mathematics",
+    "lane": "CLASSIFICATION_TAXONOMIC"
+  },
+  {
+    "stem": "The angular acceleration of a body, moving along the circumference of a circle, is",
+    "options": {
+      "1": "Along the radius towards the centre",
+      "2": "Along the tangent to its position",
+      "3": "Along the axis of rotation",
+      "4": "Along the radius, away from centre"
+    },
+    "key": 3,
+    "subject": "Mathematics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "An unpolarised light beam strikes a glass surface at Brewster's angle. Then",
+    "options": {
+      "1": "Both the reflected and refracted light will be completely polarised.",
+      "2": "The reflected light will be completely polarised but the refracted light will be partially polarised.",
+      "3": "The reflected light will be partially polarised.",
+      "4": "The refracted light will be completely polarised."
+    },
+    "key": 2,
+    "subject": "Mathematics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "The angular acceleration of a body, moving along the circumference of a circle, is",
+    "options": {
+      "1": "Along the axis of rotation",
+      "2": "Along the radius, away from centre",
+      "3": "Along the radius towards the centre",
+      "4": "Along the tangent to its position"
+    },
+    "key": 1,
+    "subject": "Mathematics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "The ratio of frequencies of fundamental harmonic produced by an open pipe to that of closed pipe having the same length is",
+    "options": {
+      "1": "1 : 2",
+      "2": "2 : 1",
+      "3": "1 : 3",
+      "4": "3 : 1"
+    },
+    "key": 2,
+    "subject": "Mathematics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "An unpolarised light beam strikes a glass surface at Brewster's angle. Then",
+    "options": {
+      "1": "The reflected light will be completely polarised but the refracted light will be partially polarised.",
+      "2": "The reflected light will be partially polarised.",
+      "3": "The refracted light will be completely polarised.",
+      "4": "Both the reflected and refracted light will be completely polarised."
+    },
+    "key": 1,
+    "subject": "Mathematics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "The ratio of frequencies of fundamental harmonic produced by an open pipe to that of closed pipe having the same length is",
+    "options": {
+      "1": "2 : 1",
+      "2": "1 : 3",
+      "3": "3 : 1",
+      "4": "1 : 2"
+    },
+    "key": 1,
+    "subject": "Mathematics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "An unpolarised light beam strikes a glass surface at Brewster's angle. Then",
+    "options": {
+      "1": "The reflected light will be completely polarised but the refracted light will be partially polarised.",
+      "2": "The reflected light will be partially polarised.",
+      "3": "The refracted light will be completely polarised.",
+      "4": "Both the reflected and refracted light will be completely polarised."
+    },
+    "key": 1,
+    "subject": "Mathematics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "The ratio of frequencies of fundamental harmonic produced by an open pipe to that of closed pipe having the same length is",
+    "options": {
+      "1": "3 : 1",
+      "2": "1 : 2",
+      "3": "2 : 1",
+      "4": "1 : 3"
+    },
+    "key": 3,
+    "subject": "Mathematics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "The angular acceleration of a body, moving along the circumference of a circle, is",
+    "options": {
+      "1": "Along the tangent to its position",
+      "2": "Along the axis of rotation",
+      "3": "Along the radius, away from centre",
+      "4": "Along the radius towards the centre"
+    },
+    "key": 2,
+    "subject": "Mathematics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "An unpolarised light beam strikes a glass surface at Brewster's angle. Then",
+    "options": {
+      "1": "The refracted light will be completely polarised.",
+      "2": "Both the reflected and refracted light will be completely polarised.",
+      "3": "The reflected light will be completely polarised but the refracted light will be partially polarised.",
+      "4": "The reflected light will be partially polarised."
+    },
+    "key": 3,
+    "subject": "Mathematics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "The ratio of frequencies of fundamental harmonic produced by an open pipe to that of closed pipe having the same length is",
+    "options": {
+      "1": "3 : 1",
+      "2": "1 : 2",
+      "3": "2 : 1",
+      "4": "1 : 3"
+    },
+    "key": 3,
+    "subject": "Mathematics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "The ratio of frequencies of fundamental harmonic produced by an open pipe to that of closed pipe having the same length is",
+    "options": {
+      "1": "3 : 1",
+      "2": "1 : 2",
+      "3": "2 : 1",
+      "4": "1 : 3"
+    },
+    "key": 3,
+    "subject": "Mathematics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "The angular acceleration of a body, moving along the circumference of a circle, is",
+    "options": {
+      "1": "Along the axis of rotation",
+      "2": "Along the radius, away from centre",
+      "3": "Along the radius towards the centre",
+      "4": "Along the tangent to its position"
+    },
+    "key": 1,
+    "subject": "Mathematics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "Match List I with List II :\nList I  List II\nA. Expiratory capacity I. Expiratory reserve volume + Tidal volume + Inspiratory reserve volume\nB. Functional residual capacity II. Tidal volume + Expiratory reserve volume\nC. Vital capacity III. Tidal volume + Inspiratory reserve volume\nD. Inspiratory capacity IV. Expiratory reserve volume + Residual volume\nChoose the correct answer from the options given below :",
+    "options": {
+      "1": "A-II, B-I, C-IV, D-III",
+      "2": "A-I, B-III, C-II, D-IV",
+      "3": "A-II, B-IV, C-I, D-III",
+      "4": "A-III, B-II, C-IV, D-I"
+    },
+    "key": 3,
+    "subject": "Mathematics",
+    "lane": "DATA_MATCH"
+  }
+]

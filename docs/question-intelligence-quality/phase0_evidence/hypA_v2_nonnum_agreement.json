@@ -1,0 +1,28 @@
+{
+  "per_subject": {
+    "Physics": {
+      "total": 30,
+      "agree": 23,
+      "disagree": 0,
+      "unverifiable": 7
+    },
+    "Chemistry": {
+      "total": 30,
+      "agree": 26,
+      "disagree": 0,
+      "unverifiable": 4
+    },
+    "Mathematics": {
+      "total": 30,
+      "agree": 29,
+      "disagree": 0,
+      "unverifiable": 1
+    }
+  },
+  "overall": {
+    "total": 90,
+    "agree": 78,
+    "disagree": 0,
+    "unverifiable": 12
+  }
+}

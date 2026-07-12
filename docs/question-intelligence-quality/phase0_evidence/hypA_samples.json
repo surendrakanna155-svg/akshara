@@ -1,0 +1,427 @@
+{
+  "Physics": [
+    {
+      "stem": "Two point charges A and B, having charges + Q and \u2212Q respectively, are placed at certain distance apart and force acting between them is F. If 25% charge of A is transferred to B, then force between the charges becomes",
+      "key": null,
+      "subject": "Physics",
+      "doc": "2f4892e2e9eb7638",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "F",
+        "2": "9F",
+        "3": "16 F",
+        "4": "4F"
+      }
+    },
+    {
+      "stem": "Which colour of the light has the longest wavelength?",
+      "key": null,
+      "subject": "Physics",
+      "doc": "2f4892e2e9eb7638",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "red",
+        "2": "blue",
+        "3": "green",
+        "4": "violet Ans"
+      }
+    },
+    {
+      "stem": "When an object is shot from the bottom of a long smooth inclined plane kept at an angle 60\u00b0 with horizontal, it can travel a distance x1 along the plane. But when the inclination is decreased to 30\u00b0 and the same object is shot with the same velocity, it can travel x2 distance. Then x1 : x2 will be",
+      "key": null,
+      "subject": "Physics",
+      "doc": "2f4892e2e9eb7638",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "1 :2",
+        "2": "2 :1",
+        "3": "1:3",
+        "4": "1: 2 3"
+      }
+    },
+    {
+      "stem": "Two wires are made of the same material and\nhave the same volume. The first wire has\ncross-sectional area A and the second wire has\ncross-sectional area 3A. If the length of the first\nwire is increased by \uf044l on applying a force F,\nhow much force is needed to stretch the second\nwire by the same amount ?",
+      "key": null,
+      "subject": "Physics",
+      "doc": "327e0e587b0ad7df",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "F",
+        "2": "9 F",
+        "3": "4 F",
+        "4": "6 F"
+      }
+    },
+    {
+      "stem": "A sample of 0\u00b71 g of water at 100\uf0b0C and normal\n5 \u20132\npressure (1\u00b7013 \uf0b4 10 Nm ) requires 54 cal of\nheat energy to convert to steam at 100\uf0b0C. If the\nvolume of the steam produced is 167\u00b71 cc, the\nchange in internal energy of the sample, is",
+      "key": null,
+      "subject": "Physics",
+      "doc": "327e0e587b0ad7df",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "84\u00b75 J",
+        "2": "104\u00b73 J",
+        "3": "42\u00b72 J",
+        "4": "208\u00b77 J"
+      }
+    },
+    {
+      "stem": "A small sphere of radius \u2018r\u2019 falls from rest in a\nviscous liquid. As a result, heat is produced due\nto viscous force. The rate of production of heat\nwhen the sphere attains its terminal velocity, is\nproportional to\n4",
+      "key": null,
+      "subject": "Physics",
+      "doc": "327e0e587b0ad7df",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "r",
+        "2": "r",
+        "3": "r",
+        "4": "r"
+      }
+    },
+    {
+      "stem": "The power radiated by a black body is P and it\nradiates maximum energy at wavelength, \uf06c . If\n0\nthe temperature of the black body is now\nchanged so that it radiates maximum energy at\n3\nwavelength \uf06c , the power radiated by it\n0\n4\nbecomes nP. The value of n is\n81",
+      "key": null,
+      "subject": "Physics",
+      "doc": "327e0e587b0ad7df",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "256",
+        "2": "4",
+        "3": "81",
+        "4": "3 | 157. J\u00ed\u00a8\u00e6\u00e0 W\u00dd\u00f1\u00dc\u00c5\u00cb\u00c3\u00dc\u00e1\u00ca \u00dc \u00ca\u00dc\u00e1\u00f1\u00dc\u00e1 J\u00ed\u00a8\u00e6\u00e0 \u00ca\u00dc\u00d3\u00dc\u00e1\u00cb\u00af\u00ed\u00a8\u00dc \u00ca\u00dc\u00dev\u00dc\u00c6q\u00c3\u00dc\u00e1\u00ca\u00dc"
+      }
+    },
+    {
+      "stem": "Given below are two statements :\nStatement I : The forces generated transpiration can lift a xylem-sized column of water over 130 meters height.\nStatement II : Transpiration cools leaf surfaces sometimes 10 to 15 degrees evaporative cooling.\nIn the light of the above statements, choose the most appropriate answer from the options given below :",
+      "key": 4,
+      "subject": "Physics",
+      "doc": "c2961d1494999666",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "Both Statement I and Statement II are incorrect",
+        "2": "Statement I is correct but Statement II is incorrect",
+        "3": "Statement I is incorrect but Statement II is correct",
+        "4": "Both Statement I and Statement II are correct"
+      }
+    }
+  ],
+  "Mathematics": [
+    {
+      "stem": "A particle moving with velocity V\u0001\nis acted by three forces shown by the vector triangle PQR. The velocity of the particle will",
+      "key": null,
+      "subject": "Mathematics",
+      "doc": "2f4892e2e9eb7638",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "increase",
+        "2": "decrease",
+        "3": "remain constant",
+        "4": "change according to the smallest force QR"
+      }
+    },
+    {
+      "stem": "Which of the following is not a cloning vector?",
+      "key": 3,
+      "subject": "Mathematics",
+      "doc": "c2961d1494999666",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "YAC",
+        "2": "pBR322",
+        "3": "Probe",
+        "4": "BAC"
+      }
+    },
+    {
+      "stem": "The two functional groups characteristic of sugars are",
+      "key": null,
+      "subject": "Mathematics",
+      "doc": "fee21b0faa349737",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "carbonyl and hydroxyl",
+        "2": "carbonyl and phosphate",
+        "3": "carbonyl and methyl",
+        "4": "hydroxyl and methyl"
+      }
+    },
+    {
+      "stem": "16.\nA rectangular film of liquid is extended from (4 cm x 2 cm) to (5 cm x 4\ncm). If the work done is 3 x 104 J, the value of the surface tension of the\nliquid is",
+      "key": null,
+      "subject": "Mathematics",
+      "doc": "0c943b7eb8b0aa0c",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "0.250 Nm!",
+        "2": "0.125 Nm!",
+        "3": "0.2 Nm?",
+        "4": "8.0 Nm?"
+      }
+    },
+    {
+      "stem": "Following are the stages of pathway for conduction of an action potential through the heart\nA. AV bundle B. Purkinje fibres\nC. AV node D. Bundle branches\nE. SA node\nChoose the correct sequence of pathway from the options given below",
+      "key": 4,
+      "subject": "Mathematics",
+      "doc": "d3596068a2bcf3f9",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "A-E-C-B-D",
+        "2": "B-D-E-C-A",
+        "3": "E-A-D-B-C",
+        "4": "E-C-A-D-B"
+      }
+    },
+    {
+      "stem": "In the equation GPPRNPP\u2212=\nGPP is Gross Primary Productivity\nNPP is Net Primary Productivity\nR here is ________.",
+      "key": 2,
+      "subject": "Mathematics",
+      "doc": "18cd0e26d5fe73bd",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "Respiratory quotient",
+        "2": "Respiratory loss",
+        "3": "Reproductive allocation",
+        "4": "Photosynthetically active radiation"
+      }
+    },
+    {
+      "stem": "The angular acceleration of a body, moving along the circumference of a circle, is",
+      "key": 4,
+      "subject": "Mathematics",
+      "doc": "7129a41b52b020b3",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "Along the radius, away from centre",
+        "2": "Along the radius towards the centre",
+        "3": "Along the tangent to its position",
+        "4": "Along the axis of rotation"
+      }
+    },
+    {
+      "stem": "Light travels a distance x in time t1 in air and 10x in time t2 in another denser medium. What is the critical angle for this medium?",
+      "key": 4,
+      "subject": "Mathematics",
+      "doc": "55d1f9a281294f44",
+      "lane": "NUMERIC_RELATIONAL",
+      "verified_relation": "resistance_series",
+      "options": {
+        "1": "12",
+        "2": "12",
+        "3": "11",
+        "4": "11"
+      }
+    }
+  ],
+  "Biology": [
+    {
+      "stem": "177.\n21\nGoblet cells of alimentary canal are modified | 178.\nfrom :",
+      "key": null,
+      "subject": "Biology",
+      "doc": "98aadd3c85d671a9",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "Squamous epithelial cells",
+        "2": "| Columnar epithelial cells",
+        "3": "| Chondrocytes",
+        "4": "| Compound epithelial cells"
+      }
+    },
+    {
+      "stem": "(3) \u2014_ Imbibition\n(4)  Plasmolysis\nIdentify the substances having glycosidic bond and\npeptide bond, respectively in their structure :",
+      "key": null,
+      "subject": "Biology",
+      "doc": "98aadd3c85d671a9",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "3": "\u2014_ Imbibition",
+        "4": "Plasmolysis",
+        "1": "Chitin, cholesterol",
+        "2": "\u2014 Glycerol, trypsin"
+      }
+    },
+    {
+      "stem": "Which of the following statements is correct w.r.t. lipids?",
+      "key": null,
+      "subject": "Biology",
+      "doc": "4191372e9758d80c",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "A phospholipid called lecithin is found in the",
+        "2": "Saturated fatty acids possess one or more",
+        "3": "Gingelly oil has a higher melting point than",
+        "4": "Lipids are generally soluble in water and"
+      }
+    },
+    {
+      "stem": "Which part of poppy plant is used to obtain the\ndrug \u2018\u2018Smack\u2019\u2019 ?",
+      "key": null,
+      "subject": "Biology",
+      "doc": "cffa7f24fc0fccbc",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "Flowers",
+        "2": "Latex",
+        "3": "Roots",
+        "4": "Leaves"
+      }
+    },
+    {
+      "stem": "\u00ac\u02dd\u2211\u00ce\u00a7\u00c1\u00c3 \u25ca\uf8ff\u00a5 \u2022\u00a5\u00c3\u2044U\u00ca\u00a1\u00ca\u00c3\u00cb\u00ff \u00ac\u02dd\u00c1\u00c3S\u00ac\u0153\u00ca\u00b8 \u2211\uf8ff\u00a7 \u2019\u00ca\ufb02\u00a1\u00cd\u0152, \u00ac\u02dd\u00c1\u00c3S\u00ac\u0153\u00ca\u00b8 \u2211\u00a7\u2044U\u0178\uf8ff\ufb02\u00ca\u2039\u00cb \u00a1\u00ca\u00c1\u00c3\u00ff\u00ca\uf8ff\u00a5 \u0178\uf8ff \u2022\u00ac\u0178\u00cb \u00a9\u00fb\u00ca\u2044U\u00a1\u00cb\u00c1\ufb02\u00c3\u00ca \u2211\uf8ff\u00a7 \u00c1\u2039\u221e \u2211\u00a7\u00ca\u00d2\u0178 \u201a\u00cb \u00c1\ufb02\u00c1\u0153 \u2211\u00a7\u00ca\u00c1\ufb02\u2211\u00a7\u00ca\u201a \u00c1\u2211\u00a7\u00ff\u00ca \u201e\u00ca\uf8ff\u00aa\u00ca?",
+      "key": null,
+      "subject": "Biology",
+      "doc": "71d5c2cdfaebd0e2",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "\u00f7\u02c7\u00ca\u00e1\u00ca",
+        "2": "\u201a\u00a5\u201a\u00ca\u0153\u0178 \u00c1\ufb02\u00f7\u00ca\u00a1\u0178",
+        "3": "S\u00ac\u0153\u00ca\u00b8 \u00c1\u0178\u25ca\u00c8\u00b8\u00c4\u00c3",
+        "4": "\u201a\u201e\u00ca\uf8ff\u00ac\u2211\u00a7\u00ca\u00c1\u2044U\u00c3\u00ca"
+      }
+    },
+    {
+      "stem": "Given below are two statements: one is labelled as Assertion A and the other is labelled as Reason R.\nAssertion A: Endometrium is necessary for implantation of blastocyst.\nReason R: In the absence of fertilization, the corpus luteum degenerates that causes disintegration of endometrium.\nIn the light of the above statements, choose the correct answer from the options given below:",
+      "key": 1,
+      "subject": "Biology",
+      "doc": "c2961d1494999666",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "Both A and R are true but R is NOT the correct explanation of A.",
+        "2": "A is true but R is false.",
+        "3": "A is false but R is true.",
+        "4": "Both A and R are true and R is the correct explanation of A."
+      }
+    },
+    {
+      "stem": "Match List I with List II.\nList I  List II\nA. Taenia I. Nephridia\nB. Paramoecium II. Contractile vacuole\nC. Periplaneta III. Flame cells\nD. Pheretima IV. Urecose gland\nChoose the correct answer from the options given below:",
+      "key": 2,
+      "subject": "Biology",
+      "doc": "c2961d1494999666",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "A-I, B-II, C-IV, D-III",
+        "2": "A-III, B-II, C-IV, D-I",
+        "3": "A-II, B-I, C-IV, D-III",
+        "4": "A-I, B-II, C-III, D-IV"
+      }
+    },
+    {
+      "stem": "Given below are two statements:\nStatement I: Ligaments are dense irregular tissue.\nStatement II: Cartilage is dense regular tissue.\nIn the light of the above statements, choose the correct answer from the options given below:",
+      "key": 1,
+      "subject": "Biology",
+      "doc": "c2961d1494999666",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "Both Statement I and Statement II are false",
+        "2": "Statement I is true but Statement II is false",
+        "3": "Statement I is false but Statement II is true",
+        "4": "Both Statement I and Statement II are true"
+      }
+    }
+  ],
+  "Chemistry": [
+    {
+      "stem": "UD LIAIN, SE\nCH;CHO 57 g#> [A] +> [B] (4) ALN\nOH\nBr . . .\nCY 95 Consider the following compounds/species:",
+      "key": null,
+      "subject": "Chemistry",
+      "doc": "00d8cababe821fcf",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "4": "ALN",
+        "1": "HC=C\u00ae Nat",
+        "2": "4",
+        "3": "6"
+      }
+    },
+    {
+      "stem": "ll.\nyaw\n(4) CyHyo\nG2_English | 15 [| Contd...\n96\n97\nMatch List - I with List - IT :\nList - I (Oxoacids List - II (Bonds)\nof Sulphur)\nA. Peroxodisul- I. TwoS-OH, FourS=O,\nphuric acid One S-O-S\nB. Sulphuricacid II. Two S-OH, One S=O\nC. Pyrosulphuric \u2014 III. TwoS-OH, Four S=O,\nOne S-O-O-S\nSulphurous acid IV. Two S-OH, Two S=O\nacid\nD.\nChoose the correct answer from the options\ngiven below :",
+      "key": null,
+      "subject": "Chemistry",
+      "doc": "00d8cababe821fcf",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "4": "CyHyo",
+        "1": "A-II, B-IV, C-II, D-I",
+        "2": "A-I, B-II, C-II, D-IV",
+        "3": "A-II, B-IV, C-I, D-II"
+      }
+    },
+    {
+      "stem": "Which of the following are required for the dark reaction of photosynthesis?\nA. Light\nB. Chlorophyll\nC. CO2\nD. ATP\nE. NADPH\nChoose the correct answer from the options given below:",
+      "key": 1,
+      "subject": "Chemistry",
+      "doc": "62166f1aa401f43d",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "C, D and E only",
+        "2": "D and E only",
+        "3": "A, B and C only",
+        "4": "B, C and D only"
+      }
+    },
+    {
+      "stem": "Lecithin, a small molecular weight organic compound found in living tissues, is an example of:",
+      "key": 4,
+      "subject": "Chemistry",
+      "doc": "62166f1aa401f43d",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "Glycerides",
+        "2": "Carbohydrates",
+        "3": "Amino acids",
+        "4": "Phospholipids"
+      }
+    },
+    {
+      "stem": "Which of the following statements are NOT correct?\nA. Hydrogen is used to reduce heavy metal oxides to metals.\nB. Heavy water is used to study reaction mechanism.\nC. Hydrogen is used to make saturated fats from oils.\nD. The H\u2013H bond dissociation enthalpy is lowest as compared to a single bond between two atoms of any elements.\nE. Hydrogen reduces oxides of metals that are more active than iron.\nChoose the most appropriate answer from the options given below:",
+      "key": 2,
+      "subject": "Chemistry",
+      "doc": "237b008798c6413a",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "B, D only",
+        "2": "D, E only",
+        "3": "A, B, C only",
+        "4": "B, C, D, E only"
+      }
+    },
+    {
+      "stem": "Weight (g) of two moles of the organic compound, which is obtained by heating sodium ethanoate with sodium hydroxide in presence of calcium oxide is :",
+      "key": 1,
+      "subject": "Chemistry",
+      "doc": "237b008798c6413a",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "32",
+        "2": "30",
+        "3": "18",
+        "4": "16"
+      }
+    },
+    {
+      "stem": "The highest number of helium atoms is in",
+      "key": 4,
+      "subject": "Chemistry",
+      "doc": "a28c9ca8e47dfc32",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "4 u of helium",
+        "2": "4 g of helium",
+        "3": "2.271098 L of helium at STP",
+        "4": "4 mol of helium"
+      }
+    },
+    {
+      "stem": "Cellulose does not form blue colour with Iodine because",
+      "key": 2,
+      "subject": "Chemistry",
+      "doc": "c2961d1494999666",
+      "lane": "NON_NUMERIC",
+      "options": {
+        "1": "It is a helical molecule",
+        "2": "It does not contain complex helices and hence cannot hold iodine molecules",
+        "3": "It breaks down when iodine reacts with it",
+        "4": "It is a disaccharide"
+      }
+    }
+  ]
+}

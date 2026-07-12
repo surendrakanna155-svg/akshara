@@ -1,0 +1,310 @@
+[
+  {
+    "uid": "Q001",
+    "subject": "Physics",
+    "class_profile": "Foundation",
+    "stem": "A resistor of 13 Ω carries a steady current of 3 A. Find the potential difference across it.",
+    "options": {
+      "a": "39 V"
+    },
+    "stated_answer": "39 V",
+    "solution": "By Ohm's law, V = I·R = 3 × 13 = 39 V."
+  },
+  {
+    "uid": "Q002",
+    "subject": "Mathematics",
+    "class_profile": "Foundation",
+    "stem": "For the data set [3, 7, 5, 9, 11], first find the mean, then find the mean absolute deviation about it.",
+    "options": {
+      "a": "2.4",
+      "b": "7",
+      "c": "8",
+      "d": "35"
+    },
+    "stated_answer": "2.4",
+    "solution": "Step 1: mean = 35/5 = 7. Step 2: MAD = mean of |x−mean| = 2.4. Distractor (b) stops at the mean (partial reasoning); (c) is the range; (d) is the sum."
+  },
+  {
+    "uid": "Q003",
+    "subject": "Physics",
+    "class_profile": "Foundation",
+    "stem": "A body of mass 6 kg starts at 2 m/s and accelerates uniformly at 4 m/s² for 3 s. Find its kinetic energy at the end.",
+    "options": {
+      "a": "588 J",
+      "b": "1176 J",
+      "c": "432 J",
+      "d": "12 J"
+    },
+    "stated_answer": "588 J",
+    "solution": "Step 1: v = u + at = 2 + 4×3 = 14 m/s. Step 2: KE = ½ m v² = ½×6×14² = 588 J. Key insight: velocity must be found first; KE uses the FINAL velocity, not u. Common mistake (option d) uses the initial velocity."
+  },
+  {
+    "uid": "Q004",
+    "subject": "Biology",
+    "class_profile": "NEET",
+    "stem": "Which of the following is NOT a component of the human axial skeleton?",
+    "options": {
+      "a": "Femur",
+      "b": "Skull",
+      "c": "Vertebral column",
+      "d": "Rib cage"
+    },
+    "stated_answer": "Femur",
+    "solution": "The axial skeleton = skull + vertebral column + rib cage. The femur is APPENDICULAR (limb). Distractors are all genuine axial members, so only a precise class boundary separates them."
+  },
+  {
+    "uid": "Q005",
+    "subject": "Chemistry",
+    "class_profile": "NEET",
+    "stem": "Across period 3 from Na to Cl, atomic radius decreases. What is the most direct cause?",
+    "options": {
+      "a": "Increasing effective nuclear charge pulling electrons in the same shell",
+      "b": "Addition of a new electron shell",
+      "c": "Decreasing number of protons",
+      "d": "Increasing shielding by inner electrons"
+    },
+    "stated_answer": "Increasing effective nuclear charge pulling electrons in the same shell",
+    "solution": "Same shell across a period, but nuclear charge rises → stronger pull → smaller radius. (b) is the DOWN-a-group cause (misapplied); (c) is false; (d) is roughly constant across a period."
+  },
+  {
+    "uid": "Q006",
+    "subject": "Physics",
+    "class_profile": "Foundation",
+    "stem": "A body of mass 4 kg starts at 0 m/s and accelerates uniformly at 2 m/s² for 5 s. Find its kinetic energy at the end.",
+    "options": {
+      "a": "200 J",
+      "b": "400 J",
+      "c": "200 J",
+      "d": "0 J"
+    },
+    "stated_answer": "200 J",
+    "solution": "Step 1: v = u + at = 0 + 2×5 = 10 m/s. Step 2: KE = ½ m v² = ½×4×10² = 200 J. Key insight: velocity must be found first; KE uses the FINAL velocity, not u. Common mistake (option d) uses the initial velocity."
+  },
+  {
+    "uid": "Q007",
+    "subject": "Physics",
+    "class_profile": "Foundation",
+    "stem": "Two resistors of 4 Ω and 6 Ω are connected in SERIES. Find the equivalent resistance.",
+    "options": {
+      "a": "10 Ω",
+      "b": "2.4 Ω",
+      "c": "2 Ω",
+      "d": "24 Ω"
+    },
+    "stated_answer": "10 Ω",
+    "solution": "Series adds directly: R = 4+6 = 10 Ω. Distractor (b) 2.4 Ω is the PARALLEL result — the most common misconception (using the reciprocal rule for a series circuit). (d) multiplies; (c) subtracts."
+  },
+  {
+    "uid": "Q008",
+    "subject": "Physics",
+    "class_profile": "Foundation",
+    "stem": "Assertion (A): For a metallic conductor at constant temperature, the current is directly proportional to the potential difference across it.\nReason (R): By Ohm's law, V = IR with R constant at constant temperature.\nSelect the correct option:\n(a) Both A and R are true and R is the correct explanation of A\n(b) Both A and R are true but R is not the correct explanation of A\n(c) A is true but R is false\n(d) A is false but R is true",
+    "options": {
+      "a": "Both A and R are true and R is the correct explanation of A",
+      "b": "Both A and R are true but R is not the correct explanation of A",
+      "c": "A is true but R is false",
+      "d": "A is false but R is true"
+    },
+    "stated_answer": "Both A and R are true and R is the correct explanation of A",
+    "solution": "Both statements are true and the Reason is the correct explanation of the Assertion (option a)."
+  },
+  {
+    "uid": "Q009",
+    "subject": "Chemistry",
+    "class_profile": "Foundation",
+    "stem": "Calculate the number of moles in 96 g of a substance whose molar mass is 48 g/mol.",
+    "options": {
+      "a": "2 mol"
+    },
+    "stated_answer": "2 mol",
+    "solution": "n = mass ÷ molar mass = 96 ÷ 48 = 2 mol."
+  },
+  {
+    "uid": "Q010",
+    "subject": "Physics",
+    "class_profile": "Foundation",
+    "stem": "Assertion (A): The resistance of a metallic conductor increases with temperature.\nReason (R): Resistivity of metals decreases as temperature rises.\nSelect the correct option:\n(a) Both A and R are true and R is the correct explanation of A\n(b) Both A and R are true but R is not the correct explanation of A\n(c) A is true but R is false\n(d) A is false but R is true",
+    "options": {
+      "a": "Both A and R are true and R is the correct explanation of A",
+      "b": "Both A and R are true but R is not the correct explanation of A",
+      "c": "A is true but R is false",
+      "d": "A is false but R is true"
+    },
+    "stated_answer": "A is true but R is false",
+    "solution": "A is true (metals: R rises with T); R is FALSE (metal resistivity RISES with T). So 'A true, R false'."
+  },
+  {
+    "uid": "Q011",
+    "subject": "Biology",
+    "class_profile": "NEET",
+    "stem": "A diploid cell of an organism has 8 chromosomes. Calculate the number of chromosomes in each gamete produced by meiosis.",
+    "options": {
+      "a": "4",
+      "b": "5",
+      "c": "3",
+      "d": "6"
+    },
+    "stated_answer": "4",
+    "solution": "Meiosis halves the chromosome number: 8 ÷ 2 = 4."
+  },
+  {
+    "uid": "Q012",
+    "subject": "Physics",
+    "class_profile": "Foundation",
+    "stem": "Two resistors of 3 Ω and 9 Ω are connected in SERIES. Find the equivalent resistance.",
+    "options": {
+      "a": "12 Ω",
+      "b": "2.25 Ω",
+      "c": "6 Ω",
+      "d": "27 Ω"
+    },
+    "stated_answer": "12 Ω",
+    "solution": "Series adds directly: R = 3+9 = 12 Ω. Distractor (b) 2.25 Ω is the PARALLEL result — the most common misconception (using the reciprocal rule for a series circuit). (d) multiplies; (c) subtracts."
+  },
+  {
+    "uid": "Q013",
+    "subject": "Biology",
+    "class_profile": "NEET",
+    "stem": "In a nephron, which structure is chiefly responsible for the reabsorption of glucose from the filtrate?",
+    "options": {
+      "a": "Proximal convoluted tubule",
+      "b": "Glomerulus",
+      "c": "Loop of Henle",
+      "d": "Collecting duct"
+    },
+    "stated_answer": "Proximal convoluted tubule",
+    "solution": "Glucose is almost entirely reabsorbed in the PCT via active transport. (b) filters; (c) concentrates via the counter-current mechanism; (d) does final water reabsorption — each distractor is a real nephron part with a DIFFERENT function (structure–function confusion)."
+  },
+  {
+    "uid": "Q014",
+    "subject": "Physics",
+    "class_profile": "Foundation",
+    "stem": "A body of mass 15 kg moves with a uniform acceleration of 11 m/s². Calculate the net force acting on it.",
+    "options": {
+      "a": "165 N"
+    },
+    "stated_answer": "165 N",
+    "solution": "By Newton's second law, F = m·a = 15 × 11 = 165 N."
+  },
+  {
+    "uid": "Q015",
+    "subject": "Physics",
+    "class_profile": "Foundation",
+    "stem": "Assertion (A): For a metallic conductor at constant temperature, current is proportional to potential difference.\nReason (R): Ohm's law states V = IR with R constant at constant temperature.\nSelect the correct option:\n(a) Both A and R are true and R is the correct explanation of A\n(b) Both A and R are true but R is not the correct explanation of A\n(c) A is true but R is false\n(d) A is false but R is true",
+    "options": {
+      "a": "Both A and R are true and R is the correct explanation of A",
+      "b": "Both A and R are true but R is not the correct explanation of A",
+      "c": "A is true but R is false",
+      "d": "A is false but R is true"
+    },
+    "stated_answer": "Both A and R are true and R is the correct explanation of A",
+    "solution": "A is a true statement of Ohm's law; R correctly states why. Both true, R explains A."
+  },
+  {
+    "uid": "Q016",
+    "subject": "Biology",
+    "class_profile": "NEET",
+    "stem": "In a well-watered plant at midday, guard cells lose turgor and the stomata close. What is the most direct consequence for the leaf?",
+    "options": {
+      "a": "Transpiration decreases",
+      "b": "Photosynthesis rate immediately increases",
+      "c": "Root pressure rises sharply",
+      "d": "Xylem vessels collapse"
+    },
+    "stated_answer": "Transpiration decreases",
+    "solution": "Stomatal closure directly reduces water-vapour loss, so transpiration decreases. CO₂ entry also falls, so photosynthesis would tend to DROP, not rise (b is the misconception). Distractors (c),(d) confuse unrelated vascular effects."
+  },
+  {
+    "uid": "Q017",
+    "subject": "Biology",
+    "class_profile": "NEET",
+    "stem": "A person moves to a high altitude where the partial pressure of oxygen is low. Over several weeks, which change most directly compensates?",
+    "options": {
+      "a": "Increased red blood cell production",
+      "b": "Decreased haemoglobin affinity for oxygen at the lungs",
+      "c": "Reduced breathing rate",
+      "d": "Fewer capillaries in muscle"
+    },
+    "stated_answer": "Increased red blood cell production",
+    "solution": "Chronic hypoxia stimulates erythropoietin → more RBCs → more O₂-carrying capacity. Distractor (b) is a real but opposite-direction trap; (c),(d) are the wrong direction."
+  },
+  {
+    "uid": "Q018",
+    "subject": "Physics",
+    "class_profile": "Foundation",
+    "stem": "Assertion (A): A superconductor has zero resistance below its critical temperature.\nReason (R): In a superconductor, charge carriers experience no scattering below the critical temperature.\nSelect the correct option:\n(a) Both A and R are true and R is the correct explanation of A\n(b) Both A and R are true but R is not the correct explanation of A\n(c) A is true but R is false\n(d) A is false but R is true",
+    "options": {
+      "a": "Both A and R are true and R is the correct explanation of A",
+      "b": "Both A and R are true but R is not the correct explanation of A",
+      "c": "A is true but R is false",
+      "d": "A is false but R is true"
+    },
+    "stated_answer": "Both A and R are true and R is the correct explanation of A",
+    "solution": "Both true; the absence of scattering is the correct mechanism for zero resistance."
+  },
+  {
+    "uid": "Q019",
+    "subject": "Mathematics",
+    "class_profile": "Foundation",
+    "stem": "For the data set [4, 8, 6, 10, 12], first find the mean, then find the mean absolute deviation about it.",
+    "options": {
+      "a": "2.4",
+      "b": "8",
+      "c": "8",
+      "d": "40"
+    },
+    "stated_answer": "2.4",
+    "solution": "Step 1: mean = 40/5 = 8. Step 2: MAD = mean of |x−mean| = 2.4. Distractor (b) stops at the mean (partial reasoning); (c) is the range; (d) is the sum."
+  },
+  {
+    "uid": "Q020",
+    "subject": "Biology",
+    "class_profile": "NEET",
+    "stem": "Which term is defined as: \"the powerhouse of the cell\"?",
+    "options": {
+      "a": "Mitochondrion",
+      "b": "Ribosome",
+      "c": "Golgi apparatus",
+      "d": "Lysosome"
+    },
+    "stated_answer": "Mitochondrion",
+    "solution": "(distractors = sibling concepts from same chapter; no misconception rationale)"
+  },
+  {
+    "uid": "Q021",
+    "subject": "Physics",
+    "class_profile": "Foundation",
+    "stem": "Two resistors of 10 Ω and 15 Ω are connected in SERIES. Find the equivalent resistance.",
+    "options": {
+      "a": "25 Ω",
+      "b": "6.0 Ω",
+      "c": "5 Ω",
+      "d": "150 Ω"
+    },
+    "stated_answer": "25 Ω",
+    "solution": "Series adds directly: R = 10+15 = 25 Ω. Distractor (b) 6.0 Ω is the PARALLEL result — the most common misconception (using the reciprocal rule for a series circuit). (d) multiplies; (c) subtracts."
+  },
+  {
+    "uid": "Q022",
+    "subject": "Physics",
+    "class_profile": "Foundation",
+    "stem": "A body of mass 2 kg starts at 5 m/s and accelerates uniformly at 3 m/s² for 4 s. Find its kinetic energy at the end.",
+    "options": {
+      "a": "289 J",
+      "b": "578 J",
+      "c": "144 J",
+      "d": "25 J"
+    },
+    "stated_answer": "289 J",
+    "solution": "Step 1: v = u + at = 5 + 3×4 = 17 m/s. Step 2: KE = ½ m v² = ½×2×17² = 289 J. Key insight: velocity must be found first; KE uses the FINAL velocity, not u. Common mistake (option d) uses the initial velocity."
+  },
+  {
+    "uid": "Q023",
+    "subject": "Biology",
+    "class_profile": "NEET",
+    "stem": "Define Totipotency.",
+    "options": {},
+    "stated_answer": "the capacity to generate a whole plant from any cell of the plant",
+    "solution": "(model answer = stored definition text, shipped verbatim)"
+  }
+]

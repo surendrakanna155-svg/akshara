@@ -1,0 +1,362 @@
+[
+  {
+    "stem": "Given below are two statements :\nStatement I : The forces generated transpiration can lift a xylem-sized column of water over 130 meters height.\nStatement II : Transpiration cools leaf surfaces sometimes 10 to 15 degrees evaporative cooling.\nIn the light of the above statements, choose the most appropriate answer from the options given below :",
+    "options": {
+      "1": "Both Statement I and Statement II are incorrect",
+      "2": "Statement I is correct but Statement II is incorrect",
+      "3": "Statement I is incorrect but Statement II is correct",
+      "4": "Both Statement I and Statement II are correct"
+    },
+    "key": 4,
+    "subject": "Physics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "The relation between nm, (nm = the number of permissible values of magnetic quantum number (m)) for a\ngiven value of azimuthal quantum number (l), is",
+    "options": {
+      "1": "l = 2nm + 1",
+      "2": "nm = 2l2 + 1",
+      "3": "nm = l + 2",
+      "4": "mn– 1"
+    },
+    "key": 4,
+    "subject": "Physics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "A parallel plate capacitor is charged by connecting it to a battery through a resistor. If I is the current in the circuit, then in the gap between the plates:",
+    "options": {
+      "1": "Displacement current of magnitude equal to I flows in a direction opposite to that of I",
+      "2": "Displacement current of magnitude greater than I flows but can be in any direction",
+      "3": "There is no current",
+      "4": "Displacement current of magnitude equal to I flows in the same direction as I"
+    },
+    "key": 4,
+    "subject": "Physics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "The property which is not of an electromagnetic wave travelling in free space is that:",
+    "options": {
+      "1": "They originate from charges moving with uniform speed",
+      "2": "They are transverse in nature",
+      "3": "The energy density in electric field is equal to energy density in magnetic field",
+      "4": "They travel with a speed equal to"
+    },
+    "key": 1,
+    "subject": "Physics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "A parallel plate capacitor is charged by connecting it to a battery through a resistor. If I is the current in the circuit, then in the gap between the plates:",
+    "options": {
+      "1": "Displacement current of magnitude greater than I flows but can be in any direction",
+      "2": "There is no current",
+      "3": "Displacement current of magnitude equal to I flows in the same direction as I",
+      "4": "Displacement current of magnitude equal to I flows in a direction opposite to that of I"
+    },
+    "key": 3,
+    "subject": "Physics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "The pair of lanthanoid ions which are diamagnetic is",
+    "options": {
+      "1": "Pm3+ and Sm3+",
+      "2": "Ce4+ and Yb2+",
+      "3": "Ce3+ and Eu2+",
+      "4": "Gd3+ and Eu3+"
+    },
+    "key": 2,
+    "subject": "Physics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "Given below are two statements: One is labelled as Assertion A and the other is labelled as Reason R:\nAssertion A : Breast-feeding during initial period of infant growth is recommended by doctors for bringing a\nhealthy baby.\nReason R : Colostrum contains several antibodies absolutely essential to develop resistance for the new\nborn baby.\nIn the light of the above statements, choose the most appropriate answer from the options given below:",
+    "options": {
+      "1": "Both A and R are correct but R is NOT the correct explanation of A",
+      "2": "A is correct but R is not correct",
+      "3": "A is not correct but R is correct",
+      "4": "Both A and R are correct and R is the correct explanation of A"
+    },
+    "key": 4,
+    "subject": "Physics",
+    "lane": "ASSERTION_RELATION"
+  },
+  {
+    "stem": "Following are the stages of pathway for conduction of an action potential through the heart\nA. AV bundle B. Purkinje fibres\nC. AV node D. Bundle branches\nE. SA node\nChoose the correct sequence of pathway from the options given below",
+    "options": {
+      "1": "A-E-C-B-D",
+      "2": "B-D-E-C-A",
+      "3": "E-A-D-B-C",
+      "4": "E-C-A-D-B"
+    },
+    "key": 4,
+    "subject": "Physics",
+    "lane": "PROCESS_SEQUENCE"
+  },
+  {
+    "stem": "Given below are some stages of human evolution.\nArrange them in correct sequence. (Past to Recent)\nA. Homo habilis B. Homo sapiens\nC. Homo neanderthalensis D. Homo erectus\nChoose the correct sequence of human evolution from the options given below:",
+    "options": {
+      "1": "B-A-D-C",
+      "2": "C-B-D-A",
+      "3": "A-D-C-B",
+      "4": "D-A-C-B"
+    },
+    "key": 3,
+    "subject": "Physics",
+    "lane": "PROCESS_SEQUENCE"
+  },
+  {
+    "stem": "Which of the following are fused in somatic hybridization involving two varieties of plants?",
+    "options": {
+      "1": "Callus",
+      "2": "Somatic embryos",
+      "3": "Protoplasts",
+      "4": "Pollens"
+    },
+    "key": 3,
+    "subject": "Physics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "If the monochromatic source in Young’s double slit experiment is replaced by white light, then",
+    "options": {
+      "1": "There will be a central dark fringe surrounded by a few coloured fringes",
+      "2": "There will be a central bright white fringe surrounded by a few coloured fringes",
+      "3": "All bright fringes will be of equal width",
+      "4": "Interference pattern will disappear"
+    },
+    "key": 2,
+    "subject": "Physics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "Match List I with List II.\nList I  List II\nA. P-wave I. Beginning of systole\nB. Q-wave II. Repolarisation of ventricles\nC. QRS complex III. Depolarisation of atria\nD. T-wave IV. Depolarisation of ventricles\nChoose the correct answer from the options given below :",
+    "options": {
+      "1": "A-IV, B-III, C-II, D-I",
+      "2": "A-II, B-IV, C-I, D-III",
+      "3": "A-I, B-II, C-III, D-IV",
+      "4": "A-III, B-I, C-IV, D-II"
+    },
+    "key": 4,
+    "subject": "Physics",
+    "lane": "DATA_MATCH"
+  },
+  {
+    "stem": "Resistance of a carbon resistor determined from colour codes is (22000 ± 5%) . The colour of third band must be",
+    "options": {
+      "1": "Red",
+      "2": "Green",
+      "3": "Orange",
+      "4": "Yellow"
+    },
+    "key": 3,
+    "subject": "Physics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "Given below are two statements:\nStatement I: Photovoltaic devices can convert optical radiation into electricity.\nStatement II: Zener diode is designed to operate under reverse bias in breakdown region.\nIn the light of the above statements, choose the most appropriate answer from the options given below.",
+    "options": {
+      "1": "Both Statement I and Statement II are correct",
+      "2": "Both Statement I and Statement II are incorrect",
+      "3": "Statement I is correct but Statement II is incorrect",
+      "4": "Statement I is incorrect but Statement II is correct"
+    },
+    "key": 1,
+    "subject": "Physics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "An ac source is connected to a capacitor C. Due to decrease in its operating frequency",
+    "options": {
+      "1": "Capacitive reactance decreases",
+      "2": "Displacement current increases",
+      "3": "Displacement current decreases",
+      "4": "Capacitive reactance remains constant"
+    },
+    "key": 3,
+    "subject": "Physics",
+    "lane": "CONCEPTUAL_CAUSAL"
+  },
+  {
+    "stem": "A football player is moving southward and suddenly turns eastward with the same speed to avoid an opponent. The force that acts on the player while turning is",
+    "options": {
+      "1": "Along eastward",
+      "2": "Along northward",
+      "3": "Along north-east",
+      "4": "Along south-west"
+    },
+    "key": 3,
+    "subject": "Physics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "A full wave rectifier circuit consists of two p-n junction diodes, a centre-tapped transformer, capacitor and a load resistance. Which of these components remove the ac ripple from the rectified output?",
+    "options": {
+      "1": "A centre-tapped transformer",
+      "2": "p-n junction diodes",
+      "3": "Capacitor",
+      "4": "Load resistance"
+    },
+    "key": 3,
+    "subject": "Physics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "A force defined by F = t2 + t acts on a particle at a given time t. The factor which is dimensionless, if  and  are constants, is:",
+    "options": {
+      "1": "t",
+      "2": "t",
+      "3": "t",
+      "4": "t"
+    },
+    "key": 1,
+    "subject": "Physics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "A sheet is placed on a horizontal surface in front of a strong magnetic pole. A force is needed to:\nA. hold the sheet there if it is magnetic.\nB. hold the sheet there if it is non-magnetic.\nC. move the sheet away from the pole with uniform velocity if it is conducting.\nD. move the sheet away from the pole with uniform velocity if it is both, non-conducting and non-polar.\nChoose the correct statement(s) from the options given below:",
+    "options": {
+      "1": "A and C only",
+      "2": "A, C and D only",
+      "3": "C only",
+      "4": "B and D only"
+    },
+    "key": 1,
+    "subject": "Physics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "The relation between nm, (nm = the number of permissible values of magnetic quantum number (m)) for a\ngiven value of azimuthal quantum number (l), is",
+    "options": {
+      "1": "nm = l + 2",
+      "2": "mn–12l",
+      "3": "l = 2nm + 1",
+      "4": "nm = 2l2 + 1"
+    },
+    "key": 2,
+    "subject": "Physics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "A sheet is placed on a horizontal surface in front of a strong magnetic pole. A force is needed to:\nA. hold the sheet there if it is magnetic.\nB. hold the sheet there if it is non-magnetic.\nC. move the sheet away from the pole with uniform velocity if it is conducting.\nD. move the sheet away from the pole with uniform velocity if it is both, non-conducting and non-polar.\n- 22 -\nNEET (UG)-2024 (Code-Q4)\nChoose the correct statement(s) from the options given below:",
+    "options": {
+      "1": "B and D only",
+      "2": "A and C only",
+      "3": "A, C and D only",
+      "4": "C only"
+    },
+    "key": 2,
+    "subject": "Physics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "In the figure shown here, what is the equivalent focal length of the combination of lenses (Assume that all layers are thin)?",
+    "options": {
+      "1": "–50 cm",
+      "2": "40 cm",
+      "3": "–40 cm",
+      "4": "–100 cm"
+    },
+    "key": 4,
+    "subject": "Physics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "The net impedance of circuit (as shown in figure) will be",
+    "options": {
+      "1": "25 Ω",
+      "2": "10 2 Ω",
+      "3": "15 Ω",
+      "4": "5 5 Ω"
+    },
+    "key": 4,
+    "subject": "Physics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "For the following logic circuit, the truth table is",
+    "options": {
+      "1": "001",
+      "2": "000",
+      "3": "001",
+      "4": "000"
+    },
+    "key": 2,
+    "subject": "Physics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "‘Spin only’ magnetic moment is same for which of the following ions?\nA. Ti3+ B. Cr2+\nC. Mn2+ D. Fe2+\nE. Sc3+\nChoose the most appropriate answer from the options given below.",
+    "options": {
+      "1": "A and E only",
+      "2": "B and C only",
+      "3": "A and D only",
+      "4": "B and D only"
+    },
+    "key": 4,
+    "subject": "Physics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "Ionized hydrogen atoms and -particles withsame momenta enters perpendicular to aconstant magnetic field, B. The ratio of theirradii of their paths rH : r will be :",
+    "options": {
+      "1": "1 : 4",
+      "2": "2 : 1",
+      "3": "1 : 2",
+      "4": "4 : 1"
+    },
+    "key": 2,
+    "subject": "Physics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "At a point A on the earth’s surface the angleof dip,  = +25°. At a point B on the earth’ssurface the angle of dip,  = –25°. We caninterpret that:",
+    "options": {
+      "1": "A and B are both located in the southern",
+      "2": "A and B are both located in the northern",
+      "3": "A is located in the southern hemisphere",
+      "4": "A is located in the northern hemisphere"
+    },
+    "key": 4,
+    "subject": "Physics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "Given below are two statements : one is labelled as Assertion A and the other is labelled as\nReason R :\nAssertion A : Metallic sodium dissolves in liquid ammonia giving a deep blue solution, which is\nparamagnetic.\nReason R : The deep blue solution is due to the formation of amide.\nIn the light of the above statements, choose the correct answer from the options given below :",
+    "options": {
+      "1": "Both A and R are true and R is the correct explanation of A",
+      "2": "Both A and R are true but R is NOT the correct explanation of A",
+      "3": "A is true but R is false",
+      "4": "A is false but R is true"
+    },
+    "key": 3,
+    "subject": "Physics",
+    "lane": "ASSERTION_RELATION"
+  },
+  {
+    "stem": "A logic circuit provides the output Y as per the following truth table :\n001010101110\nABY\nThe expression for the output Y is :",
+    "options": {
+      "1": ".ABA+",
+      "2": "B",
+      "3": "B",
+      "4": ".ABA+"
+    },
+    "key": 2,
+    "subject": "Physics",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "Resistance of a carbon resistor determined from colour codes is (22000 ± 5%) . The colour of third band must be",
+    "options": {
+      "1": "Yellow",
+      "2": "Red",
+      "3": "Green",
+      "4": "Orange"
+    },
+    "key": 4,
+    "subject": "Physics",
+    "lane": "CONCEPTUAL_GENERIC"
+  }
+]

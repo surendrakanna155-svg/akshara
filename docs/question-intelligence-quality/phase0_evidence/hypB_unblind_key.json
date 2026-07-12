@@ -1,0 +1,140 @@
+{
+  "Q001": {
+    "engine": "A",
+    "lane": "NUMERIC_RELATIONAL",
+    "subject": "Physics",
+    "machine_correct": true
+  },
+  "Q002": {
+    "engine": "B",
+    "lane": "NUMERIC_RELATIONAL",
+    "subject": "Mathematics",
+    "machine_correct": true
+  },
+  "Q003": {
+    "engine": "B",
+    "lane": "NUMERIC_RELATIONAL",
+    "subject": "Physics",
+    "machine_correct": true
+  },
+  "Q004": {
+    "engine": "B",
+    "lane": "CLASSIFICATION_TAXONOMIC",
+    "subject": "Biology",
+    "machine_correct": null
+  },
+  "Q005": {
+    "engine": "B",
+    "lane": "CONCEPTUAL_CAUSAL",
+    "subject": "Chemistry",
+    "machine_correct": null
+  },
+  "Q006": {
+    "engine": "B",
+    "lane": "NUMERIC_RELATIONAL",
+    "subject": "Physics",
+    "machine_correct": true
+  },
+  "Q007": {
+    "engine": "B",
+    "lane": "MISCONCEPTION_DIAGNOSTIC",
+    "subject": "Physics",
+    "machine_correct": null
+  },
+  "Q008": {
+    "engine": "A",
+    "lane": "ASSERTION_RELATION",
+    "subject": "Physics",
+    "machine_correct": null
+  },
+  "Q009": {
+    "engine": "A",
+    "lane": "NUMERIC_RELATIONAL",
+    "subject": "Chemistry",
+    "machine_correct": true
+  },
+  "Q010": {
+    "engine": "B",
+    "lane": "ASSERTION_RELATION",
+    "subject": "Physics",
+    "machine_correct": null
+  },
+  "Q011": {
+    "engine": "A",
+    "lane": "NUMERIC_RELATIONAL",
+    "subject": "Biology",
+    "machine_correct": true
+  },
+  "Q012": {
+    "engine": "B",
+    "lane": "MISCONCEPTION_DIAGNOSTIC",
+    "subject": "Physics",
+    "machine_correct": null
+  },
+  "Q013": {
+    "engine": "B",
+    "lane": "STRUCTURE_FUNCTION",
+    "subject": "Biology",
+    "machine_correct": null
+  },
+  "Q014": {
+    "engine": "A",
+    "lane": "NUMERIC_RELATIONAL",
+    "subject": "Physics",
+    "machine_correct": true
+  },
+  "Q015": {
+    "engine": "B",
+    "lane": "ASSERTION_RELATION",
+    "subject": "Physics",
+    "machine_correct": null
+  },
+  "Q016": {
+    "engine": "B",
+    "lane": "CONCEPTUAL_CAUSAL",
+    "subject": "Biology",
+    "machine_correct": null
+  },
+  "Q017": {
+    "engine": "B",
+    "lane": "CONCEPTUAL_CAUSAL",
+    "subject": "Biology",
+    "machine_correct": null
+  },
+  "Q018": {
+    "engine": "B",
+    "lane": "ASSERTION_RELATION",
+    "subject": "Physics",
+    "machine_correct": null
+  },
+  "Q019": {
+    "engine": "B",
+    "lane": "NUMERIC_RELATIONAL",
+    "subject": "Mathematics",
+    "machine_correct": true
+  },
+  "Q020": {
+    "engine": "A",
+    "lane": "DEFINITION_MATCH_MCQ",
+    "subject": "Biology",
+    "machine_correct": null
+  },
+  "Q021": {
+    "engine": "B",
+    "lane": "MISCONCEPTION_DIAGNOSTIC",
+    "subject": "Physics",
+    "machine_correct": null
+  },
+  "Q022": {
+    "engine": "B",
+    "lane": "NUMERIC_RELATIONAL",
+    "subject": "Physics",
+    "machine_correct": true
+  },
+  "Q023": {
+    "engine": "A",
+    "lane": "DEFINITION",
+    "subject": "Biology",
+    "machine_correct": null
+  }
+}

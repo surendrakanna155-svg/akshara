@@ -1,0 +1,204 @@
+{
+  "total_candidates": 59,
+  "by_reason": {
+    "ocr_junk": 30,
+    "prefix_domain_mismatch": 17,
+    "non_concept": 12
+  },
+  "by_status": {
+    "rejected": 42,
+    "review": 17
+  },
+  "by_subject": {
+    "Mathematics": 7,
+    "Physics": 16,
+    "Biology": 32,
+    "Chemistry": 4
+  },
+  "auto_quarantine_candidates": 42,
+  "review_candidates": 17,
+  "samples": [
+    [
+      "MAT_ANSWERSANSWERSANSWERSANSWERSANSW",
+      "Answersanswersanswersanswersanswers",
+      "ocr_junk",
+      "rejected"
+    ],
+    [
+      "CHE_NEWTON_S_LAW",
+      "Newton's law",
+      "prefix_domain_mismatch",
+      "review"
+    ],
+    [
+      "CHE_AMPERE_S_LAW",
+      "Ampere's law",
+      "prefix_domain_mismatch",
+      "review"
+    ],
+    [
+      "CHE_HOOKE_S_LAW",
+      "Hooke's law",
+      "prefix_domain_mismatch",
+      "review"
+    ],
+    [
+      "BIO_NEWTON_S_FIRST_LAW",
+      "Newton's first law",
+      "prefix_domain_mismatch",
+      "review"
+    ],
+    [
+      "BIO_NEWTON_S_SECOND_LAW",
+      "Newton's second law",
+      "prefix_domain_mismatch",
+      "review"
+    ],
+    [
+      "BIO_NEWTON_S_THIRD_LAW",
+      "Newton's third law",
+      "prefix_domain_mismatch",
+      "review"
+    ],
+    [
+      "CHE_LOGARITHMS",
+      "Logarithms",
+      "prefix_domain_mismatch",
+      "review"
+    ],
+    [
+      "CHE_LENZ_S_LAW",
+      "Lenz's law",
+      "prefix_domain_mismatch",
+      "review"
+    ],
+    [
+      "BIO_AMPERE_MAXWELL_S_LAW",
+      "Ampere-Maxwell's law",
+      "prefix_domain_mismatch",
+      "review"
+    ],
+    [
+      "CHE_BERNOULLI_S_LAW",
+      "Bernoulli's law",
+      "prefix_domain_mismatch",
+      "review"
+    ],
+    [
+      "CHE_OHMS_LAW",
+      "Ohms law",
+      "prefix_domain_mismatch",
+      "review"
+    ],
+    [
+      "CHE_MENDEL_S_SECOND_LAW",
+      "Mendel's second law",
+      "prefix_domain_mismatch",
+      "review"
+    ],
+    [
+      "MAT_SOLUTION_BY_USING_BINOMIAL_THEOR",
+      "Solution by using binomial theorem",
+      "non_concept",
+      "rejected"
+    ],
+    [
+      "CHE_EXPONENTIAL_NOTATION_AND_OPERATI",
+      "Exponential Notation and Operations",
+      "prefix_domain_mismatch",
+      "review"
+    ],
+    [
+      "CHE_GEOBOARD_ACTIVITY",
+      "Geoboard Activity",
+      "non_concept",
+      "rejected"
+    ],
+    [
+      "BIO_BETTER_HOUSEKEEPINGPRACTICES",
+      "Better Housekeepingpractices",
+      "ocr_junk",
+      "rejected"
+    ],
+    [
+      "BIO_ALTERNATIVE_ARRANGEMENT",
+      "Alternative Arrangement",
+      "non_concept",
+      "rejected"
+    ],
+    [
+      "BIO_AMAZING_FACT",
+      "Amazing fact",
+      "non_concept",
+      "rejected"
+    ],
+    [
+      "PHY_READ_CAREFULLY_THE_FOLLOWING_INS",
+      "Read carefully the following instructions",
+      "non_concept",
+      "rejected"
+    ],
+    [
+      "CHE_GROUP_ACTIVITY",
+      "Group Activity",
+      "non_concept",
+      "rejected"
+    ],
+    [
+      "PHY_BAYE_S_THEOREM",
+      "Baye's theorem",
+      "prefix_domain_mismatch",
+      "review"
+    ],
+    [
+      "PHY_HEISENBERGUNCERTAINTY_PRINCIPLE",
+      "Heisenberguncertainty principle",
+      "ocr_junk",
+      "rejected"
+    ],
+    [
+      "MAT_CONTINUITY_ANDDIFFERENTIABILITY",
+      "Continuity Anddifferentiability",
+      "ocr_junk",
+      "rejected"
+    ],
+    [
+      "PHY_KEYWORDSKEYWORDSKEYWORDSKEYWORDS",
+      "Keywordskeywordskeywordskeywordskeywords",
+      "ocr_junk",
+      "rejected"
+    ],
+    [
+      "CHE_AMPERE_S_CIRCUITAL_LAW",
+      "Ampere's circuital law",
+      "prefix_domain_mismatch",
+      "review"
+    ],
+    [
+      "CHE_COULOMB_S_INVERSE_SQUARE_LAW",
+      "Coulomb's inverse square law",
+      "prefix_domain_mismatch",
+      "review"
+    ],
+    [
+      "CHE_AMPERE_S_CIRCUTAL_LAW",
+      "Ampere's circutal law",
+      "prefix_domain_mismatch",
+      "review"
+    ],
+    [
+      "CHE_LAB_ACTIVITY",
+      "Lab Activity",
+      "non_concept",
+      "rejected"
+    ],
+    [
+      "CHE_NEUTRALACIDALKALISTRONGWEAKWEAKS",
+      "Neutralacidalkal Istrongweakweakstrong",
+      "ocr_junk",
+      "rejected"
+    ]
+  ],
+  "total_active_concepts": 1736,
+  "written_to_qie_ledger": 59
+}

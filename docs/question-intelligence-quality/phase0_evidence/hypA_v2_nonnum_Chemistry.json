@@ -1,0 +1,362 @@
+[
+  {
+    "stem": "Match List I with List II.\nList I  List II\nA. Taenia I. Nephridia\nB. Paramoecium II. Contractile vacuole\nC. Periplaneta III. Flame cells\nD. Pheretima IV. Urecose gland\nChoose the correct answer from the options given below:",
+    "options": {
+      "1": "A-I, B-II, C-IV, D-III",
+      "2": "A-III, B-II, C-IV, D-I",
+      "3": "A-II, B-I, C-IV, D-III",
+      "4": "A-I, B-II, C-III, D-IV"
+    },
+    "key": 2,
+    "subject": "Chemistry",
+    "lane": "DATA_MATCH"
+  },
+  {
+    "stem": "Given below are two statements:\nStatement I: Ligaments are dense irregular tissue.\nStatement II: Cartilage is dense regular tissue.\nIn the light of the above statements, choose the correct answer from the options given below:",
+    "options": {
+      "1": "Both Statement I and Statement II are false",
+      "2": "Statement I is true but Statement II is false",
+      "3": "Statement I is false but Statement II is true",
+      "4": "Both Statement I and Statement II are true"
+    },
+    "key": 1,
+    "subject": "Chemistry",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "Which of the following are required for the dark reaction of photosynthesis?\nA. Light\nB. Chlorophyll\nC. CO2\nD. ATP\nE. NADPH\nChoose the correct answer from the options given below:",
+    "options": {
+      "1": "C, D and E only",
+      "2": "D and E only",
+      "3": "A, B and C only",
+      "4": "B, C and D only"
+    },
+    "key": 1,
+    "subject": "Chemistry",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "Match List I with List II\nList-I  List-II\nA. Rhizopus I. Mushroom\nB. Ustilago II. Smut fungus\nC. Puccinia III. Bread mould\nD. Agaricus IV. Rust fungus\nChoose the correct answer from the options given below:",
+    "options": {
+      "1": "A-III, B-II, C-I, D-IV",
+      "2": "A-IV, B-III, C-II, D-I",
+      "3": "A-III, B-II, C-IV, D-I",
+      "4": "A-I, B-III, C-II, D-IV"
+    },
+    "key": 3,
+    "subject": "Chemistry",
+    "lane": "DATA_MATCH"
+  },
+  {
+    "stem": "Lecithin, a small molecular weight organic compound found in living tissues, is an example of:",
+    "options": {
+      "1": "Glycerides",
+      "2": "Carbohydrates",
+      "3": "Amino acids",
+      "4": "Phospholipids"
+    },
+    "key": 4,
+    "subject": "Chemistry",
+    "lane": "CLASSIFICATION_TAXONOMIC"
+  },
+  {
+    "stem": "Which of the following statements are NOT correct?\nA. Hydrogen is used to reduce heavy metal oxides to metals.\nB. Heavy water is used to study reaction mechanism.\nC. Hydrogen is used to make saturated fats from oils.\nD. The H–H bond dissociation enthalpy is lowest as compared to a single bond between two atoms of any elements.\nE. Hydrogen reduces oxides of metals that are more active than iron.\nChoose the most appropriate answer from the options given below:",
+    "options": {
+      "1": "B, D only",
+      "2": "D, E only",
+      "3": "A, B, C only",
+      "4": "B, C, D, E only"
+    },
+    "key": 2,
+    "subject": "Chemistry",
+    "lane": "COMPARATIVE"
+  },
+  {
+    "stem": "Weight (g) of two moles of the organic compound, which is obtained by heating sodium ethanoate with sodium hydroxide in presence of calcium oxide is :",
+    "options": {
+      "1": "32",
+      "2": "30",
+      "3": "18",
+      "4": "16"
+    },
+    "key": 1,
+    "subject": "Chemistry",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "Given below are two statements: one is labelled as Assertion A and the other is labelled as Reason R\nAssertion A : In equation rG = –nFEcell’ value of rG depends on n.\nReasons R : Ecell is an intensive property and rG is an extensive property.\nIn the light of the above statements, choose the correct answer from the options given below",
+    "options": {
+      "1": "Both A and R are true and R is NOT the correct explanation of A",
+      "2": "A is true but R is false",
+      "3": "A is false but R is true",
+      "4": "Both A and R are true and R is the correct explanation of A"
+    },
+    "key": 1,
+    "subject": "Chemistry",
+    "lane": "ASSERTION_RELATION"
+  },
+  {
+    "stem": "The highest number of helium atoms is in",
+    "options": {
+      "1": "4 u of helium",
+      "2": "4 g of helium",
+      "3": "2.271098 L of helium at STP",
+      "4": "4 mol of helium"
+    },
+    "key": 4,
+    "subject": "Chemistry",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "Cellulose does not form blue colour with Iodine because",
+    "options": {
+      "1": "It is a helical molecule",
+      "2": "It does not contain complex helices and hence cannot hold iodine molecules",
+      "3": "It breaks down when iodine reacts with it",
+      "4": "It is a disaccharide"
+    },
+    "key": 2,
+    "subject": "Chemistry",
+    "lane": "CONCEPTUAL_CAUSAL"
+  },
+  {
+    "stem": "Which hormone promotes internode/petiole elongation in deep water rice?",
+    "options": {
+      "1": "Kinetin",
+      "2": "Ethylene",
+      "3": "2, 4-D",
+      "4": "GA3"
+    },
+    "key": 2,
+    "subject": "Chemistry",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "Upon exposure to UV radiation, DNA stained with ethidium bromide will show",
+    "options": {
+      "1": "Bright blue colour",
+      "2": "Bright yellow colour",
+      "3": "Bright orange colour",
+      "4": "Bright red colour"
+    },
+    "key": 3,
+    "subject": "Chemistry",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "The historic Convention on Biological Diversity, ‘The Earth Summit’ was held in Rio de Janeiro in the year",
+    "options": {
+      "1": "1992",
+      "2": "1986",
+      "3": "2002",
+      "4": "1985"
+    },
+    "key": 1,
+    "subject": "Chemistry",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "The reaction centre in PS II has an absorption maxima at",
+    "options": {
+      "1": "700 nm",
+      "2": "660 nm",
+      "3": "780 nm",
+      "4": "680 nm"
+    },
+    "key": 4,
+    "subject": "Chemistry",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "The compound that is most difficult toprotonate is :",
+    "options": {
+      "1": "HHO",
+      "2": "H C3HO",
+      "3": "CH3",
+      "4": "PhHO"
+    },
+    "key": 4,
+    "subject": "Chemistry",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "The manganate and permanganate ions aretetrahedral, due to :",
+    "options": {
+      "1": "The -bonding involves overlap of",
+      "2": "There is no -bonding",
+      "3": "The -bonding involves overlap of",
+      "4": "The -bonding involves overlap of"
+    },
+    "key": 1,
+    "subject": "Chemistry",
+    "lane": "CONCEPTUAL_CAUSAL"
+  },
+  {
+    "stem": "Amongst the given options which of the following molecules/ ion acts as a Lewis acid?",
+    "options": {
+      "1": "H2O",
+      "2": "BF3",
+      "3": "OH–",
+      "4": "NH3"
+    },
+    "key": 2,
+    "subject": "Chemistry",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "Which of the following statements are NOT correct?\nA. Hydrogen is used to reduce heavy metal oxides to metals.\nB. Heavy water is used to study reaction mechanism.\nC. Hydrogen is used to make saturated fats from oils.\nD. The H–H bond dissociation enthalpy is lowest as compared to a single bond between two atoms of\nany elements.\nE. Hydrogen reduces oxides of metals that are more active than iron.\nChoose the most appropriate answer from the options given below:",
+    "options": {
+      "1": "B, D only",
+      "2": "D, E only",
+      "3": "A, B, C only",
+      "4": "B, C, D, E only"
+    },
+    "key": 2,
+    "subject": "Chemistry",
+    "lane": "COMPARATIVE"
+  },
+  {
+    "stem": "Which one of the following statements is correct?",
+    "options": {
+      "1": "All enzymes that utilise ATP in phosphate transfer require Ca as the cofactor",
+      "2": "The bone in human body is an inert and unchanging substance",
+      "3": "Mg plays roles in neuromuscular function and interneuronal transmission",
+      "4": "The daily requirement of Mg and Ca in the human body is estimated to be 0.2-0.3 g"
+    },
+    "key": 4,
+    "subject": "Chemistry",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "Match List I with List II:\nList I  List II\nA. Unicellular glandular epithelium\nI. Salivary glands\nB. Compound epithelium II. Pancreas\nC. Multicellular glandular epithelium\nIII. Goblet cells of alimentary canal\nD. Endocrine glandular epithelium\nIV. Moist surface of buccal cavity\nChoose the correct answer from the options given below:",
+    "options": {
+      "1": "A-IV, B-III, C-I, D-II",
+      "2": "A-III, B-IV, C-I, D-II",
+      "3": "A-II, B-I, C-IV, D-III",
+      "4": "A-II, B-I, C-III, D-IV"
+    },
+    "key": 2,
+    "subject": "Chemistry",
+    "lane": "DATA_MATCH"
+  },
+  {
+    "stem": "As per ABO blood grouping system, the blood group of father is B+, mother is A+ and child is O+. Their respective genotype can be\nA. IBi/IAi/ii B. IBIB/IAIA/ii\nC. IAIB/iIA/IBi D. IAi/IBi/IAi\nE. iIB/iIA/IAIB\nChoose the most appropriate answer from the options given below :",
+    "options": {
+      "1": "B only",
+      "2": "C & B only",
+      "3": "D & E only",
+      "4": "A only"
+    },
+    "key": 4,
+    "subject": "Chemistry",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "Arrange the following elements in increasing order of electronegativity:\nN, O, F, C, Si\nChoose the correct answer from the options given below:",
+    "options": {
+      "1": "O < F < N < C < Si",
+      "2": "F < O < N < C < Si",
+      "3": "Si < C < N < O < F",
+      "4": "Si < C < O < N < F"
+    },
+    "key": 3,
+    "subject": "Chemistry",
+    "lane": "PROCESS_SEQUENCE"
+  },
+  {
+    "stem": "The most stable carbocation among the following is :",
+    "options": {
+      "1": "  1 -H",
+      "2": "  7 -H",
+      "3": "  3 -H",
+      "4": "  5 -H"
+    },
+    "key": 2,
+    "subject": "Chemistry",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "Match List I with List II :\nList I  List II\nA. Pleurobrachia I. Mollusca\nB. Radula II. Ctenophora\nC. Stomochord III. Osteichthyes\nD. Air bladder IV. Hemichordata\nChoose the correct answer from the options given below :",
+    "options": {
+      "1": "A-IV, B-III, C-II, D-I",
+      "2": "A-IV, B-II, C-III, D-I",
+      "3": "A-II, B-I, C-IV, D-III",
+      "4": "A-II, B-IV, C-I, D-III"
+    },
+    "key": 3,
+    "subject": "Chemistry",
+    "lane": "DATA_MATCH"
+  },
+  {
+    "stem": "Which of the following are Autoimmune disorders?\nA. Myasthenia gravis B. Rheumatoid arthritis\nC. Gout D. Muscular dystrophy\nE. Systemic Lupus Erythematosus (SLE)\nChoose the most appropriate answer from the options given below:",
+    "options": {
+      "1": "C, D & E only",
+      "2": "A, B & D only",
+      "3": "A, B & E only",
+      "4": "B, C & E only"
+    },
+    "key": 3,
+    "subject": "Chemistry",
+    "lane": "PROCESS_SEQUENCE"
+  },
+  {
+    "stem": "Identify the correct statements:\nA. Lenticels are the lens-shaped openings permitting the exchange of gases.\nB. Bark formed early in the season is called hard bark.\nC. Bark is a technical term that refers to all tissues exterior to vascular cambium.\nD. Bark refers to periderm and secondary phloem.\nE. Phellogen is single-layered in thickness.\nChoose the correct answer from the options given below:",
+    "options": {
+      "1": "B and C only",
+      "2": "B, C and E only",
+      "3": "A and D only",
+      "4": "A, B and D only"
+    },
+    "key": 3,
+    "subject": "Chemistry",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "Which of the following statements are correct about Klinefelter’s Syndrome?\nA. This disorder was first described by Langdon Down (1866).\nB. Such an individual has overall masculine development. However, the feminine developement is also expressed.\nC. The affected individual is short statured.\nD. Physical, psychomotor and mental development is retarded.\nE. Such individuals are sterile.\nChoose the correct answer from the options given below:",
+    "options": {
+      "1": "A and E only",
+      "2": "A and B only",
+      "3": "C and D only",
+      "4": "B and E only"
+    },
+    "key": 4,
+    "subject": "Chemistry",
+    "lane": "PROCESS_SEQUENCE"
+  },
+  {
+    "stem": "Which is of the following statements isincorrect?",
+    "options": {
+      "1": "Morels and truffles are edible delicacies.",
+      "2": "Claviceps is a source of many alkaloids",
+      "3": "Conidia are produced exogenously and",
+      "4": "Yeasts have filamentous bodies with long"
+    },
+    "key": 4,
+    "subject": "Chemistry",
+    "lane": "CONCEPTUAL_GENERIC"
+  },
+  {
+    "stem": "Which of the following immune responses isresponsible for rejection of kidney graft?",
+    "options": {
+      "1": "Auto-immune response",
+      "2": "Humoral immune response",
+      "3": "Inflammatory immune response",
+      "4": "Cell-mediated immune response"
+    },
+    "key": 4,
+    "subject": "Chemistry",
+    "lane": "STRUCTURE_FUNCTION"
+  },
+  {
+    "stem": "Match List I with List II:\nList I  List II\nA. Unicellular glandular epithelium\nI. Salivary glands\nB. Compound epithelium II. Pancreas\nC. Multicellular glandular epithelium\nIII. Goblet cells of alimentary canal\nD. Endocrine glandular epithelium\nIV. Moist surface of buccal cavity\nChoose the correct answer from the options given below:",
+    "options": {
+      "1": "A-III, B-IV, C-I, D-II",
+      "2": "A-II, B-I, C-IV, D-III",
+      "3": "A-II, B-I, C-III, D-IV",
+      "4": "A-IV, B-III, C-I, D-II"
+    },
+    "key": 1,
+    "subject": "Chemistry",
+    "lane": "DATA_MATCH"
+  }
+]
