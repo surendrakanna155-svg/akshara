@@ -43,6 +43,11 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "POST", path: "/sis/students/:id/transfer-certificate", permission: "manageSis", scope: "school", module: "sis" },
   // SCE-1 — Student Clearance / No-Dues report (read-only, cross-module).
   { method: "GET", path: "/sis/students/:id/clearance", permission: "viewSis", scope: "school", module: "sis" },
+  // SCE-1 slice 3 — clearance dues-waivers (maker-checker). Raise = manageSis
+  // (maker); approve/reject + the pending queue = approveClearanceWaiver (checker).
+  { method: "POST", path: "/sis/students/:id/clearance/waivers", permission: "manageSis", scope: "school", module: "sis" },
+  { method: "GET", path: "/sis/clearance/waivers", permission: "approveClearanceWaiver", scope: "school", module: "sis" },
+  { method: "POST", path: "/sis/clearance/waivers/:id/decide", permission: "approveClearanceWaiver", scope: "school", module: "sis" },
   { method: "GET", path: "/academic/years", permission: "viewSis", scope: "school", module: "academic" },
   { method: "POST", path: "/academic/transitions/preview", permission: "manageSis", scope: "school", module: "academic" },
   { method: "POST", path: "/academic/transitions/:id/execute", permission: "manageSis", scope: "school", module: "academic" },

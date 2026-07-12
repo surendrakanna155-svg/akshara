@@ -207,6 +207,46 @@ Deno.test("SCE-1 GET /sis/students/:id/clearance is registered as viewSis school
   assertEquals(rule!.module, "sis");
 });
 
+Deno.test("sis router matches the SCE-1 waiver routes (raise / queue / decide)", () => {
+  const sid = "a4000000-0000-4000-8000-000000000001";
+  const raise = matchSisRoute("POST", `/sis/students/${sid}/clearance/waivers`);
+  assertEquals(raise?.args, [sid]);
+  assertEquals(raise?.handler.name, "handleCreateClearanceWaiver");
+
+  const queue = matchSisRoute("GET", "/sis/clearance/waivers");
+  assertEquals(queue?.args, []);
+  assertEquals(queue?.handler.name, "handleListPendingClearanceWaivers");
+
+  const decide = matchSisRoute("POST", "/sis/clearance/waivers/w-9/decide");
+  assertEquals(decide?.args, ["w-9"]);
+  assertEquals(decide?.handler.name, "handleDecideClearanceWaiver");
+});
+
+Deno.test("sis router: waiver-raise (POST) does not collide with the clearance GET report", () => {
+  const sid = "a4000000-0000-4000-8000-000000000001";
+  // GET /clearance is the report; POST /clearance/waivers is the raise. Distinct.
+  assertEquals(matchSisRoute("GET", `/sis/students/${sid}/clearance`)?.handler.name, "handleStudentClearance");
+  assertEquals(matchSisRoute("POST", `/sis/students/${sid}/clearance`), null);
+  assertEquals(
+    matchSisRoute("POST", `/sis/students/${sid}/clearance/waivers`)?.handler.name,
+    "handleCreateClearanceWaiver",
+  );
+});
+
+Deno.test("SCE-1 waiver routes are registered with the right RBAC (maker=manageSis, checker=approveClearanceWaiver)", () => {
+  const raise = RBAC_ROUTE_INVENTORY.find(
+    (r) => r.method === "POST" && r.path === "/sis/students/:id/clearance/waivers",
+  );
+  assertExists(raise);
+  assertEquals(raise!.permission, "manageSis");
+  for (const path of ["/sis/clearance/waivers", "/sis/clearance/waivers/:id/decide"]) {
+    const rule = RBAC_ROUTE_INVENTORY.find((r) => r.path === path);
+    assertExists(rule);
+    assertEquals(rule!.permission, "approveClearanceWaiver");
+    assertEquals(rule!.scope, "school");
+  }
+});
+
 Deno.test("sis router matches GET /sis/admissions-conversion (#5)", () => {
   const match = matchSisRoute("GET", "/sis/admissions-conversion");
   assertEquals(match?.args, []);

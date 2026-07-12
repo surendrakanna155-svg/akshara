@@ -731,6 +731,47 @@ export const sisAudit = {
   }),
 };
 
+// ─── SCE-1 clearance dues-waivers (maker-checker) ────────────────────────────
+
+export const clearanceWaiverAudit = {
+  requested: (
+    waiverId: string,
+    studentId: string,
+    lifecycle: string,
+    amount: number,
+  ): MutationAuditSpec => ({
+    ...workflow("clearanceWaiverRequested", "student_clearance_waiver", waiverId, {
+      waiverId,
+      studentId,
+      lifecycle,
+      amount,
+    }),
+    domain: {
+      eventType: "clearance.waiver.requested",
+      payload: { waiverId, studentId, lifecycle, amount },
+      sourceModule: "sis",
+      idempotencyKey: `clearance.waiver.requested:${waiverId}`,
+    },
+  }),
+  decided: (
+    waiverId: string,
+    checkerId: string,
+    status: string,
+  ): MutationAuditSpec => ({
+    ...workflow("clearanceWaiverDecided", "student_clearance_waiver", waiverId, {
+      waiverId,
+      checkerId,
+      status,
+    }),
+    domain: {
+      eventType: "clearance.waiver.decided",
+      payload: { waiverId, checkerId, status },
+      sourceModule: "sis",
+      idempotencyKey: `clearance.waiver.decided:${waiverId}`,
+    },
+  }),
+};
+
 // ─── Academic ───────────────────────────────────────────────────────────────
 
 export const academicAudit = {

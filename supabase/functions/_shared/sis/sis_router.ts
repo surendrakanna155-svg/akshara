@@ -34,6 +34,11 @@ import {
 } from "./sis_student_360_handlers.ts";
 import { handleListStudentSiblings } from "./sis_sibling_handlers.ts";
 import { handleStudentClearance } from "../clearance/clearance_handlers.ts";
+import {
+  handleCreateClearanceWaiver,
+  handleDecideClearanceWaiver,
+  handleListPendingClearanceWaivers,
+} from "../clearance/clearance_waiver_handlers.ts";
 
 const UUID_SEGMENT =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -71,6 +76,17 @@ export function matchSisRoute(
     return { handler: handleAdmissionsConversion, args: [] };
   }
 
+  // SCE-1 slice 3 — clearance dues-waivers (maker-checker). The approver queue
+  // + decide are school-wide (not student-scoped); the raise is student-scoped
+  // (matched below with the other /sis/students/:id/* routes).
+  if (path === "/sis/clearance/waivers" && method === "GET") {
+    return { handler: handleListPendingClearanceWaivers, args: [] };
+  }
+  const waiverDecideMatch = path.match(/^\/sis\/clearance\/waivers\/([^/]+)\/decide$/);
+  if (waiverDecideMatch && method === "POST") {
+    return { handler: handleDecideClearanceWaiver, args: [waiverDecideMatch[1]!] };
+  }
+
   const enrollmentMatch = path.match(/^\/sis\/enrollments\/([^/]+)$/);
   if (enrollmentMatch && method === "PUT") {
     return { handler: handleUpdateEnrollment, args: [enrollmentMatch[1]!] };
@@ -106,6 +122,12 @@ export function matchSisRoute(
   const clearanceMatch = path.match(/^\/sis\/students\/([^/]+)\/clearance$/);
   if (clearanceMatch && method === "GET") {
     return { handler: handleStudentClearance, args: [clearanceMatch[1]!] };
+  }
+  // SCE-1 slice 3 — a maker raises a dues-waiver for the student (more specific
+  // than /clearance, so match first).
+  const waiverCreateMatch = path.match(/^\/sis\/students\/([^/]+)\/clearance\/waivers$/);
+  if (waiverCreateMatch && method === "POST") {
+    return { handler: handleCreateClearanceWaiver, args: [waiverCreateMatch[1]!] };
   }
 
   // SIS-D1 — transfer certificate (TC) engine. Matched BEFORE the generic

@@ -10,7 +10,7 @@ import {
   type ClearanceContributor,
   type ClearanceItem,
 } from "./clearance_engine.ts";
-import { evaluateClearanceGate } from "./clearance_gate.ts";
+import { evaluateClearanceGate, resolveClearanceDecision } from "./clearance_gate.ts";
 
 const SCOPE = { organizationId: "org-1", schoolId: "school-1" };
 
@@ -128,4 +128,54 @@ Deno.test("evaluateClearanceGate runs the real default registry in gate mode: fi
     Error,
     "db down",
   );
+});
+
+
+// ── resolveClearanceDecision: dues + approved-waiver override (slice 3) ────────
+function decisionDb(opts: { net: string; waiver?: { amount: string } | null }): TenantQueryClient {
+  return {
+    // deno-lint-ignore require-await
+    queryObject: async <T>(sql: string): Promise<T[]> => {
+      if (sql.includes("SUM(outstanding_amount)")) return [{ outstanding: opts.net }] as T[];
+      if (sql.includes("FROM student_clearance_waivers") && sql.includes("status = 'approved'")) {
+        return (opts.waiver ? [{ id: "w1", blocking_amount: opts.waiver.amount }] : []) as T[];
+      }
+      return [] as T[];
+    },
+  } as unknown as TenantQueryClient;
+}
+
+Deno.test("resolveClearanceDecision: no dues → not blocked, no waiver, duesAtGate 0", async () => {
+  const d = await resolveClearanceDecision(decisionDb({ net: "0" }), SCOPE, "stu-1", "transfer_certificate");
+  assertEquals(d.blocked, false);
+  assertEquals(d.blockingAmount, 0);
+  assertEquals(d.duesAtGate, 0);
+  assertEquals(d.waiver, null);
+});
+
+Deno.test("resolveClearanceDecision: dues + NO waiver → blocked, snapshots duesAtGate", async () => {
+  const d = await resolveClearanceDecision(decisionDb({ net: "500" }), SCOPE, "stu-1", "transfer_certificate");
+  assertEquals(d.blocked, true);
+  assertEquals(d.blockingAmount, 500);
+  assertEquals(d.duesAtGate, 500);
+  assertEquals(d.waiver, null);
+});
+
+Deno.test("resolveClearanceDecision: an approved waiver that COVERS the dues clears the block", async () => {
+  const d = await resolveClearanceDecision(
+    decisionDb({ net: "500", waiver: { amount: "500" } }), SCOPE, "stu-1", "transfer_certificate",
+  );
+  assertEquals(d.blocked, false, "waiver covers the dues → cleared");
+  assertEquals(d.blockingAmount, 0);
+  assertEquals(d.duesAtGate, 500, "the pre-waiver dues are snapshotted for the audit");
+  assertEquals(d.waiver, { id: "w1", amount: 500 });
+});
+
+Deno.test("resolveClearanceDecision: dues GREW past what the waiver covered → still blocked (no open-ended waive)", async () => {
+  const d = await resolveClearanceDecision(
+    decisionDb({ net: "800", waiver: { amount: "500" } }), SCOPE, "stu-1", "transfer_certificate",
+  );
+  assertEquals(d.blocked, true, "800 > 500 covered → the waiver is insufficient");
+  assertEquals(d.blockingAmount, 800);
+  assertEquals(d.waiver, null);
 });

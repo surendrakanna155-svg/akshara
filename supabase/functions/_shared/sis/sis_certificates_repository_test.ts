@@ -53,12 +53,19 @@ class CertMockDb {
   tcCounters = new Map<string, number>();
   issues: Row[] = [];
   statusUpdates: Array<{ id: string; status: string }> = [];
+  // SCE-1 slice 3: student_id -> an approved waiver's covered amount (or absent).
+  approvedWaivers = new Map<string, number>();
+  waiverConsumed: Array<{ studentId: string; issueId: string }> = [];
+  clearanceSnapshots: Array<{ issueId: string; amount: number; waiverId: string | null }> = [];
 
   seedStudent(seed: StudentSeed) {
     this.students.set(seed.id, seed);
   }
   seedOpenAccounts(studentId: string, amounts: number[]) {
     this.openAccounts.set(studentId, amounts);
+  }
+  seedApprovedWaiver(studentId: string, coveredAmount: number) {
+    this.approvedWaivers.set(studentId, coveredAmount);
   }
 
   // deno-lint-ignore require-await
@@ -140,6 +147,27 @@ class CertMockDb {
       const amounts = this.openAccounts.get(String(args[2])) ?? [];
       const sum = amounts.reduce((a, b) => a + b, 0);
       return [{ outstanding: String(sum) }] as T[];
+    }
+    // SCE-1 slice 3 — the gate's approved-waiver lookup.
+    if (sql.includes("FROM student_clearance_waivers") && sql.includes("status = 'approved'")) {
+      const covered = this.approvedWaivers.get(String(args[2]));
+      return covered === undefined
+        ? [] as T[]
+        : [{ id: "waiver-1", blocking_amount: String(covered) }] as T[];
+    }
+    // SCE-1 slice 3 — consume the covering waiver on issue.
+    if (sql.includes("UPDATE student_clearance_waivers") && sql.includes("status = 'consumed'")) {
+      this.waiverConsumed.push({ studentId: String(args[2]), issueId: String(args[4]) });
+      return [{ id: "waiver-1", status: "consumed" }] as T[];
+    }
+    // SCE-1 slice 3 — the clearance snapshot onto the issue row.
+    if (sql.includes("UPDATE sis_certificate_issues") && sql.includes("clearance_snapshot_amount")) {
+      this.clearanceSnapshots.push({
+        issueId: String(args[2]),
+        amount: Number(args[0]),
+        waiverId: args[1] === null ? null : String(args[1]),
+      });
+      return [] as T[];
     }
     // TC serial ON CONFLICT counter — mirrors allocatePublicStudentId arithmetic
     if (sql.includes("INSERT INTO school_tc_counters")) {
@@ -355,6 +383,64 @@ Deno.test("issueTransferCertificate (SCE-1): a net-zero balance (due offset by a
   // The TC is issued (net dues are zero): serial burned, status flipped.
   assertEquals(result.serialNo.length > 0, true);
   assertEquals(mock.statusUpdates.at(-1)?.status, "transferred");
+});
+
+Deno.test("issueTransferCertificate (SCE-1 slice 3): an APPROVED waiver covering the dues clears the block — TC issued, waiver consumed, decision snapshotted", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({ id: STUDENT, status: "active", className: "Grade 8" });
+  mock.seedOpenAccounts(STUDENT, [200]);       // ₹200 blocking dues
+  mock.seedApprovedWaiver(STUDENT, 200);        // an approved waiver covering ₹200
+  const client = mock as unknown as TenantQueryClient;
+
+  const result = await issueTransferCertificate(client, ORG, SCHOOL, {
+    studentId: STUDENT,
+    reason: "waived at exit",
+    issuedBy: STAFF,
+  });
+
+  // The TC issued despite the dues (the waiver covered them).
+  assertEquals(result.serialNo.length > 0, true);
+  assertEquals(mock.statusUpdates.at(-1)?.status, "transferred");
+  // The waiver was consumed (single-use) against this issue.
+  assertEquals(mock.waiverConsumed.length, 1);
+  assertEquals(mock.waiverConsumed[0].studentId, STUDENT);
+  // The clearance decision is snapshotted: the pre-waiver dues + the waiver id.
+  assertEquals(mock.clearanceSnapshots.length, 1);
+  assertEquals(mock.clearanceSnapshots[0].amount, 200);
+  assertEquals(mock.clearanceSnapshots[0].waiverId, "waiver-1");
+});
+
+Deno.test("issueTransferCertificate (SCE-1 slice 3): a waiver that NO LONGER covers grown dues does NOT clear — still 409, no write", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({ id: STUDENT, status: "active", className: "Grade 8" });
+  mock.seedOpenAccounts(STUDENT, [900]);        // dues grew to ₹900
+  mock.seedApprovedWaiver(STUDENT, 200);         // waiver only covers ₹200
+  const client = mock as unknown as TenantQueryClient;
+
+  const error = await assertRejects(
+    () => issueTransferCertificate(client, ORG, SCHOOL, {
+      studentId: STUDENT,
+      reason: "relocation",
+      issuedBy: STAFF,
+    }),
+    NoDuesPendingError,
+  );
+  assertEquals(error.outstanding, 900);
+  assertEquals(mock.issues.length, 0);
+  assertEquals(mock.waiverConsumed.length, 0);   // an insufficient waiver is NOT consumed
+  assertEquals(mock.statusUpdates.length, 0);
+});
+
+Deno.test("issueTransferCertificate (SCE-1): 0-dues TC snapshots amount 0 with no waiver", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({ id: STUDENT, status: "active", className: "Grade 8" });
+  mock.seedOpenAccounts(STUDENT, []);
+  const client = mock as unknown as TenantQueryClient;
+  await issueTransferCertificate(client, ORG, SCHOOL, { studentId: STUDENT, issuedBy: STAFF });
+  assertEquals(mock.clearanceSnapshots.length, 1);
+  assertEquals(mock.clearanceSnapshots[0].amount, 0);
+  assertEquals(mock.clearanceSnapshots[0].waiverId, null);
+  assertEquals(mock.waiverConsumed.length, 0);
 });
 
 Deno.test("issueTransferCertificate (SCE-1): the gate FAILS CLOSED — a finance read error rolls back with NO write, never an un-gated TC", async () => {

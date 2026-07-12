@@ -28,7 +28,8 @@ import {
   StudentNotFoundError,
   type StudentDetailData,
 } from "./sis_students_repository.ts";
-import { evaluateClearanceGate } from "../clearance/clearance_gate.ts";
+import { resolveClearanceDecision } from "../clearance/clearance_gate.ts";
+import { consumeWaiver } from "../clearance/clearance_waiver_repository.ts";
 
 export type CertificateType = "bonafide" | "study" | "conduct" | "transfer";
 
@@ -345,21 +346,21 @@ export async function issueTransferCertificate(
 
   // 1. NO-DUES GATE — SCE-1: consult the cross-module clearance engine in GATE
   // mode (fails CLOSED on an unreadable blocking source, exactly like the direct
-  // finance read it replaces). On the transfer_certificate lifecycle only
-  // FINANCE is blocking, and the finance contributor reports the authoritative
-  // net (COALESCE(SUM(outstanding_amount)) over open accounts) — byte-identical
-  // to outstandingForStudent — so `clearance.blocked`/`blockingAmount` equal the
-  // prior finance-only gate BY CONSTRUCTION. Inventory/library/hostel surface in
-  // the /clearance report but are advisory here (inventory-blocking is an owner
-  // opt-in). Blocks before any write; the throw rolls back the empty txn.
-  const clearance = await evaluateClearanceGate(
+  // finance read it replaces), WITH an approved dues-waiver applied. On the
+  // transfer_certificate lifecycle only FINANCE is blocking, and the finance
+  // contributor reports the authoritative net — byte-identical to
+  // outstandingForStudent — so a student with no dues (and no waiver) behaves
+  // EXACTLY as the prior finance-only gate. An APPROVED waiver that still covers
+  // the current dues clears the block (maker-checker; slice 3). Blocks before
+  // any write; the throw rolls back the empty txn.
+  const decision = await resolveClearanceDecision(
     db,
     { organizationId, schoolId: schoolIdArg },
     input.studentId,
     "transfer_certificate",
   );
-  if (clearance.blocked) {
-    throw new NoDuesPendingError(clearance.blockingAmount);
+  if (decision.blocked) {
+    throw new NoDuesPendingError(decision.blockingAmount);
   }
 
   // 2. Status-transition guard — reject an already-terminal student BEFORE we
@@ -403,6 +404,32 @@ export async function issueTransferCertificate(
     serialNo,
     reason,
     input.issuedBy,
+  );
+
+  // 4b. SCE-1 — CONSUME the covering waiver (single-use) and SNAPSHOT the
+  // clearance decision onto the issue row: the dues that were present at issue
+  // and the waiver (if any) that cleared them. Immutable audit of the exit; the
+  // snapshot lives inside this same transaction, so a later rollback discards it.
+  if (decision.waiver) {
+    await consumeWaiver(
+      db,
+      { organizationId, schoolId: schoolIdArg },
+      input.studentId,
+      "transfer_certificate",
+      issued.id,
+    );
+  }
+  await db.queryObject(
+    `UPDATE sis_certificate_issues
+        SET clearance_snapshot_amount = $1, clearance_waiver_id = $2
+      WHERE id = $3::uuid AND organization_id = $4 AND school_id = $5`,
+    [
+      decision.duesAtGate,
+      decision.waiver?.id ?? null,
+      issued.id,
+      organizationId,
+      schoolIdArg,
+    ],
   );
 
   // 5. Auto status -> transferred (guard already asserted the transition above).

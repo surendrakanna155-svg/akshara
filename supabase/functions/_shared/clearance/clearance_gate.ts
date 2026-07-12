@@ -15,6 +15,10 @@ import {
   type ClearanceScope,
 } from "./clearance_engine.ts";
 import { DEFAULT_CLEARANCE_REGISTRY } from "./clearance_contributors.ts";
+import {
+  findActiveWaiver,
+  type WaiverLifecycle,
+} from "./clearance_waiver_repository.ts";
 
 export async function evaluateClearanceGate(
   db: TenantQueryClient,
@@ -34,4 +38,46 @@ export async function evaluateClearanceGate(
     // DB-level error would poison it.
     { failClosedOnBlocking: true, blockingContributorsOnly: true },
   );
+}
+
+/** The final gate verdict for a lifecycle transition: dues (from the engine)
+ * with an APPROVED waiver applied. A waiver clears the block ONLY when it still
+ * COVERS the current dues (dues have not grown past the snapshotted amount the
+ * checker approved) — no open-ended "waive all future dues". */
+export interface ClearanceGateDecision {
+  /** true when dues remain AFTER any covering waiver — the caller must block. */
+  blocked: boolean;
+  /** the unwaived dues that remain (0 when cleared) — the 409 amount. */
+  blockingAmount: number;
+  /** dues present at the gate BEFORE any waiver — the immutable audit snapshot. */
+  duesAtGate: number;
+  /** the approved waiver applied to clear the block, else null. */
+  waiver: { id: string; amount: number } | null;
+}
+
+export async function resolveClearanceDecision(
+  db: TenantQueryClient,
+  scope: ClearanceScope,
+  studentId: string,
+  lifecycle: WaiverLifecycle,
+): Promise<ClearanceGateDecision> {
+  const report = await evaluateClearanceGate(db, scope, studentId, lifecycle);
+  const dues = report.blockingAmount;
+  if (!report.blocked) {
+    return { blocked: false, blockingAmount: 0, duesAtGate: dues, waiver: null };
+  }
+  // Dues block — is there an approved waiver that still COVERS them? (A read
+  // error here is inside the gate txn → propagates → rollback → fails closed.)
+  const waiver = await findActiveWaiver(db, scope, studentId, lifecycle);
+  const covered = Number(waiver?.blocking_amount ?? -1);
+  if (waiver && dues <= covered) {
+    return {
+      blocked: false,
+      blockingAmount: 0,
+      duesAtGate: dues,
+      waiver: { id: waiver.id, amount: covered },
+    };
+  }
+  // No waiver, or dues grew past what it covered → still blocked.
+  return { blocked: true, blockingAmount: dues, duesAtGate: dues, waiver: null };
 }
