@@ -29,6 +29,7 @@ import {
   createWaiver,
   decideWaiver,
   listPendingWaivers,
+  revokeApprovedWaiver,
 } from "./clearance_waiver_repository.ts";
 
 type AuthedClaims = Parameters<typeof requirePermission>[0];
@@ -55,6 +56,9 @@ function waiverToApi(r: ClearanceWaiverRow) {
   return {
     id: r.id,
     studentId: r.student_id,
+    // Present only on the approver-queue join — the checker must see WHOSE exit
+    // they are clearing (audit slice-4 P2).
+    ...(r.student_name != null ? { studentName: r.student_name } : {}),
     lifecycle: r.lifecycle,
     reason: r.reason,
     amount: Number(r.blocking_amount ?? 0),
@@ -197,6 +201,42 @@ export async function handleDecideClearanceWaiver(
       return out;
     });
     return jsonResponse(envelope(waiverToApi(decided)));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    if (error instanceof ClearanceWaiverError) return waiverErrorResponse(error);
+    throw error;
+  }
+}
+
+// ── POST /sis/clearance/waivers/{id}/revoke ──────────────────────────────────
+// Checker revokes a stale APPROVED (un-consumed) waiver so a corrective, larger
+// waiver can be raised when dues grew past what it covered (audit final P2).
+export async function handleRevokeClearanceWaiver(
+  req: Request,
+  config: AppConfig,
+  waiverId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireWaiverChecker(auth.claims);
+  if (denied) return denied;
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+  const checkerId = subjectOf(auth.claims);
+
+  try {
+    const revoked = await withTenantContext(config, auth.claims, async (db) => {
+      const out = await revokeApprovedWaiver(db, { organizationId: orgId, schoolId }, waiverId, checkerId);
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        clearanceWaiverAudit.decided(waiverId, checkerId, "revoked"),
+        req,
+      );
+      return out;
+    });
+    return jsonResponse(envelope(waiverToApi(revoked)));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
     if (error instanceof ClearanceWaiverError) return waiverErrorResponse(error);

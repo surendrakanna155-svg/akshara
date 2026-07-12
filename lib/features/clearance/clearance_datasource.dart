@@ -78,6 +78,22 @@ class ClearanceDataSource {
     }
   }
 
+  /// Revoke a stale APPROVED (un-consumed) waiver so a corrective, larger waiver
+  /// can be raised when dues grew past what it covered (the deadlock escape).
+  Future<ClearanceWaiver> revokeWaiver({required String waiverId}) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/sis/clearance/waivers/$waiverId/revoke',
+        queryParameters: _scope(),
+      );
+      return ClearanceWaiver.fromJson(_inner(response.data));
+    } on DioException catch (e) {
+      final rejection = _asRejection(e);
+      if (rejection != null) throw rejection;
+      rethrow;
+    }
+  }
+
   Map<String, dynamic> _inner(Map<String, dynamic>? data) {
     final body = data ?? const <String, dynamic>{};
     return (body['data'] as Map<String, dynamic>?) ?? body;

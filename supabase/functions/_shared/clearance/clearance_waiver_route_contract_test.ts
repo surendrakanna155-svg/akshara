@@ -84,3 +84,11 @@ Deno.test("waiver decide: needs approveClearanceWaiver (checker); manageSis alon
   const allowed = await call("POST", path, ["approveClearanceWaiver"], { approve: true });
   assertEquals(allowed?.status, 503);
 });
+
+Deno.test("waiver revoke: needs approveClearanceWaiver (checker); manageSis alone 403s", async () => {
+  const path = "/sis/clearance/waivers/w-1/revoke";
+  const denied = await call("POST", path, ["manageSis"], {});
+  assertEquals(denied?.status, 403);
+  const allowed = await call("POST", path, ["approveClearanceWaiver"], {});
+  assertEquals(allowed?.status, 503);
+});

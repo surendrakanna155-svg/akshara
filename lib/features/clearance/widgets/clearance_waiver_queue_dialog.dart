@@ -26,18 +26,21 @@ class ClearanceWaiverQueueDialog extends ConsumerStatefulWidget {
 class _State extends ConsumerState<ClearanceWaiverQueueDialog> {
   final Set<String> _deciding = {};
 
-  Future<void> _decide(String waiverId, bool approve) async {
+  Future<void> _act(
+    String waiverId,
+    Future<void> Function() action,
+    String successMsg,
+  ) async {
     setState(() => _deciding.add(waiverId));
     try {
-      await ref.read(clearanceDataSourceProvider).decideWaiver(waiverId: waiverId, approve: approve);
+      await action();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(approve ? 'Waiver approved.' : 'Waiver rejected.')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(successMsg)));
       setState(() => _deciding.remove(waiverId));
       ref.invalidate(pendingClearanceWaiversProvider);
     } on ClearanceWaiverRejected catch (e) {
-      // Typed verdict (SoD / already-decided / active-exists): show it + refresh.
+      // Typed verdict (SoD / already-decided / active-exists / not-revocable):
+      // show the real reason and refresh (a stale card must not linger).
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
       setState(() => _deciding.remove(waiverId));
@@ -50,6 +53,18 @@ class _State extends ConsumerState<ClearanceWaiverQueueDialog> {
       setState(() => _deciding.remove(waiverId));
     }
   }
+
+  Future<void> _decide(String waiverId, bool approve) => _act(
+        waiverId,
+        () => ref.read(clearanceDataSourceProvider).decideWaiver(waiverId: waiverId, approve: approve),
+        approve ? 'Waiver approved.' : 'Waiver rejected.',
+      );
+
+  Future<void> _revoke(String waiverId) => _act(
+        waiverId,
+        () => ref.read(clearanceDataSourceProvider).revokeWaiver(waiverId: waiverId),
+        'Waiver revoked.',
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -83,6 +98,7 @@ class _State extends ConsumerState<ClearanceWaiverQueueDialog> {
                       deciding: _deciding.contains(w.id),
                       onApprove: () => _decide(w.id, true),
                       onReject: () => _decide(w.id, false),
+                      onRevoke: () => _revoke(w.id),
                     ),
                   ],
                 ),
@@ -101,16 +117,22 @@ class _WaiverCard extends StatelessWidget {
     required this.deciding,
     required this.onApprove,
     required this.onReject,
+    required this.onRevoke,
   });
 
   final ClearanceWaiver waiver;
   final bool deciding;
   final VoidCallback onApprove;
   final VoidCallback onReject;
+  final VoidCallback onRevoke;
 
   @override
   Widget build(BuildContext context) {
     final text = context.aksharaText;
+    // An approved-but-un-consumed waiver: the only action is to REVOKE it (frees
+    // the slot for a corrective waiver when dues grew past its cover).
+    final isApproved = waiver.status == 'approved';
+    final student = (waiver.studentName ?? '').trim();
     return Card(
       elevation: 0,
       child: Padding(
@@ -118,23 +140,41 @@ class _WaiverCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('₹${waiver.amount.toStringAsFixed(0)} dues waiver', style: text.titleSmall),
+            // WHOSE exit — the checker must not decide blind (audit slice-4 P2).
+            Text(
+              student.isEmpty ? 'Student' : student,
+              key: Key('clearance-waiver-student-${waiver.id}'),
+              style: text.titleSmall,
+            ),
+            Text(
+              '₹${waiver.amount.toStringAsFixed(0)} dues waiver'
+              '${isApproved ? ' · approved, awaiting exit' : ''}',
+              style: text.bodySmall,
+            ),
             Text(waiver.reason, style: text.bodySmall),
             const SizedBox(height: 8),
             Row(
-              children: [
-                FilledButton.tonal(
-                  key: Key('clearance-waiver-approve-${waiver.id}'),
-                  onPressed: deciding ? null : onApprove,
-                  child: const Text('Approve'),
-                ),
-                const SizedBox(width: 12),
-                OutlinedButton(
-                  key: Key('clearance-waiver-reject-${waiver.id}'),
-                  onPressed: deciding ? null : onReject,
-                  child: const Text('Reject'),
-                ),
-              ],
+              children: isApproved
+                  ? [
+                      OutlinedButton(
+                        key: Key('clearance-waiver-revoke-${waiver.id}'),
+                        onPressed: deciding ? null : onRevoke,
+                        child: const Text('Revoke'),
+                      ),
+                    ]
+                  : [
+                      FilledButton.tonal(
+                        key: Key('clearance-waiver-approve-${waiver.id}'),
+                        onPressed: deciding ? null : onApprove,
+                        child: const Text('Approve'),
+                      ),
+                      const SizedBox(width: 12),
+                      OutlinedButton(
+                        key: Key('clearance-waiver-reject-${waiver.id}'),
+                        onPressed: deciding ? null : onReject,
+                        child: const Text('Reject'),
+                      ),
+                    ],
             ),
           ],
         ),

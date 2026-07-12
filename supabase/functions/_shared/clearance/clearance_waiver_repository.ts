@@ -37,6 +37,7 @@ export interface ClearanceScopeIds {
 export interface ClearanceWaiverRow {
   id: string;
   student_id: string;
+  student_name?: string | null; // populated only by the queue join (audit slice-4 P2)
   lifecycle: string;
   reason: string;
   blocking_amount: string | null;
@@ -53,6 +54,12 @@ const COLUMNS =
   `id, student_id, lifecycle, reason, blocking_amount::text AS blocking_amount,
    status, maker_id, checker_id, decided_at::text AS decided_at,
    consumed_by_issue_id, consumed_at::text AS consumed_at, created_at::text AS created_at`;
+
+/** The same projection, aliased to `w.` for the queue JOIN. */
+const COLUMNS_W =
+  `w.id, w.student_id, w.lifecycle, w.reason, w.blocking_amount::text AS blocking_amount,
+   w.status, w.maker_id, w.checker_id, w.decided_at::text AS decided_at,
+   w.consumed_by_issue_id, w.consumed_at::text AS consumed_at, w.created_at::text AS created_at`;
 
 /** Raise a PENDING waiver. Snapshots `blockingAmount` (what the checker is
  * approving). One pending-or-approved waiver per (student, lifecycle) is not
@@ -89,37 +96,28 @@ export async function createWaiver(
   return rows[0]!;
 }
 
-/** The school's PENDING waiver queue for approvers (newest first). */
+/** The school's ACTIONABLE waiver queue for approvers: pending waivers (to
+ * approve/reject) AND approved-but-un-consumed ones (to REVOKE when dues grew
+ * past their cover — the deadlock escape, audit final P2). Pending first, then
+ * approved, newest within each. JOINs the student's display name so the CHECKER
+ * sees WHOSE exit they are clearing (audit slice-4 P2 — a maker-checker control
+ * must not decide blind). LEFT JOIN so a waiver whose student row is missing
+ * still surfaces (name null). */
 export async function listPendingWaivers(
   db: TenantQueryClient,
   scope: ClearanceScopeIds,
   limit: number,
 ): Promise<ClearanceWaiverRow[]> {
   return await db.queryObject<ClearanceWaiverRow>(
-    `SELECT ${COLUMNS}
-       FROM student_clearance_waivers
-      WHERE organization_id = $1 AND school_id = $2 AND status = 'pending'
-      ORDER BY created_at DESC
+    `SELECT ${COLUMNS_W}, s.display_name AS student_name
+       FROM student_clearance_waivers w
+       LEFT JOIN students s ON s.id = w.student_id
+      WHERE w.organization_id = $1 AND w.school_id = $2
+        AND (w.status = 'pending'
+             OR (w.status = 'approved' AND w.consumed_by_issue_id IS NULL))
+      ORDER BY CASE w.status WHEN 'pending' THEN 0 ELSE 1 END, w.created_at DESC
       LIMIT $3`,
     [scope.organizationId, scope.schoolId, limit],
-  );
-}
-
-/** A student's waivers for a lifecycle (newest first) — for the report/UI. */
-export async function listWaiversForStudent(
-  db: TenantQueryClient,
-  scope: ClearanceScopeIds,
-  studentId: string,
-  lifecycle: WaiverLifecycle,
-): Promise<ClearanceWaiverRow[]> {
-  return await db.queryObject<ClearanceWaiverRow>(
-    `SELECT ${COLUMNS}
-       FROM student_clearance_waivers
-      WHERE organization_id = $1 AND school_id = $2
-        AND student_id = $3 AND lifecycle = $4
-      ORDER BY created_at DESC
-      LIMIT 20`,
-    [scope.organizationId, scope.schoolId, studentId, lifecycle],
   );
 }
 
@@ -189,6 +187,39 @@ export async function decideWaiver(
     );
   }
   return decided;
+}
+
+/**
+ * Revoke an APPROVED, un-consumed waiver (checker action). This is the escape
+ * from the deadlock (audit final P2): once a waiver is approved, dues can grow
+ * past its snapshot so it no longer covers — the gate correctly refuses it, but
+ * the one-approved-per-student unique index then blocks approving a fresh,
+ * larger waiver. Revoking the stale approval (approved -> rejected) frees the
+ * slot so a corrective waiver can be raised and approved. Status-guarded so a
+ * waiver already consumed by an issued TC can never be revoked out from under it.
+ */
+export async function revokeApprovedWaiver(
+  db: TenantQueryClient,
+  scope: ClearanceScopeIds,
+  waiverId: string,
+  checkerId: string,
+): Promise<ClearanceWaiverRow> {
+  const rows = await db.queryObject<ClearanceWaiverRow>(
+    `UPDATE student_clearance_waivers
+        SET status = 'rejected', checker_id = $4, decided_at = timezone('utc', now()),
+            updated_at = timezone('utc', now())
+      WHERE organization_id = $1 AND school_id = $2 AND id = $3 AND status = 'approved'
+      RETURNING ${COLUMNS}`,
+    [scope.organizationId, scope.schoolId, waiverId, checkerId],
+  );
+  const row = rows[0];
+  if (!row) {
+    throw new ClearanceWaiverError(
+      "WAIVER_NOT_REVOCABLE",
+      "No approved (un-consumed) waiver with that id to revoke",
+    );
+  }
+  return row;
 }
 
 /**

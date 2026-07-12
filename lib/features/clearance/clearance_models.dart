@@ -100,12 +100,14 @@ class ClearanceWaiver {
     required this.amount,
     required this.status,
     required this.makerId,
+    this.studentName,
     this.checkerId,
     this.createdAt,
   });
 
   final String id;
   final String studentId;
+  final String? studentName; // present only on the approver-queue join
   final String lifecycle;
   final String reason;
   final double amount;
@@ -117,6 +119,7 @@ class ClearanceWaiver {
   factory ClearanceWaiver.fromJson(Map<String, dynamic> json) => ClearanceWaiver(
         id: (json['id'] ?? '').toString(),
         studentId: (json['studentId'] ?? '').toString(),
+        studentName: (json['studentName'])?.toString(),
         lifecycle: (json['lifecycle'] ?? '').toString(),
         reason: (json['reason'] ?? '').toString(),
         amount: _asDouble(json['amount']),
@@ -127,4 +130,8 @@ class ClearanceWaiver {
       );
 }
 
-double _asDouble(dynamic v) => v == null ? 0 : (v as num).toDouble();
+double _asDouble(dynamic v) {
+  if (v is num) return v.toDouble();
+  if (v is String) return double.tryParse(v) ?? 0;
+  return 0;
+}

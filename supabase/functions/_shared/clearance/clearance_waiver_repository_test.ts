@@ -9,6 +9,8 @@ import {
   createWaiver,
   decideWaiver,
   findActiveWaiver,
+  listPendingWaivers,
+  revokeApprovedWaiver,
 } from "./clearance_waiver_repository.ts";
 
 interface Call {
@@ -141,4 +143,34 @@ Deno.test("consumeWaiver: single-use — status-guarded UPDATE approved→consum
 Deno.test("consumeWaiver: nothing approved to consume → null (caller proceeds; gate cleared without a waiver)", async () => {
   const { db } = mockDb([[]]);
   assertEquals(await consumeWaiver(db, SCOPE, "stu-1", "transfer_certificate", "iss-7"), null);
+});
+
+Deno.test("listPendingWaivers: JOINs the student name + returns pending AND approved-unconsumed (deadlock revoke), pending first", async () => {
+  const { db, calls } = mockDb([[{ ...pending(), student_name: "Asha Rao" }]]);
+  const rows = await listPendingWaivers(db, SCOPE, 50);
+  assertEquals(rows[0].student_name, "Asha Rao");
+  assert(calls[0].sql.includes("LEFT JOIN students"));
+  assert(calls[0].sql.includes("s.display_name AS student_name"));
+  assert(calls[0].sql.includes("w.status = 'pending'"));
+  // approved-but-un-consumed rows are included so a checker can REVOKE a stale one
+  assert(calls[0].sql.includes("w.status = 'approved' AND w.consumed_by_issue_id IS NULL"));
+  assert(calls[0].sql.includes("CASE w.status WHEN 'pending' THEN 0"));
+});
+
+Deno.test("revokeApprovedWaiver: an APPROVED waiver → rejected (status-guarded, frees the active-uq slot for a corrective waiver)", async () => {
+  const revoked = pending({ status: "rejected", checker_id: "checker-9" });
+  const { db, calls } = mockDb([[revoked]]);
+  const out = await revokeApprovedWaiver(db, SCOPE, "w1", "checker-9");
+  assertEquals(out.status, "rejected");
+  assert(calls[0].sql.includes("status = 'approved'"), "only an approved row is revocable");
+  assert(calls[0].sql.includes("SET status = 'rejected'"));
+});
+
+Deno.test("revokeApprovedWaiver: nothing approved (already consumed / pending) → WAIVER_NOT_REVOCABLE", async () => {
+  const { db } = mockDb([[]]);
+  const err = await assertRejects(
+    () => revokeApprovedWaiver(db, SCOPE, "w1", "checker-9"),
+    ClearanceWaiverError,
+  );
+  assertEquals((err as ClearanceWaiverError).code, "WAIVER_NOT_REVOCABLE");
 });

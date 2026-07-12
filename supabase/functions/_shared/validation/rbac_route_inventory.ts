@@ -48,6 +48,7 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "POST", path: "/sis/students/:id/clearance/waivers", permission: "manageSis", scope: "school", module: "sis" },
   { method: "GET", path: "/sis/clearance/waivers", permission: "approveClearanceWaiver", scope: "school", module: "sis" },
   { method: "POST", path: "/sis/clearance/waivers/:id/decide", permission: "approveClearanceWaiver", scope: "school", module: "sis" },
+  { method: "POST", path: "/sis/clearance/waivers/:id/revoke", permission: "approveClearanceWaiver", scope: "school", module: "sis" },
   { method: "GET", path: "/academic/years", permission: "viewSis", scope: "school", module: "academic" },
   { method: "POST", path: "/academic/transitions/preview", permission: "manageSis", scope: "school", module: "academic" },
   { method: "POST", path: "/academic/transitions/:id/execute", permission: "manageSis", scope: "school", module: "academic" },
@@ -308,7 +309,7 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
 export const RBAC_MODULE_PERMISSIONS = [
   "viewAdmissions", "manageAdmissions", "approveAdmissions",
   "viewFinance", "manageFinance", "approveRefunds",
-  "viewSis", "manageSis",
+  "viewSis", "manageSis", "approveClearanceWaiver",
   "viewTransport", "viewHr", "viewHostel", "viewLibrary", "viewInventory", "viewAlumni", "manageAlumni",
   "viewManagement", "viewControlCenter", "viewAdminHub", "viewPayments",
   "viewCommunications", "manageCommunications", "sendBroadcast",

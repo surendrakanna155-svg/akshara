@@ -92,6 +92,22 @@ Deno.test("evaluateClearanceGate uses blocking-only mode: a broken inventory que
   assert(!report.blocked, "no finance dues → cleared, and inventory never ran");
 });
 
+Deno.test("gate mode: a BLOCKING contributor with NO ledger (tracked=false) FAILS CLOSED (audit final P3-1)", async () => {
+  const db = {} as unknown as TenantQueryClient;
+  // A future owner flips 'library' to blocking but it has no per-student ledger
+  // (tracked=false). In gate mode this must throw, not silently not-block.
+  await assertRejects(
+    () =>
+      buildClearanceReport(db, SCOPE, "stu-1", "transfer_certificate", [
+        // finance is the blocking module on transfer_certificate; simulate an
+        // untracked blocking source by giving finance tracked=false.
+        { module: "finance", tracked: false, contribute: () => Promise.resolve([]) },
+      ], { failClosedOnBlocking: true, blockingContributorsOnly: true }),
+    Error,
+    "no ledger to verify",
+  );
+});
+
 Deno.test("report mode (default): a BLOCKING contributor that throws degrades to not_tracked (fail-SAFE, never a fabricated block)", async () => {
   const db = {} as unknown as TenantQueryClient;
   const report = await buildClearanceReport(db, SCOPE, "stu-1", "transfer_certificate", [

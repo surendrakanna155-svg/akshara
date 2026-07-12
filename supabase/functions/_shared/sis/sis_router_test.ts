@@ -220,6 +220,10 @@ Deno.test("sis router matches the SCE-1 waiver routes (raise / queue / decide)",
   const decide = matchSisRoute("POST", "/sis/clearance/waivers/w-9/decide");
   assertEquals(decide?.args, ["w-9"]);
   assertEquals(decide?.handler.name, "handleDecideClearanceWaiver");
+
+  const revoke = matchSisRoute("POST", "/sis/clearance/waivers/w-9/revoke");
+  assertEquals(revoke?.args, ["w-9"]);
+  assertEquals(revoke?.handler.name, "handleRevokeClearanceWaiver");
 });
 
 Deno.test("sis router: waiver-raise (POST) does not collide with the clearance GET report", () => {

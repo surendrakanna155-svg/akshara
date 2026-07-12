@@ -165,6 +165,16 @@ export async function buildClearanceReport(
     // it is never queried — no wasted round-trip, and no advisory query can
     // poison the gate's transaction (audit slice-2 P2).
     if (opts.blockingContributorsOnly && policy !== "blocking") continue;
+    // Fail-closed invariant (audit final P3-1): a BLOCKING source with no real
+    // ledger cannot be verified either way — in gate mode it must NOT silently
+    // pass as not_tracked. (No current config hits this — finance, the only
+    // blocking source, is tracked — but a future owner flipping an untracked
+    // module to blocking must fail closed, matching the documented guarantee.)
+    if (opts.failClosedOnBlocking && policy === "blocking" && !contributor.tracked) {
+      throw new Error(
+        `Clearance gate: blocking module '${contributor.module}' has no ledger to verify (fail closed)`,
+      );
+    }
     if (!contributor.tracked) {
       contributions.push({
         module: contributor.module,

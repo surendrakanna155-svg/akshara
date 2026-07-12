@@ -38,6 +38,7 @@ import {
   handleCreateClearanceWaiver,
   handleDecideClearanceWaiver,
   handleListPendingClearanceWaivers,
+  handleRevokeClearanceWaiver,
 } from "../clearance/clearance_waiver_handlers.ts";
 
 const UUID_SEGMENT =
@@ -85,6 +86,10 @@ export function matchSisRoute(
   const waiverDecideMatch = path.match(/^\/sis\/clearance\/waivers\/([^/]+)\/decide$/);
   if (waiverDecideMatch && method === "POST") {
     return { handler: handleDecideClearanceWaiver, args: [waiverDecideMatch[1]!] };
+  }
+  const waiverRevokeMatch = path.match(/^\/sis\/clearance\/waivers\/([^/]+)\/revoke$/);
+  if (waiverRevokeMatch && method === "POST") {
+    return { handler: handleRevokeClearanceWaiver, args: [waiverRevokeMatch[1]!] };
   }
 
   const enrollmentMatch = path.match(/^\/sis\/enrollments\/([^/]+)$/);
