@@ -410,6 +410,42 @@ Deno.test("issueTransferCertificate (SCE-1 slice 3): an APPROVED waiver covering
   assertEquals(mock.clearanceSnapshots[0].waiverId, "waiver-1");
 });
 
+Deno.test("issueTransferCertificate (SCE-1 slice 3): a covering waiver ALREADY CONSUMED by a concurrent issue re-blocks (fail closed, no second TC, no dishonest snapshot)", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({ id: STUDENT, status: "active", className: "Grade 8" });
+  mock.seedOpenAccounts(STUDENT, [200]);
+  mock.seedApprovedWaiver(STUDENT, 200);
+  // Simulate the race: findActiveWaiver still returns the approved row (this txn
+  // read before the other committed), but consumeWaiver finds nothing 'approved'
+  // to claim (the other txn consumed it) → returns null.
+  const raced = {
+    // deno-lint-ignore require-await
+    async queryObject<T>(sql: string, args: unknown[] = []): Promise<T[]> {
+      if (sql.includes("UPDATE student_clearance_waivers") && sql.includes("status = 'consumed'")) {
+        return [] as T[]; // nothing approved to consume — lost the race
+      }
+      return mock.queryObject<T>(sql, args);
+    },
+    queryCount: () => Promise.resolve(0),
+  } as unknown as TenantQueryClient;
+
+  const error = await assertRejects(
+    () => issueTransferCertificate(raced, ORG, SCHOOL, {
+      studentId: STUDENT,
+      reason: "waived at exit",
+      issuedBy: STAFF,
+    }),
+    NoDuesPendingError,
+  );
+  assertEquals(error.outstanding, 200, "re-blocks with the pre-waiver dues");
+  // Fail closed: the throw is at the consume step, BEFORE the status flip and
+  // snapshot — neither ran. (The serial/issue inserted just before are rolled
+  // back by the enclosing withTenantContext txn in production — the mock can't
+  // model rollback, so we assert the post-throw steps that provably never ran.)
+  assertEquals(mock.statusUpdates.length, 0, "student was NOT flipped to transferred");
+  assertEquals(mock.clearanceSnapshots.length, 0, "no dishonest snapshot written");
+});
+
 Deno.test("issueTransferCertificate (SCE-1 slice 3): a waiver that NO LONGER covers grown dues does NOT clear — still 409, no write", async () => {
   const mock = new CertMockDb();
   mock.seedStudent({ id: STUDENT, status: "active", className: "Grade 8" });

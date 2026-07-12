@@ -76,6 +76,13 @@ CREATE POLICY clearance_waivers_school_update ON student_clearance_waivers
     organization_id = app_current_tenant_id()
     AND app_current_scope() = 'school'
     AND school_id = app_current_school_id()
+  )
+  -- Explicit WITH CHECK (convention parity with the finance policies): a mutated
+  -- org/school on UPDATE is rejected, not silently accepted.
+  WITH CHECK (
+    organization_id = app_current_tenant_id()
+    AND app_current_scope() = 'school'
+    AND school_id = app_current_school_id()
   );
 GRANT SELECT, INSERT, UPDATE ON student_clearance_waivers TO erp_tenant;
 

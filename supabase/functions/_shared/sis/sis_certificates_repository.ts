@@ -411,13 +411,21 @@ export async function issueTransferCertificate(
   // and the waiver (if any) that cleared them. Immutable audit of the exit; the
   // snapshot lives inside this same transaction, so a later rollback discards it.
   if (decision.waiver) {
-    await consumeWaiver(
+    const consumed = await consumeWaiver(
       db,
       { organizationId, schoolId: schoolIdArg },
       input.studentId,
       "transfer_certificate",
       issued.id,
     );
+    // Single-use, race-safe (audit slice-3 P2): if the covering waiver was
+    // ALREADY consumed (a concurrent TC issuance beat us to it), it can no
+    // longer clear THIS exit — fail closed. The throw rolls back the just-
+    // inserted issue row + the allocated serial, so no un-gated second TC and
+    // no dishonest snapshot pointing at a waiver another issue already spent.
+    if (!consumed) {
+      throw new NoDuesPendingError(decision.duesAtGate);
+    }
   }
   await db.queryObject(
     `UPDATE sis_certificate_issues

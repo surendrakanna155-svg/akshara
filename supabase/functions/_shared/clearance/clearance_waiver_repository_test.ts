@@ -90,6 +90,22 @@ Deno.test("decideWaiver: losing the claim race → ALREADY_DECIDED (409)", async
   assertEquals((err as ClearanceWaiverError).status, 409);
 });
 
+Deno.test("decideWaiver: approving a second waiver while one is already approved → clean 409 (uq_clearance_waivers_active), not a raw 500", async () => {
+  const throwingDb = {
+    queryObject: <T>(sql: string): Promise<T[]> => {
+      if (sql.includes("SELECT")) return Promise.resolve([pending()] as T[]);
+      // the claim UPDATE trips the one-approved-per-student partial unique index
+      throw new Error('duplicate key value violates unique constraint "uq_clearance_waivers_active"');
+    },
+  } as unknown as TenantQueryClient;
+  const err = await assertRejects(
+    () => decideWaiver(throwingDb, SCOPE, "w2", "checker-9", true),
+    ClearanceWaiverError,
+  );
+  assertEquals((err as ClearanceWaiverError).code, "WAIVER_ACTIVE_EXISTS");
+  assertEquals((err as ClearanceWaiverError).status, 409);
+});
+
 Deno.test("decideWaiver: no pending waiver → NOT_FOUND", async () => {
   const { db } = mockDb([[]]);
   const err = await assertRejects(

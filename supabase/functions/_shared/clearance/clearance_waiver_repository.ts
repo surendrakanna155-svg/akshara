@@ -156,14 +156,30 @@ export async function decideWaiver(
       403,
     );
   }
-  const claimed = await db.queryObject<ClearanceWaiverRow>(
-    `UPDATE student_clearance_waivers
-        SET status = $4, checker_id = $5, decided_at = timezone('utc', now()),
-            updated_at = timezone('utc', now())
-      WHERE organization_id = $1 AND school_id = $2 AND id = $3 AND status = 'pending'
-      RETURNING ${COLUMNS}`,
-    [scope.organizationId, scope.schoolId, waiverId, approve ? "approved" : "rejected", checkerId],
-  );
+  let claimed: ClearanceWaiverRow[];
+  try {
+    claimed = await db.queryObject<ClearanceWaiverRow>(
+      `UPDATE student_clearance_waivers
+          SET status = $4, checker_id = $5, decided_at = timezone('utc', now()),
+              updated_at = timezone('utc', now())
+        WHERE organization_id = $1 AND school_id = $2 AND id = $3 AND status = 'pending'
+        RETURNING ${COLUMNS}`,
+      [scope.organizationId, scope.schoolId, waiverId, approve ? "approved" : "rejected", checkerId],
+    );
+  } catch (err) {
+    // Approving a second waiver while one is already approved for this
+    // (student, lifecycle) trips uq_clearance_waivers_active — surface the
+    // one-active-approval invariant as a clean 409, not a raw 500.
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("uq_clearance_waivers_active") || msg.includes("duplicate key")) {
+      throw new ClearanceWaiverError(
+        "WAIVER_ACTIVE_EXISTS",
+        "An approved waiver already exists for this student — decide or consume it first",
+        409,
+      );
+    }
+    throw err;
+  }
   const decided = claimed[0];
   if (!decided) {
     throw new ClearanceWaiverError(
