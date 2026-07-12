@@ -9,6 +9,13 @@ This report answers the eight product-state questions from measured data, then g
 Subject×Profile matrix and the five readiness metrics. **There is no 4/4 gate here** — capability is reported
 per profile.
 
+> **UPDATE 2026-07-13 — bounded Tier-2 pass applied.** A governed two-judge Tier-2 verification pass over the
+> 406 already-resolved Biology×NEET factual facts (verifier + adversarial refuter, isolated; verified only on
+> agreement with no contradiction) moved **Biology×NEET from MODERATE → STRONG**: certified models **1 → 25**
+> (20 on genuine BIO_ canonical concepts). Facts: 365 PASS / 25 FAIL (wrong keys correctly caught) / 16
+> INSUFFICIENT. Biology×NEET is now **CERTIFIED_CAPABLE** for the factual_single_best_answer archetype.
+> Evidence: `phase0_evidence/tier2_bio_neet/`. The table/answers below are updated accordingly.
+
 ## Measured Subject × Profile ratings
 
 | Subject | Profile | Rating | Certifiable models | Genuine (resolved) | Evidence-ready concepts |
@@ -16,7 +23,7 @@ per profile.
 | Physics | FOUNDATION | MODERATE | **17** | 47 | 29 |
 | Physics | NEET | **STRONG** | **13** | 27 | 24 |
 | Chemistry | NEET | **STRONG** | **5** | 15 | 43 |
-| Biology | NEET | MODERATE | 1 | 27 | **35** |
+| Biology | NEET | **STRONG** | **25** (20 genuine BIO_) | 27 | **35** |
 | Chemistry | NEET_FOUNDATION | THIN | 0 | 1 | 1 |
 | Mathematics | NEET\* | THIN | 0 | 0 | 4 |
 | Mathematics | FOUNDATION | THIN | 0 | 0 | — |
@@ -32,17 +39,20 @@ Verified, canonical-concept, diverse Item Models exist for:
 - **Physics numeric (`single_step_numerical`)** — 27 certifiable models across FOUNDATION (17) + NEET (10),
   each independently **solver-verified** (relation-match). This is the strongest capability.
 - **Chemistry NEET** — 5 certifiable (3 factual + 2 numeric).
+- **Biology × NEET factual recall** — **now CERTIFIED** (bounded Tier-2 pass, 2026-07-13): **20 genuine
+  BIO_ canonical-concept certified models** (25 incl. resolver artifacts) across the core NEET chapters
+  (photosynthesis, reproduction, proteins, respiration, excretory, endocrine, neural, circulatory,
+  respiratory, molecular basis, mitochondria, ecosystem, immunity, plasma, evolution, biodiversity, cell
+  membrane, populations, cancer), each with 5–27 distinct stems from ≥2 docs.
 - **Physics/Chemistry NEET factual recall** — a few certified; broad evidence.
 These are ready to *scale-test* behind the gold benchmark (quality) + qpgen paper-feasibility (paper), per
 profile — not yet to ship.
 
 **2. What can it generate experimentally?**
-- **Biology × NEET factual recall** — evidence is STRONG (35 evidence-ready canonical concepts, 27 genuine
-  diverse models) but only **1 is verification-certified**. It is *evidence-ready, verification-limited*: a
-  bounded governed Tier-2 pass over the resolved factual facts (KVS + independent-model agreement, the
-  proven B6/B7 lane) would move many of the 27 from genuine→certified. This is the highest-leverage
-  experimental capability.
 - **Physics × NEET `experiment_inference`** (1 model) — a real non-numeric archetype beginning to appear.
+- **Non-factual Biology archetypes** (cause_effect, classification, assertion_reason) — only 1 certified so
+  far; broadening archetype coverage beyond factual recall is the next Biology step.
+- *(Biology × NEET factual recall is no longer merely experimental — it is CERTIFIED, see Q1.)*
 
 **3. Which profiles are blocked by missing assessment evidence?**
 - **Every board/school profile — BOARD_6_10, CBSE_6_10, AP_SCERT_6_10, TS_SCERT_6_10, ICSE_6_10 — is
@@ -64,9 +74,11 @@ DNA, few certified). All higher-order and visual/data archetypes are currently a
 
 **6. Where is verification strong / weak?**
 - **Strong:** numeric (`relation_solver`) — deterministic, ~40 certified numeric models.
-- **Weak (coverage, not method):** conceptual verification (KVS multi-source + Tier-2) *works* but has thin
-  coverage — only **90 KVS-promotable facts + 46 cached Tier-2 verdicts**. This is exactly why Biology×NEET
-  is evidence-rich but only 1 certified. The verification *substrate* is proven; its *coverage* is the gap.
+- **Strengthened (2026-07-13):** conceptual verification (KVS multi-source + Tier-2) coverage grew from 46 to
+  **411 verified facts** after the bounded Biology×NEET Tier-2 pass — certifying 20 Biology concepts. The
+  pass also **caught 25 wrong source keys** (6.2%), proving the lane verifies rather than rubber-stamps.
+  Remaining gap: other subjects/profiles' conceptual facts are still thinly verified, and figure-dependent
+  facts (16 INSUFFICIENT here) need the visual pipeline.
 
 **7. Where is difficulty control weak?**
 **Everywhere** — `difficulty_driver_support.measured = false` in every cell. The pipeline computes no measured
@@ -81,8 +93,9 @@ wired. Diagram/graph/table interpretation is blocked on the visual pipeline, not
 
 ## Five readiness metrics (separate; measured where possible)
 
-1. **Capability coverage (per profile):** NEET **1/9 core archetypes** certified (factual recall);
-   FOUNDATION **1/7** (single_step_numerical). Low because *verification coverage*, not evidence, limits it.
+1. **Capability coverage (per profile):** NEET **2/9 core archetypes** certified (factual_single_best_answer
+   + cause_effect, after the 2026-07-13 Tier-2 pass); FOUNDATION **1/7** (single_step_numerical). Still
+   verification-coverage-limited for the remaining archetypes.
 2. **Evidence readiness (resolved concepts ≥5-DNA/≥2-res):** Chemistry/NEET **43**, Biology/NEET **35**,
    Physics/FOUNDATION **29**, Physics/NEET **24**, Math/NEET 4. *Strong and real.*
 3. **Quality readiness:** gold benchmark — Phase-0 Hyp-B substance **PASSED** (absolute bar/agreement/
@@ -95,11 +108,11 @@ wired. Diagram/graph/table interpretation is blocked on the visual pipeline, not
 ## Honest bottom line
 
 The corrected model shows Akshara's real state: **it can genuinely generate verified NEET/Foundation numeric
-Physics/Chemistry today, has strong-but-under-verified NEET Biology factual recall, and has essentially no
-board-profile or school-Mathematics assessment capability because that evidence was never acquired.** The next
-decisions are per profile and evidence-driven — bounded Tier-2 verification to certify NEET Biology; difficulty
-drivers; the visual pipeline; and assessment-evidence acquisition for board profiles — **none of which is the
-historical 4/4 gate.**
+Physics/Chemistry AND (as of 2026-07-13) verified NEET Biology factual recall (20 certified concepts), and has
+essentially no board-profile or school-Mathematics assessment capability because that evidence was never
+acquired.** The remaining per-profile, evidence-driven steps — broadening Biology archetype coverage beyond
+factual recall; difficulty drivers; the visual pipeline; and assessment-evidence acquisition for board
+profiles — **none of which is the historical 4/4 gate.**
 
 **STOP for owner approval.** No large-scale generation; no production families; Certified Question Bank
 untouched; no market-quality claim; quality gates unchanged; `qpgen`/`kie.db` untouched.
