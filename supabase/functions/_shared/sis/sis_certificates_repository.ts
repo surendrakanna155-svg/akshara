@@ -28,6 +28,7 @@ import {
   StudentNotFoundError,
   type StudentDetailData,
 } from "./sis_students_repository.ts";
+import { evaluateClearanceGate } from "../clearance/clearance_gate.ts";
 
 export type CertificateType = "bonafide" | "study" | "conduct" | "transfer";
 
@@ -342,15 +343,23 @@ export async function issueTransferCertificate(
   const detail = await getStudent(db, organizationId, schoolIdArg, input.studentId);
   if (!detail) throw new StudentNotFoundError(input.studentId);
 
-  // 1. NO-DUES GATE — blocks before any write.
-  const outstanding = await outstandingForStudent(
+  // 1. NO-DUES GATE — SCE-1: consult the cross-module clearance engine in GATE
+  // mode (fails CLOSED on an unreadable blocking source, exactly like the direct
+  // finance read it replaces). On the transfer_certificate lifecycle only
+  // FINANCE is blocking, and the finance contributor reports the authoritative
+  // net (COALESCE(SUM(outstanding_amount)) over open accounts) — byte-identical
+  // to outstandingForStudent — so `clearance.blocked`/`blockingAmount` equal the
+  // prior finance-only gate BY CONSTRUCTION. Inventory/library/hostel surface in
+  // the /clearance report but are advisory here (inventory-blocking is an owner
+  // opt-in). Blocks before any write; the throw rolls back the empty txn.
+  const clearance = await evaluateClearanceGate(
     db,
-    organizationId,
-    schoolIdArg,
+    { organizationId, schoolId: schoolIdArg },
     input.studentId,
+    "transfer_certificate",
   );
-  if (outstanding > 0) {
-    throw new NoDuesPendingError(outstanding);
+  if (clearance.blocked) {
+    throw new NoDuesPendingError(clearance.blockingAmount);
   }
 
   // 2. Status-transition guard — reject an already-terminal student BEFORE we

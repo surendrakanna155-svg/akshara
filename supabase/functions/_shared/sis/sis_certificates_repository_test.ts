@@ -339,6 +339,52 @@ Deno.test("issueTransferCertificate: outstanding>0 -> 409 DUES_PENDING, NOTHING 
   assertEquals(mock.statusUpdates.length, 0);
 });
 
+Deno.test("issueTransferCertificate (SCE-1): a net-zero balance (due offset by a credit) CLEARS — the engine blocks on the authoritative NET, not per-account", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({ id: STUDENT, status: "active", className: "Grade 8" });
+  // +5000 owed in one open account, -5000 credit in another → net 0 → clears.
+  // (A per-account >0 list would have wrongly blocked on the 5000 line.)
+  mock.seedOpenAccounts(STUDENT, [5000, -5000]);
+  const client = mock as unknown as TenantQueryClient;
+
+  const result = await issueTransferCertificate(client, ORG, SCHOOL, {
+    studentId: STUDENT,
+    reason: "relocation",
+    issuedBy: STAFF,
+  });
+  // The TC is issued (net dues are zero): serial burned, status flipped.
+  assertEquals(result.serialNo.length > 0, true);
+  assertEquals(mock.statusUpdates.at(-1)?.status, "transferred");
+});
+
+Deno.test("issueTransferCertificate (SCE-1): the gate FAILS CLOSED — a finance read error rolls back with NO write, never an un-gated TC", async () => {
+  const base = new CertMockDb();
+  base.seedStudent({ id: STUDENT, status: "active", className: "Grade 8" });
+  // Wrap the mock so the finance no-dues SUM throws (a DB outage on the gate).
+  const client = {
+    // deno-lint-ignore require-await
+    async queryObject<T>(sql: string, args: unknown[] = []): Promise<T[]> {
+      if (sql.includes("SUM(outstanding_amount)")) throw new Error("finance db unavailable");
+      return base.queryObject<T>(sql, args);
+    },
+    queryCount: () => Promise.resolve(0),
+  } as unknown as TenantQueryClient;
+
+  await assertRejects(
+    () => issueTransferCertificate(client, ORG, SCHOOL, {
+      studentId: STUDENT,
+      reason: "relocation",
+      issuedBy: STAFF,
+    }),
+    Error,
+    "finance db unavailable",
+  );
+  // Fail-closed: nothing was written (no serial, no issue row, no status change).
+  assertEquals(base.peekTcCounter(), undefined);
+  assertEquals(base.issues.length, 0);
+  assertEquals(base.statusUpdates.length, 0);
+});
+
 Deno.test("issueTransferCertificate: already-transferred student -> status-codec rejection (no write)", async () => {
   const mock = new CertMockDb();
   mock.seedStudent({ id: STUDENT, status: "transferred", className: "Grade 8" });

@@ -124,15 +124,28 @@ export function policyFor(lifecycle: string, module: string): ClearancePolicy {
   return Object.hasOwn(map, module) ? map[module]! : DEFAULT_MODULE_POLICY;
 }
 
+export interface BuildClearanceOptions {
+  /** GATE MODE. When true, a BLOCKING-policy contributor that THROWS re-throws
+   * (fails CLOSED) instead of degrading to not_tracked — so a failed read of a
+   * blocking dues source can never let a duesful student through a gate. Leave
+   * false for read-only reports (fail-SAFE: an inconclusive read must never
+   * fabricate a block). Advisory contributors ALWAYS degrade regardless of this
+   * flag — an advisory module's outage must not block a lifecycle event. */
+  failClosedOnBlocking?: boolean;
+}
+
 /** Fans out over the registry, aggregates, and applies the lifecycle's policy.
  * Contributors are independent: one throwing degrades ITS line to `not_tracked`
- * (surfaced, never a silent CLEARED) and never fails the whole report. */
+ * (surfaced, never a silent CLEARED) and never fails the whole report — EXCEPT
+ * a BLOCKING contributor under {failClosedOnBlocking} (gate mode), which
+ * re-throws so the caller's transaction rolls back rather than issue un-gated. */
 export async function buildClearanceReport(
   db: TenantQueryClient,
   scope: ClearanceScope,
   studentId: string,
   lifecycle: string,
   registry: readonly ClearanceContributor[],
+  opts: BuildClearanceOptions = {},
 ): Promise<ClearanceReport> {
   const contributions: ClearanceContribution[] = [];
 
@@ -152,7 +165,10 @@ export async function buildClearanceReport(
     let items: ClearanceItem[];
     try {
       items = await contributor.contribute(db, scope, studentId);
-    } catch {
+    } catch (err) {
+      // Gate mode: a BLOCKING source that can't be read must fail CLOSED (roll
+      // back), never silently pass. Advisory sources always degrade.
+      if (opts.failClosedOnBlocking && policy === "blocking") throw err;
       // A read failure must NOT read as "cleared" — surface it as not_tracked.
       contributions.push({
         module: contributor.module,

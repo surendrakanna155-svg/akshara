@@ -10,37 +10,39 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
 import type { ClearanceContributor, ClearanceItem } from "./clearance_engine.ts";
 
-/** Finance — the authoritative money source. Sum of outstanding across the
- * student's OPEN finance_student_accounts (current + prior years) — the SAME
- * balance the defaulters report and the SIS-D1 TC gate already read. Because
- * TRN-9 transport fees and inventory payment requests are raised AS finance
- * demands, this line already absorbs most cross-module money. */
+/** Finance — the authoritative money source. Reports the AUTHORITATIVE NET
+ * outstanding: COALESCE(SUM(outstanding_amount),0) across the student's OPEN
+ * finance_student_accounts, with NO per-row `>0` filter — byte-identical to the
+ * SIS-D1 TC gate's `outstandingForStudent` (sis_certificates_repository.ts), so
+ * a credit in one open account correctly nets against a due in another and the
+ * clearance engine's block decision equals the live gate's BY CONSTRUCTION
+ * (audit R1 P3-1: a per-row `>0` list could block a net-zero student the gate
+ * would clear). Kept as a self-contained query rather than importing
+ * outstandingForStudent to avoid a sis↔clearance import cycle; the shared shape
+ * is pinned by a test. TRN-9 transport fees + inventory demands raise finance
+ * rows, so this net already absorbs most cross-module money. */
 export const financeContributor: ClearanceContributor = {
   module: "finance",
   tracked: true,
   async contribute(db, scope, studentId): Promise<ClearanceItem[]> {
-    const rows = await db.queryObject<{
-      id: string;
-      academic_year: string | null;
-      outstanding: string | null;
-    }>(
-      `SELECT id, academic_year, outstanding_amount::text AS outstanding
+    const rows = await db.queryObject<{ outstanding: string | null }>(
+      `SELECT COALESCE(SUM(outstanding_amount), 0)::text AS outstanding
          FROM finance_student_accounts
         WHERE organization_id = $1
           AND school_id = $2
           AND student_id = $3::uuid
-          AND status = 'open'
-          AND outstanding_amount > 0
-        ORDER BY academic_year DESC`,
+          AND status = 'open'`,
       [scope.organizationId, scope.schoolId, studentId],
     );
-    return rows.map((r) => ({
-      reference: r.id,
-      description: r.academic_year
-        ? `Fee dues — ${r.academic_year}`
-        : "Fee dues",
-      amount: Number(r.outstanding ?? 0),
-    }));
+    const net = Number(rows[0]?.outstanding ?? 0);
+    // Only a POSITIVE net is a due; a zero/credit net is cleared (matches the
+    // gate's `outstanding > 0`). One authoritative line, no per-year breakdown.
+    if (!(net > 0)) return [];
+    return [{
+      reference: `finance:${studentId}`,
+      description: "Fee dues (net across open accounts)",
+      amount: net,
+    }];
   },
 };
 
