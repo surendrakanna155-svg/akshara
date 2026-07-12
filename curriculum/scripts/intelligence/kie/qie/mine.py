@@ -40,8 +40,16 @@ _SUBJ_KW = {
                 "species", "bacteria", "virus", "organ", "membrane", "nephron", "stomata"],
     "Mathematics": ["matrix", "determinant", "integral", "derivative", "probability", "triangle", "circle",
                     "polynomial", "vector", "logarithm", "sine", "cosine", "sequence", "mean", "median",
-                    "area", "volume", "perimeter", "ratio", "angle"],
+                    "area", "volume", "perimeter", "ratio", "angle", "equation", "value of", "solve",
+                    "roots", "quadratic", "function f", "coefficient", "arithmetic", "geometric",
+                    "tangent", "chord", "radius", "diameter", "hypotenuse", "factorial", "permutation",
+                    "combination", "binomial", "trigonometric", "expression", "series", "term of",
+                    "coordinates", "slope", "parabola", "ellipse", "hyperbola", "modulus", "inequality"],
 }
+# B3: math-notation signals that boost the Mathematics score (Math's lexicon is otherwise out-competed by
+# the richer physics/chem/bio lexicons, so genuine math items were mis-attributed / dropped).
+_MATH_NOTATION = re.compile(r"(f\s*\(\s*x\s*\)|x\s*\^|x\s*²|d\s*y\s*/\s*d\s*x|∫|∑|√|\|\s*x\s*\||"
+                            r"\b(sin|cos|tan|cot|sec|cosec|log|ln|lim)\b|\bdx\b|=\s*0\b|\bx\s*=)", re.I)
 _LANE_KEYWORDS = [
     ("ASSERTION_RELATION", ("assertion", "reason")),
     ("STRUCTURE_FUNCTION", ("function of", "responsible for", "role of", "site of", "secreted by")),
@@ -55,12 +63,11 @@ _LANE_KEYWORDS = [
 
 def guess_subject(text: str) -> Optional[str]:
     t = text.lower()
-    best, bs = None, 0
-    for s, kws in _SUBJ_KW.items():
-        c = sum(1 for k in kws if k in t)
-        if c > bs:
-            bs, best = c, s
-    return best if bs else None
+    scores = {s: sum(1 for k in kws if k in t) for s, kws in _SUBJ_KW.items()}
+    if _MATH_NOTATION.search(text):          # a strong math-notation hit counts toward Mathematics
+        scores["Mathematics"] += 2
+    best = max(scores, key=lambda s: scores[s])
+    return best if scores[best] else None
 
 
 def classify_nonnumeric_lane(stem: str) -> str:

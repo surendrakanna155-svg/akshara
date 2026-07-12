@@ -13,6 +13,15 @@ class TestRecovery(unittest.TestCase):
         self.assertEqual(len(recs[0]["options"]), 4)
         self.assertEqual(recs[0]["key"], 1)
 
+    def test_math_attribution_via_notation(self):
+        # a math item with notation but no rich Physics/Bio lexicon must attribute to Mathematics (B3)
+        self.assertEqual(mine.guess_subject("If f(x) = x^2 - 5x + 6, find the roots of the equation."),
+                         "Mathematics")
+        self.assertEqual(mine.guess_subject("Evaluate the value of sin 30 + cos 60."), "Mathematics")
+        # substring false positives must NOT fire (biology/constant/cosmic)
+        self.assertNotEqual(mine.guess_subject("The biology of the cell membrane and its organelles."),
+                            "Mathematics")
+
     def test_lane_classification(self):
         self.assertEqual(mine.classify_nonnumeric_lane("Assertion (A): x. Reason (R): y."), "ASSERTION_RELATION")
         self.assertEqual(mine.classify_nonnumeric_lane("What is the function of the nephron?"), "STRUCTURE_FUNCTION")

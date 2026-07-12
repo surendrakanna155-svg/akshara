@@ -106,6 +106,40 @@ LIBRARY: Tuple[Relation, ...] = (
     _R("pythag", 2, lambda a, b: math.sqrt(a * a + b * b), "Mathematics", "len"),
     _R("prob", 2, lambda a, b: a / b, "Mathematics", "prob"),
     _R("ratio", 2, lambda a, b: a / b, "Mathematics", "ratio"),
+    # ── B2 breadth (2026-07-12): more curriculum relations to lift numeric-verified yield ──
+    # physics
+    _R("KE_from_p", 2, lambda p, m: p * p / (2 * m), "Physics", "J"),
+    _R("gravitation", 3, lambda m1, m2, r: 6.674e-11 * m1 * m2 / (r * r), "Physics", "N"),
+    _R("Q=CV", 2, lambda c, v: c * v, "Physics", "C"),
+    _R("E_cap", 2, lambda c, v: 0.5 * c * v * v, "Physics", "J"),
+    _R("torque", 2, lambda f, r: f * r, "Physics", "Nm"),
+    _R("efficiency_pct", 2, lambda out, inp: 100 * out / inp, "Physics", "%"),
+    _R("power_avg", 2, lambda w, t: w / t, "Physics", "W"),
+    _R("wavelength", 2, lambda v, f: v / f, "Physics", "m"),
+    _R("period", 1, lambda f: 1 / f, "Physics", "s"),
+    _R("accel_centripetal", 2, lambda v, r: v * v / r, "Physics", "m/s2"),
+    _R("heat_latent", 2, lambda m, L: m * L, "Physics", "J"),
+    # chemistry
+    _R("PV=nRT_P", 3, lambda n, T, V: n * 0.0821 * T / V, "Chemistry", "atm"),
+    _R("percent_by_mass", 2, lambda part, whole: 100 * part / whole, "Chemistry", "%"),
+    _R("dilution_M2", 3, lambda m1, v1, v2: m1 * v1 / v2, "Chemistry", "M"),
+    _R("normality", 2, lambda eq, V: eq / V, "Chemistry", "N"),
+    _R("moles_from_molecules", 1, lambda N: N / 6.022e23, "Chemistry", "mol"),
+    _R("rate_ratio", 2, lambda a, b: a / b, "Chemistry", "ratio"),
+    # mathematics
+    _R("gp_nth", 3, lambda a, r, n: a * (r ** (n - 1)), "Mathematics", "num"),
+    _R("gp_sum", 3, lambda a, r, n: a * (r ** n - 1) / (r - 1) if r != 1 else a * n, "Mathematics", "num"),
+    _R("quadratic_sum_roots", 2, lambda b, a: -b / a, "Mathematics", "num"),
+    _R("quadratic_prod_roots", 2, lambda c, a: c / a, "Mathematics", "num"),
+    _R("nCr_pair", 1, lambda n: n * (n - 1) / 2, "Mathematics", "num"),
+    _R("sum_n", 1, lambda n: n * (n + 1) / 2, "Mathematics", "num"),
+    _R("sum_n2", 1, lambda n: n * (n + 1) * (2 * n + 1) / 6, "Mathematics", "num"),
+    _R("avg3", 3, lambda a, b, c: (a + b + c) / 3, "Mathematics", "num"),
+    _R("profit_pct", 2, lambda profit, cost: 100 * profit / cost, "Mathematics", "%"),
+    _R("distance_speed_time", 2, lambda s, t: s * t, "Mathematics", "dist"),
+    _R("surface_sphere", 1, lambda r: 4 * math.pi * r * r, "Mathematics", "area"),
+    _R("tsa_cylinder", 2, lambda r, h: 2 * math.pi * r * (r + h), "Mathematics", "area"),
+    _R("diagonal_rect", 2, lambda l, b: math.sqrt(l * l + b * b), "Mathematics", "len"),
 )
 
 
