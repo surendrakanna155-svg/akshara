@@ -57,8 +57,14 @@
   272→277 (minor, expected — smaller pool; a Phase-D diversity concern, not a canon regression, no gate
   weakened). 4 apply/rollback tests green. Evidence: `phase0_evidence/qp_postcanon_A2_2026-07-12.json`.
   EOS gate: **PASS**. Reversible via `concept_canon.rollback()` + the backup.
-- **A3 — KVS v0 seed:** relation library (done in A0) + assertion-base seed mined from `reference_facts` /
-  `concept_edges` / verified source-MCQ keys; the non-numeric verification backbone.
+- **A3 — KVS v0 seed — ✅ DONE (2026-07-12).** `kvs_seed.py` seeds the assertion base / taxonomy from
+  `concept_edges` + `reference_facts`, **filtered against post-canon active concepts** (so A2's quarantine
+  keeps junk out of the KVS — concretely, **235 edges skipped** for touching quarantined concepts). Seeded
+  **1,684 assertions** (1,419 edge + 265 reference-fact) + 131 taxonomy rows into local `qie.db`. **Honest v0
+  finding: 0 are promotable** (`evidence_count ≥ 2`) — the raw material (single-source edges + bare law-name
+  facts) cannot yet back non-numeric verification; a real KVS needs dedicated **multi-source mining (Phase B)**.
+  4 tests green. The relation library (numeric backbone) was delivered in A0. Evidence:
+  `phase0_evidence/kvs_v0_seed_A3.json`. EOS gate: **PASS** (plumbing correct + tested; thinness reported).
 - **A4 — E-lite ingestion boundary:** for newly ingested docs, persist question/option/answer/solution
   boundaries + equations/tables + visual assets + bbox/offset provenance (scoped ingestion-phase change,
   reviewed) — before the 200–300 incoming board PDFs ingest lossy.

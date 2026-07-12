@@ -1,0 +1,9 @@
+{
+  "assertions_seeded": 1419,
+  "edges_skipped_junk_endpoint": 235,
+  "taxonomy_rows_seeded": 131,
+  "reference_fact_assertions": 265,
+  "skipped_unparseable": 0,
+  "kvs_assertions_total": 1684,
+  "kvs_assertions_promotable_ge2_evidence": 0
+}
