@@ -78,7 +78,13 @@ class AppLockController extends Notifier<AppLockState> {
   /// decide whether the away-time crossed the grace window.
   void onBackground(DateTime now) {
     if (!state.enabled) return;
-    _backgroundedAt = now;
+    // Keep the EARLIEST background mark within one background episode (audit
+    // P2): both `paused` and `detached` arm, and the OS may fire a later signal
+    // (e.g. a memory-trim `detached` after `paused`) without an intervening
+    // resume. Overwriting with the later instant would shrink the measured
+    // away-time and could dodge the grace window (fail-open). `??=` preserves t0;
+    // onResume always clears the mark, so the next episode starts fresh.
+    _backgroundedAt ??= now;
   }
 
   /// Lifecycle: the app returned to the foreground. Re-lock iff enabled and the

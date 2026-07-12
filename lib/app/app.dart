@@ -111,6 +111,12 @@ class _AksharaAppState extends ConsumerState<AksharaApp>
         final locked = ref.watch(
           appLockControllerProvider.select((s) => s.locked),
         );
+        // Defensive (audit P3): the scrim is only ever armed while enabled and
+        // is cleared on every resume, but gate its render on `enabled` too so a
+        // future refactor can't leave it stuck visible with App Lock off.
+        final appLockEnabled = ref.watch(
+          appLockControllerProvider.select((s) => s.enabled),
+        );
         // P1-SEC-1 (audit P2-2): the Android back button is NOT intercepted here
         // and does not need to be. This builder-level Stack sits above GoRouter's
         // Navigator but is a descendant of NEITHER a Navigator nor a Router, so
@@ -134,7 +140,7 @@ class _AksharaAppState extends ConsumerState<AksharaApp>
             // Privacy scrim (audit P1-1): shown while backgrounded so the OS
             // snapshot never captures PII. The biometric lock overlay, when
             // present, sits above it and supersedes it.
-            if (_obscured && !locked)
+            if (_obscured && appLockEnabled && !locked)
               const Positioned.fill(child: _AppLockPrivacyScrim()),
             if (locked)
               Positioned.fill(

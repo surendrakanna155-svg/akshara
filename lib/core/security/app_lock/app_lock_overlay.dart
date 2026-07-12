@@ -68,6 +68,7 @@ class _AppLockOverlayState extends ConsumerState<AppLockOverlay> {
   }
 
   Future<void> _confirmSignOut() async {
+    if (_busy || !mounted) return; // symmetry with _attempt's re-entrancy guard
     // Inline confirm (audit P0-1): no Navigator/showDialog dependency.
     setState(() {
       _busy = true;
@@ -88,9 +89,12 @@ class _AppLockOverlayState extends ConsumerState<AppLockOverlay> {
     final scheme = Theme.of(context).colorScheme;
     final text = context.aksharaText;
     // The opaque full-screen Material + AbsorbPointer background swallow every
-    // tap that isn't on the card, so nothing behind is interactable (F2). Back
-    // is handled at the app shell (BackButtonListener while locked) — a
-    // builder-level widget has no ModalRoute, so PopScope here would be a no-op.
+    // tap that isn't on the card, so nothing behind is interactable (F2). The
+    // Android back button is intentionally NOT intercepted (audit P2-2): a
+    // builder-level widget has neither a ModalRoute nor a Router ancestor, so
+    // PopScope/BackButtonListener can't register here. It's safe — this overlay
+    // is driven by lock STATE, not the route stack, so back only navigates the
+    // hidden route beneath it (still covered) or backgrounds the app.
     return Material(
       key: const Key('app-lock-overlay'),
       color: scheme.surface,

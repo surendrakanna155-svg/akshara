@@ -105,6 +105,20 @@ void main() {
         reason: 'stale backgrounded-at must have been cleared; no spurious re-lock');
   });
 
+  test('audit P2: a second background signal keeps the EARLIEST mark — the grace window is not shrunk (no fail-open)', () async {
+    final c = await _container(enabledInPrefs: true, biometric: _FakeBiometric(true));
+    final ctrl = c.read(appLockControllerProvider.notifier);
+    await ctrl.unlock();
+    // paused at t0, then a later detached (memory trim) at t0+60s with NO resume
+    // in between must NOT reset the mark to the later instant.
+    ctrl.onBackground(_t0);
+    ctrl.onBackground(_t0.add(const Duration(seconds: 60)));
+    // Resume 3s after the LATER signal but 63s after the real background start.
+    ctrl.onResume(_t0.add(const Duration(seconds: 63)));
+    expect(c.read(appLockControllerProvider).locked, isTrue,
+        reason: 'away-time measured from the earliest mark (63s > 15s) → re-lock');
+  });
+
   test('audit F4: a BACKWARD clock while backgrounded re-locks (fail-safe), never dodges', () async {
     final c = await _container(enabledInPrefs: true, biometric: _FakeBiometric(true));
     final ctrl = c.read(appLockControllerProvider.notifier);
