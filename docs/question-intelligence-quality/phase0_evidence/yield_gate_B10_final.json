@@ -1,0 +1,23 @@
+{
+  "gate": "2/4",
+  "verified_models": {
+    "Physics": 20,
+    "Chemistry": 12,
+    "Biology": 2,
+    "Mathematics": 6
+  },
+  "biology": {
+    "resolution_fixed": true,
+    "items_resolved_to_canonical": 524,
+    "diverse_canonical_concepts_ge5distinct_ge2doc": 17,
+    "structured_lane_concept_models_ceiling": 4,
+    "factual_recall_distinct_stems_excluded": 436,
+    "if_factual_recall_archetype_admitted_concepts": 28,
+    "verified_now": 2
+  },
+  "mathematics": {
+    "genuine_school_profile_verified_items_full_stream": 1,
+    "genuine_school_profile_models": 0,
+    "blocker": "corpus is JEE calculus/conics + misattributed physics; genuine school-math essentially absent"
+  }
+}
