@@ -1,0 +1,309 @@
+{
+  "total_pdfs_workspace": 1526,
+  "qcorpus_docs": 863,
+  "kie_source_docs": 380,
+  "qcorpus_is": "curriculum/resources/foundation/Cursor_Downloads (DPP crawl) only",
+  "kie_is": "foundation exams (NEET/JEE/AIIMS/AIPMT/Practice/NCERT/boards) + intake - DISTINCT from qcorpus",
+  "recovered_total_kie": 5426,
+  "sources": [
+    {
+      "exam": "NEET",
+      "kie_docs": 152,
+      "in_qcorpus": 0,
+      "pdf_location": "resources/foundation/NEET",
+      "ocr_parse": {
+        "scanned_image": 52,
+        "born_digital_text": 96,
+        "sparse_text": 3,
+        "corrupt": 1
+      },
+      "doc_subjects": {
+        "Chemistry": 47,
+        "Physics": 68,
+        "?": 20,
+        "Biology": 17
+      },
+      "doc_types": {
+        "previous_paper": 106,
+        "answer_key": 17,
+        "solution": 28,
+        "?": 1
+      },
+      "years": [
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "certified": 151,
+      "recovered_keyed_mcq": 5391,
+      "utilization": "utilized",
+      "reason_unused": ""
+    },
+    {
+      "exam": "JEE_Main",
+      "kie_docs": 74,
+      "in_qcorpus": 0,
+      "pdf_location": "resources/foundation/JEE_Main",
+      "ocr_parse": {
+        "sparse_text": 6,
+        "born_digital_text": 61,
+        "scanned_image": 7
+      },
+      "doc_subjects": {
+        "?": 58,
+        "Chemistry": 7,
+        "Physics": 6,
+        "Mathematics": 3
+      },
+      "doc_types": {
+        "previous_paper": 61,
+        "answer_key": 3,
+        "solution": 10
+      },
+      "years": [
+        2016,
+        2020,
+        2021,
+        2023,
+        2024,
+        2025
+      ],
+      "certified": 74,
+      "recovered_keyed_mcq": 0,
+      "utilization": "STRANDED",
+      "reason_unused": "format mismatch (parser=born_digital_text, doctype=previous_paper)"
+    },
+    {
+      "exam": "Practice_Resources",
+      "kie_docs": 54,
+      "in_qcorpus": 0,
+      "pdf_location": "resources/foundation/Practice_Resources",
+      "ocr_parse": {
+        "born_digital_text": 45,
+        "scanned_image": 4,
+        "sparse_text": 5
+      },
+      "doc_subjects": {
+        "Physics": 15,
+        "Chemistry": 19,
+        "?": 7,
+        "Mathematics": 6,
+        "Biology": 7
+      },
+      "doc_types": {
+        "solution": 13,
+        "previous_paper": 7,
+        "unknown": 9,
+        "dpp": 7,
+        "answer_key": 1,
+        "mock_test": 5,
+        "sample_paper": 12
+      },
+      "years": [
+        2019,
+        2020,
+        2021,
+        2023,
+        2025
+      ],
+      "certified": 54,
+      "recovered_keyed_mcq": 1,
+      "utilization": "partial",
+      "reason_unused": "mostly solution docs (no inline question+option+key triple)"
+    },
+    {
+      "exam": "NCERT",
+      "kie_docs": 29,
+      "in_qcorpus": 0,
+      "pdf_location": "resources/foundation/* / curriculum/*",
+      "ocr_parse": {
+        "archive": 28,
+        "corrupt": 1
+      },
+      "doc_subjects": {
+        "Physics": 8,
+        "Mathematics": 11,
+        "Biology": 4,
+        "Chemistry": 5,
+        "?": 1
+      },
+      "doc_types": {
+        "textbook": 28,
+        "?": 1
+      },
+      "years": [],
+      "certified": 28,
+      "recovered_keyed_mcq": 0,
+      "utilization": "STRANDED",
+      "reason_unused": "textbook corpus (few MCQs) - expected low yield"
+    },
+    {
+      "exam": "AIIMS",
+      "kie_docs": 26,
+      "in_qcorpus": 0,
+      "pdf_location": "resources/foundation/AIIMS",
+      "ocr_parse": {
+        "scanned_image": 26
+      },
+      "doc_subjects": {
+        "Chemistry": 7,
+        "Physics": 17,
+        "Biology": 2
+      },
+      "doc_types": {
+        "solution": 26
+      },
+      "years": [
+        2001,
+        2002,
+        2003,
+        2004,
+        2005,
+        2006,
+        2007,
+        2008,
+        2009,
+        2010,
+        2011,
+        2012,
+        2013
+      ],
+      "certified": 26,
+      "recovered_keyed_mcq": 0,
+      "utilization": "STRANDED",
+      "reason_unused": "mostly solution docs (no inline question+option+key triple)"
+    },
+    {
+      "exam": "JEE_Advanced",
+      "kie_docs": 20,
+      "in_qcorpus": 19,
+      "pdf_location": "resources/foundation/JEE_Advanced",
+      "ocr_parse": {
+        "scanned_image": 4,
+        "born_digital_text": 16
+      },
+      "doc_subjects": {
+        "Physics": 12,
+        "Chemistry": 7,
+        "Mathematics": 1
+      },
+      "doc_types": {
+        "previous_paper": 20
+      },
+      "years": [
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "certified": 20,
+      "recovered_keyed_mcq": 0,
+      "utilization": "STRANDED",
+      "reason_unused": "letter-option (A)(B)(C)(D) papers + separate keys; miner expects (1)(2)(3)(4)+inline Answer"
+    },
+    {
+      "exam": "CBSE_NCERT",
+      "kie_docs": 15,
+      "in_qcorpus": 0,
+      "pdf_location": "resources/curriculum/cbse",
+      "ocr_parse": {
+        "born_digital_text": 15
+      },
+      "doc_subjects": {
+        "Mathematics": 1,
+        "Chemistry": 4,
+        "Biology": 3,
+        "Physics": 6,
+        "?": 1
+      },
+      "doc_types": {
+        "unknown": 15
+      },
+      "years": [],
+      "certified": 15,
+      "recovered_keyed_mcq": 0,
+      "utilization": "STRANDED",
+      "reason_unused": "textbook corpus (few MCQs) - expected low yield"
+    },
+    {
+      "exam": "AIPMT",
+      "kie_docs": 6,
+      "in_qcorpus": 0,
+      "pdf_location": "resources/foundation/AIPMT",
+      "ocr_parse": {
+        "born_digital_text": 6
+      },
+      "doc_subjects": {
+        "Chemistry": 2,
+        "Physics": 4
+      },
+      "doc_types": {
+        "collection": 6
+      },
+      "years": [],
+      "certified": 6,
+      "recovered_keyed_mcq": 34,
+      "utilization": "partial",
+      "reason_unused": "format mismatch (parser=born_digital_text, doctype=collection)"
+    },
+    {
+      "exam": "TS_SCERT",
+      "kie_docs": 3,
+      "in_qcorpus": 0,
+      "pdf_location": "resources/curriculum/telangana",
+      "ocr_parse": {
+        "born_digital_text": 3
+      },
+      "doc_subjects": {
+        "Chemistry": 1,
+        "Mathematics": 1,
+        "Biology": 1
+      },
+      "doc_types": {
+        "unknown": 3
+      },
+      "years": [
+        2025
+      ],
+      "certified": 3,
+      "recovered_keyed_mcq": 0,
+      "utilization": "STRANDED",
+      "reason_unused": "textbook corpus (few MCQs) - expected low yield"
+    },
+    {
+      "exam": "NTA_Sample",
+      "kie_docs": 1,
+      "in_qcorpus": 0,
+      "pdf_location": "resources/foundation/NTA_Sample",
+      "ocr_parse": {
+        "born_digital_text": 1
+      },
+      "doc_subjects": {
+        "Physics": 1
+      },
+      "doc_types": {
+        "sample_paper": 1
+      },
+      "years": [
+        2025
+      ],
+      "certified": 1,
+      "recovered_keyed_mcq": 0,
+      "utilization": "STRANDED",
+      "reason_unused": "format mismatch (parser=born_digital_text, doctype=sample_paper)"
+    }
+  ]
+}

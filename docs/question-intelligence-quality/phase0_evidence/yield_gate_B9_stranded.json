@@ -1,0 +1,39 @@
+{
+  "before_b8": {
+    "verified_models": {
+      "Physics": 20,
+      "Chemistry": 12,
+      "Biology": 1,
+      "Mathematics": 6
+    },
+    "recovered": {
+      "Physics": 5440,
+      "Chemistry": 3890,
+      "Biology": 2247,
+      "Mathematics": 465
+    },
+    "gate": 2
+  },
+  "after_b9_stranded_bridge": {
+    "verified_models": {
+      "Physics": 20,
+      "Chemistry": 12,
+      "Biology": 1,
+      "Mathematics": 6
+    },
+    "recovered": {
+      "Physics": 5468,
+      "Chemistry": 3952,
+      "Biology": 2269,
+      "Mathematics": 478
+    },
+    "gate": 2,
+    "stream": {
+      "base_qcorpus": 6558,
+      "deglue_delta": 58,
+      "stranded_added": 125,
+      "stranded_deduped": 86
+    }
+  },
+  "verdict": "2/4 UNCHANGED - stranded reuse does not move the verified gate"
+}
