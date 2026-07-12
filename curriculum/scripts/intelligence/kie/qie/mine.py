@@ -132,6 +132,36 @@ def _dna_id(subject, lane, concept, sig) -> str:
     return "D_" + hashlib.sha256(f"{subject}|{lane}|{concept}|{sig}".encode()).hexdigest()[:16]
 
 
+def norm_answer(text: str) -> str:
+    t = (text or "").lower().strip()
+    t = re.sub(r"\s+", " ", t)
+    return re.sub(r"[.;,:]+$", "", t)
+
+
+def fact_key(concept: str, answer_text: str) -> str:
+    """Stable key for a (concept, correct-answer) fact — shared with kvs_build for verification lookup."""
+    return hashlib.sha256(f"{concept}|{norm_answer(answer_text)}".encode()).hexdigest()[:20]
+
+
+# Option-label / non-semantic answers ("a-ii, b-i", "a, b, c only", "both a and b", "all of the above",
+# single letters/romans) collide across unrelated questions and must NOT count as corroborated FACTS.
+_OPTION_LABEL = re.compile(
+    r"^(all of the above|none of (the above|these)|both\b.*|only\b.*|[a-d]\s*(and|,|;|&)\s*[a-d].*|"
+    r"[a-d]\s*-\s*[ivx]+.*|[ivx]+\s*(,|and)\s*[ivx]+.*|\d+\s*(and|,|&)\s*\d+.*|[a-d]|[ivx]{1,4}|\d{1,2})$",
+    re.I)
+
+
+def is_semantic_answer(ans: str) -> bool:
+    """True only for a real content answer — not an option label, not a stub."""
+    a = norm_answer(ans)
+    return len(a) >= 4 and not _OPTION_LABEL.match(a)
+
+
+def is_resolved_concept(concept: str) -> bool:
+    """True only for a resolved concept_code (not a coarse 'subject:keyword' fallback bucket)."""
+    return ":" not in concept
+
+
 def concept_key(stem: str, subject: str, by_title: Dict[str, str]) -> str:
     t = stem.lower()
     for title, code in by_title.items():
@@ -144,8 +174,12 @@ def concept_key(stem: str, subject: str, by_title: Dict[str, str]) -> str:
 
 
 def run(kconn: sqlite3.Connection, qconn: sqlite3.Connection, now: str,
-        max_per_subject: int = 100000) -> dict:
-    """Full-corpus mine. Returns metrics incl. the retained yield-gate result per subject."""
+        max_per_subject: int = 100000, verified_facts: Optional[Set[str]] = None) -> dict:
+    """Full-corpus mine. Returns metrics incl. BOTH the structural and (if `verified_facts` supplied from
+    the KVS) the VERIFICATION-BACKED yield-gate result per subject. A non-numeric Item Model is
+    verification-backed when >=50% of its member DNA facts are KVS-promotable (>=2 independent source docs);
+    numeric Item Models are verification-backed by relation-match."""
+    verified_facts = verified_facts or set()
     kconn.row_factory = sqlite3.Row
     active: Set[str] = {r[0] for r in kconn.execute("SELECT concept_code FROM concepts WHERE status='active'")}
     by_title = {(r[1] or "").lower(): r[0] for r in
@@ -156,7 +190,8 @@ def run(kconn: sqlite3.Connection, qconn: sqlite3.Connection, now: str,
 
     per_subj = defaultdict(lambda: defaultdict(int))
     # cluster: subject -> key(lane,concept) -> {dna_ids:set, docs:set}
-    clusters: Dict[str, Dict[tuple, dict]] = defaultdict(lambda: defaultdict(lambda: {"dna": set(), "docs": set()}))
+    clusters: Dict[str, Dict[tuple, dict]] = defaultdict(
+        lambda: defaultdict(lambda: {"dna": set(), "docs": set(), "verified": set()}))
     dna_rows = []
     counts = defaultdict(int)
     for row in rows:
@@ -182,6 +217,7 @@ def run(kconn: sqlite3.Connection, qconn: sqlite3.Connection, now: str,
                                      json.dumps(tf)))
                     clusters[subj][(lane, rel)]["dna"].add(did)
                     clusters[subj][(lane, rel)]["docs"].add(doc)
+                    clusters[subj][(lane, rel)]["verified"].add(did)   # relation-match = verified
                     counts["numeric_dna"] += 1
                     continue
                 per_subj[subj]["numeric_unverified"] += 1
@@ -197,6 +233,8 @@ def run(kconn: sqlite3.Connection, qconn: sqlite3.Connection, now: str,
             dna_rows.append((did, lane, subj, ck, json.dumps({"concept": ck}), json.dumps([])))
             clusters[subj][(lane, ck)]["dna"].add(did)
             clusters[subj][(lane, ck)]["docs"].add(doc)
+            if fact_key(ck, keyopt) in verified_facts:      # KVS-corroborated (>=2 independent source docs)
+                clusters[subj][(lane, ck)]["verified"].add(did)
             counts["nonnum_dna"] += 1
 
     # persist DNA
@@ -208,26 +246,33 @@ def run(kconn: sqlite3.Connection, qconn: sqlite3.Connection, now: str,
     # qualify + persist Item Models; measure yield gate (>=5 DNA, >=2 resources, distinct lane/archetype)
     yield_result = {}
     for subj in ("Physics", "Chemistry", "Biology", "Mathematics"):
-        qualified = []
+        qualified, verified_models = [], []
         for (lane, concept), c in clusters[subj].items():
             n_dna, n_res = len(c["dna"]), len(c["docs"])
             if n_dna >= 5 and n_res >= 2:
+                is_verified = (lane == "NUMERIC_RELATIONAL") or (len(c["verified"]) / n_dna >= 0.5)
                 imid = "IM_" + hashlib.sha256(f"{subj}|{lane}|{concept}".encode()).hexdigest()[:16]
                 qconn.execute(
-                    "INSERT OR IGNORE INTO item_model(item_model_id,lane,archetype,concept_scope,n_dna,"
+                    "INSERT OR REPLACE INTO item_model(item_model_id,lane,archetype,concept_scope,n_dna,"
                     "n_resources,certification_status,created_at) VALUES (?,?,?,?,?,?,?,?)",
-                    (imid, lane, lane, json.dumps([concept]), n_dna, n_res, "draft", now))
-                qualified.append({"lane": lane, "concept": concept, "n_dna": n_dna, "n_res": n_res})
-        # distinct-lane count: number of qualified models
+                    (imid, lane, lane, json.dumps([concept]), n_dna, n_res,
+                     "ai_validated" if is_verified else "draft", now))
+                entry = {"lane": lane, "concept": concept, "n_dna": n_dna, "n_res": n_res, "verified": is_verified}
+                qualified.append(entry)
+                if is_verified:
+                    verified_models.append(entry)
         yield_result[subj] = {
             "recovered": per_subj[subj]["recovered"],
             "numeric_verified": per_subj[subj]["numeric_verified"],
             "qualified_item_models": len(qualified),
+            "verified_item_models": len(verified_models),
             "distinct_lanes": len({q["lane"] for q in qualified}),
-            "meets_gate_ge8": len(qualified) >= 8,
-            "models": sorted(qualified, key=lambda q: -q["n_dna"])[:15],
+            "meets_structural_gate_ge8": len(qualified) >= 8,
+            "meets_verified_gate_ge8": len(verified_models) >= 8,
+            "models": sorted(qualified, key=lambda q: (-q["verified"], -q["n_dna"]))[:20],
         }
     qconn.commit()
     return {"total_dna": len(dna_rows), "counts": dict(counts),
-            "yield_gate_ge8_per_subject": {s: yield_result[s]["meets_gate_ge8"] for s in yield_result},
+            "structural_gate_ge8": {s: yield_result[s]["meets_structural_gate_ge8"] for s in yield_result},
+            "verified_gate_ge8": {s: yield_result[s]["meets_verified_gate_ge8"] for s in yield_result},
             "per_subject": yield_result}

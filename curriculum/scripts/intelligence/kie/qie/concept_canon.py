@@ -22,6 +22,8 @@ _NON_CONCEPT = (
     "reason", "match the", "academic standard", "amazing fact", "activity", "exercise", "example",
     "alternative arrangement", "let us", "do you know", "try these", "fill in the blank",
     "true or false", "answer the", "figure ", "table ", "solution", "objective type",
+    # B5 additions — junk pseudo-concepts found over-corroborating the KVS (spot-check 2026-07-12)
+    "correct answ", "correct answer", "answer key", "answ", "column", "list i", "list-i",
 )
 # subject_domain prefix map for cross-subject mistag detection
 _PREFIX = {"PHY_": "Physics", "CHE_": "Chemistry", "BIO_": "Biology", "MAT_": "Mathematics", "MATH_": "Mathematics"}
