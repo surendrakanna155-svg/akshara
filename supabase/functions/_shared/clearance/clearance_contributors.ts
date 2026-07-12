@@ -18,9 +18,11 @@ import type { ClearanceContributor, ClearanceItem } from "./clearance_engine.ts"
  * clearance engine's block decision equals the live gate's BY CONSTRUCTION
  * (audit R1 P3-1: a per-row `>0` list could block a net-zero student the gate
  * would clear). Kept as a self-contained query rather than importing
- * outstandingForStudent to avoid a sis↔clearance import cycle; the shared shape
- * is pinned by a test. TRN-9 transport fees + inventory demands raise finance
- * rows, so this net already absorbs most cross-module money. */
+ * outstandingForStudent to avoid a sis↔clearance import cycle; the net-SUM shape
+ * (no per-row filter) is pinned by a contributor test — the two queries are
+ * intentional twins kept in sync by that test's assertions, not shared code.
+ * TRN-9 transport fees + inventory demands raise finance rows, so this net
+ * already absorbs most cross-module money. */
 export const financeContributor: ClearanceContributor = {
   module: "finance",
   tracked: true,

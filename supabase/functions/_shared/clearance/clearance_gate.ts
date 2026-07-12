@@ -28,6 +28,10 @@ export async function evaluateClearanceGate(
     studentId,
     lifecycle,
     DEFAULT_CLEARANCE_REGISTRY,
-    { failClosedOnBlocking: true },
+    // Gate mode: fail closed on a blocking-source read error, and run ONLY the
+    // blocking contributors — an advisory query has no bearing on the decision
+    // and (audit slice-2 P2) must not run inside the gate's transaction where a
+    // DB-level error would poison it.
+    { failClosedOnBlocking: true, blockingContributorsOnly: true },
   );
 }

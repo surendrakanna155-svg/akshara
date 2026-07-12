@@ -132,6 +132,16 @@ export interface BuildClearanceOptions {
    * fabricate a block). Advisory contributors ALWAYS degrade regardless of this
    * flag — an advisory module's outage must not block a lifecycle event. */
   failClosedOnBlocking?: boolean;
+  /** GATE MODE. When true, ADVISORY-policy contributors are skipped entirely
+   * (not even queried) — they cannot affect the block decision, so a gate never
+   * needs them. This also avoids a subtle transactional hazard (audit slice-2
+   * P2): an advisory query that errors at the Postgres LEVEL inside the gate's
+   * transaction would poison the whole txn (aborting the subsequent writes),
+   * turning a supposed graceful-degrade into a blocked lifecycle event. A gate
+   * running only blocking contributors is immune. Stays future-proof: a module
+   * the owner flips to blocking IS run. Read-only reports leave this false to
+   * surface the full cross-module picture (advisory dues + not_tracked coverage). */
+  blockingContributorsOnly?: boolean;
 }
 
 /** Fans out over the registry, aggregates, and applies the lifecycle's policy.
@@ -151,6 +161,10 @@ export async function buildClearanceReport(
 
   for (const contributor of registry) {
     const policy = policyFor(lifecycle, contributor.module);
+    // Gate mode: an advisory contributor cannot change the block decision, so
+    // it is never queried — no wasted round-trip, and no advisory query can
+    // poison the gate's transaction (audit slice-2 P2).
+    if (opts.blockingContributorsOnly && policy !== "blocking") continue;
     if (!contributor.tracked) {
       contributions.push({
         module: contributor.module,

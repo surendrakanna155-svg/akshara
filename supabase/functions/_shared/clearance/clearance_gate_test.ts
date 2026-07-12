@@ -56,6 +56,42 @@ Deno.test("gate mode: an ADVISORY contributor that throws still DEGRADES (does n
   assertEquals(report.contributions[1].status, "not_tracked");
 });
 
+Deno.test("gate mode blockingContributorsOnly: an advisory contributor is NEVER QUERIED (audit slice-2 P2 — a throwing advisory query can't run to poison the txn)", async () => {
+  const db = {} as unknown as TenantQueryClient;
+  let inventoryQueried = false;
+  const spyInventory: ClearanceContributor = {
+    module: "inventory",
+    tracked: true,
+    contribute() {
+      inventoryQueried = true; // would flip if the gate ran it
+      throw new Error("inventory must not be queried in blocking-only gate mode");
+    },
+  };
+  const report = await buildClearanceReport(db, SCOPE, "stu-1", "transfer_certificate", [
+    fake("finance", { tracked: true, items: dues(700) }),
+    spyInventory,
+  ], { failClosedOnBlocking: true, blockingContributorsOnly: true });
+  assertEquals(inventoryQueried, false, "advisory inventory must be skipped, not queried");
+  assert(report.blocked, "finance still blocks");
+  assertEquals(report.blockingAmount, 700);
+  // only the blocking contributor appears in a gate-mode report
+  assertEquals(report.contributions.length, 1);
+  assertEquals(report.contributions[0].module, "finance");
+});
+
+Deno.test("evaluateClearanceGate uses blocking-only mode: a broken inventory query does NOT run / does NOT affect the gate", async () => {
+  const db = {
+    // deno-lint-ignore require-await
+    queryObject: async <T>(sql: string): Promise<T[]> => {
+      if (sql.includes("SUM(outstanding_amount)")) return [{ outstanding: "0" }] as T[];
+      // If the gate ever ran the inventory JOIN, this would throw and surface.
+      throw new Error("inventory query must not run in the gate");
+    },
+  } as unknown as TenantQueryClient;
+  const report = await evaluateClearanceGate(db, SCOPE, "stu-1", "transfer_certificate");
+  assert(!report.blocked, "no finance dues → cleared, and inventory never ran");
+});
+
 Deno.test("report mode (default): a BLOCKING contributor that throws degrades to not_tracked (fail-SAFE, never a fabricated block)", async () => {
   const db = {} as unknown as TenantQueryClient;
   const report = await buildClearanceReport(db, SCOPE, "stu-1", "transfer_certificate", [
