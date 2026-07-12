@@ -1,0 +1,45 @@
+{
+  "mathongo_jee_advanced_dpps": {
+    "files": 14,
+    "pages": 364,
+    "recovered_complete": 323,
+    "with_key": 0,
+    "numeric_verified": 0,
+    "kvs_corroborated": 0,
+    "by_subject": {
+      "Chemistry": 121,
+      "Mathematics": 38,
+      "Biology": 1,
+      "Physics": 96
+    }
+  },
+  "jeebooks_dpp": {
+    "files": 3,
+    "pages": 1464,
+    "recovered_complete": 7,
+    "with_key": 0,
+    "numeric_verified": 0,
+    "kvs_corroborated": 0,
+    "by_subject": {
+      "Mathematics": 2
+    }
+  },
+  "physicsaholics_dpps": {
+    "files": 15,
+    "pages": 394,
+    "recovered_complete": 0,
+    "with_key": 0,
+    "numeric_verified": 0,
+    "kvs_corroborated": 0,
+    "by_subject": {}
+  },
+  "studentbro_neet_dpps": {
+    "files": 15,
+    "pages": 83,
+    "recovered_complete": 0,
+    "with_key": 0,
+    "numeric_verified": 0,
+    "kvs_corroborated": 0,
+    "by_subject": {}
+  }
+}
