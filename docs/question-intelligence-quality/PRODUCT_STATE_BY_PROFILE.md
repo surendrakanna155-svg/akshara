@@ -1,0 +1,105 @@
+# Question Intelligence — Product State by Assessment Profile (measured)
+
+**Date:** 2026-07-12 · **Status:** measurement checkpoint after the Phase-C architecture correction. Corrected
+`(subject × profile × concept × archetype)` pipeline run over all reused B1–B10 evidence (12,219 items, no
+re-OCR, no new data). Evidence: `phase0_evidence/capability_matrix_C.json`. Quality gates and the 15-gate
+ladder are **unchanged**; no generation run; `qpgen`/Certified Bank untouched. **474 tests green.**
+
+This report answers the eight product-state questions from measured data, then gives the honest
+Subject×Profile matrix and the five readiness metrics. **There is no 4/4 gate here** — capability is reported
+per profile.
+
+## Measured Subject × Profile ratings
+
+| Subject | Profile | Rating | Certifiable models | Genuine (resolved) | Evidence-ready concepts |
+|---|---|---|---|---|---|
+| Physics | FOUNDATION | MODERATE | **17** | 47 | 29 |
+| Physics | NEET | **STRONG** | **13** | 27 | 24 |
+| Chemistry | NEET | **STRONG** | **5** | 15 | 43 |
+| Biology | NEET | MODERATE | 1 | 27 | **35** |
+| Chemistry | NEET_FOUNDATION | THIN | 0 | 1 | 1 |
+| Mathematics | NEET\* | THIN | 0 | 0 | 4 |
+| Mathematics | FOUNDATION | THIN | 0 | 0 | — |
+| **all subjects** | **CBSE/AP-SCERT/TS-SCERT/ICSE/BOARD_6_10** | **ABSENT** | 0 | 0 | 0 |
+
+\*Math×NEET is `guess_subject` physics-noise misattribution, not real math. Certifiable = verified + genuine
+(canonical concept, ≥5 distinct stems) + profile-valid archetype.
+
+## The eight questions, answered from measured data
+
+**1. What can Akshara generate well today?**
+Verified, canonical-concept, diverse Item Models exist for:
+- **Physics numeric (`single_step_numerical`)** — 27 certifiable models across FOUNDATION (17) + NEET (10),
+  each independently **solver-verified** (relation-match). This is the strongest capability.
+- **Chemistry NEET** — 5 certifiable (3 factual + 2 numeric).
+- **Physics/Chemistry NEET factual recall** — a few certified; broad evidence.
+These are ready to *scale-test* behind the gold benchmark (quality) + qpgen paper-feasibility (paper), per
+profile — not yet to ship.
+
+**2. What can it generate experimentally?**
+- **Biology × NEET factual recall** — evidence is STRONG (35 evidence-ready canonical concepts, 27 genuine
+  diverse models) but only **1 is verification-certified**. It is *evidence-ready, verification-limited*: a
+  bounded governed Tier-2 pass over the resolved factual facts (KVS + independent-model agreement, the
+  proven B6/B7 lane) would move many of the 27 from genuine→certified. This is the highest-leverage
+  experimental capability.
+- **Physics × NEET `experiment_inference`** (1 model) — a real non-numeric archetype beginning to appear.
+
+**3. Which profiles are blocked by missing assessment evidence?**
+- **Every board/school profile — BOARD_6_10, CBSE_6_10, AP_SCERT_6_10, TS_SCERT_6_10, ICSE_6_10 — is
+  ABSENT**: 0 recovered assessment items (those sources are textbooks → concepts, not question papers).
+- **JEE_MAIN / JEE_ADVANCED** are THIN (evidence sparse and calculus-heavy).
+- **Any school-Mathematics profile** is effectively blocked (genuine school-math ≈ 0; corpus is JEE calculus).
+These profiles require **assessment-evidence acquisition**, not more mining of the current corpus.
+
+**4. Which archetypes are strong?**
+- `single_step_numerical` (Physics/Chemistry) — strongest; deterministic solver verification.
+- `factual_single_best_answer` (Biology/Chemistry/Physics × NEET) — strong *evidence*, verification-limited.
+
+**5. Which archetypes are absent (uncertified)?**
+`multi_step_numerical`, `reverse_numerical`, `missing_variable_inference` (the classifier does not yet
+separate these from single-step — a known next step), `graph_interpretation`, `table_interpretation`,
+`diagram_interpretation` (visual/data — 0 certified), `constraint_reasoning`, `multi_concept_integration`,
+`case_interpretation`, `error_analysis`, `property_application` (0 certified), `assertion_reason` (present in
+DNA, few certified). All higher-order and visual/data archetypes are currently absent from certified output.
+
+**6. Where is verification strong / weak?**
+- **Strong:** numeric (`relation_solver`) — deterministic, ~40 certified numeric models.
+- **Weak (coverage, not method):** conceptual verification (KVS multi-source + Tier-2) *works* but has thin
+  coverage — only **90 KVS-promotable facts + 46 cached Tier-2 verdicts**. This is exactly why Biology×NEET
+  is evidence-rich but only 1 certified. The verification *substrate* is proven; its *coverage* is the gap.
+
+**7. Where is difficulty control weak?**
+**Everywhere** — `difficulty_driver_support.measured = false` in every cell. The pipeline computes no measured
+difficulty-driver vectors yet (that is the psychometric/difficulty-driver spec, not built). Difficulty labels
+are currently unvalidated across all subjects/profiles — a cross-cutting gap that no amount of yield fixes.
+
+**8. Where are visuals available but not generation-ready?**
+qcorpus preserved **70,541 visual assets + 91,878 equation candidates**, but the corrected DNA is text-only and
+`visual_support.measured = false` in every cell. The `DIAGRAM_VISUAL` / `DATA_INTERPRETATION` archetypes have
+real *evidence potential* (assets exist) but **0 generation-ready models** — those lanes are Phase-E and not
+wired. Diagram/graph/table interpretation is blocked on the visual pipeline, not on evidence.
+
+## Five readiness metrics (separate; measured where possible)
+
+1. **Capability coverage (per profile):** NEET **1/9 core archetypes** certified (factual recall);
+   FOUNDATION **1/7** (single_step_numerical). Low because *verification coverage*, not evidence, limits it.
+2. **Evidence readiness (resolved concepts ≥5-DNA/≥2-res):** Chemistry/NEET **43**, Biology/NEET **35**,
+   Physics/FOUNDATION **29**, Physics/NEET **24**, Math/NEET 4. *Strong and real.*
+3. **Quality readiness:** gold benchmark — Phase-0 Hyp-B substance **PASSED** (absolute bar/agreement/
+   Biology-specific); per-profile benchmark **PENDING** (not re-run here).
+4. **Scale readiness:** 36 certifiable models, median **8** distinct stems — a proxy for non-clone parameter
+   diversity; adequate for the certified numeric models, thin elsewhere.
+5. **Paper readiness:** **not measured** — requires a target blueprint per profile via qpgen feasibility;
+   next step, not this slice.
+
+## Honest bottom line
+
+The corrected model shows Akshara's real state: **it can genuinely generate verified NEET/Foundation numeric
+Physics/Chemistry today, has strong-but-under-verified NEET Biology factual recall, and has essentially no
+board-profile or school-Mathematics assessment capability because that evidence was never acquired.** The next
+decisions are per profile and evidence-driven — bounded Tier-2 verification to certify NEET Biology; difficulty
+drivers; the visual pipeline; and assessment-evidence acquisition for board profiles — **none of which is the
+historical 4/4 gate.**
+
+**STOP for owner approval.** No large-scale generation; no production families; Certified Question Bank
+untouched; no market-quality claim; quality gates unchanged; `qpgen`/`kie.db` untouched.
