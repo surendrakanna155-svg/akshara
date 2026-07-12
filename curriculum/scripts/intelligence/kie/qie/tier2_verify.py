@@ -38,7 +38,8 @@ def cached_hashes(qconn: sqlite3.Connection) -> Set[str]:
 
 
 def collect_candidates(items: Iterable[dict], by_title: Dict[str, str], verified_facts: Set[str],
-                       subject: str = "Biology", max_facts: int = 300) -> "OrderedDict[str, dict]":
+                       subject: str = "Biology", max_facts: int = 300, resolver=None
+                       ) -> "OrderedDict[str, dict]":
     """Return {fact_key: representative_item} for DISTINCT non-numeric `subject` facts that are NOT already
     KVS-verified and are on a resolved concept with a semantic answer (so verification is meaningful and
     bounded — one model check per distinct fact, not per item)."""
@@ -53,7 +54,7 @@ def collect_candidates(items: Iterable[dict], by_title: Dict[str, str], verified
         lane = mine.classify_nonnumeric_lane(stem)
         if lane == "CONCEPTUAL_GENERIC":
             continue
-        ck = mine.concept_key(stem, subject, by_title)
+        ck = mine.item_concept(stem, ans, subject, by_title, resolver)
         if not mine.is_resolved_concept(ck) or not mine.is_semantic_answer(ans):
             continue
         fk = mine.fact_key(ck, ans)

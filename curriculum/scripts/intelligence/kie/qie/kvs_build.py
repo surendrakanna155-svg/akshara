@@ -26,7 +26,8 @@ norm_answer = mine.norm_answer
 fact_key = mine.fact_key
 
 
-def build_from_corpus(kconn: sqlite3.Connection, qconn: sqlite3.Connection, now: str, extra_items=None) -> dict:
+def build_from_corpus(kconn: sqlite3.Connection, qconn: sqlite3.Connection, now: str, extra_items=None,
+                      resolver=None) -> dict:
     """Mine (concept, correct-answer) facts from all keyed non-numeric MCQs across kie.db AND (optionally)
     the qcorpus adapter items; corroborate across INDEPENDENT source docs. More independent sources ->
     more facts reach the >=2-doc promotion bar."""
@@ -38,7 +39,7 @@ def build_from_corpus(kconn: sqlite3.Connection, qconn: sqlite3.Connection, now:
     def add(stem, keyopt, subj, doc):
         if not subj or not keyopt or mine.R.first_number(keyopt) is not None:
             return   # numeric-answer facts are verified by the relation library, not the KVS
-        ck = mine.concept_key(stem, subj, by_title)
+        ck = mine.item_concept(stem, keyopt, subj, by_title, resolver)
         # A fact must be on a RESOLVED concept (not a coarse subject:keyword bucket) with a SEMANTIC answer
         # (not an option-label) — kills the B5 over-corroboration (junk-concept + "a-ii,b-i" collisions).
         if not mine.is_resolved_concept(ck) or not mine.is_semantic_answer(keyopt):

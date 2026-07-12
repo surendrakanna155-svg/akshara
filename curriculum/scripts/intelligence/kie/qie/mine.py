@@ -173,6 +173,17 @@ def concept_key(stem: str, subject: str, by_title: Dict[str, str]) -> str:
     return f"{subject}:misc"
 
 
+def item_concept(stem: str, answer: Optional[str], subject: str, by_title: Dict[str, str],
+                 resolver=None) -> str:
+    """Concept key for an item: a confident canonical resolution (answer/stem entity-link) if the resolver
+    supplies one, else the legacy substring/keyword key. Strict — the resolver returns None when unsure."""
+    if resolver is not None and answer:
+        rc = resolver(stem, answer, subject)
+        if rc:
+            return rc
+    return concept_key(stem, subject, by_title)
+
+
 def iter_kie_items(kconn: sqlite3.Connection):
     """Yield normalized items {stem, options{label:text}, answer_text, subject, doc_id, visual_dependent}
     from the certified kie.db chunk corpus (read-only)."""
@@ -199,7 +210,7 @@ def build_by_title(kconn: sqlite3.Connection) -> Dict[str, str]:
 
 def run(kconn: sqlite3.Connection, qconn: sqlite3.Connection, now: str,
         max_per_subject: int = 100000, verified_facts: Optional[Set[str]] = None,
-        extra_items=None, tier2_verified: Optional[Set[str]] = None) -> dict:
+        extra_items=None, tier2_verified: Optional[Set[str]] = None, resolver=None) -> dict:
     """Mine a unified item stream (kie.db chunks + optional `extra_items`, e.g. the qcorpus adapter) into
     Question DNA + Item-Model clusters and measure BOTH the structural and the VERIFICATION-BACKED yield
     gate. A non-numeric Item Model is verification-backed when >=50% of its member DNA facts are either
@@ -232,7 +243,7 @@ def run(kconn: sqlite3.Connection, qconn: sqlite3.Connection, now: str,
         opts = it.get("options") or {}
         kv = R.first_number(keyopt) if keyopt else None
         given = R.parse_numbers(stem)
-        ck = concept_key(stem, subj, by_title)
+        ck = item_concept(stem, keyopt, subj, by_title, resolver)
         if kv is not None and given:
             rel = R.verify(given, kv, subject=subj)
             if rel:
