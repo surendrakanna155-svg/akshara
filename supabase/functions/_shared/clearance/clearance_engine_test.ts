@@ -82,27 +82,57 @@ Deno.test("FAIL-SAFE: a throwing tracked contributor degrades to not_tracked, ne
   assert(report.contributions[0].status !== "cleared");
 });
 
-Deno.test("mixed: blocking-pending + advisory-pending + not_tracked", async () => {
+Deno.test("mixed: finance blocks on exit, inventory dues are advisory (counted, non-blocking), library not_tracked", async () => {
   const report = await buildClearanceReport(db, SCOPE, "stu-1", "transfer_certificate", [
-    fake("finance", { tracked: true, items: dues(2000) }), // blocking
-    fake("inventory", { tracked: true, items: [{ reference: "d1", description: "book", amount: 0 }] }), // blocking, non-monetary
+    fake("finance", { tracked: true, items: dues(2000) }), // blocking on exit
+    fake("inventory", { tracked: true, items: dues(500) }), // advisory on exit (owner opt-in to block)
     fake("library", { tracked: false }), // advisory + not tracked
   ]);
-  assert(report.blocked);
-  assertEquals(report.blockingAmount, 2000); // inventory item is 0-amount
-  assertEquals(report.totalOutstanding, 2000);
-  assertEquals(report.notTracked, ["library"]);
-  // inventory pending flags the obligation even at amount 0
+  assert(report.blocked, "finance dues block the exit");
+  assertEquals(report.blockingAmount, 2000, "only finance is blocking; inventory is advisory");
+  assertEquals(report.totalOutstanding, 2500, "inventory dues ARE summed into the total");
+  assertEquals(report.contributions[1].policy, "advisory");
   assertEquals(report.contributions[1].status, "pending");
+  assertEquals(report.notTracked, ["library"]);
 });
 
-Deno.test("unknown lifecycle falls back to the strict exit policy (finance blocks), not permissive", async () => {
+Deno.test("inventory dues alone do NOT block a TC today (preserves SIS-D1 finance-only gate)", async () => {
+  const report = await buildClearanceReport(db, SCOPE, "stu-1", "transfer_certificate", [
+    fake("finance", { tracked: true, items: [] }),
+    fake("inventory", { tracked: true, items: dues(500) }),
+  ]);
+  assert(!report.blocked, "unpaid inventory alone must not block the TC by default");
+  assertEquals(report.blockingAmount, 0);
+  assertEquals(report.totalOutstanding, 500);
+});
+
+Deno.test("unknown lifecycle → the engine fails STRICT (blocking), never permissive", async () => {
   const report = await buildClearanceReport(db, SCOPE, "stu-1", "made_up_event", [
     fake("finance", { tracked: true, items: dues(500) }),
   ]);
-  // 'made_up_event' isn't in the map, so finance gets DEFAULT_POLICY (advisory)
-  // at the engine level — the HANDLER is what coerces unknown→transfer_certificate.
-  // This asserts the engine's documented default so the handler's coercion is
-  // the single source of strictness.
+  // An unrecognized lifecycle is treated as an exit event: finance dues BLOCK.
+  assertEquals(report.contributions[0].policy, "blocking");
+  assert(report.blocked);
+});
+
+Deno.test("SECURITY: a prototype key as the lifecycle cannot downgrade a gate to advisory", async () => {
+  for (const evil of ["constructor", "valueOf", "toString", "hasOwnProperty", "__proto__"]) {
+    const report = await buildClearanceReport(db, SCOPE, "stu-1", evil, [
+      fake("finance", { tracked: true, items: dues(500) }),
+    ]);
+    assertEquals(report.contributions[0].policy, "blocking", `lifecycle=${evil} must fail strict`);
+    assert(report.blocked, `lifecycle=${evil} must still block a duesful exit`);
+  }
+});
+
+Deno.test("SECURITY: a prototype key as the MODULE name resolves to the safe default, not an inherited value", async () => {
+  const report = await buildClearanceReport(db, SCOPE, "stu-1", "transfer_certificate", [
+    fake("constructor", { tracked: true, items: dues(100) }),
+    fake("toString", { tracked: true, items: dues(50) }),
+  ]);
+  // Unknown modules on a known lifecycle default to advisory (not blocking, not
+  // a thrown inherited function) — no crash, no false block, no false clear.
   assertEquals(report.contributions[0].policy, "advisory");
+  assertEquals(report.contributions[1].policy, "advisory");
+  assert(!report.blocked);
 });

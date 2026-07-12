@@ -91,21 +91,37 @@ export interface ClearanceReport {
 export type LifecyclePolicyMap = Record<string, ClearancePolicy>;
 
 export const LIFECYCLE_POLICIES: Record<string, LifecyclePolicyMap> = {
-  // Exit events: dues are genuinely withheld against (matches SIS-D1 today).
-  transfer_certificate: { finance: "blocking", inventory: "blocking", library: "advisory" },
-  transfer: { finance: "blocking", inventory: "blocking", library: "advisory" },
-  alumni_conversion: { finance: "blocking", inventory: "blocking", library: "advisory" },
+  // Exit events: FINANCE dues are genuinely withheld against — this is exactly
+  // today's SIS-D1 finance-only TC no-dues gate, preserved. Inventory dues are
+  // ADVISORY by default (surfaced + summed, non-blocking) so wiring the gate to
+  // this engine (slice 2) does not silently start blocking TCs on unpaid items;
+  // inventory→blocking is the owner's per-gate opt-in (a DATA change, no code).
+  transfer_certificate: { finance: "blocking", inventory: "advisory", library: "advisory" },
+  transfer: { finance: "blocking", inventory: "advisory", library: "advisory" },
+  alumni_conversion: { finance: "blocking", inventory: "advisory", library: "advisory" },
   // In-school progression: warn only — a student is never held back a grade over
   // dues; the school chases the money without blocking the academic record.
   promotion: { finance: "advisory", inventory: "advisory", library: "advisory" },
   year_close: { finance: "advisory", inventory: "advisory", library: "advisory" },
 };
 
-/** The default policy for a module not named in a lifecycle's map. */
-const DEFAULT_POLICY: ClearancePolicy = "advisory";
+/** The default policy for a KNOWN lifecycle's module that isn't named in its map
+ * (progression is lenient, so an unlisted module warns rather than blocks). */
+const DEFAULT_MODULE_POLICY: ClearancePolicy = "advisory";
 
-function policyFor(lifecycle: string, module: string): ClearancePolicy {
-  return LIFECYCLE_POLICIES[lifecycle]?.[module] ?? DEFAULT_POLICY;
+/** Resolves a module's policy for a lifecycle. Two safety properties:
+ *  1. Prototype-safe: `Object.hasOwn`, never `in`/`[]` — so `constructor`,
+ *     `valueOf`, `toString` etc. can never masquerade as a known lifecycle/
+ *     module and pull an inherited value.
+ *  2. Fail-STRICT on an unknown lifecycle: an unrecognized lifecycle is treated
+ *     as BLOCKING (the exit-event stance), so a caller passing a bad/typo/
+ *     attacker-supplied lifecycle can never downgrade a gate to advisory. The
+ *     handler ALSO coerces unknown→transfer_certificate; this is the engine's
+ *     own independent backstop. */
+export function policyFor(lifecycle: string, module: string): ClearancePolicy {
+  if (!Object.hasOwn(LIFECYCLE_POLICIES, lifecycle)) return "blocking";
+  const map = LIFECYCLE_POLICIES[lifecycle]!;
+  return Object.hasOwn(map, module) ? map[module]! : DEFAULT_MODULE_POLICY;
 }
 
 /** Fans out over the registry, aggregates, and applies the lifecycle's policy.

@@ -53,18 +53,24 @@ Deno.test("finance contributor: no open dues → no items (cleared)", async () =
   assertEquals(items, []);
 });
 
-Deno.test("inventory contributor: reads ONLY payment_pending distributions, amount 0 (money on the finance line)", async () => {
+Deno.test("inventory contributor: reads payment_pending distributions with the REAL owed amount from the linked open payment_request", async () => {
   const { db, calls } = mockDb([[
-    { id: "dist-1", item_name: "Mathematics Textbook", quantity: 1 },
-    { id: "dist-2", item_name: "Uniform Set", quantity: 2 },
+    { id: "dist-1", item_name: "Mathematics Textbook", quantity: 1, amount: "500" },
+    { id: "dist-2", item_name: "Uniform Set", quantity: 2, amount: null }, // no live request → 0, still flagged
   ]]);
   const items = await inventoryContributor.contribute(db, SCOPE, "stu-1");
   assertEquals(items.length, 2);
-  assertEquals(items[0].amount, 0, "monetary value lives on the linked finance demand");
+  assertEquals(items[0].amount, 500, "owed rupees come from the linked open payment_request");
+  assertEquals(items[1].amount, 0, "no live request → 0, but the obligation still flags");
   assert(items[1].description.includes("×2"));
   const sql = calls[0].sql;
   assert(sql.includes("inv_student_distributions"));
   assert(sql.includes("status = 'payment_pending'"));
+  assert(sql.includes("payment_requests"), "must join the payment_requests ledger for the amount");
+  assert(
+    sql.includes("'pending', 'initiated', 'failed'"),
+    "only a still-owed request contributes an amount (captured/cancelled = settled)",
+  );
 });
 
 Deno.test("library + hostel are honestly not tracked (tracked=false, no query)", () => {

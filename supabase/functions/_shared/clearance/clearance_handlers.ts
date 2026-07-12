@@ -29,12 +29,15 @@ function requireClearanceRead(
     requireSchoolOperationalScope(claims);
 }
 
-/** A known lifecycle key, or the strict default. An unknown value falls back to
- * the exit policy rather than the permissive DEFAULT_POLICY, so a typo can never
- * silently downgrade a blocking gate to advisory. */
-function resolveLifecycle(raw: string | null): string {
+/** A known lifecycle key, or the strict exit default. Uses `Object.hasOwn`
+ * (never `in`) so an inherited prototype key — `constructor`, `valueOf`,
+ * `toString`, `hasOwnProperty` — cannot masquerade as a known lifecycle and
+ * slip past coercion; anything unrecognized falls back to transfer_certificate
+ * (the strict exit policy), so a typo or crafted query value can never
+ * downgrade a blocking gate to advisory. Exported for direct unit tests. */
+export function resolveLifecycle(raw: string | null): string {
   const key = (raw ?? "").trim();
-  return key && key in LIFECYCLE_POLICIES ? key : DEFAULT_LIFECYCLE;
+  return key && Object.hasOwn(LIFECYCLE_POLICIES, key) ? key : DEFAULT_LIFECYCLE;
 }
 
 export async function handleStudentClearance(

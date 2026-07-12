@@ -47,7 +47,14 @@ export const financeContributor: ClearanceContributor = {
 /** Inventory — un-paid distributed items (textbooks/uniforms a student was
  * given and owes for). Reads inv_student_distributions in the money-owed state
  * `payment_pending`; keyed by the real student_id. Non-payment_pending statuses
- * (distributed/acknowledged/paid) are NOT dues. */
+ * (distributed/acknowledged/paid) are NOT dues.
+ *
+ * The rupees live on the linked payment_requests row — a SEPARATE ledger from
+ * finance_student_accounts (which this row's amount never posts to), so reading
+ * it here does NOT double-count the finance line; it fills a real gap in the
+ * total. LEFT JOIN + a still-owed status filter (a captured/cancelled request
+ * is settled) so a distribution without a live request still flags as pending
+ * (amount 0) rather than vanishing. */
 export const inventoryContributor: ClearanceContributor = {
   module: "inventory",
   tracked: true,
@@ -56,12 +63,16 @@ export const inventoryContributor: ClearanceContributor = {
       id: string;
       item_name: string | null;
       quantity: number;
+      amount: string | null;
     }>(
       `SELECT d.id,
               c.name AS item_name,
-              d.quantity
+              d.quantity,
+              CASE WHEN pr.status IN ('pending', 'initiated', 'failed')
+                   THEN pr.amount::text END AS amount
          FROM inv_student_distributions d
          JOIN inv_catalog_items c ON c.id = d.catalog_item_id
+         LEFT JOIN payment_requests pr ON pr.id = d.payment_request_id
         WHERE d.organization_id = $1
           AND d.school_id = $2
           AND d.student_id = $3::uuid
@@ -74,10 +85,9 @@ export const inventoryContributor: ClearanceContributor = {
       description: r.item_name
         ? `Unpaid item — ${r.item_name}${r.quantity > 1 ? ` ×${r.quantity}` : ""}`
         : "Unpaid distributed item",
-      // The monetary amount is carried on the linked finance payment_request
-      // (already counted by the finance contributor), so this line flags the
-      // obligation without double-counting the rupees.
-      amount: 0,
+      // Real owed rupees from the linked (still-open) payment request; 0 when no
+      // live request is attached — the obligation still flags as pending.
+      amount: Number(r.amount ?? 0),
     }));
   },
 };
