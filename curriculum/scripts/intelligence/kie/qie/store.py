@@ -33,8 +33,16 @@ def connect(db_path: PathLike = None) -> sqlite3.Connection:
     return conn
 
 
+def _add_column_if_missing(conn: sqlite3.Connection, table: str, column: str, decl: str) -> None:
+    cols = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+    if column not in cols:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
+
+
 def migrate(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA_PATH.read_text())
+    # Phase C additive migration for pre-existing stores (CREATE TABLE IF NOT EXISTS won't add columns).
+    _add_column_if_missing(conn, "question_dna", "assessment_profile", "TEXT")
     conn.execute(
         "INSERT INTO qie_meta(key, value) VALUES ('schema_version', ?) "
         "ON CONFLICT(key) DO UPDATE SET value = excluded.value",

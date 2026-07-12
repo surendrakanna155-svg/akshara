@@ -14,7 +14,8 @@ CREATE TABLE IF NOT EXISTS question_dna (
   lane              TEXT NOT NULL,             -- one of kie.qie.lanes.LANES
   subject           TEXT,
   concept_code      TEXT,                      -- resolved canonical concept (references kie.db concepts, by value)
-  archetype         TEXT,
+  archetype         TEXT,                      -- assessment FORM (kie.qie.archetypes.ARCHETYPES) — independent of lane
+  assessment_profile TEXT,                     -- target-exam profile (kie.qie.profiles.PROFILES) from source provenance
   provenance        TEXT,                      -- json: resource_id, page, bbox, question_number, license_status, confidence
   construction      TEXT,                      -- json: givens/unknown/units/answer_rule (numeric) OR KVS fact refs
   distractor_dna    TEXT,                      -- json: per-wrong-option {misconception_type, transform}
