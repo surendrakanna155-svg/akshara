@@ -9,12 +9,15 @@ This report answers the eight product-state questions from measured data, then g
 Subject×Profile matrix and the five readiness metrics. **There is no 4/4 gate here** — capability is reported
 per profile.
 
-> **UPDATE 2026-07-13 — bounded Tier-2 pass applied.** A governed two-judge Tier-2 verification pass over the
-> 406 already-resolved Biology×NEET factual facts (verifier + adversarial refuter, isolated; verified only on
-> agreement with no contradiction) moved **Biology×NEET from MODERATE → STRONG**: certified models **1 → 25**
-> (20 on genuine BIO_ canonical concepts). Facts: 365 PASS / 25 FAIL (wrong keys correctly caught) / 16
-> INSUFFICIENT. Biology×NEET is now **CERTIFIED_CAPABLE** for the factual_single_best_answer archetype.
-> Evidence: `phase0_evidence/tier2_bio_neet/`. The table/answers below are updated accordingly.
+> **UPDATE 2026-07-13 — bounded Tier-2 pass + subject-scope cleanup.** A governed two-judge Tier-2 pass over
+> the 406 already-resolved Biology×NEET factual facts (verifier + adversarial refuter, isolated; verified only
+> on agreement with no contradiction) moved **Biology×NEET MODERATE → STRONG**: certified models **1 → 25**,
+> then a root-cause subject-scope fix removed **5 cross-domain resolver artifacts** (PHY_VISION,
+> MAT_TEMPERATURE, …) → **20 certified models, all on genuine BIO_ canonical concepts** (0 cross-domain
+> concepts in any Biology certified model). Facts: 365 PASS / 25 FAIL (wrong keys caught) / 16 INSUFFICIENT —
+> a **measured 6.2% source-key error rate for this governed pass** (not an assumed inherent ceiling; its
+> reducibility can be measured later). Biology×NEET is now **CERTIFIED_CAPABLE** for the
+> factual_single_best_answer archetype. Evidence: `phase0_evidence/tier2_bio_neet/`.
 
 ## Measured Subject × Profile ratings
 
@@ -23,7 +26,7 @@ per profile.
 | Physics | FOUNDATION | MODERATE | **17** | 47 | 29 |
 | Physics | NEET | **STRONG** | **13** | 27 | 24 |
 | Chemistry | NEET | **STRONG** | **5** | 15 | 43 |
-| Biology | NEET | **STRONG** | **25** (20 genuine BIO_) | 27 | **35** |
+| Biology | NEET | **STRONG** | **20** (all genuine BIO_) | 27 | **35** |
 | Chemistry | NEET_FOUNDATION | THIN | 0 | 1 | 1 |
 | Mathematics | NEET\* | THIN | 0 | 0 | 4 |
 | Mathematics | FOUNDATION | THIN | 0 | 0 | — |
@@ -39,8 +42,9 @@ Verified, canonical-concept, diverse Item Models exist for:
 - **Physics numeric (`single_step_numerical`)** — 27 certifiable models across FOUNDATION (17) + NEET (10),
   each independently **solver-verified** (relation-match). This is the strongest capability.
 - **Chemistry NEET** — 5 certifiable (3 factual + 2 numeric).
-- **Biology × NEET factual recall** — **now CERTIFIED** (bounded Tier-2 pass, 2026-07-13): **20 genuine
-  BIO_ canonical-concept certified models** (25 incl. resolver artifacts) across the core NEET chapters
+- **Biology × NEET factual recall** — **now CERTIFIED** (bounded Tier-2 pass + subject-scope cleanup,
+  2026-07-13): **20 genuine BIO_ canonical-concept certified models** (0 cross-domain artifacts) across the
+  core NEET chapters
   (photosynthesis, reproduction, proteins, respiration, excretory, endocrine, neural, circulatory,
   respiratory, molecular basis, mitochondria, ecosystem, immunity, plasma, evolution, biodiversity, cell
   membrane, populations, cancer), each with 5–27 distinct stems from ≥2 docs.

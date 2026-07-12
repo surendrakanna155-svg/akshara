@@ -162,10 +162,14 @@ def is_resolved_concept(concept: str) -> bool:
     return ":" not in concept
 
 
-def concept_key(stem: str, subject: str, by_title: Dict[str, str]) -> str:
+def concept_key(stem: str, subject: str, by_title: Dict[str, tuple]) -> str:
+    """Legacy substring/keyword concept key, SUBJECT-SCOPED: a title only matches when its concept's
+    subject_domain equals the item's subject. Without this, a Biology stem containing 'vision'/'pressure'/
+    'temperature' matched a Physics/Math concept title and a non-Biology concept contaminated Biology
+    clustering (the observed certified artifacts). by_title values are (concept_code, subject_domain)."""
     t = stem.lower()
-    for title, code in by_title.items():
-        if len(title) > 4 and title in t:
+    for title, (code, domain) in by_title.items():
+        if len(title) > 4 and domain == subject and title in t:
             return code
     for kw in _SUBJ_KW.get(subject, []):
         if kw in t:
@@ -202,9 +206,12 @@ def iter_kie_items(kconn: sqlite3.Connection):
                    "subject": subj, "doc_id": doc, "visual_dependent": False}
 
 
-def build_by_title(kconn: sqlite3.Connection) -> Dict[str, str]:
-    return {(r[1] or "").lower(): r[0] for r in
-            kconn.execute("SELECT concept_code, title FROM concepts WHERE status='active' AND title IS NOT NULL")
+def build_by_title(kconn: sqlite3.Connection) -> Dict[str, tuple]:
+    """title_lower -> (concept_code, subject_domain). subject_domain is carried so concept_key can subject-
+    scope its substring match and never assign a cross-subject concept to an item."""
+    return {(r[1] or "").lower(): (r[0], r[2]) for r in
+            kconn.execute("SELECT concept_code, title, subject_domain FROM concepts "
+                          "WHERE status='active' AND title IS NOT NULL")
             if r[1]}
 
 

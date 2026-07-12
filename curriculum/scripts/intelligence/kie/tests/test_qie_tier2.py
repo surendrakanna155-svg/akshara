@@ -27,7 +27,7 @@ class TestTier2Cache(unittest.TestCase):
 
 class TestCandidateSelection(unittest.TestCase):
     def test_only_distinct_nonnumeric_resolved_biology(self):
-        by_title = {"photosynthesis": "BIO_PHOTOSYNTHESIS", "nephron": "BIO_NEPHRON"}
+        by_title = {"photosynthesis": ("BIO_PHOTOSYNTHESIS", "Biology"), "nephron": ("BIO_NEPHRON", "Biology")}
         items = [
             {"subject": "Biology", "stem": "Why does photosynthesis stop in the dark?",
              "options": {"a": "no light", "b": "x"}, "answer_text": "no light", "doc_id": "d1"},
@@ -44,7 +44,7 @@ class TestCandidateSelection(unittest.TestCase):
         self.assertEqual(c["concept"], "BIO_PHOTOSYNTHESIS")
 
     def test_already_kvs_verified_excluded(self):
-        by_title = {"photosynthesis": "BIO_PHOTOSYNTHESIS"}
+        by_title = {"photosynthesis": ("BIO_PHOTOSYNTHESIS", "Biology")}
         item = {"subject": "Biology", "stem": "Why does photosynthesis stop in the dark?",
                 "options": {"a": "no light"}, "answer_text": "no light", "doc_id": "d1"}
         fk = mine.fact_key("BIO_PHOTOSYNTHESIS", "no light")

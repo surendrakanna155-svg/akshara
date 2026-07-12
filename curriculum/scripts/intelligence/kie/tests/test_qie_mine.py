@@ -36,6 +36,20 @@ class TestRecovery(unittest.TestCase):
         self.assertIn("half", kinds)     # 135
         self.assertIn("sign_flip", kinds)  # -270
 
+    def test_concept_key_is_subject_scoped(self):
+        # by_title = title -> (code, subject_domain). A Biology stem must NOT grab a Physics/Math concept
+        # via a bare substring ("vision"/"temperature"), which produced the certified cross-domain artifacts.
+        by_title = {"vision": ("PHY_VISION", "Physics"), "temperature": ("MAT_TEMPERATURE", "Mathematics"),
+                    "photosynthesis": ("BIO_PHOTOSYNTHESIS", "Biology")}
+        # Biology item mentioning 'vision' + 'photosynthesis' -> the Biology concept, never PHY_VISION
+        self.assertEqual(mine.concept_key("Role of vision pigments in photosynthesis", "Biology", by_title),
+                         "BIO_PHOTOSYNTHESIS")
+        # Biology item mentioning only 'temperature' -> no Biology title matches -> coarse bucket, NOT MAT_
+        ck = mine.concept_key("Effect of temperature on enzyme activity", "Biology", by_title)
+        self.assertFalse(ck.startswith("MAT_") or ck.startswith("PHY_"))
+        # a genuine Physics item CAN still resolve its own subject's concept
+        self.assertEqual(mine.concept_key("Human vision and the eye lens", "Physics", by_title), "PHY_VISION")
+
 
 def _fake_corpus():
     conn = sqlite3.connect(":memory:")

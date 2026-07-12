@@ -168,14 +168,20 @@
       "profile_invalid_evidence": 1
     }
   },
-  "certified_models_after": 25,
   "genuine_BIO_concept_models": 20,
   "cross_domain_resolver_artifacts": 5,
   "verdict": "CERTIFIED_CAPABLE (factual_single_best_answer archetype, NEET profile)",
   "remaining_bottleneck": [
     "~16 figure/OCR-dependent facts need Phase-E visual pipeline",
-    "5 cross-domain title-substring resolver artifacts to subject-scope (follow-up)",
-    "~6% source keys were wrong (correctly FAILED, inherent OCR/source noise)",
-    "archetype coverage dominated by factual; cause_effect/classification/assertion under-represented"
-  ]
+    "archetype coverage dominated by factual_single_best_answer; cause_effect/classification/assertion under-represented",
+    "measured 6.2% source-key error rate for this pass (reducibility TBD, not assumed inherent)"
+  ],
+  "certified_models_after_tier2": 25,
+  "certified_models_after_subjectscope_cleanup": 20,
+  "cross_domain_resolver_artifacts_after_cleanup": 0,
+  "cleanup": "subject-scoped concept_key/build_by_title (mine.py); non-Biology subject_domain concepts can no longer match a Biology stem; verified 0 cross-domain concepts in any Biology certified model",
+  "measured_source_key_error_rate": {
+    "value_pct": 6.2,
+    "note": "MEASURED rate for this governed pass; NOT an assumed inherent ceiling \u2014 reducibility can be measured later"
+  }
 }
