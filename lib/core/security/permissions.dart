@@ -198,6 +198,11 @@ enum Permission {
   // server-side in 20260820000000 for the supervisory roles.
   approveStaffAttendance,
 
+  // SCE-1 slice 4 — approve/reject a student clearance dues-waiver (maker-checker,
+  // the sanctioned override to issue a TC despite a small remaining due). Seeded
+  // server-side in 20260878000000 for the supervisory roles.
+  approveClearanceWaiver,
+
   // Phase D M-D5 — Finance approval governance
   assignScholarship,
   approveFeeConcession,
