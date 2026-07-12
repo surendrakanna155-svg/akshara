@@ -10,6 +10,11 @@ import {
   statusToDb,
 } from "./sis_status_codec.ts";
 import { allocatePublicStudentId } from "./sis_public_student_id.ts";
+import {
+  ClearanceDuesBlockedError,
+  resolveClearanceDecision,
+} from "../clearance/clearance_gate.ts";
+import { consumeWaiver } from "../clearance/clearance_waiver_repository.ts";
 
 export interface StudentListFilters {
   search?: string;
@@ -827,7 +832,37 @@ export async function updateStudentStatus(
   if (!existing) throw new StudentNotFoundError(studentId);
 
   assertValidStatusTransition(existing.student.status, input.status);
-  const dbStatus = statusToDb(parseApiStatus(input.status));
+  const targetStatus = parseApiStatus(input.status);
+  const dbStatus = statusToDb(targetStatus);
+
+  // SCE-1 (owner-approved 2026-07-12): the raw status endpoint must not BYPASS
+  // the Transfer-Certificate no-dues law. Every transition to `transferred`
+  // consults the SAME clearance gate as the TC engine (lifecycle
+  // 'transfer_certificate' — identical finance-blocking policy AND the shared
+  // waiver pool), fails CLOSED on unwaived dues, and CONSUMES a covering
+  // approved waiver (single-use; no TC issue row, so consumed_by_issue_id null).
+  // `graduated` is DELIBERATELY NOT gated here — whether bulk cohort graduation
+  // hard-blocks on dues is an explicit open owner-policy decision, not a guess.
+  if (targetStatus === "transferred") {
+    const decision = await resolveClearanceDecision(
+      db,
+      { organizationId, schoolId },
+      studentId,
+      "transfer_certificate",
+    );
+    if (decision.blocked) {
+      throw new ClearanceDuesBlockedError(decision.blockingAmount);
+    }
+    if (decision.waiver) {
+      await consumeWaiver(
+        db,
+        { organizationId, schoolId },
+        studentId,
+        "transfer_certificate",
+        null,
+      );
+    }
+  }
 
   await db.queryObject(
     `UPDATE students SET

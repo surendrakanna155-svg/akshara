@@ -40,6 +40,22 @@ export async function evaluateClearanceGate(
   );
 }
 
+/** Thrown by a lifecycle transition (e.g. the raw status endpoint) that is
+ * blocked by unwaived dues. Carries the outstanding amount. Clearance-owned so
+ * callers outside the TC engine can enforce the no-dues law without importing
+ * (and cycling through) sis_certificates_repository's NoDuesPendingError; both
+ * map to the same 409 DUES_PENDING client contract. */
+export class ClearanceDuesBlockedError extends Error {
+  readonly amount: number;
+  constructor(amount: number) {
+    super(
+      `Blocked by clearance: student has ${amount} in outstanding dues. Clear or waive them first.`,
+    );
+    this.name = "ClearanceDuesBlockedError";
+    this.amount = amount;
+  }
+}
+
 /** The final gate verdict for a lifecycle transition: dues (from the engine)
  * with an APPROVED waiver applied. A waiver clears the block ONLY when it still
  * COVERS the current dues (dues have not grown past the snapshotted amount the

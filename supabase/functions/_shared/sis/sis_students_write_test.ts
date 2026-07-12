@@ -22,6 +22,7 @@ import {
   updateStudentStatus,
   ValidationError,
 } from "./sis_students_repository.ts";
+import { ClearanceDuesBlockedError } from "../clearance/clearance_gate.ts";
 
 const ORG = "a1000000-0000-4000-8000-000000000001";
 const SCHOOL_A = "a2000000-0000-4000-8000-000000000001";
@@ -504,6 +505,90 @@ Deno.test("updateStudentStatus applies lifecycle transition", async () => {
   );
   assertEquals(detail.student.status, "alumni");
   assertEquals(parseApiStatus(statusFromDb(detail.student.status)), "graduated");
+});
+
+// ── SCE-1: the raw status endpoint cannot BYPASS the TC no-dues law ───────────
+function seedActiveStudent(db: WriteMockDb) {
+  db.committedStudents.push({
+    id: STUDENT_A, organization_id: ORG, school_id: SCHOOL_A,
+    student_code: "STU-001", display_name: "Student", status: "active",
+    created_at: "2026-06-01T00:00:00.000Z", updated_at: "2026-06-01T00:00:00.000Z",
+  });
+  db.committedProfiles.push({
+    id: "profile-a", student_id: STUDENT_A, organization_id: ORG, school_id: SCHOOL_A,
+    admission_number: "ADM-001", date_of_birth: null, gender: null, blood_group: null,
+    address: null, city: null, state: null, postal_code: null, country: null,
+    created_at: "2026-06-01T00:00:00.000Z", updated_at: "2026-06-01T00:00:00.000Z",
+  });
+}
+
+/** Wrap the mock so the clearance finance-SUM answers `dues`, and the approved-
+ * waiver lookup answers `waiverCover` (null = no waiver). Records a consume. */
+function clearanceWrap(
+  db: WriteMockDb,
+  opts: { dues: number; waiverCover?: number | null },
+): { client: TenantQueryClient; consumed: string[] } {
+  const consumed: string[] = [];
+  const client = {
+    // deno-lint-ignore require-await
+    async queryObject<T>(sql: string, args: unknown[] = []): Promise<T[]> {
+      if (sql.includes("SUM(outstanding_amount)")) {
+        return [{ outstanding: String(opts.dues) }] as T[];
+      }
+      if (sql.includes("FROM student_clearance_waivers") && sql.includes("status = 'approved'")) {
+        return (opts.waiverCover != null
+          ? [{ id: "waiver-1", blocking_amount: String(opts.waiverCover) }]
+          : []) as T[];
+      }
+      if (sql.includes("UPDATE student_clearance_waivers") && sql.includes("status = 'consumed'")) {
+        consumed.push(String(args[4] ?? "null"));
+        return [{ id: "waiver-1", status: "consumed" }] as T[];
+      }
+      return db.queryObject<T>(sql, args);
+    },
+    queryCount: () => Promise.resolve(0),
+  } as unknown as TenantQueryClient;
+  return { client, consumed };
+}
+
+Deno.test("SCE-1: status endpoint → transferred is BLOCKED when the student owes dues (no bypass of the TC law)", async () => {
+  const db = new WriteMockDb();
+  seedActiveStudent(db);
+  const { client } = clearanceWrap(db, { dues: 750, waiverCover: null });
+  db.beginTransaction();
+  const err = await assertRejects(
+    () => updateStudentStatus(client, ORG, SCHOOL_A, STUDENT_A, { status: "transferred" }),
+    ClearanceDuesBlockedError,
+  );
+  assertEquals((err as ClearanceDuesBlockedError).amount, 750);
+  // The student was NOT flipped (the throw precedes the UPDATE).
+  assertEquals(db.committedStudents[0].status, "active");
+});
+
+Deno.test("SCE-1: an approved COVERING waiver lets the status-endpoint transfer through AND consumes the waiver (single-use)", async () => {
+  const db = new WriteMockDb();
+  seedActiveStudent(db);
+  const { client, consumed } = clearanceWrap(db, { dues: 300, waiverCover: 300 });
+  const detail = await withMockTransaction(
+    db,
+    () => Promise.resolve(client).then((c) =>
+      updateStudentStatus(c, ORG, SCHOOL_A, STUDENT_A, { status: "transferred" })),
+  );
+  assertEquals(detail.student.status, "transferred");
+  assertEquals(consumed.length, 1, "the covering waiver is consumed by the transfer");
+});
+
+Deno.test("SCE-1: `graduated` is DELIBERATELY NOT gated — a duesful student can still be graduated (owner-policy boundary)", async () => {
+  const db = new WriteMockDb();
+  seedActiveStudent(db);
+  const { client, consumed } = clearanceWrap(db, { dues: 999, waiverCover: null });
+  const detail = await withMockTransaction(
+    db,
+    () => Promise.resolve(client).then((c) =>
+      updateStudentStatus(c, ORG, SCHOOL_A, STUDENT_A, { status: "graduated" })),
+  );
+  assertEquals(detail.student.status, "alumni");
+  assertEquals(consumed.length, 0, "no clearance gate / consume on the graduation path");
 });
 
 Deno.test("updateStudent rejects cross-school student", async () => {

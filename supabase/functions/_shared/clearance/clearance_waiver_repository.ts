@@ -256,7 +256,10 @@ export async function consumeWaiver(
   scope: ClearanceScopeIds,
   studentId: string,
   lifecycle: WaiverLifecycle,
-  issueId: string,
+  // The TC issue that consumed it, or null when a non-TC exit (the raw status
+  // endpoint transferring the student) consumes it — the row is still marked
+  // single-use spent; consumed_by_issue_id is a nullable FK.
+  issueId: string | null,
 ): Promise<ClearanceWaiverRow | null> {
   const rows = await db.queryObject<ClearanceWaiverRow>(
     `UPDATE student_clearance_waivers
