@@ -173,20 +173,47 @@ def concept_key(stem: str, subject: str, by_title: Dict[str, str]) -> str:
     return f"{subject}:misc"
 
 
-def run(kconn: sqlite3.Connection, qconn: sqlite3.Connection, now: str,
-        max_per_subject: int = 100000, verified_facts: Optional[Set[str]] = None) -> dict:
-    """Full-corpus mine. Returns metrics incl. BOTH the structural and (if `verified_facts` supplied from
-    the KVS) the VERIFICATION-BACKED yield-gate result per subject. A non-numeric Item Model is
-    verification-backed when >=50% of its member DNA facts are KVS-promotable (>=2 independent source docs);
-    numeric Item Models are verification-backed by relation-match."""
-    verified_facts = verified_facts or set()
+def iter_kie_items(kconn: sqlite3.Connection):
+    """Yield normalized items {stem, options{label:text}, answer_text, subject, doc_id, visual_dependent}
+    from the certified kie.db chunk corpus (read-only)."""
     kconn.row_factory = sqlite3.Row
-    active: Set[str] = {r[0] for r in kconn.execute("SELECT concept_code FROM concepts WHERE status='active'")}
-    by_title = {(r[1] or "").lower(): r[0] for r in
-                kconn.execute("SELECT concept_code, title FROM concepts WHERE status='active' AND title IS NOT NULL")
-                if r[1]}
     base = ("text LIKE '%(1)%' AND text LIKE '%(2)%' AND text LIKE '%(3)%' AND text LIKE '%(4)%'")
-    rows = kconn.execute(f"SELECT c.doc_id, c.text FROM chunks c WHERE {base}").fetchall()
+    for row in kconn.execute(f"SELECT c.doc_id, c.text FROM chunks c WHERE {base}"):
+        doc, text = row[0], row[1]
+        for rec in split_and_recover(text):
+            if rec["key"] is None:
+                continue
+            subj = guess_subject(rec["stem"])
+            if not subj:
+                continue
+            opts = {str(k): v for k, v in rec["options"].items()}
+            yield {"stem": rec["stem"], "options": opts, "answer_text": opts.get(str(rec["key"])),
+                   "subject": subj, "doc_id": doc, "visual_dependent": False}
+
+
+def build_by_title(kconn: sqlite3.Connection) -> Dict[str, str]:
+    return {(r[1] or "").lower(): r[0] for r in
+            kconn.execute("SELECT concept_code, title FROM concepts WHERE status='active' AND title IS NOT NULL")
+            if r[1]}
+
+
+def run(kconn: sqlite3.Connection, qconn: sqlite3.Connection, now: str,
+        max_per_subject: int = 100000, verified_facts: Optional[Set[str]] = None,
+        extra_items=None, tier2_verified: Optional[Set[str]] = None) -> dict:
+    """Mine a unified item stream (kie.db chunks + optional `extra_items`, e.g. the qcorpus adapter) into
+    Question DNA + Item-Model clusters and measure BOTH the structural and the VERIFICATION-BACKED yield
+    gate. A non-numeric Item Model is verification-backed when >=50% of its member DNA facts are either
+    KVS-promotable (`verified_facts`, >=2 independent source docs) or Tier-2 model-agreed
+    (`tier2_verified`); numeric Item Models are verified by relation-match. Structural clusters are NEVER
+    counted as verified."""
+    verified_facts = verified_facts or set()
+    tier2_verified = tier2_verified or set()
+    by_title = build_by_title(kconn)
+
+    def items():
+        yield from iter_kie_items(kconn)
+        if extra_items is not None:
+            yield from extra_items
 
     per_subj = defaultdict(lambda: defaultdict(int))
     # cluster: subject -> key(lane,concept) -> {dna_ids:set, docs:set}
@@ -194,48 +221,46 @@ def run(kconn: sqlite3.Connection, qconn: sqlite3.Connection, now: str,
         lambda: defaultdict(lambda: {"dna": set(), "docs": set(), "verified": set()}))
     dna_rows = []
     counts = defaultdict(int)
-    for row in rows:
-        doc, text = row[0], row[1]
-        for rec in split_and_recover(text):
-            subj = guess_subject(rec["stem"])
-            if not subj or per_subj[subj]["recovered"] >= max_per_subject:
+    for it in items():
+        subj = it.get("subject")
+        stem = it.get("stem") or ""
+        if not subj or per_subj[subj]["recovered"] >= max_per_subject:
+            continue
+        per_subj[subj]["recovered"] += 1
+        doc = it.get("doc_id") or ""
+        keyopt = it.get("answer_text")
+        opts = it.get("options") or {}
+        kv = R.first_number(keyopt) if keyopt else None
+        given = R.parse_numbers(stem)
+        ck = concept_key(stem, subj, by_title)
+        if kv is not None and given:
+            rel = R.verify(given, kv, subject=subj)
+            if rel:
+                per_subj[subj]["numeric_verified"] += 1
+                lane = "NUMERIC_RELATIONAL"
+                tf = distractor_transforms(kv, {i: v for i, v in enumerate(opts.values())},
+                                           next((i for i, v in enumerate(opts.values()) if v == keyopt), -1))
+                did = _dna_id(subj, lane, rel, doc + "|" + stem[:80])
+                dna_rows.append((did, lane, subj, rel, json.dumps({"relation": rel, "answer": kv}), json.dumps(tf)))
+                clusters[subj][(lane, rel)]["dna"].add(did)
+                clusters[subj][(lane, rel)]["docs"].add(doc)
+                clusters[subj][(lane, rel)]["verified"].add(did)   # relation-match = verified
+                counts["numeric_dna"] += 1
                 continue
-            per_subj[subj]["recovered"] += 1
-            keyopt = rec["options"].get(rec["key"]) if rec["key"] else None
-            kv = R.first_number(keyopt) if keyopt else None
-            given = R.parse_numbers(rec["stem"])
-            ck = concept_key(rec["stem"], subj, by_title)
-            if kv is not None and given:
-                rel = R.verify(given, kv, subject=subj)
-                if rel:
-                    per_subj[subj]["numeric_verified"] += 1
-                    lane = "NUMERIC_RELATIONAL"
-                    tf = distractor_transforms(kv, rec["options"], rec["key"])
-                    sig = rel
-                    did = _dna_id(subj, lane, rel, doc + "|" + rec["stem"][:80])
-                    dna_rows.append((did, lane, subj, rel, json.dumps({"relation": rel, "given": given, "answer": kv}),
-                                     json.dumps(tf)))
-                    clusters[subj][(lane, rel)]["dna"].add(did)
-                    clusters[subj][(lane, rel)]["docs"].add(doc)
-                    clusters[subj][(lane, rel)]["verified"].add(did)   # relation-match = verified
-                    counts["numeric_dna"] += 1
-                    continue
-                per_subj[subj]["numeric_unverified"] += 1
-            # non-numeric
-            if rec["key"] is None:
-                per_subj[subj]["no_key"] += 1
-                continue
-            lane = classify_nonnumeric_lane(rec["stem"])
-            if lane == "CONCEPTUAL_GENERIC" or ck.endswith(":misc"):
-                per_subj[subj]["nonnum_unclustered"] += 1
-                continue   # do NOT count unclassified/misc as a distinct-archetype cluster (honest)
-            did = _dna_id(subj, lane, ck, doc + "|" + rec["stem"][:80])
-            dna_rows.append((did, lane, subj, ck, json.dumps({"concept": ck}), json.dumps([])))
-            clusters[subj][(lane, ck)]["dna"].add(did)
-            clusters[subj][(lane, ck)]["docs"].add(doc)
-            if fact_key(ck, keyopt) in verified_facts:      # KVS-corroborated (>=2 independent source docs)
-                clusters[subj][(lane, ck)]["verified"].add(did)
-            counts["nonnum_dna"] += 1
+            per_subj[subj]["numeric_unverified"] += 1
+        # non-numeric
+        lane = classify_nonnumeric_lane(stem)
+        if lane == "CONCEPTUAL_GENERIC" or ck.endswith(":misc"):
+            per_subj[subj]["nonnum_unclustered"] += 1
+            continue   # do NOT count unclassified/misc as a distinct-archetype cluster (honest)
+        did = _dna_id(subj, lane, ck, doc + "|" + stem[:80])
+        dna_rows.append((did, lane, subj, ck, json.dumps({"concept": ck}), json.dumps([])))
+        clusters[subj][(lane, ck)]["dna"].add(did)
+        clusters[subj][(lane, ck)]["docs"].add(doc)
+        fk = fact_key(ck, keyopt) if keyopt else None
+        if fk and (fk in verified_facts or fk in tier2_verified):   # KVS-corroborated OR Tier-2 model-agreed
+            clusters[subj][(lane, ck)]["verified"].add(did)
+        counts["nonnum_dna"] += 1
 
     # persist DNA
     for (did, lane, subj, concept, construction, distractor) in dna_rows:

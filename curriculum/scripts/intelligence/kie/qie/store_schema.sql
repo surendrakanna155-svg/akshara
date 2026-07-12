@@ -141,6 +141,21 @@ CREATE TABLE IF NOT EXISTS elite_visual_asset (
 );
 CREATE INDEX IF NOT EXISTS idx_elite_v_doc ON elite_visual_asset(doc_id);
 
+-- ── Tier-2 model-verification cache (B6) — governed, cached, OFFLINE independent-model agreement ──────
+-- Non-numeric clusters the deterministic KVS cannot reach (esp. Biology) are verified by an independent
+-- model reading stem+options+stated-answer (the Phase-0b agreement architecture, 91.7% on Biology). Verdicts
+-- are CACHED by item content hash so the model is never re-run (I9: offline at certification, zero runtime AI).
+CREATE TABLE IF NOT EXISTS tier2_verdict (
+  item_hash    TEXT PRIMARY KEY,          -- sha256 of (stem|options|stated_answer)
+  fact_key     TEXT,                      -- the (concept,answer) fact this item attests
+  subject      TEXT,
+  verdict      TEXT NOT NULL,             -- agree | disagree | unverifiable
+  model        TEXT,                      -- judge model id (provenance)
+  note         TEXT,
+  created_at   TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_tier2_fact ON tier2_verdict(fact_key);
+
 -- ── Concept-canonicalization ledger (A2) — which junk pseudo-concepts were quarantined, reversibly ──
 CREATE TABLE IF NOT EXISTS concept_canon_ledger (
   concept_code      TEXT PRIMARY KEY,

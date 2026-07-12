@@ -1,0 +1,433 @@
+[
+ {
+  "id": 0,
+  "fact_key": "9fa33c995647adc96e88",
+  "stem": "Following are the steps involved in action of toxin in Bt. Cotton\nA. The inactive toxin converted into active form due to alkaline pH of gut of insect.\nB. Bacillus thuringiensis produce crystals with toxic insecticidal proteins.\nC. The alkaline pH solubilises the crystals.\nD. The activated toxin binds to the surface of midgut cells, creates pores and causes death of the insect.\nE. The toxin protei",
+  "options": {
+   "1": "E → C → B → A → D",
+   "2": "B → C → A → E → D",
+   "3": "A → E → B → D → C",
+   "4": "B → E → C → A → D"
+  },
+  "stated_answer": "B → E → C → A → D"
+ },
+ {
+  "id": 1,
+  "fact_key": "fbae7589629c79187ef9",
+  "stem": "Noise pollution may cause nervousness and irritability by stimulating the secretion of",
+  "options": {
+   "a": "thyroid hormone",
+   "b": "adernaline hormone",
+   "c": "parathyroid hormone",
+   "d": "none of these"
+  },
+  "stated_answer": "adernaline hormone"
+ },
+ {
+  "id": 2,
+  "fact_key": "ac08be9c3bacb0f0f017",
+  "stem": "Which of the following can cause DNA damage and mutations in humans?",
+  "options": {
+   "a": "Absorption of  UV-A and UV-B",
+   "b": "Absorption of  UV-B",
+   "c": "Absorption of  UV-A",
+   "d": "Absorption of  UV-A and UV-C"
+  },
+  "stated_answer": "Absorption of  UV-B"
+ },
+ {
+  "id": 3,
+  "fact_key": "03a2d94d12ce0f4e3c41",
+  "stem": "Read the following statements. A lake near a village suffered heavy mortality of fishes within a few days. Consider the following reasons for this; (i) Lots of urea and phosphate fertilizer were used in the crops in the vicinity. (ii) The area was sprayed with DDT by an aircraft. (iii) The lake water turned green and stinky. (iv) Phytoplankton populations in the lake declined intially thereby grea",
+  "options": {
+   "a": "(i) and (iii)",
+   "b": "(i) and (ii)",
+   "c": "(ii) and (iii)",
+   "d": "(iii) and (iv)"
+  },
+  "stated_answer": "(i) and (iii)"
+ },
+ {
+  "id": 4,
+  "fact_key": "67e95a8f0d2b0a89ebb7",
+  "stem": "Organization responsible for maintaning Red Data Book is",
+  "options": {
+   "a": "IUCN",
+   "b": "WWF",
+   "c": "CITES",
+   "d": "IBWL"
+  },
+  "stated_answer": "IUCN"
+ },
+ {
+  "id": 5,
+  "fact_key": "f71f1b1dc89cde6c7418",
+  "stem": "Which of the following is the most serious threat to biodiversity?",
+  "options": {
+   "a": "Competition from exotic species",
+   "b": "Commercial harvesting",
+   "c": "Habitat destruction",
+   "d": "Overexploitation"
+  },
+  "stated_answer": "Habitat destruction"
+ },
+ {
+  "id": 6,
+  "fact_key": "0b8bdb92dd890bdab6a1",
+  "stem": "Which of the following is not a step in understanding biodiversity ?",
+  "options": {
+   "a": "Naming the species",
+   "b": "Looking at other related species",
+   "c": "Assessing the species geographic range",
+   "d": "Quantifying the species genome"
+  },
+  "stated_answer": "Quantifying the species genome"
+ },
+ {
+  "id": 7,
+  "fact_key": "592f0edadb1361fec4a0",
+  "stem": "Following arrangement is correct from the point of view of decreasing biodiversity in angiosperms (N), fungi (F), pteridophytes (P) and algae(A)",
+  "options": {
+   "a": "N > F > P > A",
+   "b": "N > F > A > P",
+   "c": "F > N > P > A",
+   "d": "F > N > A > P"
+  },
+  "stated_answer": "F > N > A > P"
+ },
+ {
+  "id": 8,
+  "fact_key": "64bbf87bca7d41e3e3fb",
+  "stem": "Which of the following is a free living aerobic non- photosynthetic nitrogen-fixer?",
+  "options": {
+   "a": "Rhizobium",
+   "b": "Azotobacter",
+   "c": "Azospirillum",
+   "d": "Nostoc"
+  },
+  "stated_answer": "Azotobacter"
+ },
+ {
+  "id": 9,
+  "fact_key": "cd428d468fe3381e3ee7",
+  "stem": "Atrial natriuretic factor (ANF) is released in response to the increase in blood volume and blood pressure. Which of the following is not the function of ANF?",
+  "options": {
+   "a": "Stimulates aldosterone secretion",
+   "b": "Inhibits the release of renin from JGA",
+   "c": "Stimulates salt loss in urine",
+   "d": "Inhibits sodium reabsorption from collecting duct"
+  },
+  "stated_answer": "Stimulates aldosterone secretion"
+ },
+ {
+  "id": 10,
+  "fact_key": "bede821a4d1f7945a71c",
+  "stem": "In telophase of mitosis, the mitotic spindle breaks down and nuclear membranes form. This is essentially the opposite of what happens in",
+  "options": {
+   "a": "prophase.",
+   "b": "interphase.",
+   "c": "metaphase.",
+   "d": "S phase."
+  },
+  "stated_answer": "prophase."
+ },
+ {
+  "id": 11,
+  "fact_key": "a085e9c3902a97db372a",
+  "stem": "Asexual reproduction is an effective strategy in stable environments because",
+  "options": {
+   "a": "gametogenesis is most efficient under these conditions.",
+   "b": "the offspring, genetically identical to their parents, are preadapted to the environment.",
+   "c": "asexual parthenogenesis produces a large amount of genetic diversity.",
+   "d": "animal cells tend to be more totipotent under stable conditions."
+  },
+  "stated_answer": "the offspring, genetically identical to their parents, are preadapted to the environment."
+ },
+ {
+  "id": 12,
+  "fact_key": "8cdc4f1c6d4d422ba1c3",
+  "stem": "Grafting is an example of asexual reproduction. Which of the following choices is an example of asexual reproduction involving nonvegetative parts of a plant ?",
+  "options": {
+   "a": "Apomixis",
+   "b": "Production of corms",
+   "c": "Production of bulbs",
+   "d": "Production of rhizomes"
+  },
+  "stated_answer": "Apomixis"
+ },
+ {
+  "id": 13,
+  "fact_key": "5ce85a225c67157fb012",
+  "stem": "Some organisms are capable of asexual or sexual reproduction. Under favourable conditions, reproduction proceeds asexually. When conditions become more stressful reproduction switchess to a sexual mode. Why?",
+  "options": {
+   "a": "Sexual reproduction is simple and more rapid allowing larger numbers of offspring to be produced",
+   "b": "Sexual reproduction requires two separate individuals, who can mutually provide nutrient support during stress",
+   "c": "Sexual reproduction produces individuals with new combinations of recombined chromosomes increasing diversity",
+   "d": "Asexual reproduction requires more energy"
+  },
+  "stated_answer": "Sexual reproduction produces individuals with new combinations of recombined chromosomes increasing diversity"
+ },
+ {
+  "id": 14,
+  "fact_key": "d4c1f477b6ff3a1473da",
+  "stem": "Which of the following statements are true ? (i) The blood transports CO2 comparatively easily because of its higher solubility. (ii) Approximately 8-9% of CO2 is transported being dissolved in the plasma of blood. (iii) The carbon dioxide produced by the tissues, diffuses passively into the blood stream and passes into red blood corpuscles and react with water to form H2CO3. (iv) The oxyhaemoglob",
+  "options": {
+   "a": "(i), (iii) and (v) are true, (ii) and (iv) are false",
+   "b": "(i), (iii) and (v) are false, (ii) and (iv) are true",
+   "c": "(i), (ii) and (iv) are true, (iii) and (v) are false",
+   "d": "(i), (ii) and (iv) are false, (iii) and (v) are true"
+  },
+  "stated_answer": "(i), (iii) and (v) are true, (ii) and (iv) are false"
+ },
+ {
+  "id": 15,
+  "fact_key": "c20db2e0e174a7851dea",
+  "stem": "Given below are four statements (i-iv) regarding human blood circulatory system (i) Arteries are thick-walled and have narrow lumen as compared to veins (ii) Angina is acute chest pain when the blood circulation to the brain is reduced (iii) Persons with blood group AB can donate blood to any person with any blood group under ABO system (iv) Calcium ions play a very important role in blood clottin",
+  "options": {
+   "a": "(i) and  (iv)",
+   "b": "(i) and (iv)",
+   "c": "(ii) and (iii)",
+   "d": "(iii) and (iv)"
+  },
+  "stated_answer": "(i) and  (iv)"
+ },
+ {
+  "id": 16,
+  "fact_key": "045e196f64afe0c330c7",
+  "stem": "The correct sequence in the process of development of human embryo is",
+  "options": {
+   "a": "fertilization—zygote—cleavage—morula—blastula— gastrula",
+   "b": "fertilization—cleavage—morula—zygote—blastula— gastrula",
+   "c": "fertilization—zygote—blastula—morula—cleavage— gastrula",
+   "d": "cleavage—zygote—fertilization—morula—blastula— gastrula"
+  },
+  "stated_answer": "fertilization—zygote—cleavage—morula—blastula— gastrula"
+ },
+ {
+  "id": 17,
+  "fact_key": "33214405c8d623939832",
+  "stem": "Plasmids are suitable vectors for gene cloning because",
+  "options": {
+   "a": "these are small circular DNA molecules which can integrate with host chromosomal DNA.",
+   "b": "these are small circular DNA molecules with their own replication origin site.",
+   "c": "these can shuttle between prokaryotic and eukaryotic cells.",
+   "d": "these often carry antibiotic resistance genes."
+  },
+  "stated_answer": "these are small circular DNA molecules with their own replication origin site."
+ },
+ {
+  "id": 18,
+  "fact_key": "ea5c6b8c18254a8ed3e6",
+  "stem": "The primary reason why the same basic techniques can be used to analyze the DNA from species as diverse as bacteria and humans is that",
+  "options": {
+   "a": "all cells are identical.",
+   "b": "every organism has the same amount of DNA.",
+   "c": "the DNA sequences of all organisms are the same.",
+   "d": "DNA has a consistent structure in all organisms."
+  },
+  "stated_answer": "DNA has a consistent structure in all organisms."
+ },
+ {
+  "id": 19,
+  "fact_key": "cb04319c4dff35fc2e70",
+  "stem": "The most important function of diaphragm is",
+  "options": {
+   "a": "To divide body cavity into compartments",
+   "b": "To protect lungs",
+   "c": "To aid in digestion",
+   "d": "To aid in ventilation"
+  },
+  "stated_answer": "To aid in ventilation"
+ },
+ {
+  "id": 20,
+  "fact_key": "fb6f32a560cee33abb22",
+  "stem": "Channel proteins allow ions that would not normally pass through the cell membrane to go through the channel. What properties of the proteins are responsible for this?",
+  "options": {
+   "a": "The channels are often composed of charged or polar R groups.",
+   "b": "The channels are often composed of hydrophobic R groups.",
+   "c": "a and b",
+   "d": "None of the above"
+  },
+  "stated_answer": "The channels are often composed of charged or polar R groups."
+ },
+ {
+  "id": 21,
+  "fact_key": "b84a2d8d7f0c13b85e6b",
+  "stem": "If we completely remove the decomposers from an ecosystem, its functioning will be adversely affected because",
+  "options": {
+   "a": "energy flow will be blocked",
+   "b": "herbivores will not receive solar energy",
+   "c": "mineral movement will be blocked",
+   "d": "rate of decomposition will be very high"
+  },
+  "stated_answer": "mineral movement will be blocked"
+ },
+ {
+  "id": 22,
+  "fact_key": "ef97a900ad9eb0b79e96",
+  "stem": "Which one of the following is not a function of an ecosystem?",
+  "options": {
+   "a": "Energy flow",
+   "b": "Decomposition",
+   "c": "Productivity",
+   "d": "Stratification"
+  },
+  "stated_answer": "Stratification"
+ },
+ {
+  "id": 23,
+  "fact_key": "f0683b78055c2df72de3",
+  "stem": "Which one of the following animals may occupy more than one trophic levels in the same ecosystem at the same time?",
+  "options": {
+   "a": "Sparrow",
+   "b": "Lion",
+   "c": "Goat",
+   "d": "Frog"
+  },
+  "stated_answer": "Sparrow"
+ },
+ {
+  "id": 24,
+  "fact_key": "d8f84394fdb9d41ab365",
+  "stem": "Which of the following is a man made artificial ecosystem?",
+  "options": {
+   "a": "Grassland ecosystem",
+   "b": "Agro ecosystem",
+   "c": "Ecosystem of artificial lakes and dams",
+   "d": "Forest ecosystem"
+  },
+  "stated_answer": "Agro ecosystem"
+ },
+ {
+  "id": 25,
+  "fact_key": "4336a2b8a04dda5dfd5d",
+  "stem": "Vaccine against polio viruses is an example of",
+  "options": {
+   "a": "auto-immunization",
+   "b": "passive immunization",
+   "c": "active immunization",
+   "d": "simple immunization"
+  },
+  "stated_answer": "active immunization"
+ },
+ {
+  "id": 26,
+  "fact_key": "25673d5f61e590c588c0",
+  "stem": "It is sometimes necessary to genetically engineered mammalian cells to produce proteins because they",
+  "options": {
+   "a": "can produce larger quantities of protein than bacteria.",
+   "b": "can read eukaryotic genes and bacteria cannot.",
+   "c": "can add sugars to make glycoproteins and bacteria cannot.",
+   "d": "are easier to grow than bacteria."
+  },
+  "stated_answer": "can add sugars to make glycoproteins and bacteria cannot."
+ },
+ {
+  "id": 27,
+  "fact_key": "61db6199fc8318e5b14d",
+  "stem": "Cow’s milk is slightly yellowish in colour due to the presence of",
+  "options": {
+   "a": "Carotene",
+   "b": "Riboflavin",
+   "c": "Xanthophyll",
+   "d": "Xanthophyll and Carotene"
+  },
+  "stated_answer": "Riboflavin"
+ },
+ {
+  "id": 28,
+  "fact_key": "24827724739017a21b19",
+  "stem": "Pancreatic cancer is an especially dangerous disease in people because the pancreas is",
+  "options": {
+   "a": "the organ that produces and stores bile.",
+   "b": "the site of synthesis for all of the essential amino acids.",
+   "c": "one of the organs through which food must pass on its way to the colon.",
+   "d": "an organ in which many different kinds of digestive enzymes are manufacture"
+  },
+  "stated_answer": "an organ in which many different kinds of digestive enzymes are manufacture"
+ },
+ {
+  "id": 29,
+  "fact_key": "80332babf9d31e4362b6",
+  "stem": "Which of the following is characteristic of the large intestine?",
+  "options": {
+   "a": "It has almost no bacterial populations.",
+   "b": "It contains chyme.",
+   "c": "It absorbs much of the water remaining in waste materials.",
+   "d": "It is the site of most of digestion."
+  },
+  "stated_answer": "It absorbs much of the water remaining in waste materials."
+ },
+ {
+  "id": 30,
+  "fact_key": "155e7c5e42585fa1210f",
+  "stem": "Which of the following light receptors is responsible for absorbing blue and ultraviolet light ?",
+  "options": {
+   "a": "Phytochrome Pr",
+   "b": "Photochrome Pfr",
+   "c": "Cryptochrome"
+  },
+  "stated_answer": "Cryptochrome"
+ },
+ {
+  "id": 31,
+  "fact_key": "b10664a2835519dcbe88",
+  "stem": "In which kingdom would you classify the archaebecteria and nitrogen-fixing organisms. If the five-kingdom system of classification is used ?",
+  "options": {
+   "a": "Monera",
+   "b": "Plantae",
+   "c": "Fungi",
+   "d": "Protista"
+  },
+  "stated_answer": "Monera"
+ },
+ {
+  "id": 32,
+  "fact_key": "468ad99cb4ab18386f63",
+  "stem": "Two animals which are the members of the same order must also be the members of the same :",
+  "options": {
+   "a": "Class",
+   "b": "Family",
+   "c": "Genus",
+   "d": "Species"
+  },
+  "stated_answer": "Class"
+ },
+ {
+  "id": 33,
+  "fact_key": "b5e1f83d6c733b3c94fc",
+  "stem": "Mycoplasma is pleuromorphic due to",
+  "options": {
+   "a": "absence of cell wall",
+   "b": "presence of three layered cell membrane",
+   "c": "the presence of sterol",
+   "d": "None of these Total Questions 45 Total Marks 180 Attempted Correct Incorrect Net Score Cut-off Score 45 Qualifying Score 60 Success Gap = Net Score – Qualifying Score Net Score = (Correct × 4) – (Incorrect × 1) DAILY PRACTICE PROBLEM DPP CHAPTERWISE 2 - BIOLOGY"
+  },
+  "stated_answer": "absence of cell wall"
+ },
+ {
+  "id": 34,
+  "fact_key": "2d92dac501a8a194c138",
+  "stem": "Which of the following statements is/are not true? (i) In Urochordata, notochord is present in larval tail. (ii) In Cephalochordata, notochord extends from head to tail region. (iii) Branchiostoma belongs to hemichordata. (iv) Only one class of living members, class Cyclostomata represents the super class agnatha",
+  "options": {
+   "a": "(ii) and (iv)",
+   "b": "(i), (iii) and (iv)",
+   "c": "(iii) only",
+   "d": "(i) and (iv)"
+  },
+  "stated_answer": "(iii) only"
+ },
+ {
+  "id": 35,
+  "fact_key": "79b00282d0cb56e1a2d5",
+  "stem": "The change of the light-coloured variety of peppered moth (Biston betularia) to its darker variety (Biston carbonaria) is due to",
+  "options": {
+   "a": "mutation",
+   "b": "regeneration",
+   "c": "genetic isolation",
+   "d": "temporal isolation"
+  },
+  "stated_answer": "mutation"
+ }
+]

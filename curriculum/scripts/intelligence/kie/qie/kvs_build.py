@@ -26,37 +26,32 @@ norm_answer = mine.norm_answer
 fact_key = mine.fact_key
 
 
-def build_from_corpus(kconn: sqlite3.Connection, qconn: sqlite3.Connection, now: str) -> dict:
-    """Mine (concept, correct-answer) facts from all keyed non-numeric MCQs; corroborate across docs."""
+def build_from_corpus(kconn: sqlite3.Connection, qconn: sqlite3.Connection, now: str, extra_items=None) -> dict:
+    """Mine (concept, correct-answer) facts from all keyed non-numeric MCQs across kie.db AND (optionally)
+    the qcorpus adapter items; corroborate across INDEPENDENT source docs. More independent sources ->
+    more facts reach the >=2-doc promotion bar."""
     kconn.row_factory = sqlite3.Row
-    by_title = {(r[1] or "").lower(): r[0] for r in
-                kconn.execute("SELECT concept_code, title FROM concepts WHERE status='active' AND title IS NOT NULL")
-                if r[1]}
-    base = "text LIKE '%(1)%' AND text LIKE '%(2)%' AND text LIKE '%(3)%' AND text LIKE '%(4)%'"
+    by_title = mine.build_by_title(kconn)
     # fact -> {docs, concept, answer, subject}
     facts: Dict[str, dict] = defaultdict(lambda: {"docs": set(), "concept": None, "answer": None, "subject": None})
-    for row in kconn.execute(f"SELECT c.doc_id, c.text FROM chunks c WHERE {base}"):
-        doc, text = row[0], row[1]
-        for rec in mine.split_and_recover(text):
-            if rec["key"] is None:
-                continue
-            subj = mine.guess_subject(rec["stem"])
-            if not subj:
-                continue
-            # numeric-answer facts are verified by the relation library, not the KVS — skip here
-            keyopt = rec["options"].get(rec["key"])
-            if not keyopt or mine.R.first_number(keyopt) is not None:
-                continue
-            ck = mine.concept_key(rec["stem"], subj, by_title)
-            # A fact must be on a RESOLVED concept (not a coarse subject:keyword bucket) with a SEMANTIC
-            # answer (not an option-label). This kills the over-corroboration found in the B5 spot-check
-            # (junk-concept + "a-ii,b-i" answer-label collisions inflating the verified count).
-            if not mine.is_resolved_concept(ck) or not mine.is_semantic_answer(keyopt):
-                continue
-            fk = fact_key(ck, keyopt)
-            f = facts[fk]
-            f["docs"].add(doc)
-            f["concept"], f["answer"], f["subject"] = ck, norm_answer(keyopt), subj
+
+    def add(stem, keyopt, subj, doc):
+        if not subj or not keyopt or mine.R.first_number(keyopt) is not None:
+            return   # numeric-answer facts are verified by the relation library, not the KVS
+        ck = mine.concept_key(stem, subj, by_title)
+        # A fact must be on a RESOLVED concept (not a coarse subject:keyword bucket) with a SEMANTIC answer
+        # (not an option-label) — kills the B5 over-corroboration (junk-concept + "a-ii,b-i" collisions).
+        if not mine.is_resolved_concept(ck) or not mine.is_semantic_answer(keyopt):
+            return
+        fk = fact_key(ck, keyopt)
+        f = facts[fk]
+        f["docs"].add(doc)
+        f["concept"], f["answer"], f["subject"] = ck, norm_answer(keyopt), subj
+
+    for item in mine.iter_kie_items(kconn):
+        add(item["stem"], item.get("answer_text"), item["subject"], item["doc_id"])
+    for item in (extra_items or []):
+        add(item.get("stem", ""), item.get("answer_text"), item.get("subject"), item.get("doc_id"))
     promotable = 0
     for fk, f in facts.items():
         n = len(f["docs"])
