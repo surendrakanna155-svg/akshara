@@ -283,9 +283,41 @@ export async function decideAttendanceRequest(
   if (!reqRow) {
     throw new StaffAttendanceValidationError("REQUEST_NOT_FOUND", "No pending request with that id");
   }
+  // SoD (audit R4, mirroring HR-3 leave / owner decision 2026-07-06): the
+  // requester can never decide their own request — a supervisory user holds
+  // markStaffAttendance too, and self-approval would let them certify their
+  // own attendance with zero independent verification, defeating the whole
+  // geofence+face chain. Same auth `sub` identity space; no mapping needed.
+  if (approverId !== "" && reqRow.user_id === approverId) {
+    throw new StaffAttendanceValidationError(
+      "SELF_APPROVE_DENIED",
+      "You cannot approve or reject your own attendance request",
+    );
+  }
+
+  // Claim the decision FIRST, guarded on status='pending' (audit R4 race fix):
+  // two approvers deciding concurrently both pass the SELECT above, but only
+  // the first one's UPDATE matches — the loser gets zero rows back and a typed
+  // conflict, and crucially never reaches the check-in INSERT (no duplicate
+  // ledger rows). Mirrors LEAVE_ALREADY_DECIDED.
+  const claimed = await db.queryObject<AttendanceRequestRow>(
+    `UPDATE staff_attendance_requests
+        SET status = $2, decided_by = $3, decided_at = timezone('utc', now())
+      WHERE organization_id = app_current_tenant_id()
+        AND school_id = app_current_school_id()
+        AND id = $1 AND status = 'pending'
+      RETURNING *`,
+    [requestId, approve ? "approved" : "rejected", approverId],
+  );
+  let decided = claimed[0];
+  if (!decided) {
+    throw new StaffAttendanceValidationError(
+      "REQUEST_ALREADY_DECIDED",
+      "This request was already decided by another approver",
+    );
+  }
 
   let checkIn: StaffCheckInRow | null = null;
-  let resultingId: string | null = null;
   if (approve) {
     checkIn = await recordStaffCheckIn(db, organizationId, schoolId, {
       userId: reqRow.user_id,
@@ -305,18 +337,17 @@ export async function decideAttendanceRequest(
       faceMatched: false,
       captureRef: null,
     });
-    resultingId = checkIn.id;
+    const linked = await db.queryObject<AttendanceRequestRow>(
+      `UPDATE staff_attendance_requests
+          SET resulting_check_in_id = $2
+        WHERE organization_id = app_current_tenant_id()
+          AND school_id = app_current_school_id()
+          AND id = $1
+        RETURNING *`,
+      [requestId, checkIn.id],
+    );
+    decided = linked[0] ?? decided;
   }
 
-  const updated = await db.queryObject<AttendanceRequestRow>(
-    `UPDATE staff_attendance_requests
-        SET status = $2, decided_by = $3, decided_at = timezone('utc', now()),
-            resulting_check_in_id = $4
-      WHERE organization_id = app_current_tenant_id()
-        AND school_id = app_current_school_id()
-        AND id = $1
-      RETURNING *`,
-    [requestId, approve ? "approved" : "rejected", approverId, resultingId],
-  );
-  return { request: updated[0]!, checkIn };
+  return { request: decided, checkIn };
 }

@@ -5,6 +5,7 @@ import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../manual_request_datasource.dart';
+import '../staff_attendance_models.dart';
 import '../staff_attendance_providers.dart';
 
 /// P1-PROD-22 slice 4 — the approver's Manual Attendance Request queue. The
@@ -42,6 +43,17 @@ class _ManualRequestQueueState extends ConsumerState<ManualRequestQueue> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(approve ? 'Request approved.' : 'Request rejected.')),
+      );
+      setState(() {
+        _deciding.remove(requestId);
+        _pending = _load();
+      });
+    } on StaffAttendanceRejected catch (e) {
+      // Typed server verdict (already decided by another approver / SoD): show
+      // the real reason and refresh — the stale card must not linger (R4).
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
       );
       setState(() {
         _deciding.remove(requestId);

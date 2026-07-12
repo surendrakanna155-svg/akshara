@@ -97,10 +97,12 @@ class ManualAttendanceRequestDataSource {
     return (body['data'] as Map<String, dynamic>?) ?? body;
   }
 
-  /// Maps a 422 `STAFF_ATTENDANCE_*` envelope (bad reason / not-found request)
-  /// to the same typed rejection the check-in datasource uses.
+  /// Maps a `STAFF_ATTENDANCE_*` envelope to the typed rejection the check-in
+  /// datasource uses. 422 = bad payload/not-found; 403 = SELF_APPROVE_DENIED
+  /// (SoD); 409 = REQUEST_ALREADY_DECIDED (lost decide race).
   StaffAttendanceRejected? _asRejection(DioException e) {
-    if (e.response?.statusCode != 422) return null;
+    const mapped = {422, 403, 409};
+    if (!mapped.contains(e.response?.statusCode)) return null;
     final data = e.response?.data;
     if (data is Map) {
       final error = data['error'];

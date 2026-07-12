@@ -77,7 +77,14 @@ function roleOf(claims: unknown): string {
 }
 
 function validationResponse(e: StaffAttendanceValidationError): Response {
-  return errorEnvelope(`STAFF_ATTENDANCE_${e.code}`, e.message, 422);
+  // Contract fidelity with the HR leave twin (audit R4): SoD denial is a 403
+  // (authorization, not payload), a lost decide race is a 409 conflict.
+  const status = e.code === "SELF_APPROVE_DENIED"
+    ? 403
+    : e.code === "REQUEST_ALREADY_DECIDED"
+    ? 409
+    : 422;
+  return errorEnvelope(`STAFF_ATTENDANCE_${e.code}`, e.message, status);
 }
 
 // ── POST /staff-attendance/check ─────────────────────────────────────────────
