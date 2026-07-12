@@ -141,6 +141,16 @@ class QuestionSlot:
     solution: Optional[str] = None
     provenance: Dict = field(default_factory=dict)   # frequency, years, exam, pattern_id
     validation: List[str] = field(default_factory=list)
+    # ── Phase-A5 INERT engine-v2 seam (additive only) ────────────────────────────────────────────
+    # Optional fields the quality-first architecture (kie/qie) will populate in later phases. Nothing in
+    # the engine reads or writes them yet, so generation behavior and the frozen matrix are UNCHANGED.
+    # This is the minimal reviewed seam per OPUS_FABLE_RECONCILIATION_RECORD.md §4 surface #1 — no
+    # selection/label/dedup behavior is altered here (those are Phase C/D changes, benchmark-gated).
+    item_model_id: Optional[str] = None
+    lane: Optional[str] = None
+    difficulty_drivers: Optional[Dict] = None
+    gate_verdicts: List = field(default_factory=list)
+    solution_steps: Optional[List] = None
 
 
 @dataclass

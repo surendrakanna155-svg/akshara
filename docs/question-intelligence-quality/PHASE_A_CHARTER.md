@@ -72,9 +72,13 @@
   drops, with page/bbox provenance, into new `qie.db` `elite_question` / `elite_visual_asset` tables. So the
   ~200–300 incoming board PDFs can be ingested without silently losing structure. 4 tests green; frozen
   ingestion phases untouched. EOS gate: **PASS**.
-- **A5 — Inert engine-v2 seam:** additive `QuestionSlot` fields (`item_model_id`, `lane`, `difficulty_drivers`,
-  `gate_verdicts`, `solution_steps`), a gate slot in `validate.py`, a lane/archetype hook in `select.py` — all
-  inert, matrix green. Separately reviewed.
+- **A5 — Inert engine-v2 seam — ✅ DONE (2026-07-12).** Per the owner's constraint (inert only; no new
+  generation behavior; no gate weakened; no surface expansion), A5 added **only** the additive `QuestionSlot`
+  fields (`item_model_id`, `lane`, `difficulty_drivers`, `gate_verdicts`, `solution_steps`) in
+  `qpgen/models.py`, all Optional with defaults — nothing reads them. The `validate.py` gate slot and
+  `select.py` lane hook were **deliberately deferred to Phase C/D** because active hooks/label/dedup changes
+  alter behavior (not inert). **Proof of inertness: post-A5 frozen matrix is byte-identical to post-canon
+  A2**, and the full 394-test regression is green. EOS gate: **PASS**.
 
 **Phase-A exit:** benchmark harness runs; `qie.db` schema migrated; relation library + KVS v0 cover the first
 benchmark slice; concept canonicalization done with evidence; engine-v2 seam merged inert with the matrix
