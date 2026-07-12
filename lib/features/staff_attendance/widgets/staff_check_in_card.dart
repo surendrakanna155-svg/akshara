@@ -15,15 +15,22 @@ import '../staff_attendance_models.dart';
 /// point to `FaceEnrollmentScreen` at all times, PLUS a prominent "Enrol my
 /// face" call-to-action when the last outcome was specifically a
 /// `FACE_NOT_ENROLLED` rejection ([StaffCheckOutcome.isNotEnrolled]).
+///
+/// [onManualRequest] (Slice 4), when provided, surfaces the design-sanctioned
+/// fallback — "Request manual attendance" — whenever the chain could NOT
+/// complete (location-blocked / face-blocked / failed). Never on a recorded
+/// success. The host opens the submission flow with the attempted event.
 class StaffCheckInCard extends StatefulWidget {
   const StaffCheckInCard({
     super.key,
     required this.onRecord,
     this.onOpenEnrollment,
+    this.onManualRequest,
   });
 
   final Future<StaffCheckOutcome> Function(StaffCheckEvent event) onRecord;
   final VoidCallback? onOpenEnrollment;
+  final void Function(StaffCheckEvent? attempted)? onManualRequest;
 
   @override
   State<StaffCheckInCard> createState() => _StaffCheckInCardState();
@@ -132,6 +139,21 @@ class _StaffCheckInCardState extends State<StaffCheckInCard> {
                     onPressed: widget.onOpenEnrollment,
                     icon: const Icon(Icons.face_retouching_natural),
                     label: const Text('Enrol my face'),
+                  ),
+                ),
+              ],
+              // Slice 4 — the chain could not complete: offer the audited
+              // manual-request fallback (design §3's ONLY sanctioned bypass).
+              if (_last!.status != StaffCheckStatus.recorded &&
+                  widget.onManualRequest != null) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    key: const Key('manual-request-cta'),
+                    onPressed: () => widget.onManualRequest!(_lastEvent),
+                    icon: const Icon(Icons.edit_calendar_outlined),
+                    label: const Text('Request manual attendance'),
                   ),
                 ),
               ],

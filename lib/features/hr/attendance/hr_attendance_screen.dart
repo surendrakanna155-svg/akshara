@@ -12,8 +12,12 @@ import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_status_chip.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
+import '../../../core/security/permissions.dart';
+import '../../../core/security/rbac_service.dart';
 import '../../admin/admin_layout.dart';
 import '../../staff_attendance/staff_attendance_providers.dart';
+import '../../staff_attendance/widgets/manual_request_dialog.dart';
+import '../../staff_attendance/widgets/manual_request_queue.dart';
 import '../../staff_attendance/widgets/staff_check_in_card.dart';
 import '../hr_models.dart';
 import '../hr_providers.dart';
@@ -66,8 +70,25 @@ class HrAttendanceScreen extends ConsumerWidget {
               // call-to-action both open the same enrollment flow.
               onOpenEnrollment: () =>
                   context.push(RouteNames.staffFaceEnrollment),
+              // Slice 4 — the audited fallback when the chain cannot complete.
+              onManualRequest: (attempted) => showDialog<void>(
+                context: context,
+                builder: (_) => ManualRequestDialog(
+                  datasource:
+                      ref.read(manualAttendanceRequestDataSourceProvider),
+                  attempted: attempted,
+                ),
+              ),
             ),
             const SizedBox(height: AksharaSpacing.s4),
+            // Slice 4 — approver queue, only for holders of the same
+            // supervisory permission the server enforces on list + decide.
+            if (ref
+                .watch(rbacServiceProvider)
+                .hasPermission(Permission.approveStaffAttendance)) ...[
+              const ManualRequestQueue(),
+              const SizedBox(height: AksharaSpacing.s4),
+            ],
             // HR-6 — monthly attendance muster export (inferred from the
             // staff_check_ins ledger server-side). Always available on this
             // viewHr-gated screen, independent of the attendance list state.

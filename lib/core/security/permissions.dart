@@ -193,6 +193,11 @@ enum Permission {
   // teacher-entered (O4); markAttendance above is the teacher→roster permission.
   markStaffAttendance,
 
+  // P1-PROD-22 slice 4 — approve/reject manual staff attendance requests (the
+  // audited fallback when the geofence+face chain cannot complete). Seeded
+  // server-side in 20260820000000 for the supervisory roles.
+  approveStaffAttendance,
+
   // Phase D M-D5 — Finance approval governance
   assignScholarship,
   approveFeeConcession,

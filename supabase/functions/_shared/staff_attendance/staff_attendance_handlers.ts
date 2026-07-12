@@ -22,6 +22,8 @@ import {
   createAttendanceRequest,
   decideAttendanceRequest,
   getGeofenceConfig,
+  listMyAttendanceRequests,
+  listPendingAttendanceRequests,
   recordStaffCheckIn,
   StaffAttendanceValidationError,
   staffCheckInToApi,
@@ -363,6 +365,62 @@ export async function handleCreateManualRequest(req: Request, config: AppConfig)
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse();
     if (error instanceof StaffAttendanceValidationError) return validationResponse(error);
+    throw error;
+  }
+}
+
+// ── GET /staff-attendance/manual-requests ────────────────────────────────────
+// SLICE 4 — the read that makes the design-§3 fallback usable in-app.
+//   ?mine=true → the CALLER's own recent requests (JWT subject only; the same
+//                universal self-service gate as POST /check).
+//   default    → the school's PENDING approval queue (approver gate — the same
+//                supervisory permission that decides them).
+// Read-only: no mutation audit.
+export async function handleListManualRequests(req: Request, config: AppConfig): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const url = new URL(req.url);
+  const mine = url.searchParams.get("mine") === "true";
+  const denied = mine ? requireMark(auth.claims) : requireApprove(auth.claims);
+  if (denied) return denied;
+
+  const claims = auth.claims;
+  const organizationId = organizationIdFromClaims(claims);
+  const schoolId = schoolIdFromClaims(claims);
+  try {
+    if (mine) {
+      const rows = await withTenantContext(config, claims, (db) =>
+        listMyAttendanceRequests(db, organizationId, schoolId, subjectOf(claims)));
+      return jsonResponse(envelope({
+        items: rows.map((r) => ({
+          id: r.id,
+          eventType: r.event_type,
+          reason: r.reason,
+          status: r.status,
+          createdAt: r.created_at,
+          decidedAt: r.decided_at,
+        })),
+      }));
+    }
+    const limitRaw = Number(url.searchParams.get("limit") ?? "50");
+    const limit = Number.isFinite(limitRaw)
+      ? Math.min(100, Math.max(1, Math.trunc(limitRaw)))
+      : 50;
+    const rows = await withTenantContext(config, claims, (db) =>
+      listPendingAttendanceRequests(db, organizationId, schoolId, limit));
+    return jsonResponse(envelope({
+      items: rows.map((r) => ({
+        id: r.id,
+        userId: r.user_id,
+        staffName: r.staff_name,
+        eventType: r.event_type,
+        reason: r.reason,
+        createdAt: r.created_at,
+      })),
+      count: rows.length,
+    }));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse();
     throw error;
   }
 }

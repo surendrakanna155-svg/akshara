@@ -209,6 +209,60 @@ export async function createAttendanceRequest(
   return rows[0]!;
 }
 
+/** SLICE 4 — the caller's OWN recent requests (staff self-service; the
+ * userId is ALWAYS the JWT subject at the handler, never a request param). */
+export interface MyAttendanceRequestRow {
+  id: string;
+  event_type: string;
+  reason: string;
+  status: string;
+  created_at: string;
+  decided_at: string | null;
+}
+
+export async function listMyAttendanceRequests(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  userId: string,
+): Promise<MyAttendanceRequestRow[]> {
+  return await db.queryObject<MyAttendanceRequestRow>(
+    `SELECT id, event_type, reason, status, created_at, decided_at
+       FROM staff_attendance_requests
+      WHERE organization_id = $1 AND school_id = $2 AND user_id = $3
+      ORDER BY created_at DESC
+      LIMIT 20`,
+    [organizationId, schoolId, userId],
+  );
+}
+
+/** SLICE 4 — the school's PENDING queue for approvers (uses
+ * idx_attendance_requests_school_status; limit clamped at the handler). */
+export interface PendingAttendanceRequestRow {
+  id: string;
+  user_id: string;
+  staff_name: string;
+  event_type: string;
+  reason: string;
+  created_at: string;
+}
+
+export async function listPendingAttendanceRequests(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  limit: number,
+): Promise<PendingAttendanceRequestRow[]> {
+  return await db.queryObject<PendingAttendanceRequestRow>(
+    `SELECT id, user_id, staff_name, event_type, reason, created_at
+       FROM staff_attendance_requests
+      WHERE organization_id = $1 AND school_id = $2 AND status = 'pending'
+      ORDER BY created_at DESC
+      LIMIT $3`,
+    [organizationId, schoolId, limit],
+  );
+}
+
 export async function decideAttendanceRequest(
   db: TenantQueryClient,
   organizationId: string,

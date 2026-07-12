@@ -10,6 +10,7 @@ import 'attendance_capture_sources.dart';
 import 'device/geolocator_location_source.dart';
 import 'device/mlkit_face_capture.dart';
 import 'face_enrollment_datasource.dart';
+import 'manual_request_datasource.dart';
 import 'staff_attendance_controller.dart';
 import 'staff_attendance_remote_datasource.dart';
 
@@ -46,6 +47,16 @@ final faceCaptureSourceProvider = Provider<FaceCaptureSource>(
 /// revoke the CALLER's own reference face. See face_enrollment_datasource.dart.
 final faceEnrollmentDataSourceProvider = Provider<FaceEnrollmentDataSource>(
   (ref) => FaceEnrollmentDataSource(
+    dio: ref.watch(dioProvider),
+    query: ref.watch(repositoryQueryProvider),
+  ),
+);
+
+/// Slice 4 — the Manual Attendance Request datasource (staff submission +
+/// approver queue). Same direct-Dio shape as the enrollment datasource.
+final manualAttendanceRequestDataSourceProvider =
+    Provider<ManualAttendanceRequestDataSource>(
+  (ref) => ManualAttendanceRequestDataSource(
     dio: ref.watch(dioProvider),
     query: ref.watch(repositoryQueryProvider),
   ),
