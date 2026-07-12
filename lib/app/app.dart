@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/constants/app_constants.dart';
 import '../core/notifications/notification_ui_keys.dart';
 import '../core/providers/router_provider.dart';
+import '../core/security/app_lock/app_lock_overlay.dart';
+import '../core/security/app_lock/app_lock_providers.dart';
 import '../core/reliability/drafts/draft_autosave.dart';
 import '../core/reliability/reliability_providers.dart';
 import '../core/reliability/sync_center/sync_banner.dart';
@@ -52,10 +54,14 @@ class _AksharaAppState extends ConsumerState<AksharaApp>
       // Persist every in-progress form immediately (covers phone-lock,
       // app-switch and kill). Fire-and-forget — never block the lifecycle.
       unawaited(ref.read(draftFlushRegistryProvider).flushAll());
+      // P1-SEC-1: arm the App Lock timer when backgrounded.
+      ref.read(appLockControllerProvider.notifier).onBackground(DateTime.now());
     } else if (state == AppLifecycleState.resumed) {
       // REL-4: on foreground, drain any writes queued while backgrounded/offline
       // (a killed-then-relaunched session may have undrained outbox entries).
       ref.read(syncEngineProvider).flushIfOnline();
+      // P1-SEC-1: re-lock if the background outlasted the grace window.
+      ref.read(appLockControllerProvider.notifier).onResume(DateTime.now());
     }
   }
 
@@ -75,14 +81,25 @@ class _AksharaAppState extends ConsumerState<AksharaApp>
       themeMode: themeMode,
       routerConfig: router,
       builder: (BuildContext context, Widget? child) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        // P1-SEC-1: when App Lock is engaged, cover the ENTIRE app (content +
+        // sync banner) with the biometric lock overlay so nothing behind it is
+        // visible or interactable until a successful unlock.
+        final locked = ref.watch(
+          appLockControllerProvider.select((s) => s.locked),
+        );
+        return Stack(
           children: <Widget>[
-            Expanded(child: child ?? const SizedBox.shrink()),
-            SyncBanner(
-              onOpenSyncCenter: () =>
-                  ref.read(goRouterProvider).push(RouteNames.syncCenter),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Expanded(child: child ?? const SizedBox.shrink()),
+                SyncBanner(
+                  onOpenSyncCenter: () =>
+                      ref.read(goRouterProvider).push(RouteNames.syncCenter),
+                ),
+              ],
             ),
+            if (locked) const Positioned.fill(child: AppLockOverlay()),
           ],
         );
       },
