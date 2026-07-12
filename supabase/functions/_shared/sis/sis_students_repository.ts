@@ -754,6 +754,16 @@ export async function updateStudent(
 
   if (input.status !== undefined) {
     assertValidStatusTransition(existing.student.status, input.status);
+    // SCE-1 (audit F1 P0): the general update is a second writer of
+    // status='transferred' — it must enforce the SAME no-dues gate as
+    // PATCH /status and the TC engine, or the bypass stays open here.
+    await enforceTransferClearance(
+      db,
+      organizationId,
+      schoolId,
+      studentId,
+      parseApiStatus(input.status),
+    );
   }
 
   if (input.displayName !== undefined || input.status !== undefined) {
@@ -821,6 +831,53 @@ export async function updateStudent(
   return detail;
 }
 
+/**
+ * SCE-1 (owner-approved 2026-07-12): EVERY transition to `transferred` — whoever
+ * writes the status — must clear the SAME no-dues gate as the TC engine, so no
+ * status-writing endpoint can bypass the Transfer-Certificate law. Shared by
+ * `updateStudentStatus` (PATCH /status) AND `updateStudent` (PUT /students/:id).
+ * Consults the clearance gate on lifecycle 'transfer_certificate' (identical
+ * finance-blocking policy AND the shared waiver pool), fails CLOSED on unwaived
+ * dues (→ ClearanceDuesBlockedError → 409 DUES_PENDING), and CONSUMES a covering
+ * approved waiver single-use (no TC issue row, so consumed_by_issue_id null;
+ * re-blocks on a lost consume race). No-op for any target other than
+ * `transferred` — `graduated` is DELIBERATELY NOT gated (open owner policy on
+ * cohort-graduation dues-blocking). MUST run inside the caller's transaction,
+ * BEFORE the status UPDATE, so a block rolls the whole change back.
+ */
+export async function enforceTransferClearance(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  studentId: string,
+  targetStatus: string,
+): Promise<void> {
+  if (targetStatus !== "transferred") return;
+  const decision = await resolveClearanceDecision(
+    db,
+    { organizationId, schoolId },
+    studentId,
+    "transfer_certificate",
+  );
+  if (decision.blocked) {
+    throw new ClearanceDuesBlockedError(decision.blockingAmount);
+  }
+  if (decision.waiver) {
+    const consumed = await consumeWaiver(
+      db,
+      { organizationId, schoolId },
+      studentId,
+      "transfer_certificate",
+      null,
+    );
+    // Single-use guard (mirrors the TC path): a concurrent exit may have already
+    // consumed the covering waiver → it can't clear THIS transfer → fail closed.
+    if (!consumed) {
+      throw new ClearanceDuesBlockedError(decision.duesAtGate);
+    }
+  }
+}
+
 export async function updateStudentStatus(
   db: TenantQueryClient,
   organizationId: string,
@@ -835,39 +892,7 @@ export async function updateStudentStatus(
   const targetStatus = parseApiStatus(input.status);
   const dbStatus = statusToDb(targetStatus);
 
-  // SCE-1 (owner-approved 2026-07-12): the raw status endpoint must not BYPASS
-  // the Transfer-Certificate no-dues law. Every transition to `transferred`
-  // consults the SAME clearance gate as the TC engine (lifecycle
-  // 'transfer_certificate' — identical finance-blocking policy AND the shared
-  // waiver pool), fails CLOSED on unwaived dues, and CONSUMES a covering
-  // approved waiver (single-use; no TC issue row, so consumed_by_issue_id null).
-  // `graduated` is DELIBERATELY NOT gated here — whether bulk cohort graduation
-  // hard-blocks on dues is an explicit open owner-policy decision, not a guess.
-  if (targetStatus === "transferred") {
-    const decision = await resolveClearanceDecision(
-      db,
-      { organizationId, schoolId },
-      studentId,
-      "transfer_certificate",
-    );
-    if (decision.blocked) {
-      throw new ClearanceDuesBlockedError(decision.blockingAmount);
-    }
-    if (decision.waiver) {
-      const consumed = await consumeWaiver(
-        db,
-        { organizationId, schoolId },
-        studentId,
-        "transfer_certificate",
-        null,
-      );
-      // Same single-use guard as the TC path: if a concurrent exit already
-      // consumed the covering waiver, it can't clear THIS transfer — fail closed.
-      if (!consumed) {
-        throw new ClearanceDuesBlockedError(decision.duesAtGate);
-      }
-    }
-  }
+  await enforceTransferClearance(db, organizationId, schoolId, studentId, targetStatus);
 
   await db.queryObject(
     `UPDATE students SET

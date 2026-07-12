@@ -578,6 +578,33 @@ Deno.test("SCE-1: an approved COVERING waiver lets the status-endpoint transfer 
   assertEquals(consumed.length, 1, "the covering waiver is consumed by the transfer");
 });
 
+Deno.test("SCE-1 (audit F1 P0): the GENERAL update endpoint (updateStudent) also gates status=transferred — the bypass is closed on both writers", async () => {
+  const db = new WriteMockDb();
+  seedActiveStudent(db);
+  const { client } = clearanceWrap(db, { dues: 600, waiverCover: null });
+  db.beginTransaction();
+  const err = await assertRejects(
+    () => updateStudent(client, ORG, SCHOOL_A, STUDENT_A, { status: "transferred" }),
+    ClearanceDuesBlockedError,
+  );
+  assertEquals((err as ClearanceDuesBlockedError).amount, 600);
+  assertEquals(db.committedStudents[0].status, "active", "no status flip on the general update either");
+});
+
+Deno.test("SCE-1 (audit F1): updateStudent with a NON-transferred status (or no status) is unaffected — the gate is transferred-only", async () => {
+  const db = new WriteMockDb();
+  seedActiveStudent(db);
+  const { client, consumed } = clearanceWrap(db, { dues: 999, waiverCover: null });
+  // display-name-only update touches no status → no gate, no dues check.
+  const detail = await withMockTransaction(
+    db,
+    () => Promise.resolve(client).then((c) =>
+      updateStudent(c, ORG, SCHOOL_A, STUDENT_A, { displayName: "New Name" })),
+  );
+  assertEquals(detail.student.display_name, "New Name");
+  assertEquals(consumed.length, 0);
+});
+
 Deno.test("SCE-1: `graduated` is DELIBERATELY NOT gated — a duesful student can still be graduated (owner-policy boundary)", async () => {
   const db = new WriteMockDb();
   seedActiveStudent(db);
