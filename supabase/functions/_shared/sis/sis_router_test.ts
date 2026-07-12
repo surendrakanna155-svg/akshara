@@ -180,6 +180,33 @@ Deno.test("sis router: transfer-certificate does not resolve to the generic stud
   assertEquals(studentGet?.handler.name, "handleGetStudent");
 });
 
+Deno.test("sis router matches GET /sis/students/:id/clearance (SCE-1)", () => {
+  const studentId = "a4000000-0000-4000-8000-000000000001";
+  const match = matchSisRoute("GET", `/sis/students/${studentId}/clearance`);
+  assertEquals(match?.args, [studentId]);
+  assertEquals(match?.handler.name, "handleStudentClearance");
+});
+
+Deno.test("sis router: clearance is GET-only and doesn't collide with the generic student route", () => {
+  const studentId = "a4000000-0000-4000-8000-000000000001";
+  assertEquals(
+    matchSisRoute("POST", `/sis/students/${studentId}/clearance`),
+    null,
+  );
+  const studentGet = matchSisRoute("GET", `/sis/students/${studentId}`);
+  assertEquals(studentGet?.handler.name, "handleGetStudent");
+});
+
+Deno.test("SCE-1 GET /sis/students/:id/clearance is registered as viewSis school route", () => {
+  const rule = RBAC_ROUTE_INVENTORY.find(
+    (r) => r.method === "GET" && r.path === "/sis/students/:id/clearance",
+  );
+  assertExists(rule);
+  assertEquals(rule!.permission, "viewSis");
+  assertEquals(rule!.scope, "school");
+  assertEquals(rule!.module, "sis");
+});
+
 Deno.test("sis router matches GET /sis/admissions-conversion (#5)", () => {
   const match = matchSisRoute("GET", "/sis/admissions-conversion");
   assertEquals(match?.args, []);

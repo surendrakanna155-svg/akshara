@@ -33,6 +33,7 @@ import {
   handleGetStudentTimeline,
 } from "./sis_student_360_handlers.ts";
 import { handleListStudentSiblings } from "./sis_sibling_handlers.ts";
+import { handleStudentClearance } from "../clearance/clearance_handlers.ts";
 
 const UUID_SEGMENT =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -98,6 +99,13 @@ export function matchSisRoute(
     if (method === "POST") {
       return { handler: handleUploadStudentDocument, args: [documentsMatch[1]!] };
     }
+  }
+
+  // SCE-1 — Student Clearance / No-Dues report (read-only, cross-module).
+  // Matched before the generic /certificates route so the specific path wins.
+  const clearanceMatch = path.match(/^\/sis\/students\/([^/]+)\/clearance$/);
+  if (clearanceMatch && method === "GET") {
+    return { handler: handleStudentClearance, args: [clearanceMatch[1]!] };
   }
 
   // SIS-D1 — transfer certificate (TC) engine. Matched BEFORE the generic
