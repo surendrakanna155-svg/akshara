@@ -1,0 +1,297 @@
+{
+  "total_dna": 1429,
+  "counts": {
+    "numeric_dna": 470,
+    "nonnum_dna": 959
+  },
+  "yield_gate_ge8_per_subject": {
+    "Physics": true,
+    "Chemistry": true,
+    "Biology": true,
+    "Mathematics": false
+  },
+  "per_subject": {
+    "Physics": {
+      "recovered": 2647,
+      "numeric_verified": 344,
+      "qualified_item_models": 17,
+      "distinct_lanes": 6,
+      "meets_gate_ge8": true,
+      "models": [
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "V=IR",
+          "n_dna": 148,
+          "n_res": 47
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "R=V/I",
+          "n_dna": 77,
+          "n_res": 39
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "KE=.5mv2",
+          "n_dna": 47,
+          "n_res": 21
+        },
+        {
+          "lane": "ASSERTION_RELATION",
+          "concept": "BIO_CORRECT_ANSW",
+          "n_dna": 27,
+          "n_res": 27
+        },
+        {
+          "lane": "CONCEPTUAL_CAUSAL",
+          "concept": "BIO_CORRECT_ANSW",
+          "n_dna": 27,
+          "n_res": 17
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "P=I2R",
+          "n_dna": 24,
+          "n_res": 24
+        },
+        {
+          "lane": "CONCEPTUAL_CAUSAL",
+          "concept": "Physics:frequency",
+          "n_dna": 22,
+          "n_res": 22
+        },
+        {
+          "lane": "CONCEPTUAL_CAUSAL",
+          "concept": "MAT_TEMPERATURE",
+          "n_dna": 22,
+          "n_res": 22
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "Rseries",
+          "n_dna": 22,
+          "n_res": 21
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "W=mg10",
+          "n_dna": 22,
+          "n_res": 22
+        },
+        {
+          "lane": "CONCEPTUAL_CAUSAL",
+          "concept": "PHY_ELECTRIC_DIPOLE",
+          "n_dna": 20,
+          "n_res": 20
+        },
+        {
+          "lane": "COMPARATIVE",
+          "concept": "Physics:charge",
+          "n_dna": 16,
+          "n_res": 16
+        },
+        {
+          "lane": "ASSERTION_RELATION",
+          "concept": "BRD_PHY_ce26529e8f59",
+          "n_dna": 14,
+          "n_res": 14
+        },
+        {
+          "lane": "PROCESS_SEQUENCE",
+          "concept": "BIO_EVOLUTION",
+          "n_dna": 13,
+          "n_res": 13
+        },
+        {
+          "lane": "PROCESS_SEQUENCE",
+          "concept": "Physics:potential",
+          "n_dna": 12,
+          "n_res": 12
+        }
+      ]
+    },
+    "Chemistry": {
+      "recovered": 5394,
+      "numeric_verified": 108,
+      "qualified_item_models": 28,
+      "distinct_lanes": 7,
+      "meets_gate_ge8": true,
+      "models": [
+        {
+          "lane": "PROCESS_SEQUENCE",
+          "concept": "BIO_CORRECT_ANSW",
+          "n_dna": 76,
+          "n_res": 20
+        },
+        {
+          "lane": "ASSERTION_RELATION",
+          "concept": "BIO_CORRECT_ANSW",
+          "n_dna": 74,
+          "n_res": 39
+        },
+        {
+          "lane": "STRUCTURE_FUNCTION",
+          "concept": "Chemistry:ion",
+          "n_dna": 41,
+          "n_res": 40
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "n=m/M",
+          "n_dna": 35,
+          "n_res": 35
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "m=nM",
+          "n_dna": 33,
+          "n_res": 33
+        },
+        {
+          "lane": "CONCEPTUAL_CAUSAL",
+          "concept": "BIO_CORRECT_ANSW",
+          "n_dna": 31,
+          "n_res": 31
+        },
+        {
+          "lane": "CONCEPTUAL_CAUSAL",
+          "concept": "Chemistry:ion",
+          "n_dna": 28,
+          "n_res": 26
+        },
+        {
+          "lane": "COMPARATIVE",
+          "concept": "Chemistry:solution",
+          "n_dna": 22,
+          "n_res": 22
+        },
+        {
+          "lane": "CLASSIFICATION_TAXONOMIC",
+          "concept": "Chemistry:compound",
+          "n_dna": 21,
+          "n_res": 21
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "n=V/22.4",
+          "n_dna": 21,
+          "n_res": 21
+        },
+        {
+          "lane": "PROCESS_SEQUENCE",
+          "concept": "Chemistry:reaction",
+          "n_dna": 20,
+          "n_res": 20
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "M1V1=M2V2",
+          "n_dna": 19,
+          "n_res": 18
+        },
+        {
+          "lane": "CLASSIFICATION_TAXONOMIC",
+          "concept": "Chemistry:ion",
+          "n_dna": 19,
+          "n_res": 19
+        },
+        {
+          "lane": "ASSERTION_RELATION",
+          "concept": "BIO_ACTIVATION_ENERGY",
+          "n_dna": 17,
+          "n_res": 17
+        },
+        {
+          "lane": "CONCEPTUAL_CAUSAL",
+          "concept": "BIO_FRAGMENTATION",
+          "n_dna": 17,
+          "n_res": 17
+        }
+      ]
+    },
+    "Biology": {
+      "recovered": 1292,
+      "numeric_verified": 0,
+      "qualified_item_models": 8,
+      "distinct_lanes": 6,
+      "meets_gate_ge8": true,
+      "models": [
+        {
+          "lane": "CONCEPTUAL_CAUSAL",
+          "concept": "Biology:cell",
+          "n_dna": 19,
+          "n_res": 19
+        },
+        {
+          "lane": "PROCESS_SEQUENCE",
+          "concept": "Biology:plant",
+          "n_dna": 16,
+          "n_res": 16
+        },
+        {
+          "lane": "STRUCTURE_FUNCTION",
+          "concept": "Biology:cell",
+          "n_dna": 16,
+          "n_res": 16
+        },
+        {
+          "lane": "CLASSIFICATION_TAXONOMIC",
+          "concept": "Biology:hormone",
+          "n_dna": 16,
+          "n_res": 16
+        },
+        {
+          "lane": "PROCESS_SEQUENCE",
+          "concept": "BIO_CUTTING",
+          "n_dna": 14,
+          "n_res": 14
+        },
+        {
+          "lane": "COMPARATIVE",
+          "concept": "BIO_MITOCHONDRIA",
+          "n_dna": 12,
+          "n_res": 12
+        },
+        {
+          "lane": "ASSERTION_RELATION",
+          "concept": "BIO_CORRECT_ANSW",
+          "n_dna": 5,
+          "n_res": 5
+        },
+        {
+          "lane": "CONCEPTUAL_CAUSAL",
+          "concept": "BIO_PROTEINS",
+          "n_dna": 5,
+          "n_res": 5
+        }
+      ]
+    },
+    "Mathematics": {
+      "recovered": 328,
+      "numeric_verified": 18,
+      "qualified_item_models": 3,
+      "distinct_lanes": 3,
+      "meets_gate_ge8": false,
+      "models": [
+        {
+          "lane": "PROCESS_SEQUENCE",
+          "concept": "Mathematics:sequence",
+          "n_dna": 32,
+          "n_res": 25
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "area_trap",
+          "n_dna": 18,
+          "n_res": 18
+        },
+        {
+          "lane": "CLASSIFICATION_TAXONOMIC",
+          "concept": "Mathematics:vector",
+          "n_dna": 8,
+          "n_res": 8
+        }
+      ]
+    }
+  }
+}

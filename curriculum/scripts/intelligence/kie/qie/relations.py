@@ -118,7 +118,13 @@ def parse_numbers(text: str) -> List[float]:
     s = text.replace("–", "-").replace("—", "-").replace("−", "-").replace(",", "")
     out: List[float] = []
     for m in re.finditer(r"(-?\d+(?:\.\d+)?)\s*[x×*]\s*10\s*(-?\d+)", s):
-        out.append(float(m.group(1)) * (10.0 ** int(m.group(2))))
+        exp = int(m.group(2))
+        if abs(exp) > 100:         # implausible exponent from OCR garble (real physics <= ~35) — skip
+            continue
+        try:
+            out.append(float(m.group(1)) * (10.0 ** exp))
+        except (OverflowError, ValueError):
+            continue
     tmp = re.sub(r"(-?\d+(?:\.\d+)?)\s*[x×*]\s*10\s*(-?\d+)", "", s)
     for m in re.finditer(r"-?\d+(?:\.\d+)?", tmp):
         try:
