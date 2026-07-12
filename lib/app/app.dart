@@ -6,8 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/constants/app_constants.dart';
 import '../core/notifications/notification_ui_keys.dart';
 import '../core/providers/router_provider.dart';
+import '../core/security/app_lock/app_lock_controller.dart' show appLockArmsOnBackground;
 import '../core/security/app_lock/app_lock_overlay.dart';
 import '../core/security/app_lock/app_lock_providers.dart';
+import '../features/auth/auth_provider.dart';
 import '../core/reliability/drafts/draft_autosave.dart';
 import '../core/reliability/reliability_providers.dart';
 import '../core/reliability/sync_center/sync_banner.dart';
@@ -54,8 +56,13 @@ class _AksharaAppState extends ConsumerState<AksharaApp>
       // Persist every in-progress form immediately (covers phone-lock,
       // app-switch and kill). Fire-and-forget — never block the lifecycle.
       unawaited(ref.read(draftFlushRegistryProvider).flushAll());
-      // P1-SEC-1: arm the App Lock timer when backgrounded.
-      ref.read(appLockControllerProvider.notifier).onBackground(DateTime.now());
+      // P1-SEC-1 (audit F1): arm the App Lock timer ONLY on a TRUE background
+      // (`paused`/`detached`) — `inactive`/`hidden` also fire during the resume
+      // handshake and would reset the timer, defeating re-lock. Pure predicate
+      // so this decision is unit-tested.
+      if (appLockArmsOnBackground(state)) {
+        ref.read(appLockControllerProvider.notifier).onBackground(DateTime.now());
+      }
     } else if (state == AppLifecycleState.resumed) {
       // REL-4: on foreground, drain any writes queued while backgrounded/offline
       // (a killed-then-relaunched session may have undrained outbox entries).
@@ -99,7 +106,20 @@ class _AksharaAppState extends ConsumerState<AksharaApp>
                 ),
               ],
             ),
-            if (locked) const Positioned.fill(child: AppLockOverlay()),
+            if (locked)
+              Positioned.fill(
+                child: AppLockOverlay(
+                  // Recovery from a biometric-removed lock-out: sign out (clears
+                  // the session) AND disable App Lock, so the router redirects to
+                  // a clean login. Safe — logout destroys the protected session.
+                  onSignOut: () async {
+                    await ref.read(authProvider.notifier).logout();
+                    await ref
+                        .read(appLockControllerProvider.notifier)
+                        .setEnabled(false);
+                  },
+                ),
+              ),
           ],
         );
       },

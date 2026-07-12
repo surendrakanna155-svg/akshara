@@ -1,7 +1,17 @@
+import 'package:flutter/widgets.dart' show AppLifecycleState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../biometric/biometric_authenticator.dart';
 import 'app_lock_providers.dart';
+
+/// Whether a lifecycle transition is a TRUE background that should arm the App
+/// Lock timer (audit F1). ONLY `paused`/`detached` — NOT `inactive`/`hidden`,
+/// which also fire transiently during the resume handshake
+/// (paused→hidden→inactive→resumed); arming on those would reset the timer at
+/// ~resume time and silently defeat re-lock. Pure so the app-shell wiring is
+/// unit-testable.
+bool appLockArmsOnBackground(AppLifecycleState state) =>
+    state == AppLifecycleState.paused || state == AppLifecycleState.detached;
 
 /// P1-SEC-1 — the biometric App Lock state.
 ///  - [enabled]: the user turned App Lock on (persisted, device-level).
@@ -63,8 +73,14 @@ class AppLockController extends Notifier<AppLockState> {
   void onResume(DateTime now) {
     if (!state.enabled || state.locked) return;
     final since = _backgroundedAt;
-    if (since != null && now.difference(since) >= graceWindow) {
-      state = state.copyWith(locked: true);
+    if (since != null) {
+      final away = now.difference(since);
+      // Fail-safe (audit F4): a NEGATIVE away-time means the wall clock moved
+      // backwards while backgrounded (device clock change) — treat it as a long
+      // background and LOCK, rather than letting a clock rollback dodge the lock.
+      if (away.isNegative || away >= graceWindow) {
+        state = state.copyWith(locked: true);
+      }
     }
     _backgroundedAt = null;
   }

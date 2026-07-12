@@ -2,6 +2,8 @@
 // re-lock on resume, biometric unlock (success only), enable-requires-biometric.
 
 import 'package:akshara_erp/core/biometric/biometric_authenticator.dart';
+import 'package:akshara_erp/core/security/app_lock/app_lock_controller.dart' show appLockArmsOnBackground;
+import 'package:flutter/widgets.dart' show AppLifecycleState;
 import 'package:akshara_erp/core/security/app_lock/app_lock_providers.dart';
 import 'package:akshara_erp/core/security/app_lock/app_lock_storage.dart';
 import 'package:akshara_erp/core/providers/shared_preferences_provider.dart';
@@ -62,6 +64,25 @@ void main() {
     ctrl.onBackground(_t0);
     ctrl.onResume(_t0.add(const Duration(seconds: 5))); // < 15s grace
     expect(c.read(appLockControllerProvider).locked, isFalse, reason: 'brief background must not nag');
+  });
+
+  test('audit F1: only paused/detached ARM the lock — inactive/hidden (resume-handshake states) do NOT', () {
+    expect(appLockArmsOnBackground(AppLifecycleState.paused), isTrue);
+    expect(appLockArmsOnBackground(AppLifecycleState.detached), isTrue);
+    // These fire transiently during paused→hidden→inactive→resumed; arming on
+    // them would reset the backgrounded-at time and kill re-lock.
+    expect(appLockArmsOnBackground(AppLifecycleState.inactive), isFalse);
+    expect(appLockArmsOnBackground(AppLifecycleState.hidden), isFalse);
+    expect(appLockArmsOnBackground(AppLifecycleState.resumed), isFalse);
+  });
+
+  test('audit F4: a BACKWARD clock while backgrounded re-locks (fail-safe), never dodges', () async {
+    final c = await _container(enabledInPrefs: true, biometric: _FakeBiometric(true));
+    final ctrl = c.read(appLockControllerProvider.notifier);
+    await ctrl.unlock();
+    ctrl.onBackground(_t0);
+    ctrl.onResume(_t0.subtract(const Duration(minutes: 10))); // clock moved back
+    expect(c.read(appLockControllerProvider).locked, isTrue, reason: 'negative away-time → lock');
   });
 
   test('a real background (past the grace window) RE-LOCKS on resume', () async {
