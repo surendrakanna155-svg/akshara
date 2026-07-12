@@ -1,0 +1,497 @@
+{
+  "total_dna": 3041,
+  "counts": {
+    "numeric_dna": 1649,
+    "nonnum_dna": 1392
+  },
+  "structural_gate_ge8": {
+    "Physics": true,
+    "Chemistry": true,
+    "Biology": true,
+    "Mathematics": true
+  },
+  "verified_gate_ge8": {
+    "Physics": true,
+    "Chemistry": true,
+    "Biology": false,
+    "Mathematics": false
+  },
+  "per_subject": {
+    "Physics": {
+      "recovered": 5440,
+      "numeric_verified": 1309,
+      "qualified_item_models": 33,
+      "verified_item_models": 20,
+      "distinct_lanes": 6,
+      "meets_structural_gate_ge8": true,
+      "meets_verified_gate_ge8": true,
+      "models": [
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "V=IR",
+          "n_dna": 429,
+          "n_res": 229,
+          "verified": true
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "R=V/I",
+          "n_dna": 247,
+          "n_res": 163,
+          "verified": true
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "KE=.5mv2",
+          "n_dna": 125,
+          "n_res": 102,
+          "verified": true
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "P=I2R",
+          "n_dna": 78,
+          "n_res": 73,
+          "verified": true
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "Rseries",
+          "n_dna": 76,
+          "n_res": 70,
+          "verified": true
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "P=V2/R",
+          "n_dna": 73,
+          "n_res": 62,
+          "verified": true
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "W=mg10",
+          "n_dna": 64,
+          "n_res": 58,
+          "verified": true
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "v=u+at",
+          "n_dna": 55,
+          "n_res": 52,
+          "verified": true
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "a=(v-u)/t",
+          "n_dna": 43,
+          "n_res": 39,
+          "verified": true
+        },
+        {
+          "lane": "ASSERTION_RELATION",
+          "concept": "BRD_PHY_ce26529e8f59",
+          "n_dna": 41,
+          "n_res": 33,
+          "verified": true
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "f=1/T",
+          "n_dna": 31,
+          "n_res": 30,
+          "verified": true
+        },
+        {
+          "lane": "CONCEPTUAL_CAUSAL",
+          "concept": "MAT_TEMPERATURE",
+          "n_dna": 26,
+          "n_res": 26,
+          "verified": true
+        },
+        {
+          "lane": "CONCEPTUAL_CAUSAL",
+          "concept": "PHY_DISPLACEMENT_CURRENT",
+          "n_dna": 22,
+          "n_res": 22,
+          "verified": true
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "KE_from_p",
+          "n_dna": 21,
+          "n_res": 20,
+          "verified": true
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "efficiency_pct",
+          "n_dna": 20,
+          "n_res": 18,
+          "verified": true
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "Rparallel",
+          "n_dna": 18,
+          "n_res": 17,
+          "verified": true
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "PE_g10",
+          "n_dna": 15,
+          "n_res": 15,
+          "verified": true
+        },
+        {
+          "lane": "PROCESS_SEQUENCE",
+          "concept": "BIO_EVOLUTION",
+          "n_dna": 14,
+          "n_res": 14,
+          "verified": true
+        },
+        {
+          "lane": "CONCEPTUAL_CAUSAL",
+          "concept": "PHY_ELECTRIC_FIELD",
+          "n_dna": 8,
+          "n_res": 8,
+          "verified": true
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "gravitation",
+          "n_dna": 7,
+          "n_res": 7,
+          "verified": true
+        }
+      ]
+    },
+    "Chemistry": {
+      "recovered": 3890,
+      "numeric_verified": 208,
+      "qualified_item_models": 34,
+      "verified_item_models": 12,
+      "distinct_lanes": 7,
+      "meets_structural_gate_ge8": true,
+      "meets_verified_gate_ge8": true,
+      "models": [
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "n=m/M",
+          "n_dna": 76,
+          "n_res": 65,
+          "verified": true
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "M1V1=M2V2",
+          "n_dna": 43,
+          "n_res": 34,
+          "verified": true
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "m=nM",
+          "n_dna": 37,
+          "n_res": 36,
+          "verified": true
+        },
+        {
+          "lane": "CONCEPTUAL_CAUSAL",
+          "concept": "BRD_PHY_ce26529e8f59",
+          "n_dna": 30,
+          "n_res": 30,
+          "verified": true
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "n=V/22.4",
+          "n_dna": 24,
+          "n_res": 24,
+          "verified": true
+        },
+        {
+          "lane": "COMPARATIVE",
+          "concept": "CHE_METALS",
+          "n_dna": 16,
+          "n_res": 16,
+          "verified": true
+        },
+        {
+          "lane": "PROCESS_SEQUENCE",
+          "concept": "BIO_TIVITY",
+          "n_dna": 15,
+          "n_res": 15,
+          "verified": true
+        },
+        {
+          "lane": "PROCESS_SEQUENCE",
+          "concept": "BIO_DEVELOPMENT",
+          "n_dna": 14,
+          "n_res": 14,
+          "verified": true
+        },
+        {
+          "lane": "PROCESS_SEQUENCE",
+          "concept": "PHY_VISION",
+          "n_dna": 14,
+          "n_res": 14,
+          "verified": true
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "moles_from_molecules",
+          "n_dna": 9,
+          "n_res": 9,
+          "verified": true
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "percent_by_mass",
+          "n_dna": 9,
+          "n_res": 8,
+          "verified": true
+        },
+        {
+          "lane": "ASSERTION_RELATION",
+          "concept": "CHE_SEX_DETERMINATION",
+          "n_dna": 6,
+          "n_res": 6,
+          "verified": true
+        },
+        {
+          "lane": "ASSERTION_RELATION",
+          "concept": "BRD_PHY_ce26529e8f59",
+          "n_dna": 77,
+          "n_res": 39,
+          "verified": false
+        },
+        {
+          "lane": "STRUCTURE_FUNCTION",
+          "concept": "Chemistry:ion",
+          "n_dna": 57,
+          "n_res": 42,
+          "verified": false
+        },
+        {
+          "lane": "PROCESS_SEQUENCE",
+          "concept": "Chemistry:ion",
+          "n_dna": 42,
+          "n_res": 27,
+          "verified": false
+        },
+        {
+          "lane": "CONCEPTUAL_CAUSAL",
+          "concept": "Chemistry:ion",
+          "n_dna": 36,
+          "n_res": 32,
+          "verified": false
+        },
+        {
+          "lane": "PROCESS_SEQUENCE",
+          "concept": "BRD_PHY_ce26529e8f59",
+          "n_dna": 29,
+          "n_res": 18,
+          "verified": false
+        },
+        {
+          "lane": "PROCESS_SEQUENCE",
+          "concept": "Chemistry:reaction",
+          "n_dna": 26,
+          "n_res": 22,
+          "verified": false
+        },
+        {
+          "lane": "COMPARATIVE",
+          "concept": "Chemistry:solution",
+          "n_dna": 22,
+          "n_res": 22,
+          "verified": false
+        },
+        {
+          "lane": "CLASSIFICATION_TAXONOMIC",
+          "concept": "Chemistry:ion",
+          "n_dna": 22,
+          "n_res": 21,
+          "verified": false
+        }
+      ]
+    },
+    "Biology": {
+      "recovered": 2247,
+      "numeric_verified": 0,
+      "qualified_item_models": 9,
+      "verified_item_models": 1,
+      "distinct_lanes": 6,
+      "meets_structural_gate_ge8": true,
+      "meets_verified_gate_ge8": false,
+      "models": [
+        {
+          "lane": "COMPARATIVE",
+          "concept": "BIO_MITOCHONDRIA",
+          "n_dna": 12,
+          "n_res": 12,
+          "verified": true
+        },
+        {
+          "lane": "CONCEPTUAL_CAUSAL",
+          "concept": "Biology:cell",
+          "n_dna": 24,
+          "n_res": 24,
+          "verified": false
+        },
+        {
+          "lane": "STRUCTURE_FUNCTION",
+          "concept": "Biology:cell",
+          "n_dna": 21,
+          "n_res": 21,
+          "verified": false
+        },
+        {
+          "lane": "PROCESS_SEQUENCE",
+          "concept": "Biology:plant",
+          "n_dna": 17,
+          "n_res": 17,
+          "verified": false
+        },
+        {
+          "lane": "CLASSIFICATION_TAXONOMIC",
+          "concept": "Biology:hormone",
+          "n_dna": 17,
+          "n_res": 17,
+          "verified": false
+        },
+        {
+          "lane": "PROCESS_SEQUENCE",
+          "concept": "BIO_CUTTING",
+          "n_dna": 14,
+          "n_res": 14,
+          "verified": false
+        },
+        {
+          "lane": "CONCEPTUAL_CAUSAL",
+          "concept": "Biology:plant",
+          "n_dna": 9,
+          "n_res": 7,
+          "verified": false
+        },
+        {
+          "lane": "CONCEPTUAL_CAUSAL",
+          "concept": "BIO_PROTEINS",
+          "n_dna": 8,
+          "n_res": 8,
+          "verified": false
+        },
+        {
+          "lane": "ASSERTION_RELATION",
+          "concept": "BRD_PHY_ce26529e8f59",
+          "n_dna": 5,
+          "n_res": 5,
+          "verified": false
+        }
+      ]
+    },
+    "Mathematics": {
+      "recovered": 465,
+      "numeric_verified": 132,
+      "qualified_item_models": 9,
+      "verified_item_models": 6,
+      "distinct_lanes": 4,
+      "meets_structural_gate_ge8": true,
+      "meets_verified_gate_ge8": false,
+      "models": [
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "area_rect",
+          "n_dna": 37,
+          "n_res": 24,
+          "verified": true
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "area_trap",
+          "n_dna": 22,
+          "n_res": 21,
+          "verified": true
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "mean2",
+          "n_dna": 17,
+          "n_res": 17,
+          "verified": true
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "ap_sum",
+          "n_dna": 17,
+          "n_res": 17,
+          "verified": true
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "area_tri",
+          "n_dna": 13,
+          "n_res": 8,
+          "verified": true
+        },
+        {
+          "lane": "NUMERIC_RELATIONAL",
+          "concept": "sum_n",
+          "n_dna": 5,
+          "n_res": 5,
+          "verified": true
+        },
+        {
+          "lane": "PROCESS_SEQUENCE",
+          "concept": "Mathematics:sequence",
+          "n_dna": 32,
+          "n_res": 25,
+          "verified": false
+        },
+        {
+          "lane": "ASSERTION_RELATION",
+          "concept": "BRD_PHY_ce26529e8f59",
+          "n_dna": 16,
+          "n_res": 16,
+          "verified": false
+        },
+        {
+          "lane": "CLASSIFICATION_TAXONOMIC",
+          "concept": "Mathematics:vector",
+          "n_dna": 8,
+          "n_res": 8,
+          "verified": false
+        }
+      ]
+    }
+  },
+  "kvs": {
+    "distinct_facts": 836,
+    "promotable_ge2docs": 77
+  },
+  "tier2_agreement": {
+    "agree": 46,
+    "disagree": 0,
+    "unverifiable": 2,
+    "total": 48,
+    "agree_pct": 95.8
+  },
+  "verified_facts_ct": 77,
+  "tier2_verified_ct": 46,
+  "stream": {
+    "base_qcorpus": 6558,
+    "deglue_delta": 58
+  },
+  "math_structure_model": {
+    "raw_single_step_matches": 132,
+    "all_rejected_as_false": 132,
+    "confident_math_topic_items": 4,
+    "genuine_verified_items": 0,
+    "genuine_multi_step": 0,
+    "genuine_verified_models_ge5_ge2": 0
+  },
+  "gate_result": "2/4"
+}
