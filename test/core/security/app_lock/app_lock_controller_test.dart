@@ -2,7 +2,8 @@
 // re-lock on resume, biometric unlock (success only), enable-requires-biometric.
 
 import 'package:akshara_erp/core/biometric/biometric_authenticator.dart';
-import 'package:akshara_erp/core/security/app_lock/app_lock_controller.dart' show appLockArmsOnBackground;
+import 'package:akshara_erp/core/security/app_lock/app_lock_controller.dart'
+    show appLockArmsOnBackground, appLockObscuresOnState;
 import 'package:flutter/widgets.dart' show AppLifecycleState;
 import 'package:akshara_erp/core/security/app_lock/app_lock_providers.dart';
 import 'package:akshara_erp/core/security/app_lock/app_lock_storage.dart';
@@ -74,6 +75,34 @@ void main() {
     expect(appLockArmsOnBackground(AppLifecycleState.inactive), isFalse);
     expect(appLockArmsOnBackground(AppLifecycleState.hidden), isFalse);
     expect(appLockArmsOnBackground(AppLifecycleState.resumed), isFalse);
+  });
+
+  test('audit P1-1: the privacy scrim engages on paused/hidden/detached, not inactive/resumed', () {
+    expect(appLockObscuresOnState(AppLifecycleState.paused), isTrue);
+    expect(appLockObscuresOnState(AppLifecycleState.hidden), isTrue);
+    expect(appLockObscuresOnState(AppLifecycleState.detached), isTrue);
+    // inactive is a transient interruption (notification-shade / control-centre
+    // pull) where the app is still foreground — scrimming there would flash.
+    expect(appLockObscuresOnState(AppLifecycleState.inactive), isFalse);
+    expect(appLockObscuresOnState(AppLifecycleState.resumed), isFalse);
+  });
+
+  test('audit P2-1: a backgrounded-at recorded WHILE LOCKED is cleared on resume — no phantom re-lock later', () async {
+    final c = await _container(enabledInPrefs: true, biometric: _FakeBiometric(true));
+    final ctrl = c.read(appLockControllerProvider.notifier);
+    // Cold start locked. Backgrounding while still locked records a timestamp
+    // (onBackground records regardless of locked)...
+    ctrl.onBackground(_t0);
+    // ...and resuming while still locked must CLEAR that mark, not leave it to
+    // fire against a much-later benign resume.
+    ctrl.onResume(_t0.add(const Duration(seconds: 1)));
+    await ctrl.unlock();
+    expect(c.read(appLockControllerProvider).locked, isFalse);
+    // A benign resume long afterwards with NO fresh background (e.g. dismissing
+    // the notification shade) must not re-lock off the stale mark.
+    ctrl.onResume(_t0.add(const Duration(minutes: 5)));
+    expect(c.read(appLockControllerProvider).locked, isFalse,
+        reason: 'stale backgrounded-at must have been cleared; no spurious re-lock');
   });
 
   test('audit F4: a BACKWARD clock while backgrounded re-locks (fail-safe), never dodges', () async {

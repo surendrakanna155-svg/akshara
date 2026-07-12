@@ -11,6 +11,7 @@ import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeBiometric implements BiometricAuthenticator {
@@ -80,7 +81,7 @@ void main() {
     expect(contentTapped, isFalse, reason: 'the overlay must absorb taps, not pass them through');
   });
 
-  testWidgets('audit F3: "Sign out instead" confirms then invokes the sign-out escape', (tester) async {
+  testWidgets('audit F3: "Sign out instead" confirms inline then invokes the sign-out escape', (tester) async {
     var signedOut = false;
     await tester.pumpWidget(ProviderScope(
       overrides: await _overrides(true, _FakeBiometric(false)),
@@ -90,11 +91,54 @@ void main() {
       ),
     ));
     await tester.pumpAndSettle();
+    // No confirm control is shown until the user asks to sign out.
+    expect(find.byKey(const Key('app-lock-signout-confirm')), findsNothing);
+    await tester.tap(find.byKey(const Key('app-lock-signout-button')));
+    await tester.pumpAndSettle();
+    // Inline confirm appears; Cancel returns to the lock card.
+    expect(find.byKey(const Key('app-lock-signout-confirm')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('app-lock-signout-cancel')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('app-lock-signout-confirm')), findsNothing);
+    // Re-open and confirm → the escape fires.
     await tester.tap(find.byKey(const Key('app-lock-signout-button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('app-lock-signout-confirm')));
     await tester.pumpAndSettle();
     expect(signedOut, isTrue);
+  });
+
+  testWidgets(
+      'audit P0-1: the sign-out escape works with NO Navigator ancestor (MaterialApp.router builder — the production mount)',
+      (tester) async {
+    // Reproduces the real tree: the overlay lives in the MaterialApp.router
+    // BUILDER, a sibling of GoRouter's Navigator, so it has no Navigator/
+    // ModalRoute ancestor. The old showDialog-based confirm threw here (silently
+    // breaking the F3 escape → permanent lock-out); the inline confirm must not.
+    var signedOut = false;
+    final router = GoRouter(
+      routes: [GoRoute(path: '/', builder: (_, __) => const Scaffold(body: SizedBox.shrink()))],
+    );
+    await tester.pumpWidget(ProviderScope(
+      overrides: await _overrides(true, _FakeBiometric(false)),
+      child: MaterialApp.router(
+        theme: AksharaAppTheme.light(),
+        routerConfig: router,
+        builder: (context, child) => Stack(
+          children: [
+            child ?? const SizedBox.shrink(),
+            Positioned.fill(child: AppLockOverlay(onSignOut: () async => signedOut = true)),
+          ],
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('app-lock-signout-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('app-lock-signout-confirm')));
+    await tester.pumpAndSettle();
+    expect(signedOut, isTrue, reason: 'inline confirm must not depend on a Navigator ancestor');
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('tapping Unlock with a working biometric clears the lock in the controller', (tester) async {

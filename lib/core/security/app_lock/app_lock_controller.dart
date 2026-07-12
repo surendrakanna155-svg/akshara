@@ -13,6 +13,19 @@ import 'app_lock_providers.dart';
 bool appLockArmsOnBackground(AppLifecycleState state) =>
     state == AppLifecycleState.paused || state == AppLifecycleState.detached;
 
+/// Whether a lifecycle state should engage the PRIVACY SCRIM that hides content
+/// from the OS app-switcher / recents snapshot while App Lock is enabled (audit
+/// P1-1). Distinct from [appLockArmsOnBackground]: the scrim is a pure VISUAL
+/// cover with no biometric timer, so it can safely include `hidden` (an earlier
+/// background signal that lets the scrim paint BEFORE the OS captures its
+/// snapshot). It deliberately EXCLUDES `inactive` — that fires on transient
+/// interruptions (notification-shade / control-centre pulls) where the app is
+/// still foreground, and flashing a scrim there would nag. Cleared on `resumed`.
+bool appLockObscuresOnState(AppLifecycleState state) =>
+    state == AppLifecycleState.paused ||
+    state == AppLifecycleState.hidden ||
+    state == AppLifecycleState.detached;
+
 /// P1-SEC-1 — the biometric App Lock state.
 ///  - [enabled]: the user turned App Lock on (persisted, device-level).
 ///  - [locked]: the app content is hidden behind the lock overlay until a
@@ -71,8 +84,15 @@ class AppLockController extends Notifier<AppLockState> {
   /// Lifecycle: the app returned to the foreground. Re-lock iff enabled and the
   /// away-time reached the grace window.
   void onResume(DateTime now) {
-    if (!state.enabled || state.locked) return;
+    // Always consume the timestamp FIRST (audit P2-1): if it is left set — e.g.
+    // the app was backgrounded while already locked, so the guard below returns
+    // early — a later benign resume (notification-shade peek) would compute a
+    // huge away-time against the stale mark and spuriously re-lock. Clearing it
+    // unconditionally keeps the fail-safe (a genuine long background still sets
+    // a fresh mark via onBackground) without the phantom re-lock.
     final since = _backgroundedAt;
+    _backgroundedAt = null;
+    if (!state.enabled || state.locked) return;
     if (since != null) {
       final away = now.difference(since);
       // Fail-safe (audit F4): a NEGATIVE away-time means the wall clock moved
@@ -82,7 +102,6 @@ class AppLockController extends Notifier<AppLockState> {
         state = state.copyWith(locked: true);
       }
     }
-    _backgroundedAt = null;
   }
 
   /// Runs the biometric; clears the lock only on success. Returns whether the
