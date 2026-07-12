@@ -63,3 +63,10 @@ SESSION_LOG.md
 
 # Crawler runtime frontier state (local-only; manifest committed separately once the real crawl runs)
 acquisition/crawler_state.json
+
+# --- Non-certified question-corpus staging lane (LOCAL ONLY; overnight extraction) ---
+# RAW DOCUMENT -> LOSS-MINIMISING EXTRACTION -> STRUCTURED STAGING CORPUS. Never certified,
+# never production, never merged into kie.db / Certified Question Bank. Manifests+assets are
+# derived local artifacts (can be gigabytes). Leading slash anchors to curriculum/staging/ ONLY
+# so the harness code under curriculum/scripts/staging/ stays committable.
+/staging/
