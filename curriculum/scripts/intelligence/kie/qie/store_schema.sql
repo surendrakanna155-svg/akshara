@@ -107,6 +107,40 @@ CREATE TABLE IF NOT EXISTS generated_item (
   created_at        TEXT NOT NULL
 );
 
+-- ── E-lite ingestion boundary (A4) — preserve structure the frozen phase2/phase4 currently drop ──────
+-- Additive + separate: E-lite runs ALONGSIDE the frozen ingestion phases (never modifies them) and captures,
+-- for newly ingested docs, the question/option/answer/solution boundaries + visual assets that phase4 loses
+-- at the parse->chunk boundary. Populated from a doc's parsed structure; LOCAL-ONLY.
+CREATE TABLE IF NOT EXISTS elite_question (
+  question_id       TEXT PRIMARY KEY,
+  doc_id            TEXT NOT NULL,
+  page              INTEGER,
+  question_number   TEXT,
+  stem              TEXT,
+  options           TEXT,                      -- json {1..4 / A..D}
+  answer_key        TEXT,                      -- detected key (option label) if present
+  solution_ref      TEXT,                      -- solution text/anchor if present
+  bbox              TEXT,                      -- json [x0,y0,x1,y1] when available
+  linked_visual_ids TEXT,                      -- json list
+  extraction_confidence REAL,
+  created_at        TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_elite_q_doc ON elite_question(doc_id);
+
+CREATE TABLE IF NOT EXISTS elite_visual_asset (
+  asset_id          TEXT PRIMARY KEY,
+  doc_id            TEXT NOT NULL,
+  page              INTEGER,
+  kind              TEXT,                      -- raster | vector | equation | table
+  bbox              TEXT,
+  digest            TEXT,
+  dims              TEXT,
+  raw               TEXT,                      -- equation raw/latex where available
+  linked_question_id TEXT,
+  created_at        TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_elite_v_doc ON elite_visual_asset(doc_id);
+
 -- ── Concept-canonicalization ledger (A2) — which junk pseudo-concepts were quarantined, reversibly ──
 CREATE TABLE IF NOT EXISTS concept_canon_ledger (
   concept_code      TEXT PRIMARY KEY,

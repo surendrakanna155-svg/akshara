@@ -65,9 +65,13 @@
   facts) cannot yet back non-numeric verification; a real KVS needs dedicated **multi-source mining (Phase B)**.
   4 tests green. The relation library (numeric backbone) was delivered in A0. Evidence:
   `phase0_evidence/kvs_v0_seed_A3.json`. EOS gate: **PASS** (plumbing correct + tested; thinness reported).
-- **A4 — E-lite ingestion boundary:** for newly ingested docs, persist question/option/answer/solution
-  boundaries + equations/tables + visual assets + bbox/offset provenance (scoped ingestion-phase change,
-  reviewed) — before the 200–300 incoming board PDFs ingest lossy.
+- **A4 — E-lite ingestion boundary — ✅ DONE (2026-07-12).** Built as an **additive extractor**
+  (`elite_ingest.py`) that runs ALONGSIDE the frozen phase2/phase4 (does NOT modify them): detects
+  question/option/answer/solution boundaries (numbering + option-marker + `Answer(n)` regex, validated on
+  real corpus in Phase-0b) and preserves the images/equations/tables (incl. LaTeX) that phase4 currently
+  drops, with page/bbox provenance, into new `qie.db` `elite_question` / `elite_visual_asset` tables. So the
+  ~200–300 incoming board PDFs can be ingested without silently losing structure. 4 tests green; frozen
+  ingestion phases untouched. EOS gate: **PASS**.
 - **A5 — Inert engine-v2 seam:** additive `QuestionSlot` fields (`item_model_id`, `lane`, `difficulty_drivers`,
   `gate_verdicts`, `solution_steps`), a gate slot in `validate.py`, a lane/archetype hook in `select.py` — all
   inert, matrix green. Separately reviewed.
