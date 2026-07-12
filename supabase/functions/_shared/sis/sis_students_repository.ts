@@ -854,13 +854,18 @@ export async function updateStudentStatus(
       throw new ClearanceDuesBlockedError(decision.blockingAmount);
     }
     if (decision.waiver) {
-      await consumeWaiver(
+      const consumed = await consumeWaiver(
         db,
         { organizationId, schoolId },
         studentId,
         "transfer_certificate",
         null,
       );
+      // Same single-use guard as the TC path: if a concurrent exit already
+      // consumed the covering waiver, it can't clear THIS transfer — fail closed.
+      if (!consumed) {
+        throw new ClearanceDuesBlockedError(decision.duesAtGate);
+      }
     }
   }
 
