@@ -130,10 +130,11 @@ def mine_capability(kconn: sqlite3.Connection, qconn: sqlite3.Connection, now: s
             continue
         lane = c["lane"]
         verified = (lane == "NUMERIC_RELATIONAL") or (len(c["verified"]) / n_dna >= 0.5)
-        genuine = n_stems >= min_distinct_stems
         resolved = mine.is_resolved_concept(concept)
+        # a GENUINE Item Model is on a canonical concept with diverse (non-replicated) support
+        genuine = resolved and n_stems >= min_distinct_stems
         profile_valid = bool(profile) and P.is_valid_archetype_for(profile, archetype) and P.is_permitted(profile)
-        certifiable = verified and genuine and resolved and profile_valid
+        certifiable = verified and genuine and profile_valid
         rec = {"subject": subj, "profile": profile, "concept": concept, "archetype": archetype, "lane": lane,
                "n_dna": n_dna, "n_resources": n_res, "distinct_stems": n_stems, "verified": verified,
                "genuine": genuine, "resolved_concept": resolved, "profile_valid": profile_valid,

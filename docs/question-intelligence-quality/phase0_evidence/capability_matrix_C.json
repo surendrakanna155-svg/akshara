@@ -1,0 +1,4549 @@
+{
+  "run": {
+    "n_items": 12219,
+    "n_dna": 12219,
+    "candidate_models": 363,
+    "certifiable_models": 36,
+    "models": [
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "BRD_PHY_ce26529e8f59",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 154,
+        "n_resources": 43,
+        "distinct_stems": 24,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "PHY_VISION",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 49,
+        "n_resources": 41,
+        "distinct_stems": 5,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "PHY_FRICTION",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 44,
+        "n_resources": 40,
+        "distinct_stems": 9,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "PHY_POWER",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 37,
+        "n_resources": 21,
+        "distinct_stems": 9,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "MAT_TEMPERATURE",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 35,
+        "n_resources": 22,
+        "distinct_stems": 35,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "PHY_POWER",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 29,
+        "n_resources": 17,
+        "distinct_stems": 29,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "PHY_MAGNETIC_FLUX",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 28,
+        "n_resources": 27,
+        "distinct_stems": 6,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "BRD_PHY_ce26529e8f59",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 27,
+        "n_resources": 24,
+        "distinct_stems": 26,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "PHY_ELECTRIC_FIELD",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 26,
+        "n_resources": 24,
+        "distinct_stems": 7,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "PHY_DENSITY",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 26,
+        "n_resources": 20,
+        "distinct_stems": 26,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "PHY_INDUCTANCE",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 25,
+        "n_resources": 23,
+        "distinct_stems": 6,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "BRD_PHY_ce26529e8f59",
+        "archetype": "experiment_inference",
+        "lane": "EXPERIMENT_OBSERVATION",
+        "n_dna": 23,
+        "n_resources": 20,
+        "distinct_stems": 7,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "PHY_FRICTION",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 23,
+        "n_resources": 16,
+        "distinct_stems": 23,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "PHY_PRESSURE",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 22,
+        "n_resources": 19,
+        "distinct_stems": 8,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "BIO_MOTION",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 22,
+        "n_resources": 21,
+        "distinct_stems": 22,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "BIO_ELECTROMAGNET",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 20,
+        "n_resources": 17,
+        "distinct_stems": 5,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "BIO_TIVITY",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 20,
+        "n_resources": 18,
+        "distinct_stems": 6,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "BRD_PHY_ce26529e8f59",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 20,
+        "n_resources": 20,
+        "distinct_stems": 5,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "CHE_EQUILIBRIUM",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 18,
+        "n_resources": 16,
+        "distinct_stems": 5,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "PHY_PRESSURE",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 15,
+        "n_resources": 8,
+        "distinct_stems": 15,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "PHY_ELECTRIC_FIELD",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 15,
+        "n_resources": 11,
+        "distinct_stems": 15,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "BIO_MOTION",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 13,
+        "n_resources": 7,
+        "distinct_stems": 13,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "MAT_TEMPERATURE",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 13,
+        "n_resources": 5,
+        "distinct_stems": 13,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "PHY_INDUCTANCE",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 11,
+        "n_resources": 5,
+        "distinct_stems": 11,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "BRD_PHY_ce26529e8f59",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 10,
+        "n_resources": 7,
+        "distinct_stems": 10,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "PHY_PRESSURE",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 10,
+        "n_resources": 6,
+        "distinct_stems": 10,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "BIO_EVOLUTION",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 8,
+        "n_resources": 8,
+        "distinct_stems": 8,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "BIO_TUNING_FORK",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 8,
+        "n_resources": 2,
+        "distinct_stems": 8,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "PHY_THE_REFRACTIVE_INDEX",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 7,
+        "n_resources": 6,
+        "distinct_stems": 7,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "PHY_DENSITY",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 7,
+        "n_resources": 3,
+        "distinct_stems": 7,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "PHY_RADIATION",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 6,
+        "n_resources": 5,
+        "distinct_stems": 6,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "PHY_BATTERY",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 6,
+        "n_resources": 4,
+        "distinct_stems": 6,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "PHY_INDUCTION",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 5,
+        "n_resources": 4,
+        "distinct_stems": 5,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "PHY_GRAVITATIONAL_FORCE",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 5,
+        "n_resources": 4,
+        "distinct_stems": 5,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "PHY_RADIATION",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 5,
+        "n_resources": 5,
+        "distinct_stems": 5,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "PHY_NUCLEI",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 5,
+        "n_resources": 3,
+        "distinct_stems": 5,
+        "verified": true,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": true
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "Chemistry:ion",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 629,
+        "n_resources": 84,
+        "distinct_stems": 148,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "Biology:misc",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 606,
+        "n_resources": 39,
+        "distinct_stems": 585,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "Physics:misc",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 568,
+        "n_resources": 199,
+        "distinct_stems": 555,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "Chemistry:misc",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 277,
+        "n_resources": 52,
+        "distinct_stems": 257,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "Chemistry:ion",
+        "archetype": "multi_concept_integration",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 271,
+        "n_resources": 40,
+        "distinct_stems": 35,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "Physics:misc",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 212,
+        "n_resources": 53,
+        "distinct_stems": 205,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "Chemistry:mole",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 186,
+        "n_resources": 63,
+        "distinct_stems": 43,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "Physics:velocity",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 184,
+        "n_resources": 99,
+        "distinct_stems": 174,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "Physics:misc",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 182,
+        "n_resources": 103,
+        "distinct_stems": 182,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "Chemistry:reaction",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 162,
+        "n_resources": 65,
+        "distinct_stems": 61,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "Biology:cell",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 120,
+        "n_resources": 64,
+        "distinct_stems": 65,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "Biology:plant",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 91,
+        "n_resources": 40,
+        "distinct_stems": 62,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "BRD_PHY_ce26529e8f59",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 91,
+        "n_resources": 46,
+        "distinct_stems": 89,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "Physics:velocity",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 90,
+        "n_resources": 53,
+        "distinct_stems": 37,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "Physics:magnetic",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 90,
+        "n_resources": 48,
+        "distinct_stems": 25,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "MAT_TEMPERATURE",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 88,
+        "n_resources": 35,
+        "distinct_stems": 86,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "Physics:force",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 82,
+        "n_resources": 54,
+        "distinct_stems": 32,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "Biology:gene",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 80,
+        "n_resources": 42,
+        "distinct_stems": 37,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "Physics:energy",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 80,
+        "n_resources": 45,
+        "distinct_stems": 80,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "BRD_PHY_ce26529e8f59",
+        "archetype": "assertion_reason",
+        "lane": "ASSERTION_RELATION",
+        "n_dna": 74,
+        "n_resources": 39,
+        "distinct_stems": 4,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "Physics:velocity",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 72,
+        "n_resources": 48,
+        "distinct_stems": 72,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "Physics:force",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 69,
+        "n_resources": 42,
+        "distinct_stems": 66,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "Physics:circuit",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 65,
+        "n_resources": 44,
+        "distinct_stems": 9,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "Physics:energy",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 64,
+        "n_resources": 37,
+        "distinct_stems": 32,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "PHY_RADIATION",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 64,
+        "n_resources": 28,
+        "distinct_stems": 21,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "Chemistry:acid",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 60,
+        "n_resources": 38,
+        "distinct_stems": 40,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "MAT_TEMPERATURE",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 60,
+        "n_resources": 33,
+        "distinct_stems": 38,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "Chemistry:compound",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 59,
+        "n_resources": 35,
+        "distinct_stems": 18,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "Physics:current",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 59,
+        "n_resources": 27,
+        "distinct_stems": 59,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "Physics:velocity",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 57,
+        "n_resources": 32,
+        "distinct_stems": 43,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "MAT_TEMPERATURE",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 57,
+        "n_resources": 41,
+        "distinct_stems": 14,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "PHY_PRESSURE",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 57,
+        "n_resources": 28,
+        "distinct_stems": 56,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "BRD_PHY_ce26529e8f59",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 56,
+        "n_resources": 27,
+        "distinct_stems": 21,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "PHY_FRICTION",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 56,
+        "n_resources": 29,
+        "distinct_stems": 55,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "PHY_ELECTRIC_FIELD",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 56,
+        "n_resources": 22,
+        "distinct_stems": 55,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "Chemistry:mole",
+        "archetype": "multi_concept_integration",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 54,
+        "n_resources": 38,
+        "distinct_stems": 5,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "CHE_OXIDATION",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 53,
+        "n_resources": 26,
+        "distinct_stems": 21,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "Biology:misc",
+        "archetype": "cause_effect",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 53,
+        "n_resources": 24,
+        "distinct_stems": 52,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "Physics:current",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 52,
+        "n_resources": 42,
+        "distinct_stems": 20,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "Physics:current",
+        "archetype": "diagram_interpretation",
+        "lane": "DIAGRAM_VISUAL",
+        "n_dna": 51,
+        "n_resources": 38,
+        "distinct_stems": 5,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "Physics:resistance",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 50,
+        "n_resources": 27,
+        "distinct_stems": 10,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "Biology:species",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 50,
+        "n_resources": 44,
+        "distinct_stems": 15,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "Physics:wavelength",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 49,
+        "n_resources": 28,
+        "distinct_stems": 10,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Mathematics",
+        "profile": "NEET",
+        "concept": "Mathematics:radius",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 48,
+        "n_resources": 29,
+        "distinct_stems": 5,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "Physics:misc",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 48,
+        "n_resources": 25,
+        "distinct_stems": 47,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "Chemistry:bond",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 47,
+        "n_resources": 46,
+        "distinct_stems": 14,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "CHE_EQUILIBRIUM",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 47,
+        "n_resources": 43,
+        "distinct_stems": 13,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "Chemistry:ion",
+        "archetype": "diagram_interpretation",
+        "lane": "DIAGRAM_VISUAL",
+        "n_dna": 47,
+        "n_resources": 17,
+        "distinct_stems": 3,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "CHE_COMPOUNDS",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 46,
+        "n_resources": 34,
+        "distinct_stems": 27,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "Biology:enzyme",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 45,
+        "n_resources": 32,
+        "distinct_stems": 24,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "Chemistry:reaction",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 45,
+        "n_resources": 44,
+        "distinct_stems": 11,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "PHY_POWER",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 45,
+        "n_resources": 22,
+        "distinct_stems": 45,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "PHY_DENSITY",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 44,
+        "n_resources": 27,
+        "distinct_stems": 44,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "BRD_PHY_ce26529e8f59",
+        "archetype": "cause_effect",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 43,
+        "n_resources": 35,
+        "distinct_stems": 4,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "Chemistry:ion",
+        "archetype": "misconception_detection",
+        "lane": "MISCONCEPTION_DIAGNOSTIC",
+        "n_dna": 42,
+        "n_resources": 24,
+        "distinct_stems": 10,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "Physics:charge",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 42,
+        "n_resources": 19,
+        "distinct_stems": 42,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "Chemistry:enthalpy",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 41,
+        "n_resources": 41,
+        "distinct_stems": 4,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "BRD_PHY_ce26529e8f59",
+        "archetype": "assertion_reason",
+        "lane": "ASSERTION_RELATION",
+        "n_dna": 41,
+        "n_resources": 33,
+        "distinct_stems": 2,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "Chemistry:solution",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 40,
+        "n_resources": 31,
+        "distinct_stems": 20,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "Biology:cell",
+        "archetype": "cause_effect",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 40,
+        "n_resources": 40,
+        "distinct_stems": 7,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "Physics:lens",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 39,
+        "n_resources": 23,
+        "distinct_stems": 6,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "Chemistry:acid",
+        "archetype": "multi_concept_integration",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 38,
+        "n_resources": 37,
+        "distinct_stems": 6,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "BIO_PHOTOSYNTHESIS_FOODMAKING_PROCES",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 38,
+        "n_resources": 21,
+        "distinct_stems": 27,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "Physics:force",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 38,
+        "n_resources": 26,
+        "distinct_stems": 38,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "Physics:potential",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 36,
+        "n_resources": 36,
+        "distinct_stems": 4,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "PHY_BATTERY",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 36,
+        "n_resources": 36,
+        "distinct_stems": 4,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "BIO_REPLICATION",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 36,
+        "n_resources": 36,
+        "distinct_stems": 2,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "BIO_MOTION",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 36,
+        "n_resources": 24,
+        "distinct_stems": 34,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Mathematics",
+        "profile": "NEET",
+        "concept": "Mathematics:ratio",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 35,
+        "n_resources": 35,
+        "distinct_stems": 2,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "Physics:circuit",
+        "archetype": "table_interpretation",
+        "lane": "DATA_INTERPRETATION",
+        "n_dna": 35,
+        "n_resources": 35,
+        "distinct_stems": 2,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Mathematics",
+        "profile": "FOUNDATION",
+        "concept": "Mathematics:misc",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 35,
+        "n_resources": 6,
+        "distinct_stems": 35,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "BIO_CELL_STRUCTURE_AND_FUNCTIONS",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 34,
+        "n_resources": 22,
+        "distinct_stems": 15,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "Physics:frequency",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 33,
+        "n_resources": 19,
+        "distinct_stems": 32,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "Physics:acceleration",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 33,
+        "n_resources": 23,
+        "distinct_stems": 33,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Mathematics",
+        "profile": "NEET",
+        "concept": "Mathematics:sequence",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 32,
+        "n_resources": 25,
+        "distinct_stems": 5,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "Physics:current",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 31,
+        "n_resources": 28,
+        "distinct_stems": 10,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "PHY_RADIATION",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 31,
+        "n_resources": 23,
+        "distinct_stems": 2,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "Physics:magnetic",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 31,
+        "n_resources": 14,
+        "distinct_stems": 31,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "Physics:energy",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 30,
+        "n_resources": 29,
+        "distinct_stems": 8,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "BIO_HUMAN_REPRODUCTION",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 30,
+        "n_resources": 8,
+        "distinct_stems": 26,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "PHY_DENSITY",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 30,
+        "n_resources": 28,
+        "distinct_stems": 11,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Mathematics",
+        "profile": "NEET",
+        "concept": "Mathematics:mean",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 30,
+        "n_resources": 16,
+        "distinct_stems": 3,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "PHY_PRESSURE",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 30,
+        "n_resources": 22,
+        "distinct_stems": 18,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "BIO_EXCRETORY_SYSTEM_IN_HUMANS",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 30,
+        "n_resources": 15,
+        "distinct_stems": 18,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "Chemistry:ion",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 29,
+        "n_resources": 29,
+        "distinct_stems": 13,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "Physics:wavelength",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 29,
+        "n_resources": 14,
+        "distinct_stems": 29,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "BIO_PROGENY",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 28,
+        "n_resources": 19,
+        "distinct_stems": 4,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "Biology:cell",
+        "archetype": "multi_concept_integration",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 28,
+        "n_resources": 24,
+        "distinct_stems": 4,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "Physics:resistance",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 28,
+        "n_resources": 14,
+        "distinct_stems": 28,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Mathematics",
+        "profile": "NEET",
+        "concept": "Mathematics:circle",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 27,
+        "n_resources": 26,
+        "distinct_stems": 4,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "BIO_ACTIVI",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 27,
+        "n_resources": 27,
+        "distinct_stems": 4,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "Chemistry:compound",
+        "archetype": "multi_concept_integration",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 27,
+        "n_resources": 17,
+        "distinct_stems": 2,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "BIO_MITOCHONDRIA",
+        "archetype": "multi_concept_integration",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 27,
+        "n_resources": 15,
+        "distinct_stems": 2,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "Biology:misc",
+        "archetype": "misconception_detection",
+        "lane": "MISCONCEPTION_DIAGNOSTIC",
+        "n_dna": 27,
+        "n_resources": 16,
+        "distinct_stems": 24,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "PHY_RADIATION",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 27,
+        "n_resources": 14,
+        "distinct_stems": 27,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "Chemistry:molar",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 26,
+        "n_resources": 22,
+        "distinct_stems": 8,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "PHY_PRESSURE",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 26,
+        "n_resources": 10,
+        "distinct_stems": 23,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "PHY_INDUCTANCE",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 26,
+        "n_resources": 24,
+        "distinct_stems": 5,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "CHE_METALS",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 26,
+        "n_resources": 24,
+        "distinct_stems": 7,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "BRD_BIO_0c566ed5c07e",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 25,
+        "n_resources": 23,
+        "distinct_stems": 4,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "Physics:acceleration",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 25,
+        "n_resources": 17,
+        "distinct_stems": 25,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Mathematics",
+        "profile": "FOUNDATION",
+        "concept": "Mathematics:misc",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 25,
+        "n_resources": 6,
+        "distinct_stems": 25,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Mathematics",
+        "profile": "NEET",
+        "concept": "Mathematics:misc",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 24,
+        "n_resources": 24,
+        "distinct_stems": 2,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "PHY_DENSITY",
+        "archetype": "error_analysis",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 24,
+        "n_resources": 24,
+        "distinct_stems": 2,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": false,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "Biology:hormone",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 23,
+        "n_resources": 7,
+        "distinct_stems": 19,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "MAT_TEMPERATURE",
+        "archetype": "cause_effect",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 23,
+        "n_resources": 23,
+        "distinct_stems": 2,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "Physics:circuit",
+        "archetype": "diagram_interpretation",
+        "lane": "DIAGRAM_VISUAL",
+        "n_dna": 23,
+        "n_resources": 23,
+        "distinct_stems": 1,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "Chemistry:atomic mass",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 23,
+        "n_resources": 22,
+        "distinct_stems": 3,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "Chemistry:concentration",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 23,
+        "n_resources": 23,
+        "distinct_stems": 2,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "Physics:charge",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 23,
+        "n_resources": 15,
+        "distinct_stems": 23,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "PHY_DISPLACEMENT_CURRENT",
+        "archetype": "cause_effect",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 22,
+        "n_resources": 22,
+        "distinct_stems": 1,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "Chemistry:solution",
+        "archetype": "comparison",
+        "lane": "COMPARATIVE",
+        "n_dna": 22,
+        "n_resources": 22,
+        "distinct_stems": 1,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "BIO_SPLITTING_OF_WATER",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 22,
+        "n_resources": 22,
+        "distinct_stems": 1,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "BIO_FRAGMENTATION",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 22,
+        "n_resources": 22,
+        "distinct_stems": 3,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "BIO_PRODUCTIVITY",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 22,
+        "n_resources": 22,
+        "distinct_stems": 1,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "PHY_ELECTRIC_FIELD",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 22,
+        "n_resources": 10,
+        "distinct_stems": 19,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "PHY_INDUCTANCE",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 22,
+        "n_resources": 8,
+        "distinct_stems": 22,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "Biology:organism",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 22,
+        "n_resources": 12,
+        "distinct_stems": 22,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "PHY_ELECTRIC_DIPOLE",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 21,
+        "n_resources": 20,
+        "distinct_stems": 2,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "Physics:lens",
+        "archetype": "diagram_interpretation",
+        "lane": "DIAGRAM_VISUAL",
+        "n_dna": 21,
+        "n_resources": 21,
+        "distinct_stems": 1,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "BIO_PROPHASE",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 21,
+        "n_resources": 21,
+        "distinct_stems": 1,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "BIO_PROTEINS",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 21,
+        "n_resources": 14,
+        "distinct_stems": 21,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "BRD_BIO_45bf6a396ce0",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 20,
+        "n_resources": 20,
+        "distinct_stems": 2,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "BIO_DEVELOPMENT",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 20,
+        "n_resources": 19,
+        "distinct_stems": 2,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "PHY_ELECTRIC_DIPOLE",
+        "archetype": "diagram_interpretation",
+        "lane": "DIAGRAM_VISUAL",
+        "n_dna": 20,
+        "n_resources": 20,
+        "distinct_stems": 1,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "Biology:organ",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 20,
+        "n_resources": 16,
+        "distinct_stems": 18,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "Physics:current",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 20,
+        "n_resources": 17,
+        "distinct_stems": 20,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "BIO_MOTION",
+        "archetype": "graph_interpretation",
+        "lane": "DATA_INTERPRETATION",
+        "n_dna": 19,
+        "n_resources": 19,
+        "distinct_stems": 1,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "Chemistry:isotope",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 19,
+        "n_resources": 19,
+        "distinct_stems": 1,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "BIO_TIVITY",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 19,
+        "n_resources": 19,
+        "distinct_stems": 3,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "Chemistry:atomic mass",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 19,
+        "n_resources": 18,
+        "distinct_stems": 4,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "Physics:charge",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 19,
+        "n_resources": 6,
+        "distinct_stems": 19,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "Chemistry:misc",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 19,
+        "n_resources": 13,
+        "distinct_stems": 19,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "BIO_HUMAN_ENDOCRINE_SYSTEM",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 19,
+        "n_resources": 7,
+        "distinct_stems": 18,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "BIO_RESPIRATION_THE_ENERGY_RELEASING",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 19,
+        "n_resources": 5,
+        "distinct_stems": 19,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "Chemistry:ion",
+        "archetype": "cause_effect",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 18,
+        "n_resources": 14,
+        "distinct_stems": 14,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "PHY_MAGNETIC_FORCE",
+        "archetype": "graph_interpretation",
+        "lane": "DATA_INTERPRETATION",
+        "n_dna": 18,
+        "n_resources": 18,
+        "distinct_stems": 1,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "BIO_TRANSPIRATION",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 18,
+        "n_resources": 18,
+        "distinct_stems": 1,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "BIO_REPLICATION",
+        "archetype": "multi_concept_integration",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 18,
+        "n_resources": 18,
+        "distinct_stems": 1,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "BIO_METAPHASE",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 18,
+        "n_resources": 18,
+        "distinct_stems": 2,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "BIO_HUMAN_ENDOCRINE_SYSTEM",
+        "archetype": "misconception_detection",
+        "lane": "MISCONCEPTION_DIAGNOSTIC",
+        "n_dna": 18,
+        "n_resources": 18,
+        "distinct_stems": 3,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Mathematics",
+        "profile": "NEET",
+        "concept": "BRD_PHY_ce26529e8f59",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 18,
+        "n_resources": 18,
+        "distinct_stems": 1,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "Physics:lens",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 18,
+        "n_resources": 5,
+        "distinct_stems": 18,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "BRD_CHE_96478c732cb8",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 18,
+        "n_resources": 8,
+        "distinct_stems": 18,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "PHY_BATTERY",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 17,
+        "n_resources": 15,
+        "distinct_stems": 6,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "PHY_DISPLACEMENT_CURRENT",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 17,
+        "n_resources": 16,
+        "distinct_stems": 3,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "Chemistry:reaction",
+        "archetype": "misconception_detection",
+        "lane": "MISCONCEPTION_DIAGNOSTIC",
+        "n_dna": 17,
+        "n_resources": 17,
+        "distinct_stems": 1,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "BIO_FRAGMENTATION",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 17,
+        "n_resources": 17,
+        "distinct_stems": 1,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "BIO_DEVELOPMENT",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 17,
+        "n_resources": 16,
+        "distinct_stems": 7,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "concept": "Physics:energy",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 17,
+        "n_resources": 13,
+        "distinct_stems": 17,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "BIO_NEURAL_CONTROL_ANDCOORDINATION",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 17,
+        "n_resources": 3,
+        "distinct_stems": 16,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "CHE_METALS",
+        "archetype": "comparison",
+        "lane": "COMPARATIVE",
+        "n_dna": 16,
+        "n_resources": 16,
+        "distinct_stems": 1,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "BIO_CUTTING",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 16,
+        "n_resources": 15,
+        "distinct_stems": 3,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "Physics:charge",
+        "archetype": "diagram_interpretation",
+        "lane": "DIAGRAM_VISUAL",
+        "n_dna": 16,
+        "n_resources": 16,
+        "distinct_stems": 1,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Mathematics",
+        "profile": "NEET",
+        "concept": "Mathematics:area",
+        "archetype": "single_step_numerical",
+        "lane": "NUMERIC_RELATIONAL",
+        "n_dna": 16,
+        "n_resources": 16,
+        "distinct_stems": 1,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "PHY_LIQUID_STATE",
+        "archetype": "experiment_inference",
+        "lane": "EXPERIMENT_OBSERVATION",
+        "n_dna": 16,
+        "n_resources": 16,
+        "distinct_stems": 1,
+        "verified": true,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "BIO_NEURAL_CONTROL_ANDCOORDINATION",
+        "archetype": "multi_concept_integration",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 16,
+        "n_resources": 16,
+        "distinct_stems": 2,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "BRD_BIO_45bf6a396ce0",
+        "archetype": "multi_concept_integration",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 16,
+        "n_resources": 16,
+        "distinct_stems": 1,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "BIO_MOTION",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 16,
+        "n_resources": 8,
+        "distinct_stems": 16,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "concept": "BIO_CIRCULATORY_SYSTEM",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 16,
+        "n_resources": 7,
+        "distinct_stems": 15,
+        "verified": false,
+        "genuine": true,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "Physics:current",
+        "archetype": "graph_interpretation",
+        "lane": "DATA_INTERPRETATION",
+        "n_dna": 15,
+        "n_resources": 15,
+        "distinct_stems": 1,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "CHE_THE_REFRACTIVE_INDEX",
+        "archetype": "diagram_interpretation",
+        "lane": "DIAGRAM_VISUAL",
+        "n_dna": 15,
+        "n_resources": 15,
+        "distinct_stems": 1,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "concept": "Physics:wavelength",
+        "archetype": "multi_concept_integration",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 15,
+        "n_resources": 15,
+        "distinct_stems": 1,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": false,
+        "profile_valid": true,
+        "certifiable": false
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "concept": "BIO_MOTION",
+        "archetype": "factual_single_best_answer",
+        "lane": "CONCEPTUAL_CAUSAL",
+        "n_dna": 15,
+        "n_resources": 15,
+        "distinct_stems": 4,
+        "verified": false,
+        "genuine": false,
+        "resolved_concept": true,
+        "profile_valid": true,
+        "certifiable": false
+      }
+    ]
+  },
+  "matrix": {
+    "cells": [
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "archetype": "factual_single_best_answer",
+        "evidence_depth_dna": 1667,
+        "distinct_concepts": 50,
+        "resource_count_max": 64,
+        "distinct_stems_max": 585,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 6,
+        "genuine_item_models": 26,
+        "certifiable_item_models": 1,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 585,
+          "concepts": 50
+        }
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "archetype": "cause_effect",
+        "evidence_depth_dna": 118,
+        "distinct_concepts": 5,
+        "resource_count_max": 40,
+        "distinct_stems_max": 52,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 0,
+        "genuine_item_models": 1,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 52,
+          "concepts": 5
+        }
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "archetype": "multi_concept_integration",
+        "evidence_depth_dna": 103,
+        "distinct_concepts": 7,
+        "resource_count_max": 24,
+        "distinct_stems_max": 4,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 0,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 4,
+          "concepts": 7
+        }
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "archetype": "misconception_detection",
+        "evidence_depth_dna": 45,
+        "distinct_concepts": 2,
+        "resource_count_max": 18,
+        "distinct_stems_max": 24,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 1,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 24,
+          "concepts": 2
+        }
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "archetype": "comparison",
+        "evidence_depth_dna": 18,
+        "distinct_concepts": 2,
+        "resource_count_max": 12,
+        "distinct_stems_max": 6,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 1,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 6,
+          "concepts": 2
+        }
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "archetype": "error_analysis",
+        "evidence_depth_dna": 15,
+        "distinct_concepts": 1,
+        "resource_count_max": 14,
+        "distinct_stems_max": 15,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 0,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 15,
+          "concepts": 1
+        }
+      },
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "archetype": "assertion_reason",
+        "evidence_depth_dna": 5,
+        "distinct_concepts": 1,
+        "resource_count_max": 5,
+        "distinct_stems_max": 1,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 0,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 1,
+          "concepts": 1
+        }
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "archetype": "factual_single_best_answer",
+        "evidence_depth_dna": 2458,
+        "distinct_concepts": 50,
+        "resource_count_max": 84,
+        "distinct_stems_max": 257,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 14,
+        "genuine_item_models": 12,
+        "certifiable_item_models": 3,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 257,
+          "concepts": 50
+        }
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "archetype": "multi_concept_integration",
+        "evidence_depth_dna": 571,
+        "distinct_concepts": 17,
+        "resource_count_max": 40,
+        "distinct_stems_max": 35,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 1,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 35,
+          "concepts": 17
+        }
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "archetype": "single_step_numerical",
+        "evidence_depth_dna": 186,
+        "distinct_concepts": 10,
+        "resource_count_max": 44,
+        "distinct_stems_max": 19,
+        "verification_readiness": "solver",
+        "verified_item_models": 10,
+        "genuine_item_models": 2,
+        "certifiable_item_models": 2,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "partial"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "relation_solver"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 19,
+          "concepts": 10
+        }
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "archetype": "cause_effect",
+        "evidence_depth_dna": 97,
+        "distinct_concepts": 6,
+        "resource_count_max": 35,
+        "distinct_stems_max": 15,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 1,
+        "genuine_item_models": 1,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 15,
+          "concepts": 6
+        }
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "archetype": "assertion_reason",
+        "evidence_depth_dna": 91,
+        "distinct_concepts": 4,
+        "resource_count_max": 39,
+        "distinct_stems_max": 5,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 1,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 5,
+          "concepts": 4
+        }
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "archetype": "misconception_detection",
+        "evidence_depth_dna": 87,
+        "distinct_concepts": 4,
+        "resource_count_max": 24,
+        "distinct_stems_max": 14,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 0,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 14,
+          "concepts": 4
+        }
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "archetype": "diagram_interpretation",
+        "evidence_depth_dna": 83,
+        "distinct_concepts": 4,
+        "resource_count_max": 17,
+        "distinct_stems_max": 3,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 1,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 3,
+          "concepts": 4
+        }
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "archetype": "comparison",
+        "evidence_depth_dna": 53,
+        "distinct_concepts": 3,
+        "resource_count_max": 22,
+        "distinct_stems_max": 1,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 1,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 1,
+          "concepts": 3
+        }
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "archetype": "experiment_inference",
+        "evidence_depth_dna": 44,
+        "distinct_concepts": 3,
+        "resource_count_max": 16,
+        "distinct_stems_max": 1,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 1,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 1,
+          "concepts": 3
+        }
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "archetype": "error_analysis",
+        "evidence_depth_dna": 19,
+        "distinct_concepts": 2,
+        "resource_count_max": 9,
+        "distinct_stems_max": 11,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 0,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 11,
+          "concepts": 2
+        }
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET_FOUNDATION",
+        "archetype": "factual_single_best_answer",
+        "evidence_depth_dna": 20,
+        "distinct_concepts": 2,
+        "resource_count_max": 9,
+        "distinct_stems_max": 13,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 0,
+        "genuine_item_models": 1,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 13,
+          "concepts": 2
+        }
+      },
+      {
+        "subject": "Mathematics",
+        "profile": "FOUNDATION",
+        "archetype": "single_step_numerical",
+        "evidence_depth_dna": 41,
+        "distinct_concepts": 2,
+        "resource_count_max": 6,
+        "distinct_stems_max": 35,
+        "verification_readiness": "solver",
+        "verified_item_models": 2,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "partial"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "relation_solver"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 35,
+          "concepts": 2
+        }
+      },
+      {
+        "subject": "Mathematics",
+        "profile": "FOUNDATION",
+        "archetype": "factual_single_best_answer",
+        "evidence_depth_dna": 25,
+        "distinct_concepts": 1,
+        "resource_count_max": 6,
+        "distinct_stems_max": 25,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 0,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 25,
+          "concepts": 1
+        }
+      },
+      {
+        "subject": "Mathematics",
+        "profile": "NEET",
+        "archetype": "factual_single_best_answer",
+        "evidence_depth_dna": 243,
+        "distinct_concepts": 11,
+        "resource_count_max": 35,
+        "distinct_stems_max": 5,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 1,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 5,
+          "concepts": 11
+        }
+      },
+      {
+        "subject": "Mathematics",
+        "profile": "NEET",
+        "archetype": "single_step_numerical",
+        "evidence_depth_dna": 75,
+        "distinct_concepts": 6,
+        "resource_count_max": 18,
+        "distinct_stems_max": 3,
+        "verification_readiness": "solver",
+        "verified_item_models": 6,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "partial"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "relation_solver"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 3,
+          "concepts": 6
+        }
+      },
+      {
+        "subject": "Mathematics",
+        "profile": "NEET",
+        "archetype": "multi_concept_integration",
+        "evidence_depth_dna": 14,
+        "distinct_concepts": 1,
+        "resource_count_max": 14,
+        "distinct_stems_max": 1,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 0,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 1,
+          "concepts": 1
+        }
+      },
+      {
+        "subject": "Mathematics",
+        "profile": "NEET",
+        "archetype": "diagram_interpretation",
+        "evidence_depth_dna": 10,
+        "distinct_concepts": 1,
+        "resource_count_max": 10,
+        "distinct_stems_max": 1,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 0,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 1,
+          "concepts": 1
+        }
+      },
+      {
+        "subject": "Mathematics",
+        "profile": "NEET",
+        "archetype": "misconception_detection",
+        "evidence_depth_dna": 8,
+        "distinct_concepts": 1,
+        "resource_count_max": 8,
+        "distinct_stems_max": 1,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 0,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 1,
+          "concepts": 1
+        }
+      },
+      {
+        "subject": "Mathematics",
+        "profile": "NEET",
+        "archetype": "assertion_reason",
+        "evidence_depth_dna": 6,
+        "distinct_concepts": 1,
+        "resource_count_max": 6,
+        "distinct_stems_max": 1,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 0,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 1,
+          "concepts": 1
+        }
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "archetype": "factual_single_best_answer",
+        "evidence_depth_dna": 1913,
+        "distinct_concepts": 46,
+        "resource_count_max": 199,
+        "distinct_stems_max": 555,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 0,
+        "genuine_item_models": 28,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 555,
+          "concepts": 46
+        }
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "archetype": "single_step_numerical",
+        "evidence_depth_dna": 699,
+        "distinct_concepts": 31,
+        "resource_count_max": 103,
+        "distinct_stems_max": 182,
+        "verification_readiness": "solver",
+        "verified_item_models": 31,
+        "genuine_item_models": 17,
+        "certifiable_item_models": 17,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "partial"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "relation_solver"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 182,
+          "concepts": 31
+        }
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "archetype": "cause_effect",
+        "evidence_depth_dna": 29,
+        "distinct_concepts": 4,
+        "resource_count_max": 10,
+        "distinct_stems_max": 13,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 0,
+        "genuine_item_models": 1,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 13,
+          "concepts": 4
+        }
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "archetype": "experiment_inference",
+        "evidence_depth_dna": 24,
+        "distinct_concepts": 2,
+        "resource_count_max": 6,
+        "distinct_stems_max": 15,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 0,
+        "genuine_item_models": 1,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 15,
+          "concepts": 2
+        }
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "archetype": "error_analysis",
+        "evidence_depth_dna": 8,
+        "distinct_concepts": 1,
+        "resource_count_max": 5,
+        "distinct_stems_max": 8,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 0,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 8,
+          "concepts": 1
+        }
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "archetype": "misconception_detection",
+        "evidence_depth_dna": 7,
+        "distinct_concepts": 1,
+        "resource_count_max": 7,
+        "distinct_stems_max": 7,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 0,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 7,
+          "concepts": 1
+        }
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "archetype": "table_interpretation",
+        "evidence_depth_dna": 6,
+        "distinct_concepts": 1,
+        "resource_count_max": 6,
+        "distinct_stems_max": 6,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 0,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 6,
+          "concepts": 1
+        }
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "archetype": "graph_interpretation",
+        "evidence_depth_dna": 5,
+        "distinct_concepts": 1,
+        "resource_count_max": 5,
+        "distinct_stems_max": 5,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 0,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 5,
+          "concepts": 1
+        }
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "archetype": "factual_single_best_answer",
+        "evidence_depth_dna": 1311,
+        "distinct_concepts": 35,
+        "resource_count_max": 54,
+        "distinct_stems_max": 205,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 5,
+        "genuine_item_models": 16,
+        "certifiable_item_models": 2,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 205,
+          "concepts": 35
+        }
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "archetype": "single_step_numerical",
+        "evidence_depth_dna": 510,
+        "distinct_concepts": 23,
+        "resource_count_max": 53,
+        "distinct_stems_max": 47,
+        "verification_readiness": "solver",
+        "verified_item_models": 23,
+        "genuine_item_models": 10,
+        "certifiable_item_models": 10,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "partial"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "relation_solver"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 47,
+          "concepts": 23
+        }
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "archetype": "diagram_interpretation",
+        "evidence_depth_dna": 131,
+        "distinct_concepts": 5,
+        "resource_count_max": 38,
+        "distinct_stems_max": 5,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 0,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 5,
+          "concepts": 5
+        }
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "archetype": "cause_effect",
+        "evidence_depth_dna": 71,
+        "distinct_concepts": 5,
+        "resource_count_max": 23,
+        "distinct_stems_max": 2,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 3,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 2,
+          "concepts": 5
+        }
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "archetype": "graph_interpretation",
+        "evidence_depth_dna": 52,
+        "distinct_concepts": 3,
+        "resource_count_max": 19,
+        "distinct_stems_max": 1,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 0,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 1,
+          "concepts": 3
+        }
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "archetype": "multi_concept_integration",
+        "evidence_depth_dna": 42,
+        "distinct_concepts": 3,
+        "resource_count_max": 15,
+        "distinct_stems_max": 1,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 0,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 1,
+          "concepts": 3
+        }
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "archetype": "assertion_reason",
+        "evidence_depth_dna": 41,
+        "distinct_concepts": 1,
+        "resource_count_max": 33,
+        "distinct_stems_max": 2,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 1,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 2,
+          "concepts": 1
+        }
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "archetype": "table_interpretation",
+        "evidence_depth_dna": 35,
+        "distinct_concepts": 1,
+        "resource_count_max": 35,
+        "distinct_stems_max": 2,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 0,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 2,
+          "concepts": 1
+        }
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "archetype": "error_analysis",
+        "evidence_depth_dna": 24,
+        "distinct_concepts": 1,
+        "resource_count_max": 24,
+        "distinct_stems_max": 2,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 0,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 2,
+          "concepts": 1
+        }
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "archetype": "experiment_inference",
+        "evidence_depth_dna": 23,
+        "distinct_concepts": 1,
+        "resource_count_max": 20,
+        "distinct_stems_max": 7,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 1,
+        "genuine_item_models": 1,
+        "certifiable_item_models": 1,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 7,
+          "concepts": 1
+        }
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "archetype": "comparison",
+        "evidence_depth_dna": 6,
+        "distinct_concepts": 1,
+        "resource_count_max": 5,
+        "distinct_stems_max": 6,
+        "verification_readiness": "kvs+tier2",
+        "verified_item_models": 0,
+        "genuine_item_models": 0,
+        "certifiable_item_models": 0,
+        "difficulty_driver_support": {
+          "measured": false,
+          "proxy": "absent"
+        },
+        "solution_verification_support": {
+          "measured": true,
+          "value": "kvs_tier2_agreement"
+        },
+        "visual_support": {
+          "measured": false,
+          "proxy": "assets_exist_not_generation_ready"
+        },
+        "generation_diversity_potential": {
+          "measured": true,
+          "distinct_stems": 6,
+          "concepts": 1
+        }
+      }
+    ],
+    "subject_profile_ratings": [
+      {
+        "subject": "Biology",
+        "profile": "NEET",
+        "rating": "MODERATE",
+        "certifiable_models": 1,
+        "genuine_models": 27,
+        "candidate_models": 68,
+        "archetypes_covered": [
+          "factual_single_best_answer"
+        ],
+        "profile_invalid_evidence": 1
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET",
+        "rating": "STRONG",
+        "certifiable_models": 5,
+        "genuine_models": 15,
+        "candidate_models": 103,
+        "archetypes_covered": [
+          "factual_single_best_answer",
+          "single_step_numerical"
+        ],
+        "profile_invalid_evidence": 2
+      },
+      {
+        "subject": "Chemistry",
+        "profile": "NEET_FOUNDATION",
+        "rating": "THIN",
+        "certifiable_models": 0,
+        "genuine_models": 1,
+        "candidate_models": 2,
+        "archetypes_covered": [],
+        "profile_invalid_evidence": 0
+      },
+      {
+        "subject": "Mathematics",
+        "profile": "FOUNDATION",
+        "rating": "THIN",
+        "certifiable_models": 0,
+        "genuine_models": 0,
+        "candidate_models": 3,
+        "archetypes_covered": [],
+        "profile_invalid_evidence": 0
+      },
+      {
+        "subject": "Mathematics",
+        "profile": "NEET",
+        "rating": "THIN",
+        "certifiable_models": 0,
+        "genuine_models": 0,
+        "candidate_models": 21,
+        "archetypes_covered": [],
+        "profile_invalid_evidence": 0
+      },
+      {
+        "subject": "Physics",
+        "profile": "FOUNDATION",
+        "rating": "MODERATE",
+        "certifiable_models": 17,
+        "genuine_models": 47,
+        "candidate_models": 87,
+        "archetypes_covered": [
+          "single_step_numerical"
+        ],
+        "profile_invalid_evidence": 0
+      },
+      {
+        "subject": "Physics",
+        "profile": "NEET",
+        "rating": "STRONG",
+        "certifiable_models": 13,
+        "genuine_models": 27,
+        "candidate_models": 79,
+        "archetypes_covered": [
+          "experiment_inference",
+          "factual_single_best_answer",
+          "single_step_numerical"
+        ],
+        "profile_invalid_evidence": 1
+      }
+    ]
+  },
+  "metrics": {
+    "capability_coverage_per_profile": {
+      "BOARD_6_10": {
+        "core_archetypes": 6,
+        "covered": 0,
+        "fraction": 0.0,
+        "covered_archetypes": []
+      },
+      "CBSE_6_10": {
+        "core_archetypes": 6,
+        "covered": 0,
+        "fraction": 0.0,
+        "covered_archetypes": []
+      },
+      "AP_SCERT_6_10": {
+        "core_archetypes": 6,
+        "covered": 0,
+        "fraction": 0.0,
+        "covered_archetypes": []
+      },
+      "TS_SCERT_6_10": {
+        "core_archetypes": 6,
+        "covered": 0,
+        "fraction": 0.0,
+        "covered_archetypes": []
+      },
+      "ICSE_6_10": {
+        "core_archetypes": 6,
+        "covered": 0,
+        "fraction": 0.0,
+        "covered_archetypes": []
+      },
+      "FOUNDATION": {
+        "core_archetypes": 7,
+        "covered": 1,
+        "fraction": 0.143,
+        "covered_archetypes": [
+          "single_step_numerical"
+        ]
+      },
+      "JEE_FOUNDATION": {
+        "core_archetypes": 4,
+        "covered": 0,
+        "fraction": 0.0,
+        "covered_archetypes": []
+      },
+      "NEET_FOUNDATION": {
+        "core_archetypes": 9,
+        "covered": 0,
+        "fraction": 0.0,
+        "covered_archetypes": []
+      },
+      "JEE_MAIN": {
+        "core_archetypes": 5,
+        "covered": 0,
+        "fraction": 0.0,
+        "covered_archetypes": []
+      },
+      "NEET": {
+        "core_archetypes": 9,
+        "covered": 1,
+        "fraction": 0.111,
+        "covered_archetypes": [
+          "factual_single_best_answer"
+        ]
+      },
+      "JEE_ADVANCED": {
+        "core_archetypes": 6,
+        "covered": 0,
+        "fraction": 0.0,
+        "covered_archetypes": []
+      }
+    },
+    "evidence_readiness_concepts": {
+      "Biology/NEET": 35,
+      "Chemistry/NEET": 43,
+      "Chemistry/NEET_FOUNDATION": 1,
+      "Mathematics/NEET": 4,
+      "Physics/FOUNDATION": 29,
+      "Physics/NEET": 24
+    },
+    "quality_readiness": {
+      "instrument": "gold_benchmark (blind teacher / AI-panel proxy)",
+      "status": "Phase-0 Hyp-B substance PASSED (absolute bar/agreement/Biology-specific); per-profile benchmark PENDING",
+      "measured_here": false
+    },
+    "scale_readiness": {
+      "certifiable_models": 36,
+      "median_distinct_stems": 8.0,
+      "note": "distinct-stem breadth is a proxy for non-clone parameter/context diversity"
+    },
+    "paper_readiness": {
+      "instrument": "qpgen blueprint feasibility per profile",
+      "measured_here": false,
+      "note": "requires a target blueprint per profile; not measured in this slice"
+    }
+  },
+  "kvs": {
+    "distinct_facts": 1006,
+    "promotable_ge2docs": 90
+  },
+  "tier2_verified": 46
+}
