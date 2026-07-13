@@ -36,11 +36,15 @@ per profile.
 > 10/10; parametric instances **deterministically** verified (relation solver, no AI/item); originality vs 366
 > source-param signatures (0 numbers copied). Then extended to the FOUNDATION physics pool (+8 relations,
 > validated 8/8): **combined pilot bank now 630 verified** — Biology×NEET 62 (factual) · Chemistry×NEET 110 ·
-> Physics×NEET 167 · Physics×FOUNDATION 291 (numeric). **Reconciliation:** the earlier "JEE = 23 items" was a
-> profile-mapping artifact (physicsaholics→FOUNDATION); JEE is NOT corpus-blocked (FOUNDATION Physics = 767
-> numeric-verified) — only JEE-Math (calculus) and JEE-Advanced multi-step are genuine build blockers. Only the
-> **factual + single-step-numeric** modalities are proven (NEET is partially covered, not complete). See
-> `GENERATION_PILOT_NEET_NUMERIC.md`.
+> Physics×NEET 167 · Physics×FOUNDATION 291 (numeric). See `GENERATION_PILOT_NEET_NUMERIC.md`.
+>
+> **UPDATE 2026-07-13 — JEE build + depth profiling.** (1) Item-level **depth-based** profiling
+> (`profiles.item_profile`) replaces source-identity classification — JEE_MAIN now surfaces genuine items
+> (Physics 511, Chem 391, Math 85). (2) **JEE-Mathematics calculus blocker CLOSED:** `generate_calculus.py`
+> generates + verifies calculus SYMBOLICALLY (sympy; integrals verified by differentiation, derivatives by
+> integration — independent, deterministic, no AI); pilot 100→**64 PASS** (0 symbolic-disagreement; AI phrasing
+> sanity 10/10). **Pilot bank now 694** (adds Mathematics×JEE_MAIN 64). JEE was a *classification* issue +
+> calculus-verifier gap, not corpus-blocked. See `GENERATION_JEE_BUILD.md`.
 
 ## Measured Subject × Profile ratings
 

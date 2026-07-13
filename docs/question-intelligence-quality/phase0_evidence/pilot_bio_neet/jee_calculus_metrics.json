@@ -1,0 +1,83 @@
+{
+  "calc_pilot": {
+    "attempted": 100,
+    "passed": 64,
+    "rejected": 36,
+    "by_family": {
+      "poly_integral": 25,
+      "poly_derivative": 24,
+      "trig_derivative": 10,
+      "exp_integral": 5
+    },
+    "bank_total": 694,
+    "bank_by_subject_profile": {
+      "Biology/NEET": 62,
+      "Chemistry/NEET": 110,
+      "Mathematics/JEE_MAIN": 64,
+      "Physics/FOUNDATION": 291,
+      "Physics/NEET": 167
+    }
+  },
+  "ai_phrasing_sanity": [
+    {
+      "id": "GENC_6058bab7b40ce0ee",
+      "verdict": "agree",
+      "computed": "6x^5/5+7x^2/2",
+      "note": "Power rule; matches proposed answer exactly."
+    },
+    {
+      "id": "GENC_6462b4557534b08e",
+      "verdict": "agree",
+      "computed": "x^6/2+6x",
+      "note": "3x^6/6+6x = x^6/2+6x; matches."
+    },
+    {
+      "id": "GENC_15d9724b6b35b7c9",
+      "verdict": "agree",
+      "computed": "x^6+6x",
+      "note": "6x^6/6+6x = x^6+6x; matches."
+    },
+    {
+      "id": "GENC_8abf90daa85359ed",
+      "verdict": "agree",
+      "computed": "x^6/2+5x^2/2",
+      "note": "3x^6/6+5x^2/2; matches proposed answer."
+    },
+    {
+      "id": "GENC_cdb9a789fb66488e",
+      "verdict": "agree",
+      "computed": "7x^4/4+7x",
+      "note": "Power rule; matches proposed answer exactly."
+    },
+    {
+      "id": "GENC_cc014ab4cc8087c5",
+      "verdict": "agree",
+      "computed": "5x^4/4+3x^2",
+      "note": "5x^4/4+6x^2/2 = 5x^4/4+3x^2; matches."
+    },
+    {
+      "id": "GENC_7c4df9791dec7ed7",
+      "verdict": "agree",
+      "computed": "3x^5/5+7x^2/2",
+      "note": "Power rule; matches proposed answer exactly."
+    },
+    {
+      "id": "GENC_2b4768b3844d8cf3",
+      "verdict": "agree",
+      "computed": "7x^3/3+x",
+      "note": "Power rule; matches proposed answer exactly."
+    },
+    {
+      "id": "GENC_9cce3eb51dd5d0e5",
+      "verdict": "agree",
+      "computed": "8x^5/5+x",
+      "note": "Power rule; matches proposed answer exactly."
+    },
+    {
+      "id": "GENC_8a129c906c43902d",
+      "verdict": "agree",
+      "computed": "5x^4/4+x",
+      "note": "Power rule; matches proposed answer exactly."
+    }
+  ]
+}
