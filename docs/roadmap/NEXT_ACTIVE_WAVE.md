@@ -10,6 +10,15 @@
 
 ## ▶ CURRENT (post-RECON-1, 2026-07-10)
 
+> ### ⏸ ERP LANE PARKED — 2026-07-13 (owner-approved), tip `af69e19a`, branch `feature/data-reliability-platform`, tree CLEAN
+> **All runnable ERP implementation is complete for now.** This session shipped: P1-SEC-1 Biometric App Lock (hardening exit, R1–R4) · a `flutter test | tail` masking-bug fix · CFC-1 code items **6/10** pre-cleared (1·3·4·6·7 + item 2's Trust-Hub deep-link violation fixed & regression-locked) · FLAG_SECURE decided (enable-toggled, device-residue) · graduated-gating left to owner with recommendation.
+> **The lane resumes the moment ANY of these external dependencies clears** (recovery-first → verify → …; no owner prompt needed to restart):
+> - **P0-LIVE-1 provisioned** (owner: R2 creds · `INTERNAL_CRON_TOKEN` · CI runner + 7-day clock) → unblocks CFC-1 item 5 + the LIVE-1 checklist (RLS probes, backups, crons) + the W2/Face-ID/SCE-1 migration deploys.
+> - **K-2 hardening exit** (parallel Knowledge lane) → unblocks CFC-1 item 10.
+> - **Clean tree across ALL lanes** (the curriculum lane commits its in-flight work) → unblocks CFC-1 item 9.
+> - When **all three** clear → run **CFC-1** (all 10 in one sweep on one commit; items 1–4·6·7 already green, item 2 code-green, only item 8 migration-head-check + the three above remain) → **FREEZE-1** → P4…
+> **Nothing here is self-detectable or time-driven** (LIVE-1 = owner action; K-2/curriculum = other lanes) — so no polling; resume on the next real signal. Owner-gated P1 tail (CODE-4/6/7/8 — identity/module-scope) also awaits genuine owner scope decisions. Do NOT touch `curriculum/**` (K-2 lane).
+
 **RECON-1 ✅ COMPLETE (this commit)** — tracking reconciled to reality; derived progress **54.8%** (Wave Ledger §0b; ✅=1 · 🔶=0.5 · never estimated).
 
 **Active waves (parallel, disjoint ownership — never two implementation agents on one module):**
