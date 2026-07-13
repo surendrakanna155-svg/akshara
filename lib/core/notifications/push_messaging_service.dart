@@ -65,7 +65,7 @@ class PushMessagingService {
         sound: true,
       );
     } catch (error) {
-      debugPrint('PushMessaging: permission request failed: $error');
+      if (!kReleaseMode) debugPrint('PushMessaging: permission request failed: $error');
     }
 
     // 2. Token refresh → re-register with the backend.
@@ -82,7 +82,7 @@ class PushMessagingService {
         _onNotificationTapped(initial);
       }
     } catch (error) {
-      debugPrint('PushMessaging: getInitialMessage failed: $error');
+      if (!kReleaseMode) debugPrint('PushMessaging: getInitialMessage failed: $error');
     }
 
     // 5. Register the current token now (if already logged in) and again
@@ -106,7 +106,7 @@ class PushMessagingService {
         await _registerToken(token);
       }
     } catch (error) {
-      debugPrint('PushMessaging: getToken failed: $error');
+      if (!kReleaseMode) debugPrint('PushMessaging: getToken failed: $error');
     }
   }
 
@@ -122,7 +122,7 @@ class PushMessagingService {
           );
     } catch (error) {
       // Best-effort: a failed registration must not disrupt the session.
-      debugPrint('PushMessaging: token registration failed: $error');
+      if (!kReleaseMode) debugPrint('PushMessaging: token registration failed: $error');
     }
   }
 
@@ -183,7 +183,7 @@ class PushMessagingService {
     try {
       _ref.read(goRouterProvider).go(route);
     } catch (error) {
-      debugPrint('PushMessaging: navigation to "$route" failed: $error');
+      if (!kReleaseMode) debugPrint('PushMessaging: navigation to "$route" failed: $error');
     }
   }
 

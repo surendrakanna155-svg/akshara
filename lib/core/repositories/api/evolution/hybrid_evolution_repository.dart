@@ -258,20 +258,24 @@ class HybridEvolutionRepository implements EvolutionRepository {
       // role-scoped layout configured yet — fall back to the mock default so
       // the dashboard still renders something useful.
       if (live.widgets.isEmpty) {
-        debugPrint(
-          'HybridEvolutionRepository: live role dashboard layout for "$role" '
-          'is empty — serving mock fallback layout (degraded).',
-        );
+        if (!kReleaseMode) {
+          debugPrint(
+            'HybridEvolutionRepository: live role dashboard layout for "$role" '
+            'is empty — serving mock fallback layout (degraded).',
+          );
+        }
         return _fallback.getRoleDashboardLayout(query: query, role: role);
       }
       return live;
     } catch (error) {
       // Missing route / network / backend off — never hard-error the dashboard,
       // but make the silent mock substitution observable.
-      debugPrint(
-        'HybridEvolutionRepository: live role dashboard layout for "$role" '
-        'failed — serving mock fallback layout (degraded): $error',
-      );
+      if (!kReleaseMode) {
+        debugPrint(
+          'HybridEvolutionRepository: live role dashboard layout for "$role" '
+          'failed — serving mock fallback layout (degraded): $error',
+        );
+      }
       return _fallback.getRoleDashboardLayout(query: query, role: role);
     }
   }

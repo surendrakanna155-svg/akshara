@@ -198,7 +198,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
     } catch (e) {
       // A single bad frame must never crash the live stream — log and keep
       // waiting for the next one.
-      debugPrint('FaceCaptureScreen: frame processing failed: $e');
+      if (!kReleaseMode) debugPrint('FaceCaptureScreen: frame processing failed: $e');
     }
   }
 
