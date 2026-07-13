@@ -10,8 +10,9 @@
 
 ## ▶ CURRENT (post-RECON-1, 2026-07-10)
 
-> ### ⏸ ERP LANE PARKED — 2026-07-13 (owner-approved), tip `af69e19a`, branch `feature/data-reliability-platform`, tree CLEAN
-> **All runnable ERP implementation is complete for now.** This session shipped: P1-SEC-1 Biometric App Lock (hardening exit, R1–R4) · a `flutter test | tail` masking-bug fix · CFC-1 code items **6/10** pre-cleared (1·3·4·6·7 + item 2's Trust-Hub deep-link violation fixed & regression-locked) · FLAG_SECURE decided (enable-toggled, device-residue) · graduated-gating left to owner with recommendation.
+> ### ⏸ ERP LANE PARKED — 2026-07-13 (owner-approved; re-verified after a full-roadmap re-scan), tip `51debd2d`, branch `feature/data-reliability-platform`, tree CLEAN
+> **Runnable ERP implementation is exhausted — verified per-item, not assumed.** This session shipped: P1-SEC-1 Biometric App Lock (hardening exit, R1–R4) · a `flutter test | tail` masking-bug fix · CFC-1 code items **6/10** pre-cleared (1·3·4·6·7 + item 2's Trust-Hub deep-link violation fixed & regression-locked) · a workflow-trigger honesty fix (`d24ce6db`) · dashboard reconciliation (`51debd2d`) · FLAG_SECURE decided (enable-toggled, device-residue) · graduated-gating left to owner with recommendation.
+> **Re-scan verdict (2026-07-13):** every open roadmap item is genuinely gated — **P1-TEST-2** N+1 already clean (report loops are in-memory aggregation; PERF-1 fixed Wave 4), only its load-test half is env-blocked · **P1-TEST-1** router coverage substantial (55 backend contract + 6 Flutter suites), device-E2E/live-cert parts device-gated · **CODE-4** owner PLAT-0 + live-RLS(DB-3..10) · **CODE-6/7/8** owner scope · residuals (PAR3-UPLOAD/PRI-4·5/HWK-1·C6) owner · **P4→P8** behind the CFC-1→FREEZE-1 sequence. No self-driven ERP engineering work remains.
 > **The lane resumes the moment ANY of these external dependencies clears** (recovery-first → verify → …; no owner prompt needed to restart):
 > - **P0-LIVE-1 provisioned** (owner: R2 creds · `INTERNAL_CRON_TOKEN` · CI runner + 7-day clock) → unblocks CFC-1 item 5 + the LIVE-1 checklist (RLS probes, backups, crons) + the W2/Face-ID/SCE-1 migration deploys.
 > - **K-2 hardening exit** (parallel Knowledge lane) → unblocks CFC-1 item 10.
