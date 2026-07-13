@@ -168,3 +168,25 @@ CREATE TABLE IF NOT EXISTS concept_canon_ledger (
   applied_at        TEXT,
   created_at        TEXT NOT NULL
 );
+
+-- ── PILOT VERIFIED QUESTION BANK (Phase D pilot) — SEPARATE from any Certified Bank; only fully-verified,
+-- gated, provenance-complete generated items land here. Local/derived; never merged without owner approval.
+CREATE TABLE IF NOT EXISTS pilot_verified_item (
+  gen_id            TEXT PRIMARY KEY,
+  item_model_id     TEXT NOT NULL,             -- certified Item Model this was generated from (provenance)
+  subject           TEXT NOT NULL,
+  profile           TEXT NOT NULL,             -- assessment profile (NEET)
+  concept_code      TEXT NOT NULL,             -- certified concept
+  archetype         TEXT NOT NULL,
+  frame_id          TEXT,
+  stem              TEXT NOT NULL,             -- authored stem (never source-question wording)
+  options           TEXT NOT NULL,             -- json {label: text}
+  answer_text       TEXT NOT NULL,
+  correct_fact_key  TEXT NOT NULL,             -- verified (concept, answer) fact
+  distractor_fact_keys TEXT NOT NULL,          -- json list of verified distractor facts
+  distractor_provenance TEXT,                  -- json list {token, source_concept, plausibility_tier}
+  verifier_verdict  TEXT NOT NULL,             -- Tier-2 verifier
+  refuter_verdict   TEXT NOT NULL,             -- Tier-2 adversarial refuter
+  verifier_model    TEXT,
+  created_at        TEXT NOT NULL
+);

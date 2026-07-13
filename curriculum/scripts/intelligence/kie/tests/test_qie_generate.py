@@ -2,15 +2,17 @@
 Contract: new authored stems, verified-evidence answers, governed cross-concept distractors, hard gates
 (boundary / unsupported / near-copy / duplicate / answer-disagreement / uncertainty), full provenance,
 no fabrication. Hermetic, deterministic, stub verifier."""
+import sqlite3
 import unittest
 
-from kie.qie import generate as G, mine
+from kie.qie import generate as G, mine, store as qstore
 
 TITLES = {"BIO_ENDO": "Human Endocrine System", "BIO_EXCR": "Excretory System",
           "BIO_NEUR": "Neural Control"}
 TOKENS = {"BIO_ENDO": ["Glucagon", "Insulin", "Cortisol"],
           "BIO_EXCR": ["Nephron", "Ureter", "Malpighian"],
           "BIO_NEUR": ["Neuron", "Synapse", "Axon"]}
+PLAUS = G.build_plausibility(TITLES)
 
 
 def _evidence(source_options=None):
@@ -52,7 +54,7 @@ class TestSelect(unittest.TestCase):
 class TestGenerate(unittest.TestCase):
     def test_candidates_are_boundary_correct_and_new(self):
         ev = _evidence()
-        cands = G.generate_candidates(list(TOKENS), ev, seed="D1", per_concept=2)
+        cands = G.generate_candidates(list(TOKENS), ev, PLAUS, seed="D1", per_concept=2)
         self.assertTrue(cands)
         for c in cands:
             self.assertEqual(len(c["options"]), 4)
@@ -103,24 +105,67 @@ class TestRunClassification(unittest.TestCase):
     def test_pass_reject_quarantine(self):
         ev = _evidence()
         concepts = list(TOKENS)
-        agree = G.run(concepts, ev, lambda c: "agree", per_concept=1)
+        agree = G.run(concepts, ev, PLAUS, lambda c: "agree", per_concept=1)
         self.assertEqual(agree["passed"], agree["attempted"])
         self.assertEqual(agree["rejected"] + agree["quarantined"], 0)
-        dis = G.run(concepts, ev, lambda c: "disagree", per_concept=1)
+        dis = G.run(concepts, ev, PLAUS, lambda c: "disagree", per_concept=1)
         self.assertEqual(dis["rejected"], dis["attempted"])
         self.assertTrue(all(i["reason"] == "ANSWER_DISAGREEMENT" for i in dis["items"]))
-        quar = G.run(concepts, ev, lambda c: "unverifiable", per_concept=1)
+        quar = G.run(concepts, ev, PLAUS, lambda c: "unverifiable", per_concept=1)
         self.assertEqual(quar["quarantined"], quar["attempted"])
 
     def test_provenance_and_no_fabrication(self):
         ev = _evidence()
-        res = G.run(list(TOKENS), ev, lambda c: "agree", per_concept=1)
+        res = G.run(list(TOKENS), ev, PLAUS, lambda c: "agree", per_concept=1)
         for it in res["items"]:
             for key in ("gen_id", "item_model_id", "concept", "correct_fact_key", "distractor_fact_keys",
                         "frame_id", "verification"):
                 self.assertIn(key, it)
             # correct_fact_key must equal the verified fact_key of (concept, answer) — never fabricated
             self.assertEqual(it["correct_fact_key"], mine.fact_key(it["concept"], it["answer_text"]))
+
+
+class TestDistractorPlausibility(unittest.TestCase):
+    def test_same_family_preferred_and_evidence_backed(self):
+        ev = _evidence()
+        cands = G.generate_candidates(list(TOKENS), ev, PLAUS, seed="D1", per_concept=1)
+        self.assertTrue(cands)
+        for c in cands:
+            for d in c["provenance"]["distractors"]:
+                # all 3 target concepts are human_systems family -> distractors are family-tier, evidence-backed
+                self.assertEqual(d["plausibility_tier"], "family")
+                self.assertIn(d["token"], sum(TOKENS.values(), []))       # a real verified token
+                self.assertNotIn(d["token"], TOKENS[c["concept"]])        # not from this concept
+
+    def test_distractor_check_flags_unbacked(self):
+        ev = _evidence()
+        bad = {"concept": "BIO_ENDO", "answer_text": "Glucagon",
+               "options": {"1": "Glucagon", "2": "MADE_UP", "3": "Neuron", "4": "Nephron"},
+               "provenance": {"distractors": [{"token": "MADE_UP", "source_concept": "?", "plausibility_tier": "cross"}]}}
+        self.assertEqual(G.distractor_check(bad, ev), "DISTRACTOR_NOT_EVIDENCE_BACKED")
+
+
+class TestPilotBankBoundary(unittest.TestCase):
+    def test_only_pass_items_bank_and_nonpass_refused(self):
+        q = qstore.open_store(":memory:")
+        ev = _evidence()
+        res = G.run(list(TOKENS), ev, PLAUS, lambda c: "agree", per_concept=1)
+        n = G.persist_pilot_bank(q, res["verified_bank"], "test-judge", "t")
+        self.assertEqual(n, res["passed"])
+        self.assertEqual(q.execute("SELECT COUNT(*) FROM pilot_verified_item").fetchone()[0], res["passed"])
+        # a REJECT item must be refused entry (hard boundary)
+        rej = {"gen_id": "GEN_x", "status": "REJECT"}
+        with self.assertRaises(ValueError):
+            G.persist_pilot_bank(q, [rej], "test-judge", "t")
+
+    def test_banked_rows_carry_full_provenance(self):
+        q = qstore.open_store(":memory:")
+        ev = _evidence()
+        res = G.run(list(TOKENS), ev, PLAUS, lambda c: "agree", per_concept=1)
+        G.persist_pilot_bank(q, res["verified_bank"], "test-judge", "t")
+        row = q.execute("SELECT item_model_id, concept_code, correct_fact_key, distractor_fact_keys, "
+                        "verifier_verdict FROM pilot_verified_item LIMIT 1").fetchone()
+        self.assertTrue(all(x is not None for x in row))
 
 
 if __name__ == "__main__":
