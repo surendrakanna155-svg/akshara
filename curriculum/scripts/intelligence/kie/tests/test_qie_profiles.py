@@ -53,5 +53,31 @@ class TestProfileGating(unittest.TestCase):
         self.assertNotIn("direct_recall", P.PROFILES["CBSE_6_10"].core_archetypes)
 
 
+class TestItemProfile(unittest.TestCase):
+    def test_depth_based_not_source_based(self):
+        # calculus -> JEE regardless of source (even a NEET-labelled source)
+        self.assertEqual(P.item_profile("Mathematics", "Evaluate the integral of x^2 dx",
+                                        source_profile="NEET_FOUNDATION"), "JEE_MAIN")
+        # single-relation numeric -> FOUNDATION (shared), even from a JEE-labelled source
+        self.assertEqual(P.item_profile("Physics", "A resistor of 10 ohm carries 2 A. Find V.",
+                                        single_relation=True, source_profile="JEE_MAIN"), "FOUNDATION")
+        # multi-quantity unsolved-by-one-relation -> JEE_MAIN (multi-step depth)
+        self.assertEqual(P.item_profile("Physics", "A projectile ... with these five values",
+                                        distinct_given=5, single_relation=False), "JEE_MAIN")
+
+    def test_biology_is_neet_domain(self):
+        self.assertEqual(P.item_profile("Biology", "The functional unit of the kidney is",
+                                        source_profile="FOUNDATION"), "NEET")
+
+    def test_calculus_regex_no_biology_false_positive(self):
+        # a Biology stem with a stray 'dx'-like token must NOT be flagged calculus
+        self.assertNotEqual(P.item_profile("Chemistry", "The oxidation state of Cr in K2Cr2O7 is",
+                                           single_relation=False, source_profile="NEET"), "JEE_MAIN")
+
+    def test_indeterminate_falls_back_to_source(self):
+        self.assertEqual(P.item_profile("Physics", "Which statement about waves is correct?",
+                                        source_profile="NEET"), "NEET")
+
+
 if __name__ == "__main__":
     unittest.main()

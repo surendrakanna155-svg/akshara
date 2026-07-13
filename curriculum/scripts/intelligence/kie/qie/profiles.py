@@ -95,12 +95,40 @@ _SOURCE_PATTERNS: Tuple[Tuple[str, "re.Pattern[str]"], ...] = (
 
 def profile_for_source(source: str) -> Optional[str]:
     """Map a source identifier (kie.db exam / qcorpus group / rel-path token) to a canonical profile, or None
-    when unresolved. Deterministic; never guesses beyond the ratified patterns."""
+    when unresolved. Deterministic; never guesses beyond the ratified patterns. Source identity is a WEAK
+    signal — prefer `item_profile` (depth-based) when item content is available."""
     s = source or ""
     for prof, pat in _SOURCE_PATTERNS:
         if pat.search(s):
             return prof
     return None
+
+
+# ── item-level, DEPTH-based profiling (owner directive: don't classify a whole source by identity) ────
+# Real calculus markers only (avoid bare 'dx' OCR false-positives that hit Biology/Chemistry).
+_CALCULUS = re.compile(r"∫|∑|d\s*y\s*/\s*d\s*x|\bderivative\b|\bintegral\b|integrat|differentiat|"
+                       r"\bmaxima\b|\bminima\b|w\.?r\.?t\.?|\blim(?:it)?\b|\bd\s*/\s*dx\b", re.I)
+
+
+def item_profile(subject: str, stem: str, answer: Optional[str] = None,
+                 distinct_given: int = 0, single_relation: bool = False,
+                 source_profile: Optional[str] = None) -> Optional[str]:
+    """Determine an item's assessment profile from its CONTENT DEPTH, not its source identity:
+      * Biology → NEET (biology is the medical-entrance domain);
+      * calculus content → JEE_MAIN (calculus is a JEE, not a school/NEET, construct);
+      * multi-quantity numeric with NO single-relation solution → JEE_MAIN (multi-step depth);
+      * single-relation numeric → FOUNDATION (shared JEE/NEET foundation);
+      * otherwise → fall back to the (weak) source profile.
+    Deterministic; returns None only when subject is unknown and nothing else resolves."""
+    if subject == "Biology":
+        return "NEET"
+    if _CALCULUS.search(stem or ""):
+        return "JEE_MAIN"
+    if single_relation:
+        return "FOUNDATION"
+    if distinct_given >= 4:
+        return "JEE_MAIN"                 # unsolved-by-one-relation multi-quantity → multi-step depth
+    return source_profile
 
 
 def is_valid_archetype_for(profile: str, archetype: str) -> bool:
