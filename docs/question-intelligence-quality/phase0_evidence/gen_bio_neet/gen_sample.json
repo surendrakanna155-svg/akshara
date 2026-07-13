@@ -1,0 +1,482 @@
+[
+ {
+  "gen_id": "GEN_74e03a333bde590c",
+  "item_model_id": "IMC_f19c40fcc77b0472",
+  "concept": "BIO_PHOTOSYNTHESIS_FOODMAKING_PROCES",
+  "profile": "NEET",
+  "subject": "Biology",
+  "archetype": "factual_single_best_answer",
+  "frame_id": "assoc",
+  "stem": "Which one of the following is most closely associated with Photosynthesis \u2014 Foodmaking Process in Plants?",
+  "options": {
+   "1": "chloride shift",
+   "2": "differentiation",
+   "3": "RuBisCo",
+   "4": "meristem culture"
+  },
+  "answer_text": "RuBisCo",
+  "correct_fact_key": "e157ad52c66e5786180a",
+  "distractor_fact_keys": [
+   "94003b2951fd7b5749cb",
+   "e6fbe4a4c7c7bf58cc07",
+   "13f92087790ee802a5c8"
+  ],
+  "provenance": {
+   "certified_model": true,
+   "correct_source_concept": "BIO_PHOTOSYNTHESIS_FOODMAKING_PROCES",
+   "distractor_tokens": [
+    "chloride shift",
+    "differentiation",
+    "meristem culture"
+   ]
+  }
+ },
+ {
+  "gen_id": "GEN_e6147f7705809912",
+  "item_model_id": "IMC_c828890fcaf419a5",
+  "concept": "BIO_HUMAN_REPRODUCTION",
+  "profile": "NEET",
+  "subject": "Biology",
+  "archetype": "factual_single_best_answer",
+  "frame_id": "assoc",
+  "stem": "Which one of the following is most closely associated with Human Reproduction?",
+  "options": {
+   "1": "Hypothalamus",
+   "2": "deuteromycetes",
+   "3": "ovulatory phase",
+   "4": "bioinformatics"
+  },
+  "answer_text": "ovulatory phase",
+  "correct_fact_key": "08982a8430e61422d0bc",
+  "distractor_fact_keys": [
+   "7623adcdf557992e118d",
+   "26aca190883ed98cc89f",
+   "78f35c7c243bc4893576"
+  ],
+  "provenance": {
+   "certified_model": true,
+   "correct_source_concept": "BIO_HUMAN_REPRODUCTION",
+   "distractor_tokens": [
+    "Hypothalamus",
+    "deuteromycetes",
+    "bioinformatics"
+   ]
+  }
+ },
+ {
+  "gen_id": "GEN_0a60250107c373a7",
+  "item_model_id": "IMC_174b01935dffc5c3",
+  "concept": "BIO_EXCRETORY_SYSTEM_IN_HUMANS",
+  "profile": "NEET",
+  "subject": "Biology",
+  "archetype": "factual_single_best_answer",
+  "frame_id": "assoc",
+  "stem": "Which one of the following is most closely associated with Excretory system in humans?",
+  "options": {
+   "1": "Urethra",
+   "2": "steorids",
+   "3": "Larynx",
+   "4": "Acrosome"
+  },
+  "answer_text": "Urethra",
+  "correct_fact_key": "c206e5c5952e6fb1b793",
+  "distractor_fact_keys": [
+   "73a5cd1b4e8db1f1a778",
+   "10a6235eb5fec94e989e",
+   "995caeb1dfbe4b5e517b"
+  ],
+  "provenance": {
+   "certified_model": true,
+   "correct_source_concept": "BIO_EXCRETORY_SYSTEM_IN_HUMANS",
+   "distractor_tokens": [
+    "steorids",
+    "Acrosome",
+    "Larynx"
+   ]
+  }
+ },
+ {
+  "gen_id": "GEN_0cc42e1f7dd9773a",
+  "item_model_id": "IMC_28a73e75822026de",
+  "concept": "BIO_PROTEINS",
+  "profile": "NEET",
+  "subject": "Biology",
+  "archetype": "factual_single_best_answer",
+  "frame_id": "assoc",
+  "stem": "Which one of the following is most closely associated with Proteins?",
+  "options": {
+   "1": "Tidal volume",
+   "2": "Myelinated fibre",
+   "3": "Aldosterone",
+   "4": "Phosphodiester bonds"
+  },
+  "answer_text": "Phosphodiester bonds",
+  "correct_fact_key": "f5d9c5b3b12fe5dc7987",
+  "distractor_fact_keys": [
+   "a935c9ebd4be803a279e",
+   "d3489fbbe77079e350b8",
+   "c0bf46120caf39adf4ac"
+  ],
+  "provenance": {
+   "certified_model": true,
+   "correct_source_concept": "BIO_PROTEINS",
+   "distractor_tokens": [
+    "Aldosterone",
+    "Myelinated fibre",
+    "Tidal volume"
+   ]
+  }
+ },
+ {
+  "gen_id": "GEN_40ef35233ec3b964",
+  "item_model_id": "IMC_629ca0aba4d492d4",
+  "concept": "BIO_HUMAN_ENDOCRINE_SYSTEM",
+  "profile": "NEET",
+  "subject": "Biology",
+  "archetype": "factual_single_best_answer",
+  "frame_id": "assoc",
+  "stem": "Which one of the following is most closely associated with Human Endocrine System?",
+  "options": {
+   "1": "Funicle Hilum",
+   "2": "Glucagon",
+   "3": "Magnesium",
+   "4": "cardiac cycle"
+  },
+  "answer_text": "Glucagon",
+  "correct_fact_key": "19964f49b38cb6eb1ae2",
+  "distractor_fact_keys": [
+   "5a0422c0928ade7c034a",
+   "dd320cccaecb84b85cec",
+   "ad1187b0bade2ec3a025"
+  ],
+  "provenance": {
+   "certified_model": true,
+   "correct_source_concept": "BIO_HUMAN_ENDOCRINE_SYSTEM",
+   "distractor_tokens": [
+    "cardiac cycle",
+    "Magnesium",
+    "Funicle Hilum"
+   ]
+  }
+ },
+ {
+  "gen_id": "GEN_ec2de7fd967b7a5e",
+  "item_model_id": "IMC_71e9ee64541af3e8",
+  "concept": "BIO_RESPIRATION_THE_ENERGY_RELEASING",
+  "profile": "NEET",
+  "subject": "Biology",
+  "archetype": "factual_single_best_answer",
+  "frame_id": "assoc",
+  "stem": "Which one of the following is most closely associated with Respiration - the energy releasing system?",
+  "options": {
+   "1": "Glycolysis",
+   "2": "transcription",
+   "3": "chloride shift",
+   "4": "Interferon"
+  },
+  "answer_text": "Glycolysis",
+  "correct_fact_key": "5eaa63b277699f4e8529",
+  "distractor_fact_keys": [
+   "94003b2951fd7b5749cb",
+   "5205d26345cece7c44cf",
+   "b4a37a4fcd7927c4492a"
+  ],
+  "provenance": {
+   "certified_model": true,
+   "correct_source_concept": "BIO_RESPIRATION_THE_ENERGY_RELEASING",
+   "distractor_tokens": [
+    "chloride shift",
+    "transcription",
+    "Interferon"
+   ]
+  }
+ },
+ {
+  "gen_id": "GEN_91ce0b9870b3558c",
+  "item_model_id": "IMC_68e151f803a884f5",
+  "concept": "BIO_NEURAL_CONTROL_ANDCOORDINATION",
+  "profile": "NEET",
+  "subject": "Biology",
+  "archetype": "factual_single_best_answer",
+  "frame_id": "assoc",
+  "stem": "Which one of the following is most closely associated with Neural Control Andcoordination?",
+  "options": {
+   "1": "Plastids",
+   "2": "Plasma membrane",
+   "3": "Myelinated fibre",
+   "4": "Habitat destruction"
+  },
+  "answer_text": "Myelinated fibre",
+  "correct_fact_key": "d3489fbbe77079e350b8",
+  "distractor_fact_keys": [
+   "e514377ec045502ee164",
+   "f71f1b1dc89cde6c7418",
+   "af90ad1c713751633569"
+  ],
+  "provenance": {
+   "certified_model": true,
+   "correct_source_concept": "BIO_NEURAL_CONTROL_ANDCOORDINATION",
+   "distractor_tokens": [
+    "Plasma membrane",
+    "Habitat destruction",
+    "Plastids"
+   ]
+  }
+ },
+ {
+  "gen_id": "GEN_74b319d975893bae",
+  "item_model_id": "IMC_316f110ecb7f66da",
+  "concept": "BIO_CIRCULATORY_SYSTEM",
+  "profile": "NEET",
+  "subject": "Biology",
+  "archetype": "factual_single_best_answer",
+  "frame_id": "assoc",
+  "stem": "Which one of the following is most closely associated with Circulatory System?",
+  "options": {
+   "1": "Cartilaginous rings",
+   "2": "cytokinin",
+   "3": "menopause",
+   "4": "Lymph vessels"
+  },
+  "answer_text": "Lymph vessels",
+  "correct_fact_key": "7e92cbe7c0d404274b17",
+  "distractor_fact_keys": [
+   "a91b8045ede19b7acc5b",
+   "561e7c3a9d97597704f8",
+   "a346da16517e9d64f98f"
+  ],
+  "provenance": {
+   "certified_model": true,
+   "correct_source_concept": "BIO_CIRCULATORY_SYSTEM",
+   "distractor_tokens": [
+    "cytokinin",
+    "menopause",
+    "Cartilaginous rings"
+   ]
+  }
+ },
+ {
+  "gen_id": "GEN_8508b73cfdceeb0e",
+  "item_model_id": "IMC_9b1b4d6835528832",
+  "concept": "BIO_HUMAN_RESPIRATORY_SYSTEM",
+  "profile": "NEET",
+  "subject": "Biology",
+  "archetype": "factual_single_best_answer",
+  "frame_id": "assoc",
+  "stem": "Which one of the following is most closely associated with Human Respiratory System?",
+  "options": {
+   "1": "Ethylene",
+   "2": "Twelve weeks",
+   "3": "stem cutting",
+   "4": "ciliated epithelium"
+  },
+  "answer_text": "ciliated epithelium",
+  "correct_fact_key": "67fb223c821e33b1c276",
+  "distractor_fact_keys": [
+   "61325fd70ac952fc2c08",
+   "138e1d03e7d0ee7209ac",
+   "4118c58a656355004fc8"
+  ],
+  "provenance": {
+   "certified_model": true,
+   "correct_source_concept": "BIO_HUMAN_RESPIRATORY_SYSTEM",
+   "distractor_tokens": [
+    "Ethylene",
+    "stem cutting",
+    "Twelve weeks"
+   ]
+  }
+ },
+ {
+  "gen_id": "GEN_63bae498490f41b8",
+  "item_model_id": "IMC_17cf07857dfeec69",
+  "concept": "BIO_MOLECULAR_BASIS_OFINHERITANCE",
+  "profile": "NEET",
+  "subject": "Biology",
+  "archetype": "factual_single_best_answer",
+  "frame_id": "assoc",
+  "stem": "Which one of the following is most closely associated with Molecular Basis Ofinheritance?",
+  "options": {
+   "1": "biological process",
+   "2": "menopause",
+   "3": "Repressor protein",
+   "4": "basic proteins"
+  },
+  "answer_text": "Repressor protein",
+  "correct_fact_key": "b1ce9600a2f11cde3304",
+  "distractor_fact_keys": [
+   "a99b6ac1b8ea1ec76a16",
+   "561e7c3a9d97597704f8",
+   "4fffb3cb581b18db3483"
+  ],
+  "provenance": {
+   "certified_model": true,
+   "correct_source_concept": "BIO_MOLECULAR_BASIS_OFINHERITANCE",
+   "distractor_tokens": [
+    "basic proteins",
+    "menopause",
+    "biological process"
+   ]
+  }
+ },
+ {
+  "gen_id": "GEN_6cee3ba71c9f15ff",
+  "item_model_id": "IMC_0fd0a1170ae5ee0f",
+  "concept": "BIO_MITOCHONDRIA",
+  "profile": "NEET",
+  "subject": "Biology",
+  "archetype": "factual_single_best_answer",
+  "frame_id": "assoc",
+  "stem": "Which one of the following is most closely associated with Mitochondria?",
+  "options": {
+   "1": "increase",
+   "2": "Plastids",
+   "3": "Mitochondria",
+   "4": "Solanaceae"
+  },
+  "answer_text": "Mitochondria",
+  "correct_fact_key": "da81a8d0ec03bbe76843",
+  "distractor_fact_keys": [
+   "af90ad1c713751633569",
+   "9d2c42412de2adf90543",
+   "05a997b02e88a0dcadca"
+  ],
+  "provenance": {
+   "certified_model": true,
+   "correct_source_concept": "BIO_MITOCHONDRIA",
+   "distractor_tokens": [
+    "Plastids",
+    "increase",
+    "Solanaceae"
+   ]
+  }
+ },
+ {
+  "gen_id": "GEN_9de66e017e8c457a",
+  "item_model_id": "IMC_5449cbf5588f3b0c",
+  "concept": "BIO_ECOSYSTEM",
+  "profile": "NEET",
+  "subject": "Biology",
+  "archetype": "factual_single_best_answer",
+  "frame_id": "assoc",
+  "stem": "Which one of the following is most closely associated with Ecosystem?",
+  "options": {
+   "1": "cobalt",
+   "2": "Glucagon",
+   "3": "chloride shift",
+   "4": "Stratification"
+  },
+  "answer_text": "Stratification",
+  "correct_fact_key": "ef97a900ad9eb0b79e96",
+  "distractor_fact_keys": [
+   "19964f49b38cb6eb1ae2",
+   "94003b2951fd7b5749cb",
+   "f18d11f3832473fc1bb3"
+  ],
+  "provenance": {
+   "certified_model": true,
+   "correct_source_concept": "BIO_ECOSYSTEM",
+   "distractor_tokens": [
+    "Glucagon",
+    "chloride shift",
+    "cobalt"
+   ]
+  }
+ },
+ {
+  "gen_id": "GEN_7757bdfd4dfae631",
+  "item_model_id": "IMC_c1b442c5a527389a",
+  "concept": "BIO_IMMUNITY",
+  "profile": "NEET",
+  "subject": "Biology",
+  "archetype": "factual_single_best_answer",
+  "frame_id": "assoc",
+  "stem": "Which one of the following is most closely associated with Immunity?",
+  "options": {
+   "1": "passive immunity",
+   "2": "Medulla oblongata",
+   "3": "endoplasmic reticulum",
+   "4": "aorta"
+  },
+  "answer_text": "passive immunity",
+  "correct_fact_key": "9522361297aede3c25e7",
+  "distractor_fact_keys": [
+   "55962625c8a74540d95e",
+   "f824aea12da323f1efa4",
+   "26980c6f38c825d34aec"
+  ],
+  "provenance": {
+   "certified_model": true,
+   "correct_source_concept": "BIO_IMMUNITY",
+   "distractor_tokens": [
+    "aorta",
+    "endoplasmic reticulum",
+    "Medulla oblongata"
+   ]
+  }
+ },
+ {
+  "gen_id": "GEN_3d910a0cfc483bed",
+  "item_model_id": "IMC_c1a8c5b925abb097",
+  "concept": "BIO_PLASMA",
+  "profile": "NEET",
+  "subject": "Biology",
+  "archetype": "factual_single_best_answer",
+  "frame_id": "assoc",
+  "stem": "Which one of the following is most closely associated with Plasma?",
+  "options": {
+   "1": "Agro ecosystem",
+   "2": "Plasma membrane",
+   "3": "Lymph vessels",
+   "4": "Coral reefs"
+  },
+  "answer_text": "Plasma membrane",
+  "correct_fact_key": "e514377ec045502ee164",
+  "distractor_fact_keys": [
+   "a178a7feef733c807eb8",
+   "d8f84394fdb9d41ab365",
+   "7e92cbe7c0d404274b17"
+  ],
+  "provenance": {
+   "certified_model": true,
+   "correct_source_concept": "BIO_PLASMA",
+   "distractor_tokens": [
+    "Coral reefs",
+    "Agro ecosystem",
+    "Lymph vessels"
+   ]
+  }
+ },
+ {
+  "gen_id": "GEN_77476a99f6587475",
+  "item_model_id": "IMC_7d97611a109aa6e6",
+  "concept": "BIO_BIODIVERSITY",
+  "profile": "NEET",
+  "subject": "Biology",
+  "archetype": "factual_single_best_answer",
+  "frame_id": "assoc",
+  "stem": "Which one of the following is most closely associated with Biodiversity?",
+  "options": {
+   "1": "acetylcholine",
+   "2": "transcription",
+   "3": "Neuron",
+   "4": "Western Ghats"
+  },
+  "answer_text": "Western Ghats",
+  "correct_fact_key": "9866dba6ef25ce7411e0",
+  "distractor_fact_keys": [
+   "5205d26345cece7c44cf",
+   "e884168875459fe59405",
+   "6e7e46d1f07b572079b9"
+  ],
+  "provenance": {
+   "certified_model": true,
+   "correct_source_concept": "BIO_BIODIVERSITY",
+   "distractor_tokens": [
+    "transcription",
+    "Neuron",
+    "acetylcholine"
+   ]
+  }
+ }
+]

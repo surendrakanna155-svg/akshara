@@ -1,0 +1,17 @@
+[
+ {"id": "GEN_74e03a333bde590c", "verdict": "agree", "note": "RuBisCo is the key Calvin-cycle carboxylase; others unrelated"},
+ {"id": "GEN_e6147f7705809912", "verdict": "agree", "note": "Ovulatory phase is a menstrual-cycle stage; only reproductive option"},
+ {"id": "GEN_0a60250107c373a7", "verdict": "agree", "note": "Urethra carries urine out; larynx/acrosome/steroids not excretory"},
+ {"id": "GEN_0cc42e1f7dd9773a", "verdict": "disagree", "note": "Phosphodiester bonds join nucleotides; proteins use peptide bonds"},
+ {"id": "GEN_40ef35233ec3b964", "verdict": "agree", "note": "Glucagon is a pancreatic hormone; clearly endocrine"},
+ {"id": "GEN_ec2de7fd967b7a5e", "verdict": "agree", "note": "Glycolysis is first energy-releasing step of respiration"},
+ {"id": "GEN_91ce0b9870b3558c", "verdict": "agree", "note": "Myelinated fibre is a neuron feature; only neural option"},
+ {"id": "GEN_74b319d975893bae", "verdict": "agree", "note": "Lymph vessels belong to circulatory/lymphatic system"},
+ {"id": "GEN_8508b73cfdceeb0e", "verdict": "agree", "note": "Ciliated epithelium lines the respiratory tract"},
+ {"id": "GEN_63bae498490f41b8", "verdict": "disagree", "note": "Basic proteins (histones) equally from this chapter; not uniquely best"},
+ {"id": "GEN_6cee3ba71c9f15ff", "verdict": "disagree", "note": "Answer repeats the topic verbatim; circular/tautological"},
+ {"id": "GEN_9de66e017e8c457a", "verdict": "agree", "note": "Stratification is vertical layering of an ecosystem"},
+ {"id": "GEN_7757bdfd4dfae631", "verdict": "agree", "note": "Passive immunity is a legitimate immunity subtype; distractors unrelated"},
+ {"id": "GEN_3d910a0cfc483bed", "verdict": "disagree", "note": "Plasma membrane is word-match trap; lymph derives from blood plasma"},
+ {"id": "GEN_77476a99f6587475", "verdict": "agree", "note": "Western Ghats is an Indian biodiversity hotspot"}
+]

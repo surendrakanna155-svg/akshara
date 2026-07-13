@@ -18,6 +18,13 @@ per profile.
 > a **measured 6.2% source-key error rate for this governed pass** (not an assumed inherent ceiling; its
 > reducibility can be measured later). Biology×NEET is now **CERTIFIED_CAPABLE** for the
 > factual_single_best_answer archetype. Evidence: `phase0_evidence/tier2_bio_neet/`.
+>
+> **UPDATE 2026-07-13 — certified→generation bridge proven (internal, NOT the pilot).** `qie/generate.py`
+> connects the certified Biology×NEET factual models to new-question generation: authored stems +
+> verified-evidence answers + governed distractors + independent 2-judge verification + full provenance.
+> Internal sample **15 → 11 PASS / 4 REJECT / 0 QUARANTINE** (73% verified; 0 near-copies). Blocker before the
+> 100–300 pilot: wire **automatic in-loop verification** + a **distractor-plausibility** mechanism. See
+> `GENERATION_BRIDGE_SLICE.md`.
 
 ## Measured Subject × Profile ratings
 

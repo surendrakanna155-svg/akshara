@@ -1,0 +1,208 @@
+{
+  "attempted": 15,
+  "counts": {
+    "PASS": 11,
+    "REJECT": 4,
+    "QUARANTINE": 0
+  },
+  "verified_pass_rate_pct": 73,
+  "near_copies": 0,
+  "distinct_stems": 15,
+  "rows": [
+    {
+      "concept": "BIO_PHOTOSYNTHESIS_FOODMAKING_PROCES",
+      "answer": "RuBisCo",
+      "V": "agree",
+      "R": "agree",
+      "status": "PASS",
+      "options": [
+        "chloride shift",
+        "differentiation",
+        "RuBisCo",
+        "meristem culture"
+      ]
+    },
+    {
+      "concept": "BIO_HUMAN_REPRODUCTION",
+      "answer": "ovulatory phase",
+      "V": "agree",
+      "R": "agree",
+      "status": "PASS",
+      "options": [
+        "Hypothalamus",
+        "deuteromycetes",
+        "ovulatory phase",
+        "bioinformatics"
+      ]
+    },
+    {
+      "concept": "BIO_EXCRETORY_SYSTEM_IN_HUMANS",
+      "answer": "Urethra",
+      "V": "agree",
+      "R": "agree",
+      "status": "PASS",
+      "options": [
+        "Urethra",
+        "steorids",
+        "Larynx",
+        "Acrosome"
+      ]
+    },
+    {
+      "concept": "BIO_PROTEINS",
+      "answer": "Phosphodiester bonds",
+      "V": "disagree",
+      "R": "disagree",
+      "status": "REJECT",
+      "options": [
+        "Tidal volume",
+        "Myelinated fibre",
+        "Aldosterone",
+        "Phosphodiester bonds"
+      ]
+    },
+    {
+      "concept": "BIO_HUMAN_ENDOCRINE_SYSTEM",
+      "answer": "Glucagon",
+      "V": "agree",
+      "R": "agree",
+      "status": "PASS",
+      "options": [
+        "Funicle Hilum",
+        "Glucagon",
+        "Magnesium",
+        "cardiac cycle"
+      ]
+    },
+    {
+      "concept": "BIO_RESPIRATION_THE_ENERGY_RELEASING",
+      "answer": "Glycolysis",
+      "V": "agree",
+      "R": "agree",
+      "status": "PASS",
+      "options": [
+        "Glycolysis",
+        "transcription",
+        "chloride shift",
+        "Interferon"
+      ]
+    },
+    {
+      "concept": "BIO_NEURAL_CONTROL_ANDCOORDINATION",
+      "answer": "Myelinated fibre",
+      "V": "agree",
+      "R": "agree",
+      "status": "PASS",
+      "options": [
+        "Plastids",
+        "Plasma membrane",
+        "Myelinated fibre",
+        "Habitat destruction"
+      ]
+    },
+    {
+      "concept": "BIO_CIRCULATORY_SYSTEM",
+      "answer": "Lymph vessels",
+      "V": "agree",
+      "R": "agree",
+      "status": "PASS",
+      "options": [
+        "Cartilaginous rings",
+        "cytokinin",
+        "menopause",
+        "Lymph vessels"
+      ]
+    },
+    {
+      "concept": "BIO_HUMAN_RESPIRATORY_SYSTEM",
+      "answer": "ciliated epithelium",
+      "V": "agree",
+      "R": "agree",
+      "status": "PASS",
+      "options": [
+        "Ethylene",
+        "Twelve weeks",
+        "stem cutting",
+        "ciliated epithelium"
+      ]
+    },
+    {
+      "concept": "BIO_MOLECULAR_BASIS_OFINHERITANCE",
+      "answer": "Repressor protein",
+      "V": "disagree",
+      "R": "disagree",
+      "status": "REJECT",
+      "options": [
+        "biological process",
+        "menopause",
+        "Repressor protein",
+        "basic proteins"
+      ]
+    },
+    {
+      "concept": "BIO_MITOCHONDRIA",
+      "answer": "Mitochondria",
+      "V": "disagree",
+      "R": "disagree",
+      "status": "REJECT",
+      "options": [
+        "increase",
+        "Plastids",
+        "Mitochondria",
+        "Solanaceae"
+      ]
+    },
+    {
+      "concept": "BIO_ECOSYSTEM",
+      "answer": "Stratification",
+      "V": "agree",
+      "R": "agree",
+      "status": "PASS",
+      "options": [
+        "cobalt",
+        "Glucagon",
+        "chloride shift",
+        "Stratification"
+      ]
+    },
+    {
+      "concept": "BIO_IMMUNITY",
+      "answer": "passive immunity",
+      "V": "agree",
+      "R": "agree",
+      "status": "PASS",
+      "options": [
+        "passive immunity",
+        "Medulla oblongata",
+        "endoplasmic reticulum",
+        "aorta"
+      ]
+    },
+    {
+      "concept": "BIO_PLASMA",
+      "answer": "Plasma membrane",
+      "V": "disagree",
+      "R": "disagree",
+      "status": "REJECT",
+      "options": [
+        "Agro ecosystem",
+        "Plasma membrane",
+        "Lymph vessels",
+        "Coral reefs"
+      ]
+    },
+    {
+      "concept": "BIO_BIODIVERSITY",
+      "answer": "Western Ghats",
+      "V": "agree",
+      "R": "agree",
+      "status": "PASS",
+      "options": [
+        "acetylcholine",
+        "transcription",
+        "Neuron",
+        "Western Ghats"
+      ]
+    }
+  ]
+}

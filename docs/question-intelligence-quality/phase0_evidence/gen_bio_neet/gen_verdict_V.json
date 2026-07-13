@@ -1,0 +1,17 @@
+[
+ {"id": "GEN_74e03a333bde590c", "verdict": "agree", "note": "RuBisCO is the key carbon-fixation enzyme of photosynthesis; others unrelated."},
+ {"id": "GEN_e6147f7705809912", "verdict": "agree", "note": "Ovulatory phase is a core menstrual-cycle reproduction term; clearly best."},
+ {"id": "GEN_0a60250107c373a7", "verdict": "agree", "note": "Urethra conveys urine, part of urinary/excretory system; others unrelated."},
+ {"id": "GEN_0cc42e1f7dd9773a", "verdict": "disagree", "note": "Phosphodiester bonds join nucleic acids; proteins use peptide bonds. Wrong key."},
+ {"id": "GEN_40ef35233ec3b964", "verdict": "agree", "note": "Glucagon is a pancreatic hormone, squarely endocrine; others unrelated."},
+ {"id": "GEN_ec2de7fd967b7a5e", "verdict": "agree", "note": "Glycolysis is the first step of cellular respiration; clearly best."},
+ {"id": "GEN_91ce0b9870b3558c", "verdict": "agree", "note": "Myelinated fibre is a nerve fibre, central to neural coordination."},
+ {"id": "GEN_74b319d975893bae", "verdict": "agree", "note": "Lymph vessels are part of the circulatory/lymphatic system; others unrelated."},
+ {"id": "GEN_8508b73cfdceeb0e", "verdict": "agree", "note": "Ciliated epithelium lines the respiratory tract; clearly best."},
+ {"id": "GEN_63bae498490f41b8", "verdict": "disagree", "note": "Basic proteins (histones) equally belong to this chapter; ambiguous key."},
+ {"id": "GEN_6cee3ba71c9f15ff", "verdict": "disagree", "note": "Tautological: option 'Mitochondria' merely restates the topic."},
+ {"id": "GEN_9de66e017e8c457a", "verdict": "agree", "note": "Stratification is vertical layering of an ecosystem/community; correct."},
+ {"id": "GEN_7757bdfd4dfae631", "verdict": "agree", "note": "Passive immunity is a direct immunity concept; others unrelated."},
+ {"id": "GEN_3d910a0cfc483bed", "verdict": "disagree", "note": "Lexical match; blood plasma is not plasma membrane; topic ambiguous."},
+ {"id": "GEN_77476a99f6587475", "verdict": "agree", "note": "Western Ghats is a recognized biodiversity hotspot; clearly best."}
+]
