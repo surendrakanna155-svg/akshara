@@ -19,8 +19,17 @@ distinct_given, single_relation, source_profile)` decides from **content depth**
 - else → the (weak) source profile.
 
 Re-measured by depth, **JEE_MAIN is no longer empty**: Physics **511**, Chemistry **391**, Mathematics **85**
-(calculus + multi-quantity) surface as genuine JEE-level items that source-labelling had hidden; single-step
-physics correctly stays FOUNDATION (3,310). This confirms JEE was a **classification** issue, not corpus-blocked.
+(calculus + multi-quantity) surface as JEE-level *candidates* that source-labelling had hidden; single-step
+physics correctly stays FOUNDATION (3,310). This confirms JEE was a **classification** issue, not corpus-blocked
+— **for the modalities that have usable text.**
+
+> **Caveat (measured 2026-07-13, `JEE_MULTISTEP_EVIDENCE_CHECK.md`):** the Physics 511 / Chemistry 391
+> *multi-step numeric* sub-count is a numeric-token-density artifact, not a count of usable items. A read-only
+> audit of the raw evidence found **40% are NTA response-sheet OCR shells** (the JEE question body was a
+> rasterized image — only `A B C D / Question ID` survived), 16% textbook prose, and only ~2% clean-solvable
+> (and those are mostly school-board word problems). **JEE multi-step is therefore EVIDENCE-BLOCKED** — it
+> needs genuine-JEE-text acquisition (owner-HOLD), not a generator. The **calculus** JEE-Math lane below is
+> unaffected because it is *synthesized + symbolically verified*, not corpus-dependent.
 
 ## 2. JEE-Mathematics symbolic calculus generation (`generate_calculus.py`)
 
@@ -60,9 +69,9 @@ log_derivative 8 · exp_integral 5 · exp_derivative 5.
 
 ## Remaining measured work (JEE/NEET-first)
 
-- **JEE multi-step Physics/Chemistry** (the depth-classified 511/391 multi-quantity items) — needs a
-  multi-step numeric generator + verifier (a distinct build; the "multi-quantity" heuristic also contains OCR
-  noise, so evidence quality must be measured first).
+- **JEE multi-step Physics/Chemistry** — **EVIDENCE-BLOCKED** (measured, `JEE_MULTISTEP_EVIDENCE_CHECK.md`):
+  the genuine JEE stems were images never OCR'd into text; clean text items are school-board word problems.
+  Requires genuine-JEE-text **acquisition** (owner-HOLD), not a generator.
 - **More calculus breadth** (definite integrals, product/quotient rule, limits) — extends JEE-Math capacity
   cleanly on the same symbolic-verification substrate (9 families done; chain-rule + log/trig/exp added).
 - **NEET non-factual archetypes** (classification / cause_effect / assertion) — archetype-specific generation.
