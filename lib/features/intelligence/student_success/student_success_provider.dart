@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/config/environment_provider.dart';
+import '../../../core/repositories/repository_config.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/security/rbac_service.dart';
@@ -82,6 +84,16 @@ class StudentSuccessMutationsNotifier extends AsyncNotifier<void> {
     List<StudentSuccessSnapshot> previousRows,
     List<StudentSuccessSnapshot> currentRows,
   ) async {
+    // Honesty guard: the workflow-automation module has no live backend and its
+    // API flag is OFF in the live release (see surface_backend_gate). In a real
+    // (API-mode) build `workflowRepositoryProvider` is therefore the mock, whose
+    // triggerWorkflow is a silent no-op — enqueuing here would falsely imply that
+    // at-risk escalations were actioned. Skip it in that build; a local/mock
+    // build (`enableApiMode` off) still exercises the mock as intended dev
+    // behaviour. Wire this back on the day a real workflow backend + flag ship.
+    final workflowBackendless =
+        ref.read(enableApiModeProvider) && !ref.read(workflowApiEnabledProvider);
+    if (workflowBackendless) return;
     final previousTierByStudent = <String, AtRiskTier>{
       for (final row in previousRows) row.studentId: classifyAtRiskTier(row),
     };
