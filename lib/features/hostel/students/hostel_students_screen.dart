@@ -132,7 +132,8 @@ class HostelStudentsScreen extends ConsumerWidget {
         const SizedBox(height: AksharaSpacing.s6),
         AksharaInsightCard(
           message:
-              'Student names and IDs reference SIS registry. Fee pending links to Finance FN-02 hostel fee structures.',
+              'Student names and IDs reference the SIS registry. Hostel fees are tracked in the Hostel module and '
+              'are NOT posted to the Finance ledger — collect them via the FN-02 hostel fee structures if needed.',
           actionLabel: 'Open Finance',
           icon: Icons.link_outlined,
           semanticLabelPrefix: 'Finance integration',

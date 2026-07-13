@@ -338,7 +338,8 @@ export function computeFines(
   return {
     fines: [...persisted, ...live],
     financeIntegrationNote:
-      "Library fines sync to Finance FN-02 fee head library_fine. Paid fines post to FN-05 collections.",
+      "Library fines are tracked in the Library module and are NOT posted to the Finance ledger. " +
+      "Where a fine is matched to a registered student, collect it manually via the FN-02 library_fine fee head.",
     financeRoute: "/finance/fee-structures",
     totalPending: rupees(totalPending),
   };
