@@ -1,0 +1,74 @@
+[
+ [
+  {
+   "id": "GENN_d75e18c3adbc838b",
+   "template": "T_VIR",
+   "verdict": "agree",
+   "computed": "99 V",
+   "note": "V=IR=11*9=99 V; unique correct option."
+  },
+  {
+   "id": "GENN_bb830d2a7dbb912b",
+   "template": "T_RVI",
+   "verdict": "agree",
+   "computed": "8.5 ohm",
+   "note": "R=V/I=102/12=8.5 ohm; correct."
+  },
+  {
+   "id": "GENN_766e6c6e78f6f738",
+   "template": "T_KE",
+   "verdict": "agree",
+   "computed": "18 J",
+   "note": "KE=0.5*9*2^2=18 J; correct."
+  },
+  {
+   "id": "GENN_21320e460b2fce5f",
+   "template": "T_PI2R",
+   "verdict": "agree",
+   "computed": "45 W",
+   "note": "P=I^2R=9*5=45 W; correct."
+  },
+  {
+   "id": "GENN_7a06749ae6044289",
+   "template": "T_WMG",
+   "verdict": "agree",
+   "computed": "380 N",
+   "note": "W=mg=38*10=380 N; correct."
+  },
+  {
+   "id": "GENN_049eda48e4baca36",
+   "template": "T_RSER",
+   "verdict": "agree",
+   "computed": "59 ohm",
+   "note": "Series 51+8=59 ohm; correct."
+  },
+  {
+   "id": "GENN_cb36f2e28e16f1ff",
+   "template": "T_NMM",
+   "verdict": "agree",
+   "computed": "3.74 mol",
+   "note": "n=273/73=3.74 mol; correct."
+  },
+  {
+   "id": "GENN_642393f85839a40a",
+   "template": "T_MNM",
+   "verdict": "agree",
+   "computed": "12 g",
+   "note": "m=nM=3*4=12 g; correct."
+  },
+  {
+   "id": "GENN_f17bf673bb134c0f",
+   "template": "T_MV",
+   "verdict": "agree",
+   "computed": "0.79 M",
+   "note": "M2=7*85/754=0.789=0.79 M; correct."
+  },
+  {
+   "id": "GENN_7b445585106dbd4a",
+   "template": "T_NV",
+   "verdict": "agree",
+   "computed": "4.51 mol",
+   "note": "n=101/22.4=4.509=4.51 mol; correct."
+  }
+ ]
+]

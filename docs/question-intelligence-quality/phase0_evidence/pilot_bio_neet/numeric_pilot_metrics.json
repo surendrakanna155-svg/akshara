@@ -1,0 +1,163 @@
+{
+  "attempted": 300,
+  "passed": 277,
+  "rejected": 23,
+  "rejection_reasons": {
+    "DUPLICATE_GENERATED": 17,
+    "NEAR_COPY_OF_SOURCE_PARAMS": 1,
+    "SOLVER_DISAGREEMENT": 5
+  },
+  "pass_by_relation": {
+    "V=IR": 28,
+    "R=V/I": 30,
+    "KE=.5mv2": 28,
+    "P=I2R": 29,
+    "W=mg10": 22,
+    "Rseries": 30,
+    "n=m/M": 29,
+    "m=nM": 29,
+    "M1V1=M2V2": 27,
+    "n=V/22.4": 25
+  },
+  "source_param_sigs": 366,
+  "validated_templates": [
+    "T_KE",
+    "T_MNM",
+    "T_MV",
+    "T_NMM",
+    "T_NV",
+    "T_PI2R",
+    "T_RSER",
+    "T_RVI",
+    "T_VIR",
+    "T_WMG"
+  ],
+  "bank_total": 339,
+  "bank_by_subject": {
+    "Biology": 62,
+    "Chemistry": 110,
+    "Physics": 167
+  },
+  "sample": [
+    {
+      "stem": "A resistor of 28 ohm carries a steady current of 3 A. The potential difference across it (in volt) is:",
+      "answer": "84",
+      "unit": "V",
+      "options": [
+        "84",
+        "168",
+        "42",
+        "92.4"
+      ],
+      "relation": "V=IR"
+    },
+    {
+      "stem": "A resistor of 12 ohm carries a steady current of 8 A. The potential difference across it (in volt) is:",
+      "answer": "96",
+      "unit": "V",
+      "options": [
+        "192",
+        "105.6",
+        "48",
+        "96"
+      ],
+      "relation": "V=IR"
+    },
+    {
+      "stem": "A resistor of 10 ohm carries a steady current of 9 A. The potential difference across it (in volt) is:",
+      "answer": "90",
+      "unit": "V",
+      "options": [
+        "90",
+        "99",
+        "180",
+        "45"
+      ],
+      "relation": "V=IR"
+    },
+    {
+      "stem": "A resistor of 17 ohm carries a steady current of 8 A. The potential difference across it (in volt) is:",
+      "answer": "136",
+      "unit": "V",
+      "options": [
+        "136",
+        "272",
+        "149.6",
+        "68"
+      ],
+      "relation": "V=IR"
+    },
+    {
+      "stem": "A resistor of 14 ohm carries a steady current of 12 A. The potential difference across it (in volt) is:",
+      "answer": "168",
+      "unit": "V",
+      "options": [
+        "168",
+        "336",
+        "184.8",
+        "84"
+      ],
+      "relation": "V=IR"
+    },
+    {
+      "stem": "A resistor of 22 ohm carries a steady current of 6 A. The potential difference across it (in volt) is:",
+      "answer": "132",
+      "unit": "V",
+      "options": [
+        "132",
+        "145.2",
+        "264",
+        "66"
+      ],
+      "relation": "V=IR"
+    },
+    {
+      "stem": "A resistor of 21 ohm carries a steady current of 11 A. The potential difference across it (in volt) is:",
+      "answer": "231",
+      "unit": "V",
+      "options": [
+        "231",
+        "115.5",
+        "462",
+        "254.1"
+      ],
+      "relation": "V=IR"
+    },
+    {
+      "stem": "A resistor of 12 ohm carries a steady current of 7 A. The potential difference across it (in volt) is:",
+      "answer": "84",
+      "unit": "V",
+      "options": [
+        "42",
+        "92.4",
+        "168",
+        "84"
+      ],
+      "relation": "V=IR"
+    },
+    {
+      "stem": "A resistor of 33 ohm carries a steady current of 11 A. The potential difference across it (in volt) is:",
+      "answer": "363",
+      "unit": "V",
+      "options": [
+        "363",
+        "181.5",
+        "726",
+        "399.3"
+      ],
+      "relation": "V=IR"
+    },
+    {
+      "stem": "A resistor of 29 ohm carries a steady current of 5 A. The potential difference across it (in volt) is:",
+      "answer": "145",
+      "unit": "V",
+      "options": [
+        "159.5",
+        "290",
+        "145",
+        "72.5"
+      ],
+      "relation": "V=IR"
+    }
+  ]
+}

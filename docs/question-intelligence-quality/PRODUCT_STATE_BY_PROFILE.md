@@ -29,8 +29,14 @@ per profile.
 > + plausible-distractor mechanism wired. Pilot: **97 attempted → 62 PASS / 34 REJECT / 1 QUARANTINE**; **62
 > verified questions** in a SEPARATE `pilot_verified_item` bank (not the Certified Bank); inter-judge agreement
 > 91.8%, distractor plausibility 92.8% family-tier, 16/19 concepts covered, 0 near-copies. **62 = honest
-> certified-model capacity of one archetype (no gate-weakening); 300 needs expansion (more archetypes/facts +
-> other profiles).** See `GENERATION_PILOT_NEET_BIOLOGY.md`.
+> certified-model capacity of one archetype (no gate-weakening).** See `GENERATION_PILOT_NEET_BIOLOGY.md`.
+>
+> **UPDATE 2026-07-13 — numeric expansion (Physics/Chemistry).** Extended the bridge to `single_step_numerical`
+> from 10 certified NEET relations (V=IR, n=m/M, KE, M1V1=M2V2, …); template semantics independently validated
+> 10/10; parametric instances **deterministically** verified (relation solver, no AI/item); originality vs 366
+> source-param signatures (0 numbers copied). Pilot: **300 attempted → 277 PASS**; **combined pilot bank now
+> 339 verified** (Biology 62 · Chemistry 110 · Physics 167) — crosses 300 via legitimate expansion. See
+> `GENERATION_PILOT_NEET_NUMERIC.md`.
 
 ## Measured Subject × Profile ratings
 
