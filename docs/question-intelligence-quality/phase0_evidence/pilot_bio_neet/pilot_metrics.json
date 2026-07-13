@@ -1,0 +1,38 @@
+{
+  "total_attempted": 97,
+  "PASS": 62,
+  "REJECT": 34,
+  "QUARANTINE": 1,
+  "pilot_verified_bank_count": 62,
+  "raw_correctness_before_verification_pct": 66.0,
+  "final_answer_agreement_of_accepted_pct": 100.0,
+  "interjudge_agreement_pct": 91.8,
+  "distractor_plausibility_tiers": {
+    "family": 270,
+    "cross": 6,
+    "neighbour": 15
+  },
+  "distractor_family_tier_pct": 92.8,
+  "duplicate_or_near_copy_count": 0,
+  "concept_coverage": {
+    "certified_reachable": 19,
+    "concepts_with_pass": 16
+  },
+  "certified_model_coverage_pct": 84.2,
+  "stem_diversity": {
+    "distinct_stems": 36,
+    "frames_used": {
+      "assoc": 54,
+      "belongs": 43
+    }
+  },
+  "archetype": "factual_single_best_answer (only certified archetype this slice)",
+  "top_rejection_reasons": {
+    "ANSWER_DISAGREEMENT": 34,
+    "UNVERIFIABLE_quarantine": 1,
+    "TAUTOLOGY_pregate": 2
+  },
+  "operational_issues": [
+    "none"
+  ]
+}

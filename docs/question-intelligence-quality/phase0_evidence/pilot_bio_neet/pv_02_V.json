@@ -1,0 +1,19 @@
+[
+ {"id": "GEN_e488f31f3a1df2ae", "verdict": "agree", "note": "Physiological barriers = innate immunity component; others unrelated"},
+ {"id": "GEN_b5d57c08faafaa42", "verdict": "agree", "note": "Passive immunity is the direct immunity term"},
+ {"id": "GEN_db7559cd422d0ca7", "verdict": "agree", "note": "Interferon is antiviral immune cytokine; others unrelated"},
+ {"id": "GEN_9879b67b74c87d63", "verdict": "agree", "note": "Chloride shift involves blood plasma/CO2 transport"},
+ {"id": "GEN_a64c577db243acda", "verdict": "disagree", "note": "Plasma membrane is tautological word-overlap, not blood plasma"},
+ {"id": "GEN_514b4f0575cb56e4", "verdict": "disagree", "note": "Secondary wall unrelated to plasma"},
+ {"id": "GEN_32e3c10db811b159", "verdict": "disagree", "note": "Biosphere reserve equally associated with biodiversity"},
+ {"id": "GEN_faf1647d178f84e7", "verdict": "disagree", "note": "Species composition also a biodiversity term"},
+ {"id": "GEN_47e7654b7134f1c4", "verdict": "disagree", "note": "Circulation not associated with evolution"},
+ {"id": "GEN_9a232b701034aeab", "verdict": "agree", "note": "Convergent evolution is direct evolution term"},
+ {"id": "GEN_41f970041e171ce6", "verdict": "agree", "note": "Convergent evolution clearly the evolution term"},
+ {"id": "GEN_3217bf4e31b7beaa", "verdict": "disagree", "note": "Rice not an evolution term"},
+ {"id": "GEN_7444577063036134", "verdict": "agree", "note": "Phospholipids form the cell membrane bilayer"},
+ {"id": "GEN_e3126544d7624c58", "verdict": "disagree", "note": "Smaller populations tautological; genetic drift is concept"},
+ {"id": "GEN_7d22f88ecab94002", "verdict": "disagree", "note": "Biosphere reserve is biodiversity, not population term"},
+ {"id": "GEN_deca2efd919d6bca", "verdict": "agree", "note": "Genetic drift directly a population-genetics concept"},
+ {"id": "GEN_9ab7c4415d394348", "verdict": "disagree", "note": "Mutation far more closely associated with cancer than cobalt"}
+]

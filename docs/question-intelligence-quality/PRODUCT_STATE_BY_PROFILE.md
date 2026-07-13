@@ -22,9 +22,15 @@ per profile.
 > **UPDATE 2026-07-13 — certified→generation bridge proven (internal, NOT the pilot).** `qie/generate.py`
 > connects the certified Biology×NEET factual models to new-question generation: authored stems +
 > verified-evidence answers + governed distractors + independent 2-judge verification + full provenance.
-> Internal sample **15 → 11 PASS / 4 REJECT / 0 QUARANTINE** (73% verified; 0 near-copies). Blocker before the
-> 100–300 pilot: wire **automatic in-loop verification** + a **distractor-plausibility** mechanism. See
+> Internal sample **15 → 11 PASS / 4 REJECT / 0 QUARANTINE** (73% verified; 0 near-copies). See
 > `GENERATION_BRIDGE_SLICE.md`.
+>
+> **UPDATE 2026-07-13 — both pre-pilot blockers closed + controlled pilot run.** In-loop automatic verification
+> + plausible-distractor mechanism wired. Pilot: **97 attempted → 62 PASS / 34 REJECT / 1 QUARANTINE**; **62
+> verified questions** in a SEPARATE `pilot_verified_item` bank (not the Certified Bank); inter-judge agreement
+> 91.8%, distractor plausibility 92.8% family-tier, 16/19 concepts covered, 0 near-copies. **62 = honest
+> certified-model capacity of one archetype (no gate-weakening); 300 needs expansion (more archetypes/facts +
+> other profiles).** See `GENERATION_PILOT_NEET_BIOLOGY.md`.
 
 ## Measured Subject × Profile ratings
 
