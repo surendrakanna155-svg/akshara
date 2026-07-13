@@ -36,6 +36,7 @@
 4. **P0-LIVE-1 — Consolidated live checklist** (owner-provisioned): ① **AI migrations `20260867`+/`20260873` deploy — MUST precede the W2 release flag reaching any live build** · ② outbox drain · ③ COM-4 cron token · ④ reminder crons · ⑤ live `ai_*` probes · ⑥ off-site R2 creds · ⑦ alert delivery · ⑧⑨ CI + isolation-in-CI · ⑩ **7-day cron clock (calendar-critical — gates P7)**. Items ⑪⑫⑬ ✅ 2026-07-09.
 
 **Then (strict order):** CFC-1 Code Freeze Checklist (10 items, evidence per item) → FREEZE-1 Feature Freeze → P4 → P5 → P6-VAL-1 → P6-PILOT-1 → P6-BETA-1 (5–10 real schools) → P7 → P8.
+   **CFC-1 pre-clearing (2026-07-13, `2147a51a`):** the pure-code items are green ahead of the gate run — **item 1** TODO/FIXME CLEAN · **item 4** debug-in-release FIXED (feature-path `debugPrint`s `!kReleaseMode`-guarded; `Debug*` services gated to NoOp in prod) · **item 6** commented-out-code CLEAN · **item 7** temp-bypasses CLEAN. **Still gated (can't run yet):** item 2 (mock-repo release-flavor build proof) · item 3 (stub-API labelling audit) · item 5 (W2 flag → LIVE-1 ①) · item 8 (migration head==deployed) · item 9 (clean tree ALL lanes — curriculum dirty) · item 10 (no open P0/P1 — K-2 hardening). The gate closes only when all 10 are green in ONE sweep on ONE commit.
 
 ### 👤 Owner-decision batch (surface now; none pauses the active lanes)
 - **P0-LIVE-1 provisioning:** R2 creds · `INTERNAL_CRON_TOKEN` · CI runner (starts the 7-day clock).
