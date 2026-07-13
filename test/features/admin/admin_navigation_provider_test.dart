@@ -31,7 +31,7 @@ void main() {
       addTearDown(container.dispose);
 
       final destinations = container.read(adminNavDestinationsProvider);
-      expect(destinations, hasLength(16));
+      expect(destinations, hasLength(15));
       expect(
         destinations.map((d) => d.route).toList(),
         [
@@ -48,7 +48,7 @@ void main() {
           RouteNames.hostelDashboard,
           RouteNames.libraryDashboard,
           RouteNames.inventoryDashboard,
-          RouteNames.alumniDashboard,
+          // Alumni DEFERRED for pilot (CODE-8, 2026-07-13) — dropped from nav.
           RouteNames.controlCenterDashboard,
           RouteNames.directorDashboard,
         ],
@@ -61,6 +61,7 @@ void main() {
       expect(routes, isNot(contains(RouteNames.whiteLabel)));
       expect(routes, isNot(contains(RouteNames.organizationBuilder)));
       expect(routes, isNot(contains(RouteNames.dynamicWidgets)));
+      expect(routes, isNot(contains(RouteNames.alumniDashboard))); // CODE-8
     });
 
     test('financeAdmin sees finance and admin hub only', () {

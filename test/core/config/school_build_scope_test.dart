@@ -43,10 +43,9 @@ void main() {
         AdminModule.hr,
         AdminModule.management,
         AdminModule.transport,
-        AdminModule.hostel,
+        AdminModule.hostel, // CODE-7: module stays (residence-lite); only leave/gate-pass routes hidden
         AdminModule.library,
         AdminModule.inventory,
-        AdminModule.alumni,
         AdminModule.controlCenter, // multi-school: KEPT
         AdminModule.director, // multi-school: KEPT
       ]) {
@@ -55,6 +54,30 @@ void main() {
           isFalse,
           reason: '$module must stay visible in the school build',
         );
+      }
+    });
+
+    test('owner scope deferrals (CODE-7/8, 2026-07-13): Alumni hidden; Hostel leave/gate-pass hidden',
+        () {
+      // CODE-8: Alumni deferred for pilot — module dropped from nav, whole
+      // /alumni/* surface route-hidden.
+      expect(SchoolBuildScope.isModuleHidden(AdminModule.alumni), isTrue);
+      expect(SchoolBuildScope.isRouteHidden(RouteNames.alumni), isTrue);
+      expect(SchoolBuildScope.isRouteHidden(RouteNames.alumniRegistry), isTrue,
+          reason: 'nested /alumni/* sub-routes must also be blocked');
+      // CODE-7: Hostel residence-lite — leave-management + visitor/gate-pass
+      // sub-features hidden, but the occupancy core stays reachable.
+      expect(SchoolBuildScope.isRouteHidden(RouteNames.hostelLeave), isTrue);
+      expect(SchoolBuildScope.isRouteHidden(RouteNames.hostelVisitors), isTrue);
+      for (final kept in [
+        RouteNames.hostelDashboard,
+        RouteNames.hostelStudents,
+        RouteNames.hostelRooms,
+        RouteNames.hostelAttendance,
+        RouteNames.hostelReports,
+      ]) {
+        expect(SchoolBuildScope.isRouteHidden(kept), isFalse,
+            reason: '$kept is residence-lite occupancy — must stay reachable');
       }
     });
 
