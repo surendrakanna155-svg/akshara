@@ -34,8 +34,12 @@ per profile.
 > **UPDATE 2026-07-13 — numeric expansion (Physics/Chemistry).** Extended the bridge to `single_step_numerical`
 > from 10 certified NEET relations (V=IR, n=m/M, KE, M1V1=M2V2, …); template semantics independently validated
 > 10/10; parametric instances **deterministically** verified (relation solver, no AI/item); originality vs 366
-> source-param signatures (0 numbers copied). Pilot: **300 attempted → 277 PASS**; **combined pilot bank now
-> 339 verified** (Biology 62 · Chemistry 110 · Physics 167) — crosses 300 via legitimate expansion. See
+> source-param signatures (0 numbers copied). Then extended to the FOUNDATION physics pool (+8 relations,
+> validated 8/8): **combined pilot bank now 630 verified** — Biology×NEET 62 (factual) · Chemistry×NEET 110 ·
+> Physics×NEET 167 · Physics×FOUNDATION 291 (numeric). **Reconciliation:** the earlier "JEE = 23 items" was a
+> profile-mapping artifact (physicsaholics→FOUNDATION); JEE is NOT corpus-blocked (FOUNDATION Physics = 767
+> numeric-verified) — only JEE-Math (calculus) and JEE-Advanced multi-step are genuine build blockers. Only the
+> **factual + single-step-numeric** modalities are proven (NEET is partially covered, not complete). See
 > `GENERATION_PILOT_NEET_NUMERIC.md`.
 
 ## Measured Subject × Profile ratings

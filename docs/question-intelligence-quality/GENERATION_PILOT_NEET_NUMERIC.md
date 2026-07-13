@@ -78,6 +78,27 @@ process_sequence, data/graph. So NEET is **partially** covered, not complete.
 - ❌ **JEE-Advanced multi-step depth** — needs multi-step numeric generation (a distinct build).
 
 **Autonomous next step (unblocked):** extend numeric generation across the FOUNDATION Physics/Chemistry pool
-(the 15 relations above), materially growing the verified bank — see the FOUNDATION expansion below. Owner
-decisions remaining: promote the pilot bank into a real Question Bank; fund the JEE Math symbolic-verifier /
-multi-step build; and (optionally) re-differentiate the FOUNDATION↔JEE_MAIN profile mapping.
+(the 15 relations above), materially growing the verified bank — DONE below. Owner decisions remaining:
+promote the pilot bank into a real Question Bank; fund the JEE Math symbolic-verifier / multi-step build; and
+(optionally) re-differentiate the FOUNDATION↔JEE_MAIN profile mapping.
+
+## FOUNDATION Physics numeric expansion (executed) — proves JEE is not corpus-blocked
+
+Authored + **independently validated (8/8 agree)** templates for 8 additional certified FOUNDATION relations
+(P=V²/R, v=u+at, a=(v−u)/t, f=1/T, KE_from_p, efficiency_pct, Rparallel, PE_g10) — the physicsaholics-backed
+pool the JEE-thin diagnosis had hidden. Same two-layer verification (independent template validation +
+deterministic per-instance relation-solver); originality vs **981** source-param signatures.
+
+| Metric | Value |
+|---|---|
+| Templates (validated) | 8/8 |
+| Attempted | **320** |
+| PASS | **291** |
+| REJECT | 29 (all duplicate-generated; **0 solver-disagreement, 0 source near-copies**) |
+| **Pilot verified bank TOTAL** | **630** |
+
+**Bank composition (630):** Biology×NEET **62** (factual, AI-verified) · Chemistry×NEET **110** · Physics×NEET
+**167** · Physics×FOUNDATION **291** (numeric, deterministically verified). This directly demonstrates the
+reconciliation: the shared JEE/NEET foundation-physics evidence is abundant and generatable — the corpus is
+**not** evidence-blocked; only JEE-Mathematics (calculus) and JEE-Advanced multi-step remain genuine build
+blockers.

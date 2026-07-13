@@ -1,0 +1,25 @@
+{
+  "attempted": 320,
+  "passed": 291,
+  "rejected": 29,
+  "rejections": {
+    "DUPLICATE_GENERATED": 29
+  },
+  "pass_by_relation": {
+    "P=V2/R": 40,
+    "v=u+at": 40,
+    "a=(v-u)/t": 40,
+    "f=1/T": 18,
+    "KE_from_p": 37,
+    "efficiency_pct": 39,
+    "Rparallel": 39,
+    "PE_g10": 38
+  },
+  "bank_total": 630,
+  "bank_by_subject_profile": {
+    "Biology/NEET": 62,
+    "Chemistry/NEET": 110,
+    "Physics/FOUNDATION": 291,
+    "Physics/NEET": 167
+  }
+}

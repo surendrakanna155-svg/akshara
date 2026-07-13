@@ -1,0 +1,60 @@
+[
+ [
+  {
+   "id": "GENN_bcc670e30c1b826c",
+   "template": "T_PV2R",
+   "verdict": "agree",
+   "computed": "48.66 W",
+   "note": "P=V^2/R=43^2/38=1849/38=48.66 W; matches."
+  },
+  {
+   "id": "GENN_2900d49f4ab81ba5",
+   "template": "T_VUAT",
+   "verdict": "agree",
+   "computed": "37 m/s",
+   "note": "v=u+at=1+6*6=37 m/s; correct."
+  },
+  {
+   "id": "GENN_a329e19faead589b",
+   "template": "T_AVUT",
+   "verdict": "agree",
+   "computed": "3.8 m/s^2",
+   "note": "a=(23-4)/5=3.8; u=4,v=23 order correct."
+  },
+  {
+   "id": "GENN_c16ab47017169e17",
+   "template": "T_F1T",
+   "verdict": "agree",
+   "computed": "0.059 Hz",
+   "note": "f=1/T=1/17=0.0588=0.059 Hz; correct."
+  },
+  {
+   "id": "GENN_d7a11c8ef3b5c6a5",
+   "template": "T_KEP",
+   "verdict": "agree",
+   "computed": "48.05 J",
+   "note": "KE=p^2/2m=961/20=48.05 J; correct."
+  },
+  {
+   "id": "GENN_655140aa34acd938",
+   "template": "T_EFF",
+   "verdict": "agree",
+   "computed": "16.92 %",
+   "note": "eff=22/130*100=16.92%; correct."
+  },
+  {
+   "id": "GENN_f053405928fbbec7",
+   "template": "T_RPAR",
+   "verdict": "agree",
+   "computed": "8.92 ohm",
+   "note": "R=22*15/37=330/37=8.92 ohm; correct."
+  },
+  {
+   "id": "GENN_154cfe9d72794c46",
+   "template": "T_PE",
+   "verdict": "agree",
+   "computed": "4800 J",
+   "note": "PE=mgh=16*10*30=4800 J; correct."
+  }
+ ]
+]
