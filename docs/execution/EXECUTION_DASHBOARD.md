@@ -9,6 +9,8 @@
 
 ## 1. Where we are  (states: ✅ Complete · 🔶 Impl-Complete/Hardening · 🟩 Production-Certified · 👤 Owner-Gated · 🔮 Future)
 
+> **⚠ POST-RECON-1 ADDENDUM (2026-07-13) — the tables below are as-of RECON-1 (2026-07-10) and lag reality.** Authoritative current state = [`../roadmap/NEXT_ACTIVE_WAVE.md`](../roadmap/NEXT_ACTIVE_WAVE.md) (⏸ ERP LANE PARKED marker) + the journal. **Landed since RECON-1:** P3-AI-3 (W2) HARDENING EXIT (2026-07-11) · P1-PROD-22 Face ID HARDENING EXIT (2026-07-12) · SCE-1 Student Clearance/No-Dues MODULE COMPLETE (2026-07-12) · P1-SEC-1 Biometric App Lock (runnable slice) HARDENING EXIT (2026-07-13) · CFC-1 code items **6/10 pre-cleared** (1·3·4·6·7 + item 2 Trust-Hub deep-link fix). **ERP lane now PARKED** — remaining CFC-1 items (5/8/9/10) hard-blocked on P0-LIVE-1 (owner) · K-2 exit (Knowledge lane) · clean-tree-all-lanes (curriculum dirty). Owner-gated P1 tail (CODE-4/6/7/8) awaits genuine scope/identity decisions; TEST-1/2 device/live-gated (N+1 already clean, router coverage substantial). **§0b Wave-Ledger recompute + §2/§7 derived-% refresh are DUE at the next reconciliation pass** (not hand-estimated here to avoid drift).
+
 | Field | Value |
 |---|---|
 | **Derived progress** | **54.8%** (45.5 / 83 wave units — roadmap §0b) |
