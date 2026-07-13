@@ -49,16 +49,35 @@ scalable path, and it crosses the 300 target legitimately.
 The 5 SOLVER_DISAGREEMENT rejections confirm the deterministic verifier is not a rubber stamp — it rejected
 instances whose stored key did not reproduce within tolerance (rounding/edge cases).
 
-## Program status (JEE/NEET-first)
+## Program status (JEE/NEET-first) — CORRECTED 2026-07-13
 
-- **NEET Biology factual — pilot done** (62 verified, AI-verified).
-- **NEET Physics/Chemistry numeric — pilot done** (277 verified, deterministically verified). **Bank ≥ 300.**
-- **Remaining measured blockers** (not started; genuine build work, not owner decisions):
-  - NEET Biology non-factual archetypes (cause_effect / classification) — need archetype-specific frames.
-  - **JEE Main/Advanced** — 0 certified models (readiness check); needs the certified→verify pass on JEE
-    evidence first (JEE Math is calculus — needs a symbolic verifier).
-  - Difficulty-driver calibration + visual pipeline remain unbuilt (cross-cutting, owner-gated).
-  - Promotion of the pilot bank into a real Question Bank — **owner decision**, not started.
+**Modalities proven (not "the whole NEET vertical"):** only **factual_single_best_answer** (Biology, AI-verified)
+and **single_step_numerical** (Physics/Chemistry, deterministically verified) are built. NEET has many
+*unbuilt* archetypes — multi-step numeric, classification, cause_effect, structure_function, assertion,
+process_sequence, data/graph. So NEET is **partially** covered, not complete.
 
-Continuing the expansion (more relations, NEET Biology archetypes, then JEE) closes only measured blockers.
-The pilot bank stays separate until owner approval to promote.
+**JEE blocker reconciliation (corrected).** JEE is **NOT corpus/evidence-blocked** — the earlier "JEE evidence
+= 23 items" was a **profile-mapping artifact**. Two source→profile maps disagreed: the early ad-hoc matrix put
+`physicsaholics_dpps` → JEE (~2,937 physics questions); the canonical `profiles.py` puts `physicsaholics_dpps`
+→ **FOUNDATION**. Measured under the canonical map:
+- **FOUNDATION Physics: 3,012 items · 767 numeric-relation-verified · 15 relations ≥5-doc** (V=IR 152, R=V/I
+  105, KE 59, P=V²/R 50, v=u+at 46, P=I²R 41, Rseries 38, a=(v-u)/t 30, W=mg 25, f=1/T 22, KE_from_p 16,
+  efficiency 16, Rparallel 14, PE 12, gravitation 6) — a large pool of *shared JEE/NEET-foundation physics*,
+  currently label-routed to FOUNDATION and **unused for generation**.
+- **JEE_MAIN/ADVANCED profiles: ~19 Chem items, 0 numeric-verified** — thin only because the bulk physics
+  (physicsaholics) is labeled FOUNDATION, and the JEE-specific sources are mathongo (Math/calculus) + the
+  jeeadv archive.
+
+**Corrected classification of the JEE situation:**
+- ✅ **Physics/Chemistry single-step content: NOT blocked** — abundant FOUNDATION evidence (767 verified);
+  usable now (this doc's expansion begins here).
+- ⚠ **Profile differentiation** (JEE_MAIN vs FOUNDATION vs NEET) is coarse because the corpus labels
+  foundation-physics as FOUNDATION, not per-exam — a **classification/mapping** limitation, not missing corpus.
+- ❌ **JEE Mathematics (calculus) genuinely blocked** — 0 school-library-verifiable; needs a symbolic verifier
+  (a distinct build).
+- ❌ **JEE-Advanced multi-step depth** — needs multi-step numeric generation (a distinct build).
+
+**Autonomous next step (unblocked):** extend numeric generation across the FOUNDATION Physics/Chemistry pool
+(the 15 relations above), materially growing the verified bank — see the FOUNDATION expansion below. Owner
+decisions remaining: promote the pilot bank into a real Question Bank; fund the JEE Math symbolic-verifier /
+multi-step build; and (optionally) re-differentiate the FOUNDATION↔JEE_MAIN profile mapping.

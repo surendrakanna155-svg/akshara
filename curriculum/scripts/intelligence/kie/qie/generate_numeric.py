@@ -34,6 +34,7 @@ class NumTemplate:
     param_ranges: Tuple[Tuple[int, int], ...]   # (lo,hi) integer range per relation arg
     answer_unit: str
     round_to: int = 2
+    profile: str = "NEET"         # assessment profile this template's certified evidence belongs to
 
 
 # authored templates — stem semantically matches the relation's fn(args...) in order. Ranges chosen for clean,
@@ -68,6 +69,31 @@ TEMPLATES: Tuple[NumTemplate, ...] = (
                 "(in M) of the diluted solution is:", ((1, 12), (10, 100), (100, 1000)), "M"),
     NumTemplate("T_NV", "n=V/22.4", "Chemistry", "REL_MOLAR_VOLUME",
                 "The number of moles in {p0} litre of an ideal gas at STP is:", ((1, 112),), "mol"),
+    # ── FOUNDATION Physics pool (shared JEE/NEET foundation; physicsaholics evidence) ──────────────
+    NumTemplate("T_PV2R", "P=V2/R", "Physics", "REL_ELECTRIC_POWER",
+                "A potential difference of {p0} V is applied across a resistor of {p1} ohm. The power "
+                "dissipated (in watt) is:", ((10, 100), (5, 50)), "W", profile="FOUNDATION"),
+    NumTemplate("T_VUAT", "v=u+at", "Physics", "REL_KINEMATICS_V",
+                "A body moving at {p0} m/s accelerates uniformly at {p1} m/s^2 for {p2} s. Its final velocity "
+                "(in m/s) is:", ((0, 20), (1, 10), (1, 10)), "m/s", profile="FOUNDATION"),
+    NumTemplate("T_AVUT", "a=(v-u)/t", "Physics", "REL_KINEMATICS_A",
+                "A body's velocity changes from {p1} m/s to {p0} m/s in {p2} s. Its acceleration (in m/s^2) "
+                "is:", ((5, 40), (0, 12), (1, 10)), "m/s^2", profile="FOUNDATION"),
+    NumTemplate("T_F1T", "f=1/T", "Physics", "REL_FREQUENCY",
+                "A periodic oscillation has a time period of {p0} s. Its frequency (in Hz) is:",
+                ((2, 20),), "Hz", 3, profile="FOUNDATION"),
+    NumTemplate("T_KEP", "KE_from_p", "Physics", "REL_KE_MOMENTUM",
+                "A body of mass {p1} kg has a linear momentum of {p0} kg m/s. Its kinetic energy (in joule) "
+                "is:", ((2, 40), (1, 10)), "J", profile="FOUNDATION"),
+    NumTemplate("T_EFF", "efficiency_pct", "Physics", "REL_EFFICIENCY",
+                "A machine delivers {p0} J of useful output for every {p1} J of energy input. Its efficiency "
+                "(in %) is:", ((10, 80), (100, 200)), "%", profile="FOUNDATION"),
+    NumTemplate("T_RPAR", "Rparallel", "Physics", "REL_PARALLEL_RESISTANCE",
+                "Two resistors of {p0} ohm and {p1} ohm are connected in parallel. Their equivalent "
+                "resistance (in ohm) is:", ((2, 30), (2, 30)), "ohm", profile="FOUNDATION"),
+    NumTemplate("T_PE", "PE_g10", "Physics", "REL_POTENTIAL_ENERGY",
+                "Taking g = 10 m/s^2, the gravitational potential energy (in joule) of a {p0} kg body at a "
+                "height of {p1} m is:", ((1, 20), (1, 30)), "J", profile="FOUNDATION"),
 )
 
 
@@ -119,8 +145,8 @@ def generate(templates=TEMPLATES, per_template: int = 4, seed: str = "N1") -> Li
             cands.append({
                 "gen_id": gen_id,
                 "item_model_id": "IMN_" + hashlib.sha256(
-                    f"{t.subject}|NEET|{t.concept_scope}|single_step_numerical|{t.relation}".encode()).hexdigest()[:16],
-                "subject": t.subject, "profile": "NEET", "concept": t.concept_scope,
+                    f"{t.subject}|{t.profile}|{t.concept_scope}|single_step_numerical|{t.relation}".encode()).hexdigest()[:16],
+                "subject": t.subject, "profile": t.profile, "concept": t.concept_scope,
                 "archetype": "single_step_numerical", "frame_id": t.template_id, "relation": t.relation,
                 "stem": t.stem.format(**{f"p{i}": _fmt(p) for i, p in enumerate(params)}),
                 "options": options, "answer_text": _fmt(answer),

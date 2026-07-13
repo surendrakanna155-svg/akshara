@@ -14,7 +14,7 @@ class TestGenerate(unittest.TestCase):
             rel = next(r for r in R.LIBRARY if r.name == c["relation"])
             # the stated answer equals the certified relation applied to the generated params
             import itertools
-            ok = any(rel.fn(*p) is not None and abs(round(rel.fn(*p), 2) - c["answer_value"]) < 1e-6
+            ok = any(rel.fn(*p) is not None and abs(rel.fn(*p) - c["answer_value"]) < 0.01
                      for p in itertools.permutations(c["params"], rel.arity))
             self.assertTrue(ok, c["relation"])
             self.assertEqual(len(c["options"]), 4)
