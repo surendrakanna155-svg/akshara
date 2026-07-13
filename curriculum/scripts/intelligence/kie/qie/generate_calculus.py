@@ -57,9 +57,44 @@ def _exp_integral(seed: str):
     return f, sp.integrate(f, x), "integrate"
 
 
+# ── breadth families (2026-07-13) — all still verified by the uniform inverse-operation check ─────────
+def _trig_integral(seed: str):
+    k = _seed_int(seed + "k", 2, 6)
+    fam = _seed_int(seed + "f", 0, 1)
+    f = [sp.sin(k * x), sp.cos(k * x)][fam]
+    return f, sp.integrate(f, x), "integrate"
+
+
+def _exp_derivative(seed: str):
+    k = _seed_int(seed + "k", 2, 6)
+    f = sp.exp(k * x)
+    return f, sp.diff(f, x), "differentiate"
+
+
+def _log_derivative(seed: str):
+    a = _seed_int(seed + "a", 2, 9)
+    f = a * sp.log(x)
+    return f, sp.diff(f, x), "differentiate"          # a/x — verified by ∫(a/x) = a·ln x
+
+
+def _chain_poly_integral(seed: str):
+    a = _seed_int(seed + "a", 2, 6); b = _seed_int(seed + "b", 1, 7); n = _seed_int(seed + "n", 2, 4)
+    f = (a * x + b) ** n
+    return sp.expand(f), sp.integrate(f, x), "integrate"
+
+
+def _chain_poly_derivative(seed: str):
+    a = _seed_int(seed + "a", 2, 6); b = _seed_int(seed + "b", 1, 7); n = _seed_int(seed + "n", 2, 4)
+    f = (a * x + b) ** n
+    return sp.expand(f), sp.diff(sp.expand(f), x), "differentiate"
+
+
 FAMILIES: Tuple[Tuple[str, Callable], ...] = (
     ("poly_integral", _poly_integral), ("poly_derivative", _poly_derivative),
     ("trig_derivative", _trig_derivative), ("exp_integral", _exp_integral),
+    ("trig_integral", _trig_integral), ("exp_derivative", _exp_derivative),
+    ("log_derivative", _log_derivative), ("chain_poly_integral", _chain_poly_integral),
+    ("chain_poly_derivative", _chain_poly_derivative),
 )
 
 _STEM = {
@@ -83,11 +118,15 @@ def _distractors(f, ans, op: str) -> List[sp.Expr]:
 
 
 def _verifies(f, ans, op: str) -> bool:
-    """INDEPENDENT symbolic check via the inverse operation."""
+    """INDEPENDENT symbolic check via the inverse operation.
+    integrate: d/dx(ans) must equal f exactly.
+    differentiate: ∫ans must equal f up to a constant of integration — i.e. (∫ans − f) is free of x,
+                   which is exactly d/dx(∫ans − f) == 0. This is the correct independent check even when f
+                   carries a constant term (e.g. an expanded (ax+b)^n)."""
     try:
         if op == "integrate":
             return sp.simplify(sp.diff(ans, x) - f) == 0
-        return sp.simplify(sp.integrate(ans, x) - f) == 0   # antiderivative of the derivative == f (+const→diff 0)
+        return sp.simplify(sp.diff(sp.integrate(ans, x) - f, x)) == 0
     except Exception:
         return False
 
