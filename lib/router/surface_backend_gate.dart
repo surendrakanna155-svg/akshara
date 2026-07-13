@@ -5,9 +5,9 @@ import '../core/repositories/repository_config.dart';
 
 /// P0-CODE-2 (ENG-3 / MOD-4): hide backend-less surfaces in a LIVE build.
 ///
-/// Eight shipped surfaces have no live backend and, in the live release, no
+/// These shipped surfaces have no live backend and, in the live release, no
 /// enabled API flag — so their mock repositories would fabricate reads a real
-/// user can reach. Per the owner decision (2026-07-04, "hide all 8 for pilot"),
+/// user can reach. Per the owner decision (2026-07-04, "hide all for pilot"),
 /// a surface whose API flag is OFF while `enableApiMode` is ON is **hidden**:
 /// its route is blocked (via [ErpRouteGuard]) and its nav entries are dropped
 /// (via the sub-nav filters) rather than served as mock. In a local/mock build
@@ -26,7 +26,17 @@ final List<_SurfaceGate> _backendLessSurfaces = <_SurfaceGate>[
     flag: academicOperationsApiEnabledProvider,
   ),
   (prefixes: const ['/sis/continuity'], flag: continuityApiEnabledProvider),
-  (prefixes: const ['/control-center/intelligence'], flag: platformIntelligenceApiEnabledProvider),
+  // Both platform-intelligence surfaces share the flag: the Control-Center
+  // dashboard AND the Trust Intelligence Hub (`/organization/intelligence`,
+  // TrustIntelligenceHubScreen). The trust hub was reachable by deep-link for
+  // everyday roles (schoolAdmin/principal via viewOrganizationIntelligence) and
+  // rendered MockPlatformIntelligenceRepository's fabricated cross-school trust
+  // dashboard as if real — CFC-1 item-2 fix (2026-07-13). No backend exists, so
+  // the flag stays OFF in live_release.json; the surface is hidden instead.
+  (
+    prefixes: const ['/control-center/intelligence', '/organization/intelligence'],
+    flag: platformIntelligenceApiEnabledProvider,
+  ),
   (prefixes: const ['/platform-operations'], flag: platformOperationsApiEnabledProvider),
   (prefixes: const ['/multi-school'], flag: multiSchoolOperationsApiEnabledProvider),
   (prefixes: const ['/healthcare'], flag: healthcareApiEnabledProvider),

@@ -46,6 +46,10 @@ void main() {
       '/sis/promotion',
       '/sis/continuity',
       '/control-center/intelligence',
+      // CFC-1 item-2 regression: the Trust Intelligence Hub shares the
+      // platform-intelligence flag and was deep-link-reachable (rendering mock
+      // trust data as real) until it was added to the gate. Must be hidden live.
+      '/organization/intelligence',
       '/platform-operations/alerts',
       '/multi-school/portfolio',
       '/healthcare',
