@@ -4,7 +4,18 @@
 automatic in-loop independent verification. **62 verified questions** entered the separate **PILOT VERIFIED
 QUESTION BANK** (`qie.db.pilot_verified_item`) — **not** merged into any Certified Bank. Both pre-pilot
 blockers closed (in-loop verification + plausible distractors). No corpus, no gate-weakening, no Certified-Bank
-change, `qpgen`/`kie.db` untouched. **490 tests green.** Evidence: `phase0_evidence/pilot_bio_neet/`.
+change. **490 tests green.** Evidence: `phase0_evidence/pilot_bio_neet/`.
+
+> **Record correction (data-store scope).** To be precise about what was written:
+> - **`kie.db` (certified baseline): untouched — read-only.** All modules read it read-only.
+> - **`qie.db` (local, gitignored, DERIVED store): WAS written — by design.** It now holds the pilot bank
+>   (62 `pilot_verified_item` rows) and the Tier-2 verdicts (454 `tier2_verdict` rows). Per the storage lock,
+>   derived knowledge lives locally in `qie.db`; **only the schema + code are committed to git** (the
+>   `pilot_verified_item` table definition is in `store_schema.sql`, commit 427e0b21). Earlier B-phase reports
+>   that say "`qie.db` untouched" were correct *for those phases* because they operated on scratch copies; the
+>   Tier-2 pass and this pilot deliberately persist to the real `qie.db`.
+> - **Certified Bank: untouched** — the pilot bank is a **separate** table, never merged.
+> - `qpgen`: untouched.
 
 ## Pipeline (every generated question ran, automatically, in this order)
 
