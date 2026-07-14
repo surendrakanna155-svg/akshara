@@ -93,9 +93,16 @@ export async function accrueLateFees(
     return { accruedCount: 0, totalLateFee: 0 };
   }
 
-  // Eligible = issued/partially_paid, past due (+ grace), not already accrued.
-  // Row-lock each candidate so a concurrent collection on the same invoice
-  // serializes against the outstanding update.
+  // RT-11-2: accrue as set-based writes instead of a per-invoice loop that held
+  // `FOR UPDATE` row locks on EVERY overdue invoice for the whole batch duration
+  // (blocking any concurrent collection on those invoices until the batch committed).
+  // We read candidates WITHOUT locking, compute fees in JS (formula unchanged), then
+  // apply TWO set-based UPDATEs — so the transaction commits in ~2 round trips and
+  // releases its locks far sooner. The writes are DELTA-based + guarded on
+  // `late_fee_amount = 0`, which is also SAFER than the prior absolute write: a
+  // concurrent collection's outstanding reduction is preserved, and a concurrent
+  // accrual run can never double-apply (the guard skips already-accrued rows and
+  // RETURNING excludes them from the per-account roll-up).
   const candidates = await db.queryObject<FinanceInvoiceRow & { student_account_id: string }>(
     `SELECT fi.*, fsa.id AS student_account_id
        FROM finance_invoices fi
@@ -106,50 +113,65 @@ export async function accrueLateFees(
       WHERE fi.organization_id = $1 AND fi.school_id = $2
         AND fi.invoice_status IN ('issued', 'partially_paid')
         AND fi.late_fee_amount = 0
-        AND fi.due_date + ($3 || ' days')::interval < CURRENT_DATE
-      FOR UPDATE OF fi`,
+        AND fi.due_date + ($3 || ' days')::interval < CURRENT_DATE`,
     [organizationId, schoolId, String(settings.gracePeriodDays)],
   );
 
-  let accruedCount = 0;
-  let totalLateFee = 0;
-
+  // Compute the fee per invoice (unchanged formula); keep only positive fees.
+  const invoiceIds: string[] = [];
+  const invoiceFees: string[] = [];
+  const accountByInvoice = new Map<string, string>();
+  const feeByInvoice = new Map<string, number>();
   for (const invoice of candidates) {
     const fee = computeLateFee(toNumber(invoice.total_amount), settings);
     if (fee <= 0) continue;
+    invoiceIds.push(invoice.id);
+    invoiceFees.push(formatNumeric(fee));
+    accountByInvoice.set(invoice.id, invoice.student_account_id);
+    feeByInvoice.set(invoice.id, fee);
+  }
+  if (invoiceIds.length === 0) return { accruedCount: 0, totalLateFee: 0 };
 
-    const newOutstanding = toNumber(invoice.outstanding_amount) + fee;
+  // Set-based invoice write: DELTA on outstanding + guard on late_fee_amount = 0.
+  // RETURNING = the invoices that ACTUALLY accrued (a concurrent run's rows are skipped).
+  const applied = await db.queryObject<{ id: string }>(
+    `UPDATE finance_invoices fi SET
+       late_fee_amount = v.fee,
+       late_fee_accrued_at = timezone('utc', now()),
+       outstanding_amount = fi.outstanding_amount + v.fee,
+       updated_at = timezone('utc', now())
+     FROM unnest($3::uuid[], $4::numeric[]) AS v(id, fee)
+     WHERE fi.id = v.id AND fi.organization_id = $1 AND fi.school_id = $2
+       AND fi.late_fee_amount = 0
+     RETURNING fi.id`,
+    [organizationId, schoolId, invoiceIds, invoiceFees],
+  );
+  if (applied.length === 0) return { accruedCount: 0, totalLateFee: 0 };
 
-    await db.queryObject(
-      `UPDATE finance_invoices SET
-         late_fee_amount = $1,
-         late_fee_accrued_at = timezone('utc', now()),
-         outstanding_amount = $2,
-         updated_at = timezone('utc', now())
-       WHERE id = $3 AND organization_id = $4 AND school_id = $5`,
-      [
-        formatNumeric(fee),
-        formatNumeric(newOutstanding),
-        invoice.id,
-        organizationId,
-        schoolId,
-      ],
-    );
-
-    await db.queryObject(
-      `UPDATE finance_student_accounts SET
-         outstanding_amount = outstanding_amount + $1,
-         updated_at = timezone('utc', now())
-       WHERE id = $2 AND organization_id = $3 AND school_id = $4`,
-      [formatNumeric(fee), invoice.student_account_id, organizationId, schoolId],
-    );
-
-    accruedCount += 1;
+  // Roll the applied fees up per student account (an account may back >1 invoice).
+  const feeByAccount = new Map<string, number>();
+  let totalLateFee = 0;
+  for (const row of applied) {
+    const accountId = accountByInvoice.get(row.id)!;
+    const fee = feeByInvoice.get(row.id)!;
+    feeByAccount.set(accountId, (feeByAccount.get(accountId) ?? 0) + fee);
     totalLateFee += fee;
   }
 
+  // Set-based account write: DELTA per account (preserves concurrent collections).
+  const accountIds = [...feeByAccount.keys()];
+  const accountFees = accountIds.map((id) => formatNumeric(feeByAccount.get(id)!));
+  await db.queryObject(
+    `UPDATE finance_student_accounts fsa SET
+       outstanding_amount = fsa.outstanding_amount + v.fee,
+       updated_at = timezone('utc', now())
+     FROM unnest($3::uuid[], $4::numeric[]) AS v(id, fee)
+     WHERE fsa.id = v.id AND fsa.organization_id = $1 AND fsa.school_id = $2`,
+    [organizationId, schoolId, accountIds, accountFees],
+  );
+
   return {
-    accruedCount,
+    accruedCount: applied.length,
     totalLateFee: Math.round(totalLateFee * 100) / 100,
   };
 }
