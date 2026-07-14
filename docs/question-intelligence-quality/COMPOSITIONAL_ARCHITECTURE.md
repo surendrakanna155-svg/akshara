@@ -153,6 +153,18 @@ specify *total* volume, avoiding the "water added vs total volume" ambiguity)
 quantitative domain plugs in by registering operators (with independent verifiers) + curated templates. The same
 lakhs-scale capacity argument (params × fillings × templates, config-only widening) applies per domain.
 
+**Extended (2026-07-14) to ALL FOUR core JEE/NEET subjects + deeper compositions.**
+- **Biology** (`genetics.py`, `bio_data.py`, `biology.py`, `BIOLOGY_COMPOSITION_MODEL.md`) — the substrate is
+  not even *quantitative*-specific: genetics is a deterministic Tier-1 solver (Punnett enumeration ↔ probability
+  rule), and qualitative NEET reasoning (structure-function, pathway order, cause-effect chains) is generated
+  from and verified against a **curated canonical KB** by deterministic lookup/traversal, with the LLM as
+  ambiguity examiner only. The verification hierarchy is honoured per domain.
+- **Deeper Physics/Chemistry** — new operators + **depth-4/5 cross-principle** compositions: force→accel→
+  velocity→max-height→PE (depth 4, checked by *energy conservation*), series-circuit power (P=V²/Rtot), gas
+  stoichiometry to STP volume, molarity→mass.
+The engine (`compose.py`) has not changed since v1 — every extension is registration-only. Bank now spans
+Mathematics · Physics · Chemistry · Biology at reasoning depths 1–5.
+
 **Grounded to real compounds (`chem_data.py`, done — closed the AI's honest note).** The Chemistry templates
 now draw from a **verified real-compound & reaction table**: molar masses are self-checked at import (each must
 equal the sum of its atoms' standard masses — `assert_consistent()`; no fabrication) and stoichiometric ratios

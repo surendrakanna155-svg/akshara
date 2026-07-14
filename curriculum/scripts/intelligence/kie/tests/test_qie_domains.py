@@ -81,6 +81,25 @@ class TestChemistry(unittest.TestCase):
             self.assertEqual(K.verify_composition(bad), "disagree", c["frame_id"])
 
 
+class TestDeeperTemplates(unittest.TestCase):
+    def test_physics_depth4_and_new_frames(self):
+        cands = K.generate(P.TEMPLATES, per_template=8, seed="T")
+        frames = {c["frame_id"] for c in cands}
+        self.assertIn("phys_projectile_potential_energy", frames)     # depth-4 cross-principle
+        self.assertIn("phys_series_circuit_power", frames)
+        self.assertTrue(any(c["reasoning_depth"] >= 4 for c in cands))
+        for c in cands:
+            self.assertEqual(K.verify_composition(c), "agree", c["stem"])
+
+    def test_chemistry_new_frames(self):
+        cands = K.generate(CH.TEMPLATES, per_template=10, seed="T")
+        frames = {c["frame_id"] for c in cands}
+        self.assertIn("chem_gas_stoichiometry_volume", frames)
+        self.assertIn("chem_molarity_to_mass", frames)
+        for c in cands:
+            self.assertEqual(K.verify_composition(c), "agree", c["stem"])
+
+
 class TestEngineUnchangedServesAllDomains(unittest.TestCase):
     def test_same_run_machinery_three_subjects(self):
         subjects = set()

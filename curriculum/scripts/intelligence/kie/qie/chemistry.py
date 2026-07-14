@@ -109,5 +109,56 @@ _CC = CompositionTemplate(
 )
 
 
-TEMPLATES: Dict[str, CompositionTemplate] = {t.name: t for t in (_CA, _CB, _CC)}
+# ── deeper/broader operators + templates (Slice 3) ───────────────────────────────────────────────────
+_reg("gas_volume_stp", "MOLAR_VOLUME", 1, lambda n: n * 22.4,
+     lambda ins, out: close(out / 22.4, ins[0]))                         # n ≟ V/22.4
+
+GAS_RXN = [r for r in REACTIONS if r.product == "carbon dioxide"]        # reactions evolving CO₂ gas
+
+
+def _cd_setup(seed):
+    rxn = GAS_RXN[_si(seed + "r", 0, len(GAS_RXN) - 1)]; k = _si(seed + "k", 1, 4)
+    mass = k * rxn.Mr
+    return {"mass": float(mass), "Mr": float(rxn.Mr), "ratio": float(rxn.ratio)}, \
+        {"mass": mass, "Mr": rxn.Mr, "ratio": rxn.ratio, "k": k, "eq": rxn.equation, "reactant": rxn.reactant}
+
+
+_CD = CompositionTemplate(
+    "chem_gas_stoichiometry_volume", "COMPOSE_CHEM_GAS_STOICH_VOLUME", _cd_setup,
+    [Step("nr", "moles_from_mass", ("mass", "Mr")), Step("np", "stoich_scale", ("nr", "ratio")),
+     Step("V", "gas_volume_stp", ("np",))],
+    "V",
+    lambda env, p: close(((env["V"] / 22.4) / p["ratio"]) * p["Mr"], p["mass"]),   # round-trip: reconstruct mass
+    lambda env, p: (f"For the reaction  {p['eq']}  the volume of CO₂ gas measured at STP (molar volume = "
+                    f"22.4 L/mol) produced from {p['mass']:g} g of {p['reactant']} (molar mass {p['Mr']:g} g/mol) "
+                    f"is (in litres):"),
+    lambda env, p: [p["mass"] * 22.4, env["np"], 2 * env["V"], p["k"] * 22.4],
+    subject="Chemistry", gen_prefix="GENCH_",
+)
+
+
+# only realistic aqueous solutes (avoid gases/insolubles as "dissolved solute", an examiner note)
+_SOLUBLE = [c for c in COMPOUNDS if c.name in ("glucose", "sodium hydroxide", "sulfuric acid")]
+
+
+def _ce_setup(seed):
+    comp = _SOLUBLE[_si(seed + "c", 0, len(_SOLUBLE) - 1)]
+    Cc = _si(seed + "C", 1, 4); V = _si(seed + "V", 1, 3)
+    return {"C": float(Cc), "V": float(V), "M": float(comp.molar_mass)}, \
+        {"C": Cc, "V": V, "M": comp.molar_mass, "name": comp.name}
+
+
+_CE = CompositionTemplate(
+    "chem_molarity_to_mass", "COMPOSE_CHEM_MOLARITY_TO_MASS", _ce_setup,
+    [Step("n", "moles_from_molarity", ("C", "V")), Step("mass", "mass_from_moles", ("n", "M"))],
+    "mass",
+    lambda env, p: close((env["mass"] / p["M"]) / p["V"], p["C"]),      # round-trip: reconstruct molarity
+    lambda env, p: (f"{p['V']:g} L of a {p['C']:g} mol/L solution of {p['name']} (molar mass {p['M']:g} g/mol) "
+                    f"contains what mass of dissolved solute (in grams)?"),
+    lambda env, p: [p["C"] * p["V"], p["M"], 2 * env["mass"], p["C"] * p["M"]],
+    subject="Chemistry", gen_prefix="GENCH_",
+)
+
+
+TEMPLATES: Dict[str, CompositionTemplate] = {t.name: t for t in (_CA, _CB, _CC, _CD, _CE)}
 register(TEMPLATES)

@@ -100,5 +100,56 @@ _PC = CompositionTemplate(
 )
 
 
-TEMPLATES: Dict[str, CompositionTemplate] = {t.name: t for t in (_PA, _PB, _PC)}
+# ── deeper/broader operators (Slice 3) ───────────────────────────────────────────────────────────────
+_reg("pe_gravitational", "POTENTIAL_ENERGY", 3, lambda m, g, h: m * g * h,
+     lambda ins, out: ins[0] * ins[1] != 0 and close(out / (ins[0] * ins[1]), ins[2]))     # h ≟ PE/(mg)
+_reg("max_height", "KINEMATICS_H", 2, lambda u, g: u * u / (2 * g),
+     lambda ins, out: ins[1] > 0 and out >= 0 and close(math.sqrt(2 * ins[1] * out), abs(ins[0])))  # u ≟ √(2gH)
+_reg("resistance_series", "SERIES_RESISTANCE", 2, lambda R1, R2: R1 + R2,
+     lambda ins, out: close(out - ins[1], ins[0]))                                          # R1 ≟ Rtot − R2
+
+
+# ── template PD1: force → accel → velocity → max height → PE (depth 4; cross-checked by energy conservation)
+def _pd1_setup(seed):
+    m = _si(seed + "m", 1, 5); a0 = _si(seed + "a", 2, 6); t = _si(seed + "t", 2, 4)
+    F = m * a0
+    return {"F": float(F), "m": float(m), "t": float(t), "g": 10.0}, {"F": F, "m": m, "t": t, "a0": a0}
+
+
+_PD1 = CompositionTemplate(
+    "phys_projectile_potential_energy", "COMPOSE_PHYS_PROJECTILE_PE", _pd1_setup,
+    [Step("a", "newton_accel", ("F", "m")), Step("v", "velocity_from_rest", ("a", "t")),
+     Step("h", "max_height", ("v", "g")), Step("PE", "pe_gravitational", ("m", "g", "h"))],
+    "PE",
+    lambda env, p: close(0.5 * p["m"] * (p["a0"] * p["t"]) ** 2, env["PE"]),   # energy conservation: PE_top = KE_launch
+    lambda env, p: (f"A body of mass {p['m']} kg, starting from rest, is accelerated by a constant force of "
+                    f"{p['F']} N for {p['t']} s; it is then projected vertically upward with the speed it has "
+                    f"acquired. Taking g = 10 m/s², its gravitational potential energy at the highest point "
+                    f"(in joules) is:"),
+    lambda env, p: [env["v"], env["h"], 2 * env["PE"], env["m"] * env["v"]],
+    subject="Physics", gen_prefix="GENP_",
+)
+
+
+# ── template PD2: two resistors in series → total resistance → current → power (depth 3; P = V²/Rtot check)
+def _pd2_setup(seed):
+    R1 = _si(seed + "R1", 2, 5); R2 = _si(seed + "R2", 2, 5); I0 = _si(seed + "I", 2, 3)
+    V = (R1 + R2) * I0
+    return {"R1": float(R1), "R2": float(R2), "V": float(V)}, {"R1": R1, "R2": R2, "V": V, "I0": I0}
+
+
+_PD2 = CompositionTemplate(
+    "phys_series_circuit_power", "COMPOSE_PHYS_SERIES_CIRCUIT_POWER", _pd2_setup,
+    [Step("Rtot", "resistance_series", ("R1", "R2")), Step("I", "ohms_current", ("V", "Rtot")),
+     Step("P", "power_vi", ("V", "I"))],
+    "P",
+    lambda env, p: close(p["V"] * p["V"] / (p["R1"] + p["R2"]), env["P"]),      # independent: P = V²/Rtot
+    lambda env, p: (f"Two resistors of {p['R1']} Ω and {p['R2']} Ω are connected in SERIES across a {p['V']} V "
+                    f"battery. The total power dissipated in the circuit (in watts) is:"),
+    lambda env, p: [p["V"] * (p["R1"] + p["R2"]), env["I"], 2 * env["P"], p["V"] / (p["R1"] + p["R2"])],
+    subject="Physics", gen_prefix="GENP_",
+)
+
+
+TEMPLATES: Dict[str, CompositionTemplate] = {t.name: t for t in (_PA, _PB, _PC, _PD1, _PD2)}
 register(TEMPLATES)
