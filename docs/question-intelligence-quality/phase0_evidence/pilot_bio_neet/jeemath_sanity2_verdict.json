@@ -1,0 +1,162 @@
+{
+  "items": [
+    {
+      "frame": "definite_integral",
+      "stem": "The value of the definite integral ∫ from 2 to 3 of (8x^2) dx is:",
+      "your_computed_answer": "152/3",
+      "proposed_answer": "152/3",
+      "verdict": "agree",
+      "reason": "∫8x^2dx = (8/3)x^3; F(3)-F(2) = (8/3)(27-8) = 152/3. Matches option 3, phrasing unambiguous."
+    },
+    {
+      "frame": "definite_integral",
+      "stem": "The value of the definite integral ∫ from 2 to 4 of (6x^3+4x) dx is:",
+      "your_computed_answer": "384",
+      "proposed_answer": "384",
+      "verdict": "agree",
+      "reason": "F(x)=1.5x^4+2x^2; F(4)-F(2) = 416-32 = 384. Matches option 2, phrasing unambiguous."
+    },
+    {
+      "frame": "finite_series",
+      "stem": "The sum of the first 4 terms of the geometric progression with first term 3 and common ratio 3 is:",
+      "your_computed_answer": "120",
+      "proposed_answer": "120",
+      "verdict": "agree",
+      "reason": "S=3(3^4-1)/(3-1)=3*80/2=120. Matches option 2."
+    },
+    {
+      "frame": "finite_series",
+      "stem": "The sum of the first 6 terms of the arithmetic progression with first term 4 and common difference 6 is:",
+      "your_computed_answer": "114",
+      "proposed_answer": "114",
+      "verdict": "agree",
+      "reason": "S=n/2*(2a+(n-1)d)=3*(8+30)=114. Matches option 3."
+    },
+    {
+      "frame": "limit",
+      "stem": "The value of the limit as x approaches 3 of (x^2 - 9)/(x - 3) is:",
+      "your_computed_answer": "6",
+      "proposed_answer": "6",
+      "verdict": "agree",
+      "reason": "(x^2-9)/(x-3)=x+3 -> 6 as x->3. Matches option 2."
+    },
+    {
+      "frame": "limit",
+      "stem": "The value of the limit as x approaches 1 of (x^4 - 1)/(x - 1) is:",
+      "your_computed_answer": "4",
+      "proposed_answer": "4",
+      "verdict": "agree",
+      "reason": "n*c^(n-1) = 4*1^3 = 4. Matches option 4."
+    },
+    {
+      "frame": "determinant",
+      "stem": "The determinant of the 3×3 matrix with rows [5, 5, 5]; [3, 0, 6]; [2, 5, 1] is:",
+      "your_computed_answer": "-30",
+      "proposed_answer": "-30",
+      "verdict": "agree",
+      "reason": "Cofactor/Sarrus expansion gives -30 (5(0-30)-5(3-12)+5(15-0)=-150+45+75=-30). Matches option 4."
+    },
+    {
+      "frame": "determinant",
+      "stem": "The determinant of the 3×3 matrix with rows [0, 5, -3]; [-1, 0, 6]; [3, -4, -3] is:",
+      "your_computed_answer": "63",
+      "proposed_answer": "63",
+      "verdict": "agree",
+      "reason": "aei+bfg+cdh-ceg-bdi-afh = 0+90-12-0-15-0 = 63. Matches option 2."
+    },
+    {
+      "frame": "vieta",
+      "stem": "For the quadratic equation x² + (6)x + (5) = 0, the product of its roots is:",
+      "your_computed_answer": "5",
+      "proposed_answer": "5",
+      "verdict": "agree",
+      "reason": "Product of roots = c = 5 for x^2+bx+c. Matches option 1."
+    },
+    {
+      "frame": "vieta",
+      "stem": "For the quadratic equation x² + (1)x + (-12) = 0, the product of its roots is:",
+      "your_computed_answer": "-12",
+      "proposed_answer": "-12",
+      "verdict": "agree",
+      "reason": "Product of roots = c = -12. Matches option 2."
+    },
+    {
+      "frame": "binomial_coeff",
+      "stem": "The coefficient of x^3 in the binomial expansion of (3x + 1)^6 is:",
+      "your_computed_answer": "540",
+      "proposed_answer": "540",
+      "verdict": "agree",
+      "reason": "C(6,3)*3^3*1^3 = 20*27 = 540. Matches option 4."
+    },
+    {
+      "frame": "binomial_coeff",
+      "stem": "The coefficient of x^3 in the binomial expansion of (3x + 3)^5 is:",
+      "your_computed_answer": "2430",
+      "proposed_answer": "2430",
+      "verdict": "agree",
+      "reason": "C(5,3)*3^3*3^2 = 10*27*9 = 2430. Matches option 3."
+    },
+    {
+      "frame": "counting",
+      "stem": "The value of 10C2 (the number of combinations of 2 objects from 10) is:",
+      "your_computed_answer": "45",
+      "proposed_answer": "45",
+      "verdict": "agree",
+      "reason": "10!/(2!8!) = 45. Matches option 1."
+    },
+    {
+      "frame": "counting",
+      "stem": "The value of 5C3 (the number of combinations of 3 objects from 5) is:",
+      "your_computed_answer": "10",
+      "proposed_answer": "10",
+      "verdict": "agree",
+      "reason": "5!/(3!2!) = 10. Matches option 1."
+    },
+    {
+      "frame": "matrix_inverse",
+      "stem": "For the matrix A = [[0, 6], [2, 1]], the top-left (1,1) entry of the inverse A⁻¹ is:",
+      "your_computed_answer": "-1/12",
+      "proposed_answer": "-1/12",
+      "verdict": "agree",
+      "reason": "det=0*1-6*2=-12; (1,1) entry = d/det = 1/-12 = -1/12. Matches option 4."
+    },
+    {
+      "frame": "matrix_inverse",
+      "stem": "For the matrix A = [[4, -3], [-1, 2]], the top-left (1,1) entry of the inverse A⁻¹ is:",
+      "your_computed_answer": "2/5",
+      "proposed_answer": "2/5",
+      "verdict": "agree",
+      "reason": "det=4*2-(-3)(-1)=8-3=5; (1,1) entry = d/det = 2/5. Matches option 1."
+    },
+    {
+      "frame": "complex_modsq",
+      "stem": "For the complex number z = -5 + 3i, the value of |z|² (the square of the modulus) is:",
+      "your_computed_answer": "34",
+      "proposed_answer": "34",
+      "verdict": "agree",
+      "reason": "|z|^2 = (-5)^2+3^2 = 25+9 = 34. Matches option 4."
+    },
+    {
+      "frame": "complex_modsq",
+      "stem": "For the complex number z = 2 + 2i, the value of |z|² (the square of the modulus) is:",
+      "your_computed_answer": "8",
+      "proposed_answer": "8",
+      "verdict": "agree",
+      "reason": "|z|^2 = 2^2+2^2 = 4+4 = 8. Matches option 2."
+    }
+  ],
+  "n_agree": 18,
+  "n_flag": 0,
+  "by_family": {
+    "definite_integral": {"agree": 2, "flag": 0},
+    "finite_series": {"agree": 2, "flag": 0},
+    "limit": {"agree": 2, "flag": 0},
+    "determinant": {"agree": 2, "flag": 0},
+    "vieta": {"agree": 2, "flag": 0},
+    "binomial_coeff": {"agree": 2, "flag": 0},
+    "counting": {"agree": 2, "flag": 0},
+    "matrix_inverse": {"agree": 2, "flag": 0},
+    "complex_modsq": {"agree": 2, "flag": 0}
+  },
+  "summary": "All 18 items across all 9 families independently recomputed and confirmed correct: proposed_answer matches the mathematically correct value and appears verbatim among the listed options in every case. Stems are unambiguous (single well-defined operation, clear inputs, no notation collisions). No mathematical errors, distractor confusions, or phrasing issues found."
+}

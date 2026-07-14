@@ -3,10 +3,10 @@
 **Date:** 2026-07-13 (extended 2026-07-14) · **Status:** DONE (autonomous). Delivers: (1) **item-level
 depth-based profile differentiation** (not source identity); (2) the **JEE-Mathematics build** — symbolic
 calculus generation with independent symbolic verification, a **breadth expansion** to 9 calculus families,
-and (2026-07-14, owner-approved) **5 further JEE-Math families** (definite integrals, series, limits,
-determinants, Vieta) each verified by a **genuinely independent second method**. Pilot verified bank now
-**979** (Mathematics×JEE_MAIN **349**). `kie.db`/`qpgen`/Certified Bank untouched; derived output only in the
-local `qie.db` pilot bank. **513 tests green.** Evidence: `phase0_evidence/pilot_bio_neet/`.
+and (2026-07-14, owner-approved) **9 further JEE-Math families** across integral calculus, sequences, linear
+algebra, algebra and combinatorics, each verified by a **genuinely independent second method**. Pilot verified
+bank now **1,101** (Mathematics×JEE_MAIN **471**). `kie.db`/`qpgen`/Certified Bank untouched; derived output
+only in the local `qie.db` pilot bank. **514 tests green.** Evidence: `phase0_evidence/pilot_bio_neet/`.
 
 ## 1. Item-level depth-based profiling (`profiles.item_profile`)
 
@@ -69,6 +69,10 @@ verified by a genuinely different second computation** (never sympy checking sym
 | limit `(xⁿ−cⁿ)/(x−c)` | symbolic `sp.limit` | numeric evaluation approaching `c` (both sides) |
 | determinant (3×3) | cofactor expansion along row 0 | cofactor expansion along **row 2** (different arithmetic) |
 | vieta (sum/product of roots) | Vieta formula | **solving** the quadratic and combining the actual roots |
+| binomial_coeff | `C(n,k)·aᵏ·bⁿ⁻ᵏ` | symbolic expansion of `(ax+b)ⁿ`, read the coefficient |
+| counting (nCr / nPr) | `math.comb` / `math.perm` | **Pascal's recurrence** (nCr) · Pascal·r! (nPr) |
+| matrix_inverse 2×2 ((1,1) of A⁻¹) | adjugate `d/det` | build A⁻¹, check **A·A⁻¹ = I** (python matmul) |
+| complex_modsq (\|z\|²) | `a²+b²` | `z·conj(z)` via complex arithmetic |
 
 **Pilot:** 158 attempted → **128 PASS / 30 REJECT** (all `DUPLICATE_GENERATED` from saturated integer ranges;
 **0 independent-disagreement** after fixing one real verifier bug — repeated roots, e.g. `x²+10x+25`, which
@@ -77,7 +81,14 @@ verified by a genuinely different second computation** (never sympy checking sym
 **stratified 15-item sample covering all 5 families**: **15/15 agree, 0 flags** — every answer correct, present
 among options, unambiguous phrasing (`phase0_evidence/pilot_bio_neet/jeemath_sanity_verdict.json`).
 
-## Pilot verified bank — now 979
+**Algebra & combinatorics batch (same day):** the 4 further families above (binomial, counting, matrix inverse,
+complex) ran 302 → **250 PASS** (only the 122 from the new families are net-new after `gen_id` dedup; rejects
+all `DUPLICATE_GENERATED`). 122 banked → **Mathematics × JEE_MAIN 349 → 471**. Independent AI judge on a
+stratified **18-item all-9-family sample** (2 per family): **18/18 agree, 0 flags** — every answer
+independently hand-recomputed and confirmed correct, present among options, unambiguous
+(`phase0_evidence/pilot_bio_neet/jeemath_sanity2_verdict.json`).
+
+## Pilot verified bank — now 1,101
 
 | Subject × Profile | Count | Modality / verification |
 |---|---|---|
@@ -85,8 +96,8 @@ among options, unambiguous phrasing (`phase0_evidence/pilot_bio_neet/jeemath_san
 | Chemistry × NEET | 110 | single-step numeric — deterministic relation solver |
 | Physics × NEET | 167 | single-step numeric — deterministic relation solver |
 | Physics × FOUNDATION | 291 | single-step numeric — deterministic relation solver |
-| **Mathematics × JEE_MAIN** | **349** | **calculus (9 families) + definite-int/series/limit/det/vieta (5) — deterministic, independent second-method verification** |
-| **Total** | **979** | |
+| **Mathematics × JEE_MAIN** | **471** | **18 families — calculus (9) + definite-int/series/limit/det/vieta/binomial/counting/matrix-inverse/complex (9); deterministic, independent second-method verification** |
+| **Total** | **1,101** | |
 
 ## Remaining measured work (JEE/NEET-first)
 

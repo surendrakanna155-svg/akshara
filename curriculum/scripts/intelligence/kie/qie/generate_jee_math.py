@@ -16,6 +16,7 @@ fabricated — every value is computed twice by two different routes and must ag
 from __future__ import annotations
 
 import hashlib
+import math
 from fractions import Fraction
 from typing import Callable, Dict, List, Optional, Tuple
 
@@ -129,6 +130,58 @@ def _vieta(seed: str):
     return "VIETA_ROOTS", stem, ans, distr, {"b": b, "c": c, "asks": kind}, payload
 
 
+def _binomial_coeff(seed: str):
+    a = _seed_int(seed + "a", 1, 3); b = _seed_int(seed + "b", 1, 3)
+    n = _seed_int(seed + "n", 3, 6); k = _seed_int(seed + "k", 1, n - 1)
+    ans = math.comb(n, k) * a**k * b ** (n - k)
+    distr = [math.comb(n, k),                                    # forgot the a^k b^(n-k) factor
+             a**k * b ** (n - k),                                # forgot the binomial coefficient
+             math.comb(n, k) * a ** (n - k) * b**k,              # swapped the powers
+             math.comb(n, k) * a**k * b ** (n - k) + a]          # off value
+    coef = f"{a}x" if a != 1 else "x"
+    stem = f"The coefficient of x^{k} in the binomial expansion of ({coef} + {b})^{n} is:"
+    return "BINOMIAL_COEFF", stem, ans, distr, {"a": a, "b": b, "n": n, "k": k}, \
+        {"kind": "binom", "a": a, "b": b, "n": n, "k": k}
+
+
+def _counting(seed: str):
+    perm = _seed_int(seed + "t", 0, 1) == 1
+    n = _seed_int(seed + "n", 5, 10); r = _seed_int(seed + "r", 2, n - 2)
+    if perm:
+        ans = math.perm(n, r)
+        distr = [math.comb(n, r), math.perm(n, r + 1), math.factorial(n) // math.factorial(r), n * r]
+        stem = f"The value of {n}P{r} (the number of permutations of {r} objects from {n}) is:"
+        payload = {"kind": "npr", "n": n, "r": r}
+        concept = "PERMUTATIONS"
+    else:
+        ans = math.comb(n, r)
+        distr = [math.perm(n, r), math.comb(n, r - 1), math.comb(n, r + 1), n * r]
+        stem = f"The value of {n}C{r} (the number of combinations of {r} objects from {n}) is:"
+        payload = {"kind": "ncr", "n": n, "r": r}
+        concept = "COMBINATIONS"
+    return concept, stem, ans, distr, {"n": n, "r": r}, payload
+
+
+def _matrix_inverse(seed: str):
+    M = [[_seed_int(f"{seed}|{r}|{k}", -4, 6) for k in range(2)] for r in range(2)]
+    det = M[0][0] * M[1][1] - M[0][1] * M[1][0]
+    if det == 0:
+        return "MATRIX_INVERSE", "", None, [], {}, {}
+    ans = Fraction(M[1][1], det)                                 # (1,1) entry of A⁻¹ = d/det
+    distr = [Fraction(M[0][0], det), M[1][1], -Fraction(M[1][1], det), Fraction(M[1][1], M[0][0] or 1)]
+    rows = f"[{M[0][0]}, {M[0][1]}], [{M[1][0]}, {M[1][1]}]"
+    stem = f"For the matrix A = [{rows}], the top-left (1,1) entry of the inverse A⁻¹ is:"
+    return "MATRIX_INVERSE", stem, ans, distr, {"matrix": M, "det": det}, {"kind": "matinv2", "M": M}
+
+
+def _complex_modsq(seed: str):
+    a = _seed_int(seed + "a", -5, 5); b = _seed_int(seed + "b", 1, 6)
+    ans = a * a + b * b
+    distr = [a * a - b * b, abs(a) + abs(b), 2 * abs(a * b), (abs(a) + abs(b)) ** 2]
+    stem = f"For the complex number z = {a} + {b}i, the value of |z|² (the square of the modulus) is:"
+    return "COMPLEX_MODULUS_SQ", stem, ans, distr, {"a": a, "b": b}, {"kind": "cmodsq", "a": a, "b": b}
+
+
 def _s(expr) -> str:
     return str(expr).replace("**", "^").replace("*", "").replace(" ", "")
 
@@ -136,6 +189,8 @@ def _s(expr) -> str:
 FAMILIES: Tuple[Tuple[str, Callable], ...] = (
     ("definite_integral", _definite_integral), ("finite_series", _finite_series),
     ("limit", _limit), ("determinant", _determinant), ("vieta", _vieta),
+    ("binomial_coeff", _binomial_coeff), ("counting", _counting),
+    ("matrix_inverse", _matrix_inverse), ("complex_modsq", _complex_modsq),
 )
 
 
@@ -170,14 +225,46 @@ def _independent_value(payload: dict):
             r = [complex(sp.N(t)) for t in sp.Poly(x**2 + b * x + c, x).all_roots()]
         val = (r[0] + r[1]) if want == "sum" else (r[0] * r[1])
         return val.real
+    if k == "binom":                                        # independent: symbolic expansion, read the coeff
+        a, b, n, kk = payload["a"], payload["b"], payload["n"], payload["k"]
+        poly = sp.Poly(sp.expand((a * x + b) ** n), x)
+        return int(poly.coeff_monomial(x**kk))
+    if k == "ncr":                                          # independent: Pascal's recurrence
+        return _pascal(payload["n"], payload["r"])
+    if k == "npr":                                          # independent: nPr = nCr(Pascal) · r!
+        return _pascal(payload["n"], payload["r"]) * math.factorial(payload["r"])
+    if k == "matinv2":                                      # independent: A·A⁻¹ == I via python matmul
+        M = payload["M"]
+        det = M[0][0] * M[1][1] - M[0][1] * M[1][0]
+        inv = [[Fraction(M[1][1], det), Fraction(-M[0][1], det)],
+               [Fraction(-M[1][0], det), Fraction(M[0][0], det)]]
+        prod = [[sum(M[i][t] * inv[t][j] for t in range(2)) for j in range(2)] for i in range(2)]
+        if prod != [[1, 0], [0, 1]]:
+            return None                                     # identity failed → fail-safe (won't match)
+        return inv[0][0]
+    if k == "cmodsq":                                       # independent: z·conj(z) via complex arithmetic
+        z = complex(payload["a"], payload["b"])
+        return (z * z.conjugate()).real
     raise ValueError(k)
+
+
+def _pascal(n: int, r: int) -> int:
+    """Binomial coefficient by Pascal's recurrence C(n,r)=C(n-1,r-1)+C(n-1,r) — independent of math.comb."""
+    if r < 0 or r > n:
+        return 0
+    row = [1]
+    for _ in range(n):
+        row = [1] + [row[i] + row[i + 1] for i in range(len(row) - 1)] + [1]
+    return row[r]
 
 
 def _agrees(answer_value, payload: dict) -> bool:
     try:
         indep = _independent_value(payload)
-        exact = float(Fraction(str(sp.nsimplify(answer_value)))) if not isinstance(answer_value, (int, float)) \
-            else float(answer_value)
+        if indep is None:
+            return False
+        indep = float(indep)                                # int / Fraction / sympy number / float all cast cleanly
+        exact = float(answer_value)
         return abs(indep - exact) <= max(_TOL, abs(exact) * 1e-6)
     except Exception:
         return False

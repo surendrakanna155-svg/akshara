@@ -43,12 +43,14 @@ per profile.
 > (Physics 511, Chem 391, Math 85). (2) **JEE-Mathematics calculus blocker CLOSED:** `generate_calculus.py`
 > generates + verifies calculus SYMBOLICALLY (sympy; integrals verified by differentiation, derivatives by
 > integration — independent, deterministic, no AI); **9 families**. **Extended 2026-07-14 (owner-approved):**
-> `generate_jee_math.py` adds 5 more JEE-Math families (definite integrals, AP/GP series, limits, 3×3
-> determinants, Vieta), each verified by a **genuinely independent second method** (numerical quadrature,
-> brute-force summation, finite-difference, alternate determinant expansion, actual root-solving). Pilot 0
-> independent-disagreement (one repeated-root verifier bug found & fixed). **Pilot bank now 979** (Mathematics×
-> JEE_MAIN **349**). JEE was a *classification* issue + verifier gap, not corpus-blocked. JEE multi-step
-> remains EVIDENCE-BLOCKED (`JEE_MULTISTEP_EVIDENCE_CHECK.md`). See `GENERATION_JEE_BUILD.md`.
+> `generate_jee_math.py` adds **9 more JEE-Math families** (definite integrals, AP/GP series, limits, 3×3
+> determinants, Vieta, binomial coefficients, nCr/nPr, 2×2 matrix inverse, complex \|z\|²), each verified by a
+> **genuinely independent second method** (numerical quadrature, brute-force summation, finite-difference,
+> alternate determinant expansion, root-solving, symbolic expansion, Pascal recurrence, A·A⁻¹=I identity,
+> z·conj(z)). Pilot 0 independent-disagreement (one repeated-root verifier bug found & fixed); independent AI
+> examiner 15/15 then 18/18 across all families. **Pilot bank now 1,101** (Mathematics×JEE_MAIN **471** across
+> 18 families). JEE was a *classification* issue + verifier gap, not corpus-blocked. JEE multi-step remains
+> EVIDENCE-BLOCKED (`JEE_MULTISTEP_EVIDENCE_CHECK.md`). See `GENERATION_JEE_BUILD.md`.
 
 ## Measured Subject × Profile ratings
 
