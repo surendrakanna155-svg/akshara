@@ -11,7 +11,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../helpers/auth_test_overrides.dart';
-import '../../../helpers/provider_test_overrides.dart';
 import '../../../test_helpers.dart';
 
 Future<void> pumpApprovalCenter(
