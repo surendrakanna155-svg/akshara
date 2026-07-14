@@ -16,8 +16,11 @@
 - **P4-RT-1 round 2 (round law — needs *consecutive* clean rounds):** re-audit the fixed money/TC paths + statically-unrun domains (UX/workflow/ops/DR/perf/human-error), **plus the live legs** (concurrent cross-tenant / DR / ops on `akshara_tenant_test`) — those need the owner to re-establish the SSH control-master.
 - Then P5 (close remaining findings) → P6-VAL → PILOT → BETA → P7 → P8. **PRC-A/PRC-B** (deferred) must slot before P6-VAL-1.
 
+## 2b. RT-1 round 2 — LIVE legs DONE (2026-07-14, VPS restored) — `7cc70397`
+Isolation/Ops/DR confirmed live on prod, **0 new P0/P1** (report §Round 2): edge NOBYPASSRLS + 8 new tables FORCE-RLS; backups healthy (11 nightly/2 weekly/1 monthly, all success) — a candidate ops finding was refuted (my `ORDER BY uuid` query bug); off-site LOCAL-ONLY + empty DR drill.log tracked. New tables EMPTY on prod → the data-bearing positive cross-tenant probe + live money-race re-verify are deferred until (a) the pilot has data and (b) the fixes deploy. **SSH control-master is now UP** (`~/.ssh/akshara-cm.sock`, owner-established; use `ssh -S ~/.ssh/akshara-cm.sock root@46.28.44.46` + dangerouslyDisableSandbox).
+
 ## 3. Open items carried forward
-**Deploy pending (next edge window):** the 3 round-1 fixes (`d5255c62`) are in the repo on the frozen branch; live edge is still `9bbf8630` (pre-fix). They deploy via edge rsync+restart (no migration). RT-9-2's corrective migration (waiver FK/CHECK) batches into that window.
+**⏳ Deploy AWAITING OWNER GO:** the 3 round-1 fixes (`d5255c62`) are in the repo; live edge is still `9bbf8630` (pre-fix). Deploy = edge rsync+restart (NO migration), proven recipe (2026-07-14 LIVE-1). **Prod exposure is currently nil** (financial/AI tables empty), so no active corruption — but the P0 refund fix must be live before real financial usage. RT-9-2's waiver FK/CHECK migration batches into the same window. *A prod financial-code deploy to shared prod is the "irreversible action" stop-class → surfaced for explicit owner go.*
 
 **Tracked findings (not yet fixed):**
 - **RT-4-1 (P2, parent-facing, fix-before-GA):** `parent_insights_ai.ts` calls the model with no determinism number-guard. **Correct fix = enable the percent-checking guard (NOT `allowDerivedPercents:true`, which skips it) after verifying the injected context carries the percents verbatim, with a dedicated test.** → P5.
