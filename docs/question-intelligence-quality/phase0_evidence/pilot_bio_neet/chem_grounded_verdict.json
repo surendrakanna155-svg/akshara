@@ -1,0 +1,67 @@
+{
+  "items": [
+    {
+      "frame": "chem_mass_to_molecules",
+      "stem": "The number of molecules present in 44 g of carbon dioxide (molar mass 44 g/mol) is (Avogadro's number = 6.022×10²³):",
+      "your_answer": "M(CO2) = 12 + 2(16) = 44 g/mol (correct). moles = 44/44 = 1 mol. molecules = 1 × 6.022×10^23 = 6.022×10^23",
+      "proposed_answer": "6.022×10^23",
+      "molar_masses_correct": true,
+      "ratio_correct": true,
+      "verdict": "agree",
+      "reason": "Molar mass of CO2 (44 g/mol) is correct (C=12, O=16x2). 44 g / 44 g/mol = 1 mol, giving 6.022×10^23 molecules. Matches proposed answer and option 4."
+    },
+    {
+      "frame": "chem_mass_to_molecules",
+      "stem": "The number of molecules present in 54 g of water (molar mass 18 g/mol) is (Avogadro's number = 6.022×10²³):",
+      "your_answer": "M(H2O) = 2(1) + 16 = 18 g/mol (correct). moles = 54/18 = 3 mol. molecules = 3 × 6.022×10^23 = 18.066×10^23",
+      "proposed_answer": "18.066×10^23",
+      "molar_masses_correct": true,
+      "ratio_correct": true,
+      "verdict": "agree",
+      "reason": "Molar mass of water (18 g/mol) is correct. 54 g / 18 g/mol = 3 mol, giving 3 × 6.022×10^23 = 18.066×10^23 molecules. Matches proposed answer and option 3."
+    },
+    {
+      "frame": "chem_stoichiometry_mass",
+      "stem": "For the reaction  2H2 + O2 → 2H2O  (molar masses: hydrogen = 2 g/mol, water = 18 g/mol), the mass of water obtained from 4 g of hydrogen (in grams) is:",
+      "your_answer": "Equation is balanced (2H2+O2→2H2O). M(H2)=2 g/mol (correct, diatomic), M(H2O)=18 g/mol (correct). moles H2 = 4/2 = 2 mol. Mole ratio H2:H2O = 2:2 = 1:1, so 2 mol H2O formed. mass = 2 × 18 = 36 g",
+      "proposed_answer": "36",
+      "molar_masses_correct": true,
+      "ratio_correct": true,
+      "verdict": "agree",
+      "reason": "Balanced equation and 1:1 mole ratio between H2 and H2O correctly applied; molar masses (H2=2, H2O=18) are correct; 4 g H2 -> 2 mol -> 2 mol H2O -> 36 g. Matches proposed answer and option 3. 'hydrogen' is disambiguated as H2 by the stated molar mass of 2 g/mol, so phrasing is unambiguous."
+    },
+    {
+      "frame": "chem_stoichiometry_mass",
+      "stem": "For the reaction  CaCO3 → CaO + CO2  (molar masses: calcium carbonate = 100 g/mol, calcium oxide = 56 g/mol), the mass of calcium oxide obtained from 400 g of calcium carbonate (in grams) is:",
+      "your_answer": "Equation is balanced 1:1:1 (CaCO3→CaO+CO2). M(CaCO3)=40+12+48=100 g/mol (correct). M(CaO)=40+16=56 g/mol (correct). moles CaCO3 = 400/100 = 4 mol. 1:1 ratio -> 4 mol CaO. mass = 4 × 56 = 224 g",
+      "proposed_answer": "224",
+      "molar_masses_correct": true,
+      "ratio_correct": true,
+      "verdict": "agree",
+      "reason": "Decomposition equation is already balanced with 1:1 CaCO3:CaO ratio; molar masses 100 and 56 g/mol are both correct; 400 g CaCO3 -> 4 mol -> 4 mol CaO -> 224 g. Matches proposed answer and option 3."
+    },
+    {
+      "frame": "chem_dilution_molarity",
+      "stem": "3 L of a 4 mol/L HCl solution is diluted with water to a total volume of 6 L. The molarity of the diluted solution (in mol/L) is:",
+      "your_answer": "C1V1=C2V2 -> 4 mol/L × 3 L = C2 × 6 L -> C2 = 12/6 = 2 mol/L",
+      "proposed_answer": "2",
+      "molar_masses_correct": true,
+      "ratio_correct": true,
+      "verdict": "agree",
+      "reason": "Standard dilution law C1V1=C2V2 correctly applied: (4)(3)/6 = 2 mol/L. Matches proposed answer and option 3. No molar mass involved, correctly not needed for this frame."
+    },
+    {
+      "frame": "chem_dilution_molarity",
+      "stem": "1 L of a 6 mol/L NaOH solution is diluted with water to a total volume of 4 L. The molarity of the diluted solution (in mol/L) is:",
+      "your_answer": "C1V1=C2V2 -> 6 mol/L × 1 L = C2 × 4 L -> C2 = 6/4 = 1.5 mol/L",
+      "proposed_answer": "1.5",
+      "molar_masses_correct": true,
+      "ratio_correct": true,
+      "verdict": "agree",
+      "reason": "Standard dilution law C1V1=C2V2 correctly applied: (6)(1)/4 = 1.5 mol/L. Matches proposed answer and option 2."
+    }
+  ],
+  "n_agree": 6,
+  "n_flag": 0,
+  "summary": "All 6 items independently re-derived and confirmed chemically correct. Molar masses check out (CO2=44, H2O=18, H2=2, CaCO3=100, CaO=56 g/mol, all correctly derived from atomic weights), stoichiometric mole ratios read correctly off each balanced equation (1:1:1 for CaCO3 decomposition, 1:1 H2:H2O from the 2H2+O2→2H2O balance), and the dilution law C1V1=C2V2 was applied correctly with consistent units in both dilution items. No chemistry errors found; phrasing is unambiguous throughout (notably the H2 stoichiometry item disambiguates 'hydrogen' via its stated 2 g/mol molar mass, confirming diatomic H2 not atomic H)."
+}

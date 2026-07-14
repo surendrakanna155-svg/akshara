@@ -15,6 +15,7 @@ from __future__ import annotations
 from typing import Dict
 
 from kie.qie import compose as C
+from kie.qie.chem_data import COMPOUNDS, REACTIONS, SOLUTES
 from kie.qie.compose import NUMBER, Operator, Step, close
 from kie.qie.compositions import CompositionTemplate, _fmt, _si, register
 
@@ -46,9 +47,10 @@ def _fmt_sci(v) -> str:
 
 # ── template CA: mass → moles → number of molecules (round-trip verified) ─────────────────────────────
 def _ca_setup(seed):
-    M = [2, 16, 18, 40, 44, 58][_si(seed + "M", 0, 5)]; k = _si(seed + "k", 1, 5)
-    mass = k * M                                                          # so n = k is exact
-    return {"mass": float(mass), "M": float(M)}, {"mass": mass, "M": M, "k": k}
+    comp = COMPOUNDS[_si(seed + "c", 0, len(COMPOUNDS) - 1)]; k = _si(seed + "k", 1, 5)
+    mass = k * comp.molar_mass                                            # so n = k is exact
+    return {"mass": float(mass), "M": float(comp.molar_mass)}, \
+        {"mass": mass, "M": comp.molar_mass, "k": k, "name": comp.name}
 
 
 _CA = CompositionTemplate(
@@ -56,8 +58,8 @@ _CA = CompositionTemplate(
     [Step("n", "moles_from_mass", ("mass", "M")), Step("N", "molecules_from_moles", ("n",))],
     "N",
     lambda env, p: close((env["N"] / NA) * p["M"], p["mass"]),           # round-trip: reconstruct the input mass
-    lambda env, p: (f"The number of molecules present in {p['mass']} g of a substance of molar mass "
-                    f"{p['M']} g/mol is (Avogadro's number = 6.022×10²³):"),
+    lambda env, p: (f"The number of molecules present in {p['mass']:g} g of {p['name']} "
+                    f"(molar mass {p['M']:g} g/mol) is (Avogadro's number = 6.022×10²³):"),
     lambda env, p: [2 * env["N"], 0.5 * env["N"], p["mass"] * NA, 3 * env["N"]],
     subject="Chemistry", gen_prefix="GENCH_", fmt=_fmt_sci,
 )
@@ -65,12 +67,11 @@ _CA = CompositionTemplate(
 
 # ── template CB: mass of reactant → moles → moles of product → mass of product (mass-conservation check) ─
 def _cb_setup(seed):
-    Mr = [16, 18, 28, 40, 44][_si(seed + "Mr", 0, 4)]
-    Mp = [18, 32, 44, 56, 64][_si(seed + "Mp", 0, 4)]
-    ratio = _si(seed + "ratio", 1, 3); k = _si(seed + "k", 1, 4)
-    mass = k * Mr                                                         # n_reactant = k exact
-    return {"mass": float(mass), "Mr": float(Mr), "Mp": float(Mp), "ratio": float(ratio)}, \
-        {"mass": mass, "Mr": Mr, "Mp": Mp, "ratio": ratio, "k": k}
+    rxn = REACTIONS[_si(seed + "r", 0, len(REACTIONS) - 1)]; k = _si(seed + "k", 1, 4)
+    mass = k * rxn.Mr                                                     # n_reactant = k exact
+    return {"mass": float(mass), "Mr": float(rxn.Mr), "Mp": float(rxn.Mp), "ratio": float(rxn.ratio)}, \
+        {"mass": mass, "Mr": rxn.Mr, "Mp": rxn.Mp, "ratio": rxn.ratio, "k": k,
+         "eq": rxn.equation, "reactant": rxn.reactant, "product": rxn.product}
 
 
 _CB = CompositionTemplate(
@@ -79,18 +80,21 @@ _CB = CompositionTemplate(
      Step("massp", "mass_from_moles", ("np", "Mp"))],
     "massp",
     lambda env, p: close(((env["massp"] / p["Mp"]) / p["ratio"]) * p["Mr"], p["mass"]),  # reconstruct reactant mass
-    lambda env, p: (f"In a reaction, 1 mol of reactant A (molar mass {p['Mr']} g/mol) produces {p['ratio']} mol "
-                    f"of product B (molar mass {p['Mp']} g/mol). The mass of B obtained from {p['mass']} g of A "
-                    f"(in grams) is:"),
-    lambda env, p: [p["k"] * p["Mp"], p["mass"] * p["ratio"], 2 * env["massp"], float(p["mass"])],
+    lambda env, p: (f"For the reaction  {p['eq']}  (molar masses: {p['reactant']} = {p['Mr']:g} g/mol, "
+                    f"{p['product']} = {p['Mp']:g} g/mol), the mass of {p['product']} obtained from "
+                    f"{p['mass']:g} g of {p['reactant']} (in grams) is:"),
+    # robust for any ratio (incl. 1): reactant mass, double, off-by-one-product, scaled-reactant, ratio-ignored
+    lambda env, p: [float(p["mass"]), 2 * env["massp"], env["massp"] + p["Mp"],
+                    p["mass"] * p["ratio"], p["k"] * p["Mp"]],
     subject="Chemistry", gen_prefix="GENCH_",
 )
 
 
 # ── template CC: dilution — make a solution, dilute it, find new molarity (C₁V₁ = C₂V₂ check) ──────────
 def _cc_setup(seed):
+    solute = SOLUTES[_si(seed + "s", 0, len(SOLUTES) - 1)]
     C1 = _si(seed + "C1", 2, 6); V1 = _si(seed + "V1", 1, 3); V2 = V1 + _si(seed + "V2", 1, 4)
-    return {"C1": float(C1), "V1": float(V1), "V2": float(V2)}, {"C1": C1, "V1": V1, "V2": V2}
+    return {"C1": float(C1), "V1": float(V1), "V2": float(V2)}, {"C1": C1, "V1": V1, "V2": V2, "solute": solute}
 
 
 _CC = CompositionTemplate(
@@ -98,8 +102,8 @@ _CC = CompositionTemplate(
     [Step("n", "moles_from_molarity", ("C1", "V1")), Step("C2", "molarity", ("n", "V2"))],
     "C2",
     lambda env, p: close((env["C2"] * p["V2"]) / p["V1"], p["C1"]),     # C₁V₁ = C₂V₂ ⇒ reconstruct C₁ (round-trip)
-    lambda env, p: (f"{p['V1']} L of a {p['C1']} mol/L solution is diluted with water to a total volume of "
-                    f"{p['V2']} L. The molarity of the diluted solution (in mol/L) is:"),
+    lambda env, p: (f"{p['V1']:g} L of a {p['C1']:g} mol/L {p['solute']} solution is diluted with water to a "
+                    f"total volume of {p['V2']:g} L. The molarity of the diluted solution (in mol/L) is:"),
     lambda env, p: [p["C1"] * p["V1"], float(p["C1"]), p["C1"] * p["V2"] / p["V1"], 2 * env["C2"]],
     subject="Chemistry", gen_prefix="GENCH_",
 )

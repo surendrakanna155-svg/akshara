@@ -43,9 +43,28 @@ class TestPhysics(unittest.TestCase):
             self.assertEqual(K.verify_composition(bad), "disagree", c["frame_id"])
 
 
+class TestChemData(unittest.TestCase):
+    def test_molar_masses_self_consistent(self):
+        from kie.qie import chem_data as D
+        D.assert_consistent()                                   # each molar mass = Σ atomic masses (no fabrication)
+        self.assertEqual(dict(zip(("H", "C", "N", "O"), (1.0, 12.0, 14.0, 16.0))),
+                         {k: D.ATOMIC[k] for k in ("H", "C", "N", "O")})
+        # spot-check a couple of real compounds
+        by_name = {c.name: c for c in D.COMPOUNDS}
+        self.assertEqual(by_name["water"].molar_mass, 18.0)
+        self.assertEqual(by_name["glucose"].molar_mass, 180.0)
+
+    def test_reactions_use_real_molar_masses(self):
+        from kie.qie import chem_data as D
+        for r in D.REACTIONS:
+            self.assertGreater(r.Mr, 0)
+            self.assertGreater(r.Mp, 0)
+            self.assertGreaterEqual(r.ratio, 1)
+
+
 class TestChemistry(unittest.TestCase):
     def test_generates_verified_chemistry_items(self):
-        cands = K.generate(CH.TEMPLATES, per_template=5, seed="T")
+        cands = K.generate(CH.TEMPLATES, per_template=12, seed="T")
         frames = {c["frame_id"] for c in cands}
         for f in ("chem_mass_to_molecules", "chem_stoichiometry_mass", "chem_dilution_molarity"):
             self.assertIn(f, frames, f)

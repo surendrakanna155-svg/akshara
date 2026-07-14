@@ -153,11 +153,17 @@ specify *total* volume, avoiding the "water added vs total volume" ambiguity)
 quantitative domain plugs in by registering operators (with independent verifiers) + curated templates. The same
 lakhs-scale capacity argument (params × fillings × templates, config-only widening) applies per domain.
 
-**Honest limitation (measured, not a defect):** the Chemistry v1 templates use *generic* substances
-("a substance of molar mass M", "reactant A / product B") rather than named compounds — a deliberate choice
-that sidesteps real-molar-mass mismatches while proving the compositional mechanism. Grounding these to **real
-named compounds** (bind the molar-mass parameter to a validated compound table, with balanced-equation ratios)
-is a clean future enhancement on the same substrate — it swaps the parameter source, not the engine.
+**Grounded to real compounds (`chem_data.py`, done — closed the AI's honest note).** The Chemistry templates
+now draw from a **verified real-compound & reaction table**: molar masses are self-checked at import (each must
+equal the sum of its atoms' standard masses — `assert_consistent()`; no fabrication) and stoichiometric ratios
+come from **real balanced equations** (CaCO₃→CaO+CO₂, N₂+3H₂→2NH₃, 2H₂+O₂→2H₂O, …). Questions now read as
+grounded chemistry ("the mass of ammonia obtained from 112 g of nitrogen for N₂+3H₂→2NH₃") rather than abstract
+math. This swapped only the *parameter source* — the engine, operators, and verification were untouched, which
+is itself another instance of the substrate's extensibility. (Grounding also surfaced and fixed a distractor
+bug for ratio-1 reactions — a real defect the generic version had hidden.) An independent Chemistry examiner AI
+judge on a 6-item grounded sample: **6/6 agree** — every molar mass (CO₂=44, H₂O=18, CaCO₃=100 …) and every
+mole ratio read off the balanced equation confirmed correct (`phase0_evidence/pilot_bio_neet/
+chem_grounded_verdict.json`).
 
 ## Roadmap (on the same foundation — additive, no rewrites)
 
