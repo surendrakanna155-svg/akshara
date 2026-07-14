@@ -12,12 +12,11 @@
 
 **FREEZE-1 is in force** ([declaration](../engineering/eos/FREEZE1_FEATURE_FREEZE_DECLARATION.md)): in the ERP scope, ONLY bug/regression/perf/security/quality/stability work. Feature requests → post-GA register (P8-GA-5). The K lane (K-2/K-3/K-4, `curriculum/**`) is **carved out** (owner 2026-07-14) and runs its own program in parallel — never blocks ERP phases. **Do NOT touch `curriculum/**` from the ERP lane.**
 
-**Active wave: P4-RT-0 — Global Red Team Preparation** (framework: `docs/strategy/GLOBAL_RED_TEAM_FRAMEWORK.md`)
-- Freeze honest re-scoped claims (P0-DOC-4 basis) · stand up the 12 domain operators · ready staging/throwaway tenants + fixtures.
-- **Refresh the attack seeds for the post-W2 surface:** persona feeds (Teacher/Parent/Student/Principal/Director) · Universal Search RBAC scoping · per-role copilot quotas + atomic reservation (A5) · prompt-injection on EVERY AI entry point (incl. injection fences A6) · Domain-Gate bypass attempts · **new surfaces since the last seed set: Staff Face ID (enroll/verify/manual-request SoD) · SCE-1 clearance + waiver maker-checker (transferred gate) · Biometric App Lock (lifecycle/re-lock/sign-out escape) · LIVE-1-deployed W2 endpoints on prod edge**.
-- Exit = **READINESS PASS**: 12 domains scoped, operators + fixtures ready, seeds current.
+**P4-RT-0 — Global Red Team Preparation: ✅ READINESS PASS (2026-07-14)** — [`../strategy/RED_TEAM_P4_RT0_READINESS.md`](../strategy/RED_TEAM_P4_RT0_READINESS.md). Honest-claims baseline frozen; 12 domains scoped with perspective-diverse model-tiered operators; attack seeds refreshed for the post-W2/post-freeze surface (persona feeds · Universal Search RBAC · copilot quota + A5 reservation · prompt-injection on every AI entry point + A6 fences · Face-ID SoD · SCE-1 waiver split · App Lock · 5 new tables' RLS), each anchored to real code; fixture/tenant plan + adversarial-verify protocol set.
 
-**Then: P4-RT-1 — 12-domain adversarial assault** (security · isolation · money · AI abuse · UX · workflow · ops · DR · corruption · concurrency · performance · human-error), per-subsystem **audit → fix (P5) → regression → re-audit**, loop-until-dry under the round law (exit only when repeated audits stop finding meaningful production issues).
+**Active wave: P4-RT-1 — 12-domain adversarial assault** (security · isolation · money · AI abuse · UX · workflow · ops · DR · corruption · concurrency · performance · human-error), per-subsystem **audit → fix (P5) → regression → re-audit**, loop-until-dry under the round law (exit only when repeated audits stop finding meaningful production issues). Every finding adversarially verified (second operator refutes) with `file:line`/live evidence before it counts.
+- **Local-runnable seed set proceeds now** (no VPS): RBAC route-contract attacks, injection-fence unit attacks, quota/reservation race (fake-db), matcher fail-closed, App-Lock predicates, isolation-probe extension for the concurrent/crafted-scope case.
+- **Live legs are owner-gated:** re-establish the SSH control-master (`ssh -fN -M -S ~/.ssh/akshara-cm.sock -o ControlPersist=12h root@46.28.44.46`); destructive probes on `akshara_tenant_test` only, never prod.
 
 **Parallel / owner lanes (do not block P4):**
 - **K-2 rounds** (carved-out Knowledge lane; exit = 2 consecutive clean audits → K-4 re-cert; K-3 promotion owner-timed).
