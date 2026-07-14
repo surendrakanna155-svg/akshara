@@ -20,6 +20,7 @@ LLM is examiner-only, never in this path.
 from __future__ import annotations
 
 import hashlib
+import re
 import sqlite3
 from typing import Dict, List, Optional, Tuple
 
@@ -35,6 +36,7 @@ def _engine_pool(subjects, seed: int, per: int = 14) -> List[dict]:
     from kie.qie import compositions as K
     # importing the domain modules registers their operators/templates into the shared registry
     from kie.qie import physics, chemistry, genetics, biology  # noqa: F401
+    from kie.qie.convert import kvs_compose  # noqa: F401 — registers governed-KVS templates (verified facts)
     subs = set(subjects)
     out: List[dict] = []
 
@@ -72,6 +74,12 @@ def _targets(item: dict) -> List[str]:
     mis-bind (e.g. 'force'→'Nuclear Force', 'energy'→'capacitor energy') are deliberately excluded;
     a frame with no precise in-scope target returns [] and is skipped rather than mis-placed."""
     f = item["frame_id"]
+    if f.startswith("kvs_"):
+        # governed-KVS items carry their own doc-grounded source chapter ("Subject :: Chapter"); bind to a
+        # certified in-scope concept in the same subject by chapter name / significant chapter tokens.
+        chapter = (item.get("concept", "").split("::")[-1] or "").strip().lower()
+        toks = [chapter] + [w for w in re.split(r"[^a-z0-9]+", chapter) if len(w) > 3]
+        return [t for t in toks if t]
     if "integral" in f or f in ("area_between_roots", "area_between_curve_and_line", "ftc_integral_of_derivative"):
         return ["integrals"]
     if "deriv" in f or f in ("min_value_quadratic", "tangent_slope_at_root"):

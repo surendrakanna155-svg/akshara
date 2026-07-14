@@ -190,3 +190,31 @@ CREATE TABLE IF NOT EXISTS pilot_verified_item (
   verifier_model    TEXT,
   created_at        TEXT NOT NULL
 );
+
+-- ── GOVERNED FACT record (Phase-6 scaled conversion) — the single, provenance-complete, verification-aware
+-- knowledge record for each converted fact. Every admitted fact traces back to its owned source evidence
+-- (doc/question) AND carries its verification evidence (deterministic subject gate + independent examiner +
+-- answer-key). Verified rows are PROJECTED into the typed KVS tables (below) that the engine verifies against;
+-- rejected/quarantined rows are retained so already-refuted evidence is never re-examined. Local/derived.
+CREATE TABLE IF NOT EXISTS governed_fact (
+  fact_id           TEXT PRIMARY KEY,          -- hash of (concept_candidate | canonical fact)
+  subject           TEXT NOT NULL,             -- deterministically gated subject (hard gate)
+  exam              TEXT,                       -- NEET | JEE_MAIN | JEE_ADVANCED | FOUNDATION (provenance)
+  concept_candidate TEXT NOT NULL,             -- "Subject :: Chapter" (context-aware, doc-grounded binding)
+  certified_concept_code TEXT,                 -- best-effort kie.db certified concept (nullable)
+  lane              TEXT NOT NULL,             -- STRUCTURE_FUNCTION | PROCESS_SEQUENCE | COMPARATIVE | ...
+  fact_text         TEXT NOT NULL,             -- the verified, self-contained atomic fact (authored, not OCR)
+  structured        TEXT,                      -- json typed slots per lane (structure/function/system | steps | ...)
+  answer_text       TEXT NOT NULL,             -- the verified correct answer (semantic)
+  distractors       TEXT,                      -- json: real wrong options = misconception evidence (learned)
+  provenance        TEXT NOT NULL,             -- json: doc_id, question_ref, exam, chapter, ocr_score, evidence
+  verification      TEXT NOT NULL,             -- json: subject_gate, examiner_verdict, answer_correct, method
+  verifier_model    TEXT,                       -- examiner model id (provenance; never the sole truth)
+  status            TEXT NOT NULL,             -- verified | rejected | quarantined
+  reject_reason     TEXT,
+  item_hash         TEXT,                       -- sha256(stem|options|answer) — examiner-cache key (no re-run)
+  created_at        TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_gf_subject_lane ON governed_fact(subject, lane);
+CREATE INDEX IF NOT EXISTS idx_gf_status ON governed_fact(status);
+CREATE INDEX IF NOT EXISTS idx_gf_concept ON governed_fact(concept_candidate);

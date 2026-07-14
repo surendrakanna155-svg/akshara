@@ -1,0 +1,739 @@
+{
+  "_registry": "Akshara Canonical Evidence & Knowledge Governance Registry",
+  "_authority": "Single store-level source of truth for owned QIE/curriculum evidence + lifecycle state.",
+  "_owner_correction": "2026-07-14 evidence-storage governance reconciliation",
+  "generated_at": "2026-07-14T23:00:00Z",
+  "workspace": "/Users/surendrakanna/Documents/Akshara_ERP/curriculum",
+  "lifecycle_states": [
+    "1_raw_source",
+    "2_ocr_normalized",
+    "3_extracted_evidence",
+    "4_recovered_notation",
+    "5_verified_knowledge",
+    "6_concept_bound",
+    "7_qie_available",
+    "q_quarantine"
+  ],
+  "totals": {
+    "stores": 22,
+    "total_bytes": 63727267840,
+    "total_human": "59.4 GB",
+    "by_scope": {
+      "in_scope": 7,
+      "held": 4,
+      "mixed": 4,
+      "out_of_scope": 1,
+      "n_a": 6
+    },
+    "by_state": {
+      "1_raw_source": 11,
+      "q_quarantine": 5,
+      "3_extracted_evidence": 2,
+      "2_ocr_normalized": 3,
+      "7_qie_available": 1
+    }
+  },
+  "stores": [
+    {
+      "canonical_id": "RAW_FOUNDATION",
+      "physical_path": "resources/foundation",
+      "role": "raw_source",
+      "state": "1_raw_source",
+      "scope": "in_scope",
+      "purpose": "Organized raw JEE/NEET/NCERT-STEM acquisition (the frozen foundation corpus).",
+      "source_type": "mixed_official_third_party",
+      "media": "pdf",
+      "provenance_level": "mixed",
+      "git": "gitignored_local_only",
+      "detail_manifest": "knowledge/repository_verification.json",
+      "depends_on_code": [
+        "scripts/intelligence/kie/config.py",
+        "scripts/intelligence/repository_verifier.py"
+      ],
+      "duplicate_of": null,
+      "subjects": [
+        "Physics",
+        "Chemistry",
+        "Mathematics",
+        "Biology"
+      ],
+      "exams_boards": [
+        "JEE_MAIN",
+        "JEE_ADVANCED",
+        "NEET",
+        "AIIMS",
+        "AIPMT",
+        "NCERT"
+      ],
+      "classes": [
+        "11",
+        "12"
+      ],
+      "languages": [
+        "en"
+      ],
+      "notes": "1199 PDFs incl. NCERT 11-12 STEM textbooks (canonical formula/law source).",
+      "exists": true,
+      "size_bytes": 4050509824,
+      "size_human": "3.8 GB",
+      "live": {
+        "pdf_files": 1199
+      }
+    },
+    {
+      "canonical_id": "RAW_CURSOR_DOWNLOADS",
+      "physical_path": "resources/foundation/Cursor_Downloads",
+      "role": "raw_source",
+      "state": "1_raw_source",
+      "scope": "in_scope",
+      "purpose": "Cursor-agent-acquired JEE/NEET PDFs (the previously 'invisible' download universe).",
+      "source_type": "cursor_download",
+      "media": "pdf",
+      "provenance_level": "trusted_third_party",
+      "git": "gitignored_local_only",
+      "detail_manifest": null,
+      "depends_on_code": [
+        "scripts/staging/qcorpus/config.py",
+        "scripts/acquisition/sequential_board_fetch.py"
+      ],
+      "duplicate_of": null,
+      "subjects": [
+        "Physics",
+        "Chemistry",
+        "Mathematics",
+        "Biology"
+      ],
+      "exams_boards": [
+        "JEE_MAIN",
+        "JEE_ADVANCED",
+        "NEET"
+      ],
+      "classes": [],
+      "languages": [
+        "en"
+      ],
+      "notes": "Feeds the qcorpus OCR/extraction lane (STG_QCORPUS).",
+      "exists": true,
+      "size_bytes": 1813200896,
+      "size_human": "1.7 GB",
+      "live": {
+        "pdf_files": 865
+      }
+    },
+    {
+      "canonical_id": "RAW_CURRICULUM_CBSE",
+      "physical_path": "resources/curriculum/cbse",
+      "role": "raw_source",
+      "state": "1_raw_source",
+      "scope": "in_scope",
+      "purpose": "NCERT/CBSE board textbooks (Classes 6-12) \u2014 in-scope Math/Science subset.",
+      "source_type": "official_ncert_cbse",
+      "media": "pdf",
+      "provenance_level": "official",
+      "git": "gitignored_local_only",
+      "detail_manifest": "PROVENANCE_MANIFEST.json",
+      "depends_on_code": [],
+      "duplicate_of": null,
+      "subjects": [
+        "Mathematics",
+        "Science",
+        "Physics",
+        "Chemistry",
+        "Biology"
+      ],
+      "exams_boards": [
+        "CBSE",
+        "NCERT"
+      ],
+      "classes": [
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12"
+      ],
+      "languages": [
+        "en"
+      ],
+      "notes": "MIXED at the folder level: 6-12 STEM is IN-SCOPE; non-STEM/1-5 HELD (split logically).",
+      "exists": true,
+      "size_bytes": 3168350208,
+      "size_human": "3.0 GB",
+      "live": {
+        "pdf_files": 48
+      }
+    },
+    {
+      "canonical_id": "RAW_CURRICULUM_AP",
+      "physical_path": "resources/curriculum/ap",
+      "role": "raw_source",
+      "state": "1_raw_source",
+      "scope": "held",
+      "purpose": "Andhra Pradesh state-board curriculum \u2014 HELD (state-board conversion deferred).",
+      "source_type": "official_state_board",
+      "media": "pdf",
+      "provenance_level": "official",
+      "git": "gitignored_local_only",
+      "detail_manifest": "PROVENANCE_MANIFEST.json",
+      "depends_on_code": [],
+      "duplicate_of": null,
+      "subjects": [],
+      "exams_boards": [
+        "AP_SCERT"
+      ],
+      "classes": [],
+      "languages": [
+        "en"
+      ],
+      "notes": "Held per mandate; retained, not deleted.",
+      "exists": true,
+      "size_bytes": 11431124992,
+      "size_human": "10.6 GB",
+      "live": {
+        "pdf_files": 230
+      }
+    },
+    {
+      "canonical_id": "RAW_CURRICULUM_TS",
+      "physical_path": "resources/curriculum/telangana",
+      "role": "raw_source",
+      "state": "1_raw_source",
+      "scope": "held",
+      "purpose": "Telangana state-board curriculum \u2014 HELD.",
+      "source_type": "official_state_board",
+      "media": "pdf",
+      "provenance_level": "official",
+      "git": "gitignored_local_only",
+      "detail_manifest": null,
+      "depends_on_code": [],
+      "duplicate_of": null,
+      "subjects": [],
+      "exams_boards": [
+        "TS_SCERT"
+      ],
+      "classes": [],
+      "languages": [
+        "en"
+      ],
+      "notes": "Held per mandate.",
+      "exists": true,
+      "size_bytes": 1173553152,
+      "size_human": "1.1 GB",
+      "live": {
+        "pdf_files": 31
+      }
+    },
+    {
+      "canonical_id": "RAW_CURRICULUM_ICSE",
+      "physical_path": "resources/curriculum/icse",
+      "role": "raw_source",
+      "state": "1_raw_source",
+      "scope": "held",
+      "purpose": "ICSE/CISCE curriculum \u2014 HELD.",
+      "source_type": "official_board",
+      "media": "pdf",
+      "provenance_level": "official",
+      "git": "gitignored_local_only",
+      "detail_manifest": null,
+      "depends_on_code": [],
+      "duplicate_of": null,
+      "subjects": [],
+      "exams_boards": [
+        "ICSE",
+        "CISCE"
+      ],
+      "classes": [],
+      "languages": [
+        "en"
+      ],
+      "notes": "Held per mandate.",
+      "exists": true,
+      "size_bytes": 37646336,
+      "size_human": "35.9 MB",
+      "live": {
+        "pdf_files": 20
+      }
+    },
+    {
+      "canonical_id": "RAW_INTAKE",
+      "physical_path": "resources/intake",
+      "role": "raw_source",
+      "state": "1_raw_source",
+      "scope": "mixed",
+      "purpose": "Knowledge Intake Center managed resources (content-addressed new/updated imports).",
+      "source_type": "intake_managed",
+      "media": "pdf",
+      "provenance_level": "mixed",
+      "git": "gitignored_local_only",
+      "detail_manifest": null,
+      "depends_on_code": [
+        "scripts/intelligence/kie/config.py"
+      ],
+      "duplicate_of": null,
+      "subjects": [],
+      "exams_boards": [],
+      "classes": [],
+      "languages": [
+        "en"
+      ],
+      "notes": "Sole sanctioned new-knowledge entry point (intake baseline).",
+      "exists": true,
+      "size_bytes": 87494656,
+      "size_human": "83.4 MB",
+      "live": {
+        "pdf_files": 19
+      }
+    },
+    {
+      "canonical_id": "ARCH_BOARD_OUT_OF_SCOPE",
+      "physical_path": "resources/archive/board_out_of_scope",
+      "role": "quarantine",
+      "state": "q_quarantine",
+      "scope": "out_of_scope",
+      "purpose": "Archived board material outside JEE/NEET scope.",
+      "source_type": "archive",
+      "media": "pdf",
+      "provenance_level": "mixed",
+      "git": "gitignored_local_only",
+      "detail_manifest": null,
+      "depends_on_code": [],
+      "duplicate_of": null,
+      "subjects": [],
+      "exams_boards": [],
+      "classes": [],
+      "languages": [
+        "en"
+      ],
+      "notes": "27 GB; correctly out-of-scope, retained.",
+      "exists": true,
+      "size_bytes": 29130858496,
+      "size_human": "27.1 GB",
+      "live": {
+        "pdf_files": 7
+      }
+    },
+    {
+      "canonical_id": "ARCH_NCERT_NON_STEM",
+      "physical_path": "resources/archive/NCERT_non_stem",
+      "role": "quarantine",
+      "state": "q_quarantine",
+      "scope": "held",
+      "purpose": "NCERT non-STEM subjects \u2014 held (not in current STEM mandate).",
+      "source_type": "archive",
+      "media": "pdf",
+      "provenance_level": "official",
+      "git": "gitignored_local_only",
+      "detail_manifest": null,
+      "depends_on_code": [],
+      "duplicate_of": null,
+      "subjects": [],
+      "exams_boards": [],
+      "classes": [],
+      "languages": [
+        "en"
+      ],
+      "notes": "Retained; re-scopable if mandate widens.",
+      "exists": true,
+      "size_bytes": 1404297216,
+      "size_human": "1.3 GB",
+      "live": {
+        "pdf_files": 0
+      }
+    },
+    {
+      "canonical_id": "ARCH_DUPLICATES",
+      "physical_path": "resources/archive/duplicates",
+      "role": "quarantine",
+      "state": "q_quarantine",
+      "scope": "n_a",
+      "purpose": "Archived duplicate copies.",
+      "source_type": "archive_dedup",
+      "media": "pdf",
+      "provenance_level": "derived",
+      "git": "gitignored_local_only",
+      "detail_manifest": null,
+      "depends_on_code": [],
+      "duplicate_of": "RAW_FOUNDATION",
+      "subjects": [],
+      "exams_boards": [],
+      "classes": [],
+      "languages": [
+        "en"
+      ],
+      "notes": "",
+      "exists": true,
+      "size_bytes": 129925120,
+      "size_human": "123.9 MB",
+      "live": {
+        "pdf_files": 52
+      }
+    },
+    {
+      "canonical_id": "DL_DUPLICATES",
+      "physical_path": "downloads/duplicates",
+      "role": "quarantine",
+      "state": "q_quarantine",
+      "scope": "n_a",
+      "purpose": "Deduplicated download copies (safe-delete candidates once dedup map is confirmed).",
+      "source_type": "download_dedup",
+      "media": "pdf",
+      "provenance_level": "derived",
+      "git": "gitignored_local_only",
+      "detail_manifest": "indexes/duplicate_map.json",
+      "depends_on_code": [],
+      "duplicate_of": "RAW_FOUNDATION",
+      "subjects": [],
+      "exams_boards": [],
+      "classes": [],
+      "languages": [
+        "en"
+      ],
+      "notes": "",
+      "exists": true,
+      "size_bytes": 7848398848,
+      "size_human": "7.3 GB",
+      "live": {
+        "pdf_files": 99
+      }
+    },
+    {
+      "canonical_id": "DL_FAILED",
+      "physical_path": "downloads/failed",
+      "role": "quarantine",
+      "state": "q_quarantine",
+      "scope": "n_a",
+      "purpose": "Failed/partial downloads (retained for retry provenance).",
+      "source_type": "download_failed",
+      "media": "pdf",
+      "provenance_level": "derived",
+      "git": "gitignored_local_only",
+      "detail_manifest": null,
+      "depends_on_code": [],
+      "duplicate_of": null,
+      "subjects": [],
+      "exams_boards": [],
+      "classes": [],
+      "languages": [
+        "en"
+      ],
+      "notes": "",
+      "exists": true,
+      "size_bytes": 616304640,
+      "size_human": "587.8 MB",
+      "live": {
+        "pdf_files": 70
+      }
+    },
+    {
+      "canonical_id": "STG_QCORPUS",
+      "physical_path": "staging/qcorpus_noncert",
+      "role": "staging_derived",
+      "state": "3_extracted_evidence",
+      "scope": "in_scope",
+      "purpose": "The Cursor OCR/extraction lane: normalized pages + extracted questions/answer-keys/equations/visual assets for JEE/NEET DPPs. NOT merged into kie.db (isolated by design).",
+      "source_type": "derived_ocr_extraction",
+      "media": "extracted_json",
+      "provenance_level": "trusted_third_party",
+      "git": "gitignored_local_only",
+      "detail_manifest": "staging/qcorpus_noncert/manifests/_manifest_counts.json",
+      "depends_on_code": [
+        "scripts/intelligence/kie/qie/qcorpus_adapter.py",
+        "scripts/staging/qcorpus/config.py"
+      ],
+      "duplicate_of": null,
+      "subjects": [
+        "Physics",
+        "Chemistry",
+        "Mathematics",
+        "Biology"
+      ],
+      "exams_boards": [
+        "NEET",
+        "JEE_MAIN",
+        "JEE_ADVANCED"
+      ],
+      "classes": [],
+      "languages": [
+        "en"
+      ],
+      "notes": "THE conversion prize: 22,759 questions / 10,354 answer-keys, extracted but NOT structured.",
+      "exists": true,
+      "size_bytes": 1159958528,
+      "size_human": "1.1 GB",
+      "live": {
+        "corpus_inventory": 865,
+        "document_extraction_manifest": 863,
+        "duplicate_groups": 13,
+        "equation_recovery_manifest": 91878,
+        "extracted_questions": 22759,
+        "extraction_failures": 1,
+        "notation_repairs": 3007,
+        "page_extraction_manifest": 12926,
+        "visual_assets_manifest": 70541
+      }
+    },
+    {
+      "canonical_id": "STG_BOARD_CURRICULUM",
+      "physical_path": "staging/board_curriculum",
+      "role": "staging_derived",
+      "state": "2_ocr_normalized",
+      "scope": "mixed",
+      "purpose": "Board-curriculum staging (OCR/normalization of CBSE/AP curriculum).",
+      "source_type": "derived_ocr",
+      "media": "ocr_text",
+      "provenance_level": "official",
+      "git": "gitignored_local_only",
+      "detail_manifest": null,
+      "depends_on_code": [
+        "scripts/staging/board_curriculum/config.py"
+      ],
+      "duplicate_of": null,
+      "subjects": [],
+      "exams_boards": [],
+      "classes": [],
+      "languages": [
+        "en"
+      ],
+      "notes": "",
+      "exists": true,
+      "size_bytes": 1220874240,
+      "size_human": "1.1 GB",
+      "live": {}
+    },
+    {
+      "canonical_id": "KDB_KIE",
+      "physical_path": "knowledge/kie/kie.db",
+      "role": "knowledge_db",
+      "state": "3_extracted_evidence",
+      "scope": "in_scope",
+      "purpose": "Certified corpus DB: chunks + concepts + question_patterns + formulas (names). Notation NOT recovered (formulas.expression=name, symbols NULL).",
+      "source_type": "derived_certified",
+      "media": "sqlite",
+      "provenance_level": "derived",
+      "git": "gitignored_local_only",
+      "detail_manifest": null,
+      "depends_on_code": [
+        "scripts/intelligence/kie/config.py",
+        "scripts/intelligence/kie/store.py"
+      ],
+      "duplicate_of": null,
+      "subjects": [],
+      "exams_boards": [],
+      "classes": [],
+      "languages": [
+        "en"
+      ],
+      "notes": "Concept/pattern layer present; quantitative relations notation-damaged.",
+      "exists": true,
+      "size_bytes": 164777984,
+      "size_human": "157.1 MB",
+      "live": {
+        "chunks": 42141,
+        "concepts": 3006,
+        "question_patterns": 4853,
+        "formulas": 317,
+        "formulas_with_symbols": 0
+      }
+    },
+    {
+      "canonical_id": "KDB_QIE",
+      "physical_path": "knowledge/kie/qie.db",
+      "role": "knowledge_db",
+      "state": "7_qie_available",
+      "scope": "in_scope",
+      "purpose": "QIE derived knowledge substrate: KVS (assertion/taxonomy/sequence/structure_function/comparison), question_dna, item_model, tier2_verdict, distractor_dna, pilot_verified_item.",
+      "source_type": "derived_knowledge",
+      "media": "sqlite",
+      "provenance_level": "derived",
+      "git": "gitignored_local_only",
+      "detail_manifest": null,
+      "depends_on_code": [
+        "scripts/intelligence/kie/qie/store.py"
+      ],
+      "duplicate_of": null,
+      "subjects": [],
+      "exams_boards": [],
+      "classes": [],
+      "languages": [
+        "en"
+      ],
+      "notes": "The canonical verified-knowledge store. Governed-conversion target for structured facts.",
+      "exists": true,
+      "size_bytes": 3207168,
+      "size_human": "3.1 MB",
+      "live": {
+        "kvs_assertion_total": 1781,
+        "kvs_assertion_corroborated_ge2": 77,
+        "kvs_structure_function": 6,
+        "kvs_sequence": 13,
+        "kvs_comparison": 2,
+        "kvs_taxonomy": 131,
+        "tier2_agree": 411,
+        "distractor_dna": 121,
+        "item_model": 84,
+        "item_model_ai_validated": 39,
+        "pilot_verified_item": 1496
+      }
+    },
+    {
+      "canonical_id": "KDB_INTAKE_STAGING",
+      "physical_path": "knowledge/kie/intake/staging",
+      "role": "knowledge_db",
+      "state": "2_ocr_normalized",
+      "scope": "mixed",
+      "purpose": "Per-batch intake staging DBs (incremental ingestion).",
+      "source_type": "derived_intake",
+      "media": "sqlite",
+      "provenance_level": "derived",
+      "git": "gitignored_local_only",
+      "detail_manifest": null,
+      "depends_on_code": [
+        "scripts/intelligence/kie/config.py"
+      ],
+      "duplicate_of": null,
+      "subjects": [],
+      "exams_boards": [],
+      "classes": [],
+      "languages": [
+        "en"
+      ],
+      "notes": "",
+      "exists": true,
+      "size_bytes": 13692928,
+      "size_human": "13.1 MB",
+      "live": {}
+    },
+    {
+      "canonical_id": "KDB_PARSED",
+      "physical_path": "knowledge/kie/parsed",
+      "role": "staging_derived",
+      "state": "2_ocr_normalized",
+      "scope": "in_scope",
+      "purpose": "Per-document parsed outputs (phase2/phase4 intermediate).",
+      "source_type": "derived_parse",
+      "media": "ocr_text",
+      "provenance_level": "derived",
+      "git": "gitignored_local_only",
+      "detail_manifest": null,
+      "depends_on_code": [],
+      "duplicate_of": null,
+      "subjects": [],
+      "exams_boards": [],
+      "classes": [],
+      "languages": [
+        "en"
+      ],
+      "notes": "",
+      "exists": true,
+      "size_bytes": 267059200,
+      "size_human": "254.7 MB",
+      "live": {}
+    },
+    {
+      "canonical_id": "GOV_PROVENANCE_MANIFEST",
+      "physical_path": "PROVENANCE_MANIFEST.json",
+      "role": "governance_index",
+      "state": "1_raw_source",
+      "scope": "mixed",
+      "purpose": "Per-file provenance manifest for the curriculum/board acquisition universe (839 resources): id/board/class/subject/doctype/sha256/local_path/license.",
+      "source_type": "governance",
+      "media": "manifest",
+      "provenance_level": "official",
+      "git": "git_tracked",
+      "detail_manifest": null,
+      "depends_on_code": [],
+      "duplicate_of": null,
+      "subjects": [],
+      "exams_boards": [],
+      "classes": [],
+      "languages": [
+        "en"
+      ],
+      "notes": "Detail layer for RAW_CURRICULUM_*; does NOT cover foundation/qcorpus/DBs (this registry does).",
+      "exists": true,
+      "size_bytes": 1032192,
+      "size_human": "1008.0 KB",
+      "live": {}
+    },
+    {
+      "canonical_id": "GOV_INDEXES",
+      "physical_path": "indexes",
+      "role": "governance_index",
+      "state": "1_raw_source",
+      "scope": "n_a",
+      "purpose": "Acquisition indexes: master_index / checksum_index / download_index / duplicate_map.",
+      "source_type": "governance",
+      "media": "manifest",
+      "provenance_level": "derived",
+      "git": "git_tracked",
+      "detail_manifest": null,
+      "depends_on_code": [],
+      "duplicate_of": null,
+      "subjects": [],
+      "exams_boards": [],
+      "classes": [],
+      "languages": [
+        "en"
+      ],
+      "notes": "",
+      "exists": true,
+      "size_bytes": 1433600,
+      "size_human": "1.4 MB",
+      "live": {}
+    },
+    {
+      "canonical_id": "GOV_REPORTS",
+      "physical_path": "reports",
+      "role": "governance_index",
+      "state": "1_raw_source",
+      "scope": "n_a",
+      "purpose": "Curriculum coverage/audit reports + canonical curriculum matrix.",
+      "source_type": "governance",
+      "media": "manifest",
+      "provenance_level": "derived",
+      "git": "git_tracked",
+      "detail_manifest": null,
+      "depends_on_code": [],
+      "duplicate_of": null,
+      "subjects": [],
+      "exams_boards": [],
+      "classes": [],
+      "languages": [
+        "en"
+      ],
+      "notes": "",
+      "exists": true,
+      "size_bytes": 2424832,
+      "size_human": "2.3 MB",
+      "live": {}
+    },
+    {
+      "canonical_id": "GOV_DISCOVERY",
+      "physical_path": "discovery",
+      "role": "governance_index",
+      "state": "1_raw_source",
+      "scope": "n_a",
+      "purpose": "Official-universe discovery + trusted-source catalogues.",
+      "source_type": "governance",
+      "media": "manifest",
+      "provenance_level": "official",
+      "git": "git_tracked",
+      "detail_manifest": null,
+      "depends_on_code": [],
+      "duplicate_of": null,
+      "subjects": [],
+      "exams_boards": [],
+      "classes": [],
+      "languages": [
+        "en"
+      ],
+      "notes": "",
+      "exists": true,
+      "size_bytes": 1142784,
+      "size_human": "1.1 MB",
+      "live": {}
+    }
+  ]
+}
