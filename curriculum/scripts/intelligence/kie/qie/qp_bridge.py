@@ -52,6 +52,11 @@ def _engine_pool(subjects, seed: int, per: int = 14) -> List[dict]:
             out.append(_norm(it, 3))
         for it in JM.run(per_family=per, seed=str(seed))["verified_bank"]:
             out.append(_norm(it, 3))
+    if subs & {"Physics", "Chemistry"}:            # qie's existing verified single-relation items (V=IR, …)
+        from kie.qie import generate_numeric as GN
+        for it in GN.run(GN.TEMPLATES, per_template=per, seed=str(seed))["verified_bank"]:
+            if it["subject"] in subs:
+                out.append(_norm(it, 3))
     return out
 
 
@@ -83,6 +88,26 @@ def _targets(item: dict) -> List[str]:
         return ["newton"]                                    # Newton's laws (F = ma) — the governing concept
     if f in ("phys_power_from_v_r", "phys_series_circuit_power"):
         return ["power", "ohm"]
+    # qie single-relation items (generate_numeric) → bind by their certified law/relation concept
+    c = item.get("concept", "")
+    if c in ("REL_OHMS_LAW",):
+        return ["ohm"]
+    if c in ("REL_ELECTRIC_POWER",):
+        return ["power"]
+    if c in ("REL_KINETIC_ENERGY", "REL_KE_MOMENTUM"):
+        return ["kinetic energy"]
+    if c in ("REL_POTENTIAL_ENERGY",):
+        return ["potential energy"]
+    if c in ("REL_WEIGHT",):
+        return ["weight"]
+    if c in ("REL_SERIES_RESISTANCE", "REL_PARALLEL_RESISTANCE"):
+        return ["resistance", "resistors"]
+    if c in ("REL_KINEMATICS_V", "REL_KINEMATICS_A"):
+        return ["equations of motion", "motion", "velocity", "acceleration"]
+    if c in ("REL_FREQUENCY",):
+        return ["frequency"]
+    if c in ("REL_EFFICIENCY",):
+        return ["efficiency"]
     if f == "chem_mass_to_molecules":
         return ["mole", "avogadro"]
     if f in ("chem_stoichiometry_mass", "chem_gas_stoichiometry_volume"):
