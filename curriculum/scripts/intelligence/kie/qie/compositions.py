@@ -29,6 +29,11 @@ def _si(seed: str, lo: int, hi: int) -> int:
 
 
 def _fmt(v) -> str:
+    """Exact display for integers/fractions/sympy numbers; clean decimals for physics-style floats."""
+    if isinstance(v, float):
+        if v == int(v):
+            return str(int(v))
+        return f"{v:.4f}".rstrip("0").rstrip(".")
     f = v if isinstance(v, Fraction) else Fraction(str(v))
     return str(f.numerator) if f.denominator == 1 else f"{f.numerator}/{f.denominator}"
 
@@ -44,9 +49,22 @@ class CompositionTemplate:
     setup: Callable          # params(seed) already applied → returns (env0, params)
     pipeline: List[Step]
     answer_key: str
-    end_to_end: Callable     # (env, params) -> independent value (a genuinely different route)
+    end_to_end: Callable     # (env, params) -> bool: an INDEPENDENT check (different route / round-trip)
     stem: Callable           # (env, params) -> str
     distractors: Callable     # (env, params) -> list of candidate wrong values
+    subject: str = "Mathematics"           # domain the engine is being applied to (Math/Physics/Chemistry/…)
+    fmt: Callable = _fmt                    # value → option text (per-domain: exact for Math, decimals for Physics)
+    gen_prefix: str = "GENK_"              # gen_id prefix per domain
+
+
+# Shared cross-domain registry — Physics/Chemistry register their templates here too, so verify_composition()
+# resolves any template by name and the SAME machinery serves every domain (the universal-substrate proof).
+TEMPLATE_REGISTRY: Dict[str, CompositionTemplate] = {}
+
+
+def register(templates: Dict[str, CompositionTemplate]) -> Dict[str, CompositionTemplate]:
+    TEMPLATE_REGISTRY.update(templates)
+    return templates
 
 
 # ── T1: area between a parabola and the x-axis, between its roots (algebra + calculus) ─────────────────
@@ -62,7 +80,7 @@ _T1 = CompositionTemplate(
      Step("hi", "max_root", ("roots",)), Step("signed", "integrate_def", ("f", "lo", "hi")),
      Step("area", "absval", ("signed",))],
     "area",
-    lambda env, p: abs(float(mpmath.quad(_poly_fn(env["f"]), [p["p"], p["q"]]))),
+    lambda env, p: close(abs(float(mpmath.quad(_poly_fn(env["f"]), [p["p"], p["q"]]))), env["area"]),
     lambda env, p: (f"The area (in square units) of the finite region enclosed between the curve "
                     f"y = {_poly_text(env['f'])} and the x-axis is:"),
     lambda env, p: [env["signed"], 2 * env["area"], env["area"] + abs(p["q"] - p["p"])],
@@ -78,7 +96,7 @@ def _t2_setup(seed):
 
 def _t2_e2e(env, p):
     a2, b1, c0 = [Fraction(str(c)) for c in sp.Poly(env["f"], x).all_coeffs()]   # closed-form vertex formula
-    return c0 - b1 * b1 / (4 * a2)
+    return close(c0 - b1 * b1 / (4 * a2), env["minval"])
 
 
 _T2 = CompositionTemplate(
@@ -101,7 +119,7 @@ def _t3_setup(seed):
 
 def _t3_e2e(env, p):
     g = _poly_fn(env["f"]); r2 = p["r2"]; h = 1e-6
-    return (g(r2 + h) - g(r2 - h)) / (2 * h)                       # numeric derivative of f at r2
+    return close((g(r2 + h) - g(r2 - h)) / (2 * h), env["slope"])  # numeric derivative of f at r2
 
 
 _T3 = CompositionTemplate(
@@ -125,7 +143,7 @@ def _t4_setup(seed):
 
 def _t4_e2e(env, p):
     g = _poly_fn(env["f"])
-    return g(p["hi"]) - g(p["lo"])                                 # FTC identity via direct evaluation
+    return close(g(p["hi"]) - g(p["lo"]), env["val"])             # FTC identity via direct evaluation
 
 
 def _t4_distr(env, p):
@@ -159,7 +177,7 @@ def _t5_setup(seed):
 
 def _t5_e2e(env, p):
     gf, gg = _poly_fn(env["f"]), _poly_fn(env["g"])
-    return abs(float(mpmath.quad(lambda t: gf(t) - gg(t), [p["p"], p["q"]])))
+    return close(abs(float(mpmath.quad(lambda t: gf(t) - gg(t), [p["p"], p["q"]]))), env["area"])
 
 
 _T5 = CompositionTemplate(
@@ -175,6 +193,7 @@ _T5 = CompositionTemplate(
 
 
 TEMPLATES: Dict[str, CompositionTemplate] = {t.name: t for t in (_T1, _T2, _T3, _T4, _T5)}
+register(TEMPLATES)
 
 
 def _round(v):
@@ -184,9 +203,12 @@ def _round(v):
     return Fraction(str(v))
 
 
-def generate(per_template: int = 8, seed: str = "K1") -> List[dict]:
+def generate(templates: Optional[Dict[str, CompositionTemplate]] = None, per_template: int = 8,
+             seed: str = "K1") -> List[dict]:
+    tmap = TEMPLATES if templates is None else templates
     cands: List[dict] = []
-    for name, tmpl in TEMPLATES.items():
+    for name, tmpl in tmap.items():
+        fmt = tmpl.fmt
         for j in range(per_template):
             s = f"{seed}|{name}|{j}"
             env0, params = tmpl.setup(s)
@@ -194,33 +216,33 @@ def generate(per_template: int = 8, seed: str = "K1") -> List[dict]:
             if not ok:                                             # a per-step independent check failed
                 continue
             answer = env[tmpl.answer_key]
-            indep = tmpl.end_to_end(env, params)
-            if indep is None or not close(indep, answer):          # end-to-end independent check failed
+            if not tmpl.end_to_end(env, params):                   # independent end-to-end check failed
                 continue
-            ans_t = _fmt(answer)
+            ans_t = fmt(answer)
             opts = [answer]
             for d in tmpl.distractors(env, params):
-                dt = _fmt(d)
+                dt = fmt(d)
                 if dt == ans_t:
                     continue
-                if dt not in {_fmt(o) for o in opts}:
+                if dt not in {fmt(o) for o in opts}:
                     opts.append(d)
                 if len(opts) == 4:
                     break
             if len(opts) < 4:
                 continue
-            opts_sorted = sorted(opts, key=lambda e: hashlib.sha256((_fmt(e) + s).encode()).hexdigest())
-            options = {str(i + 1): _fmt(e) for i, e in enumerate(opts_sorted)}
+            opts_sorted = sorted(opts, key=lambda e: hashlib.sha256((fmt(e) + s).encode()).hexdigest())
+            options = {str(i + 1): fmt(e) for i, e in enumerate(opts_sorted)}
             depth = reasoning_depth(tmpl.pipeline, env0.keys())
             sig = hashlib.sha256(f"{name}|{tmpl.stem(env, params)}".encode()).hexdigest()[:16]
             cands.append({
-                "gen_id": "GENK_" + sig,
+                "gen_id": tmpl.gen_prefix + sig,
                 "item_model_id": "IMK_" + hashlib.sha256(f"{tmpl.concept_code}".encode()).hexdigest()[:12],
-                "subject": "Mathematics", "profile": "JEE_MAIN", "concept": tmpl.concept_code,
+                "subject": tmpl.subject, "profile": "JEE_MAIN", "concept": tmpl.concept_code,
                 "archetype": "multi_step_numerical", "frame_id": name,
                 "stem": tmpl.stem(env, params), "options": options, "answer_text": ans_t,
                 "reasoning_depth": depth, "depth_band": depth_band(depth),
-                "provenance": {"template": name, "concepts": pipeline_concepts(tmpl.pipeline),
+                "provenance": {"template": name, "subject": tmpl.subject,
+                               "concepts": pipeline_concepts(tmpl.pipeline),
                                "domains": pipeline_domains(tmpl.pipeline), "reasoning_depth": depth,
                                "depth_band": depth_band(depth), "verification": "per_step + independent_end_to_end"},
                 "_env0": env0, "_params": params, "_answer": answer, "_sig": sig,
@@ -230,18 +252,19 @@ def generate(per_template: int = 8, seed: str = "K1") -> List[dict]:
 
 def verify_composition(cand: dict) -> str:
     """Authoritative re-verification from scratch: re-run the pipeline (per-step independent checks) + the
-    independent end-to-end recomputation, and confirm the recorded answer/options are untampered."""
-    tmpl = TEMPLATES[cand["frame_id"]]
+    independent end-to-end recomputation, and confirm the recorded answer/options are untampered. Resolves the
+    template from the shared cross-domain registry, so it verifies Math/Physics/Chemistry items identically."""
+    tmpl = TEMPLATE_REGISTRY[cand["frame_id"]]
+    fmt = tmpl.fmt
     env, ok = run_pipeline(cand["_env0"], tmpl.pipeline)
     if not ok:
         return "disagree"
     true_ans = env[tmpl.answer_key]
-    indep = tmpl.end_to_end(env, cand["_params"])
-    if indep is None or not close(indep, true_ans):
+    if not tmpl.end_to_end(env, cand["_params"]):
         return "disagree"
     if not close(true_ans, cand["_answer"]):
         return "disagree"
-    if cand["answer_text"] != _fmt(true_ans):
+    if cand["answer_text"] != fmt(true_ans):
         return "disagree"
     if list(cand["options"].values()).count(cand["answer_text"]) != 1:
         return "disagree"
@@ -259,10 +282,11 @@ def gate(cand: dict, seen: set) -> Optional[str]:
     return None
 
 
-def run(per_template: int = 8, seed: str = "K1", verify_fn: Callable[[dict], str] = verify_composition) -> dict:
+def run(templates: Optional[Dict[str, CompositionTemplate]] = None, per_template: int = 8,
+        seed: str = "K1", verify_fn: Callable[[dict], str] = verify_composition) -> dict:
     seen: set = set()
     passed, rejected = [], []
-    for cand in generate(per_template, seed):
+    for cand in generate(templates, per_template, seed):
         reason = gate(cand, seen)
         clean = {k: v for k, v in cand.items() if not k.startswith("_")}
         if reason:

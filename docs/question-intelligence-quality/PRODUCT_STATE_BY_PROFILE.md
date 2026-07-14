@@ -65,8 +65,15 @@ per profile.
 > (quality); every step independently verified ⇒ sound by construction. 2 schemas → 6 auto-composed shapes; AI
 > judge 12/12 (phrasing genuinely high-quality). **Measured capacity: 50,159 distinct verified auto-composed
 > items** (≈56k with the templates, unwidened → lakhs–crores by config alone — the mandate demonstrated).
-> **Pilot bank now 1,345** (Mathematics×JEE_MAIN **715**). JEE-exam *evidence* still EVIDENCE-BLOCKED but
-> synthesized compositional depth doesn't need it. See `COMPOSITIONAL_ARCHITECTURE.md`, `GENERATION_JEE_BUILD.md`.
+>
+> **UPDATE 2026-07-14 — UNIVERSAL SUBSTRATE (owner-directed: prove the engine is domain-universal).**
+> `physics.py` and `chemistry.py` add NOTHING to the engine — they only register domain operators + templates
+> into the shared registries; the identical generate/verify/run path serves all three subjects. Physics
+> end-to-end = independent physical principle (work–energy / impulse–momentum / P=V²/R); Chemistry end-to-end =
+> round-trip conservation (C₁V₁=C₂V₂ / mass conservation / mole identity). 6 domain templates (depths 2–3),
+> verified per-step AND end-to-end. **Pilot bank now 1,416** — Physics×JEE_MAIN & Chemistry×JEE_MAIN
+> compositional items added (bounded evidence). The operator/composition/verification/depth architecture is
+> **not Math-specific**. See `COMPOSITIONAL_ARCHITECTURE.md`.
 
 ## Measured Subject × Profile ratings
 

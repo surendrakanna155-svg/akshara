@@ -123,6 +123,42 @@ curated templates, **the compositional foundation already encodes ≈56,000 dist
 schemas + 5 templates, unwidened. Widening ranges (config) and adding schemas/operators takes this to
 lakhs–crores with **no engine changes** — the mandate, demonstrated end-to-end.
 
+## Universal substrate — Physics & Chemistry (`physics.py`, `chemistry.py`)
+
+Owner-directed (2026-07-14): prove the substrate is **domain-universal**, not Mathematics-only. It is —
+demonstrated by construction: `physics.py` and `chemistry.py` add **nothing** to the engine (`compose.py`) or
+the composition machinery (`compositions.py`). They only **register** domain operators into the shared operator
+registry and domain templates into the shared template registry; the identical generate / verify / run path
+serves all three subjects. (Two small generalisations enabled this cleanly: a per-template value **formatter**
+— exact fractions for Math, decimals for Physics, scientific notation for Chemistry — and a boolean
+`end_to_end` check so each domain can use its most genuinely-independent verification.)
+
+**Independent verification carries across domains:**
+- **Physics** — per-operator checks recompute a *different* quantity (÷ vs ×, √ vs square); end-to-end uses a
+  genuinely **independent physical principle**: work–energy theorem (KE), impulse–momentum theorem (momentum),
+  `P = V²/R` (power). A different law, not a rearrangement.
+- **Chemistry** — end-to-end is a **round-trip conservation check**: reconstruct an original input from the
+  final answer via the inverse chain (`C₁V₁ = C₂V₂` for dilution, mass conservation for stoichiometry, mole
+  identity for the Avogadro count) and confirm it matches.
+
+**v1 domain templates (6):** Physics — force→accel→velocity→KE (depth 3), →momentum (3), V,R→current→power (2);
+Chemistry — mass→moles→molecules (2), stoichiometry mass→mass (3), dilution molarity (2). Independent examiner
+AI judge on a stratified 12-item cross-domain sample: **12/12 agree** (6/6 Physics, 6/6 Chemistry) — correct
+units (J, kg·m/s, W, ×10²³, g, mol/L), unique correct option, unambiguous well-posed stems (dilution stems
+specify *total* volume, avoiding the "water added vs total volume" ambiguity)
+(`phase0_evidence/pilot_bio_neet/domains_sanity_verdict.json`). Bounded evidence banked (71 items):
+**Physics × JEE_MAIN and Chemistry × JEE_MAIN compositional items now in the bank; total → 1,416.**
+
+**What this proves:** the operator/composition/verification/depth architecture is not Math-specific — any
+quantitative domain plugs in by registering operators (with independent verifiers) + curated templates. The same
+lakhs-scale capacity argument (params × fillings × templates, config-only widening) applies per domain.
+
+**Honest limitation (measured, not a defect):** the Chemistry v1 templates use *generic* substances
+("a substance of molar mass M", "reactant A / product B") rather than named compounds — a deliberate choice
+that sidesteps real-molar-mass mismatches while proving the compositional mechanism. Grounding these to **real
+named compounds** (bind the molar-mass parameter to a validated compound table, with balanced-equation ratios)
+is a clean future enhancement on the same substrate — it swaps the parameter source, not the engine.
+
 ## Roadmap (on the same foundation — additive, no rewrites)
 
 1. **More operators** (limits, matrix product/inverse, `solve_linear/quadratic`, `binomial_term`, `summation`)

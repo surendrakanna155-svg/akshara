@@ -1,0 +1,119 @@
+{
+  "items": [
+    {
+      "subject": "Physics",
+      "frame": "phys_force_to_kinetic_energy",
+      "stem_summary": "m=3kg, F=9N, t=4s -> KE",
+      "your_worked_answer": "a=F/m=3 m/s^2; v=a*t=12 m/s; KE=0.5*3*12^2=216 J",
+      "proposed_answer": "216",
+      "verdict": "agree",
+      "reason": "Matches independent computation; unique among options {72,36,216,432}; stem unambiguous (rest start, constant force, straight-line, ideal)."
+    },
+    {
+      "subject": "Physics",
+      "frame": "phys_force_to_kinetic_energy",
+      "stem_summary": "m=2kg, F=10N, t=5s -> KE",
+      "your_worked_answer": "a=5 m/s^2; v=25 m/s; KE=0.5*2*625=625 J",
+      "proposed_answer": "625",
+      "verdict": "agree",
+      "reason": "Matches independent computation; unique among options {625,1250,312.5,50}; phrasing clear and well-posed."
+    },
+    {
+      "subject": "Physics",
+      "frame": "phys_force_to_momentum",
+      "stem_summary": "m=3kg, F=6N, t=4s -> momentum",
+      "your_worked_answer": "p=F*t=6*4=24 kg*m/s",
+      "proposed_answer": "24",
+      "verdict": "agree",
+      "reason": "Matches independent computation; unique among options {24,48,6,96}; unit (kg*m/s) correctly requested and used."
+    },
+    {
+      "subject": "Physics",
+      "frame": "phys_force_to_momentum",
+      "stem_summary": "m=5kg, F=10N, t=2s -> momentum",
+      "your_worked_answer": "p=F*t=10*2=20 kg*m/s",
+      "proposed_answer": "20",
+      "verdict": "agree",
+      "reason": "Matches independent computation; unique among options {10,4,40,20}; unambiguous phrasing."
+    },
+    {
+      "subject": "Physics",
+      "frame": "phys_power_from_v_r",
+      "stem_summary": "R=6ohm, V=12V -> power",
+      "your_worked_answer": "P=V^2/R=144/6=24 W",
+      "proposed_answer": "24",
+      "verdict": "agree",
+      "reason": "Matches independent computation; unique among options {48,2,24,72}; ideal-resistor assumption is standard and stated implicitly by context."
+    },
+    {
+      "subject": "Physics",
+      "frame": "phys_power_from_v_r",
+      "stem_summary": "R=4ohm, V=8V -> power",
+      "your_worked_answer": "P=V^2/R=64/4=16 W",
+      "proposed_answer": "16",
+      "verdict": "agree",
+      "reason": "Matches independent computation; unique among options {16,32,2,12}; well-posed."
+    },
+    {
+      "subject": "Chemistry",
+      "frame": "chem_mass_to_molecules",
+      "stem_summary": "58g of substance, M=58 g/mol -> molecules",
+      "your_worked_answer": "n=58/58=1 mol; N=1*6.022e23=6.022x10^23",
+      "proposed_answer": "6.022×10^23",
+      "verdict": "agree",
+      "reason": "Matches independent computation; unique among options; use of generic 'substance' (rather than a named compound) avoids a real-molar-mass mismatch, so no ambiguity."
+    },
+    {
+      "subject": "Chemistry",
+      "frame": "chem_mass_to_molecules",
+      "stem_summary": "54g of substance, M=18 g/mol -> molecules",
+      "your_worked_answer": "n=54/18=3 mol; N=3*6.022e23=18.066x10^23",
+      "proposed_answer": "18.066×10^23",
+      "verdict": "agree",
+      "reason": "Matches independent computation; unique among options {36.132,325.188,18.066,9.033}x10^23; unambiguous."
+    },
+    {
+      "subject": "Chemistry",
+      "frame": "chem_stoichiometry_mass",
+      "stem_summary": "A(M=44)->3B(M=32) stoichiometric ratio; 88g of A -> mass of B",
+      "your_worked_answer": "n_A=88/44=2 mol; n_B=3*2=6 mol; mass_B=6*32=192 g",
+      "proposed_answer": "192",
+      "verdict": "agree",
+      "reason": "Matches independent computation; unique among options {64,264,192,384}; ratio is stated explicitly (1 mol A -> 3 mol B) so no ambiguity in stoichiometry, even though the reaction/compounds are generic placeholders rather than named species."
+    },
+    {
+      "subject": "Chemistry",
+      "frame": "chem_stoichiometry_mass",
+      "stem_summary": "A(M=28)->2B(M=56) stoichiometric ratio; 56g of A -> mass of B",
+      "your_worked_answer": "n_A=56/28=2 mol; n_B=2*2=4 mol; mass_B=4*56=224 g",
+      "proposed_answer": "224",
+      "verdict": "agree",
+      "reason": "Matches independent computation; unique among options {112,56,448,224}; well-posed given explicit mol ratio."
+    },
+    {
+      "subject": "Chemistry",
+      "frame": "chem_dilution_molarity",
+      "stem_summary": "3L of 4 mol/L diluted to total 6L -> molarity",
+      "your_worked_answer": "C2=C1*V1/V2=4*3/6=2 mol/L",
+      "proposed_answer": "2",
+      "verdict": "agree",
+      "reason": "Matches independent computation; unique among options {8,4,2,12}; stem specifies FINAL total volume (not water added), which removes the classic dilution ambiguity."
+    },
+    {
+      "subject": "Chemistry",
+      "frame": "chem_dilution_molarity",
+      "stem_summary": "1L of 6 mol/L diluted to total 4L -> molarity",
+      "your_worked_answer": "C2=C1*V1/V2=6*1/4=1.5 mol/L",
+      "proposed_answer": "1.5",
+      "verdict": "agree",
+      "reason": "Matches independent computation; unique among options {6,1.5,24,3}; unambiguous 'total volume' framing."
+    }
+  ],
+  "n_agree": 12,
+  "n_flag": 0,
+  "by_subject": {
+    "Physics": { "n_agree": 6, "n_flag": 0 },
+    "Chemistry": { "n_agree": 6, "n_flag": 0 }
+  },
+  "summary": "All 12 items independently re-derived match the proposed answer exactly, each answer is the unique option among 4 plausible distractors, and every stem is unambiguous (single interpretation, units stated, ideal-case assumptions standard for JEE-style physics/chemistry). No arithmetic, unit, or phrasing errors found. Minor stylistic note (not a flag): the two chem_stoichiometry_mass items use generic/unnamed 'reactant A'/'product B' rather than real compounds, and chem_mass_to_molecules uses a generic 'substance' -- this is actually a safe design choice since it sidesteps any real-molar-mass mismatch, but it means these two templates read as abstract math-in-chemistry-clothing rather than grounded chemistry."
+}
