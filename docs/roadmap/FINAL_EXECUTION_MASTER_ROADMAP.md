@@ -30,14 +30,14 @@
 | Phase | Title | Priority | Status | Gate |
 |---|---|---|---|---|
 | **RECON** | Roadmap Reconciliation (RECON-1) | 🔴 | ✅ Complete (2026-07-10) — tracking-only, no implementation | EOS DOCS PASS |
-| **P0** | Truth · Documentation · Live Verification | 🔴 | 🔵 — W1 ✅ · W2 ✅ (14/19 tasks) · **P0-LIVE-1 ⚪ (consolidated live checklist, absorbs W3; 4/13 items already live-verified 2026-07-09)** | EOS PASS per task |
-| **P1** | Remaining Backend & Code Fixes | 🟠 | 🔵 — non-gated lane ✅ (CODE-1/2/3/5 · PROD-0 · C1–C21 · CI-0 · **GS-1..3 gap-sweeps**); open: CODE-4/6/7/8 👤 · **PROD-22 Face ID (Must-Before-GA — schedule now)** · SEC-1 · TEST-1/2 | EOS PASS per wave |
+| **P0** | Truth · Documentation · Live Verification | 🔴 | 🔵 — W1 ✅ · W2 ✅ (14/19 tasks) · **P0-LIVE-1 🔵 (① AI/Face-ID/SCE-1 migrations + edge DEPLOYED 2026-07-14 → live head `20260878`; ⑪⑫⑬ ✅ 2026-07-09; rest owner-provisioned incl. the 7-day clock)** | EOS PASS per task |
+| **P1** | Remaining Backend & Code Fixes | 🟠 | 🔵 — non-gated lane ✅ (CODE-1/2/3/5 · PROD-0 · C1–C21 · CI-0 · **GS-1..3 gap-sweeps**) · **PROD-22 Face ID ✅ hardening exit 2026-07-12** · **CODE-6/7/8 ✅ owner-decided+implemented 2026-07-13** · SEC-1 🔶 (runnable slice exit 2026-07-13; TLS-pin/root-detect/session-revoke residue) · CODE-4 👤 deferred post-pilot (owner 2026-07-13) · TEST-1/2 device/env-gated | EOS PASS per wave |
 | **P2** | UI / UX Improvements | 🟠 | ✅ Complete (2026-07-08, UX-1..5) | EOS UX PASS |
-| **P3** | Adaptive AI Implementation | 🟡 | 🔵 — **W1 (P3-AI-1) ✅ CERTIFIED (2026-07-10)** · **W2 (P3-AI-2) 🔶 hardening in progress** · P3-AI-3 closure ⚪ | EOS AI per sub-wave |
-| **K** | Knowledge Lane — KIE + QP Engine | 🟡 | 🔶 — K-1 KIE ✅ (local) · **K-2 QP hardening 🔶** · K-3 promotion 👤 (not GA-gating) · K-4 re-cert ⚪ | K-gates |
-| **CFC** | Code Freeze Checklist (quality gate) | 🔴 | ⚪ — mandatory before FREEZE-1 | CFC-1 PASS |
-| **FREEZE** | Feature Freeze | 🔴 | ⚪ — entry: CFC-1 PASS | FREEZE declared |
-| **P4** | Global Red Team Preparation | 🔴 | ⚪ — entry: FREEZE-1 | Framework ready |
+| **P3** | Adaptive AI Implementation | 🟡 | ✅ — **W1 (P3-AI-1) ✅ CERTIFIED (2026-07-10)** · **W2 full surface + P3-AI-3 HARDENING EXIT MET 2026-07-11 (R6 verify clean = 2nd consecutive)** · 🟩 only via P7 | EOS AI per sub-wave |
+| **K** | Knowledge Lane — KIE + QP Engine | 🟡 | 🔶 — K-1 KIE ✅ (local) · **K-2 QP hardening 🔶 (CARVED OUT of the ERP freeze — owner 2026-07-14)** · K-3 promotion 👤 (not GA-gating) · K-4 re-cert ⚪ | K-gates |
+| **CFC** | Code Freeze Checklist (quality gate) | 🔴 | ✅ **PASS 2026-07-14** (`d59b5762` — 10/10 green in one sweep; evidence `docs/engineering/eos/CFC1_CODE_FREEZE_CHECKLIST_EVIDENCE.md`) | CFC-1 PASS ✅ |
+| **FREEZE** | Feature Freeze | 🔴 | ✅ **DECLARED 2026-07-14** — ERP feature freeze in force (K lane carved out by owner ruling); only bug/regression/perf/security/quality/stability work beyond this point | FREEZE declared ✅ |
+| **P4** | Global Red Team Preparation | 🔴 | 🔵 — **OPEN (entry FREEZE-1 met 2026-07-14)** — RT-0 seeds/operators/fixtures, then RT-1 12-domain assault | Framework ready |
 | **P5** | Red Team Fixes | 🔴 | ⚪ Pending | EOS PASS + live re-verify |
 | **P6** | Final Validation · Pilot · Beta Schools | 🔴 | ⚪ — **VAL-1 → PILOT-1 → BETA-1** (strictly in order) | VAL PASS → PILOT-READY → BETA PASS |
 | **P7** | Production Certification | 🔴 | ⚪ — repeated audit rounds until no meaningful findings | GA gates PASS |
@@ -49,18 +49,20 @@
 
 | Lane | Units | ✅ | 🔶 | Credit |
 |---|---:|---:|---:|---:|
-| Gates (RECON-1 · CFC-1 · FREEZE-1) | 3 | 1 | 0 | 1.0 |
-| P0 (W1 · W2 · LIVE-1) | 3 | 2 | 0 | 2.0 |
-| P1 (13 base + 22 PROD + GS-1..3) | 38 | 27 | 0 | 27.0 |
+| Gates (RECON-1 ✅ · CFC-1 ✅ · FREEZE-1 ✅) | 3 | 3 | 0 | 3.0 |
+| P0 (W1 ✅ · W2 ✅ · LIVE-1 partial: ①⑪⑫⑬ done, owner items open) | 3 | 2 | 0 | 2.0 |
+| P1 (13 base + 22 PROD + GS-1..3 — +PROD-22 ✅ · +CODE-6/7/8 ✅ · SEC-1 🔶; CODE-4 deferred 👤 · TEST-1/2 gated) | 38 | 31 | 1 | 31.5 |
 | P2 (UX-1..5) | 5 | 5 | 0 | 5.0 |
-| P3 (W1.1–1.5 · W2.0/GATE/S · W2.1–2.9 · AI-3) | 18 | 5 | 8 | 9.0 |
-| K (K-1..K-4) | 4 | 1 | 1 | 1.5 |
+| P3 (W1.1–1.5 · W2.0/GATE/S · W2.1–2.9 · AI-3 — **hardening exit 2026-07-11, all landed**) | 18 | 18 | 0 | 18.0 |
+| K (K-1 ✅ · K-2 🔶 carved-out · K-3 👤 · K-4 ⚪) | 4 | 1 | 1 | 1.5 |
 | P4 | 2 | 0 | 0 | 0 |
 | P5 | 1 | 0 | 0 | 0 |
 | P6 (VAL-1 · PILOT-1 · BETA-1) | 3 | 0 | 0 | 0 |
 | P7 | 1 | 0 | 0 | 0 |
 | P8 | 5 | 0 | 0 | 0 |
-| **Total** | **83** | **41** | **9** | **45.5 → 54.8%** |
+| **Total** | **83** | **60** | **2** | **61.0 → 73.5%** |
+
+*Recompute note (2026-07-14, at the CFC-1/FREEZE-1 boundary — the recompute the parked dashboard marked DUE):* P3's 18 units graduate ✅ at the P3-AI-3 hardening exit per the state law (🟩 still only via P7); P1 credits PROD-22 (exit 2026-07-12) + CODE-6/7/8 (owner-decided & implemented 2026-07-13) ✅ and SEC-1 🔶 (runnable-slice exit; device/live residue); CODE-4 (deferred post-pilot) and TEST-1/2 (device/env-gated) stay uncredited; LIVE-1 stays uncredited despite ① (majority of checklist is owner-provisioning). SCE-1 (built 2026-07-12, outside the RECON-1 denominator) is deliberately NOT added as a unit — denominators never grow mid-flight.
 
 **Already-verified-live during the audit (do NOT restart):** tenant RLS isolation (QA-2/LV-11), edge uses `erp_tenant` NOBYPASSRLS (DB-2), entitlement enforcement ON (ENG-2/OPS-5), automated encrypted backups + monthly restore drill (LV-2/LV-8), watchdog running (LV-9), AI live via OpenRouter (AI-4 part), live DB password rotated (DB-1 live), `inventory_stock_valuations` WITH-CHECK fix. See ledger §A.
 **Additionally live-verified 2026-07-09 (do NOT restart):** production deploy of the full 44-migration backlog (prod `akshara_db` → `20260866`) + edge redeploy `2568ff9b` with all `/health` green (`8c98e3b3`) · post-deploy broad smoke 34/36 reads, 0 server errors (`cc7c4efb`) · live RLS cross-tenant probes — 12 QA-B rows PASS, 233/233 enforced probes, zero leaks (`33e52eaa`/`34d33995`) · nightly backup GREEN/restorable (`bd9ef023`) · `finance_fee_reductions` live certification (`docs/FINANCE_FEE_REDUCTIONS_LIVE_CERTIFICATION.md`). ⚠ **W1/W2 AI migrations (`20260867`+, incl. `20260873`) are NOT yet deployed** — see P0-LIVE-1 item ①.

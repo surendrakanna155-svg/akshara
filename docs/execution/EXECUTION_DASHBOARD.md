@@ -9,72 +9,68 @@
 
 ## 1. Where we are  (states: ✅ Complete · 🔶 Impl-Complete/Hardening · 🟩 Production-Certified · 👤 Owner-Gated · 🔮 Future)
 
-> **⚠ POST-RECON-1 ADDENDUM (2026-07-13) — the tables below are as-of RECON-1 (2026-07-10) and lag reality.** Authoritative current state = [`../roadmap/NEXT_ACTIVE_WAVE.md`](../roadmap/NEXT_ACTIVE_WAVE.md) (⏸ ERP LANE PARKED marker) + the journal. **Landed since RECON-1:** P3-AI-3 (W2) HARDENING EXIT (2026-07-11) · P1-PROD-22 Face ID HARDENING EXIT (2026-07-12) · SCE-1 Student Clearance/No-Dues MODULE COMPLETE (2026-07-12) · P1-SEC-1 Biometric App Lock (runnable slice) HARDENING EXIT (2026-07-13) · CFC-1 code items **6/10 pre-cleared** (1·3·4·6·7 + item 2 Trust-Hub deep-link fix). **ERP lane now PARKED** — remaining CFC-1 items (5/8/9/10) hard-blocked on P0-LIVE-1 (owner) · K-2 exit (Knowledge lane) · clean-tree-all-lanes (curriculum dirty). Owner-gated P1 tail (CODE-4/6/7/8) awaits genuine scope/identity decisions; TEST-1/2 device/live-gated (N+1 already clean, router coverage substantial). **§0b Wave-Ledger recompute + §2/§7 derived-% refresh are DUE at the next reconciliation pass** (not hand-estimated here to avoid drift).
+> **🔒 FREEZE-1 IN FORCE (2026-07-14).** CFC-1 passed 10/10 (`d59b5762`, evidence [`../engineering/eos/CFC1_CODE_FREEZE_CHECKLIST_EVIDENCE.md`](../engineering/eos/CFC1_CODE_FREEZE_CHECKLIST_EVIDENCE.md)) and the **ERP Feature Freeze is DECLARED** ([`../engineering/eos/FREEZE1_FEATURE_FREEZE_DECLARATION.md`](../engineering/eos/FREEZE1_FEATURE_FREEZE_DECLARATION.md)) under the owner-approved **K-lane carve-out** (2026-07-14 — K-2 runs past the freeze as an independent lane and never blocks ERP phases). Only bug/regression/perf/security/quality/stability work in the ERP scope from here; feature requests → post-GA register (P8-GA-5). **P4 (Red Team) is OPEN.** The §0b recompute that was DUE is done (roadmap §0b note, 2026-07-14). **PRC program (owner-mandated 2026-07-11):** preserved into git + deferred under PRC-X-01 (tracker §7); slotting = flagged owner decision (recommended with/after P4-RT-1, before P6-VAL-1).
 
 | Field | Value |
 |---|---|
-| **Derived progress** | **54.8%** (45.5 / 83 wave units — roadmap §0b) |
-| **Current Phase** | **Twin hardening programs (post-RECON-1):** **P3-AI-3** W2 Hardening & Closure 🔶 ∥ **K-2** QP Engine Hardening 🔶 — plus **P1-PROD-22 Face ID** (Must-Before-GA, open now) and **P0-LIVE-1** (owner-provisioned live checklist). Then CFC-1 → FREEZE-1 → P4. |
-| **Completed** | RECON-1 ✅ · P0 W1+W2 (14/19 tasks; live legs ⑪⑫⑬ verified 2026-07-09) · P1 non-gated lane ✅ (CODE-1/2/3/5 · PROD-0 · C1–C21 · CI-0 · **GS-1..3 gap-sweeps**) · **P2 ✅ (UX-1..5)** · **P3-AI-1 ✅ CERTIFIED** (cert v2, 2026-07-10) · **K-1 KIE ✅ (local: Phases 1–7 + 360-corpus cert + Intake Center)** · acquisition engine ✅ (Coverage Matrix = SSOT, 14.1%) |
-| **🔶 Hardening (NOT complete, NOT production-ready)** | **P3-AI-2 (W2):** engines/gates/search/quotas/client/persona-feeds built; audit loop OPEN (P0-1/P1-1/P1-2 fixed; more rounds required; W2.1/2.7/2.8/2.9 open; migrations `20260867`+ **not deployed**). **K-2 (QP engine):** Q1–Q8 + R1–R9 + prod-readiness GO (scoped); template/blueprint/OCR/validation program continues; exit = 2 consecutive clean audits. |
+| **Derived progress** | **73.5%** (61.0 / 83 wave units — roadmap §0b, recomputed 2026-07-14 at the CFC/FREEZE boundary) |
+| **Current Phase** | **🔒 FREEZE-1 in force → P4 Red Team OPEN.** Active: **P4-RT-0** (Red Team preparation — seeds refreshed for the post-W2 surface) → **P4-RT-1** (12-domain assault, per-subsystem rounds). Parallel independent lanes: **K-2** QP hardening (carved out) · **P0-LIVE-1** owner provisioning (gates P7's clock, not P4). |
+| **Completed** | RECON-1 ✅ · **CFC-1 ✅ (2026-07-14, `d59b5762`)** · **FREEZE-1 ✅ DECLARED (2026-07-14)** · P0 W1+W2 · **LIVE-1 ① prod deploy (2026-07-14 → live head `20260878`, edge `9bbf8630`)** · P1 non-gated lane ✅ + **PROD-22 Face ID ✅ (2026-07-12)** + **CODE-6/7/8 ✅ (2026-07-13)** + SCE-1 ✅ (2026-07-12) + SEC-1 runnable slice (2026-07-13) · **P2 ✅** · **P3 ✅ (W1 CERTIFIED 2026-07-10 · W2+AI-3 hardening exit 2026-07-11)** · **K-1 KIE ✅ (local)** · acquisition engine ✅ |
+| **🔶 Hardening (NOT complete, NOT production-ready)** | **K-2 (QP engine, CARVED-OUT lane):** hardening rounds continue in the Knowledge lane; exit = 2 consecutive clean audits → K-4 re-cert. **SEC-1 residue** (freeze-compatible security work): TLS pinning · root/jailbreak detection · session-revoke live-proof (⏳/👤). |
 | **🟩 Production-certified (interim, task-scope)** | live RLS isolation (233/233 zero-leak) · nightly backup (restorable) · `finance_fee_reductions` live cert. *Phase-wide 🟩 is granted only by P7.* |
-| **👤 / ⏳ open** | P0-LIVE-1 provisioning (R2 creds · cron token · CI runner · **7-day clock**) · P1-CODE-4/6/7/8 · FREEZE-1 K-lane carve-out · P6-BETA-1 cohort · K-3 promotion · PAR3-UPLOAD · PRI-4/5 · HWK-1/C6 · A2 ratification |
-| **Planning** | 🔒 FROZEN 2026-07-04 → **RECONCILED at RECON-1 (2026-07-10)** — structure unchanged; additions: LIVE-1 · GS record · AI-3 · K-lane · CFC/FREEZE · VAL/BETA · Wave Ledger |
-| **Last commit-gated wave** | **RECON-1 (2026-07-10)** — reconciliation, tracking-only, EOS DOCS PASS. Last substantive: W2 audit-round fixes `7224782d` (🔶 open) · QP Phase-1 hardening `835f39e4` (🔶 open) · W1 cert `56f780a1` ✅. |
+| **👤 / ⏳ open** | P0-LIVE-1 provisioning (R2 creds · cron token · CI runner · **7-day clock**) · **PRC slotting** (deferred program — where do PRC-A/PRC-B run relative to P4?) · P6-BETA-1 cohort · K-3 promotion · signed pilot build (owner keystore, P6) · Face-ID model asset + on-device E2E · FLAG_SECURE native impl · CODE-4 (deferred post-pilot) · PAR3-UPLOAD · PRI-4/5 scheduled-send (needs cron) · HWK-1/C6 · A2 ratification |
+| **Planning** | 🔒 FROZEN 2026-07-04 → RECONCILED at RECON-1 (2026-07-10) → **FEATURE-FROZEN at FREEZE-1 (2026-07-14, K-lane carved out)** |
+| **Last commit-gated wave** | **CFC-1 gate PASS + FREEZE-1 declaration (2026-07-14, `d59b5762` + this commit)** — EOS RELEASE PASS. Prior: LIVE-1 ① prod deploy (2026-07-14) · SEC-1 exit `96a4c84b` (2026-07-13). |
 
 ## 2. Wave arithmetic  (= roadmap §0b Wave Ledger — the single source for every %)
 
 | Lane | Units | ✅ | 🔶 | Credit |
 |---|---:|---:|---:|---:|
-| Gates (RECON-1 ✅ · CFC-1 · FREEZE-1) | 3 | 1 | 0 | 1.0 |
-| P0 (W1 ✅ · W2 ✅ · LIVE-1) | 3 | 2 | 0 | 2.0 |
-| P1 (13 base + 22 PROD + GS-1..3) | 38 | 27 | 0 | 27.0 |
+| Gates (RECON-1 ✅ · CFC-1 ✅ · FREEZE-1 ✅) | 3 | 3 | 0 | 3.0 |
+| P0 (W1 ✅ · W2 ✅ · LIVE-1 partial ①⑪⑫⑬, uncredited) | 3 | 2 | 0 | 2.0 |
+| P1 (+PROD-22 ✅ · +CODE-6/7/8 ✅ · SEC-1 🔶; CODE-4 deferred · TEST-1/2 gated) | 38 | 31 | 1 | 31.5 |
 | P2 (UX-1..5) | 5 | 5 | 0 | 5.0 |
-| P3 (W1.1–1.5 ✅ · W2.0/GATE/S + W2.2–2.6 🔶 · W2.1/2.7/2.8/2.9 + AI-3 ⚪) | 18 | 5 | 8 | 9.0 |
-| K (K-1 ✅ · K-2 🔶 · K-3 👤 · K-4 ⚪) | 4 | 1 | 1 | 1.5 |
-| P4 (RT-0 · RT-1) | 2 | 0 | 0 | 0 |
+| P3 (all waves landed; hardening exit 2026-07-11; 🟩 via P7) | 18 | 18 | 0 | 18.0 |
+| K (K-1 ✅ · K-2 🔶 carved-out · K-3 👤 · K-4 ⚪) | 4 | 1 | 1 | 1.5 |
+| P4 (RT-0 · RT-1) — **OPEN** | 2 | 0 | 0 | 0 |
 | P5 (FIX-1, variable) | 1 | 0 | 0 | 0 |
 | P6 (VAL-1 · PILOT-1 · BETA-1) | 3 | 0 | 0 | 0 |
 | P7 (CERT-1) | 1 | 0 | 0 | 0 |
 | P8 (GA-1..5) | 5 | 0 | 0 | 0 |
-| **Total** | **83** | **41** | **9** | **45.5 → 54.8%** |
+| **Total** | **83** | **60** | **2** | **61.0 → 73.5%** |
 
 ## 3. Current Blockers
 
 | # | Blocker | Blocks | Owner action needed |
 |---|---|---|---|
-| 1 | **P0-LIVE-1 provisioning** — R2 creds, `INTERNAL_CRON_TOKEN`, CI runner | off-site backup · crons · CI · isolation-in-CI · **7-day clock (gates P7 — calendar-critical)** | Provide creds/token/runner; the deploy pipeline itself is proven (2026-07-09) |
-| 2 | **W2 flag/migration sequencing** — release config enables W2 (`ce1e886f`) but migrations `20260867`+/`20260873` are NOT deployed | any live build with W2 on | Deploy LIVE-1 ① before any release build ships (guarded at CFC-1 item 5) |
-| 3 | **Owner decisions batch** (see §4) | P1-CODE-4/6/7/8 · FREEZE-1 entry · BETA cohort | Decide in batch at the next boundary |
-| 4 | In-flight uncommitted work — `priority_engine.ts` (W2 round) · `qpgen/templates.py` (K-2 round) · acquisition-strategy doc set | CFC-1 item 9 (clean tree) | Lanes land them with their rounds (no action if rounds close normally) |
+| 1 | **P0-LIVE-1 provisioning** — R2 creds (backup local-only), `INTERNAL_CRON_TOKEN`, CI runner, **7-day cron clock** | off-site backup · crons · CI · isolation-in-CI · **P7's calendar-critical clock** — does NOT block P4/P5 | Provide creds/token/runner; deploy pipeline proven (2026-07-09 + 2026-07-14) |
+| 2 | **PRC slotting** — owner-mandated program (2026-07-11) deferred at the 2026-07-14 CFC/FREEZE directive under PRC-X-01 | where PRC-A/PRC-B run (recommended: with/after P4-RT-1, before P6-VAL-1) | Rule on the slot (tracker §7 records the deferral) |
+| 3 | **P6-BETA-1 cohort** — 5–10 real schools | P6-BETA-1 only | Recruit/schedule |
+| 4 | ~~W2 flag/migration sequencing~~ **RESOLVED 2026-07-14** (LIVE-1 ① deployed; CFC-1 items 5+8 green) · ~~FREEZE carve-out~~ **APPROVED 2026-07-14** · ~~clean-tree/K-2 CFC blockers~~ **carved out** | — | — |
 
 ## 4. Current Owner Decisions (👤 — batched; each gates only its own task, never the pipeline)
 
 | Decision | Gates |
 |---|---|
 | P0-LIVE-1 provisioning (creds/token/CI) | LIVE-1 ③⑥⑧⑨⑩ + the 7-day clock |
-| FREEZE-1 K-lane carve-out (does K-2 block the ERP freeze?) | FREEZE-1 entry |
+| **PRC slotting** — where do PRC-A/PRC-B run (recommended: with/after P4-RT-1, before P6-VAL-1)? | PRC program start |
 | P6-BETA-1 cohort recruitment (5–10 real schools) | P6-BETA-1 |
 | K-3 promotion timing (`kie.intake`→Postgres; NOT GA-gating) | K-3 |
-| Module scope: Finance-posting (MOD-1) / Hostel / Alumni | P1-CODE-6/7/8 |
-| Identity cluster (PLAT-0 · C5/ADM-D3 · IC-1..6 change-phone · SIS-D1 · admissions SoD) | P1-CODE-4 |
-| PAR3-UPLOAD (real file bytes vs reference-only) · PRI-4/5 scheduled-send · HWK-1/C6 basis re-check | tracked residuals |
+| ~~FREEZE-1 K-lane carve-out~~ **APPROVED 2026-07-14** · ~~Module scope CODE-6/7/8~~ **DECIDED+IMPLEMENTED 2026-07-13** · ~~CODE-4 identity~~ **DEFERRED post-pilot 2026-07-13** · ~~PAR3-UPLOAD~~ **reference-only confirmed** · ~~FLAG_SECURE mode~~ **enable-toggled 2026-07-13** | (closed) |
+| PRI-4/5 scheduled-send (needs LIVE-1 cron) · HWK-1/C6 basis re-check | tracked residuals |
 | Appendix A ~26 items · Consolidation DOC-8 · `APP_ENV=staging` (LV-5) · shared-box (LV-4/OPS-4) · A2 ratification | respective waves |
 
 ## 5. Next 10 waves (execution order; ∥ = parallel-eligible under disjoint file ownership)
 
 | # | Wave | Scope | Hard dependency |
 |---|---|---|---|
-| 1 | **P3-AI-3 round 2** ∥ | W2 audit round 2 → fix → regression → re-audit | rounds continue until clean |
-| 2 | **K-2 rounds** ∥ | QP hardening (templates · blueprints · OCR · validation) → audits | exit = 2 consecutive clean |
-| 3 | **P1-PROD-22** ∥ | Staff Face ID attendance (GA-1/2/3 per frozen design) | must precede P6-PILOT-1 Stage 12 |
-| 4 | **P0-LIVE-1** ∥ | 13-item live checklist; ① AI migrations FIRST; ⑩ starts the 7-day clock | 👤 provisioning |
-| 5 | **P1 owner-gated tail** | CODE-4/6/7/8 as decisions land; SEC-1; TEST-1/2 | 👤 |
-| 6 | **CFC-1** | 10-item Code Freeze Checklist (evidence per item) | P3-AI-3 + K-2 exits (or carve-out) + LIVE-1 ① |
-| 7 | **FREEZE-1** | Feature Freeze declared — bug/regression/perf/security/quality/stability only | CFC-1 PASS |
-| 8 | **P4-RT-0 → P4-RT-1** | seeds refreshed for post-W2 AI surface; 12 domains; per-subsystem audit→fix→regression→re-audit | FREEZE-1 |
-| 9 | **P5-FIX-1** | close every finding; live re-verify; **round law: repeat until audits stop finding meaningful issues** | P4 verdict |
-| 10 | **P6-VAL-1 → P6-PILOT-1 → P6-BETA-1** | full E2E validation (rounds) → internal pilot stages 0–16 → 5–10 real beta schools | P5 exit; then P7 → P8 |
+| 1 | **P4-RT-0** (ACTIVE) | Red Team preparation: honest claims frozen, domain operators, fixtures/staging tenants, **seeds refreshed for the post-W2 surface** (persona feeds T/P/S/Pri/Dir · Universal Search RBAC · copilot quotas · prompt-injection on every AI entry point · Domain-Gate bypass · Face-ID/SCE-1/App-Lock new surfaces) | FREEZE-1 ✅ (met) |
+| 2 | **P4-RT-1** | 12-domain adversarial assault; per-subsystem audit→fix→regression→re-audit; loop-until-dry | P4-RT-0 |
+| 3 | **K-2 rounds** ∥ (carved-out lane) | QP hardening (templates · blueprints · OCR · validation) → audits | exit = 2 consecutive clean |
+| 4 | **P0-LIVE-1 remainder** ∥ | ② outbox drain · ③ cron token · ④ reminder crons · ⑤ live `ai_*` probes · ⑥ off-site R2 · ⑦ alerts · ⑧⑨ CI · ⑩ **7-day clock** | 👤 provisioning |
+| 5 | **PRC-A → PRC-B** (deferred, owner slot pending) | 148-capability real-school audit → 12-invariant-category correctness cert (tracker: 502 reqs) | 👤 slotting (recommended with/after RT-1) |
+| 6 | **P5-FIX-1** | close every finding; live re-verify; **round law: repeat until audits stop finding meaningful issues** | P4 verdict |
+| 7 | **P6-VAL-1 → P6-PILOT-1 → P6-BETA-1** | full E2E validation (rounds) → internal pilot stages 0–16 → 5–10 real beta schools | P5 exit; then P7 → P8 |
 
 ## 6. Estimated Completion Order (macro)
 
@@ -96,39 +92,39 @@ Hard gates: P0-LIVE-1 gates P7's clock · P3-AI-1 ✅ feeds P6 · CFC-1 → FREE
 
 | Phase | Units | ✅ | 🔶 | ⚪/👤 | Gate |
 |---|---:|---:|---:|---:|---|
-| Gates (RECON/CFC/FREEZE) | 3 | 1 | 0 | 2 | DOCS/RELEASE |
+| Gates (RECON/CFC/FREEZE) | 3 | 3 | 0 | 0 | DOCS/RELEASE ✅ |
 | P0 — Truth/Docs/Live | 3 | 2 | 0 | 1 (LIVE-1) | EOS per task |
-| P1 — Backend & Code | 38 | 27 | 0 | 11 | EOS per wave |
+| P1 — Backend & Code | 38 | 31 | 1 | 6 | EOS per wave |
 | P2 — UI/UX | 5 | 5 | 0 | 0 | ✅ |
-| P3 — Adaptive AI | 18 | 5 | 8 | 5 | EOS AI per sub-wave |
-| K — Knowledge Lane | 4 | 1 | 1 | 2 | K gates |
-| P4 — Red Team | 2 | 0 | 0 | 2 | verdict |
+| P3 — Adaptive AI | 18 | 18 | 0 | 0 | ✅ (🟩 via P7) |
+| K — Knowledge Lane (carved out) | 4 | 1 | 1 | 2 | K gates |
+| P4 — Red Team (OPEN) | 2 | 0 | 0 | 2 | verdict |
 | P5 — Fixes | 1 | 0 | 0 | 1 | per fix |
 | P6 — VAL·Pilot·Beta | 3 | 0 | 0 | 3 | VAL/QA-R/BETA |
 | P7 — Production Cert | 1 | 0 | 0 | 1 | QA-R-012 → 🟩 |
 | P8 — GA | 5 | 0 | 0 | 5 | RELEASE |
-| **Total** | **83** | **41** | **9** | **33** | **45.5 → 54.8%** |
+| **Total** | **83** | **60** | **2** | **21** | **61.0 → 73.5%** |
 
 ## 8. EOS Status
 
 - **Gate protocol unchanged:** every wave ends with `/eos <scope>`; **commit only on PASS**; CONDITIONAL PASS only with P1s tracked *and* roadmap permission; BLOCKED = fix and re-run, never advance. Verdicts append to `docs/engineering/eos/EOS_RUN_LEDGER.md` + the journal.
 - **RECON-1 finding (recorded, not repeated):** waves executed 2026-07-08→10 (W1/W2/KIE/QP/gap-sweeps) ran **outside the recording loop** — reconstructed in the journal's catch-up block. From RECON-1 forward the loop is mandatory again: one wave, one EOS gate, one commit, one journal row.
 - **Round law (new, mandatory):** hardening/audit phases exit only when **repeated audits stop finding meaningful production issues** — never on a fixed round count.
-- **Open P0 findings:** none known. **Open 🔶 loops:** P3-AI-2/AI-3 (W2) · K-2 (QP).
+- **Open P0 findings:** none known. **Open 🔶 loops:** K-2 (QP, carved-out lane) · SEC-1 residue (device/live-gated security items).
 - **Automatic-failure tripwires** (instant BLOCKED): data loss · security breach · escalation · tenant-isolation failure · critical crash · duplicate financial transaction · broken auth/sync · critical regression · failed backup verification · production blocker.
 
 ## 9. Current Risks (accepted, tracked)
 
-1. **W2 flag vs migrations** — release config enables W2 while `20260867`+ are undeployed; guarded at LIVE-1 ① + CFC-1 item 5. Do not ship a live build before that deploy.
-2. **7-day clock not started** — every week LIVE-1 stays unprovisioned pushes P7/GA a week, regardless of coding pace.
-3. **PROD-22 Face ID** — largest un-started Must-Before-GA build; a late start collides with P6-PILOT-1 Stage 12.
-4. **Audit-loop fatigue** — both 🔶 lanes are finding real issues each round (by design); the round law forbids declaring victory early.
-5. **Owner-decision latency** — identity cluster + module scope + beta cohort narrow the runway if left undecided.
-6. **Red-Team outcome open by design** — P5 is variable; a bad verdict re-opens earlier phases.
+1. **7-day clock not started** — every week LIVE-1 stays unprovisioned pushes P7/GA a week, regardless of coding pace.
+2. **Red-Team outcome open by design** — P5 is variable; a bad verdict re-opens earlier phases; the round law forbids declaring victory early.
+3. **PRC slot undecided** — the deferred 502-requirement program must land somewhere before P6-VAL-1; late slotting narrows the runway.
+4. **Owner-decision latency** — beta cohort + LIVE-1 provisioning gate the calendar-critical path to P7.
+5. **Off-site backup not configured** — nightly backup healthy but LOCAL-ONLY (3-2-1 incomplete) until R2 creds land.
+6. **Freeze discipline** — any feature-shaped request must route to P8-GA-5, never into P4–P8 work.
 
 ## 10. Current Focus
 
-> **RECON-1 ✅ (this commit).** Twin hardening programs run in parallel under disjoint ownership: **P3-AI-3** (W2 audit rounds — next: round 2) and **K-2** (QP quality program — next: template/blueprint expansion + round). **P1-PROD-22 Face ID opens now.** Owner batch: LIVE-1 provisioning (starts the 7-day clock), FREEZE carve-out, beta cohort. Everything downstream (CFC-1 → FREEZE-1 → P4 → P5 → P6-VAL → Pilot → Beta → P7 → P8) is sequenced and gated; nothing is skipped, nothing renamed, nothing weakened.
+> **🔒 FREEZE-1 declared (this commit) — P4 Red Team OPEN.** Active wave: **P4-RT-0** (stand up the framework per `docs/strategy/GLOBAL_RED_TEAM_FRAMEWORK.md`; refresh attack seeds for the post-W2 surface — persona feeds, Universal Search RBAC, copilot quotas, prompt-injection on every AI entry point, Domain-Gate bypass, plus the new Face-ID/SCE-1/App-Lock surfaces) → **P4-RT-1** 12-domain assault under the round law. Parallel: K-2 (carved out) · LIVE-1 owner provisioning · PRC slotting (owner). Everything downstream (P5 → P6-VAL → Pilot → Beta → P7 → P8) unchanged; nothing skipped, nothing renamed, nothing weakened.
 
 ---
 
