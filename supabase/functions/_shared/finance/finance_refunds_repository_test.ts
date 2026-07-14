@@ -176,18 +176,21 @@ class MockRefundsDb {
 
     if (sql.includes("UPDATE finance_refunds SET") && sql.includes("processed")) {
       const refund = this.refunds.find((r) => r.id === args[1]);
-      if (refund) {
-        refund.refund_status = "processed";
-        refund.approved_by = args[0] as string;
-        refund.approved_at = "2026-06-07T01:00:00Z";
-      }
-      return refund ? [refund] as T[] : [] as T[];
+      // Honor the terminal `AND refund_status = 'pending'` guard: only a still-
+      // pending row transitions; the loser of a concurrent approval sees a
+      // non-pending row → zero rows → the repository throws + rolls back.
+      if (!refund || refund.refund_status !== "pending") return [] as T[];
+      refund.refund_status = "processed";
+      refund.approved_by = args[0] as string;
+      refund.approved_at = "2026-06-07T01:00:00Z";
+      return [refund] as T[];
     }
 
     if (sql.includes("UPDATE finance_refunds SET") && sql.includes("rejected")) {
       const refund = this.refunds.find((r) => r.id === args[0]);
-      if (refund) refund.refund_status = "rejected";
-      return [] as T[];
+      if (!refund || refund.refund_status !== "pending") return [] as T[];
+      refund.refund_status = "rejected";
+      return [{ id: refund.id }] as T[];
     }
 
     if (sql.includes("FROM finance_refunds fr")) {
@@ -377,6 +380,35 @@ Deno.test("approveRefund rejects non-pending refund", async () => {
   await rejectRefund(asDb(db), ORG, SCHOOL, created.id);
   await assertRejects(
     () => approveRefund(asDb(db), ORG, SCHOOL, created.id, USER),
+    InvalidRefundTransitionError,
+  );
+});
+
+Deno.test("approveRefund: a concurrent winner (terminal 0-rows) fails closed — money never double-applies (F1)", async () => {
+  const db = new MockRefundsDb();
+  const created = await createRefund(asDb(db), ORG, SCHOOL, {
+    collectionId: COLLECTION_ID,
+    refundAmount: 1000,
+    refundReason: "Duplicate approval",
+    requestedBy: USER,
+  });
+  // The pre-check read sees 'pending', but a concurrent approval commits first;
+  // our terminal `UPDATE finance_refunds ... AND refund_status = 'pending'` then
+  // matches 0 rows. The guard must throw so the enclosing txn rolls back the
+  // invoice/account/collection mutations (in production) instead of double-moving.
+  const raced = {
+    // deno-lint-ignore require-await
+    async queryObject<T>(sql: string, args: unknown[] = []): Promise<T[]> {
+      if (sql.includes("UPDATE finance_refunds SET") && sql.includes("processed")) {
+        return [] as T[]; // the winner already processed this refund
+      }
+      return db.queryObject<T>(sql, args);
+    },
+    queryCount: (sql: string, args: unknown[] = []) => db.queryCount(sql, args),
+  } as unknown as TenantQueryClient;
+
+  await assertRejects(
+    () => approveRefund(raced, ORG, SCHOOL, created.id, CHECKER),
     InvalidRefundTransitionError,
   );
 });

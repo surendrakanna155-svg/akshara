@@ -712,6 +712,7 @@ export async function cancelCollection(
       cancelled_at = timezone('utc', now()),
       updated_at = timezone('utc', now())
      WHERE id = $1 AND organization_id = $2 AND school_id = $3
+       AND collection_status <> 'cancelled'
        AND ($6::int IS NULL OR row_version = $6)
      RETURNING *`,
     [collectionId, organizationId, schoolId, reason, input.cancelledBy, expectedVersion ?? null],

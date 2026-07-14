@@ -207,10 +207,15 @@ class CertMockDb {
     }
     // status UPDATE
     if (sql.includes("UPDATE students SET") && sql.includes("status = $1")) {
-      this.statusUpdates.push({ id: String(args[1]), status: String(args[0]) });
       const s = this.students.get(String(args[1]));
-      if (s) s.status = String(args[0]);
-      return [] as T[];
+      // Honor the terminal `AND status = $5` guard: the transition applies only
+      // while the student is still in the status we read+validated. A concurrent
+      // TC issuance that already flipped it yields zero rows → the repository
+      // throws + rolls back, so no duplicate certificate is minted.
+      if (!s || s.status !== String(args[4])) return [] as T[];
+      this.statusUpdates.push({ id: String(args[1]), status: String(args[0]) });
+      s.status = String(args[0]);
+      return [{ id: String(args[1]) }] as T[];
     }
     return [] as T[];
   }
@@ -444,6 +449,39 @@ Deno.test("issueTransferCertificate (SCE-1 slice 3): a covering waiver ALREADY C
   // model rollback, so we assert the post-throw steps that provably never ran.)
   assertEquals(mock.statusUpdates.length, 0, "student was NOT flipped to transferred");
   assertEquals(mock.clearanceSnapshots.length, 0, "no dishonest snapshot written");
+});
+
+Deno.test("issueTransferCertificate: a concurrent TC on the ZERO-dues path fails closed (RT-10-1 — no duplicate certificate)", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({ id: STUDENT, status: "active", className: "Grade 8" });
+  // No open accounts, no waiver → the common no-dues path, where the waiver
+  // single-use consume guard does NOT run. Simulate a concurrent TC that already
+  // flipped the student to 'transferred' between our read and our write: the
+  // terminal `UPDATE students ... AND status = $5` matches 0 rows.
+  const raced = {
+    // deno-lint-ignore require-await
+    async queryObject<T>(sql: string, args: unknown[] = []): Promise<T[]> {
+      if (sql.includes("UPDATE students SET") && sql.includes("status = $1")) {
+        return [] as T[]; // the winner already transferred this student
+      }
+      return mock.queryObject<T>(sql, args);
+    },
+    queryCount: () => Promise.resolve(0),
+  } as unknown as TenantQueryClient;
+
+  await assertRejects(
+    () =>
+      issueTransferCertificate(raced, ORG, SCHOOL, {
+        studentId: STUDENT,
+        reason: "relocation",
+        issuedBy: STAFF,
+      }),
+    InvalidStudentStatusTransitionError,
+  );
+  // The status flip provably never committed; in production the enclosing
+  // withTenantContext txn rolls back the just-inserted issue row + serial, so no
+  // second serially-numbered legal document is minted.
+  assertEquals(mock.statusUpdates.length, 0, "no second transfer committed");
 });
 
 Deno.test("issueTransferCertificate (SCE-1 slice 3): a waiver that NO LONGER covers grown dues does NOT clear — still 409, no write", async () => {

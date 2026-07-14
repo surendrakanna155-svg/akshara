@@ -441,13 +441,29 @@ export async function issueTransferCertificate(
   );
 
   // 5. Auto status -> transferred (guard already asserted the transition above).
-  await db.queryObject(
+  // Concurrency guard: pin the write to the status we read+validated in step 2.
+  // Two concurrent zero-dues (no-waiver) TC requests would otherwise both burn a
+  // serial and both insert a `sis_certificate_issues` row — a duplicate legal
+  // document, since the waiver-branch's single-use consume guard doesn't run when
+  // there is no waiver. Guarding on the prior status makes the loser match 0 rows
+  // (the winner already flipped it) → throw → the enclosing transaction rolls back
+  // the issue row + allocated serial. Mirrors the codebase's `WHERE status='...'`
+  // atomic-transition pattern (clearance waiver consume, staff-attendance decide).
+  const statusUpdated = await db.queryObject<{ id: string }>(
     `UPDATE students SET
         status = $1,
         updated_at = timezone('utc', now())
-      WHERE id = $2::uuid AND organization_id = $3 AND school_id = $4`,
-    [statusToDb("transferred"), input.studentId, organizationId, schoolIdArg],
+      WHERE id = $2::uuid AND organization_id = $3 AND school_id = $4
+        AND status = $5
+      RETURNING id`,
+    [statusToDb("transferred"), input.studentId, organizationId, schoolIdArg, detail.student.status],
   );
+  if (statusUpdated.length === 0) {
+    throw new InvalidStudentStatusTransitionError(
+      "Cannot issue a Transfer Certificate: the student status changed concurrently " +
+        "(a Transfer Certificate was issued by another request).",
+    );
+  }
 
   const updatedDetail: StudentDetailData = {
     ...detail,

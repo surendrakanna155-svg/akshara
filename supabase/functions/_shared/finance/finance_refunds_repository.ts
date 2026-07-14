@@ -376,9 +376,20 @@ async function applyProcessedRefund(
       approved_at = timezone('utc', now()),
       updated_at = timezone('utc', now())
      WHERE id = $2 AND organization_id = $3 AND school_id = $4
+       AND refund_status = 'pending'
      RETURNING *`,
     [approvedBy, refund.id, organizationId, schoolId],
   );
+  if (updatedRows.length === 0) {
+    // A concurrent approval won the race (the row is no longer pending) — its
+    // status guard let it through while ours must not double-apply. The
+    // unconditional `AND refund_status = 'pending'` terminal predicate mirrors
+    // the certified fee-reduction path; the enclosing transaction rolls back the
+    // invoice/account/collection mutations above, so the money moves exactly once.
+    throw new InvalidRefundTransitionError(
+      `Cannot approve refund in status: ${refund.refund_status} (concurrent transition)`,
+    );
+  }
 
   return (await getRefund(db, organizationId, schoolId, updatedRows[0]!.id))!;
 }
@@ -459,13 +470,22 @@ export async function rejectRefund(
     );
   }
 
-  await db.queryObject(
+  const rejectedRows = await db.queryObject<FinanceRefundRow>(
     `UPDATE finance_refunds SET
       refund_status = 'rejected',
       updated_at = timezone('utc', now())
-     WHERE id = $1 AND organization_id = $2 AND school_id = $3`,
+     WHERE id = $1 AND organization_id = $2 AND school_id = $3
+       AND refund_status = 'pending'
+     RETURNING id`,
     [refundId, organizationId, schoolId],
   );
+  if (rejectedRows.length === 0) {
+    // A concurrent approval/rejection already moved this refund out of pending;
+    // never reject an already-processed refund (its money was moved) — fail closed.
+    throw new InvalidRefundTransitionError(
+      `Cannot reject refund in status: ${refund.refund_status} (concurrent transition)`,
+    );
+  }
 
   return (await getRefund(db, organizationId, schoolId, refundId))!;
 }
