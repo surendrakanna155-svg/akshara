@@ -1,0 +1,55 @@
+{
+  "items": [
+    {
+      "frame": "gen_monohybrid_recessive",
+      "stem": "In pea plants, violet (V) is dominant over white (v). In the cross Vv × Vv, the fraction of offspring expected to show the white phenotype is:",
+      "your_answer": "1/4",
+      "proposed_answer": "1/4",
+      "verdict": "agree",
+      "reason": "Vv×Vv gives genotypes 1 VV : 2 Vv : 1 vv, i.e. phenotypes 3 violet : 1 white. White (vv) = 1/4. Matches proposed answer, is present among options, and the stem phrasing is unambiguous standard monohybrid wording."
+    },
+    {
+      "frame": "gen_monohybrid_recessive",
+      "stem": "In pea plants, yellow (Y) is dominant over green (y). In the cross Yy × Yy, the fraction of offspring expected to show the green phenotype is:",
+      "your_answer": "1/4",
+      "proposed_answer": "1/4",
+      "verdict": "agree",
+      "reason": "Same monohybrid logic: Yy×Yy → 3 yellow : 1 green. Green (yy) = 1/4. Matches proposed answer, present among options, phrasing standard."
+    },
+    {
+      "frame": "gen_dihybrid_both_recessive",
+      "stem": "Round (R) is dominant over wrinkled (r), and tall (T) over dwarf (t); the genes assort independently. In the cross RrTt × RrTt, the fraction of offspring showing BOTH recessive traits is:",
+      "your_answer": "1/16",
+      "proposed_answer": "1/16",
+      "verdict": "agree",
+      "reason": "Independent assortment gives classic 9:3:3:1 dihybrid ratio. P(both recessive) = P(rr) × P(tt) = 1/4 × 1/4 = 1/16. Matches proposed answer, present among options, 'BOTH recessive traits' is unambiguous standard phrasing."
+    },
+    {
+      "frame": "gen_dihybrid_both_recessive",
+      "stem": "Yellow (Y) is dominant over green (y), and inflated (N) over constricted (n); the genes assort independently. In the cross YyNn × YyNn, the fraction of offspring showing BOTH recessive traits is:",
+      "your_answer": "1/16",
+      "proposed_answer": "1/16",
+      "verdict": "agree",
+      "reason": "Same dihybrid logic: P(yy) × P(nn) = 1/4 × 1/4 = 1/16. Matches proposed answer, present among options, phrasing unambiguous."
+    },
+    {
+      "frame": "gen_conditional_homozygous",
+      "stem": "In pea plants, round (R) is dominant over wrinkled (r). In the cross Rr × Rr, among the offspring showing the round phenotype, the fraction that are homozygous (RR) is:",
+      "your_answer": "1/3",
+      "proposed_answer": "1/3",
+      "verdict": "agree",
+      "reason": "Rr×Rr → 1 RR : 2 Rr : 1 rr (of total). Round phenotype = RR+Rr = 3/4 of total. Conditional on round, P(RR | round) = (1/4)/(3/4) = 1/3, not the naive unconditional 1/4 nor the Rr-conditional 2/3 (both present as distractors). This is the subtlest item in the set (true conditional/Bayesian probability, not a plain phenotype ratio), and the deterministic engine got it right: 1/3 is correct. The stem phrase 'among the offspring showing the round phenotype, the fraction that are homozygous (RR)' correctly signals conditioning and is unambiguous/standard NEET-style wording."
+    },
+    {
+      "frame": "gen_conditional_homozygous",
+      "stem": "In pea plants, violet (V) is dominant over white (v). In the cross Vv × Vv, among the offspring showing the violet phenotype, the fraction that are homozygous (VV) is:",
+      "your_answer": "1/3",
+      "proposed_answer": "1/3",
+      "verdict": "agree",
+      "reason": "Identical conditional-probability structure: among violet offspring (VV+Vv = 3/4 of total), P(VV | violet) = (1/4)/(3/4) = 1/3. Matches proposed answer, present among options, phrasing correctly signals conditioning and is unambiguous."
+    }
+  ],
+  "n_agree": 6,
+  "n_flag": 0,
+  "summary": "All 6 items independently re-derived and confirmed correct: both monohybrid recessive-phenotype fractions (1/4), both dihybrid both-recessive fractions (1/16 via 1/4×1/4 under independent assortment), and both conditional-homozygous-given-dominant-phenotype fractions (1/3, correctly distinguishing true conditional probability P(RR|round)=(1/4)/(3/4) from the naive-unconditional 1/4 and Rr-conditional 2/3 distractors). All answers are present among the listed options and all stems use unambiguous, biologically standard phrasing, including correct conditioning language ('among the offspring showing the X phenotype') in the two subtlest items. No flags."
+}
