@@ -99,15 +99,31 @@ independently hand-recomputed and confirmed correct, present among options, unam
 | **Mathematics × JEE_MAIN** | **471** | **18 families — calculus (9) + definite-int/series/limit/det/vieta/binomial/counting/matrix-inverse/complex (9); deterministic, independent second-method verification** |
 | **Total** | **1,101** | |
 
+## What this JEE-Math bank IS — and its honest boundary
+
+The 471-item JEE-Math bank is **single-concept computational fluency**: each item exercises one skill
+(differentiate this, integrate this, sum this series, expand this binomial, invert this matrix) and is
+**deterministically generated and independently verified** — so it is *unlimited, exact, and zero-AI-per-item*.
+That is exactly the substrate the per-student practice/DPP use case (Amendment A2) needs: verified, endlessly
+parameterisable drill items.
+
+It is **not** yet the multi-concept, application-heavy depth that distinguishes actual JEE Main/Advanced *exam*
+questions. That depth needs one of two things, both of which are genuine decision/boundary points:
+- a **compositional** generator+verifier (chain several concepts into one problem and verify the whole) — a
+  materially harder build than single-skill synthesis; **or**
+- **real JEE question evidence**, which is **EVIDENCE-BLOCKED** (`JEE_MULTISTEP_EVIDENCE_CHECK.md`: genuine JEE
+  stems were images never OCR'd; acquisition is on owner HOLD).
+
+Adding more single-concept families (trig values, logarithms, more progressions, coordinate-geometry distance/
+slope, De Moivre powers) is unblocked and cheap, but each is incremental — the same *kind* of item. The
+distinctive next frontier is compositional depth, which is why this is a natural checkpoint.
+
 ## Remaining measured work (JEE/NEET-first)
 
-- **JEE multi-step Physics/Chemistry** — **EVIDENCE-BLOCKED** (measured, `JEE_MULTISTEP_EVIDENCE_CHECK.md`):
-  the genuine JEE stems were images never OCR'd into text; clean text items are school-board word problems.
-  Requires genuine-JEE-text **acquisition** (owner-HOLD), not a generator.
-- **More calculus breadth** (definite integrals, product/quotient rule, limits) — extends JEE-Math capacity
-  cleanly on the same symbolic-verification substrate (9 families done; chain-rule + log/trig/exp added).
+- **JEE multi-step / compositional depth** — the genuine JEE frontier; needs a compositional generator+verifier
+  **or** unblocked evidence (acquisition owner-HOLD). *Genuine owner decision.*
+- **More single-concept JEE-Math families** — unblocked, incremental (practice/DPP value).
 - **NEET non-factual archetypes** (classification / cause_effect / assertion) — archetype-specific generation.
 - **Promotion of the pilot bank → real Question Bank — owner decision.**
 
-Continuing autonomously on the unblocked items (calculus breadth, multi-step after an evidence-quality check).
-Pilot bank stays separate until owner approval to promote.
+Pilot bank stays separate (owner: do not promote yet). `kie.db`/`qpgen`/Certified Bank untouched throughout.
