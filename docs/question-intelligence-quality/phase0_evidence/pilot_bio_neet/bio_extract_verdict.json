@@ -1,0 +1,209 @@
+{
+  "items": [
+    {
+      "concept_title": "Decomposition",
+      "subject_ok": false,
+      "answer_correct": true,
+      "keep": false,
+      "fact": null,
+      "reason": "Not Biology - Chemistry thermal-decomposition question (Ag2O/Pb3O4/PbO2 releasing O2) mis-bound to Biology concept 'Decomposition' (ecological decomposition of organic matter)."
+    },
+    {
+      "concept_title": "Evolution",
+      "subject_ok": false,
+      "answer_correct": true,
+      "keep": false,
+      "fact": null,
+      "reason": "Not Biology - Physics EMF-induction question (rotating disc in magnetic field) mis-bound to Biology concept 'Evolution'. Physics answer (pi x 10^-2 V) checks out but subject is wrong."
+    },
+    {
+      "concept_title": "Nucleus",
+      "subject_ok": false,
+      "answer_correct": true,
+      "keep": false,
+      "fact": null,
+      "reason": "Not Biology - Physics nuclear/alpha-decay recoil question mis-bound to Biology concept 'Nucleus' (cell nucleus). Physics momentum-conservation answer (4v/(A-4)) checks out but subject is wrong."
+    },
+    {
+      "concept_title": "Mutation",
+      "subject_ok": true,
+      "answer_correct": true,
+      "keep": true,
+      "fact": "Absorption of UV-B radiation causes DNA damage and mutations in human skin cells, which can lead to skin cancer.",
+      "reason": "Genuine Biology (Environmental Issues / mutagenesis); UV-B (not UV-A) is the well-established DNA-damaging/mutagenic band. Verified correct."
+    },
+    {
+      "concept_title": "Plasma",
+      "subject_ok": false,
+      "answer_correct": true,
+      "keep": false,
+      "fact": null,
+      "reason": "Concept mis-bind - item is about a neuron's plasma membrane permeability and nerve-impulse conduction, not blood plasma, which is what the concept 'Plasma' denotes."
+    },
+    {
+      "concept_title": "Cell Membrane",
+      "subject_ok": true,
+      "answer_correct": false,
+      "keep": false,
+      "fact": null,
+      "reason": "Answer is biologically incorrect: local depolarization of a sensory receptor membrane is a generator/receptor potential, not an 'action potential' (a propagated all-or-none event). Correct term is absent from the options, suggesting OCR/answer-key corruption."
+    },
+    {
+      "concept_title": "Forebrain",
+      "subject_ok": true,
+      "answer_correct": false,
+      "keep": false,
+      "fact": null,
+      "reason": "Answer key error: cerebellum and medulla are hindbrain structures, not forebrain. The forebrain comprises cerebrum, thalamus and hypothalamus (option d), which was not the marked answer."
+    },
+    {
+      "concept_title": "Biodiversity",
+      "subject_ok": true,
+      "answer_correct": true,
+      "keep": true,
+      "fact": "India's Biological Diversity Act, which governs conservation of biodiversity and regulated access to biological resources, was passed by Parliament in 2002.",
+      "reason": "Verified historical/legal fact, on-topic for Biodiversity."
+    },
+    {
+      "concept_title": "Populations",
+      "subject_ok": false,
+      "answer_correct": true,
+      "keep": false,
+      "fact": null,
+      "reason": "Concept mis-bind - item defines 'Biosphere Reserve' (a conservation/protected-area concept), not population ecology, which 'Populations' denotes."
+    },
+    {
+      "concept_title": "Menstrual Cycle",
+      "subject_ok": true,
+      "answer_correct": false,
+      "keep": false,
+      "fact": null,
+      "reason": "Answer is ambiguous/likely wrong: the ovulatory phase is a brief event (~1-2 days around day 14), not 7-8 days; none of the standard phase durations (menstrual ~3-5d, follicular ~9d, ovulatory ~1d, luteal ~14d) matches 'ovulatory phase = 7-8 days'."
+    },
+    {
+      "concept_title": "Ecosystem",
+      "subject_ok": true,
+      "answer_correct": true,
+      "keep": true,
+      "fact": "An ecosystem with low stability (easily disturbed) but high resilience will recover after some time once the damaging effect is removed.",
+      "reason": "Correctly distinguishes ecological stability (resistance to disturbance) from resilience (recovery ability); verified correct."
+    },
+    {
+      "concept_title": "THE Male Reproductive System",
+      "subject_ok": true,
+      "answer_correct": true,
+      "keep": true,
+      "fact": "In the human male reproductive system, sperm travel sequentially through the epididymis, then the vas deferens, and finally the urethra.",
+      "reason": "Matches the correct anatomical sequence (seminiferous tubules -> rete testis -> vasa efferentia -> epididymis -> vas deferens -> urethra); best-fitting option of the four given."
+    },
+    {
+      "concept_title": "Cancer",
+      "subject_ok": true,
+      "answer_correct": true,
+      "keep": true,
+      "fact": "Cobalt is a trace element beneficial to plant growth (required by nitrogen-fixing symbiotic bacteria) and its radioisotope cobalt-60 is used in cancer radiotherapy.",
+      "reason": "Cobalt-60 teletherapy is a well-established cancer-treatment fact, and cobalt's role as a beneficial plant micronutrient (legume N2-fixation) is standard biology content; best answer among options."
+    },
+    {
+      "concept_title": "Replication",
+      "subject_ok": true,
+      "answer_correct": true,
+      "keep": true,
+      "fact": "In the eukaryotic cell cycle, DNA replication occurs during the S (synthesis) phase of interphase.",
+      "reason": "Core, unambiguous cell-cycle fact. Verified correct."
+    },
+    {
+      "concept_title": "Prophase",
+      "subject_ok": true,
+      "answer_correct": true,
+      "keep": true,
+      "fact": "During meiosis, bivalents (paired homologous chromosomes) first form at the zygotene substage of prophase I, while DNA replication occurs earlier, during the S phase of interphase preceding prophase I.",
+      "reason": "Matches standard meiosis cytology (synapsis begins in zygotene; premeiotic S phase precedes prophase I). Verified correct."
+    },
+    {
+      "concept_title": "Metaphase",
+      "subject_ok": true,
+      "answer_correct": true,
+      "keep": true,
+      "fact": "The two sister chromatids of a metaphase chromosome are replicated copies of that chromosome, joined at the centromere, and they separate from one another at anaphase.",
+      "reason": "Core cell-division fact. Verified correct."
+    },
+    {
+      "concept_title": "Cytokinesis",
+      "subject_ok": true,
+      "answer_correct": true,
+      "keep": true,
+      "fact": "In animal cells, cytokinesis occurs through contraction of a contractile ring of actin microfilaments that forms a cleavage furrow dividing the cell in two.",
+      "reason": "Standard animal-cell cytokinesis mechanism. Verified correct."
+    },
+    {
+      "concept_title": "Anaphase",
+      "subject_ok": true,
+      "answer_correct": true,
+      "keep": true,
+      "fact": "At anaphase of mitosis each chromosome has a single chromatid (sister chromatids having just separated), whereas at anaphase I of meiosis each chromosome still has two chromatids, since only homologous chromosomes separate at that stage.",
+      "reason": "Standard distinguishing fact between mitotic anaphase and meiotic anaphase I. Verified correct under the conventional interpretation."
+    },
+    {
+      "concept_title": "Proteins",
+      "subject_ok": true,
+      "answer_correct": true,
+      "keep": true,
+      "fact": "Histone proteins are synthesized during the S phase of the eukaryotic cell cycle, concurrently with DNA replication, so that newly replicated DNA can be packaged into nucleosomes.",
+      "reason": "Well-established coupling of histone synthesis with S-phase DNA replication. Verified correct."
+    },
+    {
+      "concept_title": "Telophase",
+      "subject_ok": true,
+      "answer_correct": true,
+      "keep": true,
+      "fact": "During telophase of mitosis, chromosomes decondense and lose their discrete identity, cluster at opposite spindle poles, and the nuclear envelope, nucleolus, Golgi complex, and endoplasmic reticulum reform around each daughter set of chromosomes.",
+      "reason": "Accurate composite description of telophase events. Verified correct."
+    },
+    {
+      "concept_title": "Morphology",
+      "subject_ok": true,
+      "answer_correct": true,
+      "keep": true,
+      "fact": "Cellular differentiation is the developmental process by which cells in different regions of an embryo become variable in morphology and function.",
+      "reason": "Standard developmental-biology definition. Verified correct."
+    },
+    {
+      "concept_title": "Development",
+      "subject_ok": true,
+      "answer_correct": true,
+      "keep": true,
+      "fact": "Apomixis is a form of asexual reproduction in flowering plants in which seeds develop without fusion of gametes.",
+      "reason": "Standard plant-reproduction fact (e.g., in Citrus, some grasses). Verified correct."
+    },
+    {
+      "concept_title": "Translation",
+      "subject_ok": false,
+      "answer_correct": true,
+      "keep": false,
+      "fact": null,
+      "reason": "Not Biology - Physics kinetic-theory-of-gases question (translational kinetic energy of an ideal gas) mis-bound to Biology concept 'Translation' (protein synthesis). Physics answer (3/2 kT) checks out but subject is wrong."
+    },
+    {
+      "concept_title": "THE DNA",
+      "subject_ok": true,
+      "answer_correct": true,
+      "keep": true,
+      "fact": "The same basic molecular biology techniques can be used to analyze DNA from any organism, from bacteria to humans, because DNA has a chemically consistent structure (double helix, same four nitrogenous bases, same sugar-phosphate backbone) across all life forms.",
+      "reason": "Correct rationale for universality of DNA-analysis techniques (recombinant DNA technology). Verified correct."
+    },
+    {
+      "concept_title": "Chemiosmotic Hypothesis",
+      "subject_ok": true,
+      "answer_correct": true,
+      "keep": true,
+      "fact": "Peter Mitchell's chemiosmotic hypothesis proposes that ATP synthesis is driven by a proton (H+) gradient generated across a membrane during electron transport.",
+      "reason": "Correct attribution and mechanism (oxidative phosphorylation / photophosphorylation). Verified correct."
+    }
+  ],
+  "n_in": 25,
+  "n_keep": 16,
+  "n_reject_homonym": 4,
+  "n_reject_other": 5,
+  "summary": "16/25 (64%) items survived independent verification as genuine, correct, self-contained NEET Biology facts. 4 items were cross-subject homonym mis-binds (Physics or Chemistry questions wrongly tagged to a same-named Biology concept: Decomposition/Chemistry, Evolution/Physics-EMF, Nucleus/Physics-decay, Translation/Physics-kinetic-theory). The remaining 5 rejects were on-topic Biology items with either an incorrect/ambiguous marked answer (Cell Membrane: 'action potential' should be 'generator/receptor potential'; Forebrain: 'cerebellum and medulla' are hindbrain, not forebrain, structures; Menstrual Cycle: 'ovulatory phase' does not last 7-8 days) or a same-subject concept mis-bind where the claimed concept did not match the tested knowledge (Plasma: item is about neuronal plasma membrane, not blood plasma; Populations: item defines Biosphere Reserve, not population ecology)."
+}
