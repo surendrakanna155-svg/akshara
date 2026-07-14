@@ -1,6 +1,7 @@
 # AKSHARA PRODUCT REALITY & CORRECTNESS CERTIFICATION PROGRAM — Canonical Tracker (PRC)
 
-**Status:** ⚪ **SCHEDULED — DO NOT EXECUTE YET** · **Integrated:** 2026-07-11 · **Program ID:** PRC
+**Status:** 🔵 **IN AUDIT (PRC-A Wave A STARTED 2026-07-14 at RECON-2 — the true current wave)** · **Integrated:** 2026-07-11 · **Program ID:** PRC
+**RECON-2 note (2026-07-14):** this program was **skipped in the ERP-lane drift** (the ERP-branch roadmap had lost the PRC integration) — the lane wrongly ran CFC-1→FREEZE-1→"P4-RT" before PRC. Corrected: FREEZE-1 rescinded, PRC-A is now executing. First-pass classification + progress: [`../execution/PRC_A_WAVE_A_PROGRESS.md`](../execution/PRC_A_WAVE_A_PROGRESS.md). See [`../execution/RECON-2_EXECUTION_ORDER_CORRECTION.md`](../execution/RECON-2_EXECUTION_ORDER_CORRECTION.md).
 **Source (execution authority, FROZEN):** [`../AKSHARA_PRODUCT_REALITY_AND_CORRECTNESS_CERTIFICATION.md`](../AKSHARA_PRODUCT_REALITY_AND_CORRECTNESS_CERTIFICATION.md) — every `L<n>` reference below is a line of that file.
 **Roadmap anchor:** [`FINAL_EXECUTION_MASTER_ROADMAP.md`](FINAL_EXECUTION_MASTER_ROADMAP.md) → **PROGRAM PRC** (items **PRC-A**, **PRC-B**).
 **Authority rule (from the owner directive):** after integration, chat memory is NOT an execution input — the source document and the canonical roadmap (+ this tracker) are the execution authority.
