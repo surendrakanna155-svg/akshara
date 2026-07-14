@@ -1,0 +1,89 @@
+{
+  "items": [
+    {
+      "concept": "Power",
+      "answer": "36",
+      "correct": true,
+      "unique": true,
+      "concept_fit": true,
+      "note": "P = V^2/R = 144/4 = 36 W. Matches given answer; all four options are numerically distinct, no ambiguity. Difficulty 'medium' is generous for a single-formula plug-in but not unreasonable."
+    },
+    {
+      "concept": "Newton's second cord law",
+      "answer": "30",
+      "correct": true,
+      "unique": true,
+      "concept_fit": false,
+      "note": "Physics is correct: starting from rest, p = F*t = 10*3 = 30 kg*m/s (impulse-momentum form of Newton's 2nd law). However the concept label 'Newton's second cord law' is garbled/non-standard (not a recognized JEE topic name) — reads like a corrupted concatenation, should be 'Newton's Second Law' or 'Impulse-Momentum Theorem'. Flagged for concept-label integrity, not correctness."
+    },
+    {
+      "concept": "Matrices",
+      "answer": "3/13",
+      "correct": true,
+      "unique": true,
+      "concept_fit": true,
+      "note": "det(A) = (-4)(-3)-(5)(5) = -13; A^-1 = (1/det)[[d,-b],[-c,a]] => (1,1) entry = d/det = -3/-13 = 3/13. Matches; unique among options (4/13, -3/13, 3/13, -3 are all distinct)."
+    },
+    {
+      "concept": "Integrals",
+      "answer": "4x^3/3+4x^2",
+      "correct": true,
+      "unique": true,
+      "concept_fit": true,
+      "note": "Integral(4x^2+8x)dx = 4x^3/3 + 4x^2 (constant ignored as instructed). Matches; distractors (double coefficients, differentiated instead of integrated, original integrand) are plausible but clearly wrong, so unambiguous."
+    },
+    {
+      "concept": "Derivatives",
+      "answer": "2500x^3+7500x^2+7500x+2500",
+      "correct": true,
+      "unique": true,
+      "concept_fit": true,
+      "note": "Term-by-term derivative of 625x^4+2500x^3+3750x^2+2500x+625 (which is (5x+5)^4) gives 2500x^3+7500x^2+7500x+2500. Matches and is unique among options."
+    },
+    {
+      "concept": "Binomial Theorem",
+      "answer": "80",
+      "correct": true,
+      "unique": true,
+      "concept_fit": true,
+      "note": "General term C(5,4)*(2x)^4*1 = 5*16*x^4 = 80x^4, coefficient 80. Matches; unique among options."
+    },
+    {
+      "concept": "Limits and Derivatives",
+      "answer": "108",
+      "correct": true,
+      "unique": true,
+      "concept_fit": true,
+      "note": "(x^4-81)/(x-3) = (x+3)(x^2+9) for x!=3; at x=3 this is 6*18=108. Matches. Concept label 'Limits and Derivatives' is the standard combined NCERT chapter name so it fits even though this specific item only tests limits, not differentiation."
+    },
+    {
+      "concept": "Permutations and Combinations",
+      "answer": "60",
+      "correct": true,
+      "unique": true,
+      "concept_fit": true,
+      "note": "5P3 = 5!/2! = 60. Matches; unique among options. Note: a rote single-formula recall, 'medium' difficulty is generous (closer to easy)."
+    },
+    {
+      "concept": "Derivatives",
+      "answer": "3",
+      "correct": true,
+      "unique": true,
+      "concept_fit": true,
+      "note": "f(x)=x^2-2x+4 has vertex/critical point at x=1 (f'(x)=2x-2=0), f(1)=3, and f''(x)=2>0 confirms minimum. Matches, single defensible numeric answer. Difficulty label 'hard' is questionable — this is a routine one-variable optimization, more consistent with easy/medium."
+    },
+    {
+      "concept": "Integrals",
+      "answer": "64/3",
+      "correct": true,
+      "unique": true,
+      "concept_fit": true,
+      "note": "Intersections of y=2x^2+x-9 and y=-3x-3 at x=-3,1 (from x^2+2x-3=0). Integral of (line-curve)=(-2x^2-4x+6) from -3 to 1 = 64/3. Matches; genuinely multi-step, 'hard' label is appropriate here."
+    }
+  ],
+  "n_ok": 9,
+  "n_flag": 1,
+  "duplicates": [],
+  "paper_level": "Subject spread is broken for a JEE Main paper: 8 Mathematics items, 2 Physics items, 0 Chemistry items — this is a Math-heavy fragment, not a balanced partial JEE Main paper. All 10 answers were independently re-derived and match the stated key, and all 10 items have exactly one defensible answer with no ambiguous or multi-correct options. No duplicate or near-identical stems were found even though 'Derivatives' and 'Integrals' each recur twice (different values/forms, legitimate depth coverage, not duplication). One item (Physics/momentum) carries a garbled, non-standard concept label ('Newton's second cord law') even though its physics content is correct and genuinely tests Newton's second law / impulse-momentum. Difficulty tagging leans generous: several 'medium' items (Power, Permutations, Binomial Theorem, Derivatives-poly) are single-step formula applications, and the 'hard' numerical item on minimizing a quadratic is a routine computation rather than genuinely hard; the 'hard' numerical item on area between a curve and line is appropriately difficult.",
+  "summary": "9 of 10 items are fully correct, unambiguous, and concept-fit on independent re-derivation; the 1 flagged item (Physics momentum/impulse question) has a garbled concept label ('Newton's second cord law') despite its answer (30 kg*m/s) being correct. No duplicate or near-identical items were found. Difficulty labels are somewhat generous — several 'medium' items are one-step formula plug-ins and the 'hard' minimum-of-quadratic item is routine — but none are mislabelled to the point of being wrong. Overall verdict: item-level quality is genuine and independently verifiable, but this is NOT a coherent full/partial JEE paper at the paper level, since it is 80% Mathematics with zero Chemistry and only 2 Physics items — a subject-balance defect, not a correctness defect."
+}

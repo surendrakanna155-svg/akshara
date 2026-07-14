@@ -80,7 +80,7 @@ _CB = CompositionTemplate(
      Step("massp", "mass_from_moles", ("np", "Mp"))],
     "massp",
     lambda env, p: close(((env["massp"] / p["Mp"]) / p["ratio"]) * p["Mr"], p["mass"]),  # reconstruct reactant mass
-    lambda env, p: (f"For the reaction  {p['eq']}  (molar masses: {p['reactant']} = {p['Mr']:g} g/mol, "
+    lambda env, p: (f"For the reaction {p['eq']} (molar masses: {p['reactant']} = {p['Mr']:g} g/mol, "
                     f"{p['product']} = {p['Mp']:g} g/mol), the mass of {p['product']} obtained from "
                     f"{p['mass']:g} g of {p['reactant']} (in grams) is:"),
     # robust for any ratio (incl. 1): reactant mass, double, off-by-one-product, scaled-reactant, ratio-ignored
@@ -129,7 +129,7 @@ _CD = CompositionTemplate(
      Step("V", "gas_volume_stp", ("np",))],
     "V",
     lambda env, p: close(((env["V"] / 22.4) / p["ratio"]) * p["Mr"], p["mass"]),   # round-trip: reconstruct mass
-    lambda env, p: (f"For the reaction  {p['eq']}  the volume of CO₂ gas measured at STP (molar volume = "
+    lambda env, p: (f"For the reaction {p['eq']}, the volume of CO₂ gas measured at STP (molar volume = "
                     f"22.4 L/mol) produced from {p['mass']:g} g of {p['reactant']} (molar mass {p['Mr']:g} g/mol) "
                     f"is (in litres):"),
     lambda env, p: [p["mass"] * 22.4, env["np"], 2 * env["V"], p["k"] * 22.4],
