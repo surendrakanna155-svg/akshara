@@ -485,7 +485,8 @@ export function employeeDetailToApi(
   }
   if (department === "finance") {
     integrationNotes.push(
-      "Payroll entries post to Finance module (FN-05 salary disbursement placeholder).",
+      "Payroll is tracked in the HR module and is NOT posted to the Finance ledger — " +
+        "record salary disbursements against the FN-05 head in Finance manually.",
     );
   }
   if (department === "transport") {

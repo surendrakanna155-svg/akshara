@@ -379,7 +379,7 @@ class MockHrRepository implements HrRepository {
         if (employee.teacherAppLinked == true)
           'Linked to Teacher app — ${employee.name} uses TA-01 attendance and TA-07 leave.',
         if (employee.department == HrDepartment.finance)
-          'Payroll entries post to Finance module (FN-05 salary disbursement placeholder).',
+          'Payroll is tracked in the HR module and is NOT posted to the Finance ledger — record salary disbursements against the FN-05 head in Finance manually.',
         if (employee.department == HrDepartment.transport)
           'Also listed in Transport driver roster (TR-04 Ramesh Kumar).',
       ],
@@ -745,7 +745,7 @@ class MockHrRepository implements HrRepository {
         HrTrendPoint(label: 'May', amountLakhs: 1.08, targetLakhs: 1.08),
       ],
       financeIntegrationNote:
-          'Salary disbursement posts to Finance collections ledger (FN-05 placeholder). Review in Finance module before bank transfer.',
+          'Salary disbursements are tracked in HR and are NOT posted to the Finance ledger — review and record against the FN-05 head in Finance manually before bank transfer.',
       financeRoute: RouteNames.financeCollections,
     );
 
@@ -1244,7 +1244,7 @@ class MockHrRepository implements HrRepository {
               id: 'pay_cycle',
               label: 'Pay cycle',
               value: 'Monthly (last working day)',
-              description: 'Posts to Finance FN-05 salary ledger placeholder',
+              description: 'Not posted to Finance — record against FN-05 manually',
               editable: true,
             ),
             HrSettingItem(

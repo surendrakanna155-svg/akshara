@@ -767,8 +767,8 @@ class MockTransportRepository implements TransportRepository {
             TransportSettingItem(
               id: 'fuel_expense',
               label: 'Fuel expense posting',
-              value: 'Manual (Finance FN-05 placeholder)',
-              description: 'Fuel cost MTD sync to finance',
+              value: 'Manual (FN-05 head)',
+              description: 'Fuel costs tracked in Transport — not posted to Finance',
               editable: false,
             ),
           ],
