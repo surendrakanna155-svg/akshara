@@ -120,9 +120,16 @@ distinctive next frontier is compositional depth, which is why this is a natural
 
 ## Remaining measured work (JEE/NEET-first)
 
-- **JEE multi-step / compositional depth** — the genuine JEE frontier; needs a compositional generator+verifier
-  **or** unblocked evidence (acquisition owner-HOLD). *Genuine owner decision.*
-- **More single-concept JEE-Math families** — unblocked, incremental (practice/DPP value).
+- **JEE multi-step / compositional depth** — **FOUNDATION BUILT (2026-07-14, `COMPOSITIONAL_ARCHITECTURE.md`).**
+  Owner chose this direction ("lakhs of high-quality questions across depth levels, no architectural debt").
+  A typed **operator engine** (`compose.py`) + **composition templates** (`compositions.py`) generate genuine
+  multi-concept JEE items verified **per-step AND end-to-end** by independent methods, with **reasoning depth
+  computed from structure** (bands FOUNDATIONAL/INTERMEDIATE/ADVANCED). v1: 4 templates, 124 verified items at
+  depths 2–4; AI judge 8/8. Pilot bank 1,101 → **1,225** (Math × JEE_MAIN 471 → 595). Scale path = more
+  operators/templates + type-directed auto-composition on the same substrate. *(Genuine JEE-exam **evidence**
+  remains blocked, but synthesized compositional depth does not depend on it.)*
+- **More single-concept JEE-Math families** — unblocked, incremental (practice/DPP value); fold into the
+  operator engine as the depth-1 (FOUNDATIONAL) band.
 - **NEET non-factual archetypes** (classification / cause_effect / assertion) — archetype-specific generation.
 - **Promotion of the pilot bank → real Question Bank — owner decision.**
 

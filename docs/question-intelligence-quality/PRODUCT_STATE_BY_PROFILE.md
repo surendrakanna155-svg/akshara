@@ -48,9 +48,18 @@ per profile.
 > **genuinely independent second method** (numerical quadrature, brute-force summation, finite-difference,
 > alternate determinant expansion, root-solving, symbolic expansion, Pascal recurrence, A·A⁻¹=I identity,
 > z·conj(z)). Pilot 0 independent-disagreement (one repeated-root verifier bug found & fixed); independent AI
-> examiner 15/15 then 18/18 across all families. **Pilot bank now 1,101** (Mathematics×JEE_MAIN **471** across
-> 18 families). JEE was a *classification* issue + verifier gap, not corpus-blocked. JEE multi-step remains
-> EVIDENCE-BLOCKED (`JEE_MULTISTEP_EVIDENCE_CHECK.md`). See `GENERATION_JEE_BUILD.md`.
+> examiner 15/15 then 18/18 across all families. JEE was a *classification* issue + verifier gap, not
+> corpus-blocked.
+>
+> **UPDATE 2026-07-14 — COMPOSITIONAL FOUNDATION (owner-directed: reasoning-depth, no architectural debt).**
+> New **operator engine** `compose.py` (typed composable units, each with an independent verifier) + **template
+> layer** `compositions.py` generate genuine **multi-concept** JEE items verified **per-step AND end-to-end** by
+> independent methods, with **reasoning depth computed from pipeline structure** (bands FOUNDATIONAL/
+> INTERMEDIATE/ADVANCED). v1 = 4 templates (area-between-roots, min-value, tangent-slope-at-root, FTC), 124
+> verified items at depths 2–4; AI judge 8/8. First-class `reasoning_depth` column added. **Pilot bank now
+> 1,225** (Mathematics×JEE_MAIN **595**). This is the scalable foundation (→ lakhs via more operators/templates
+> + type-directed auto-composition). JEE-exam *evidence* still EVIDENCE-BLOCKED but synthesized compositional
+> depth doesn't need it. See `COMPOSITIONAL_ARCHITECTURE.md`, `GENERATION_JEE_BUILD.md`.
 
 ## Measured Subject × Profile ratings
 

@@ -1,0 +1,71 @@
+{
+  "items": [
+    {
+      "frame": "area_between_roots",
+      "stem": "The area (in square units) of the finite region enclosed between the curve y = 2x^2 + 8x + 6 and the x-axis is:",
+      "your_worked_answer": "Roots of 2x^2+8x+6=0 are x=-3,-1 (upward parabola, so curve is below the x-axis between roots -- the unique finite enclosed region). ∫_{-3}^{-1}(2x^2+8x+6)dx = F(-1)-F(-3) = -8/3 - 0 = -8/3; area = |-8/3| = 8/3.",
+      "proposed_answer": "8/3",
+      "verdict": "agree",
+      "reason": "Matches; -8/3 present as a plausible sign-error distractor, phrasing unambiguous (single finite region for upward parabola with two real roots)."
+    },
+    {
+      "frame": "area_between_roots",
+      "stem": "The area (in square units) of the finite region enclosed between the curve y = 3x^2 - 3x - 6 and the x-axis is:",
+      "your_worked_answer": "Roots of 3x^2-3x-6=0 are x=-1,2. ∫_{-1}^{2}(3x^2-3x-6)dx = F(2)-F(-1) = -10 - 3.5 = -13.5; area = |-13.5| = 27/2.",
+      "proposed_answer": "27/2",
+      "verdict": "agree",
+      "reason": "Matches; unambiguous single finite region."
+    },
+    {
+      "frame": "min_value_quadratic",
+      "stem": "The minimum value of the function f(x) = x^2 - 6x + 4 is:",
+      "your_worked_answer": "f'(x)=2x-6=0 -> x=3 (leading coeff +1 > 0, so this is a genuine minimum). f(3)=9-18+4=-5.",
+      "proposed_answer": "-5",
+      "verdict": "agree",
+      "reason": "Matches; parabola opens upward so vertex is a true minimum, unambiguous."
+    },
+    {
+      "frame": "min_value_quadratic",
+      "stem": "The minimum value of the function f(x) = 2x^2 - 8x + 10 is:",
+      "your_worked_answer": "f'(x)=4x-8=0 -> x=2 (leading coeff +2 > 0). f(2)=8-16+10=2.",
+      "proposed_answer": "2",
+      "verdict": "agree",
+      "reason": "Matches; unambiguous."
+    },
+    {
+      "frame": "tangent_slope_at_root",
+      "stem": "For f(x) = x^2 + x + 3, the slope of the tangent to the curve y = f(x) at the larger value of x satisfying x^2 - 4 = 0 is:",
+      "your_worked_answer": "x^2-4=0 -> x=±2, larger root x=2. f'(x)=2x+1, f'(2)=5.",
+      "proposed_answer": "5",
+      "verdict": "agree",
+      "reason": "Matches; 'larger value of x' unambiguously selects x=2 out of the two roots."
+    },
+    {
+      "frame": "tangent_slope_at_root",
+      "stem": "For f(x) = 2x^2 + 2x - 3, the slope of the tangent to the curve y = f(x) at the larger value of x satisfying x^2 + 3x = 0 is:",
+      "your_worked_answer": "x^2+3x=0 -> x(x+3)=0 -> x=0,-3, larger root x=0. f'(x)=4x+2, f'(0)=2.",
+      "proposed_answer": "2",
+      "verdict": "agree",
+      "reason": "Matches; larger root correctly identified as 0 (not -3), unambiguous."
+    },
+    {
+      "frame": "ftc_integral_of_derivative",
+      "stem": "If f(x) = 3x^2 - 2x + 3, the value of the definite integral ∫ from 1 to 4 of f '(x) dx is:",
+      "your_worked_answer": "By FTC, ∫_1^4 f'(x)dx = f(4)-f(1) = 43 - 4 = 39.",
+      "proposed_answer": "39",
+      "verdict": "agree",
+      "reason": "Matches; unambiguous application of FTC."
+    },
+    {
+      "frame": "ftc_integral_of_derivative",
+      "stem": "If f(x) = x^2 + 4x + 3, the value of the definite integral ∫ from 1 to 4 of f '(x) dx is:",
+      "your_worked_answer": "∫_1^4 f'(x)dx = f(4)-f(1) = 35 - 8 = 27.",
+      "proposed_answer": "27",
+      "verdict": "agree",
+      "reason": "Matches; unambiguous."
+    }
+  ],
+  "n_agree": 8,
+  "n_flag": 0,
+  "summary": "All 8 items independently re-derived and confirmed correct: proposed answers match hand-worked solutions and each correct value is present among the given options. Both area_between_roots items correctly took the absolute value of the definite integral (raw signed integrals were negative: -8/3 and -27/2, listed as sign-error distractors). Both min_value_quadratic items have positive leading coefficients so the vertex is a genuine minimum (not a saddle case needing a maximum instead). Both tangent_slope_at_root items unambiguously specify 'the larger value of x' among the two roots of g(x)=0, and the larger root was correctly identified in each case (including the non-obvious case of x=0 being larger than x=-3). No phrasing ambiguity or mathematical errors found in any of the 4 templates."
+}
