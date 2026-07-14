@@ -163,6 +163,20 @@ def _unique_verify(ins, out):
 _register(Operator("unique_root", "UNIQUE_ROOT", "algebra", (ROOTSET,), POINT, lambda s: s[0], _unique_verify))
 
 
+# ── operator: subtract polynomials (POLY,POLY -> POLY); verified by numeric agreement at sample points ─
+def _sub_apply(f, g):
+    return sp.expand(f - g)
+
+
+def _sub_verify(ins, out):
+    f, g = ins
+    gf, gg, go = _poly_fn(f), _poly_fn(g), _poly_fn(out)
+    return all(close(go(t), gf(t) - gg(t)) for t in (0.3, 1.7, -2.1))    # independent numeric identity
+
+
+_register(Operator("subtract_poly", "SUBTRACT_POLY", "algebra", (POLY, POLY), POLY, _sub_apply, _sub_verify))
+
+
 # ── operator: absolute value (NUMBER -> NUMBER) ──────────────────────────────────────────────────────
 def _abs_verify(ins, out):
     v = ins[0]

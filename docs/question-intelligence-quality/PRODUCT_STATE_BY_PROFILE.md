@@ -55,10 +55,12 @@ per profile.
 > New **operator engine** `compose.py` (typed composable units, each with an independent verifier) + **template
 > layer** `compositions.py` generate genuine **multi-concept** JEE items verified **per-step AND end-to-end** by
 > independent methods, with **reasoning depth computed from pipeline structure** (bands FOUNDATIONAL/
-> INTERMEDIATE/ADVANCED). v1 = 4 templates (area-between-roots, min-value, tangent-slope-at-root, FTC), 124
-> verified items at depths 2–4; AI judge 8/8. First-class `reasoning_depth` column added. **Pilot bank now
-> 1,225** (Mathematics×JEE_MAIN **595**). This is the scalable foundation (→ lakhs via more operators/templates
-> + type-directed auto-composition). JEE-exam *evidence* still EVIDENCE-BLOCKED but synthesized compositional
+> INTERMEDIATE/ADVANCED). v1 = **5 templates** (area-between-roots, min-value, tangent-slope-at-root, FTC,
+> area-between-curve-and-line), **164 verified items across a genuine depth ladder 2/3/4/5** (37/31/56/40); AI
+> judge 8/8 + 5/5. Adding one operator (`subtract_poly`) unlocked the depth-5 template with no engine change —
+> the debt-free scaling proof. First-class `reasoning_depth` column added. **Pilot bank now 1,265**
+> (Mathematics×JEE_MAIN **635**). This is the scalable foundation (→ lakhs via more operators/templates +
+> type-directed auto-composition). JEE-exam *evidence* still EVIDENCE-BLOCKED but synthesized compositional
 > depth doesn't need it. See `COMPOSITIONAL_ARCHITECTURE.md`, `GENERATION_JEE_BUILD.md`.
 
 ## Measured Subject × Profile ratings

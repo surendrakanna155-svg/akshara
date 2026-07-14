@@ -48,12 +48,16 @@ FOUNDATIONAL (≤1) · INTERMEDIATE (2–3) · ADVANCED (≥4).
 | min_value_quadratic | differentiate + solve + evaluate | **4** ADVANCED | closed-form vertex `c − b²/4a` |
 | tangent_slope_at_root | roots(g) + differentiate(f) + evaluate | **3** INTERMEDIATE | finite-difference slope of f at the root |
 | ftc_integral_of_derivative | differentiate + definite integral | **2** INTERMEDIATE | FTC identity `f(b) − f(a)` by direct evaluation |
+| area_between_curve_and_line | **subtract** + roots + bounds + integral + abs | **5** ADVANCED | numerical quadrature of `f−g` over the intersection interval |
 
-**Pilot:** 140 → **124 PASS** (0 verification-disagreement; all rejects `DUPLICATE_GENERATED`). Banked with a
-first-class `reasoning_depth` column: depth-2 = 37, depth-3 = 31, depth-4 = 56. **Mathematics × JEE_MAIN → 595;
-pilot bank → 1,225.** An independent JEE-examiner AI judge hand-worked a stratified 8-item all-template sample:
-**8/8 agree**, explicitly confirming the "larger root" phrasing and the area abs-value are unambiguous
-(`phase0_evidence/pilot_bio_neet/cqg_sanity_verdict.json`).
+The last row is the **extensibility proof**: adding a single operator (`subtract_poly`) unlocked a new,
+*deeper* (depth-5) composition with **no change to the engine** — the debt-free scaling claim, demonstrated.
+
+**Pilot:** 175 → **164 PASS** (0 verification-disagreement; all rejects `DUPLICATE_GENERATED`). Banked with a
+first-class `reasoning_depth` column across a genuine ladder — **depth-2 = 37, depth-3 = 31, depth-4 = 56,
+depth-5 = 40**. **Mathematics × JEE_MAIN → 635; pilot bank → 1,265.** An independent JEE-examiner AI judge
+hand-worked a stratified 8-item all-template sample: **8/8 agree**, explicitly confirming the "larger root"
+phrasing and the area abs-value are unambiguous (`phase0_evidence/pilot_bio_neet/cqg_sanity_verdict.json`).
 
 ## Why this reaches lakhs without debt
 

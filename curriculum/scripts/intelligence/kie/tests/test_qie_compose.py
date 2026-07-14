@@ -43,8 +43,11 @@ class TestDepth(unittest.TestCase):
                                            {"f", "lo", "hi"}), 2)
         self.assertEqual(C.reasoning_depth(K.TEMPLATES["area_between_roots"].pipeline,
                                            {"f", "a", "p", "q"}), 4)
+        # adding one operator (subtract_poly) extended the ladder to depth 5 with no engine change
+        self.assertEqual(C.reasoning_depth(K.TEMPLATES["area_between_curve_and_line"].pipeline,
+                                           {"f", "g", "a", "p", "q"}), 5)
         self.assertEqual(C.depth_band(2), "INTERMEDIATE")
-        self.assertEqual(C.depth_band(4), "ADVANCED")
+        self.assertEqual(C.depth_band(5), "ADVANCED")
 
 
 class TestGenerate(unittest.TestCase):
@@ -52,9 +55,9 @@ class TestGenerate(unittest.TestCase):
         cands = K.generate(per_template=5, seed="T")
         frames = {c["frame_id"] for c in cands}
         for f in ("area_between_roots", "min_value_quadratic", "tangent_slope_at_root",
-                  "ftc_integral_of_derivative"):
+                  "ftc_integral_of_derivative", "area_between_curve_and_line"):
             self.assertIn(f, frames, f)
-        self.assertTrue(any(c["reasoning_depth"] >= 4 for c in cands))   # genuine ADVANCED depth present
+        self.assertTrue(any(c["reasoning_depth"] >= 5 for c in cands))   # depth ladder extends to 5
         self.assertTrue(any(c["depth_band"] == "INTERMEDIATE" for c in cands))
         for c in cands:
             self.assertEqual(K.verify_composition(c), "agree", c["frame_id"] + " | " + c["stem"])

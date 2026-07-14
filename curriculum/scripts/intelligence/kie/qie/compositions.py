@@ -145,7 +145,36 @@ _T4 = CompositionTemplate(
 )
 
 
-TEMPLATES: Dict[str, CompositionTemplate] = {t.name: t for t in (_T1, _T2, _T3, _T4)}
+# ── T5: area of the region enclosed between a curve and a line (depth 5 — extends the ladder) ─────────
+# Demonstrates the foundation scales without engine changes: adding ONE operator (subtract_poly) unlocks a
+# new, deeper composition (subtract → roots → bounds → integrate → abs).
+def _t5_setup(seed):
+    p = _si(seed + "p", -3, 1); q = p + _si(seed + "q", 2, 4); a = _si(seed + "a", 1, 2)
+    m = _si(seed + "m", -3, 3); c = _si(seed + "c", -3, 3)
+    h = sp.expand(a * (x - p) * (x - q))                 # the (curve − line) difference, with integer roots
+    line = sp.expand(m * x + c)
+    curve = sp.expand(h + line)
+    return {"f": curve, "g": line, "a": a, "p": p, "q": q}, {"p": p, "q": q, "a": a}
+
+
+def _t5_e2e(env, p):
+    gf, gg = _poly_fn(env["f"]), _poly_fn(env["g"])
+    return abs(float(mpmath.quad(lambda t: gf(t) - gg(t), [p["p"], p["q"]])))
+
+
+_T5 = CompositionTemplate(
+    "area_between_curve_and_line", "COMPOSE_AREA_BETWEEN_CURVE_AND_LINE", _t5_setup,
+    [Step("h", "subtract_poly", ("f", "g")), Step("roots", "real_roots", ("h",)),
+     Step("lo", "min_root", ("roots",)), Step("hi", "max_root", ("roots",)),
+     Step("signed", "integrate_def", ("h", "lo", "hi")), Step("area", "absval", ("signed",))],
+    "area", _t5_e2e,
+    lambda env, p: (f"The area (in square units) of the finite region enclosed between the curve "
+                    f"y = {_poly_text(env['f'])} and the line y = {_poly_text(env['g'])} is:"),
+    lambda env, p: [env["signed"], 2 * env["area"], env["area"] + abs(p["q"] - p["p"])],
+)
+
+
+TEMPLATES: Dict[str, CompositionTemplate] = {t.name: t for t in (_T1, _T2, _T3, _T4, _T5)}
 
 
 def _round(v):
