@@ -96,16 +96,42 @@ So the current foundation already provably yields ~5,900 verified items; **lakhs
 - **The verification contract is uniform** (per-step independent + end-to-end independent), so every future
   template inherits the no-fabrication guarantee for free.
 
+## Auto-composition v1 (`autocompose.py`) — Option 1: curated phrasing-schema per shape
+
+Owner-selected (2026-07-14) strategy for scaling shape variety **without** sacrificing quality: auto-composition
+*enumerates* type-valid operator pipelines automatically, while *phrasing* stays curated per shape.
+
+- A **ShapeSchema** has operator **SLOTS**; each slot offers several type-compatible operator sequences
+  (e.g. `TRANSFORM ∈ {f′, f″}` = one or two `differentiate` applications; `REDUCE ∈ {smaller-root, larger-root}`
+  = `min_root`/`max_root`).
+- The auto-composer enumerates every slot filling, **TYPE-CHECKS** each against the operator registry
+  (`chain_out_type` threads types through the chosen operator chain; type-invalid fillings are dropped), builds
+  the concrete pipeline, and runs it through the engine where **every step is independently verified**.
+- **Soundness for free:** a composition of independently-verified operators is correct by construction — no
+  separate end-to-end proof needed. Tampering is still caught (re-run + answer/option checks).
+- **Quality for free:** the stem comes from the schema's curated template filled with the chosen slots'
+  phrases — so auto-generated questions read as cleanly as hand-written ones.
+
+**v1:** 2 schemas → **6 distinct auto-composed pipeline shapes** (4 + 2 fillings): value of the 1st/2nd
+derivative of *f* at the smaller/larger root of *g*=0; and the definite integral of *f′*/*f″* between the roots
+of *g*=0. Independent JEE-examiner AI judge on a stratified 12-item all-shape sample: **12/12 agree**, phrasing
+confirmed **genuinely high-quality and unambiguous** across all shapes (a cosmetic prime-spacing nit was fixed).
+
+**Measured auto-composition capacity: 50,159 distinct verified items** from just these 6 shapes at current
+narrow ranges (a *sampling-limited lower bound* — the per-shape parameter space is ~26k each). Combined with the
+curated templates, **the compositional foundation already encodes ≈56,000 distinct verified items** from 2
+schemas + 5 templates, unwidened. Widening ranges (config) and adding schemas/operators takes this to
+lakhs–crores with **no engine changes** — the mandate, demonstrated end-to-end.
+
 ## Roadmap (on the same foundation — additive, no rewrites)
 
 1. **More operators** (limits, matrix product/inverse, `solve_linear/quadratic`, `binomial_term`, `summation`)
    → immediately unlock many new compositions.
 2. **More templates** at each depth band (area between two curves, monotonic intervals, definite integral by
    substitution, tangent/normal geometry, optimisation word-forms).
-3. **Type-directed automatic composition:** because operators declare types, an auto-composer can *generate*
-   valid pipelines by type-matching (output type → next input type), with depth as a target — turning depth
-   levels into a dial. v1 keeps curated templates for phrasing quality; auto-composition is the scale lever and
-   uses the *same* operator registry (no rework).
+3. **Type-directed automatic composition — DONE v1** (`autocompose.py`, above): operator-slot filling with
+   type-checking + curated phrasing per shape (Option 1). Next: more schemas/slots, and depth-targeted
+   enumeration (turn depth into a dial). Uses the *same* operator registry — no rework.
 4. **Fold single-concept families in** as depth-1 operators/compositions, then retire the bespoke modules.
 
 ## Honesty / guarantees preserved

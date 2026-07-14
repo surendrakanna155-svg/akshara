@@ -58,10 +58,15 @@ per profile.
 > INTERMEDIATE/ADVANCED). v1 = **5 templates** (area-between-roots, min-value, tangent-slope-at-root, FTC,
 > area-between-curve-and-line), **164 verified items across a genuine depth ladder 2/3/4/5** (37/31/56/40); AI
 > judge 8/8 + 5/5. Adding one operator (`subtract_poly`) unlocked the depth-5 template with no engine change —
-> the debt-free scaling proof. First-class `reasoning_depth` column added. **Pilot bank now 1,265**
-> (Mathematics×JEE_MAIN **635**). This is the scalable foundation (→ lakhs via more operators/templates +
-> type-directed auto-composition). JEE-exam *evidence* still EVIDENCE-BLOCKED but synthesized compositional
-> depth doesn't need it. See `COMPOSITIONAL_ARCHITECTURE.md`, `GENERATION_JEE_BUILD.md`.
+> the debt-free scaling proof. First-class `reasoning_depth` column added.
+>
+> **UPDATE 2026-07-14 — AUTO-COMPOSITION v1 (owner-selected Option 1: curated phrasing-schema per shape).**
+> `autocompose.py` enumerates TYPE-VALID operator-slot fillings (scale) with curated per-shape phrasing
+> (quality); every step independently verified ⇒ sound by construction. 2 schemas → 6 auto-composed shapes; AI
+> judge 12/12 (phrasing genuinely high-quality). **Measured capacity: 50,159 distinct verified auto-composed
+> items** (≈56k with the templates, unwidened → lakhs–crores by config alone — the mandate demonstrated).
+> **Pilot bank now 1,345** (Mathematics×JEE_MAIN **715**). JEE-exam *evidence* still EVIDENCE-BLOCKED but
+> synthesized compositional depth doesn't need it. See `COMPOSITIONAL_ARCHITECTURE.md`, `GENERATION_JEE_BUILD.md`.
 
 ## Measured Subject × Profile ratings
 

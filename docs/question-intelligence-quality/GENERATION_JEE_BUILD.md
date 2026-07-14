@@ -127,9 +127,11 @@ distinctive next frontier is compositional depth, which is why this is a natural
   computed from structure** (bands FOUNDATIONAL/INTERMEDIATE/ADVANCED). v1: **5 templates**, **164 verified
   items across a genuine depth ladder 2/3/4/5** (37/31/56/40); AI judge 8/8. Adding one operator
   (`subtract_poly`) unlocked the depth-5 template with **no engine change** — the debt-free scaling proof.
-  Pilot bank 1,101 → **1,265** (Math × JEE_MAIN 471 → 635). Scale path = more operators/templates +
-  type-directed auto-composition on the same substrate. *(Genuine JEE-exam **evidence** remains blocked, but
-  synthesized compositional depth does not depend on it.)*
+  Pilot bank 1,101 → 1,265 (Math × JEE_MAIN 471 → 635). **Auto-composition v1 (`autocompose.py`, Option 1 —
+  curated phrasing-schema per shape) added:** type-directed operator-slot filling → 6 auto-composed shapes from
+  2 schemas, AI judge 12/12, **measured 50,159 distinct verified items** (with the templates, ≈56k from the
+  whole foundation, unwidened → lakhs–crores by config alone). Pilot bank → **1,345** (Math × JEE_MAIN → 715).
+  *(Genuine JEE-exam **evidence** remains blocked, but synthesized compositional depth does not depend on it.)*
 - **More single-concept JEE-Math families** — unblocked, incremental (practice/DPP value); fold into the
   operator engine as the depth-1 (FOUNDATIONAL) band.
 - **NEET non-factual archetypes** (classification / cause_effect / assertion) — archetype-specific generation.
