@@ -74,6 +74,16 @@ per profile.
 > verified per-step AND end-to-end. **Pilot bank now 1,416** — Physics×JEE_MAIN & Chemistry×JEE_MAIN
 > compositional items added (bounded evidence). The operator/composition/verification/depth architecture is
 > **not Math-specific**. See `COMPOSITIONAL_ARCHITECTURE.md`.
+>
+> **UPDATE 2026-07-14 — BIOLOGY on the unified engine (owner-directed; not restricted to quantitative).**
+> Evidence audit (read-only) showed the corpus lacks clean structured bio relations, so per the locked
+> verification hierarchy (no LLM as truth) Biology uses: (a) **genetics** — deterministic Punnett enumeration
+> verified two ways (probability rule / full-grid / conditional subset), 3 templates depths 2–3
+> (monohybrid/dihybrid/conditional); (b) **evidence-grounded qualitative** — a curated canonical KB
+> (`bio_data.py`: structure-function, process/pathway order, gland→hormone→effect, deficiency→disease) with
+> multi-hop compositions verified by deterministic KB lookup/traversal (structure→system, gland→hormone→effect
+> cause-effect chains, process-next-step). LLM = quality/ambiguity examiner only. **Biology now 102** in the
+> bank (genetics + qualitative). See `BIOLOGY_COMPOSITION_MODEL.md`.
 
 ## Measured Subject × Profile ratings
 

@@ -1,0 +1,70 @@
+{
+  "items": [
+    {
+      "frame": "bio_process_next_step",
+      "stem": "In the passage of food through the human alimentary canal, which of the following immediately follows the 'small intestine' stage?",
+      "proposed_answer": "large intestine",
+      "verdict": "agree",
+      "reason": "Correct sequence (mouth→oesophagus→stomach→small intestine→large intestine); all four options are alimentary-canal organs (consistent category, no category-spotting); only 'large intestine' is the immediate next stage; no lexical giveaway."
+    },
+    {
+      "frame": "bio_process_next_step",
+      "stem": "In the flow of oxygenated blood in double circulation, which of the following immediately follows the 'left ventricle' stage?",
+      "proposed_answer": "aorta",
+      "verdict": "agree",
+      "reason": "Left ventricle pumps oxygenated blood into the aorta; 'lungs' and 'pulmonary vein' belong to the deoxygenated/pulmonary leg and 'left atrium' precedes the ventricle, so exactly one option fits; all options are circulatory structures (consistent category); no lexical giveaway."
+    },
+    {
+      "frame": "bio_process_next_step",
+      "stem": "In the human reflex arc, which of the following immediately follows the 'interneuron in the spinal cord' stage?",
+      "proposed_answer": "motor neuron",
+      "verdict": "agree",
+      "reason": "Standard NCERT reflex-arc order (receptor→sensory neuron→interneuron/relay in spinal cord→motor neuron→effector) makes 'motor neuron' the unique correct next stage; all options are reflex-arc components (consistent category); no lexical giveaway."
+    },
+    {
+      "frame": "bio_process_next_step",
+      "stem": "In the passage of food through the human alimentary canal, which of the following immediately follows the 'mouth' stage?",
+      "proposed_answer": "oesophagus",
+      "verdict": "agree",
+      "reason": "Correct sequence; oesophagus is the unique immediate next stage after mouth; options are same-category alimentary-canal organs; no lexical giveaway."
+    },
+    {
+      "frame": "bio_process_next_step",
+      "stem": "In the human reflex arc, which of the following immediately follows the 'sensory neuron' stage?",
+      "proposed_answer": "interneuron in the spinal cord",
+      "verdict": "agree",
+      "reason": "Matches the standard reflex-arc order; 'interneuron in the spinal cord' is the unique correct next stage; all options are reflex-arc components; no lexical giveaway."
+    },
+    {
+      "frame": "bio_process_next_step",
+      "stem": "In the passage of food through the human alimentary canal, which of the following immediately follows the 'oesophagus' stage?",
+      "proposed_answer": "stomach",
+      "verdict": "agree",
+      "reason": "Correct sequence; 'stomach' is the unique immediate next stage after oesophagus; options are same-category alimentary-canal organs; no lexical giveaway."
+    },
+    {
+      "frame": "bio_structure_to_system",
+      "stem": "The organ / structure responsible for the production of blood cells is part of which organ system of the human body?",
+      "proposed_answer": "skeletal system",
+      "verdict": "agree",
+      "reason": "Hematopoiesis occurs in red bone marrow housed within bones (skeletal system); none of the distractors (excretory, respiratory, nervous) plausibly produce blood cells, so the answer is unique within the option set; all options are organ systems (consistent category); stem contains no 'skelet-'/'bone' root, so no lexical giveaway."
+    },
+    {
+      "frame": "bio_structure_to_system",
+      "stem": "The organ / structure responsible for the transmission of electrical impulses through the body is part of which organ system of the human body?",
+      "proposed_answer": "nervous system",
+      "verdict": "agree",
+      "reason": "Electrical-impulse transmission is a function of neurons, uniquely fitting 'nervous system' among the four organ-system options; stem uses a functional description ('electrical impulses') without the 'nerv-'/'neuro-' root, so the earlier lexical-giveaway defect is not present; options are same-category organ systems."
+    },
+    {
+      "frame": "bio_structure_to_system",
+      "stem": "The organ / structure responsible for the filtration of blood to form urine is part of which organ system of the human body?",
+      "proposed_answer": "excretory system",
+      "verdict": "agree",
+      "reason": "Blood filtration to form urine is the kidney's function, uniquely mapping to the excretory system among digestive/nervous/respiratory distractors; stem does not contain the 'excret-' root, so no lexical giveaway; options are same-category organ systems."
+    }
+  ],
+  "n_agree": 9,
+  "n_flag": 0,
+  "summary": "All 9 items are factually correct with exactly one defensible answer among same-category options, and none leak the answer via a system-name root in the stem. This batch contains no hormone/gland frames, so the multi-hormone-gland defect class is not applicable here, but the category-spotting fix (all options same type: organs-in-a-process or organ-systems) and the lexical-giveaway fix (functional descriptions avoid the answer's name root, e.g. 'electrical impulses' instead of 'nerve/neural', 'filtration of blood to form urine' instead of 'excrete') both hold cleanly across every item."
+}

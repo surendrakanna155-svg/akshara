@@ -46,6 +46,17 @@ genetics solver**.
    - **Tier-3 LLM** — **quality examiner only** (phrasing, ambiguity, single-answer). Never the truth source,
      never the generator of the answer.
 
+## Tier-3 examiner in action (the hierarchy working)
+
+The LLM quality examiner is not the truth source, but it *is* the construct-quality check — and it earned its
+keep. On the first evidence-grounded Biology sample it found **no factual errors** but flagged **two genuine
+construct risks**: (1) a structure→system item mixed human-organ-system distractors against a plant-tissue
+answer, so it was solvable by *category-spotting* rather than knowledge; (2) "the principal hormone of the
+anterior pituitary" falsely assumes a single-hormone gland. Both were fixed deterministically — distractors now
+stay within one category (human organ systems), and multi-hormone glands are excluded from the KB — and a
+re-examination confirmed the fixes. This is exactly the intended division of labour: **deterministic engine =
+correctness; LLM = catches construct/ambiguity risks a lookup can't self-detect.**
+
 ## Honesty
 The curated KB is **canonical textbook knowledge** (like the periodic table), not corpus-extracted noise and not
 LLM-fabricated; each fact is human-verifiable and, where possible, corroborated by the Tier-2 set. This is the

@@ -262,7 +262,11 @@ def verify_composition(cand: dict) -> str:
     true_ans = env[tmpl.answer_key]
     if not tmpl.end_to_end(env, cand["_params"]):
         return "disagree"
-    if not close(true_ans, cand["_answer"]):
+    try:
+        matches = close(true_ans, cand["_answer"])          # numeric domains
+    except (ValueError, TypeError):
+        matches = (true_ans == cand["_answer"])             # string/entity domains (Biology KB)
+    if not matches:
         return "disagree"
     if cand["answer_text"] != fmt(true_ans):
         return "disagree"
