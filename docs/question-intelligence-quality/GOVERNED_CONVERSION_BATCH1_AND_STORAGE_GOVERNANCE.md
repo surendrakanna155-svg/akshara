@@ -87,10 +87,18 @@ runs end-to-end; verified structured knowledge flows to real papers; Chemistry i
    damaged; recovery from source PDFs/page-images (math-capable extractor + dimensional/answer-key verify) is
    the separate next workstream.
 
-## Owner decision (genuinely required)
-**Syllabus-boundary source of truth.** Verified governed-fact chapters (`Subject :: Chapter`, subject-gated,
-real NEET/JEE syllabus topics) are cleaner than kie.db's noisy concept titles, which now cap coverage. Options:
-(A) treat verified governed-fact chapters as first-class in-scope concepts for the qpgen boundary (raises
-bindable coverage, changes the boundary's source of truth); or (B) keep kie.db concepts as the sole boundary
-and curate/clean that concept list. Recommend **(A)** with the deterministic subject gate as the guard.
-Everything else (further examiner batches, notation recovery) continues autonomously.
+## Owner decision — RESOLVED (2026-07-14): Option A
+**Syllabus-boundary source of truth = kie.db certified concepts + verified governed-fact chapters.** The owner
+chose **A**: verified governed-fact chapters (`Subject :: Chapter`, subject-gated real NEET/JEE syllabus topics)
+are now first-class in-scope concepts for the qpgen boundary, guarded by the deterministic subject gate.
+Implemented in `qp_bridge._governed_concepts` (read-only qie.db) + `_bind` exact chapter binding; qpgen
+internals stay frozen. Result (same seed):
+
+| exam | filled (baseline → batch1 → +decision A) | Chemistry | from governed-KVS |
+|---|---|---|---|
+| NEET | 5 → 11 → **16** | 0 → 1 → **3** | 7 |
+| JEE Main | — → 14 → **16** | 0 → 1 → **3** | 2 |
+
+All governed-KVS items now bind; boundary_ok, 0 rejected slots, 562 tests green. The dominant remaining
+constraint is now **scale** (admit more of the 1,720 queued candidates) + the **notation-recovery lane** (3,606
+numeric candidates + NCERT 11–12 formula chunks) — both continue autonomously.

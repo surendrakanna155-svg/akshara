@@ -132,9 +132,44 @@ def _targets(item: dict) -> List[str]:
     return []                                                # projectile-PE, vieta, complex, series, process → skip
 
 
+def _governed_concepts(subjects) -> Tuple[Dict[str, object], Dict[str, Tuple[str, str]]]:
+    """Owner decision A (2026-07-14): verified governed-fact chapters — subject-gated, doc-grounded real
+    NEET/JEE syllabus topics — are FIRST-CLASS in-scope concepts for the qpgen boundary, guarded by the
+    deterministic subject gate. Returns ({gov_code: ConceptRef}, {concept_candidate: (gov_code, title)}),
+    restricted to the scope's subjects. Read-only on qie.db; empty if the store is absent."""
+    import os
+    from kie.qie import store as QS
+    out: Dict[str, object] = {}
+    by_chapter: Dict[str, Tuple[str, str]] = {}
+    if not os.path.exists(QS.QIE_DB_PATH):
+        return out, by_chapter
+    subj_set = set(subjects)
+    c = sqlite3.connect(f"file:{QS.QIE_DB_PATH}?mode=ro", uri=True)
+    try:
+        for subj, cc in c.execute("SELECT DISTINCT subject, concept_candidate FROM governed_fact "
+                                  "WHERE status='verified'"):
+            if subj not in subj_set or not cc:
+                continue
+            title = cc.split("::")[-1].strip()
+            code = "GOV_" + hashlib.sha256(cc.encode()).hexdigest()[:14]
+            out[code] = scope_mod.ConceptRef(concept_code=code, title=title, subject=subj, exam=None,
+                                             evidence=2, is_named_law=False, has_definition=True)
+            by_chapter[cc] = (code, title)
+    except sqlite3.Error:
+        pass
+    finally:
+        c.close()
+    return out, by_chapter
+
+
 def _bind(item: dict, scope) -> Optional[Tuple[str, str]]:
     """Bind to the first in-scope certified concept matching a target (exact title preferred, then the
     shortest title CONTAINING the target). Returns None if no precise in-scope concept exists (→ skipped)."""
+    if item["frame_id"].startswith("kvs_"):
+        # governed-KVS item -> its own verified chapter (now a first-class in-scope concept). Exact, subject-safe.
+        gc = getattr(scope, "gov_by_chapter", {}).get(item.get("concept"))
+        if gc:
+            return gc
     for target in _targets(item):
         exact = contains = None
         for code, cr in scope.concepts.items():
@@ -185,6 +220,10 @@ def generate_paper(request: PaperRequest, per: int = 14) -> Tuple[GeneratedPaper
     conn.row_factory = sqlite3.Row
     try:
         scope = scope_mod.resolve_scope(conn, request)              # REUSE — certified boundary
+        # Owner decision A: extend the in-scope boundary with verified governed-fact chapters (subject-gated).
+        gov_concepts, gov_by_chapter = _governed_concepts(scope.subjects)
+        scope.concepts.update(gov_concepts)
+        scope.gov_by_chapter = gov_by_chapter
         blueprint = bp_mod.resolve_blueprint(request, scope.exam_profile)   # REUSE — authentic structure
         errs = bp_mod.validate_blueprint(blueprint)
         if errs:
