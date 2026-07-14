@@ -42,10 +42,13 @@ per profile.
 > (`profiles.item_profile`) replaces source-identity classification — JEE_MAIN now surfaces genuine items
 > (Physics 511, Chem 391, Math 85). (2) **JEE-Mathematics calculus blocker CLOSED:** `generate_calculus.py`
 > generates + verifies calculus SYMBOLICALLY (sympy; integrals verified by differentiation, derivatives by
-> integration — independent, deterministic, no AI); **9 families** (poly/chain-poly/trig/exp/log integral &
-> derivative). Pilot 0 symbolic-disagreement; AI phrasing sanity 10/10. **Pilot bank now 851** (adds
-> Mathematics×JEE_MAIN **221** distinct verified calculus items). JEE was a *classification* issue +
-> calculus-verifier gap, not corpus-blocked. See `GENERATION_JEE_BUILD.md`.
+> integration — independent, deterministic, no AI); **9 families**. **Extended 2026-07-14 (owner-approved):**
+> `generate_jee_math.py` adds 5 more JEE-Math families (definite integrals, AP/GP series, limits, 3×3
+> determinants, Vieta), each verified by a **genuinely independent second method** (numerical quadrature,
+> brute-force summation, finite-difference, alternate determinant expansion, actual root-solving). Pilot 0
+> independent-disagreement (one repeated-root verifier bug found & fixed). **Pilot bank now 979** (Mathematics×
+> JEE_MAIN **349**). JEE was a *classification* issue + verifier gap, not corpus-blocked. JEE multi-step
+> remains EVIDENCE-BLOCKED (`JEE_MULTISTEP_EVIDENCE_CHECK.md`). See `GENERATION_JEE_BUILD.md`.
 
 ## Measured Subject × Profile ratings
 

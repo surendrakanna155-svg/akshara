@@ -1,0 +1,134 @@
+{
+  "items": [
+    {
+      "frame": "definite_integral",
+      "stem": "The value of the definite integral ∫ from 2 to 3 of (8x^2) dx is:",
+      "your_computed_answer": "152/3",
+      "proposed_answer": "152/3",
+      "verdict": "agree",
+      "reason": "∫8x^2 dx = (8/3)x^3; (8/3)(27-8) = (8/3)(19) = 152/3. Matches option 3; stem unambiguous."
+    },
+    {
+      "frame": "definite_integral",
+      "stem": "The value of the definite integral ∫ from 2 to 4 of (6x^3+4x) dx is:",
+      "your_computed_answer": "384",
+      "proposed_answer": "384",
+      "verdict": "agree",
+      "reason": "Antiderivative 1.5x^4+2x^2; F(4)=384+32=416, F(2)=24+8=32; 416-32=384. Matches option 2."
+    },
+    {
+      "frame": "definite_integral",
+      "stem": "The value of the definite integral ∫ from 1 to 3 of (6x^2+4x) dx is:",
+      "your_computed_answer": "68",
+      "proposed_answer": "68",
+      "verdict": "agree",
+      "reason": "Antiderivative 2x^3+2x^2; F(3)=54+18=72, F(1)=2+2=4; 72-4=68. Matches option 4."
+    },
+    {
+      "frame": "finite_series",
+      "stem": "The sum of the first 4 terms of the geometric progression with first term 3 and common ratio 3 is:",
+      "your_computed_answer": "120",
+      "proposed_answer": "120",
+      "verdict": "agree",
+      "reason": "S4 = 3*(3^4-1)/(3-1) = 3*80/2 = 120 (terms 3,9,27,81 sum to 120). Matches option 2."
+    },
+    {
+      "frame": "finite_series",
+      "stem": "The sum of the first 6 terms of the arithmetic progression with first term 4 and common difference 6 is:",
+      "your_computed_answer": "114",
+      "proposed_answer": "114",
+      "verdict": "agree",
+      "reason": "S6 = 6/2*(2*4+5*6) = 3*(8+30) = 3*38 = 114. Matches option 3."
+    },
+    {
+      "frame": "finite_series",
+      "stem": "The sum of the first 8 terms of the arithmetic progression with first term 4 and common difference 3 is:",
+      "your_computed_answer": "116",
+      "proposed_answer": "116",
+      "verdict": "agree",
+      "reason": "S8 = 8/2*(2*4+7*3) = 4*(8+21) = 4*29 = 116 (terms 4,7,...,25 sum to 116). Matches option 1."
+    },
+    {
+      "frame": "limit",
+      "stem": "The value of the limit as x approaches 3 of (x^2 - 9)/(x - 3) is:",
+      "your_computed_answer": "6",
+      "proposed_answer": "6",
+      "verdict": "agree",
+      "reason": "(x^2-9)/(x-3) = x+3 for x≠3, limit as x->3 is 6; also n*c^(n-1)=2*3=6. Matches option 2."
+    },
+    {
+      "frame": "limit",
+      "stem": "The value of the limit as x approaches 1 of (x^4 - 1)/(x - 1) is:",
+      "your_computed_answer": "4",
+      "proposed_answer": "4",
+      "verdict": "agree",
+      "reason": "n*c^(n-1) = 4*1^3 = 4. Matches option 4."
+    },
+    {
+      "frame": "limit",
+      "stem": "The value of the limit as x approaches 1 of (x^3 - 1)/(x - 1) is:",
+      "your_computed_answer": "3",
+      "proposed_answer": "3",
+      "verdict": "agree",
+      "reason": "n*c^(n-1) = 3*1^2 = 3. Matches option 3."
+    },
+    {
+      "frame": "determinant",
+      "stem": "The determinant of the 3×3 matrix with rows [5, 5, 5]; [3, 0, 6]; [2, 5, 1] is:",
+      "your_computed_answer": "-30",
+      "proposed_answer": "-30",
+      "verdict": "agree",
+      "reason": "5*(0*1-6*5) - 5*(3*1-6*2) + 5*(3*5-0*2) = 5*(-30) - 5*(-9) + 5*15 = -150+45+75 = -30. Matches option 4."
+    },
+    {
+      "frame": "determinant",
+      "stem": "The determinant of the 3×3 matrix with rows [0, 5, -3]; [-1, 0, 6]; [3, -4, -3] is:",
+      "your_computed_answer": "63",
+      "proposed_answer": "63",
+      "verdict": "agree",
+      "reason": "0*(0*-3-6*-4) - 5*(-1*-3-6*3) + (-3)*(-1*-4-0*3) = 0 -5*(-15) + (-3)*4 = 75-12 = 63. Matches option 2."
+    },
+    {
+      "frame": "determinant",
+      "stem": "The determinant of the 3×3 matrix with rows [-1, -2, 1]; [-2, 3, 4]; [3, -3, -3] is:",
+      "your_computed_answer": "-18",
+      "proposed_answer": "-18",
+      "verdict": "agree",
+      "reason": "-1*(3*-3-4*-3) - (-2)*(-2*-3-4*3) + 1*(-2*-3-3*3) = -1*3 + 2*(-6) + 1*(-3) = -3-12-3 = -18. Matches option 1."
+    },
+    {
+      "frame": "vieta",
+      "stem": "For the quadratic equation x² + (6)x + (5) = 0, the product of its roots is:",
+      "your_computed_answer": "5",
+      "proposed_answer": "5",
+      "verdict": "agree",
+      "reason": "Product of roots for x^2+bx+c=0 is c=5. Matches option 1."
+    },
+    {
+      "frame": "vieta",
+      "stem": "For the quadratic equation x² + (1)x + (-12) = 0, the product of its roots is:",
+      "your_computed_answer": "-12",
+      "proposed_answer": "-12",
+      "verdict": "agree",
+      "reason": "Product of roots = c = -12. Matches option 2."
+    },
+    {
+      "frame": "vieta",
+      "stem": "For the quadratic equation x² + (-2)x + (-8) = 0, the product of its roots is:",
+      "your_computed_answer": "-8",
+      "proposed_answer": "-8",
+      "verdict": "agree",
+      "reason": "Product of roots = c = -8. Matches option 1."
+    }
+  ],
+  "n_agree": 15,
+  "n_flag": 0,
+  "by_family": {
+    "definite_integral": {"agree": 3, "flag": 0},
+    "finite_series": {"agree": 3, "flag": 0},
+    "limit": {"agree": 3, "flag": 0},
+    "determinant": {"agree": 3, "flag": 0},
+    "vieta": {"agree": 3, "flag": 0}
+  },
+  "summary": "All 15 items independently recomputed by hand across all 5 families (definite_integral, finite_series AP/GP, limit, 3x3 determinant, vieta). Every proposed_answer matched the hand-computed value exactly and appeared verbatim among the four options; all stems were unambiguous and well-posed. No mathematical errors, missing-answer cases, or phrasing ambiguities were found. Only a cosmetic note: the vieta family uses unicode 'x²' while definite_integral/limit use 'x^2'/'x^n' notation — a stylistic inconsistency across families, not a correctness or ambiguity issue."
+}
