@@ -71,6 +71,16 @@ Deno.test("decideWaiver: SoD — the maker can NEVER decide their own waiver (40
   assertEquals((err as ClearanceWaiverError).status, 403);
 });
 
+Deno.test("decideWaiver: an EMPTY actor id fails closed (SoD defense-in-depth, 403)", async () => {
+  const { db } = mockDb([[pending({ maker_id: "some-maker" })]]);
+  const err = await assertRejects(
+    () => decideWaiver(db, SCOPE, "w1", "", true),
+    ClearanceWaiverError,
+  );
+  assertEquals((err as ClearanceWaiverError).code, "SELF_APPROVE_DENIED");
+  assertEquals((err as ClearanceWaiverError).status, 403);
+});
+
 Deno.test("decideWaiver: a DIFFERENT checker approves via a status-guarded claim UPDATE", async () => {
   const approved = pending({ status: "approved", checker_id: "checker-9" });
   const { db, calls } = mockDb([[pending()], [approved]]);

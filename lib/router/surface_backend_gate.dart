@@ -47,6 +47,15 @@ final List<_SurfaceGate> _backendLessSurfaces = <_SurfaceGate>[
     prefixes: const ['/white-label', '/control-center/white-label'],
     flag: whiteLabelPlatformApiEnabledProvider,
   ),
+  // RT round-3 RT-5-3: Branch & Franchise operations have no live backend
+  // (mock-only repositories) yet were reachable by a chain-org schoolAdmin,
+  // rendering a fabricated multi-branch revenue dashboard as real. Same class
+  // as the CFC-1 item-2 Trust-Hub fix; the flags stay OFF (no backend), so the
+  // routes are hidden and the nav entries dropped in a live build. Four sibling
+  // modules from the same 2026-07-04 audit were already gated; these two had
+  // been dropped from that wave.
+  (prefixes: const ['/branches'], flag: branchOperationsApiEnabledProvider),
+  (prefixes: const ['/franchise'], flag: franchiseOperationsApiEnabledProvider),
 ];
 
 /// True when [location] belongs to a backend-less surface that must be hidden in

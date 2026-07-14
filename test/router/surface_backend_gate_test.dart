@@ -56,6 +56,11 @@ void main() {
       '/salon/dashboard',
       '/white-label/branding',
       '/control-center/white-label',
+      // RT round-3 RT-5-3 regression: Branch & Franchise are mock-only (no live
+      // backend) and were reachable by a chain-org schoolAdmin, rendering a
+      // fabricated revenue dashboard as real until added to the gate.
+      '/branches',
+      '/franchise',
     ]) {
       final r = await _hidden(
         tester,

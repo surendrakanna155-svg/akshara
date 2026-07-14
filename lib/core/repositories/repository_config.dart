@@ -312,6 +312,27 @@ final organizationBuilderApiEnabledProvider = Provider<bool>((ref) {
   );
 });
 
+// RT round-3 RT-5-3: Branch & Franchise are chain/multi-branch platform surfaces
+// with NO live backend (their repositories are mock-only). Like the other
+// backend-less surfaces they must be hidden in a live build so a chain-org
+// schoolAdmin can never reach a fabricated branch/franchise revenue dashboard.
+// OFF by default; no live_release.json flag turns them on (no backend exists).
+final branchOperationsApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'BRANCH_OPERATIONS_API_ENABLED',
+    defaultValue: false,
+  );
+});
+
+final franchiseOperationsApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'FRANCHISE_OPERATIONS_API_ENABLED',
+    defaultValue: false,
+  );
+});
+
 final platformOperationsApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
   return const bool.fromEnvironment(

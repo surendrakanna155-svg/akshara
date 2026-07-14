@@ -142,6 +142,15 @@ export async function enrichParentInsightWithClaude(
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: userMessage }],
     maxTokens: ENRICH_MAX_TOKENS,
+    // RT-4-1: enforce the determinism-first number rail on this parent-facing
+    // surface. `guard: true` discards any model reply that introduces a currency
+    // or percentage NOT present verbatim in the injected snapshot (the userMessage
+    // carries the real marks/attendance/homework %), so a disobeyed "never change
+    // numbers" instruction can never serve a fabricated figure to a parent — the
+    // reply is dropped and the accurate deterministic snapshot stands. Strict (no
+    // allowDerivedPercents) is correct here: the model is only restating, never
+    // deriving, and a false-drop simply falls back to the correct numbers.
+    guard: true,
   });
   return text ? applyEnrichment(text) : snapshot;
 }

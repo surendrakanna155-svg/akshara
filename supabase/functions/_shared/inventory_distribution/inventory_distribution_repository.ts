@@ -363,6 +363,11 @@ export async function fulfillReplacementRequest(
     replacementOfId: current.id,
   });
 
+  // RT round-3 S2: guard the terminal transition on the pre-state. loadReplacementRequest
+  // above is an UNLOCKED read, so two concurrent fulfills both pass the app check and
+  // each issue a free item + decrement stock via createDistribution. The unconditional
+  // `AND d.replacement_status = 'approved'` predicate makes the loser match 0 rows →
+  // requireUpdatedRow throws → the enclosing txn rolls back its distribution + stock.
   const rows = await client.queryObject<DistributionRow & { itemName: string; category: string }>(
     `UPDATE inv_student_distributions d
      SET replacement_status = 'fulfilled',
@@ -370,6 +375,7 @@ export async function fulfillReplacementRequest(
          status = 'reissued'
      FROM inv_catalog_items c
      WHERE d.id = $1 AND c.id = d.catalog_item_id
+       AND d.replacement_status = 'approved'
      RETURNING d.*, c.name AS "itemName", c.category`,
     [requestId],
   );

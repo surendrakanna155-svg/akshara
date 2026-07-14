@@ -872,6 +872,27 @@ export async function publishExamResults(
     return parseInt(published[0]?.count ?? "0", 10);
   }
 
+  // RT round-3 RT-6-1: publish must NOT strand students. processExamResults
+  // enforces completeness before advancing to 'processed', but the publish path is
+  // ALSO reachable via the generic approval endpoint (bypassing processExamResults),
+  // and had no such gate — so an incomplete exam could publish only the entered
+  // subset and flip to 'published', permanently excluding students whose marks were
+  // never entered (there is no republish path once phase='published'). Enforce the
+  // same completeness invariant here: every provisioned mark slot must be entered
+  // (a present student's marks, or an AB/ML/DB status) before results go out.
+  const pending = await db.queryObject<{ count: string }>(
+    `SELECT count(*)::text AS count FROM exam_mark_entries
+     WHERE organization_id = $1 AND school_id = $2 AND exam_id = $3
+       AND marks_entered = false`,
+    [organizationId, schoolId, examId],
+  );
+  const pendingCount = parseInt(pending[0]?.count ?? "0", 10);
+  if (pendingCount > 0) {
+    throw new ExamValidationError(
+      `Cannot publish: ${pendingCount} student(s) have no marks entered`,
+    );
+  }
+
   const marks = await listExamMarks(db, organizationId, schoolId, examId);
   const enterable = marks.filter((m) => m.marks_entered);
   if (enterable.length === 0) {

@@ -36,6 +36,7 @@ import {
   ExamMarkNotFoundError,
   examMarkToApi,
   examStatusDisplayCode,
+  ExamValidationError,
   isExamMarkStatus,
   publishExamResults,
   updateExamMark,
@@ -232,6 +233,11 @@ class PublishSpyDb {
     if (sql.includes("SELECT * FROM exam_sessions")) {
       return Promise.resolve([this.sess] as T[]);
     }
+    // RT round-3 RT-6-1: the completeness gate's pending-count query.
+    if (sql.includes("count(*)") && sql.includes("marks_entered = false")) {
+      const pending = this.marks.filter((m) => !m.marks_entered).length;
+      return Promise.resolve([{ count: String(pending) }] as T[]);
+    }
     if (sql.includes("SELECT * FROM exam_mark_entries")) {
       return Promise.resolve(this.marks as T[]);
     }
@@ -272,6 +278,21 @@ Deno.test("EXM-D6: publish grades a present student by percent and a non-present
   assertEquals(spy.gradeById["m-present"], "A"); // 85% → A on the standard scale
   assertEquals(spy.gradeById["m-absent"], "AB");
   assertEquals(spy.gradeById["m-ml"], "ML");
+});
+
+Deno.test("RT round-3 RT-6-1: publish is BLOCKED when a student has no marks entered (no stranded straggler, nothing graded)", async () => {
+  const present = markRow({ id: "m-present", marks_obtained: 85, status: "present", marks_entered: true });
+  // A straggler whose marks were never entered — must NOT be silently excluded
+  // by publishing only the entered subset and flipping the exam to 'published'.
+  const straggler = markRow({ id: "m-straggler", marks_obtained: null, status: "present", marks_entered: false });
+  const spy = new PublishSpyDb(session(), [present, straggler]);
+  await assertRejects(
+    () => publishExamResults(spy as unknown as TenantQueryClient, ORG, SCHOOL, "exam-1"),
+    ExamValidationError,
+    "Cannot publish",
+  );
+  // Fail closed BEFORE any grade write — the present student was not published either.
+  assertEquals(Object.keys(spy.gradeById).length, 0);
 });
 
 // ── (5) published immutability preserved ─────────────────────────────────────

@@ -336,12 +336,21 @@ export async function receiveGoods(
       [grnId, line.purchaseOrderLineId, organizationId, schoolId, line.quantityReceived],
     );
 
-    await db.queryObject(
+    // RT round-3 S1: guard the receipt delta atomically. The over-receipt check
+    // above reads an UNLOCKED poLine, so two concurrent GRNs both pass it and
+    // stack their deltas (10-qty line → quantity_received 20). The unconditional
+    // `AND quantity_received + $2 <= quantity` predicate makes the loser match 0
+    // rows → throw → the enclosing txn rolls back its GRN line + stock valuation.
+    const poLineUpdated = await db.queryObject<{ id: string }>(
       `UPDATE purchase_order_lines
        SET quantity_received = quantity_received + $2
-       WHERE id = $1`,
+       WHERE id = $1 AND quantity_received + $2 <= quantity
+       RETURNING id`,
       [line.purchaseOrderLineId, line.quantityReceived],
     );
+    if (poLineUpdated.length === 0) {
+      throw new Error(`Over-receipt on SKU ${poLine.sku} (concurrent receipt)`);
+    }
 
     await upsertStockValuation(
       db,

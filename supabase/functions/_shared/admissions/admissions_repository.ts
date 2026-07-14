@@ -941,6 +941,12 @@ export async function setApprovalDecision(
     }
   }
 
+  // RT round-3 S4: guard the decision on the pending pre-state so a decided
+  // approval can never be re-decided or flipped (approved↔rejected) — the makerRows
+  // read above is unlocked, and without this predicate a second checker (or a late
+  // flip after enrollment) would silently overwrite the decision. A non-pending row
+  // now matches 0 rows → the caller treats it as not-actionable (no application
+  // status change, since the block below only runs on a returned row).
   const rows = await db.queryObject<AdmissionsApprovalRow>(
     `UPDATE admissions_approvals SET
       decision = $4,
@@ -948,6 +954,7 @@ export async function setApprovalDecision(
       decided_at = timezone('utc', now()),
       updated_at = timezone('utc', now())
     WHERE id = $1 AND organization_id = $2 AND school_id = $3
+      AND decision = 'pending'
     RETURNING *`,
     [approvalId, organizationId, schoolId, decision, checkerId],
   );

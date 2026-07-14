@@ -212,7 +212,7 @@ export async function markIntentCaptured(
          collection_id = COALESCE($4, collection_id),
          receipt_id = COALESCE($5, receipt_id),
          updated_at = timezone('utc', now())
-     WHERE id = $1
+     WHERE id = $1 AND status <> 'captured'
      RETURNING *`,
     [
       intentId,

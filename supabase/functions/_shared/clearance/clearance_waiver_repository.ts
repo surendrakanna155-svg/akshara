@@ -146,8 +146,11 @@ export async function decideWaiver(
   if (!row) {
     throw new ClearanceWaiverError("WAIVER_NOT_FOUND", "No pending waiver with that id");
   }
-  // SoD: the requester can never decide their own waiver.
-  if (checkerId !== "" && row.maker_id === checkerId) {
+  // SoD: the requester can never decide their own waiver. Fail CLOSED on an empty
+  // actor id too — a subject-less token can never satisfy separation of duties, so
+  // it must be denied rather than silently skipping the check (defense-in-depth;
+  // the server always sets `sub` from the verified JWT, so this is belt-and-braces).
+  if (checkerId === "" || row.maker_id === checkerId) {
     throw new ClearanceWaiverError(
       "SELF_APPROVE_DENIED",
       "You cannot approve or reject a clearance waiver you raised",
