@@ -52,3 +52,28 @@ Post-freeze note: every fix below is a **correctness / data-integrity** change �
 Round 1 (static surface) converged: after adversarial verification, the surviving set is the 3 fixed + 3 tracked + 2 informational above. **Round 2 is required** (the exit is *consecutive* clean rounds): it re-audits the fixed money/TC paths and runs the **live legs** (concurrent cross-tenant probes on `akshara_tenant_test`, DR restore, ops/alerts) once the owner re-establishes the SSH control-master. RT-4-1 must also be closed (with its test) before GA.
 
 **EOS gate (P4/P5 round 1): PASS** — 3 confirmed P0/P1 fixed + regression-locked (deno **2867/0**, +3 race tests), no open P0/P1 on the static surface; P2/P3 tracked with owners.
+
+---
+
+## Round 2 — LIVE legs (2026-07-14, VPS restored by owner)
+
+Ran the live domains the static round couldn't cover, on prod `akshara_db` (read-only) via the owner-re-established SSH control-master. **No new P0/P1.** One candidate ops finding was **refuted under verification** (round-law discipline in action).
+
+### Domain 2 · Isolation — CONFIRMED live
+- Edge role `erp_tenant` is **NOBYPASSRLS** (`rolbypassrls=f`) — DB-2 invariant holds at runtime.
+- All 8 new W2/Face-ID/SCE tables (`ai_call_log`, `ai_call_reservations`, `ai_persona_memory`, `ai_response_cache`, `ai_school_profile`, `ai_fact_signals`, `staff_face_enrollments`, `student_clearance_waivers`) have **RLS on + FORCE-RLS on + policies present** (waivers = 3 per-op policies).
+- Runtime enforcement: as `erp_tenant` with a **bogus tenant context**, all new tables return **0 rows** → the policies filter by the context GUC (not a no-op).
+- **Caveat (honest):** the new tables are **empty on prod** (fresh 2026-07-14 deployment, no live AI/waiver/TC data yet), so the data-bearing *positive* cross-tenant probe (tenant-A-sees-its-rows / tenant-B-sees-none) is **deferred until the pilot generates data**. The RLS mechanism itself is the same pattern the 233-probe live cert already proved for the pre-existing tables.
+
+### Domain 7 · Ops — CONFIRMED healthy (candidate finding REFUTED)
+- **Candidate (raised, then refuted):** "nightly backups run but aren't recorded in `ops_backup_runs` (only manual rows)." **Refuted** — this was an artifact of my own query (`ORDER BY 1` = order by the UUID `id`, not by time). Re-queried by `started_at`: **11 nightly + 2 weekly + 1 monthly + 12 manual runs, ALL `status=success`**, latest nightly `2026-07-14 02:15`. Backups are healthy, observable, and restorable. *Lesson: verify before filing — the round law's "default to refuted" caught it.*
+- Watchdog cron runs every 5 min (`/etc/cron.d/akshara-watchdog`); backup cron nightly 02:15 (`/etc/cron.d/akshara-ops`).
+- **Only real ops gap = off-site LOCAL-ONLY** (`RCLONE_REMOTE` unset → every backup `offsite=f`; log warns "violates 3-2-1"). Known + tracked; awaits owner R2 creds.
+
+### Domain 8 · DR — mostly OK, one P3 observation
+- Monthly restore-drill cron is installed (`akshara-restore-drill.sh`, 2nd @ 03:30). **P3 observation:** `/var/log/akshara/drill.log` is **empty** → verify the 2026-07-02 drill actually executed (or logs elsewhere). Not gating (pilot accepts ~24h nightly RPO per the DR-RPO decision; nightly dumps are restorable). Routed to the ops backlog.
+
+### Round-2 verdict
+Live legs converged with **0 new P0/P1**. The 3 round-1 fixes are **not yet on the live edge** (edge = `9bbf8630`, pre-fix) — they ride the next edge deploy; prod exposure is currently **nil** because the financial/AI tables are empty. **RT-1 is NOT yet at exit** (round law = a *full* clean re-audit round): still owed = deploy + live re-verify the money-race fixes, the data-bearing isolation positive case once the pilot has data, RT-4-1 closure, and one more full static+live sweep finding nothing new.
+
+**EOS gate (P4-RT-1 round 2, live legs): PASS** — no new P0/P1; ops/isolation confirmed live; 1 candidate refuted; off-site + DR-drill-log items tracked.
