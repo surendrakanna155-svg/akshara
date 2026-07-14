@@ -1,4 +1,9 @@
-# FREEZE-1 — ERP Feature Freeze · Declaration Record
+> # ❌ RESCINDED at RECON-2 (2026-07-14)
+> **This FREEZE-1 declaration is VOID.** It was declared before the mandatory **PRC-A → PRC-B** gates ran (the canonical roadmap makes PRC completion a FREEZE-1 entry condition; the ERP branch's stale roadmap had omitted it). See [`../../execution/RECON-2_EXECUTION_ORDER_CORRECTION.md`](../../execution/RECON-2_EXECUTION_ORDER_CORRECTION.md). The true current wave is **PRC-A**. FREEZE-1 will be re-declared only after PRC-A + PRC-B + CFC-1 (canonical position). The valid bug fixes produced during the mis-labelled "P4-RT" work are preserved as pre-freeze hardening. The K-lane carve-out below remains a valid *future* FREEZE-1-entry decision but is moot until the real FREEZE-1.
+
+---
+
+# FREEZE-1 — ERP Feature Freeze · Declaration Record  *(RESCINDED — see banner above)*
 
 **Declared:** 2026-07-14 · **Branch:** `feature/data-reliability-platform` (ERP lane) · **Freeze base:** CFC-1 gate commit `d59b5762`
 **Authority:** [`../../roadmap/FINAL_EXECUTION_MASTER_ROADMAP.md`](../../roadmap/FINAL_EXECUTION_MASTER_ROADMAP.md) → GATE FREEZE-1 · owner directive 2026-07-14 (*"The owner approves the FREEZE-1 K-lane carve-out … If the gate passes, proceed to FREEZE-1 and then begin P4 Red Team"*).

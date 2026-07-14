@@ -4,27 +4,29 @@
 **Updated by:** the executor at each wave boundary (on EOS PASS + commit → advance to the next wave; refresh the dashboard at the same moment).
 **Authority:** [`FINAL_EXECUTION_MASTER_ROADMAP.md`](FINAL_EXECUTION_MASTER_ROADMAP.md) · run per [`AUTONOMOUS_EXECUTION_PLAN.md`](AUTONOMOUS_EXECUTION_PLAN.md) · journal to [`../execution/IMPLEMENTATION_PROGRESS.md`](../execution/IMPLEMENTATION_PROGRESS.md).
 
-> **Previous waves:** full history in the journal + roadmap §0/§0b. Headline state: **P0 W1/W2 ✅ · P1 ✅ (PROD-22 Face ID 2026-07-12 · CODE-6/7/8 2026-07-13 · SCE-1 2026-07-12 · SEC-1 runnable slice 2026-07-13; CODE-4 deferred; TEST-1/2 gated) · P2 ✅ · P3 ✅ (W1 CERTIFIED · W2+AI-3 hardening exit 2026-07-11) · K-1 ✅ local · LIVE-1 ① prod deploy 2026-07-14 (live head `20260878`, edge `9bbf8630`) · CFC-1 ✅ 10/10 (`d59b5762`) · 🔒 FREEZE-1 DECLARED 2026-07-14 (K-lane carved out).**
+> **Previous waves:** full history in the journal + roadmap §0/§0b. Headline state: **P0 W1/W2 ✅ · P1 ✅ · P2 ✅ · P3 ✅ (W1 CERTIFIED · W2+AI-3 hardening exit 2026-07-11) · K-1 ✅ local · LIVE-1 ① prod deploy 2026-07-14.**
 
 ---
 
-## ▶ CURRENT — 🔒 POST-FREEZE · P4 RED TEAM (opened 2026-07-14)
+## ▶ CURRENT — 🔧 RECON-2 CORRECTION → **PRC-A is the true current wave** (2026-07-14)
 
-**FREEZE-1 is in force** ([declaration](../engineering/eos/FREEZE1_FEATURE_FREEZE_DECLARATION.md)): in the ERP scope, ONLY bug/regression/perf/security/quality/stability work. Feature requests → post-GA register (P8-GA-5). The K lane (K-2/K-3/K-4, `curriculum/**`) is **carved out** (owner 2026-07-14) and runs its own program in parallel — never blocks ERP phases. **Do NOT touch `curriculum/**` from the ERP lane.**
+> ### ⚠ RECON-2 (2026-07-14): execution-order drift corrected — see [`../execution/RECON-2_EXECUTION_ORDER_CORRECTION.md`](../execution/RECON-2_EXECUTION_ORDER_CORRECTION.md)
+> The ERP branch carried a **stale roadmap missing the owner-authorized 2026-07-11 PRC integration** (it lives only on the K-lane branch). The lane drifted to **CFC-1 → FREEZE-1 → "P4-RT"** and **SKIPPED the mandatory PRC-A → PRC-B gates.** Corrected now:
+> - **FREEZE-1 = RESCINDED** (declared before PRC ran). **P4 = NOT open.** The "P4-RT-0/RT-1 rounds 1–3 + perf wave" = **PRE-FREEZE ADVERSARIAL HARDENING (PFH)** — valid fixes PRESERVED, wrong label.
+> - **Canonical order restored:** P3 exit → **PRC-A → PRC-B** → CFC-1 → FREEZE-1 → P4 → P5 → P6 → P7 → P8.
+> **Preserved (do NOT revert):** the round-1 money/document fixes (deployed to prod edge `67f57ef2`), round-3 defect-class guards S1–S4, RT-5-3/RT-6-1, RT-4-1, migrations `20260879`–`20260881` (deploy-pending), RT-11-2 late-fee. These stay as valid hardening.
 
-**P4-RT-0 — Global Red Team Preparation: ✅ READINESS PASS (2026-07-14)** — [`../strategy/RED_TEAM_P4_RT0_READINESS.md`](../strategy/RED_TEAM_P4_RT0_READINESS.md). Honest-claims baseline frozen; 12 domains scoped with perspective-diverse model-tiered operators; attack seeds refreshed for the post-W2/post-freeze surface (persona feeds · Universal Search RBAC · copilot quota + A5 reservation · prompt-injection on every AI entry point + A6 fences · Face-ID SoD · SCE-1 waiver split · App Lock · 5 new tables' RLS), each anchored to real code; fixture/tenant plan + adversarial-verify protocol set.
+**Active wave: PRC-A — Product Reality & Correctness, Wave A (Real School Operations Capability & Cross-Module Gap Audit).**
+- **148 mandatory capabilities** across 15 domains (transport/finance-integration · storage quota · AI credit wallet · central AI provider keys · SaaS plan-limit runtime enforcement · syllabus progress · fee-structure bulk assignment · marketing-AI wiring · social-media integration · cross-module cost intelligence · complaints/ticketing · gate-pass/early-pickup · health/infirmary · staff-workload intelligence · certificate-request desk). Per-capability 13-step method → classify (`WORKING/LIVE · PARTIAL · MISSING · WRONG UX · MOCK/STUB · DEVICE-GATED · N/A`) → fix verified gaps → regression → prove journeys. Dependency rule: never certify a dashboard/metric independent of the data lifecycle feeding it.
+- **Owner-future-ideas reconciliation is a PRC-A input:** classify every item in [`../owner/OWNER_FUTURE_PLATFORM_IDEAS_AND_RECONCILIATION_QUEUE.md`](../owner/OWNER_FUTURE_PLATFORM_IDEAS_AND_RECONCILIATION_QUEUE.md) vs current code / roadmap / PRC / prior owner decisions (IMPLEMENTED · PARTIAL · ALREADY-ROADMAPPED · COVERED-BY-PRC · CURRENT-SCOPE-MISSING · OWNER-GATED · POST-GA · REJECTED · DUPLICATE); genuinely-missing current-scope capabilities → roadmap + implement here (pre-freeze).
+- **Authority:** tracker [`PRODUCT_REALITY_CORRECTNESS_PROGRAM_TRACKER.md`](PRODUCT_REALITY_CORRECTNESS_PROGRAM_TRACKER.md) (502 reqs) + source `../AKSHARA_PRODUCT_REALITY_AND_CORRECTNESS_CERTIFICATION.md` (frozen). Exit: all 148 classified with evidence + gaps fixed + journeys proven + EOS PASS → **then PRC-B**.
 
-**P4-RT-1 — 12-domain adversarial assault, ROUND 1 (static/local surface): ✅ CONVERGED WITH FIXES (2026-07-14)** — [`../strategy/RED_TEAM_P4_RT1_ROUND1_REPORT.md`](../strategy/RED_TEAM_P4_RT1_ROUND1_REPORT.md). 5 model-tiered operators, every finding orchestrator-verified. **3 P0/P1 found + FIXED + regression-locked** (freeze-compatible correctness, edge code, no migration → CFC-1 item-8 head parity intact): RT-3-1/F1 (P0) refund double-approve ledger divergence · RT-10-1 (P1) duplicate zero-dues TC · RT-3-2/F2 (P1) collection-cancel double-reverse. +3 race tests, deno **2867/0**, commit `d5255c62`. Domains 1 (Security) + 2 (Isolation) clean. **Tracked:** RT-4-1 (P2 parent AI number-guard, corrected fix + test → P5) · RT-9-2 (P2 waiver FK/CHECK → next migration window) · RT-4-2 (P3 quota TOCTOU → pilot tuning).
+**Then (canonical, strict):** PRC-B (249 invariant/edge-case items) → CFC-1 (re-run at canonical position) → FREEZE-1 (declared only when scope + pre-freeze implementation genuinely complete) → **P4 (the REAL Global Red Team, against the stable frozen surface)** → P5 → P6-VAL → PILOT → BETA → P7 → P8.
 
-**Active wave: P4-RT-1 ROUND 2** (round law — exit only on *consecutive* clean rounds):
-- **Re-audit** the fixed money/TC paths + sweep the domains not yet deeply run statically (UX/workflow/ops/DR/perf/human-error).
-- **Live legs (owner-gated):** re-establish the SSH control-master (`ssh -fN -M -S ~/.ssh/akshara-cm.sock -o ControlPersist=12h root@46.28.44.46`), then run concurrent cross-tenant probes + DR restore + ops/alert checks on `akshara_tenant_test` (destructive on the mirror ONLY, never prod).
-- **Deploy pending:** the round-1 edge fixes (`d5255c62`) ride the next edge deploy window (live edge is at `9bbf8630`, pre-fix); RT-9-2's corrective migration batches there too.
-
-**Parallel / owner lanes (do not block P4):**
-- **K-2 rounds** (carved-out Knowledge lane; exit = 2 consecutive clean audits → K-4 re-cert; K-3 promotion owner-timed).
-- **P0-LIVE-1 remainder** (owner-provisioned): ② outbox drain · ③ cron token · ④ reminder crons · ⑤ live `ai_*` probes · ⑥ off-site R2 (backup currently LOCAL-ONLY) · ⑦ alert delivery · ⑧⑨ CI + isolation-in-CI · ⑩ **7-day cron clock (calendar-critical — gates P7, not P4)**. ①⑪⑫⑬ ✅.
-- **PRC-A → PRC-B (deferred program, owner slot pending):** owner-mandated 2026-07-11 (502 tracked requirements, [tracker](PRODUCT_REALITY_CORRECTNESS_PROGRAM_TRACKER.md)); deferred at the 2026-07-14 CFC/FREEZE directive under PRC-X-01 (higher-priority blocking gate). **Recommended slot: with/after P4-RT-1, before P6-VAL-1** — awaiting owner ruling; deferral recorded in tracker §7.
+**Parallel / owner lanes (do not block PRC-A):**
+- **K-2 rounds** (Knowledge lane, `curriculum/**` — HANDS-OFF; runs independently).
+- **P0-LIVE-1 remainder** (owner-provisioned): off-site R2 · cron token · CI runner · 7-day clock (gates P7).
+- **Deploy-pending (VPS down):** the PFH round-3 edge fixes + migrations `20260879`/`20260880`/`20260881` ride the next edge/migration window when the owner re-establishes the SSH control-master.
 
 ### 👤 Owner-decision batch (surface; none pauses P4)
 - **PRC slotting** (above) · **P0-LIVE-1 provisioning** (R2 · cron token · CI runner · 7-day clock) · **P6-BETA-1 cohort** (5–10 schools) · K-3 promotion timing · pgvector provisioning (optional, enables W2.8) · signed pilot build (owner keystore, at P6).
