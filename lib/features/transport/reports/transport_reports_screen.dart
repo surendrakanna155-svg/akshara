@@ -146,7 +146,7 @@ class TransportReportsScreen extends ConsumerWidget {
           ),
         const SizedBox(height: AksharaSpacing.s6),
         TransportTrendChart(
-          title: 'Fuel cost trend (₹L) — Finance placeholder',
+          title: 'Fuel cost trend (₹L)',
           points: data.fuelTrend,
           height: chartHeight,
         ),
