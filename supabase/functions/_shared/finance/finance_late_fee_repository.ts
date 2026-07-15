@@ -107,7 +107,8 @@ export async function accrueLateFees(
     `SELECT fi.*, fsa.id AS student_account_id
        FROM finance_invoices fi
        JOIN finance_student_accounts fsa
-         ON fsa.fee_assignment_id = fi.fee_assignment_id
+         ON fsa.student_id = fi.student_id
+        AND fsa.academic_year = fi.academic_year
         AND fsa.organization_id = fi.organization_id
         AND fsa.school_id = fi.school_id
       WHERE fi.organization_id = $1 AND fi.school_id = $2
@@ -190,7 +191,8 @@ export async function waiveLateFee(
     `SELECT fi.*, fsa.id AS student_account_id
        FROM finance_invoices fi
        JOIN finance_student_accounts fsa
-         ON fsa.fee_assignment_id = fi.fee_assignment_id
+         ON fsa.student_id = fi.student_id
+        AND fsa.academic_year = fi.academic_year
         AND fsa.organization_id = fi.organization_id
         AND fsa.school_id = fi.school_id
       WHERE fi.id = $1 AND fi.organization_id = $2 AND fi.school_id = $3

@@ -266,14 +266,50 @@ export async function cancelInvoice(
     throw new InvalidInvoiceTransitionError(existing.invoice_status, "cancel");
   }
 
+  // Claim the cancel with a status-GUARDED terminal write. The read above is a
+  // TOCTOU check only; without this guard two concurrent cancels would both
+  // proceed and each release the account delta below — double-crediting the
+  // student. The loser gets 0 rows and throws, rolling back its transaction.
   const rows = await db.queryObject<FinanceInvoiceRow>(
     `UPDATE finance_invoices
      SET invoice_status = 'cancelled', updated_at = timezone('utc', now())
      WHERE id = $1 AND organization_id = $2 AND school_id = $3
+       AND invoice_status NOT IN ('paid', 'cancelled')
      RETURNING *`,
     [invoiceId, organizationId, schoolId],
   );
-  return rows[0]!;
+  if (rows.length === 0) {
+    throw new InvalidInvoiceTransitionError(existing.invoice_status, "cancel");
+  }
+  const cancelled = rows[0]!;
+
+  // LOCKSTEP with the student account (mirrors approveFeeReduction / waiveLateFee).
+  // finance_student_accounts.{total_fee,outstanding_amount} are STORED aggregates
+  // that assignFeeStructure incremented when this invoice was raised — nothing
+  // re-derives them. Cancelling only the invoice therefore left the unpaid
+  // remainder owing on the account: the student stayed a false defaulter and their
+  // no-dues / TC gate stayed blocked. Release exactly the still-unpaid remainder
+  // (RETURNING carries the PRE-cancel outstanding, since only status moved), which
+  // preserves outstanding == total_fee - amount_paid and leaves real payments intact.
+  const released = Math.max(0, Math.round(parseFloat(cancelled.outstanding_amount) * 100) / 100);
+  if (Number.isFinite(released) && released > 0) {
+    await db.queryObject(
+      `UPDATE finance_student_accounts SET
+         total_fee = GREATEST(0, total_fee - $1),
+         outstanding_amount = GREATEST(0, outstanding_amount - $1),
+         updated_at = timezone('utc', now())
+       WHERE student_id = $2 AND academic_year = $3
+         AND organization_id = $4 AND school_id = $5`,
+      [
+        released.toFixed(2),
+        cancelled.student_id,
+        cancelled.academic_year,
+        organizationId,
+        schoolId,
+      ],
+    );
+  }
+  return cancelled;
 }
 
 export async function getInvoiceByAssignmentId(
