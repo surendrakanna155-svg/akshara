@@ -2,7 +2,7 @@
   "_registry": "Akshara Canonical Evidence & Knowledge Governance Registry",
   "_authority": "Single store-level source of truth for owned QIE/curriculum evidence + lifecycle state.",
   "_owner_correction": "2026-07-14 evidence-storage governance reconciliation",
-  "generated_at": "2026-07-14T23:00:00Z",
+  "generated_at": "2026-07-15T00:15:00Z",
   "workspace": "/Users/surendrakanna/Documents/Akshara_ERP/curriculum",
   "lifecycle_states": [
     "1_raw_source",
@@ -564,14 +564,14 @@
       "size_bytes": 3207168,
       "size_human": "3.1 MB",
       "live": {
-        "kvs_assertion_total": 1781,
+        "kvs_assertion_total": 1814,
         "kvs_assertion_corroborated_ge2": 77,
-        "kvs_structure_function": 6,
-        "kvs_sequence": 13,
-        "kvs_comparison": 2,
+        "kvs_structure_function": 14,
+        "kvs_sequence": 17,
+        "kvs_comparison": 8,
         "kvs_taxonomy": 131,
         "tier2_agree": 411,
-        "distractor_dna": 121,
+        "distractor_dna": 274,
         "item_model": 84,
         "item_model_ai_validated": 39,
         "pilot_verified_item": 1496

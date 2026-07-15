@@ -95,6 +95,36 @@ class TestRegisterProjection(unittest.TestCase):
         self.assertEqual(R.counts(self.conn)["governed_fact_rejected"], 1)
 
 
+class TestGovernedConceptTitles(unittest.TestCase):
+    """Owner decision A: governed chapters are in-scope ONLY if their title passes the SAME concept
+    sanitizer as every other in-scope concept (regression: verbose filename-derived titles caused
+    UNCLEAN_CONCEPT boundary breaches)."""
+
+    def test_clean_title_strips_lead_noise_dedups_and_caps(self):
+        from kie.qie import qp_bridge as QB
+        t = QB._clean_title("Adv Current Electricity Current Current Density Drift Velocity Resistance")
+        self.assertLessEqual(len(t.split()), 5)
+        self.assertFalse(t.lower().startswith("adv"))
+        self.assertEqual(t.split()[0], "Current")
+
+    def test_cleaned_titles_pass_the_qpgen_sanitizer(self):
+        from kie.qie import qp_bridge as QB
+        from kie.qpgen import sanitize
+        for raw in ("Excretory Products And Their Elimination", "Cell The Unit Of Life",
+                    "Adv Current Electricity Current Current Density Drift Velocity Resistance"):
+            self.assertTrue(sanitize.is_clean_concept(QB._clean_title(raw)), raw)
+
+    def test_governed_concepts_are_subject_gated_and_clean(self):
+        from kie.qie import qp_bridge as QB
+        from kie.qpgen import sanitize
+        concepts, by_chapter = QB._governed_concepts(["Biology"])
+        for code, ref in concepts.items():
+            self.assertEqual(ref.subject, "Biology")        # hard subject gate
+            self.assertTrue(sanitize.is_clean_concept(ref.title), ref.title)
+        for cc in by_chapter:
+            self.assertTrue(cc.startswith("Biology ::"), cc)
+
+
 class TestEvidenceRegistry(unittest.TestCase):
     def test_every_store_scans_without_error(self):
         reg = REG.build("2026-01-01T00:00:00Z")

@@ -132,13 +132,34 @@ def _targets(item: dict) -> List[str]:
     return []                                                # projectile-PE, vieta, complex, series, process → skip
 
 
+_TITLE_DROP_LEAD = {"adv", "com", "general", "the"}
+_TITLE_DROP_MID = {"their", "its", "the", "an", "a"}
+
+
+def _clean_title(chapter: str) -> str:
+    """Turn a filename-derived chapter into a sanitizer-clean concept title: drop lead noise ('Adv'/'Com'),
+    dedupe repeated OCR words, drop trip-word pronouns, cap at 5 words (the qpgen MAX_WORDS)."""
+    words = chapter.split()
+    while words and words[0].lower() in _TITLE_DROP_LEAD:
+        words = words[1:]
+    seen, dedup = set(), []
+    for w in words:                                    # dedupe repeated words ("Current Current Density")
+        if w.lower() not in seen:
+            dedup.append(w)
+            seen.add(w.lower())
+    trimmed = [w for w in dedup if w.lower() not in _TITLE_DROP_MID] or dedup
+    return " ".join(trimmed[:5]).strip()
+
+
 def _governed_concepts(subjects) -> Tuple[Dict[str, object], Dict[str, Tuple[str, str]]]:
     """Owner decision A (2026-07-14): verified governed-fact chapters — subject-gated, doc-grounded real
     NEET/JEE syllabus topics — are FIRST-CLASS in-scope concepts for the qpgen boundary, guarded by the
-    deterministic subject gate. Returns ({gov_code: ConceptRef}, {concept_candidate: (gov_code, title)}),
-    restricted to the scope's subjects. Read-only on qie.db; empty if the store is absent."""
+    deterministic subject gate AND the SAME concept sanitizer every other in-scope concept must pass (so no
+    junk/OCR-verbose title enters). A chapter whose title can't be cleaned to a sanitizer-clean concept is
+    skipped (its items become an honest shortfall, never a boundary breach)."""
     import os
     from kie.qie import store as QS
+    from kie.qpgen import sanitize
     out: Dict[str, object] = {}
     by_chapter: Dict[str, Tuple[str, str]] = {}
     if not os.path.exists(QS.QIE_DB_PATH):
@@ -150,7 +171,9 @@ def _governed_concepts(subjects) -> Tuple[Dict[str, object], Dict[str, Tuple[str
                                   "WHERE status='verified'"):
             if subj not in subj_set or not cc:
                 continue
-            title = cc.split("::")[-1].strip()
+            title = _clean_title(cc.split("::")[-1].strip())
+            if not sanitize.is_clean_concept(title):        # same gate as every other in-scope concept
+                continue
             code = "GOV_" + hashlib.sha256(cc.encode()).hexdigest()[:14]
             out[code] = scope_mod.ConceptRef(concept_code=code, title=title, subject=subj, exam=None,
                                              evidence=2, is_named_law=False, has_definition=True)
