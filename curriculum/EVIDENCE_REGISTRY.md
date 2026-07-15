@@ -1,6 +1,6 @@
 # Akshara — Canonical Evidence & Knowledge Governance Registry
 
-**Generated:** 2026-07-15T00:15:00Z · **Authority:** single store-level source of truth for ALL owned QIE/curriculum evidence + its lifecycle state. Re-run `python -m kie.evidence.registry` to refresh.
+**Generated:** 2026-07-15T00:45:00Z · **Authority:** single store-level source of truth for ALL owned QIE/curriculum evidence + its lifecycle state. Re-run `python -m kie.evidence.registry` to refresh.
 
 **Totals:** 22 stores · 59.4 GB · by scope {'in_scope': 7, 'held': 4, 'mixed': 4, 'out_of_scope': 1, 'n_a': 6} · by state {'1_raw_source': 11, 'q_quarantine': 5, '3_extracted_evidence': 2, '2_ocr_normalized': 3, '7_qie_available': 1}
 

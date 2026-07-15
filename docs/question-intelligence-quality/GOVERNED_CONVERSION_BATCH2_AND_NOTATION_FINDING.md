@@ -63,24 +63,43 @@ breach. Regression-tested.
 
 ## D. Re-measured paper balance (real QIE → qpgen path, seed 7)
 
-| exam | baseline | batch 1 | +decision A | **batch 2 + fix** | Chemistry | boundary |
-|---|---|---|---|---|---|---|
-| NEET | 5 | 11 | 16 | **21** (Bio 12 · Phy 6 · Chem 3) | 0 → **3** | ok, 0 rejected |
-| JEE Main | — | 14 | 16 | **17** (Phy 6 · Math 8 · Chem 3) | 0 → **3** | ok, 0 rejected |
-| JEE Advanced | — | — | — | **17** (Phy 6 · Math 8 · Chem 3) | 0 → **3** | ok, 0 rejected |
+| exam | baseline | batch 1 | +decision A | batch 2 + fix | **+assertion gen** | Chemistry | boundary |
+|---|---|---|---|---|---|---|---|
+| NEET | 5 | 11 | 16 | 21 | **26** (Bio 17 · Phy 6 · Chem 3) | 0 → **3** | ok, 0 rejected |
+| JEE Main | — | 14 | 16 | 17 | **17** (Phy 6 · Math 8 · Chem 3) | 0 → **3** | ok, 0 rejected |
+| JEE Advanced | — | — | — | 17 | **17** (Phy 6 · Math 8 · Chem 3) | 0 → **3** | ok, 0 rejected |
 
-21 distinct concepts on the NEET paper (11 from governed-KVS). 562 tests green.
+**NEET: 5 → 26 filled** across 26 distinct concepts (16 from governed-KVS), boundary clean, 0 forced fills.
+565 tests green.
 
-## E. Exact remaining gap
-1. **Generation lags admission.** Only the `structure_function` (14) + `sequence` (17) facts are generatable
-   today; the 53 assertions + 8 comparisons are *admitted verified knowledge* but have **no generation template**
-   yet. Their clean generation needs **real-distractor alignment**: the stored real exam distractors are
-   parallel to the *source* question's direction, so an inverted authored stem (term→definition) cannot reuse
-   them. Same-pool distractors are unusable here because assertion/comparison objects are heterogeneous
-   (a giveaway). This is the next engine increment and would unlock ~60 already-verified facts.
-2. **Scale.** ~1,660 clean candidates remain queued (mostly `CONCEPTUAL_GENERIC`), at the proven 76–88% yield.
-3. **Physics qualitative** facts admit but don't generate (they are assertion/comparison lane) — same blocker
-   as (1).
+## E. Assertion generation with AUTHENTIC distractors (built — closes the admission→generation gap)
+
+The assertions were admitted but not generatable. Solved by authoring a fresh stem from the verified fact and
+reusing **the source item's REAL wrong options** as distractors (authentic exam misconception evidence — the
+owner's "use authentic exam evidence for distractor evidence, not cloning"). This is only sound when the source
+asked "what is X?", so `kvs_compose._assert_usable` gates it:
+- answer must be a clean short entity — **matching-pair/list answers rejected** ("Aschelminthes : Ancylostoma,
+  Enterobius, Tubifex" produced an incoherent stem);
+- **no giveaway** — no significant answer word may appear in the authored stem (rejected "Ethyl alcohol- Yeast"
+  where the stem said *yeast*);
+- ≥3 distinct real distractors ≠ answer.
+
+10 of 52 assertions pass the gate today and generate cleanly, e.g.:
+> *Which of the following is the TCA-cycle enzyme located in the inner mitochondrial membrane?*
+> (isocitrate dehydrogenase · malate dehydrogenase · **succinate dehydrogenase** · lactate dehydrogenase)
+
+> *Which of the following are not a normal constituent of the glomerular filtrate?*
+> (**Red blood cells** · Sodium ion · Urea · Glucose)
+
+Fresh stems, real exam distractors, Tier-1 deterministic re-derivation against the KVS fact. Gate regression-tested.
+
+## F. Exact remaining gap
+1. **Scale.** ~1,660 clean candidates remain queued (mostly `CONCEPTUAL_GENERIC`), at the proven 76–88% yield.
+2. **Assertion direction.** 42 of 52 assertions still don't generate — the source asked in the inverse direction
+   (term→definition), so the real distractors aren't parallel to an authored stem. Re-authoring the structured
+   slots in the source's direction at examiner time would unlock most of these (cheap fix, next batch).
+3. **JEE Main / Advanced are numeric-bound.** Both sit at 17 filled and barely move on qualitative facts: their
+   papers are dominated by Physics/Maths numerics, which is exactly the blocked notation lane (§A).
 
 ## Owner decision required — quantitative notation lane
 Deterministic arithmetic induction is proven unsafe and yields **zero** admissible relations. To convert the

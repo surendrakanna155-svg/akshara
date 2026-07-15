@@ -125,6 +125,40 @@ class TestGovernedConceptTitles(unittest.TestCase):
             self.assertTrue(cc.startswith("Biology ::"), cc)
 
 
+class TestAssertionGenerationGate(unittest.TestCase):
+    """Authoring an assertion item reuses the source's REAL distractors; the gate must reject the shapes
+    that produce broken or giveaway questions (regression: matching-pair answers and answer-in-stem)."""
+
+    def _u(self, answer, subject_term, predicate, object_term, distractors):
+        from kie.qie.convert import kvs_compose as KV
+        return KV._assert_usable(answer, subject_term, predicate, object_term, distractors)
+
+    def test_accepts_clean_entity_answer_with_real_distractors(self):
+        self.assertTrue(self._u("Pyruvic acid", "Pyruvic acid (pyruvate)", "is the common intermediate in",
+                                "all types of respiration",
+                                ["Acetyl CoA", "Oxaloacetate", "Tricarboxylic acid"]))
+
+    def test_rejects_matching_pair_answer(self):
+        # "Aschelminthes : Ancylostoma, Enterobius, Tubifex" -> incoherent stem
+        self.assertFalse(self._u("Aschelminthes : Ancylostoma, Enterobius, Tubifex", "Tubifex",
+                                 "belongs to the phylum", "Annelida",
+                                 ["Annelida : Aphrodite", "Mollusca : Teredo", "Arthropoda : Buthus"]))
+
+    def test_rejects_giveaway_answer_word_in_stem(self):
+        # stem would contain "yeast" and the answer is "Ethyl alcohol- Yeast"
+        self.assertFalse(self._u("Ethyl alcohol- Yeast", "Ethyl alcohol (ethanol) production",
+                                 "is carried out by", "yeast (fermentation)",
+                                 ["Acetic acid- Lactobacillus", "Cheese - Nitrobacter", "Curd - Azotobacter"]))
+
+    def test_rejects_when_fewer_than_three_real_distractors(self):
+        self.assertFalse(self._u("Pyruvic acid", "Pyruvic acid", "is the common intermediate in",
+                                 "all respiration", ["Acetyl CoA", "Acetyl CoA"]))
+
+    def test_rejects_when_answer_does_not_match_subject_term(self):
+        self.assertFalse(self._u("quaternary structure", "Some unrelated term", "describes",
+                                 "an arrangement", ["a", "b", "c"]))
+
+
 class TestEvidenceRegistry(unittest.TestCase):
     def test_every_store_scans_without_error(self):
         reg = REG.build("2026-01-01T00:00:00Z")
