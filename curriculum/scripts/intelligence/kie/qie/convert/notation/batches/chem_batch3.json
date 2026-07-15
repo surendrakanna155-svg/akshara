@@ -1,0 +1,812 @@
+{
+ "batch": "chem_batch3",
+ "extractor": "notation-recovery/chem-batch3",
+ "now": "2026-07-15T00:00:00Z",
+ "subject": "Chemistry",
+ "note": "Chemistry notation-recovery breadth. Each relation was transcribed from a RENDERED page image of an owned NCERT source (SUMMARY pages: highest relations-per-read) and certified by the locked deterministic hierarchy. NOTE: the NCERT zip class labels are SWAPPED — NCERT_Class11_lech1dd.zip holds the Class XII book and NCERT_Class12_kech1dd.zip the Class XI book; chapter identity was verified with sources.entry_title().",
+ "controls_note": "Deliberately damaged variants of relations admitted in this same batch. All three are caught by the DIMENSIONAL gate, so the gate is proven to have teeth on exactly the knowledge this batch admits.",
+ "relations": [
+  {
+   "name": "First law of thermodynamics",
+   "subject": "Chemistry",
+   "concept_candidate": "Chemistry :: Thermodynamics",
+   "exam": "NEET",
+   "equation": "dU = q + w",
+   "display": "ΔU = q + w",
+   "lhs_unit": "J",
+   "symbols": {
+    "dU": "J",
+    "q": "J",
+    "w": "J"
+   },
+   "meanings": {
+    "dU": "change in internal energy of the system",
+    "q": "heat absorbed by the system",
+    "w": "work done on the system"
+   },
+   "constants": [],
+   "constraints": [
+    "sign convention: q and w positive when added to the system"
+   ],
+   "value_ranges": {
+    "q": {
+     "lo": 2,
+     "hi": 9,
+     "scale": 100.0
+    },
+    "w": {
+     "lo": 2,
+     "hi": 9,
+     "scale": 100.0
+    }
+   },
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_12/Textbooks/NCERT_Class12_kech1dd.zip",
+    "entry": "kech105.pdf",
+    "page": 28,
+    "chapter": "Thermodynamics",
+    "eq_label": "SUMMARY: first law of thermodynamics via ΔU = q + w",
+    "recovered_from": "rendered page image (dpi=170)"
+   }
+  },
+  {
+   "name": "Heat capacity relation",
+   "subject": "Chemistry",
+   "concept_candidate": "Chemistry :: Thermodynamics",
+   "exam": "NEET",
+   "equation": "q = C*dT",
+   "display": "q = CΔT",
+   "lhs_unit": "J",
+   "symbols": {
+    "q": "J",
+    "C": "J/K",
+    "dT": "K"
+   },
+   "meanings": {
+    "q": "heat absorbed or evolved",
+    "C": "heat capacity of the substance",
+    "dT": "rise in temperature"
+   },
+   "constants": [],
+   "constraints": [
+    "heat capacity taken constant over the temperature range"
+   ],
+   "value_ranges": {
+    "C": {
+     "lo": 2,
+     "hi": 9,
+     "scale": 10.0
+    },
+    "dT": {
+     "lo": 2,
+     "hi": 9
+    }
+   },
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_12/Textbooks/NCERT_Class12_kech1dd.zip",
+    "entry": "kech105.pdf",
+    "page": 28,
+    "chapter": "Thermodynamics",
+    "eq_label": "SUMMARY: heat absorbed or evolved is q = CΔT",
+    "recovered_from": "rendered page image (dpi=170)"
+   }
+  },
+  {
+   "name": "Work of gas expansion",
+   "subject": "Chemistry",
+   "concept_candidate": "Chemistry :: Thermodynamics",
+   "exam": "NEET",
+   "equation": "w = -p_ex*dV",
+   "display": "w = −p_ex ΔV",
+   "lhs_unit": "J",
+   "symbols": {
+    "w": "J",
+    "p_ex": "Pa",
+    "dV": "m^3"
+   },
+   "meanings": {
+    "w": "work done on the gas",
+    "p_ex": "external pressure",
+    "dV": "change in volume of the gas"
+   },
+   "constants": [],
+   "constraints": [
+    "expansion against a constant external pressure"
+   ],
+   "value_ranges": {
+    "p_ex": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 100000.0
+    },
+    "dV": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 0.001
+    }
+   },
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_12/Textbooks/NCERT_Class12_kech1dd.zip",
+    "entry": "kech105.pdf",
+    "page": 28,
+    "chapter": "Thermodynamics",
+    "eq_label": "SUMMARY: work measured by w = −p_ex ΔV in expansion of gases",
+    "recovered_from": "rendered page image (dpi=170)"
+   }
+  },
+  {
+   "name": "Ideal gas equation",
+   "subject": "Chemistry",
+   "concept_candidate": "Chemistry :: Thermodynamics",
+   "exam": "NEET",
+   "equation": "p = n*R*T/V",
+   "display": "pV = nRT",
+   "lhs_unit": "Pa",
+   "symbols": {
+    "p": "Pa",
+    "n": "mol",
+    "R": "J K^-1 mol^-1",
+    "T": "K",
+    "V": "m^3"
+   },
+   "meanings": {
+    "p": "pressure of the gas",
+    "n": "amount of gas",
+    "R": "gas constant",
+    "T": "absolute temperature",
+    "V": "volume of the gas"
+   },
+   "constants": [
+    {
+     "symbol": "R",
+     "value": 8.314,
+     "unit": "J K^-1 mol^-1"
+    }
+   ],
+   "constraints": [
+    "ideal gas"
+   ],
+   "value_ranges": {
+    "n": {
+     "lo": 1,
+     "hi": 9
+    },
+    "T": {
+     "lo": 2,
+     "hi": 9,
+     "scale": 50.0
+    },
+    "V": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 0.001
+    }
+   },
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_12/Textbooks/NCERT_Class12_kech1dd.zip",
+    "entry": "kech105.pdf",
+    "page": 28,
+    "chapter": "Thermodynamics",
+    "eq_label": "SUMMARY: we can use gas equation, pV = nRT",
+    "recovered_from": "rendered page image (dpi=170)"
+   }
+  },
+  {
+   "name": "Enthalpy from internal energy",
+   "subject": "Chemistry",
+   "concept_candidate": "Chemistry :: Thermodynamics",
+   "exam": "NEET",
+   "equation": "dH = dU + dn_g*R*T",
+   "display": "ΔH = ΔU + Δn_g RT",
+   "lhs_unit": "J",
+   "symbols": {
+    "dH": "J",
+    "dU": "J",
+    "dn_g": "mol",
+    "R": "J K^-1 mol^-1",
+    "T": "K"
+   },
+   "meanings": {
+    "dH": "enthalpy change",
+    "dU": "change in internal energy",
+    "dn_g": "change in the number of moles of gas",
+    "R": "gas constant",
+    "T": "absolute temperature"
+   },
+   "constants": [
+    {
+     "symbol": "R",
+     "value": 8.314,
+     "unit": "J K^-1 mol^-1"
+    }
+   ],
+   "constraints": [
+    "gaseous species behave ideally"
+   ],
+   "value_ranges": {
+    "dU": {
+     "lo": 2,
+     "hi": 9,
+     "scale": 1000.0
+    },
+    "dn_g": {
+     "lo": 1,
+     "hi": 3
+    },
+    "T": {
+     "lo": 2,
+     "hi": 9,
+     "scale": 50.0
+    }
+   },
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_12/Textbooks/NCERT_Class12_kech1dd.zip",
+    "entry": "kech105.pdf",
+    "page": 28,
+    "chapter": "Thermodynamics",
+    "eq_label": "SUMMARY: enthalpy change, ΔH = ΔU + Δn_g RT",
+    "recovered_from": "rendered page image (dpi=170)"
+   }
+  },
+  {
+   "name": "Entropy change reversible process",
+   "subject": "Chemistry",
+   "concept_candidate": "Chemistry :: Thermodynamics",
+   "exam": "NEET",
+   "equation": "dS = q_rev/T",
+   "display": "ΔS = q_rev / T",
+   "lhs_unit": "J/K",
+   "symbols": {
+    "dS": "J/K",
+    "q_rev": "J",
+    "T": "K"
+   },
+   "meanings": {
+    "dS": "entropy change",
+    "q_rev": "heat exchanged reversibly",
+    "T": "absolute temperature"
+   },
+   "constants": [],
+   "constraints": [
+    "reversible process",
+    "q_rev/T is independent of path"
+   ],
+   "value_ranges": {
+    "q_rev": {
+     "lo": 2,
+     "hi": 9,
+     "scale": 100.0
+    },
+    "T": {
+     "lo": 2,
+     "hi": 9,
+     "scale": 50.0
+    }
+   },
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_12/Textbooks/NCERT_Class12_kech1dd.zip",
+    "entry": "kech105.pdf",
+    "page": 28,
+    "chapter": "Thermodynamics",
+    "eq_label": "SUMMARY: entropy changes measured by ΔS = q_rev/T for a reversible process",
+    "recovered_from": "rendered page image (dpi=170)"
+   }
+  },
+  {
+   "name": "Gibbs energy change",
+   "subject": "Chemistry",
+   "concept_candidate": "Chemistry :: Thermodynamics",
+   "exam": "NEET",
+   "equation": "dG_r = dH_r - T*dS_r",
+   "display": "Δ_rG = Δ_rH − TΔ_rS",
+   "lhs_unit": "J/mol",
+   "symbols": {
+    "dG_r": "J/mol",
+    "dH_r": "J/mol",
+    "T": "K",
+    "dS_r": "J K^-1 mol^-1"
+   },
+   "meanings": {
+    "dG_r": "Gibbs energy change of the reaction",
+    "dH_r": "enthalpy change of the reaction",
+    "T": "absolute temperature",
+    "dS_r": "entropy change of the reaction"
+   },
+   "constants": [],
+   "constraints": [
+    "constant temperature and pressure"
+   ],
+   "value_ranges": {
+    "dH_r": {
+     "lo": 2,
+     "hi": 9,
+     "scale": 1000.0
+    },
+    "T": {
+     "lo": 2,
+     "hi": 9,
+     "scale": 50.0
+    },
+    "dS_r": {
+     "lo": 2,
+     "hi": 9,
+     "scale": 10.0
+    }
+   },
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_12/Textbooks/NCERT_Class12_kech1dd.zip",
+    "entry": "kech105.pdf",
+    "page": 28,
+    "chapter": "Thermodynamics",
+    "eq_label": "SUMMARY: Gibbs energy, Δ_rG = Δ_rH − TΔ_rS",
+    "recovered_from": "rendered page image (dpi=170)"
+   }
+  },
+  {
+   "name": "Gibbs energy and equilibrium constant",
+   "subject": "Chemistry",
+   "concept_candidate": "Chemistry :: Thermodynamics",
+   "exam": "NEET",
+   "equation": "dG_std = -R*T*log(K_eq)",
+   "display": "Δ_rG⊖ = − RT ln K",
+   "lhs_unit": "J/mol",
+   "symbols": {
+    "dG_std": "J/mol",
+    "R": "J K^-1 mol^-1",
+    "T": "K",
+    "K_eq": "1"
+   },
+   "meanings": {
+    "dG_std": "standard Gibbs energy change of the reaction",
+    "R": "gas constant",
+    "T": "absolute temperature",
+    "K_eq": "equilibrium constant"
+   },
+   "constants": [
+    {
+     "symbol": "R",
+     "value": 8.314,
+     "unit": "J K^-1 mol^-1"
+    }
+   ],
+   "constraints": [
+    "standard state",
+    "K is the dimensionless thermodynamic equilibrium constant"
+   ],
+   "value_ranges": {
+    "T": {
+     "lo": 2,
+     "hi": 9,
+     "scale": 50.0
+    },
+    "K_eq": {
+     "lo": 2,
+     "hi": 9
+    }
+   },
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_12/Textbooks/NCERT_Class12_kech1dd.zip",
+    "entry": "kech105.pdf",
+    "page": 28,
+    "chapter": "Thermodynamics",
+    "eq_label": "SUMMARY: standard Gibbs energy change related to equilibrium constant, Δ_rG⊖ = −RT ln K",
+    "recovered_from": "rendered page image (dpi=170)"
+   }
+  },
+  {
+   "name": "Arrhenius equation",
+   "subject": "Chemistry",
+   "concept_candidate": "Chemistry :: Chemical Kinetics",
+   "exam": "NEET",
+   "equation": "k = A*exp(-Ea/(R*T))",
+   "display": "k = A e^(−Ea/RT)",
+   "lhs_unit": "s^-1",
+   "symbols": {
+    "k": "s^-1",
+    "A": "s^-1",
+    "Ea": "J/mol",
+    "R": "J K^-1 mol^-1",
+    "T": "K"
+   },
+   "meanings": {
+    "k": "rate constant",
+    "A": "Arrhenius (pre-exponential) factor",
+    "Ea": "activation energy",
+    "R": "gas constant",
+    "T": "absolute temperature"
+   },
+   "constants": [
+    {
+     "symbol": "R",
+     "value": 8.314,
+     "unit": "J K^-1 mol^-1"
+    }
+   ],
+   "constraints": [
+    "k and A carry identical units; s^-1 declared for a first-order reaction"
+   ],
+   "value_ranges": {
+    "A": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 10000000000.0
+    },
+    "Ea": {
+     "lo": 2,
+     "hi": 9,
+     "scale": 10000.0
+    },
+    "T": {
+     "lo": 2,
+     "hi": 9,
+     "scale": 50.0
+    }
+   },
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_11/Textbooks/NCERT_Class11_lech1dd.zip",
+    "entry": "lech103.pdf",
+    "page": 23,
+    "chapter": "Chemical Kinetics",
+    "eq_label": "SUMMARY: temperature dependence of rate constants described by Arrhenius equation (k = Ae^-Ea/RT)",
+    "recovered_from": "rendered page image (dpi=170)"
+   }
+  },
+  {
+   "name": "Collision theory rate constant",
+   "subject": "Chemistry",
+   "concept_candidate": "Chemistry :: Chemical Kinetics",
+   "exam": "JEE Main",
+   "equation": "k = P*Z_AB*exp(-Ea/(R*T))",
+   "display": "k = P Z_AB e^(−Ea/RT)",
+   "lhs_unit": "s^-1",
+   "symbols": {
+    "k": "s^-1",
+    "P": "1",
+    "Z_AB": "s^-1",
+    "Ea": "J/mol",
+    "R": "J K^-1 mol^-1",
+    "T": "K"
+   },
+   "meanings": {
+    "k": "rate constant",
+    "P": "steric factor",
+    "Z_AB": "collision frequency",
+    "Ea": "activation energy",
+    "R": "gas constant",
+    "T": "absolute temperature"
+   },
+   "constants": [
+    {
+     "symbol": "R",
+     "value": 8.314,
+     "unit": "J K^-1 mol^-1"
+    }
+   ],
+   "constraints": [
+    "k and A carry identical units; s^-1 declared for a first-order reaction",
+    "collision theory with steric factor P"
+   ],
+   "value_ranges": {
+    "P": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 0.1
+    },
+    "Z_AB": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 10000000000.0
+    },
+    "Ea": {
+     "lo": 2,
+     "hi": 9,
+     "scale": 10000.0
+    },
+    "T": {
+     "lo": 2,
+     "hi": 9,
+     "scale": 50.0
+    }
+   },
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_11/Textbooks/NCERT_Class11_lech1dd.zip",
+    "entry": "lech103.pdf",
+    "page": 23,
+    "chapter": "Chemical Kinetics",
+    "eq_label": "SUMMARY: modifying the Arrhenius equation to k = P Z_AB e^(−Ea/RT)",
+    "recovered_from": "rendered page image (dpi=170)"
+   }
+  },
+  {
+   "name": "Standard cell potential",
+   "subject": "Chemistry",
+   "concept_candidate": "Chemistry :: Electrochemistry",
+   "exam": "NEET",
+   "equation": "E_cell = E_cathode - E_anode",
+   "display": "E⊖(cell) = E⊖cathode − E⊖anode",
+   "lhs_unit": "V",
+   "symbols": {
+    "E_cell": "V",
+    "E_cathode": "V",
+    "E_anode": "V"
+   },
+   "meanings": {
+    "E_cell": "standard potential of the cell",
+    "E_cathode": "standard electrode potential of the cathode",
+    "E_anode": "standard electrode potential of the anode"
+   },
+   "constants": [],
+   "constraints": [
+    "standard states",
+    "standard hydrogen electrode taken as zero"
+   ],
+   "value_ranges": {
+    "E_cathode": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 0.1
+    },
+    "E_anode": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 0.1
+    }
+   },
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_11/Textbooks/NCERT_Class11_lech1dd.zip",
+    "entry": "lech102.pdf",
+    "page": 27,
+    "chapter": "Electrochemistry",
+    "eq_label": "SUMMARY: standard potential of the cell = difference of standard potentials of cathode and anode",
+    "recovered_from": "rendered page image (dpi=170)"
+   }
+  },
+  {
+   "name": "Gibbs energy from cell potential",
+   "subject": "Chemistry",
+   "concept_candidate": "Chemistry :: Electrochemistry",
+   "exam": "NEET",
+   "equation": "dG_cell = -n*F*E_cell",
+   "display": "Δ_rG⊖ = −nF E⊖(cell)",
+   "lhs_unit": "J/mol",
+   "symbols": {
+    "dG_cell": "J/mol",
+    "n": "1",
+    "F": "C/mol",
+    "E_cell": "V"
+   },
+   "meanings": {
+    "dG_cell": "standard Gibbs energy change of the cell reaction",
+    "n": "number of electrons transferred",
+    "F": "Faraday constant",
+    "E_cell": "standard potential of the cell"
+   },
+   "constants": [
+    {
+     "symbol": "F",
+     "value": 96487.0,
+     "unit": "C/mol"
+    }
+   ],
+   "constraints": [
+    "standard states"
+   ],
+   "value_ranges": {
+    "n": {
+     "lo": 1,
+     "hi": 4
+    },
+    "E_cell": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 0.1
+    }
+   },
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_11/Textbooks/NCERT_Class11_lech1dd.zip",
+    "entry": "lech102.pdf",
+    "page": 27,
+    "chapter": "Electrochemistry",
+    "eq_label": "SUMMARY: standard potential of the cells related to standard Gibbs energy (Δ_rG⊖ = −nF E⊖(cell))",
+    "recovered_from": "rendered page image (dpi=170)"
+   }
+  },
+  {
+   "name": "Molar conductivity",
+   "subject": "Chemistry",
+   "concept_candidate": "Chemistry :: Electrochemistry",
+   "exam": "NEET",
+   "equation": "L_m = kappa/c",
+   "display": "Λm = κ/c",
+   "lhs_unit": "S m^2 mol^-1",
+   "symbols": {
+    "L_m": "S m^2 mol^-1",
+    "kappa": "S/m",
+    "c": "mol m^-3"
+   },
+   "meanings": {
+    "L_m": "molar conductivity",
+    "kappa": "conductivity of the electrolytic solution",
+    "c": "concentration of the electrolyte"
+   },
+   "constants": [],
+   "constraints": [],
+   "value_ranges": {
+    "kappa": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 0.01
+    },
+    "c": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 10.0
+    }
+   },
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_11/Textbooks/NCERT_Class11_lech1dd.zip",
+    "entry": "lech102.pdf",
+    "page": 27,
+    "chapter": "Electrochemistry",
+    "eq_label": "SUMMARY: molar conductivity, Λm, is defined by = κ/c where c is the concentration",
+    "recovered_from": "rendered page image (dpi=170)"
+   }
+  },
+  {
+   "name": "Raoult's law binary solution",
+   "subject": "Chemistry",
+   "concept_candidate": "Chemistry :: Solutions",
+   "exam": "NEET",
+   "equation": "p_total = p1_0*x1 + p2_0*x2",
+   "display": "p_total = p1⁰x1 + p2⁰x2",
+   "lhs_unit": "Pa",
+   "symbols": {
+    "p_total": "Pa",
+    "p1_0": "Pa",
+    "x1": "1",
+    "p2_0": "Pa",
+    "x2": "1"
+   },
+   "meanings": {
+    "p_total": "total vapour pressure over the solution",
+    "p1_0": "vapour pressure of pure component 1",
+    "x1": "mole fraction of component 1",
+    "p2_0": "vapour pressure of pure component 2",
+    "x2": "mole fraction of component 2"
+   },
+   "constants": [],
+   "constraints": [
+    "binary solution of two volatile components",
+    "ideal solution"
+   ],
+   "value_ranges": {
+    "p1_0": {
+     "lo": 2,
+     "hi": 9,
+     "scale": 10000.0
+    },
+    "x1": {
+     "lo": 1,
+     "hi": 4,
+     "scale": 0.1
+    },
+    "p2_0": {
+     "lo": 2,
+     "hi": 9,
+     "scale": 10000.0
+    },
+    "x2": {
+     "lo": 6,
+     "hi": 9,
+     "scale": 0.1
+    }
+   },
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_11/Textbooks/NCERT_Class11_lech1dd.zip",
+    "entry": "lech101.pdf",
+    "page": 26,
+    "chapter": "Solutions",
+    "eq_label": "SUMMARY: Raoult's law for a binary liquid solution, p_total = p1⁰x1 + p2⁰x2",
+    "recovered_from": "rendered page image (dpi=170)"
+   }
+  }
+ ],
+ "controls": [
+  {
+   "name": "CONTROL damaged enthalpy relation",
+   "subject": "Chemistry",
+   "concept_candidate": "Chemistry :: Thermodynamics",
+   "exam": "NEET",
+   "equation": "dH = dU + dn_g*R",
+   "display": "ΔH = ΔU + Δn_g R  [DAMAGED: T dropped]",
+   "lhs_unit": "J",
+   "symbols": {
+    "dH": "J",
+    "dU": "J",
+    "dn_g": "mol",
+    "R": "J K^-1 mol^-1"
+   },
+   "meanings": {
+    "dH": "enthalpy change",
+    "dU": "change in internal energy",
+    "dn_g": "change in moles of gas",
+    "R": "gas constant"
+   },
+   "constants": [],
+   "constraints": [],
+   "value_ranges": {},
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_12/Textbooks/NCERT_Class12_kech1dd.zip",
+    "entry": "kech105.pdf",
+    "page": 28,
+    "chapter": "Thermodynamics",
+    "eq_label": "ADVERSARIAL CONTROL: absolute temperature deliberately dropped",
+    "recovered_from": "rendered page image (dpi=170)"
+   }
+  },
+  {
+   "name": "CONTROL damaged Arrhenius equation",
+   "subject": "Chemistry",
+   "concept_candidate": "Chemistry :: Chemical Kinetics",
+   "exam": "NEET",
+   "equation": "k = A*exp(-Ea*R/T)",
+   "display": "k = A e^(−Ea·R/T)  [DAMAGED: R moved to numerator]",
+   "lhs_unit": "s^-1",
+   "symbols": {
+    "k": "s^-1",
+    "A": "s^-1",
+    "Ea": "J/mol",
+    "R": "J K^-1 mol^-1",
+    "T": "K"
+   },
+   "meanings": {
+    "k": "rate constant",
+    "A": "Arrhenius factor",
+    "Ea": "activation energy",
+    "R": "gas constant",
+    "T": "absolute temperature"
+   },
+   "constants": [],
+   "constraints": [],
+   "value_ranges": {},
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_11/Textbooks/NCERT_Class11_lech1dd.zip",
+    "entry": "lech103.pdf",
+    "page": 23,
+    "chapter": "Chemical Kinetics",
+    "eq_label": "ADVERSARIAL CONTROL: gas constant moved into the exponent numerator",
+    "recovered_from": "rendered page image (dpi=170)"
+   }
+  },
+  {
+   "name": "CONTROL damaged molar conductivity",
+   "subject": "Chemistry",
+   "concept_candidate": "Chemistry :: Electrochemistry",
+   "exam": "NEET",
+   "equation": "L_m = kappa*c",
+   "display": "Λm = κ·c  [DAMAGED: division flipped to multiplication]",
+   "lhs_unit": "S m^2 mol^-1",
+   "symbols": {
+    "L_m": "S m^2 mol^-1",
+    "kappa": "S/m",
+    "c": "mol m^-3"
+   },
+   "meanings": {
+    "L_m": "molar conductivity",
+    "kappa": "conductivity",
+    "c": "concentration"
+   },
+   "constants": [],
+   "constraints": [],
+   "value_ranges": {},
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_11/Textbooks/NCERT_Class11_lech1dd.zip",
+    "entry": "lech102.pdf",
+    "page": 27,
+    "chapter": "Electrochemistry",
+    "eq_label": "ADVERSARIAL CONTROL: quotient replaced by a product",
+    "recovered_from": "rendered page image (dpi=170)"
+   }
+  }
+ ]
+}

@@ -2,7 +2,7 @@
   "_registry": "Akshara Canonical Evidence & Knowledge Governance Registry",
   "_authority": "Single store-level source of truth for owned QIE/curriculum evidence + lifecycle state.",
   "_owner_correction": "2026-07-14 evidence-storage governance reconciliation",
-  "generated_at": "2026-07-15T02:45:00Z",
+  "generated_at": "2026-07-15T07:32:11Z",
   "workspace": "/Users/surendrakanna/Documents/Akshara_ERP/curriculum",
   "lifecycle_states": [
     "1_raw_source",
@@ -16,7 +16,7 @@
   ],
   "totals": {
     "stores": 23,
-    "total_bytes": 63729254400,
+    "total_bytes": 63731888128,
     "total_human": "59.4 GB",
     "by_scope": {
       "in_scope": 8,
@@ -577,8 +577,8 @@
         "item_model_ai_validated": 39,
         "pilot_verified_item": 1496,
         "governed_fact_verified": 92,
-        "governed_relation_certified": 14,
-        "governed_relation_rejected": 2
+        "governed_relation_certified": 28,
+        "governed_relation_rejected": 5
       }
     },
     {
@@ -665,8 +665,8 @@
       ],
       "notes": "Deterministic + idempotent re-render from owned PDFs; certified output lands in qie.db governed_relation.",
       "exists": true,
-      "size_bytes": 1986560,
-      "size_human": "1.9 MB",
+      "size_bytes": 4620288,
+      "size_human": "4.4 MB",
       "live": {}
     },
     {
