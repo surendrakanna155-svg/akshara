@@ -176,13 +176,55 @@ class TestOptionQualityGate(unittest.TestCase):
         for s in ("_!_ increases linearly with t c",      # stray OCR marks
                   "C decreases with ķ I",                  # latin-extended OCR confusion
                   "the momentum of `S` remains constant",  # backtick artifact
-                  "a ketone RESPO'iSE",                    # internal-case garbage
+                  "a ketone RESPO'iSE",                    # apostrophe swallowed mid-token
+                  "Zr andY have about the same radius",    # a lost space glued a word to a capital
                   ""):
             self.assertFalse(self._c(s), s)
 
-    def test_rejects_over_long_option(self):
-        self.assertFalse(self._c("Whether KP is greater than, less than or equal to Kc depends upon "
-                                 "the total gas pressure of the system"))
+    def test_accepts_real_biochemistry_with_internal_capitals(self):
+        """Regression: the CONCEPT-TITLE garbage detector rejects [a-z][A-Z] and so kills real science
+        (Acetyl CoA, mRNA, NaOH, pH). Options are PROSE and must use the stem gate, not the title gate —
+        a gate that rejects truth is as much a defect as one that admits junk."""
+        for s in ("Acetyl CoA", "mRNA polymerase activity", "NADH dehydrogenase",
+                  "pH of the solution", "NaOH solution", "MgCl2 crystals"):
+            self.assertTrue(self._c(s), s)
+
+    def test_accepts_a_long_but_legitimate_option(self):
+        """Length is a runaway-OCR bound, not a quality proxy. Real exam options genuinely run long, and
+        rejecting truth for being verbose is the same defect as a gate that rejects a true relation."""
+        self.assertTrue(self._c("Whether KP is greater than, less than or equal to Kc depends upon "
+                                "the total gas pressure"))
+        self.assertTrue(self._c("Analogous organs that have evolved due to convergent evolution."))
+
+    def test_rejects_runaway_option(self):
+        self.assertFalse(self._c("x" * 200))
+
+    def test_rejects_prose_damage_in_a_long_option(self):
+        """A word-level check cannot see prose damage; qpgen's own artifact detector can."""
+        self.assertFalse(self._c("For a temperature more than T , V has one real and two . . c roots"))
+
+    def test_the_answer_is_quality_gated_too_not_just_the_distractors(self):
+        """The ANSWER prints verbatim as an option. Regression: only distractors were gated, so an
+        OCR-damaged answer ('real depth of  pond' — double space) reached a paper."""
+        from kie.qie.convert import kvs_compose as KV
+        self.assertFalse(KV._assert_usable(
+            "Difference between apparent and real depth of  pond",
+            "The difference between the apparent and real depth of a pond", "is due to",
+            "refraction (not total internal reflection)",
+            ["Working of optical fibre", "Brilliance of diamond", "Mirage on hot summer days"]))
+        self.assertFalse(KV._assert_object_usable(
+            "the momentum of `S` is constant", "A satellite", "shows", "constant momentum",
+            ["energy varies", "speed is constant", "period changes"]))
+
+    def test_no_generated_kvs_item_ships_an_option_the_gate_would_reject(self):
+        """End-to-end: whatever reaches a paper must survive the same gate we claim to enforce."""
+        from kie.qie import compositions as K
+        from kie.qie.convert import kvs_compose as KV
+        if not KV._TEMPLATES:
+            self.skipTest("no governed KVS facts in the local store")
+        leaks = [(it["concept"], o) for it in K.run(KV._TEMPLATES, per_template=1, seed="7")["verified_bank"]
+                 for o in it["options"].values() if not KV._option_clean(o)]
+        self.assertEqual(leaks, [])
 
     def test_damaged_distractors_are_dropped_not_shipped(self):
         from kie.qie.convert import kvs_compose as KV

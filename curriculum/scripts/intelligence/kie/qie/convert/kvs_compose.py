@@ -28,6 +28,32 @@ def _norm(s: str) -> str:
     return _re.sub(r"[^a-z0-9 ]", "", (s or "").lower()).strip()
 
 
+_ARTICLE = __import__("re").compile(r"\b(?:a|an|the)\b")
+
+
+def _corresponds(answer: str, term: str) -> bool:
+    """Does `answer` name the same thing as `term`?
+
+    Articles are noise here: the examiner writes the object_term as prose ("the sodium salt of a carboxylic
+    acid") while the source's option is bare ("sodium salt of carboxylic acid"). The substring test is done
+    article-blind so identical content matches.
+
+    The first-word test is deliberately NOT article-blind. It is a loose heuristic, and widening it produces
+    false matches: "Sol A is negatively charged and sol B is positively charged" would match the subject term
+    "A sol coagulated more effectively by a divalent cation" on the shared first word "sol" alone, and author
+    an incoherent item. Missing a fact is cheaper than authoring a wrong one.
+    """
+    a, t = _norm(answer), _norm(term)
+    if not a or not t:
+        return False
+    ab = _ARTICLE.sub(" ", a).split()
+    tb = _ARTICLE.sub(" ", t).split()
+    if not ab or not tb:
+        return False
+    a_bare, t_bare = " ".join(ab), " ".join(tb)
+    return a_bare in t_bare or t_bare in a_bare or a.split()[0] == t.split()[0]
+
+
 # An option is printed VERBATIM to a student. The source's real distractors are authentic misconception
 # evidence, but they are OCR text — so a string can be damaged even when the fact behind it is sound
 # ("_!_ increases linearly with t", "C decreases with ķ I", "the momentum of `S`"). Damaged strings are
@@ -38,12 +64,23 @@ _OPT_NOISE = __import__("re").compile(
     r"[`_~\\{}<>|]"          # stray OCR marks — never present in a real option
     r"|!"                     # a bare '!' inside an option is OCR noise
     r"|[Ā-ɏ]"      # Latin-Extended (ķ, Ï …) — OCR confusion, never real English science
+    # A run of 3+ lowercase letters glued to a capital is a lost space ("Zr andY have..."). The 3+ bound is
+    # what keeps real chemistry safe: NaOH, MgCl2, CoA, mRNA, tRNA and pH all carry at most TWO lowercase
+    # letters before a capital, so none of them match.
+    r"|[a-z]{3,}[A-Z]"
+    r"|'[a-z]+[A-Z]"          # an apostrophe swallowed mid-token ("a ketone RESPO'iSE")
 )
-MAX_OPTION_LEN = 60
+# A sanity bound, not a quality proxy. Real NEET options genuinely run long ("A major advantage is that the
+# offspring are protected from predators and there is a great chance of their survival upto adulthood." = 129
+# chars), so a tight cap would reject truth for being verbose. Length is bounded only to catch runaway OCR;
+# whether an option is JUNK is decided by the artifact detectors below. (Entity-vs-prose is a separate
+# question and stays where it belongs: on the ANSWER in the per-direction gates.)
+MAX_OPTION_LEN = 130
+_ARTIFACT_MIN_LEN = 8          # sanitize.stem_quality_ok requires >= 8 chars, so short options skip it
 
 
 def _option_clean(s: str) -> bool:
-    """True if an option string is fit to print to a student."""
+    """True if an option string is fit to print VERBATIM to a student."""
     from kie.qpgen import sanitize
     t = (s or "").strip()
     if not t or len(t) > MAX_OPTION_LEN:
@@ -52,7 +89,12 @@ def _option_clean(s: str) -> bool:
         return False
     if _OPT_NOISE.search(t):
         return False
-    return not sanitize._looks_like_ocr_garbage(t)
+    # `stem_quality_ok` — NOT `_looks_like_ocr_garbage`. An option is PROSE, like a stem; the garbage detector
+    # is the CONCEPT-TITLE gate and its internal-case rule ([a-z][A-Z]) rejects real biochemistry — Acetyl CoA,
+    # mRNA, tRNA, NaOH, pH. sanitize says so itself: stem_quality_ok exists "so pH/mRNA/units/maths in a
+    # legitimate stem are never rejected". It also catches the prose damage a word-level check cannot
+    # ("... one real and two . . c 1magmary roots" -> space before punctuation).
+    return len(t) < _ARTIFACT_MIN_LEN or sanitize.stem_quality_ok(t)
 
 
 def _clean_distractors(distractors: List[str], answer: str) -> List[str]:
@@ -85,15 +127,19 @@ def _assert_usable(answer: str, subject_term: str, predicate: str, object_term: 
         return False
     if ":" in (answer or "") or " - " in (answer or "") or len(answer) > 60:
         return False                                   # matching-pair / list-style option, not an entity
-    if not (a in st or st in a or a.split()[0] == st.split()[0]):
+    if not _option_clean(answer):
+        return False        # the ANSWER is an option too: it prints verbatim, so it must be clean as well
+        # (regression: an OCR-damaged answer — "real depth of  pond", double space — shipped because only the
+        #  distractors were being quality-gated)
+    if not _corresponds(answer, subject_term):
         return False                                   # answer does not correspond to the subject term
     stem_words = set(_norm(f"{predicate} {object_term}").split())
     if any(w for w in a.split() if len(w) > 3 and w in stem_words):
         return False                                   # giveaway: answer word appears in the stem
-    clean = [d for d in distractors if d and _norm(d) != a]
-    if len({_norm(d) for d in clean}) < 3:
-        return False
-    return True
+    # Count CLEAN distractors, exactly as `_load` does. Counting raw ones would pass a fact whose damaged
+    # strings are then dropped, leaving <3 options — the gate would say yes and the item would silently
+    # never appear.
+    return len(_clean_distractors(distractors, answer)) >= 3
 
 
 def _assert_object_usable(answer: str, subject_term: str, predicate: str, object_term: str,
@@ -117,9 +163,12 @@ def _assert_object_usable(answer: str, subject_term: str, predicate: str, object
     a, ot, st = _norm(answer), _norm(object_term), _norm(subject_term)
     if not a or not ot or not st:
         return False
+    # No 60-char entity cap here: unlike "what is X?" (whose answer NAMES an entity), the object direction's
+    # answer is legitimately a descriptive phrase ("Analogous organs that have evolved due to convergent
+    # evolution." = 61 chars). Matching-pair/list markers are still refused — those make an incoherent stem.
     if ":" in (answer or "") or " - " in (answer or "") or not _option_clean(answer):
         return False
-    if not (a in ot or ot in a or a.split()[0] == ot.split()[0]):
+    if not _corresponds(answer, object_term):
         return False                                   # answer does not correspond to the object term
     stem_words = set(_norm(f"{subject_term} {predicate}").split())
     if any(w for w in a.split() if len(w) > 3 and w in stem_words):
