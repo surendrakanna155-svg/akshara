@@ -5,6 +5,7 @@ import '../../repository_query.dart';
 import '../../../../features/finance/finance_models.dart';
 import '../../../../features/finance/finance_requests.dart';
 import '../../../../features/finance/intelligence/finance_intelligence_models.dart';
+import 'dto/finance_enum_codec.dart';
 import 'finance_installment_plan_catalog.dart';
 import 'mapper/finance_mapper.dart';
 import 'mapper/finance_intelligence_mapper.dart';
@@ -362,6 +363,91 @@ class ApiFinanceRepository implements FinanceRepository {
     final dto = await _remote.fetchDiscountsDashboard(query: query);
     return _mapper.toDiscountsDashboard(dto);
   }
+
+  // ── STEP-5: fee reductions (scholarship awards + discount applications) ───
+  @override
+  Future<List<FeeReduction>> listFeeReductions({
+    required RepositoryQuery query,
+    FeeReductionStatus? status,
+    String? invoiceId,
+    String? studentId,
+    FeeReductionSourceKind? sourceKind,
+  }) async {
+    final dto = await _remote.fetchFeeReductions(
+      query: query,
+      status: status == null
+          ? null
+          : switch (status) {
+              FeeReductionStatus.pending => 'pending',
+              FeeReductionStatus.approved => 'approved',
+              FeeReductionStatus.rejected => 'rejected',
+              FeeReductionStatus.reversed => 'reversed',
+            },
+      invoiceId: invoiceId,
+      studentId: studentId,
+      sourceKind: sourceKind == null
+          ? null
+          : FinanceEnumCodec.feeReductionSourceKindToApi(sourceKind),
+    );
+    return _mapper.toFeeReductions(dto);
+  }
+
+  @override
+  Future<FeeReduction> proposeScholarshipAward({
+    required RepositoryQuery query,
+    required String scholarshipId,
+    required String invoiceId,
+    required String reason,
+    double? percent,
+    double? amount,
+  }) =>
+      _remote.proposeScholarshipAward(
+        query: query,
+        scholarshipId: scholarshipId,
+        invoiceId: invoiceId,
+        reason: reason,
+        percent: percent,
+        amount: amount,
+      );
+
+  @override
+  Future<FeeReduction> proposeDiscountApplication({
+    required RepositoryQuery query,
+    required String discountRuleId,
+    required String invoiceId,
+    required String reason,
+    double? percent,
+    double? amount,
+  }) =>
+      _remote.proposeDiscountApplication(
+        query: query,
+        discountRuleId: discountRuleId,
+        invoiceId: invoiceId,
+        reason: reason,
+        percent: percent,
+        amount: amount,
+      );
+
+  @override
+  Future<FeeReduction> approveFeeReduction({
+    required RepositoryQuery query,
+    required String reductionId,
+  }) =>
+      _remote.approveFeeReduction(query: query, reductionId: reductionId);
+
+  @override
+  Future<FeeReduction> rejectFeeReduction({
+    required RepositoryQuery query,
+    required String reductionId,
+  }) =>
+      _remote.rejectFeeReduction(query: query, reductionId: reductionId);
+
+  @override
+  Future<FeeReduction> reverseFeeReduction({
+    required RepositoryQuery query,
+    required String reductionId,
+  }) =>
+      _remote.reverseFeeReduction(query: query, reductionId: reductionId);
 
   @override
   Future<FinanceReportsData> getReportsData({

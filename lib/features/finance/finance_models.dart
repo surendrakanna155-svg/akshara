@@ -1005,6 +1005,99 @@ class DiscountsDashboardData {
   final String impactSummary;
 }
 
+// STEP-5 — fee reductions (scholarship awards + discount applications) that
+// ACTUALLY reduce a student's payable, but only through the two-person
+// maker-checker on `finance_fee_reductions_{repository,handlers}.ts`. A
+// reduction is born `pending` (no money moves) and only `approveFeeReduction`
+// — by someone other than the proposer — applies it against the target
+// INVOICE. Mirrors the backend's `FinanceFeeReductionRow` / `feeReductionToApi`
+// shape exactly (see finance_fee_reductions_repository.ts).
+enum FeeReductionSourceKind { scholarship, discount }
+
+enum FeeReductionKind { percent, fixed }
+
+enum FeeReductionStatus { pending, approved, rejected, reversed }
+
+@immutable
+class FeeReduction {
+  const FeeReduction({
+    required this.id,
+    required this.sourceKind,
+    this.scholarshipId = '',
+    this.discountRuleId = '',
+    required this.studentId,
+    required this.invoiceId,
+    this.studentAccountId = '',
+    required this.reductionKind,
+    this.percent = '',
+    this.fixedAmount = '',
+    this.appliedAmount = '0',
+    required this.status,
+    required this.reason,
+    required this.createdBy,
+    this.approvedBy = '',
+    this.reversedBy = '',
+    this.appliedAt = '',
+    this.reversedAt = '',
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final String id;
+  final FeeReductionSourceKind sourceKind;
+  final String scholarshipId;
+  final String discountRuleId;
+  final String studentId;
+  final String invoiceId;
+  final String studentAccountId;
+  final FeeReductionKind reductionKind;
+  final String percent;
+  final String fixedAmount;
+  final String appliedAmount;
+  final FeeReductionStatus status;
+  final String reason;
+  final String createdBy;
+  final String approvedBy;
+  final String reversedBy;
+  final String appliedAt;
+  final String reversedAt;
+  final String createdAt;
+  final String updatedAt;
+
+  FeeReduction copyWith({
+    FeeReductionStatus? status,
+    String? appliedAmount,
+    String? approvedBy,
+    String? reversedBy,
+    String? appliedAt,
+    String? reversedAt,
+    String? updatedAt,
+  }) {
+    return FeeReduction(
+      id: id,
+      sourceKind: sourceKind,
+      scholarshipId: scholarshipId,
+      discountRuleId: discountRuleId,
+      studentId: studentId,
+      invoiceId: invoiceId,
+      studentAccountId: studentAccountId,
+      reductionKind: reductionKind,
+      percent: percent,
+      fixedAmount: fixedAmount,
+      appliedAmount: appliedAmount ?? this.appliedAmount,
+      status: status ?? this.status,
+      reason: reason,
+      createdBy: createdBy,
+      approvedBy: approvedBy ?? this.approvedBy,
+      reversedBy: reversedBy ?? this.reversedBy,
+      appliedAt: appliedAt ?? this.appliedAt,
+      reversedAt: reversedAt ?? this.reversedAt,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+}
+
 enum FinanceReportType {
   collection,
   outstanding,

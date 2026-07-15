@@ -1565,6 +1565,31 @@ abstract final class QaTestKeys {
   static ValueKey<String> financeDiscountRuleEditButton(String ruleId) =>
       ValueKey<String>('finance_discount_rule_edit_button_$ruleId');
 
+  // STEP-5 — fee reductions (scholarship awards + discount applications):
+  // the award (maker) dialog's picker fields.
+  static const financeAwardSourceKindField =
+      ValueKey<String>('finance_award_source_kind_field');
+  static const financeAwardSourceField =
+      ValueKey<String>('finance_award_source_field');
+  static const financeAwardStudentField =
+      ValueKey<String>('finance_award_student_field');
+  static const financeAwardInvoiceField =
+      ValueKey<String>('finance_award_invoice_field');
+  static const financeAwardReductionKindField =
+      ValueKey<String>('finance_award_reduction_kind_field');
+  static const financeAwardValueField =
+      ValueKey<String>('finance_award_value_field');
+  static const financeAwardReasonField =
+      ValueKey<String>('finance_award_reason_field');
+
+  // STEP-5 — the checker (pending awards) actions.
+  static ValueKey<String> financeFeeReductionApproveButton(String id) =>
+      ValueKey<String>('finance_fee_reduction_approve_$id');
+  static ValueKey<String> financeFeeReductionRejectButton(String id) =>
+      ValueKey<String>('finance_fee_reduction_reject_$id');
+  static ValueKey<String> financeFeeReductionReverseButton(String id) =>
+      ValueKey<String>('finance_fee_reduction_reverse_$id');
+
   static const subjectAddButton =
       ValueKey<String>('subject_add_button');
 

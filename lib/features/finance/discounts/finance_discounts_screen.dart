@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/errors/api_failure.dart';
+import '../../../core/errors/api_failure_mapper.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
@@ -12,7 +14,10 @@ import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../finance_async_state.dart';
 import '../finance_models.dart';
+import '../finance_mutations_provider.dart';
 import '../finance_workflow_actions.dart';
+import '../invoices/finance_invoices_provider.dart';
+import '../student_accounts/finance_student_accounts_provider.dart';
 import '../widgets/finance_kpi_row.dart';
 import '../widgets/finance_module_scaffold.dart';
 import 'finance_discounts_provider.dart';
@@ -50,22 +55,24 @@ class FinanceDiscountsScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Maker-checker state (mirrors FIN-D4 fee concessions): the catalog and
-        // rules here are TEMPLATES. Awarding one to a student now reduces their
-        // fee for real — but only through a two-person maker-checker: a proposed
-        // award stays "awaiting approval" and changes NO money until a second
-        // authorised person approves it, at which point the student's payable
-        // drops. This replaces the earlier "not-yet-applied" caveat.
+        // STEP-5 — maker-checker on the invoice-scoped fee-reduction engine
+        // (finance_fee_reductions_{repository,handlers}.ts): the catalog and
+        // rules here are TEMPLATES. Awarding one targets a SPECIFIC INVOICE —
+        // it is proposed (maker) and moves NO money; the student's payable
+        // drops only once a second, different, authorised person approves it
+        // in "Pending awards" below.
         const AksharaWarningBanner(
           message:
               'Scholarships and discount rules here are templates. Awarding one '
-              'to a student reduces their fee only after a second authorised '
-              'person approves it — until then it shows as awaiting approval.',
+              'proposes a reduction against a specific invoice — the student\'s '
+              'fee drops only after a second, different, authorised person '
+              'approves it below.',
           compactMessage: true,
           height: 72,
           semanticLabel:
-              'Awarding a scholarship or discount reduces a student fee only '
-              'after a second person approves it',
+              'Awarding a scholarship or discount targets a specific invoice '
+              'and reduces the student fee only after a second person '
+              'approves it',
         ),
         const SizedBox(height: AksharaSpacing.s4),
         FinanceKpiRow(
@@ -153,7 +160,7 @@ class FinanceDiscountsScreen extends ConsumerWidget {
                 key: QaTestKeys.financeAssignConcessionButton,
                 onPressed: () => showAssignFeeConcessionDialog(context, ref),
                 icon: const Icon(Icons.person_add_alt_1_outlined),
-                label: const Text('Assign concession'),
+                label: const Text('Award scholarship / discount'),
               ),
             ),
           ),
@@ -169,7 +176,7 @@ class FinanceDiscountsScreen extends ConsumerWidget {
                   key: QaTestKeys.financeAssignConcessionButton,
                   onPressed: () => showAssignFeeConcessionDialog(context, ref),
                   icon: const Icon(Icons.person_add_alt_1_outlined),
-                  label: const Text('Assign concession'),
+                  label: const Text('Award scholarship / discount'),
                 ),
               ),
             ],
@@ -186,6 +193,11 @@ class FinanceDiscountsScreen extends ConsumerWidget {
           )
         else
           _AssignmentsTable(assignments: data.assignments),
+        const SizedBox(height: AksharaSpacing.s6),
+        // STEP-5 — the CHECKER half of the maker-checker: proposed awards wait
+        // here until a second, different, authorised person approves (money
+        // moves) or rejects (no money) them; approved ones can be reversed.
+        _PendingFeeReductionsSection(data: data),
         const SizedBox(height: AksharaSpacing.s6),
         AksharaInsightCard(
           message: data.impactSummary,
@@ -464,6 +476,282 @@ class _AssignmentMobileCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// STEP-5 — the CHECKER half of the invoice-scoped fee-reduction
+/// maker-checker (finance_fee_reductions_{repository,handlers}.ts). Watches
+/// its own read providers (independent of the parent's discounts-dashboard
+/// future) so Approve/Reject/Reverse — which invalidate
+/// `financeFeeReductionsFutureProvider` — refresh this section immediately.
+class _PendingFeeReductionsSection extends ConsumerWidget {
+  const _PendingFeeReductionsSection({required this.data});
+
+  final DiscountsDashboardData data;
+
+  String _sourceLabel(FeeReduction r) {
+    if (r.sourceKind == FeeReductionSourceKind.scholarship) {
+      final scholarship =
+          data.scholarships.cast<ScholarshipCatalogItem?>().firstWhere(
+                (s) => s?.id == r.scholarshipId,
+                orElse: () => null,
+              );
+      return scholarship?.name ?? 'Scholarship';
+    }
+    final rule = data.rules.cast<DiscountRule?>().firstWhere(
+          (rule) => rule?.id == r.discountRuleId,
+          orElse: () => null,
+        );
+    return rule?.name ?? 'Discount rule';
+  }
+
+  String _valueLabel(FeeReduction r) {
+    return r.reductionKind == FeeReductionKind.percent
+        ? '${r.percent}%'
+        : '₹${r.fixedAmount}';
+  }
+
+  void _showError(BuildContext context, Object error) {
+    final failure = error is ApiFailureException
+        ? error.failure
+        : apiFailureMapper.fromException(error);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(failure.message)),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pending = ref.watch(financePendingFeeReductionsProvider);
+    final approved = ref.watch(financeApprovedFeeReductionsProvider);
+    final invoices = ref.watch(financeInvoicesProvider);
+    final studentAccounts = ref.watch(financeStudentAccountsProvider);
+
+    if (pending.isEmpty && approved.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    FinanceInvoice? invoiceFor(String invoiceId) {
+      return invoices.cast<FinanceInvoice?>().firstWhere(
+            (inv) => inv?.id == invoiceId,
+            orElse: () => null,
+          );
+    }
+
+    String invoiceLabel(String invoiceId) =>
+        invoiceFor(invoiceId)?.invoiceNumber ?? invoiceId;
+
+    String studentLabel(FeeReduction r) {
+      final invoice = invoiceFor(r.invoiceId);
+      if (invoice == null) return r.studentId;
+      final account = studentAccounts.cast<StudentFeeAccount?>().firstWhere(
+            (a) =>
+                a?.feeAssignmentId != null &&
+                a!.feeAssignmentId == invoice.feeAssignmentId,
+            orElse: () => null,
+          );
+      return account?.studentName ?? r.studentId;
+    }
+
+    Future<void> approve(FeeReduction reduction) async {
+      try {
+        await ref
+            .read(approveFeeReductionProvider.notifier)
+            .execute(reductionId: reduction.id);
+      } catch (error) {
+        if (!context.mounted) return;
+        _showError(context, error);
+      }
+    }
+
+    Future<void> reject(FeeReduction reduction) async {
+      try {
+        await ref
+            .read(rejectFeeReductionProvider.notifier)
+            .execute(reductionId: reduction.id);
+      } catch (error) {
+        if (!context.mounted) return;
+        _showError(context, error);
+      }
+    }
+
+    Future<void> reverse(FeeReduction reduction) async {
+      try {
+        await ref
+            .read(reverseFeeReductionProvider.notifier)
+            .execute(reductionId: reduction.id);
+      } catch (error) {
+        if (!context.mounted) return;
+        _showError(context, error);
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const AksharaSectionHeader(title: 'Pending awards'),
+        const SizedBox(height: AksharaSpacing.s3),
+        if (pending.isEmpty)
+          const Text('No awards awaiting approval.')
+        else
+          for (final reduction in pending) ...[
+            _FeeReductionRow(
+              reduction: reduction,
+              sourceLabel: _sourceLabel(reduction),
+              valueLabel: _valueLabel(reduction),
+              invoiceLabel: invoiceLabel(reduction.invoiceId),
+              studentLabel: studentLabel(reduction),
+              onApprove: () => approve(reduction),
+              onReject: () => reject(reduction),
+            ),
+            const SizedBox(height: AksharaSpacing.s3),
+          ],
+        if (approved.isNotEmpty) ...[
+          const SizedBox(height: AksharaSpacing.s3),
+          const AksharaSectionHeader(title: 'Approved awards'),
+          const SizedBox(height: AksharaSpacing.s3),
+          for (final reduction in approved) ...[
+            _FeeReductionRow(
+              reduction: reduction,
+              sourceLabel: _sourceLabel(reduction),
+              valueLabel: _valueLabel(reduction),
+              invoiceLabel: invoiceLabel(reduction.invoiceId),
+              studentLabel: studentLabel(reduction),
+              onReverse: () => reverse(reduction),
+            ),
+            const SizedBox(height: AksharaSpacing.s3),
+          ],
+        ],
+      ],
+    );
+  }
+}
+
+/// A single proposed/approved fee reduction with its checker actions —
+/// Approve/Reject gated behind [Permission.approveFeeConcession] (pending) or
+/// Reverse (approved). Never crashes on the backend's 403 self-approval —
+/// errors surface via the same snackbar path as every other finance mutation.
+class _FeeReductionRow extends StatelessWidget {
+  const _FeeReductionRow({
+    required this.reduction,
+    required this.sourceLabel,
+    required this.valueLabel,
+    required this.invoiceLabel,
+    required this.studentLabel,
+    this.onApprove,
+    this.onReject,
+    this.onReverse,
+  });
+
+  final FeeReduction reduction;
+  final String sourceLabel;
+  final String valueLabel;
+  final String invoiceLabel;
+  final String studentLabel;
+  final VoidCallback? onApprove;
+  final VoidCallback? onReject;
+  final VoidCallback? onReverse;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final text = context.aksharaText;
+    final isPending = reduction.status == FeeReductionStatus.pending;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AksharaSpacing.s3),
+        side: BorderSide(color: colors.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '$studentLabel · $sourceLabel',
+                    style: text.titleSmall,
+                  ),
+                ),
+                _FeeReductionStatusChip(status: reduction.status),
+              ],
+            ),
+            const SizedBox(height: AksharaSpacing.s2),
+            Text(
+              'Invoice $invoiceLabel · $valueLabel · ${reduction.reason}',
+              style: text.bodySmall,
+            ),
+            if (isPending) ...[
+              const SizedBox(height: AksharaSpacing.s3),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  AksharaApproveAction(
+                    permission: Permission.approveFeeConcession,
+                    child: OutlinedButton(
+                      key: QaTestKeys.financeFeeReductionRejectButton(
+                        reduction.id,
+                      ),
+                      onPressed: onReject,
+                      child: const Text('Reject'),
+                    ),
+                  ),
+                  const SizedBox(width: AksharaSpacing.s2),
+                  AksharaApproveAction(
+                    permission: Permission.approveFeeConcession,
+                    child: FilledButton(
+                      key: QaTestKeys.financeFeeReductionApproveButton(
+                        reduction.id,
+                      ),
+                      onPressed: onApprove,
+                      child: const Text('Approve'),
+                    ),
+                  ),
+                ],
+              ),
+            ] else if (reduction.status == FeeReductionStatus.approved) ...[
+              const SizedBox(height: AksharaSpacing.s3),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  AksharaApproveAction(
+                    permission: Permission.approveFeeConcession,
+                    child: OutlinedButton(
+                      key: QaTestKeys.financeFeeReductionReverseButton(
+                        reduction.id,
+                      ),
+                      onPressed: onReverse,
+                      child: const Text('Reverse'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FeeReductionStatusChip extends StatelessWidget {
+  const _FeeReductionStatusChip({required this.status});
+
+  final FeeReductionStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, tone) = switch (status) {
+      FeeReductionStatus.pending => ('Pending', KpiAccent.warning),
+      FeeReductionStatus.approved => ('Approved', KpiAccent.success),
+      FeeReductionStatus.rejected => ('Rejected', KpiAccent.error),
+      FeeReductionStatus.reversed => ('Reversed', KpiAccent.primary),
+    };
+    return AksharaStatusChip(label: label, tone: tone);
   }
 }
 

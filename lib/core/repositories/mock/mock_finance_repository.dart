@@ -15,6 +15,11 @@ double _parseFinanceAmount(String value) =>
 
 String _formatFinanceAmount(double value) => '₹${value.round()}';
 
+/// Plain (no currency symbol) numeric string for fee-reduction percent /
+/// fixed-amount fields — mirrors the backend's `String(row.percent)`.
+String _plainNumber(double value) =>
+    value == value.roundToDouble() ? value.toStringAsFixed(0) : value.toString();
+
 /// In-memory finance data for MVP and Phase 2 screens.
 class MockFinanceRepository implements FinanceRepository {
   final _FinanceMutableStore _store = _FinanceMutableStore();
@@ -1178,6 +1183,266 @@ class MockFinanceRepository implements FinanceRepository {
     return _store.discountsDashboard;
   }
 
+  // ── STEP-5: fee reductions (scholarship awards + discount applications) ───
+  // In-memory mirror of finance_fee_reductions_{repository,handlers}.ts: a
+  // reduction is born `pending` (no money moves); only [approveFeeReduction]
+  // (mirroring the real backend's checker step) reduces the invoice's
+  // outstanding + the linked student account's balance, in lockstep — the same
+  // simplification `_applyRefundReversal` above uses (outstanding + status
+  // only; this mock never modelled `totalAmount`/`discountAmount` deltas).
+  @override
+  Future<List<FeeReduction>> listFeeReductions({
+    required RepositoryQuery query,
+    FeeReductionStatus? status,
+    String? invoiceId,
+    String? studentId,
+    FeeReductionSourceKind? sourceKind,
+  }) async {
+    return _store.feeReductions.where((r) {
+      if (status != null && r.status != status) return false;
+      if (invoiceId != null && invoiceId.isNotEmpty && r.invoiceId != invoiceId) {
+        return false;
+      }
+      if (studentId != null && studentId.isNotEmpty && r.studentId != studentId) {
+        return false;
+      }
+      if (sourceKind != null && r.sourceKind != sourceKind) return false;
+      return true;
+    }).toList(growable: false);
+  }
+
+  @override
+  Future<FeeReduction> proposeScholarshipAward({
+    required RepositoryQuery query,
+    required String scholarshipId,
+    required String invoiceId,
+    required String reason,
+    double? percent,
+    double? amount,
+  }) {
+    if (!_store.scholarships.any((s) => s.id == scholarshipId)) {
+      throw StateError('Scholarship not found: $scholarshipId');
+    }
+    return _proposeFeeReduction(
+      sourceKind: FeeReductionSourceKind.scholarship,
+      sourceId: scholarshipId,
+      invoiceId: invoiceId,
+      reason: reason,
+      percent: percent,
+      amount: amount,
+    );
+  }
+
+  @override
+  Future<FeeReduction> proposeDiscountApplication({
+    required RepositoryQuery query,
+    required String discountRuleId,
+    required String invoiceId,
+    required String reason,
+    double? percent,
+    double? amount,
+  }) {
+    if (!_store.discountRules.any((r) => r.id == discountRuleId)) {
+      throw StateError('Discount rule not found: $discountRuleId');
+    }
+    return _proposeFeeReduction(
+      sourceKind: FeeReductionSourceKind.discount,
+      sourceId: discountRuleId,
+      invoiceId: invoiceId,
+      reason: reason,
+      percent: percent,
+      amount: amount,
+    );
+  }
+
+  Future<FeeReduction> _proposeFeeReduction({
+    required FeeReductionSourceKind sourceKind,
+    required String sourceId,
+    required String invoiceId,
+    required String reason,
+    double? percent,
+    double? amount,
+  }) async {
+    final invoice = _store.invoices.cast<FinanceInvoice?>().firstWhere(
+          (item) => item?.id == invoiceId,
+          orElse: () => null,
+        );
+    if (invoice == null) {
+      throw StateError('Invoice not found: $invoiceId');
+    }
+    if (invoice.invoiceStatus == InvoiceStatus.cancelled) {
+      throw StateError('Cannot reduce a cancelled invoice');
+    }
+    if ((percent == null) == (amount == null)) {
+      throw StateError('Send exactly one of percent or amount');
+    }
+    final account = _store.studentAccounts.cast<StudentFeeAccount?>().firstWhere(
+          (item) =>
+              item?.feeAssignmentId != null &&
+              item!.feeAssignmentId == invoice.feeAssignmentId,
+          orElse: () => null,
+        );
+    final reduction = FeeReduction(
+      id: _store.nextId('fred_'),
+      sourceKind: sourceKind,
+      scholarshipId: sourceKind == FeeReductionSourceKind.scholarship ? sourceId : '',
+      discountRuleId: sourceKind == FeeReductionSourceKind.discount ? sourceId : '',
+      studentId: invoice.studentId,
+      invoiceId: invoice.id,
+      studentAccountId: account?.id ?? '',
+      reductionKind:
+          percent != null ? FeeReductionKind.percent : FeeReductionKind.fixed,
+      percent: percent != null ? _plainNumber(percent) : '',
+      fixedAmount: amount != null ? _plainNumber(amount) : '',
+      status: FeeReductionStatus.pending,
+      reason: reason,
+      createdBy: 'finance_demo',
+      createdAt: 'Today',
+      updatedAt: 'Today',
+    );
+    _store.feeReductions.insert(0, reduction);
+    return reduction;
+  }
+
+  @override
+  Future<FeeReduction> approveFeeReduction({
+    required RepositoryQuery query,
+    required String reductionId,
+  }) async {
+    final index = _store.feeReductions.indexWhere((r) => r.id == reductionId);
+    if (index < 0) throw StateError('Fee reduction not found: $reductionId');
+    final current = _store.feeReductions[index];
+    if (current.status != FeeReductionStatus.pending) {
+      throw StateError(
+          'Cannot approve fee reduction in status: ${current.status.name}');
+    }
+
+    final applied = _applyFeeReductionDelta(current, reverse: false);
+
+    final updated = current.copyWith(
+      status: FeeReductionStatus.approved,
+      appliedAmount: _plainNumber(applied),
+      approvedBy: 'finance_checker',
+      appliedAt: 'Today',
+      updatedAt: 'Today',
+    );
+    _store.feeReductions[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<FeeReduction> rejectFeeReduction({
+    required RepositoryQuery query,
+    required String reductionId,
+  }) async {
+    final index = _store.feeReductions.indexWhere((r) => r.id == reductionId);
+    if (index < 0) throw StateError('Fee reduction not found: $reductionId');
+    final current = _store.feeReductions[index];
+    if (current.status != FeeReductionStatus.pending) {
+      throw StateError(
+          'Cannot reject fee reduction in status: ${current.status.name}');
+    }
+    final updated = current.copyWith(
+      status: FeeReductionStatus.rejected,
+      approvedBy: 'finance_checker',
+      updatedAt: 'Today',
+    );
+    _store.feeReductions[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<FeeReduction> reverseFeeReduction({
+    required RepositoryQuery query,
+    required String reductionId,
+  }) async {
+    final index = _store.feeReductions.indexWhere((r) => r.id == reductionId);
+    if (index < 0) throw StateError('Fee reduction not found: $reductionId');
+    final current = _store.feeReductions[index];
+    if (current.status != FeeReductionStatus.approved) {
+      throw StateError(
+          'Cannot reverse fee reduction in status: ${current.status.name}');
+    }
+
+    _applyFeeReductionDelta(current, reverse: true);
+
+    final updated = current.copyWith(
+      status: FeeReductionStatus.reversed,
+      reversedBy: 'finance_checker',
+      reversedAt: 'Today',
+      updatedAt: 'Today',
+    );
+    _store.feeReductions[index] = updated;
+    return updated;
+  }
+
+  /// Applies (or reverses) `reduction`'s money effect on the linked invoice +
+  /// student account, in lockstep — mirrors [_applyRefundReversal]. Returns the
+  /// clamped amount actually applied (only meaningful on the forward path).
+  double _applyFeeReductionDelta(FeeReduction reduction, {required bool reverse}) {
+    final invoiceIndex =
+        _store.invoices.indexWhere((item) => item.id == reduction.invoiceId);
+    if (invoiceIndex < 0) return _parseFinanceAmount(reduction.appliedAmount);
+
+    final invoice = _store.invoices[invoiceIndex];
+    final outstanding = _parseFinanceAmount(invoice.outstandingAmount);
+    final total = _parseFinanceAmount(invoice.totalAmount);
+    final subtotal = _parseFinanceAmount(invoice.subtotalAmount);
+
+    final applied = reverse
+        ? _parseFinanceAmount(reduction.appliedAmount)
+        : (reduction.reductionKind == FeeReductionKind.fixed
+                ? _parseFinanceAmount(reduction.fixedAmount)
+                : subtotal * (_parseFinanceAmount(reduction.percent) / 100))
+            .clamp(0, outstanding)
+            .clamp(0, total)
+            .toDouble();
+    if (applied <= 0) return applied;
+
+    final newOutstanding = reverse ? outstanding + applied : outstanding - applied;
+    final clampedOutstanding = newOutstanding.clamp(0, double.infinity).toDouble();
+    final newStatus = clampedOutstanding <= 0
+        ? InvoiceStatus.paid
+        : (clampedOutstanding < total
+            ? InvoiceStatus.partiallyPaid
+            : InvoiceStatus.issued);
+    _store.invoices[invoiceIndex] = invoice.copyWith(
+      outstandingAmount: clampedOutstanding.toStringAsFixed(0),
+      invoiceStatus: newStatus,
+    );
+
+    final accountIndex = _store.studentAccounts.indexWhere(
+      (item) => item.id == reduction.studentAccountId,
+    );
+    if (accountIndex >= 0) {
+      final account = _store.studentAccounts[accountIndex];
+      final balance = _parseFinanceAmount(account.balance);
+      final totalDue = _parseFinanceAmount(account.totalDue);
+      final newBalance = (reverse ? balance + applied : balance - applied)
+          .clamp(0, double.infinity)
+          .toDouble();
+      final newTotalDue = (reverse ? totalDue + applied : totalDue - applied)
+          .clamp(0, double.infinity)
+          .toDouble();
+      _store.studentAccounts[accountIndex] = StudentFeeAccount(
+        id: account.id,
+        studentName: account.studentName,
+        admissionNumber: account.admissionNumber,
+        classLabel: account.classLabel,
+        feeStructureName: account.feeStructureName,
+        totalDue: _formatFinanceAmount(newTotalDue),
+        totalPaid: account.totalPaid,
+        balance: _formatFinanceAmount(newBalance),
+        status: account.status,
+        lastPaymentDate: account.lastPaymentDate,
+        installmentPlan: account.installmentPlan,
+        feeAssignmentId: account.feeAssignmentId,
+      );
+    }
+
+    return applied;
+  }
+
   @override
   Future<FinanceReportsData> getReportsData(
       {required RepositoryQuery query}) async {
@@ -2233,6 +2498,7 @@ class _FinanceMutableStore {
             .map((item) => item.id)
             .toList(),
         qrPaymentSessions = <QrPaymentSession>[],
+        feeReductions = <FeeReduction>[],
         settings = _seedSettings;
 
   List<FinanceFeeStructure> feeStructures;
@@ -2245,6 +2511,8 @@ class _FinanceMutableStore {
   List<OfflinePaymentRecord> offlinePayments;
   List<String> pendingOfflinePaymentQueue;
   List<QrPaymentSession> qrPaymentSessions;
+  // STEP-5 — fee reductions (scholarship awards + discount applications).
+  List<FeeReduction> feeReductions;
   FinanceSettingsData settings;
   final Map<String, String> invoiceIdByFeeAccountId = {};
   int _counter = 100;
@@ -2506,6 +2774,11 @@ class _FinanceMutableStore {
       status: FeeAccountStatus.active,
       lastPaymentDate: 'Today',
       installmentPlan: '3-term quarterly',
+      // STEP-5 — joins finance_fee_reductions' invoice lookup the same way the
+      // real backend does: invoice.feeAssignmentId == account.feeAssignmentId.
+      // Linked to inv_1 (issued, open) so the award dialog has a real student
+      // with a real open invoice in mock/demo mode.
+      feeAssignmentId: 'assign_1',
     ),
     const StudentFeeAccount(
       id: 'acct_2',
@@ -2519,6 +2792,8 @@ class _FinanceMutableStore {
       status: FeeAccountStatus.pending,
       lastPaymentDate: '—',
       installmentPlan: '3-term quarterly',
+      // Linked to inv_4 (issued, open, unpaid) — a second open-invoice example.
+      feeAssignmentId: 'assign_4',
     ),
     const StudentFeeAccount(
       id: 'acct_3',
@@ -2532,6 +2807,9 @@ class _FinanceMutableStore {
       status: FeeAccountStatus.active,
       lastPaymentDate: '2 days ago',
       installmentPlan: '4-term termly',
+      // Linked to inv_3 (draft — NOT open) so the picker demonstrates the
+      // "no open invoices for this student" case.
+      feeAssignmentId: 'assign_3',
     ),
     const StudentFeeAccount(
       id: 'acct_4',
@@ -2545,6 +2823,9 @@ class _FinanceMutableStore {
       status: FeeAccountStatus.overdue,
       lastPaymentDate: '45 days ago',
       installmentPlan: '3-term quarterly',
+      // Linked to inv_2 (fully paid — NOT open) — another "no open invoices"
+      // example.
+      feeAssignmentId: 'assign_2',
     ),
   ];
 
@@ -2717,6 +2998,28 @@ class _FinanceMutableStore {
       createdBy: 'staff_1',
       createdAt: '2026-06-10T00:00:00.000Z',
       updatedAt: '2026-06-10T00:00:00.000Z',
+    ),
+    // STEP-5 — a second open (issued, unpaid) invoice so the fee-reduction
+    // award dialog has more than one real student/invoice pairing in
+    // mock/demo mode (linked to acct_2 via feeAssignmentId).
+    FinanceInvoice(
+      id: 'inv_4',
+      studentId: 'stu_4',
+      feeAssignmentId: 'assign_4',
+      academicYear: '2026-27',
+      invoiceNumber: 'INV-2026-M3N4O5P6',
+      invoiceDate: '2026-06-01',
+      dueDate: '2026-07-15',
+      subtotalAmount: '215000',
+      discountAmount: '0',
+      totalAmount: '215000',
+      outstandingAmount: '215000',
+      paidAmount: '0',
+      invoiceStatus: InvoiceStatus.issued,
+      termLabel: 'Annual',
+      createdBy: 'staff_1',
+      createdAt: '2026-06-01T00:00:00.000Z',
+      updatedAt: '2026-06-01T00:00:00.000Z',
     ),
   ];
 

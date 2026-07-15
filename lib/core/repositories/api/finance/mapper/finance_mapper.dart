@@ -6,6 +6,7 @@ import '../dto/finance_dashboard_dto.dart';
 import '../dto/finance_defaulters_dto.dart';
 import '../dto/finance_discounts_dto.dart';
 import '../dto/finance_enum_codec.dart';
+import '../dto/finance_fee_reductions_dto.dart';
 import '../dto/finance_fee_structures_dto.dart';
 import '../dto/finance_invoices_dto.dart';
 import '../dto/offline_payment_dto.dart';
@@ -504,6 +505,43 @@ class FinanceMapper {
       originalReceipt: raw['originalReceipt'] as String? ?? '',
       collectionId: raw['collectionId'] as String? ?? '',
       invoiceId: raw['invoiceId'] as String? ?? '',
+    );
+  }
+
+  // STEP-5 — fee reductions (scholarship awards + discount applications).
+  List<FeeReduction> toFeeReductions(FeeReductionsResponseDto dto) {
+    return [for (final item in dto.items) toFeeReduction(item)];
+  }
+
+  FeeReduction toFeeReduction(FeeReductionDto dto) {
+    final raw = dto.raw;
+    return FeeReduction(
+      id: raw['id'] as String? ?? '',
+      sourceKind: FinanceEnumCodec.parseFeeReductionSourceKind(
+        raw['sourceKind'] as String?,
+      ),
+      scholarshipId: raw['scholarshipId'] as String? ?? '',
+      discountRuleId: raw['discountRuleId'] as String? ?? '',
+      studentId: raw['studentId'] as String? ?? '',
+      invoiceId: raw['invoiceId'] as String? ?? '',
+      studentAccountId: raw['studentAccountId'] as String? ?? '',
+      reductionKind: FinanceEnumCodec.parseFeeReductionKind(
+        raw['reductionKind'] as String?,
+      ),
+      percent: raw['percent']?.toString() ?? '',
+      fixedAmount: raw['fixedAmount']?.toString() ?? '',
+      appliedAmount: raw['appliedAmount']?.toString() ?? '0',
+      status: FinanceEnumCodec.parseFeeReductionStatus(
+        raw['status'] as String?,
+      ),
+      reason: raw['reason'] as String? ?? '',
+      createdBy: raw['createdBy'] as String? ?? '',
+      approvedBy: raw['approvedBy'] as String? ?? '',
+      reversedBy: raw['reversedBy'] as String? ?? '',
+      appliedAt: raw['appliedAt'] as String? ?? '',
+      reversedAt: raw['reversedAt'] as String? ?? '',
+      createdAt: raw['createdAt'] as String? ?? '',
+      updatedAt: raw['updatedAt'] as String? ?? '',
     );
   }
 
