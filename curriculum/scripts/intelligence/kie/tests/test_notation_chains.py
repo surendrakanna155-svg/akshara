@@ -16,7 +16,7 @@ from kie.qie.convert.notation import chains as CH
 from kie.qie.convert.notation import verify as V
 
 SET = "depth4_chains"
-RELATION_BATCHES = ("phys_batch1_2", "chem_batch3")
+RELATION_BATCHES = ("phys_batch1_2", "chem_batch3", "phys_batch4")
 
 
 def _defs() -> dict:

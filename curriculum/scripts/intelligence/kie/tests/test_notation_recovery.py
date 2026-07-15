@@ -172,6 +172,30 @@ class TestRecoveryBatches(unittest.TestCase):
     """A batch file is the only reproducible record of an admission (qie.db is a gitignored derived store),
     so replaying it must reproduce the same verdicts — and its adversarial controls must still be caught."""
 
+    def test_available_lists_relation_batches_only(self):
+        """Chain SETS live in the same directory with a different schema ("chains", and controls that are
+        mis-wired chains, not relations). Regression: listing them here made a bulk replay try to certify a
+        chain as a relation and die on the missing "equation"."""
+        names = B.available()
+        self.assertIn("chem_batch3", names)
+        self.assertNotIn("depth4_chains", names)
+        for n in names:
+            self.assertIn("relations", B.load(n))
+
+    def test_the_whole_lane_rebuilds_from_the_repo_alone(self):
+        """qie.db is a gitignored derived store, so this is the claim that matters: every certified relation
+        can be reproduced from committed files into an empty store, with every control still held."""
+        conn = S.open_store(":memory:")
+        try:
+            for name in B.available():
+                r = B.run(name, conn, now="replay")
+                self.assertEqual(r["rejected"], r["controls_held"], name)   # only controls may be rejected
+            counts = R.counts(conn)
+            self.assertGreaterEqual(counts["certified"], 41)
+            self.assertEqual([n for n in R.certified(conn) if n["name"].startswith("CONTROL")], [])
+        finally:
+            conn.close()
+
     def test_chem_batch3_certifies_and_controls_hold(self):
         r = B.dry_run("chem_batch3")
         self.assertEqual(r["rejected"], 0, [v["failed_gates"] for v in r["verdicts"]])

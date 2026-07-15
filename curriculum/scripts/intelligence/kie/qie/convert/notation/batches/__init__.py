@@ -28,7 +28,17 @@ BATCH_DIR = Path(__file__).parent
 
 
 def available() -> List[str]:
-    return sorted(p.stem for p in BATCH_DIR.glob("*.json"))
+    """Relation batches only. `chains.py` keeps its chain SETS in this same directory, and those carry a
+    "chains" key with a different schema — listing them here made a bulk replay try to certify a mis-wired
+    CHAIN as if it were a relation and die on the missing "equation"."""
+    out = []
+    for p in sorted(BATCH_DIR.glob("*.json")):
+        try:
+            if "relations" in json.loads(p.read_text()):
+                out.append(p.stem)
+        except Exception:
+            continue
+    return out
 
 
 def load(name: str) -> dict:

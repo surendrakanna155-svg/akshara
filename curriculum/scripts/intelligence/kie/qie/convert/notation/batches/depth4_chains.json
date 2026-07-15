@@ -10,17 +10,57 @@
    "concept_candidate": "Physics :: Current Electricity",
    "narrative": "A uniform conductor of the stated material and dimensions is connected across a steady potential difference.",
    "steps": [
-    {"out": "rho", "relation": "Electrical conductivity", "solve_for": "rho", "feeds": {}},
-    {"out": "R", "relation": "Resistance from resistivity", "solve_for": "R", "feeds": {"rho": "rho"}},
-    {"out": "I", "relation": "Resistance (Ohm's law form)", "solve_for": "I", "feeds": {"R": "R"}},
-    {"out": "j", "relation": "Current density", "solve_for": "j", "feeds": {"I": "I"}}
+    {
+     "out": "rho",
+     "relation": "Electrical conductivity",
+     "solve_for": "rho",
+     "feeds": {}
+    },
+    {
+     "out": "R",
+     "relation": "Resistance from resistivity",
+     "solve_for": "R",
+     "feeds": {
+      "rho": "rho"
+     }
+    },
+    {
+     "out": "I",
+     "relation": "Resistance (Ohm's law form)",
+     "solve_for": "I",
+     "feeds": {
+      "R": "R"
+     }
+    },
+    {
+     "out": "j",
+     "relation": "Current density",
+     "solve_for": "j",
+     "feeds": {
+      "I": "I"
+     }
+    }
    ],
    "answer": "j",
    "givens": {
-    "sigma": {"lo": 1, "hi": 9, "scale": 1e6},
-    "l": {"lo": 1, "hi": 9},
-    "Ar": {"lo": 1, "hi": 9, "scale": 1e-6},
-    "V": {"lo": 2, "hi": 12}
+    "sigma": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 1000000.0
+    },
+    "l": {
+     "lo": 1,
+     "hi": 9
+    },
+    "Ar": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 1e-06
+    },
+    "V": {
+     "lo": 2,
+     "hi": 12
+    }
    }
   },
   {
@@ -30,10 +70,36 @@
    "concept_candidate": "Physics :: Current Electricity",
    "narrative": "In a balanced Wheatstone bridge the arm R2 is a uniform wire of the stated material and dimensions, and the potential difference across the unknown arm R1 is as stated.",
    "steps": [
-    {"out": "rho", "relation": "Electrical conductivity", "solve_for": "rho", "feeds": {}},
-    {"out": "R2", "relation": "Resistance from resistivity", "solve_for": "R", "feeds": {"rho": "rho"}},
-    {"out": "R1", "relation": "Wheatstone bridge null condition", "solve_for": "R1", "feeds": {"R2": "R2"}},
-    {"out": "I", "relation": "Resistance (Ohm's law form)", "solve_for": "I", "feeds": {"R": "R1"}}
+    {
+     "out": "rho",
+     "relation": "Electrical conductivity",
+     "solve_for": "rho",
+     "feeds": {}
+    },
+    {
+     "out": "R2",
+     "relation": "Resistance from resistivity",
+     "solve_for": "R",
+     "feeds": {
+      "rho": "rho"
+     }
+    },
+    {
+     "out": "R1",
+     "relation": "Wheatstone bridge null condition",
+     "solve_for": "R1",
+     "feeds": {
+      "R2": "R2"
+     }
+    },
+    {
+     "out": "I",
+     "relation": "Resistance (Ohm's law form)",
+     "solve_for": "I",
+     "feeds": {
+      "R": "R1"
+     }
+    }
    ],
    "answer": "I",
    "meaning_overrides": {
@@ -44,12 +110,32 @@
     "Ar": "cross-sectional area of the wire forming arm R2"
    },
    "givens": {
-    "sigma": {"lo": 1, "hi": 9, "scale": 1e6},
-    "l": {"lo": 1, "hi": 9},
-    "Ar": {"lo": 1, "hi": 9, "scale": 1e-7},
-    "R3": {"lo": 2, "hi": 9},
-    "R4": {"lo": 2, "hi": 9},
-    "V": {"lo": 2, "hi": 12}
+    "sigma": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 1000000.0
+    },
+    "l": {
+     "lo": 1,
+     "hi": 9
+    },
+    "Ar": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 1e-07
+    },
+    "R3": {
+     "lo": 2,
+     "hi": 9
+    },
+    "R4": {
+     "lo": 2,
+     "hi": 9
+    },
+    "V": {
+     "lo": 2,
+     "hi": 12
+    }
    }
   },
   {
@@ -63,19 +149,67 @@
     "V": "initial volume of the gas"
    },
    "steps": [
-    {"out": "p", "relation": "Ideal gas equation", "solve_for": "p", "feeds": {}},
-    {"out": "w", "relation": "Work of gas expansion", "solve_for": "w", "feeds": {"p_ex": "p"}},
-    {"out": "dU", "relation": "First law of thermodynamics", "solve_for": "dU", "feeds": {"w": "w"}},
-    {"out": "dH", "relation": "Enthalpy from internal energy", "solve_for": "dH", "feeds": {"dU": "dU"}}
+    {
+     "out": "p",
+     "relation": "Ideal gas equation",
+     "solve_for": "p",
+     "feeds": {}
+    },
+    {
+     "out": "w",
+     "relation": "Work of gas expansion",
+     "solve_for": "w",
+     "feeds": {
+      "p_ex": "p"
+     }
+    },
+    {
+     "out": "dU",
+     "relation": "First law of thermodynamics",
+     "solve_for": "dU",
+     "feeds": {
+      "w": "w"
+     }
+    },
+    {
+     "out": "dH",
+     "relation": "Enthalpy from internal energy",
+     "solve_for": "dH",
+     "feeds": {
+      "dU": "dU"
+     }
+    }
    ],
    "answer": "dH",
    "givens": {
-    "n": {"lo": 1, "hi": 9},
-    "T": {"lo": 2, "hi": 9, "scale": 50.0},
-    "V": {"lo": 1, "hi": 9, "scale": 1e-3},
-    "dV": {"lo": 1, "hi": 9, "scale": 1e-4},
-    "q": {"lo": 2, "hi": 9, "scale": 100.0},
-    "dn_g": {"lo": 1, "hi": 3}
+    "n": {
+     "lo": 1,
+     "hi": 9
+    },
+    "T": {
+     "lo": 2,
+     "hi": 9,
+     "scale": 50.0
+    },
+    "V": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 0.001
+    },
+    "dV": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 0.0001
+    },
+    "q": {
+     "lo": 2,
+     "hi": 9,
+     "scale": 100.0
+    },
+    "dn_g": {
+     "lo": 1,
+     "hi": 3
+    }
    }
   },
   {
@@ -89,22 +223,136 @@
     "V": "initial volume of the gas"
    },
    "steps": [
-    {"out": "p", "relation": "Ideal gas equation", "solve_for": "p", "feeds": {}},
-    {"out": "w", "relation": "Work of gas expansion", "solve_for": "w", "feeds": {"p_ex": "p"}},
-    {"out": "q", "relation": "Heat capacity relation", "solve_for": "q", "feeds": {}},
-    {"out": "dU", "relation": "First law of thermodynamics", "solve_for": "dU", "feeds": {"w": "w", "q": "q"}},
-    {"out": "dH", "relation": "Enthalpy from internal energy", "solve_for": "dH", "feeds": {"dU": "dU"}}
+    {
+     "out": "p",
+     "relation": "Ideal gas equation",
+     "solve_for": "p",
+     "feeds": {}
+    },
+    {
+     "out": "w",
+     "relation": "Work of gas expansion",
+     "solve_for": "w",
+     "feeds": {
+      "p_ex": "p"
+     }
+    },
+    {
+     "out": "q",
+     "relation": "Heat capacity relation",
+     "solve_for": "q",
+     "feeds": {}
+    },
+    {
+     "out": "dU",
+     "relation": "First law of thermodynamics",
+     "solve_for": "dU",
+     "feeds": {
+      "w": "w",
+      "q": "q"
+     }
+    },
+    {
+     "out": "dH",
+     "relation": "Enthalpy from internal energy",
+     "solve_for": "dH",
+     "feeds": {
+      "dU": "dU"
+     }
+    }
    ],
    "answer": "dH",
    "givens": {
-    "n": {"lo": 1, "hi": 9},
-    "T": {"lo": 2, "hi": 9, "scale": 50.0},
-    "V": {"lo": 1, "hi": 9, "scale": 1e-3},
-    "dV": {"lo": 1, "hi": 9, "scale": 1e-4},
-    "C": {"lo": 2, "hi": 9, "scale": 10.0},
-    "dT": {"lo": 2, "hi": 9},
-    "dn_g": {"lo": 1, "hi": 3}
+    "n": {
+     "lo": 1,
+     "hi": 9
+    },
+    "T": {
+     "lo": 2,
+     "hi": 9,
+     "scale": 50.0
+    },
+    "V": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 0.001
+    },
+    "dV": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 0.0001
+    },
+    "C": {
+     "lo": 2,
+     "hi": 9,
+     "scale": 10.0
+    },
+    "dT": {
+     "lo": 2,
+     "hi": 9
+    },
+    "dn_g": {
+     "lo": 1,
+     "hi": 3
+    }
    }
+  },
+  {
+   "name": "Pendulum acceleration amplitude",
+   "subject": "Physics",
+   "exam": "JEE Advanced",
+   "concept_candidate": "Physics :: Oscillations",
+   "narrative": "A simple pendulum of the stated length swings through small angles with the stated amplitude.",
+   "steps": [
+    {
+     "out": "T",
+     "relation": "Period of simple pendulum",
+     "solve_for": "T",
+     "feeds": {}
+    },
+    {
+     "out": "nu",
+     "relation": "Period and frequency",
+     "solve_for": "nu",
+     "feeds": {
+      "T": "T"
+     }
+    },
+    {
+     "out": "omega",
+     "relation": "Angular frequency of oscillation",
+     "solve_for": "omega",
+     "feeds": {
+      "nu": "nu"
+     }
+    },
+    {
+     "out": "a_m",
+     "relation": "Acceleration amplitude in SHM",
+     "solve_for": "a_m",
+     "feeds": {
+      "omega": "omega"
+     }
+    }
+   ],
+   "answer": "a_m",
+   "meaning_overrides": {
+    "A": "amplitude of the pendulum bob's displacement",
+    "L": "length of the pendulum"
+   },
+   "givens": {
+    "L": {
+     "lo": 2,
+     "hi": 9,
+     "scale": 0.1
+    },
+    "A": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 0.01
+    }
+   },
+   "_why_not_artificial": "T -> nu -> omega is the GENUINE route here: no certified relation gives a pendulum's angular frequency directly (unlike the linear oscillator, where omega = sqrt(k/m) is one step — routing that through T and nu would be padding the depth, not solving the problem)."
   }
  ],
  "controls": [
@@ -115,17 +363,80 @@
    "concept_candidate": "Chemistry :: Thermodynamics",
    "narrative": "DAMAGED: feeds an extensive enthalpy (J) into a molar reaction-enthalpy slot (J/mol).",
    "steps": [
-    {"out": "p", "relation": "Ideal gas equation", "solve_for": "p", "feeds": {}},
-    {"out": "w", "relation": "Work of gas expansion", "solve_for": "w", "feeds": {"p_ex": "p"}},
-    {"out": "dU", "relation": "First law of thermodynamics", "solve_for": "dU", "feeds": {"w": "w"}},
-    {"out": "dH", "relation": "Enthalpy from internal energy", "solve_for": "dH", "feeds": {"dU": "dU"}},
-    {"out": "dG", "relation": "Gibbs energy change", "solve_for": "dG_r", "feeds": {"dH_r": "dH"}}
+    {
+     "out": "p",
+     "relation": "Ideal gas equation",
+     "solve_for": "p",
+     "feeds": {}
+    },
+    {
+     "out": "w",
+     "relation": "Work of gas expansion",
+     "solve_for": "w",
+     "feeds": {
+      "p_ex": "p"
+     }
+    },
+    {
+     "out": "dU",
+     "relation": "First law of thermodynamics",
+     "solve_for": "dU",
+     "feeds": {
+      "w": "w"
+     }
+    },
+    {
+     "out": "dH",
+     "relation": "Enthalpy from internal energy",
+     "solve_for": "dH",
+     "feeds": {
+      "dU": "dU"
+     }
+    },
+    {
+     "out": "dG",
+     "relation": "Gibbs energy change",
+     "solve_for": "dG_r",
+     "feeds": {
+      "dH_r": "dH"
+     }
+    }
    ],
    "answer": "dG",
    "givens": {
-    "n": {"lo": 1, "hi": 9}, "T": {"lo": 2, "hi": 9, "scale": 50.0}, "V": {"lo": 1, "hi": 9, "scale": 1e-3},
-    "dV": {"lo": 1, "hi": 9, "scale": 1e-4}, "q": {"lo": 2, "hi": 9, "scale": 100.0},
-    "dn_g": {"lo": 1, "hi": 3}, "dS_r": {"lo": 2, "hi": 9, "scale": 10.0}
+    "n": {
+     "lo": 1,
+     "hi": 9
+    },
+    "T": {
+     "lo": 2,
+     "hi": 9,
+     "scale": 50.0
+    },
+    "V": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 0.001
+    },
+    "dV": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 0.0001
+    },
+    "q": {
+     "lo": 2,
+     "hi": 9,
+     "scale": 100.0
+    },
+    "dn_g": {
+     "lo": 1,
+     "hi": 3
+    },
+    "dS_r": {
+     "lo": 2,
+     "hi": 9,
+     "scale": 10.0
+    }
    }
   },
   {
@@ -135,14 +446,45 @@
    "concept_candidate": "Physics :: Current Electricity",
    "narrative": "DAMAGED: feeds a resistance (ohm) straight into a current (A) slot.",
    "steps": [
-    {"out": "rho", "relation": "Electrical conductivity", "solve_for": "rho", "feeds": {}},
-    {"out": "R", "relation": "Resistance from resistivity", "solve_for": "R", "feeds": {"rho": "rho"}},
-    {"out": "j", "relation": "Current density", "solve_for": "j", "feeds": {"I": "R"}}
+    {
+     "out": "rho",
+     "relation": "Electrical conductivity",
+     "solve_for": "rho",
+     "feeds": {}
+    },
+    {
+     "out": "R",
+     "relation": "Resistance from resistivity",
+     "solve_for": "R",
+     "feeds": {
+      "rho": "rho"
+     }
+    },
+    {
+     "out": "j",
+     "relation": "Current density",
+     "solve_for": "j",
+     "feeds": {
+      "I": "R"
+     }
+    }
    ],
    "answer": "j",
    "givens": {
-    "sigma": {"lo": 1, "hi": 9, "scale": 1e7}, "l": {"lo": 1, "hi": 9},
-    "Ar": {"lo": 1, "hi": 9, "scale": 1e-6}
+    "sigma": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 10000000.0
+    },
+    "l": {
+     "lo": 1,
+     "hi": 9
+    },
+    "Ar": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 1e-06
+    }
    }
   },
   {
@@ -152,15 +494,53 @@
    "concept_candidate": "Physics :: Current Electricity",
    "narrative": "DAMAGED: the potential difference V is never supplied, so the chain cannot close.",
    "steps": [
-    {"out": "rho", "relation": "Electrical conductivity", "solve_for": "rho", "feeds": {}},
-    {"out": "R", "relation": "Resistance from resistivity", "solve_for": "R", "feeds": {"rho": "rho"}},
-    {"out": "I", "relation": "Resistance (Ohm's law form)", "solve_for": "I", "feeds": {"R": "R"}},
-    {"out": "j", "relation": "Current density", "solve_for": "j", "feeds": {"I": "I"}}
+    {
+     "out": "rho",
+     "relation": "Electrical conductivity",
+     "solve_for": "rho",
+     "feeds": {}
+    },
+    {
+     "out": "R",
+     "relation": "Resistance from resistivity",
+     "solve_for": "R",
+     "feeds": {
+      "rho": "rho"
+     }
+    },
+    {
+     "out": "I",
+     "relation": "Resistance (Ohm's law form)",
+     "solve_for": "I",
+     "feeds": {
+      "R": "R"
+     }
+    },
+    {
+     "out": "j",
+     "relation": "Current density",
+     "solve_for": "j",
+     "feeds": {
+      "I": "I"
+     }
+    }
    ],
    "answer": "j",
    "givens": {
-    "sigma": {"lo": 1, "hi": 9, "scale": 1e7}, "l": {"lo": 1, "hi": 9},
-    "Ar": {"lo": 1, "hi": 9, "scale": 1e-6}
+    "sigma": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 10000000.0
+    },
+    "l": {
+     "lo": 1,
+     "hi": 9
+    },
+    "Ar": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 1e-06
+    }
    }
   }
  ]
