@@ -13,6 +13,9 @@ import { emitMutationAudit, financeAudit } from "../audit/mutation_audit_catalog
 import {
   DuplicateAssignmentError,
   DuplicateStudentAccountError,
+  FeeProrationOverrideReasonRequiredError,
+  FeeStructureNotBoundError,
+  type FeeProrationPolicy,
   HandoffNotReadyError,
   assignFeeStructure,
   assignFromHandoff,
@@ -21,12 +24,49 @@ import {
   getAssignment,
   getStudentAccount,
   listAssignments,
+  resolveStudentIdsForBoundStructure,
 } from "./finance_assignments_repository.ts";
 import {
   assignmentToApi,
   listEnvelope,
   studentAccountToApi,
 } from "./finance_mapper.ts";
+
+const KNOWN_PRORATION_POLICIES = new Set(["full_annual", "prorate_from_admission_month"]);
+
+/**
+ * Cap 73 — parses the optional proration inputs shared by every assignment
+ * entry point (direct create, handoff-based assign, bulk assign): the
+ * admission/reference date, and an authorized user's per-assignment policy
+ * override + its mandatory reason. Returns an error message (to surface as a
+ * 422) instead of throwing, matching this file's existing early-validation
+ * style.
+ */
+function parseProrationFields(body: Record<string, unknown>): {
+  admissionDate?: string;
+  prorationPolicyOverride?: FeeProrationPolicy;
+  prorationOverrideReason?: string;
+  error?: string;
+} {
+  const admissionDate = optionalStr(body, "admission_date", "admissionDate");
+  const rawPolicy = optionalStr(body, "proration_policy_override", "prorationPolicyOverride");
+  if (rawPolicy !== undefined && !KNOWN_PRORATION_POLICIES.has(rawPolicy)) {
+    return {
+      error:
+        "proration_policy_override must be 'full_annual' or 'prorate_from_admission_month'",
+    };
+  }
+  const prorationOverrideReason = optionalStr(
+    body,
+    "proration_override_reason",
+    "prorationOverrideReason",
+  );
+  return {
+    admissionDate,
+    prorationPolicyOverride: rawPolicy as FeeProrationPolicy | undefined,
+    prorationOverrideReason,
+  };
+}
 
 function parsePagination(url: URL): { page: number; pageSize: number } {
   const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
@@ -67,6 +107,15 @@ function mapAssignmentError(error: unknown): Response | null {
     return errorEnvelope("CONFLICT", error.message, 409);
   }
   if (error instanceof HandoffNotReadyError) {
+    return errorEnvelope("VALIDATION_ERROR", error.message, 422);
+  }
+  // Cap 67 — bulk-assign was called without studentIds[] and the target
+  // structure has no class/section binding to auto-resolve from.
+  if (error instanceof FeeStructureNotBoundError) {
+    return errorEnvelope("VALIDATION_ERROR", error.message, 422);
+  }
+  // Cap 73 — an override policy was supplied without a reason.
+  if (error instanceof FeeProrationOverrideReasonRequiredError) {
     return errorEnvelope("VALIDATION_ERROR", error.message, 422);
   }
   if (error instanceof Error) {
@@ -174,6 +223,10 @@ export async function handleCreateFeeAssignment(
   const orgId = organizationIdFromClaims(auth.claims);
   const schoolId = schoolIdFromClaims(auth.claims);
   const handoffId = optionalStr(body, "handoff_id", "handoffId");
+  const proration = parseProrationFields(body);
+  if (proration.error) {
+    return errorEnvelope("VALIDATION_ERROR", proration.error, 422);
+  }
 
   try {
     const result = await runTenant(config, auth.claims, async (db) => {
@@ -187,6 +240,11 @@ export async function handleCreateFeeAssignment(
           handoffId,
           feeStructureId,
           auth.claims.sub,
+          {
+            admissionDate: proration.admissionDate,
+            prorationPolicyOverride: proration.prorationPolicyOverride,
+            prorationOverrideReason: proration.prorationOverrideReason,
+          },
         );
       } else {
         const studentId = optionalStr(body, "student_id", "studentId");
@@ -201,6 +259,9 @@ export async function handleCreateFeeAssignment(
           feeStructureId,
           academicYear,
           assignedBy: auth.claims.sub,
+          admissionDate: proration.admissionDate,
+          prorationPolicyOverride: proration.prorationPolicyOverride,
+          prorationOverrideReason: proration.prorationOverrideReason,
         });
       }
       await emitMutationAudit(
@@ -209,6 +270,22 @@ export async function handleCreateFeeAssignment(
         financeAudit.feeAssignmentCreated(assignmentResult.assignment.id),
         req,
       );
+      // Cap 73 — a per-assignment policy override is audited SEPARATELY from
+      // the plain "assignment created" event so it stays independently
+      // queryable (actor/reason/timestamp are already on the audit row; the
+      // policy + reason are duplicated into the payload for readability).
+      if (assignmentResult.assignment.proration_is_override) {
+        await emitMutationAudit(
+          db,
+          auth.claims,
+          financeAudit.feeProrationOverridden(
+            assignmentResult.assignment.id,
+            assignmentResult.assignment.proration_policy,
+            assignmentResult.assignment.proration_override_reason ?? "",
+          ),
+          req,
+        );
+      }
       return assignmentResult;
     });
 
@@ -236,6 +313,12 @@ export async function handleCreateFeeAssignment(
  * `{ feeStructureId, academicYear, studentIds[] }` (snake/camel accepted, like
  * every other handler here). manageFinance-gated, same as the single-assign
  * paths above.
+ *
+ * Cap 67 — `student_ids` is now OPTIONAL: when omitted (or an empty array),
+ * and the target fee structure has a class/section binding, the students are
+ * auto-resolved FROM that binding (current enrollments of active students in
+ * the bound class/section). The explicit studentIds[] path is UNCHANGED —
+ * still required, still authoritative, whenever it's actually provided.
  *
  * Partial-failure contract: a student who already has this exact structure
  * for this academic year is SKIPPED and reported in `skipped` — not a 409 —
@@ -270,25 +353,34 @@ export async function handleBulkAssignFeeStructures(
   }
 
   const rawStudentIds = body["student_ids"] ?? body["studentIds"];
-  if (!Array.isArray(rawStudentIds) || rawStudentIds.length === 0) {
-    return errorEnvelope(
-      "VALIDATION_ERROR",
-      "student_ids must be a non-empty array",
-      422,
-    );
+  const explicitStudentIds = Array.isArray(rawStudentIds) && rawStudentIds.length > 0
+    ? rawStudentIds.map((id) => String(id))
+    : null;
+
+  const proration = parseProrationFields(body);
+  if (proration.error) {
+    return errorEnvelope("VALIDATION_ERROR", proration.error, 422);
   }
-  const studentIds = rawStudentIds.map((id) => String(id));
 
   const orgId = organizationIdFromClaims(auth.claims);
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
     const result = await runTenant(config, auth.claims, async (db) => {
+      // Cap 67 — no explicit list: resolve from the structure's class/section
+      // binding. FeeStructureNotBoundError / "Fee structure not found" both
+      // propagate to the catch below and map to a clear 4xx.
+      const studentIds = explicitStudentIds ??
+        await resolveStudentIdsForBoundStructure(db, orgId, schoolId, feeStructureId);
+
       const bulkResult = await bulkAssignFeeStructure(db, orgId, schoolId, {
         feeStructureId,
         academicYear,
         studentIds,
         assignedBy: auth.claims.sub,
+        admissionDate: proration.admissionDate,
+        prorationPolicyOverride: proration.prorationPolicyOverride,
+        prorationOverrideReason: proration.prorationOverrideReason,
       });
       // Only audit when something actually assigned — an all-duplicate pass
       // (every student already had this structure) changed nothing, mirroring
@@ -306,9 +398,35 @@ export async function handleBulkAssignFeeStructures(
           ),
           req,
         );
+        // Cap 73 — one override event per overridden assignment, so the
+        // audit trail is per-student, not just a batch summary.
+        for (const assigned of bulkResult.assigned) {
+          if (assigned.assignment.proration_is_override) {
+            await emitMutationAudit(
+              db,
+              auth.claims,
+              financeAudit.feeProrationOverridden(
+                assigned.assignment.id,
+                assigned.assignment.proration_policy,
+                assigned.assignment.proration_override_reason ?? "",
+              ),
+              req,
+            );
+          }
+        }
       }
       return bulkResult;
     });
+
+    if (explicitStudentIds == null && result.total === 0) {
+      // Auto-resolved from the binding, but the bound class/section has no
+      // current active students — a clear signal beats a silent 201/{total:0}.
+      return errorEnvelope(
+        "VALIDATION_ERROR",
+        "No active students found for the fee structure's bound class/section",
+        422,
+      );
+    }
 
     return jsonResponse(
       envelope({
@@ -353,14 +471,43 @@ export async function handleAssignFeePlan(
     return errorEnvelope("VALIDATION_ERROR", "handoff_id is required", 422);
   }
 
+  const proration = parseProrationFields(body);
+  if (proration.error) {
+    return errorEnvelope("VALIDATION_ERROR", proration.error, 422);
+  }
+
   const orgId = organizationIdFromClaims(auth.claims);
   const schoolId = schoolIdFromClaims(auth.claims);
   const feeStructureId = optionalStr(body, "fee_structure_id", "feeStructureId") ?? null;
 
   try {
     const result = await runTenant(config, auth.claims, async (db) => {
-      const assigned = await assignFromHandoff(db, orgId, schoolId, handoffId, feeStructureId, auth.claims.sub);
+      const assigned = await assignFromHandoff(
+        db,
+        orgId,
+        schoolId,
+        handoffId,
+        feeStructureId,
+        auth.claims.sub,
+        {
+          admissionDate: proration.admissionDate,
+          prorationPolicyOverride: proration.prorationPolicyOverride,
+          prorationOverrideReason: proration.prorationOverrideReason,
+        },
+      );
       await emitMutationAudit(db, auth.claims, financeAudit.feeAssignmentCreated(assigned.assignment.id), req);
+      if (assigned.assignment.proration_is_override) {
+        await emitMutationAudit(
+          db,
+          auth.claims,
+          financeAudit.feeProrationOverridden(
+            assigned.assignment.id,
+            assigned.assignment.proration_policy,
+            assigned.assignment.proration_override_reason ?? "",
+          ),
+          req,
+        );
+      }
       return assigned;
     });
     return jsonResponse(envelope(studentAccountToApi(result)), { status: 201 });

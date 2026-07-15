@@ -1,8 +1,22 @@
 import { getFeeHandoffById } from "../admissions/admissions_handoffs_repository.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
+import { getAcademicYear } from "../academic/academic_years_repository.ts";
 import { createAnnualInvoice, getInvoiceByAssignmentId } from "./finance_invoices_repository.ts";
 import type { FinanceInvoiceRow } from "./finance_invoices_repository.ts";
 import type { PaginationParams, PaginationResult } from "./finance_structures_repository.ts";
+import { getFinanceSettingValue } from "./finance_settings_repository.ts";
+import {
+  computeFeeProration,
+  DEFAULT_FEE_PRORATION_POLICY,
+  FEE_PRORATION_SETTING,
+  FeeProrationOverrideReasonRequiredError,
+  type FeeProrationPolicy,
+  type FeeProrationYearBounds,
+  parseFeeProrationPolicy,
+} from "./finance_fee_proration.ts";
+
+export { FeeProrationOverrideReasonRequiredError } from "./finance_fee_proration.ts";
+export type { FeeProrationPolicy } from "./finance_fee_proration.ts";
 
 export interface FinanceFeeAssignmentRow {
   id: string;
@@ -16,6 +30,20 @@ export interface FinanceFeeAssignmentRow {
   assigned_at: string;
   created_at: string;
   updated_at: string;
+  // Cap 73 (owner decision #5) — mid-year admission fee proration, recorded
+  // durably per-assignment so the applied policy can be understood later, not
+  // just at the moment of assignment.
+  proration_policy: string;
+  proration_basis: string;
+  proration_total_months: number | null;
+  proration_months_charged: number | null;
+  proration_reference_date: string | null;
+  proration_annual_amount: string | null;
+  proration_charged_amount: string | null;
+  proration_fallback_reason: string | null;
+  proration_is_override: boolean;
+  proration_override_reason: string | null;
+  proration_overridden_by: string | null;
 }
 
 export interface FinanceStudentAccountRow {
@@ -48,6 +76,19 @@ export interface AssignFeeStructureInput {
   feeStructureId: string;
   academicYear: string;
   assignedBy: string;
+  // Cap 73 — the admission/assignment reference date proration is computed
+  // against, 'YYYY-MM-DD'. Defaults to today when omitted (e.g. a same-day
+  // walk-in assignment; historically that was the implicit assumption for
+  // every assignment).
+  admissionDate?: string;
+  // An authorized user's explicit, per-assignment override of the school's
+  // configured policy (e.g. a documented exception for one student).
+  // `prorationOverrideReason` is REQUIRED whenever this is set — enforced
+  // below — and both are recorded on the assignment row for audit evidence,
+  // alongside `assignedBy` as the acting/overriding user and `assigned_at` as
+  // the timestamp.
+  prorationPolicyOverride?: FeeProrationPolicy;
+  prorationOverrideReason?: string;
 }
 
 export class DuplicateAssignmentError extends Error {
@@ -71,10 +112,27 @@ export class HandoffNotReadyError extends Error {
   }
 }
 
+// Cap 67 — a bulk/class-wide assignment was called without an explicit
+// studentIds[] and the target fee structure has no class/section binding to
+// auto-resolve students from.
+export class FeeStructureNotBoundError extends Error {
+  constructor(feeStructureId: string) {
+    super(
+      `Fee structure has no class/section binding to auto-resolve students from: ${feeStructureId}`,
+    );
+    this.name = "FeeStructureNotBoundError";
+  }
+}
+
 const ASSIGNABLE_HANDOFF_STATUSES = new Set(["pending", "sent_to_finance"]);
 
 function offsetFor(page: number, pageSize: number): number {
   return Math.max(0, (page - 1) * pageSize);
+}
+
+/** 'YYYY-MM-DD' for today (UTC) — the default proration reference date. */
+function todayIsoDate(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
 async function sumStructureFees(
@@ -92,14 +150,23 @@ async function sumStructureFees(
   return parseFloat(rows[0]?.total ?? "0");
 }
 
+interface FeeStructureForAssignment {
+  name: string;
+  academic_year: string;
+  academic_year_id: string | null;
+  class_id: string | null;
+  section_id: string | null;
+}
+
 async function ensureFeeStructureExists(
   db: TenantQueryClient,
   organizationId: string,
   schoolId: string,
   feeStructureId: string,
-): Promise<{ name: string; academic_year: string }> {
-  const rows = await db.queryObject<{ name: string; academic_year: string }>(
-    `SELECT name, academic_year FROM finance_fee_structures
+): Promise<FeeStructureForAssignment> {
+  const rows = await db.queryObject<FeeStructureForAssignment>(
+    `SELECT name, academic_year, academic_year_id, class_id, section_id
+     FROM finance_fee_structures
      WHERE id = $1 AND organization_id = $2 AND school_id = $3 AND status = 'active'`,
     [feeStructureId, organizationId, schoolId],
   );
@@ -110,13 +177,75 @@ async function ensureFeeStructureExists(
   return structure;
 }
 
+/**
+ * Cap 73 — resolves a fee structure's academic year to real calendar bounds
+ * for proration. Returns null (never throws) when the structure has no
+ * academic_year_id or the referenced year can't be found — the caller treats
+ * that as "can't prorate, fall back to full_annual" rather than failing the
+ * assignment over a data gap that predates this feature.
+ */
+async function resolveProrationYearBounds(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  academicYearId: string | null,
+): Promise<FeeProrationYearBounds | null> {
+  if (!academicYearId) return null;
+  const year = await getAcademicYear(db, organizationId, schoolId, academicYearId);
+  if (!year) return null;
+  return { startDate: year.start_date, endDate: year.end_date };
+}
+
+/**
+ * Cap 67 — resolves the student ids a bound fee structure's class/section
+ * covers, for the bulk-assign endpoint's auto-resolve path. Only CURRENT
+ * enrollments of ACTIVE students are included (a stale/superseded enrollment
+ * row, or an alumni/transferred/inactive student, must not receive a fresh
+ * fee assignment just because they once sat in the bound class).
+ */
+export async function resolveStudentIdsForBoundStructure(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  feeStructureId: string,
+): Promise<string[]> {
+  const rows = await db.queryObject<{ class_id: string | null; section_id: string | null }>(
+    `SELECT class_id, section_id FROM finance_fee_structures
+     WHERE id = $1 AND organization_id = $2 AND school_id = $3`,
+    [feeStructureId, organizationId, schoolId],
+  );
+  const structure = rows[0];
+  if (!structure) {
+    throw new Error(`Fee structure not found: ${feeStructureId}`);
+  }
+  if (!structure.class_id) {
+    throw new FeeStructureNotBoundError(feeStructureId);
+  }
+
+  const studentRows = await db.queryObject<{ student_id: string }>(
+    `SELECT DISTINCT se.student_id
+       FROM sis_student_enrollments se
+       INNER JOIN students s
+         ON s.id = se.student_id
+        AND s.organization_id = se.organization_id
+        AND s.school_id = se.school_id
+      WHERE se.organization_id = $1 AND se.school_id = $2
+        AND se.class_id = $3
+        AND ($4::uuid IS NULL OR se.section_id = $4)
+        AND se.is_current = true
+        AND s.status = 'active'`,
+    [organizationId, schoolId, structure.class_id, structure.section_id],
+  );
+  return studentRows.map((r) => r.student_id);
+}
+
 async function createAssignmentAndAccount(
   db: TenantQueryClient,
   organizationId: string,
   schoolId: string,
   input: AssignFeeStructureInput,
 ): Promise<AssignmentWithAccount> {
-  await ensureFeeStructureExists(db, organizationId, schoolId, input.feeStructureId);
+  const structure = await ensureFeeStructureExists(db, organizationId, schoolId, input.feeStructureId);
 
   const duplicate = await db.queryObject<{ id: string }>(
     `SELECT id FROM finance_fee_assignments
@@ -133,6 +262,34 @@ async function createAssignmentAndAccount(
   if (duplicate[0]) {
     throw new DuplicateAssignmentError();
   }
+
+  // Cap 73 (owner decision #5) — mid-year admission fee proration. The
+  // configured policy comes from finance_settings (reusing FIN-6's home
+  // exactly); an authorized caller may override it for THIS ONE assignment,
+  // but only with a reason (audit evidence — see FeeProrationOverrideReasonRequiredError).
+  if (input.prorationPolicyOverride && !input.prorationOverrideReason?.trim()) {
+    throw new FeeProrationOverrideReasonRequiredError();
+  }
+  const configuredPolicy = parseFeeProrationPolicy(
+    await getFinanceSettingValue(
+      db,
+      organizationId,
+      schoolId,
+      FEE_PRORATION_SETTING.sectionId,
+      FEE_PRORATION_SETTING.itemId,
+      DEFAULT_FEE_PRORATION_POLICY,
+    ),
+  );
+  const isOverride = input.prorationPolicyOverride != null &&
+    input.prorationPolicyOverride !== configuredPolicy;
+  const effectivePolicy = input.prorationPolicyOverride ?? configuredPolicy;
+  const yearBounds = await resolveProrationYearBounds(
+    db,
+    organizationId,
+    schoolId,
+    structure.academic_year_id,
+  );
+  const referenceDate = input.admissionDate?.trim() || todayIsoDate();
 
   // TRN-9 (owner decision): a student's per-year finance account is a SHARED
   // container — tuition + transport (and any other structure) coexist as
@@ -160,11 +317,33 @@ async function createAssignmentAndAccount(
     input.feeStructureId,
   );
 
+  const proration = computeFeeProration({
+    policy: effectivePolicy,
+    annualAmount: totalFee,
+    referenceDate,
+    yearBounds,
+    isOverride,
+    overrideReason: input.prorationOverrideReason ?? null,
+  });
+  // The amount this assignment ACTUALLY charges — the annual total under
+  // full_annual (unchanged existing behaviour), or the prorated tail-months
+  // amount under prorate_from_admission_month. Every downstream money write
+  // (account seed/bump, invoice total) uses THIS, never the raw annual total.
+  const chargedTotal = proration.chargedAmount;
+
   const assignmentRows = await db.queryObject<FinanceFeeAssignmentRow>(
     `INSERT INTO finance_fee_assignments (
       organization_id, school_id, student_id, fee_structure_id,
-      academic_year, assignment_status, assigned_by
-    ) VALUES ($1, $2, $3, $4, $5, 'active', $6)
+      academic_year, assignment_status, assigned_by,
+      proration_policy, proration_basis, proration_total_months,
+      proration_months_charged, proration_reference_date,
+      proration_annual_amount, proration_charged_amount,
+      proration_fallback_reason, proration_is_override,
+      proration_override_reason, proration_overridden_by
+    ) VALUES (
+      $1, $2, $3, $4, $5, 'active', $6,
+      $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+    )
     RETURNING *`,
     [
       organizationId,
@@ -173,13 +352,26 @@ async function createAssignmentAndAccount(
       input.feeStructureId,
       input.academicYear,
       input.assignedBy,
+      proration.policy,
+      proration.basis,
+      proration.totalMonths,
+      proration.monthsCharged,
+      proration.referenceDate,
+      proration.annualAmount,
+      proration.chargedAmount,
+      proration.fallbackReason,
+      proration.isOverride,
+      proration.overrideReason,
+      proration.isOverride ? input.assignedBy : null,
     ],
   );
 
   const assignment = assignmentRows[0]!;
 
   // Get-or-create: reuse the student's existing per-year account when present,
-  // otherwise open a new one seeded from THIS structure's total.
+  // otherwise open a new one seeded from THIS structure's CHARGED total (not
+  // the raw annual total — a prorated assignment must never inflate the
+  // account by months it isn't billing).
   const account = reuseAccount ?? (await db.queryObject<FinanceStudentAccountRow>(
     `INSERT INTO finance_student_accounts (
       organization_id, school_id, student_id, fee_assignment_id,
@@ -192,7 +384,7 @@ async function createAssignmentAndAccount(
       input.studentId,
       assignment.id,
       input.academicYear,
-      totalFee,
+      chargedTotal,
     ],
   ))[0]!;
 
@@ -200,7 +392,7 @@ async function createAssignmentAndAccount(
     studentId: input.studentId,
     feeAssignmentId: assignment.id,
     academicYear: input.academicYear,
-    totalAmount: totalFee,
+    totalAmount: chargedTotal,
     createdBy: input.assignedBy,
   });
 
@@ -224,7 +416,7 @@ async function createAssignmentAndAccount(
          updated_at = timezone('utc', now())
        WHERE id = $2 AND organization_id = $3 AND school_id = $4
        RETURNING *`,
-      [totalFee, reuseAccount.id, organizationId, schoolId],
+      [chargedTotal, reuseAccount.id, organizationId, schoolId],
     );
     effectiveAccount = bumped[0] ?? account;
   }
@@ -322,6 +514,12 @@ export interface BulkAssignFeeStructureInput {
   academicYear: string;
   studentIds: string[];
   assignedBy: string;
+  // Cap 73 — applied uniformly to every student in the batch (a class-wide
+  // assignment has one reference date/policy decision for the whole call;
+  // per-student admission dates aren't tracked at this call site).
+  admissionDate?: string;
+  prorationPolicyOverride?: FeeProrationPolicy;
+  prorationOverrideReason?: string;
 }
 
 export interface BulkAssignSkipped {
@@ -376,6 +574,9 @@ export async function bulkAssignFeeStructure(
         feeStructureId: input.feeStructureId,
         academicYear: input.academicYear,
         assignedBy: input.assignedBy,
+        admissionDate: input.admissionDate,
+        prorationPolicyOverride: input.prorationPolicyOverride,
+        prorationOverrideReason: input.prorationOverrideReason,
       });
       await db.queryObject(`RELEASE SAVEPOINT bulk_fee_assignment`);
       assigned.push(result);
@@ -521,6 +722,15 @@ async function enrichAssignmentWithAccount(
   };
 }
 
+export interface AssignFromHandoffOptions {
+  // Cap 73 — same meaning as on AssignFeeStructureInput; threaded through so
+  // the handoff-based single-assign path (the Dart client's ONLY per-student
+  // assignment call) can also drive/override proration.
+  admissionDate?: string;
+  prorationPolicyOverride?: FeeProrationPolicy;
+  prorationOverrideReason?: string;
+}
+
 /** Assign fee plan from admissions handoff (v6.1 §6 — status → completed). */
 export async function assignFromHandoff(
   db: TenantQueryClient,
@@ -529,6 +739,7 @@ export async function assignFromHandoff(
   handoffId: string,
   feeStructureId: string | null,
   assignedBy: string,
+  options: AssignFromHandoffOptions = {},
 ): Promise<AssignmentWithAccount> {
   const handoff = await getFeeHandoffById(db, organizationId, schoolId, handoffId);
   if (!handoff) {
@@ -549,6 +760,9 @@ export async function assignFromHandoff(
     feeStructureId: structureId,
     academicYear: handoff.academic_year,
     assignedBy,
+    admissionDate: options.admissionDate,
+    prorationPolicyOverride: options.prorationPolicyOverride,
+    prorationOverrideReason: options.prorationOverrideReason,
   });
 
   await db.queryObject(

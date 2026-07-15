@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/config/finance_approval_config.dart';
 import '../../core/errors/api_failure.dart';
 import '../../core/errors/api_failure_mapper.dart';
+import '../../core/repositories/academic/academic_catalog_provider.dart';
 import '../../core/reliability/drafts/draft_autosave.dart';
 import '../../core/reliability/drafts/draft_model.dart';
 import '../../core/reliability/drafts/draft_providers.dart';
@@ -58,6 +59,135 @@ List<Widget> _dialogActions(
   ];
 }
 
+/// Cap 67 — "Unbound" sentinel for the class/section picker below (never a
+/// real class/section name, since [classOptionsProvider]/[sectionOptionsProvider]
+/// never return an empty string).
+const _unboundOption = 'Unbound';
+
+List<String> _sortedUniqueLabels(Iterable<String> values) {
+  final unique = values.where((v) => v.isNotEmpty).toSet().toList();
+  unique.sort();
+  return unique;
+}
+
+typedef _ClassSectionChanged = void Function({
+  String? className,
+  String? sectionName,
+});
+
+/// Cap 67 — OPTIONAL class/section binding picker shared by the create/edit
+/// fee-structure dialogs. Reuses the same academic catalog providers as the
+/// bulk-assign dialog's class filter; the section list is scoped to whichever
+/// class is currently selected (a section belongs to exactly one class).
+class _ClassSectionBindingFields extends ConsumerStatefulWidget {
+  const _ClassSectionBindingFields({
+    required this.onChanged,
+    this.initialClassName,
+    this.initialSectionName,
+  });
+
+  final _ClassSectionChanged onChanged;
+  final String? initialClassName;
+  final String? initialSectionName;
+
+  @override
+  ConsumerState<_ClassSectionBindingFields> createState() =>
+      _ClassSectionBindingFieldsState();
+}
+
+class _ClassSectionBindingFieldsState
+    extends ConsumerState<_ClassSectionBindingFields> {
+  late String _className;
+  late String _sectionName;
+
+  @override
+  void initState() {
+    super.initState();
+    _className = (widget.initialClassName?.isNotEmpty ?? false)
+        ? widget.initialClassName!
+        : _unboundOption;
+    _sectionName = (widget.initialSectionName?.isNotEmpty ?? false)
+        ? widget.initialSectionName!
+        : _unboundOption;
+  }
+
+  void _notify() {
+    widget.onChanged(
+      className: _className == _unboundOption ? null : _className,
+      sectionName: _sectionName == _unboundOption ? null : _sectionName,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final classes = ref.watch(classOptionsProvider);
+    final catalog = ref.watch(academicCatalogProvider);
+    final sectionsForClass = (catalog == null || _className == _unboundOption)
+        ? const <String>[]
+        : _sortedUniqueLabels(
+            catalog.sections
+                .where((s) => s.className == _className)
+                .map((s) => s.sectionName),
+          );
+    if (_sectionName != _unboundOption &&
+        !sectionsForClass.contains(_sectionName)) {
+      // The class changed (or its sections loaded) since _sectionName was
+      // picked — it no longer belongs to the selected class.
+      _sectionName = _unboundOption;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Material(
+          child: DropdownMenu<String>(
+            key: QaTestKeys.financeFeeStructureClassField,
+            initialSelection: _className,
+            label: const Text('Bind to class (optional)'),
+            expandedInsets: EdgeInsets.zero,
+            dropdownMenuEntries: [
+              const DropdownMenuEntry(value: _unboundOption, label: _unboundOption),
+              for (final c in classes)
+                DropdownMenuEntry(value: c, label: 'Class $c'),
+            ],
+            onSelected: (value) {
+              if (value == null) return;
+              setState(() {
+                _className = value;
+                _sectionName = _unboundOption;
+              });
+              _notify();
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
+        Material(
+          child: DropdownMenu<String>(
+            key: ValueKey('section-for-$_className'),
+            initialSelection: _sectionName,
+            label: const Text('Section (optional)'),
+            expandedInsets: EdgeInsets.zero,
+            enabled: _className != _unboundOption,
+            dropdownMenuEntries: [
+              const DropdownMenuEntry(value: _unboundOption, label: _unboundOption),
+              for (final s in sectionsForClass)
+                DropdownMenuEntry(value: s, label: 'Section $s'),
+            ],
+            onSelected: _className == _unboundOption
+                ? null
+                : (value) {
+                    if (value == null) return;
+                    setState(() => _sectionName = value);
+                    _notify();
+                  },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 Future<void> showCreateFeeStructureDialog(
   BuildContext context,
   WidgetRef ref, {
@@ -66,6 +196,8 @@ Future<void> showCreateFeeStructureDialog(
   final nameController = TextEditingController(text: 'New fee structure');
   final totalController = TextEditingController(text: '₹1,85,000');
   final classRangeController = TextEditingController(text: 'Nursery – 12');
+  String? selectedClassName;
+  String? selectedSectionName;
 
   final confirmed = await showAksharaDialog<bool>(
     context: context,
@@ -87,6 +219,13 @@ Future<void> showCreateFeeStructureDialog(
             label: 'Class range',
             controller: classRangeController,
           ),
+          const SizedBox(height: 8),
+          _ClassSectionBindingFields(
+            onChanged: ({className, sectionName}) {
+              selectedClassName = className;
+              selectedSectionName = sectionName;
+            },
+          ),
         ],
       ),
       actions: _dialogActions(
@@ -107,6 +246,10 @@ Future<void> showCreateFeeStructureDialog(
             academicYear: academicYear,
             totalAnnual: totalController.text.trim(),
             classRange: classRangeController.text.trim(),
+            // Cap 67 — real class/section binding (label-based; resolved
+            // server-side against `academicYear`). Both null = unbound.
+            className: selectedClassName,
+            sectionName: selectedSectionName,
             categories: const [
               FeeCategoryLine(
                 category: FeeStructureCategory.tuition,
@@ -142,12 +285,16 @@ Future<void> showEditFeeStructureDialog(
 }) async {
   final nameController = TextEditingController(text: structure.name);
   final totalController = TextEditingController(text: structure.totalAnnual);
+  final wasClassBound = structure.isClassBound;
+  String? selectedClassName = structure.className;
+  String? selectedSectionName = structure.sectionName;
 
   final confirmed = await showAksharaDialog<bool>(
     context: context,
     builder: (context) => AksharaAlertDialog(
       title: 'Edit fee structure',
       icon: Icons.edit_outlined,
+      scrollable: true,
       content: AksharaDialogFormBody(
         children: [
           AksharaFormField(
@@ -157,6 +304,15 @@ Future<void> showEditFeeStructureDialog(
           AksharaFormField(
             label: 'Annual total',
             controller: totalController,
+          ),
+          const SizedBox(height: 8),
+          _ClassSectionBindingFields(
+            initialClassName: structure.className,
+            initialSectionName: structure.sectionName,
+            onChanged: ({className, sectionName}) {
+              selectedClassName = className;
+              selectedSectionName = sectionName;
+            },
           ),
         ],
       ),
@@ -171,11 +327,18 @@ Future<void> showEditFeeStructureDialog(
   if (confirmed != true || !context.mounted) return;
 
   try {
+    // Cap 67 — the picker went back to "Unbound" for a structure that WAS
+    // bound: that's an explicit unbind, not "leave unchanged" (which is what
+    // both fields being null would otherwise mean to the request contract).
+    final unbindClass = wasClassBound && selectedClassName == null;
     await ref.read(updateFeeStructureProvider.notifier).execute(
           feeStructureId: structure.id,
           request: UpdateFeeStructureRequest(
             name: nameController.text.trim(),
             totalAnnual: totalController.text.trim(),
+            unbindClass: unbindClass,
+            className: unbindClass ? null : selectedClassName,
+            sectionName: unbindClass ? null : selectedSectionName,
           ),
         );
     if (!context.mounted) return;

@@ -24,8 +24,22 @@ class CreateFeeStructureRequestDto {
             },
         ],
         ...catalogPlacementJson(
-          AcademicCatalogPlacement(academicYearId: request.academicYearId),
+          AcademicCatalogPlacement(
+            academicYearId: request.academicYearId,
+            classId: request.classId,
+            sectionId: request.sectionId,
+          ),
         ),
+        // Cap 67 — label-based binding (catalogPlacementJson only carries
+        // resolved ids; the label path is finance-specific).
+        if (request.className?.isNotEmpty ?? false) ...{
+          'class_name': request.className,
+          'className': request.className,
+        },
+        if (request.sectionName?.isNotEmpty ?? false) ...{
+          'section_name': request.sectionName,
+          'sectionName': request.sectionName,
+        },
       },
     );
   }

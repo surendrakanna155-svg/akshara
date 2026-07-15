@@ -19,6 +19,12 @@ const _bulkAssignStudentPageSize = 200;
 final financeBulkAssignClassFilterProvider =
     StateProvider<String?>((ref) => null);
 
+/// Cap 67 — a section-level narrowing of the class roster, auto-set from a
+/// bound fee structure's `sectionName` (see finance_bulk_assign_dialog.dart).
+/// Null = no section narrowing (every section of the selected class).
+final financeBulkAssignSectionFilterProvider =
+    StateProvider<String?>((ref) => null);
+
 final financeBulkAssignStudentsQueryProvider = Provider<RepositoryQuery>((ref) {
   return ref
       .watch(repositoryQueryProvider)
@@ -39,10 +45,21 @@ final financeBulkAssignAllStudentsProvider = Provider<List<SisStudent>>((ref) {
       );
 });
 
-/// The roster for the currently-selected class only.
+/// The roster for the currently-selected class (and, when set, section) only.
+/// Cap 67 — the section narrowing is auto-populated from a bound fee
+/// structure so "resolve students FROM the bound class/section" holds even
+/// though this screen still submits an explicit studentIds[] (never relies
+/// on the server-side auto-resolve path itself).
 final financeBulkAssignClassRosterProvider = Provider<List<SisStudent>>((ref) {
   final all = ref.watch(financeBulkAssignAllStudentsProvider);
   final className = ref.watch(financeBulkAssignClassFilterProvider);
-  if (className == null || className.isEmpty) return all;
-  return all.where((s) => s.classLabel == className).toList(growable: false);
+  final sectionName = ref.watch(financeBulkAssignSectionFilterProvider);
+  var filtered = all;
+  if (className != null && className.isNotEmpty) {
+    filtered = filtered.where((s) => s.classLabel == className).toList(growable: false);
+  }
+  if (sectionName != null && sectionName.isNotEmpty) {
+    filtered = filtered.where((s) => s.section == sectionName).toList(growable: false);
+  }
+  return filtered;
 });

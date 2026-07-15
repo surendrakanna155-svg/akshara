@@ -78,22 +78,44 @@ Deno.test("bulk assign route: passes the gate WITH manageFinance (503 — DB unc
   assertEquals(res.status, 503);
 });
 
-Deno.test("bulk assign route: missing student_ids is a 422 BEFORE any DB work", async () => {
+// Cap 67 — student_ids is now OPTIONAL: omitted (or empty) means "auto-resolve
+// from the fee structure's class/section binding" instead of a synchronous
+// validation error. That resolution needs the tenant DB, so with the DB
+// unconfigured (this test harness) the request now reaches — and is turned
+// back by — the SAME 503 gate as every other DB-touching call below, not a
+// 422. This is a deliberate contract change from the original bulk-assign
+// cap fix (student_ids used to be strictly required).
+Deno.test("bulk assign route: omitted student_ids attempts class/section auto-resolve (503 — DB unconfigured, not a validation error)", async () => {
   const token = await signAccessToken(SECRET, claims(["manageFinance"]), 900);
   const res = await handleBulkAssignFeeStructures(
     post(token, { feeStructureId: "struct-1", academicYear: "2026-27" }),
     config,
   );
-  assertEquals(res.status, 422);
+  assertEquals(res.status, 503);
 });
 
-Deno.test("bulk assign route: an empty student_ids array is a 422", async () => {
+Deno.test("bulk assign route: an empty student_ids array ALSO attempts auto-resolve (503, not 422)", async () => {
   const token = await signAccessToken(SECRET, claims(["manageFinance"]), 900);
   const res = await handleBulkAssignFeeStructures(
     post(token, {
       feeStructureId: "struct-1",
       academicYear: "2026-27",
       studentIds: [],
+    }),
+    config,
+  );
+  assertEquals(res.status, 503);
+});
+
+// Cap 73 — proration_policy_override is validated synchronously (a plain
+// string-shape check, no DB needed), so an unrecognised value IS still a 422
+// before any DB work — mirrors fee_structure_id/academic_year below.
+Deno.test("bulk assign route: an invalid proration_policy_override is a 422 BEFORE any DB work", async () => {
+  const token = await signAccessToken(SECRET, claims(["manageFinance"]), 900);
+  const res = await handleBulkAssignFeeStructures(
+    post(token, {
+      ...validBody,
+      prorationPolicyOverride: "not_a_real_policy",
     }),
     config,
   );

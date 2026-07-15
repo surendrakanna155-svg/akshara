@@ -336,6 +336,9 @@ abstract final class QaTestKeys {
       ValueKey<String>('finance_assign_concession_success_snackbar');
   static const financeCreateFeeStructureSubmitButton =
       ValueKey<String>('finance_create_fee_structure_submit_button');
+  // Cap 67 — real class/section binding picker (create/edit fee structure).
+  static const financeFeeStructureClassField =
+      ValueKey<String>('finance_fee_structure_class_field');
 
   // FIN-R1..R5 — fee-recovery CRM.
   static ValueKey<String> financeLogContactButton(String defaulterId) =>

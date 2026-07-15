@@ -25,11 +25,20 @@ export interface FinanceFeeStructureRow {
   name: string;
   academic_year: string;
   academic_year_id: string | null;
+  // Cap 67 — real class/section binding (soft FK, nullable = "unbound").
+  class_id: string | null;
+  section_id: string | null;
   description: string | null;
   status: string;
   created_by: string;
   created_at: string;
   updated_at: string;
+}
+
+/** Cap 67 — resolved class/section labels for a bound structure (looked up by the caller). */
+export interface FeeStructureClassBindingLabels {
+  className: string | null;
+  sectionName: string | null;
 }
 
 export interface FinanceFeeStructureItemRow {
@@ -81,6 +90,7 @@ function sumItemAmounts(items: FinanceFeeStructureItemRow[]): string {
 export function feeStructureToApi(
   structure: FinanceFeeStructureRow,
   items: FinanceFeeStructureItemRow[],
+  classBinding: FeeStructureClassBindingLabels = { className: null, sectionName: null },
 ): Record<string, unknown> {
   const categories = items
     .sort((a, b) => a.sort_order - b.sort_order)
@@ -98,6 +108,12 @@ export function feeStructureToApi(
     name: structure.name,
     academicYear: structure.academic_year,
     academicYearId: structure.academic_year_id,
+    // Cap 67 — real class/section binding; null = unbound (free-text
+    // description below remains the only "class range" for those rows).
+    classId: structure.class_id,
+    className: classBinding.className,
+    sectionId: structure.section_id,
+    sectionName: classBinding.sectionName,
     description: structure.description,
     status: structure.status,
     classRange: structure.description ?? "",
@@ -169,6 +185,42 @@ function mapAccountStatus(status: string): string {
   return status === "closed" ? "closed" : "active";
 }
 
+/** Cap 73 — the applied mid-year admission proration, exposed as one unit. */
+function prorationToApi(
+  row: Pick<
+    FinanceFeeAssignmentRow,
+    | "proration_policy"
+    | "proration_basis"
+    | "proration_total_months"
+    | "proration_months_charged"
+    | "proration_reference_date"
+    | "proration_annual_amount"
+    | "proration_charged_amount"
+    | "proration_fallback_reason"
+    | "proration_is_override"
+    | "proration_override_reason"
+    | "proration_overridden_by"
+  >,
+): Record<string, unknown> {
+  return {
+    policy: row.proration_policy,
+    basis: row.proration_basis,
+    totalMonths: row.proration_total_months,
+    monthsCharged: row.proration_months_charged,
+    referenceDate: row.proration_reference_date,
+    annualAmount: row.proration_annual_amount != null
+      ? formatAmount(row.proration_annual_amount)
+      : null,
+    chargedAmount: row.proration_charged_amount != null
+      ? formatAmount(row.proration_charged_amount)
+      : null,
+    fallbackReason: row.proration_fallback_reason,
+    isOverride: row.proration_is_override,
+    overrideReason: row.proration_override_reason,
+    overriddenBy: row.proration_overridden_by,
+  };
+}
+
 export function assignmentToApi(
   row: FinanceFeeAssignmentRow,
 ): Record<string, unknown> {
@@ -182,6 +234,9 @@ export function assignmentToApi(
     assignedAt: row.assigned_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    // Cap 73 — which mid-year admission proration policy applied, and how it
+    // was derived (months charged / total months / basis), not just a number.
+    proration: prorationToApi(row),
   };
 }
 
@@ -205,6 +260,10 @@ export function studentAccountToApi(
     status: mapAccountStatus(account.status),
     lastPaymentDate: "",
     installmentPlan: "",
+    // Cap 73 — surfaced here too: this is the response shape callers actually
+    // consume for assign/bulk-assign, so the proration explanation travels
+    // with the result instead of requiring a second GET-assignment call.
+    proration: prorationToApi(assignment),
   };
 }
 

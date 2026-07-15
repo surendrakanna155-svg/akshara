@@ -13,6 +13,8 @@ import {
 import {
   ACADEMIC_YEAR_SCHOOL_A,
 } from "../academic/academic_years_repository.ts";
+import { ACADEMIC_CLASS_SCHOOL_A } from "../academic/classes_repository.ts";
+import { ACADEMIC_SECTION_SCHOOL_A } from "../academic/sections_repository.ts";
 import {
   archiveFeeStructure,
   createFeeStructure,
@@ -25,6 +27,8 @@ import type { TenantQueryClient } from "../tenant_db.ts";
 const ORG = "a1000000-0000-4000-8000-000000000001";
 const SCHOOL_A = "a2000000-0000-4000-8000-000000000001";
 const STAFF = "a3000000-0000-4000-8000-000000000001";
+const CLASS_A = ACADEMIC_CLASS_SCHOOL_A;
+const SECTION_A = ACADEMIC_SECTION_SCHOOL_A;
 
 function schoolClaims(permissions: string[]): AccessTokenClaims {
   return {
@@ -71,6 +75,28 @@ class MockTenantDb {
       status: "active",
     },
   ];
+  // Cap 67 — class/section catalog fixtures (mirrors academic_foundation.sql's
+  // real fixture ids via the exported ACADEMIC_CLASS/SECTION_SCHOOL_A consts).
+  classes: Row[] = [
+    {
+      id: CLASS_A,
+      organization_id: ORG,
+      school_id: SCHOOL_A,
+      academic_year_id: ACADEMIC_YEAR_SCHOOL_A,
+      class_name: "5",
+      status: "active",
+    },
+  ];
+  sections: Row[] = [
+    {
+      id: SECTION_A,
+      organization_id: ORG,
+      school_id: SCHOOL_A,
+      class_id: CLASS_A,
+      section_name: "A",
+      status: "active",
+    },
+  ];
 
   handleCatalogQuery<T>(sql: string, args: unknown[]): T[] {
     if (sql.includes("FROM academic_years") && sql.includes("ORDER BY start_date")) {
@@ -81,6 +107,49 @@ class MockTenantDb {
     if (sql.includes("SELECT * FROM academic_years") && sql.includes("WHERE id = $1")) {
       const row = this.years.find((y) =>
         y.id === args[0] && y.organization_id === args[1] && y.school_id === args[2]
+      );
+      return (row ? [row] : []) as T[];
+    }
+    // getSectionWithClass (section-only binding backfills its class).
+    if (sql.includes("INNER JOIN classes")) {
+      const section = this.sections.find((s) =>
+        s.id === args[0] && s.organization_id === args[1] && s.school_id === args[2]
+      );
+      if (!section) return [] as T[];
+      const cls = this.classes.find((c) => c.id === section.class_id);
+      return [{
+        ...section,
+        class_name: cls?.class_name ?? "",
+        academic_year_id: cls?.academic_year_id ?? null,
+      }] as T[];
+    }
+    // loadSectionByLabel.
+    if (sql.includes("FROM sections") && sql.includes("section_name = $4")) {
+      const matches = this.sections.filter((s) =>
+        s.organization_id === args[0] && s.school_id === args[1] &&
+        s.class_id === args[2] && s.section_name === args[3]
+      );
+      return matches as T[];
+    }
+    // getSection.
+    if (sql.includes("FROM sections") && sql.includes("WHERE id = $1")) {
+      const row = this.sections.find((s) =>
+        s.id === args[0] && s.organization_id === args[1] && s.school_id === args[2]
+      );
+      return (row ? [row] : []) as T[];
+    }
+    // loadClassByLabel.
+    if (sql.includes("FROM classes") && sql.includes("class_name = $4")) {
+      const matches = this.classes.filter((c) =>
+        c.organization_id === args[0] && c.school_id === args[1] &&
+        c.academic_year_id === args[2] && c.class_name === args[3]
+      );
+      return matches as T[];
+    }
+    // getClass.
+    if (sql.includes("FROM classes") && sql.includes("WHERE id = $1")) {
+      const row = this.classes.find((c) =>
+        c.id === args[0] && c.organization_id === args[1] && c.school_id === args[2]
       );
       return (row ? [row] : []) as T[];
     }
@@ -99,9 +168,12 @@ class MockTenantDb {
 
   async queryObject<T>(sql: string, args: unknown[] = []): Promise<T[]> {
     this.queries.push(sql);
-    const catalogRows = this.handleCatalogQuery<T>(sql, args);
-    if (catalogRows.length > 0 || sql.includes("FROM academic_years")) {
-      return catalogRows;
+    if (
+      sql.includes("FROM academic_years") ||
+      sql.includes("FROM classes") ||
+      sql.includes("FROM sections")
+    ) {
+      return this.handleCatalogQuery<T>(sql, args);
     }
     if (sql.startsWith("DELETE FROM finance_fee_structure_items")) {
       this.items = this.items.filter((row) => row.fee_structure_id !== args[0]);
@@ -115,9 +187,11 @@ class MockTenantDb {
         name: args[2],
         academic_year: args[3],
         academic_year_id: args[4],
-        description: args[5],
-        status: args[6],
-        created_by: args[7],
+        class_id: args[5],
+        section_id: args[6],
+        description: args[7],
+        status: args[8],
+        created_by: args[9],
         created_at: "2026-06-12T00:00:00.000Z",
         updated_at: "2026-06-12T00:00:00.000Z",
       };
@@ -162,8 +236,10 @@ class MockTenantDb {
         name: args[3],
         academic_year: args[4],
         academic_year_id: args[5],
-        description: args[6],
-        status: args[7],
+        class_id: args[6],
+        section_id: args[7],
+        description: args[8],
+        status: args[9],
         updated_at: "2026-06-12T01:00:00.000Z",
       };
       return [this.structures[idx] as T];
@@ -209,6 +285,8 @@ Deno.test("feeStructureToApi maps structure and items to client contract", () =>
       name: "Standard 5",
       academic_year: "2026-27",
       academic_year_id: ACADEMIC_YEAR_SCHOOL_A,
+      class_id: null,
+      section_id: null,
       description: "Classes 1-5",
       status: "active",
       created_by: STAFF,
@@ -230,7 +308,36 @@ Deno.test("feeStructureToApi maps structure and items to client contract", () =>
   assertEquals(api.totalAnnual, "50000");
   assertEquals(api.classRange, "Classes 1-5");
   assertEquals(api.academicYearId, ACADEMIC_YEAR_SCHOOL_A);
+  assertEquals(api.classId, null);
+  assertEquals(api.className, null);
   assertEquals((api.categories as Array<Record<string, string>>)[0]?.category, "tuition");
+});
+
+// Cap 67 — real class/section binding.
+Deno.test("feeStructureToApi surfaces a bound structure's resolved class/section labels", () => {
+  const api = feeStructureToApi(
+    {
+      id: "struct-2",
+      organization_id: ORG,
+      school_id: SCHOOL_A,
+      name: "Standard 5",
+      academic_year: "2026-27",
+      academic_year_id: ACADEMIC_YEAR_SCHOOL_A,
+      class_id: CLASS_A,
+      section_id: SECTION_A,
+      description: null,
+      status: "active",
+      created_by: STAFF,
+      created_at: "2026-06-12T00:00:00.000Z",
+      updated_at: "2026-06-12T00:00:00.000Z",
+    },
+    [],
+    { className: "5", sectionName: "A" },
+  );
+  assertEquals(api.classId, CLASS_A);
+  assertEquals(api.className, "5");
+  assertEquals(api.sectionId, SECTION_A);
+  assertEquals(api.sectionName, "A");
 });
 
 Deno.test("createFeeStructure inserts header and line items", async () => {
@@ -285,6 +392,139 @@ Deno.test("updateFeeStructure replaces items when provided", async () => {
   });
   assertEquals(updated?.structure.name, "Updated");
   assertEquals(updated?.items[0]?.fee_head, "tuition:New");
+});
+
+// ─── Cap 67 — real class/section binding ───────────────────────────────────
+
+Deno.test("createFeeStructure binds a class by id", async () => {
+  const db = new MockTenantDb();
+  const result = await createFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    name: "Class 5 Plan",
+    academicYear: "2026-27",
+    classId: CLASS_A,
+    description: null,
+    status: "active",
+    createdBy: STAFF,
+    items: [],
+  });
+  assertEquals(result.structure.class_id, CLASS_A);
+  assertEquals(result.structure.section_id, null);
+  assertEquals(result.classBinding.className, "5");
+});
+
+Deno.test("createFeeStructure binds a class by label, resolved against the academic year", async () => {
+  const db = new MockTenantDb();
+  const result = await createFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    name: "Class 5 Plan",
+    academicYear: "2026-27",
+    className: "5",
+    description: null,
+    status: "active",
+    createdBy: STAFF,
+    items: [],
+  });
+  assertEquals(result.structure.class_id, CLASS_A);
+});
+
+Deno.test("createFeeStructure binds class + section together", async () => {
+  const db = new MockTenantDb();
+  const result = await createFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    name: "Class 5-A Plan",
+    academicYear: "2026-27",
+    classId: CLASS_A,
+    sectionId: SECTION_A,
+    description: null,
+    status: "active",
+    createdBy: STAFF,
+    items: [],
+  });
+  assertEquals(result.structure.class_id, CLASS_A);
+  assertEquals(result.structure.section_id, SECTION_A);
+  assertEquals(result.classBinding.sectionName, "A");
+});
+
+Deno.test("createFeeStructure resolves a section-only binding's class FROM the section", async () => {
+  const db = new MockTenantDb();
+  const result = await createFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    name: "Section-only bind",
+    academicYear: "2026-27",
+    sectionId: SECTION_A,
+    description: null,
+    status: "active",
+    createdBy: STAFF,
+    items: [],
+  });
+  assertEquals(result.structure.class_id, CLASS_A);
+  assertEquals(result.structure.section_id, SECTION_A);
+});
+
+Deno.test("createFeeStructure leaves a structure UNBOUND when no class/section given (backward compatible)", async () => {
+  const db = new MockTenantDb();
+  const result = await createFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    name: "Unbound Plan",
+    academicYear: "2026-27",
+    description: "Classes 1-5",
+    status: "active",
+    createdBy: STAFF,
+    items: [],
+  });
+  assertEquals(result.structure.class_id, null);
+  assertEquals(result.structure.section_id, null);
+  assertEquals(result.classBinding.className, null);
+});
+
+Deno.test("updateFeeStructure with no binding fields leaves the existing binding untouched", async () => {
+  const db = new MockTenantDb();
+  const created = await createFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    name: "Bound",
+    academicYear: "2026-27",
+    classId: CLASS_A,
+    description: null,
+    status: "active",
+    createdBy: STAFF,
+    items: [],
+  });
+  const updated = await updateFeeStructure(asDb(db), ORG, SCHOOL_A, created.structure.id as string, {
+    status: "inactive",
+  });
+  assertEquals(updated?.structure.class_id, CLASS_A);
+  assertEquals(updated?.structure.status, "inactive");
+});
+
+Deno.test("updateFeeStructure with unbind_class clears an existing binding", async () => {
+  const db = new MockTenantDb();
+  const created = await createFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    name: "Bound",
+    academicYear: "2026-27",
+    classId: CLASS_A,
+    sectionId: SECTION_A,
+    description: null,
+    status: "active",
+    createdBy: STAFF,
+    items: [],
+  });
+  const updated = await updateFeeStructure(asDb(db), ORG, SCHOOL_A, created.structure.id as string, {
+    classId: null,
+  });
+  assertEquals(updated?.structure.class_id, null);
+  assertEquals(updated?.structure.section_id, null);
+});
+
+Deno.test("updateFeeStructure can (re)bind a previously-unbound structure", async () => {
+  const db = new MockTenantDb();
+  const created = await createFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    name: "Unbound at first",
+    academicYear: "2026-27",
+    description: null,
+    status: "active",
+    createdBy: STAFF,
+    items: [],
+  });
+  assertEquals(created.structure.class_id, null);
+  const updated = await updateFeeStructure(asDb(db), ORG, SCHOOL_A, created.structure.id as string, {
+    classId: CLASS_A,
+  });
+  assertEquals(updated?.structure.class_id, CLASS_A);
 });
 
 Deno.test("archiveFeeStructure sets status inactive", async () => {

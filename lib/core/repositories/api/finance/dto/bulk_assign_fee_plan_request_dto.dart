@@ -15,6 +15,14 @@ class BulkAssignFeePlanRequestDto {
         'academicYear': request.academicYear,
         'student_ids': request.studentIds,
         'studentIds': request.studentIds,
+        // Cap 73 — mid-year admission proration inputs, applied uniformly.
+        if (request.admissionDate?.isNotEmpty ?? false)
+          'admission_date': request.admissionDate,
+        if (request.prorationPolicyOverride != null)
+          'proration_policy_override':
+              request.prorationPolicyOverride!.apiValue,
+        if (request.prorationOverrideReason?.isNotEmpty ?? false)
+          'proration_override_reason': request.prorationOverrideReason,
       },
     );
   }

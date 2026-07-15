@@ -330,6 +330,36 @@ class FinanceMapper {
       categories: _mapFeeCategories(
         raw['categories'] as List<dynamic>? ?? const [],
       ),
+      // Cap 67 — real class/section binding; null = unbound.
+      classId: raw['classId'] as String? ?? raw['class_id'] as String?,
+      className: raw['className'] as String? ?? raw['class_name'] as String?,
+      sectionId: raw['sectionId'] as String? ?? raw['section_id'] as String?,
+      sectionName:
+          raw['sectionName'] as String? ?? raw['section_name'] as String?,
+    );
+  }
+
+  /// Cap 73 — parses the nested `proration` object every assignment response
+  /// now carries (see finance_mapper.ts `prorationToApi`). Returns null when
+  /// the field is absent entirely (older/unrelated payload shapes), never on
+  /// a merely-incomplete one — a freshly-created assignment always has this.
+  FeeProrationInfo? _mapProration(Map<String, dynamic> raw) {
+    final prorationRaw = raw['proration'];
+    if (prorationRaw is! Map<String, dynamic>) return null;
+    return FeeProrationInfo(
+      policy: FeeProrationPolicy.fromApiValue(
+        prorationRaw['policy'] as String?,
+      ),
+      basis: prorationRaw['basis'] as String? ?? 'month',
+      totalMonths: prorationRaw['totalMonths'] as int?,
+      monthsCharged: prorationRaw['monthsCharged'] as int?,
+      referenceDate: prorationRaw['referenceDate'] as String?,
+      annualAmount: prorationRaw['annualAmount'] as String?,
+      chargedAmount: prorationRaw['chargedAmount'] as String?,
+      isOverride: prorationRaw['isOverride'] as bool? ?? false,
+      fallbackReason: prorationRaw['fallbackReason'] as String?,
+      overrideReason: prorationRaw['overrideReason'] as String?,
+      overriddenBy: prorationRaw['overriddenBy'] as String?,
     );
   }
 
@@ -361,6 +391,8 @@ class FinanceMapper {
       // which operates on the assignment id, not the account id.
       feeAssignmentId: raw['feeAssignmentId'] as String? ??
           raw['fee_assignment_id'] as String?,
+      // Cap 73 — which mid-year admission proration policy applied.
+      proration: _mapProration(raw),
     );
   }
 

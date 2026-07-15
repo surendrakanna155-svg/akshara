@@ -43,11 +43,18 @@ Future<void> showFinanceBulkAssignDialog(
     return;
   }
 
-  // Default the class filter to the first real class so the dialog opens
-  // with a concrete roster pre-selected, not "every student in the school".
+  // Cap 67 — the default fee structure (first in the list) may itself be
+  // class/section-bound; when it is, resolve the roster FROM that binding
+  // instead of defaulting to "the first class in the school". Falls back to
+  // the pre-cap-67 default (first real class) when the structure is unbound.
+  final defaultStructure = structures.first;
   final classes = ref.read(classOptionsProvider);
   ref.read(financeBulkAssignClassFilterProvider.notifier).state =
-      classes.isNotEmpty ? classes.first : null;
+      defaultStructure.isClassBound
+          ? defaultStructure.className
+          : (classes.isNotEmpty ? classes.first : null);
+  ref.read(financeBulkAssignSectionFilterProvider.notifier).state =
+      defaultStructure.isClassBound ? defaultStructure.sectionName : null;
 
   var selectedStructureId = structures.first.id;
   var selectedYear = structures.first.academicYear;
@@ -261,6 +268,8 @@ class _BulkAssignFormState extends ConsumerState<_BulkAssignForm> {
       for (final e in structureOptions.entries) e.value: e.key,
     };
     final allSelected = roster.isNotEmpty && _selectedIds.length == roster.length;
+    final selectedStructure =
+        widget.structures.firstWhere((s) => s.id == _structureId);
 
     return AksharaDialogFormBody(
       children: [
@@ -272,12 +281,20 @@ class _BulkAssignFormState extends ConsumerState<_BulkAssignForm> {
           onChanged: (label) {
             final id = structureIdByLabel[label];
             if (id == null) return;
+            final structure = widget.structures.firstWhere((s) => s.id == id);
             setState(() {
               _structureId = id;
-              final structure =
-                  widget.structures.firstWhere((s) => s.id == id);
               _yearController.text = structure.academicYear;
             });
+            // Cap 67 — a class/section-bound structure resolves the roster
+            // FROM its binding; an unbound structure leaves the filters as
+            // the finance manager already had them (no surprise reset).
+            if (structure.isClassBound) {
+              ref.read(financeBulkAssignClassFilterProvider.notifier).state =
+                  structure.className;
+              ref.read(financeBulkAssignSectionFilterProvider.notifier).state =
+                  structure.sectionName;
+            }
             _notify();
           },
         ),
@@ -287,6 +304,19 @@ class _BulkAssignFormState extends ConsumerState<_BulkAssignForm> {
           controller: _yearController,
           required: true,
         ),
+        if (selectedStructure.isClassBound)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              selectedStructure.sectionName != null
+                  ? 'Bound to Class ${selectedStructure.className} · '
+                      'Section ${selectedStructure.sectionName}'
+                  : 'Bound to Class ${selectedStructure.className}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontStyle: FontStyle.italic,
+                  ),
+            ),
+          ),
         Material(
           child: DropdownMenu<String?>(
             key: QaTestKeys.financeBulkAssignClassField,

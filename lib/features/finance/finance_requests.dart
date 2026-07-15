@@ -11,6 +11,10 @@ class CreateFeeStructureRequest {
     this.installmentOptions = const [3, 4],
     this.status = FeeStructureStatus.active,
     this.academicYearId,
+    this.classId,
+    this.className,
+    this.sectionId,
+    this.sectionName,
   });
 
   final String name;
@@ -21,6 +25,15 @@ class CreateFeeStructureRequest {
   final List<int> installmentOptions;
   final FeeStructureStatus status;
   final String? academicYearId;
+
+  // Cap 67 — OPTIONAL class/section binding; either an id (resolves
+  // directly) or a label (resolved server-side against the academic year,
+  // same id-or-label contract as academicYearId/academicYear). Both omitted
+  // = unbound, exactly today's behaviour.
+  final String? classId;
+  final String? className;
+  final String? sectionId;
+  final String? sectionName;
 }
 
 /// Domain request to update an existing fee structure.
@@ -34,6 +47,11 @@ class UpdateFeeStructureRequest {
     this.installmentOptions,
     this.status,
     this.academicYearId,
+    this.classId,
+    this.className,
+    this.sectionId,
+    this.sectionName,
+    this.unbindClass = false,
   });
 
   final String? name;
@@ -44,6 +62,15 @@ class UpdateFeeStructureRequest {
   final List<int>? installmentOptions;
   final FeeStructureStatus? status;
   final String? academicYearId;
+
+  // Cap 67 — see CreateFeeStructureRequest. Null on ALL FOUR = binding left
+  // untouched. [unbindClass] explicitly clears an existing binding (mutually
+  // exclusive with the four fields above — set one or the other).
+  final String? classId;
+  final String? className;
+  final String? sectionId;
+  final String? sectionName;
+  final bool unbindClass;
 }
 
 /// Domain request to create a student fee account.
@@ -99,6 +126,9 @@ class AssignFeePlanRequest {
     this.studentName = '',
     this.admissionNumber = '',
     this.classLabel = '',
+    this.admissionDate,
+    this.prorationPolicyOverride,
+    this.prorationOverrideReason,
   });
 
   final String handoffId;
@@ -109,6 +139,17 @@ class AssignFeePlanRequest {
   final String studentName;
   final String admissionNumber;
   final String classLabel;
+
+  // Cap 73 (owner decision #5) — the admission/assignment reference date
+  // proration is computed against ('YYYY-MM-DD'); defaults server-side to
+  // today when omitted. [prorationPolicyOverride] lets an authorized user
+  // override the school's configured policy for THIS ONE assignment —
+  // [prorationOverrideReason] is REQUIRED whenever an override is set (the
+  // server rejects an override with no reason; both are preserved for audit
+  // alongside the acting user and timestamp).
+  final String? admissionDate;
+  final FeeProrationPolicy? prorationPolicyOverride;
+  final String? prorationOverrideReason;
 }
 
 /// PRC-A gap fix — bulk/class-wide fee-structure assignment
@@ -117,16 +158,29 @@ class AssignFeePlanRequest {
 /// per-student assignment math as [AssignFeePlanRequest]'s single-student
 /// flow; a student who already has this structure for this year is reported
 /// back as skipped, not treated as an error.
+///
+/// Cap 67 — [studentIds] may be EMPTY when the target fee structure is class/
+/// section-bound: the server then auto-resolves the roster FROM that
+/// binding. A non-empty list is always authoritative (explicit path
+/// unchanged).
 class BulkAssignFeePlanRequest {
   const BulkAssignFeePlanRequest({
     required this.feeStructureId,
     required this.academicYear,
     required this.studentIds,
+    this.admissionDate,
+    this.prorationPolicyOverride,
+    this.prorationOverrideReason,
   });
 
   final String feeStructureId;
   final String academicYear;
   final List<String> studentIds;
+
+  // Cap 73 — see AssignFeePlanRequest; applied uniformly across the batch.
+  final String? admissionDate;
+  final FeeProrationPolicy? prorationPolicyOverride;
+  final String? prorationOverrideReason;
 }
 
 /// Domain request to record a fee collection against an invoice.

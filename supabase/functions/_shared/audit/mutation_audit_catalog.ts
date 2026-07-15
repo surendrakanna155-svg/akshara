@@ -403,6 +403,29 @@ export const financeAudit = {
         `finance.fee_assignment.bulk_assigned:${schoolId}:${feeStructureId}:${nonce}`,
     },
   }),
+  // Cap 73 (owner decision #5) — an authorized user overrode the school's
+  // configured mid-year admission proration policy for ONE assignment.
+  // `emitMutationAudit`'s underlying audit row already stamps actor
+  // (claims.sub) + timestamp; `policy` + `reason` travel in the metadata/
+  // payload so the override is independently queryable (distinct eventType)
+  // rather than folded into the generic "assignment created" event.
+  feeProrationOverridden: (
+    assignmentId: string,
+    policy: string,
+    reason: string,
+  ): MutationAuditSpec => ({
+    ...workflow("feeProrationOverridden", "fee_assignment", assignmentId, {
+      assignmentId,
+      policy,
+      reason,
+    }),
+    domain: {
+      eventType: "finance.fee_assignment.proration_overridden",
+      payload: { assignmentId, policy, reason },
+      sourceModule: "finance",
+      idempotencyKey: `finance.fee_assignment.proration_overridden:${assignmentId}`,
+    },
+  }),
   // FIN-D3: cancellation now carries the mandatory reason for the register/trail.
   collectionCancelled: (collectionId: string, reason = ""): MutationAuditSpec => ({
     ...workflow("collectionCancelled", "finance_collection", collectionId, {

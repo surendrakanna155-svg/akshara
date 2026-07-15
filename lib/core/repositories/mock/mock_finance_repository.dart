@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../features/finance/finance_fee_proration.dart';
 import '../../../features/finance/finance_models.dart';
 import '../../../features/finance/finance_requests.dart';
 import '../../../features/finance/intelligence/finance_intelligence_models.dart';
@@ -1525,6 +1526,14 @@ class MockFinanceRepository implements FinanceRepository {
       categories: request.categories,
       status: request.status,
       installmentOptions: request.installmentOptions,
+      // Cap 67 — real class/section binding; mock has no separate class/
+      // section catalog to resolve a label against, so a label-only request
+      // is stored as-is (best-effort demo continuity — the real backend does
+      // the authoritative id-or-label resolution).
+      classId: request.classId,
+      className: request.className,
+      sectionId: request.sectionId,
+      sectionName: request.sectionName,
     );
     _store.feeStructures.insert(0, structure);
     return structure;
@@ -1540,6 +1549,24 @@ class MockFinanceRepository implements FinanceRepository {
         _store.feeStructures.indexWhere((item) => item.id == feeStructureId);
     if (index < 0) throw StateError('Fee structure not found: $feeStructureId');
     final current = _store.feeStructures[index];
+    // Cap 67 — same "undefined on all four = unchanged, unbindClass = clear"
+    // contract as the real backend's updateFeeStructure.
+    final bindingProvided = request.classId != null ||
+        request.className != null ||
+        request.sectionId != null ||
+        request.sectionName != null;
+    final classId = request.unbindClass
+        ? null
+        : (bindingProvided ? request.classId : current.classId);
+    final className = request.unbindClass
+        ? null
+        : (bindingProvided ? request.className : current.className);
+    final sectionId = request.unbindClass
+        ? null
+        : (bindingProvided ? request.sectionId : current.sectionId);
+    final sectionName = request.unbindClass
+        ? null
+        : (bindingProvided ? request.sectionName : current.sectionName);
     final updated = FinanceFeeStructure(
       id: current.id,
       name: request.name ?? current.name,
@@ -1550,6 +1577,10 @@ class MockFinanceRepository implements FinanceRepository {
       status: request.status ?? current.status,
       installmentOptions:
           request.installmentOptions ?? current.installmentOptions,
+      classId: classId,
+      className: className,
+      sectionId: sectionId,
+      sectionName: sectionName,
     );
     _store.feeStructures[index] = updated;
     return updated;
@@ -1643,6 +1674,13 @@ class MockFinanceRepository implements FinanceRepository {
     required RepositoryQuery query,
     required AssignFeePlanRequest request,
   }) async {
+    final structure = _store.findFeeStructure(request.feeStructureId);
+    final proration = _computeMockProration(
+      structure: structure,
+      admissionDate: request.admissionDate,
+      prorationPolicyOverride: request.prorationPolicyOverride,
+      prorationOverrideReason: request.prorationOverrideReason,
+    );
     final account = await createStudentAccount(
       query: query,
       request: CreateStudentAccountRequest(
@@ -1651,12 +1689,91 @@ class MockFinanceRepository implements FinanceRepository {
         classLabel: request.classLabel,
         feeStructureId: request.feeStructureId,
         installmentPlanId: request.installmentPlanId,
-        totalDue: _store.findFeeStructure(request.feeStructureId).totalAnnual,
+        totalDue: _formatFinanceAmount(proration.chargedAmount),
         installmentPlanLabel: _store.planLabel(request.installmentPlanId),
       ),
     );
-    _syncInvoiceForFeeAccount(account);
-    return account;
+    final withProration = _attachProration(account, proration);
+    _replaceStoredAccount(withProration);
+    _syncInvoiceForFeeAccount(withProration);
+    return withProration;
+  }
+
+  /// Cap 73 (owner decision #5) — mock-mode mid-year admission proration.
+  /// Uses the SAME month-basis calculation as the real backend
+  /// (finance_fee_proration.dart mirrors finance_fee_proration.ts exactly),
+  /// but has no real academic-years catalog to resolve bounds from — it
+  /// derives an April-start window from the structure's `academicYear` label
+  /// (best-effort, demo-only; falls back to full_annual, same as the server,
+  /// when that can't be parsed). Mock has no finance_settings-equivalent
+  /// wiring for ANY other setting either, so — unlike the real backend —
+  /// there is no "school-configured default" here: proration only ever
+  /// applies via an explicit per-call override, otherwise full_annual.
+  FeeProrationResult _computeMockProration({
+    required FinanceFeeStructure structure,
+    required String? admissionDate,
+    required FeeProrationPolicy? prorationPolicyOverride,
+    required String? prorationOverrideReason,
+  }) {
+    if (prorationPolicyOverride != null &&
+        (prorationOverrideReason == null ||
+            prorationOverrideReason.trim().isEmpty)) {
+      throw FeeProrationOverrideReasonRequiredError();
+    }
+    final policy = prorationPolicyOverride ?? FeeProrationPolicy.fullAnnual;
+    final referenceDate =
+        (admissionDate != null && admissionDate.isNotEmpty)
+            ? admissionDate
+            : DateTime.now().toIso8601String().substring(0, 10);
+    return computeFeeProration(
+      policy: policy,
+      annualAmount: _parseFinanceAmount(structure.totalAnnual),
+      referenceDate: referenceDate,
+      yearBounds: deriveAprilStartYearBounds(structure.academicYear),
+      isOverride: prorationPolicyOverride != null,
+      overrideReason: prorationOverrideReason,
+    );
+  }
+
+  FeeProrationInfo _toProrationInfo(FeeProrationResult result) {
+    return FeeProrationInfo(
+      policy: result.policy,
+      basis: 'month',
+      totalMonths: result.totalMonths,
+      monthsCharged: result.monthsCharged,
+      referenceDate: result.referenceDate,
+      annualAmount: _formatFinanceAmount(result.annualAmount),
+      chargedAmount: _formatFinanceAmount(result.chargedAmount),
+      isOverride: result.isOverride,
+      fallbackReason: result.fallbackReason,
+      overrideReason: result.overrideReason,
+    );
+  }
+
+  StudentFeeAccount _attachProration(
+    StudentFeeAccount account,
+    FeeProrationResult proration,
+  ) {
+    return StudentFeeAccount(
+      id: account.id,
+      studentName: account.studentName,
+      admissionNumber: account.admissionNumber,
+      classLabel: account.classLabel,
+      feeStructureName: account.feeStructureName,
+      totalDue: account.totalDue,
+      totalPaid: account.totalPaid,
+      balance: account.balance,
+      status: account.status,
+      lastPaymentDate: account.lastPaymentDate,
+      installmentPlan: account.installmentPlan,
+      feeAssignmentId: account.feeAssignmentId,
+      proration: _toProrationInfo(proration),
+    );
+  }
+
+  void _replaceStoredAccount(StudentFeeAccount account) {
+    final idx = _store.studentAccounts.indexWhere((a) => a.id == account.id);
+    if (idx >= 0) _store.studentAccounts[idx] = account;
   }
 
   // PRC-A gap fix — bulk/class-wide fee-structure assignment. The mock has no
@@ -1666,12 +1783,32 @@ class MockFinanceRepository implements FinanceRepository {
   // lookup — good enough for offline/demo continuity. The important,
   // certified skip-a-duplicate/abort-on-real-error semantics live server-side
   // and are proven in finance_assignments_repository_test.ts.
+  //
+  // Cap 67 — the real API auto-resolves an empty studentIds[] from the fee
+  // structure's class/section binding; the mock has no separate SIS roster
+  // to resolve against here, so an empty list is a clear, explicit error
+  // rather than a silent no-op — the app's own bulk-assign screen always
+  // resolves and sends a concrete list before calling this (see
+  // finance_bulk_assign_dialog.dart), so this path isn't exercised in
+  // practice, only guarded against.
   @override
   Future<BulkFeeAssignmentResult> bulkAssignFeeStructure({
     required RepositoryQuery query,
     required BulkAssignFeePlanRequest request,
   }) async {
+    if (request.studentIds.isEmpty) {
+      throw StateError(
+        'Bulk assign requires an explicit student list in mock/offline mode',
+      );
+    }
     final structure = _store.findFeeStructure(request.feeStructureId);
+    final proration = _computeMockProration(
+      structure: structure,
+      admissionDate: request.admissionDate,
+      prorationPolicyOverride: request.prorationPolicyOverride,
+      prorationOverrideReason: request.prorationOverrideReason,
+    );
+    final chargedAmountLabel = _formatFinanceAmount(proration.chargedAmount);
     final assigned = <StudentFeeAccount>[];
     final skipped = <BulkFeeAssignmentSkip>[];
 
@@ -1694,13 +1831,14 @@ class MockFinanceRepository implements FinanceRepository {
         admissionNumber: studentId,
         classLabel: '',
         feeStructureName: structure.name,
-        totalDue: structure.totalAnnual,
+        totalDue: chargedAmountLabel,
         totalPaid: '₹0',
-        balance: structure.totalAnnual,
+        balance: chargedAmountLabel,
         status: FeeAccountStatus.pending,
         lastPaymentDate: '—',
         installmentPlan: '',
         feeAssignmentId: accountId,
+        proration: _toProrationInfo(proration),
       );
       _store.studentAccounts.insert(0, account);
       _syncInvoiceForFeeAccount(account);
