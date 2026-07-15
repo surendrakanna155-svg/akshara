@@ -16,7 +16,7 @@ import {
   assertEquals,
   assertRejects,
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import type { TenantQueryClient } from "../tenant_db.ts";
+import type { PlatformQueryClient } from "../platform_db.ts";
 import {
   decryptLegacyBase64,
   encryptLegacyBase64,
@@ -45,12 +45,12 @@ function clearVaultKey() {
 }
 
 // deno-lint-ignore no-explicit-any
-function fakeDb(rows: any[] = []): TenantQueryClient {
+function fakeDb(rows: any[] = []): PlatformQueryClient {
   return {
     // deno-lint-ignore no-explicit-any require-await
     queryObject: async (_sql: string, _params?: unknown[]) => rows as any,
     // deno-lint-ignore no-explicit-any
-  } as any as TenantQueryClient;
+  } as any as PlatformQueryClient;
 }
 
 Deno.test("AES-256-GCM round-trip: encrypt then decrypt recovers the exact plaintext", async () => {
@@ -158,7 +158,7 @@ Deno.test("storeSecret writes AES-256-GCM ciphertext + key_version=2 when VAULT_
         }
         return [];
       },
-    } as unknown as TenantQueryClient;
+    } as unknown as PlatformQueryClient;
 
     const secret = await storeSecret(db, {
       providerCategory: "ai",

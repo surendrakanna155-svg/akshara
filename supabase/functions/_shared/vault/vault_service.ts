@@ -1,4 +1,10 @@
-import type { TenantQueryClient } from "../tenant_db.ts";
+// PRC-A caps 44-49 — these functions run exclusively on the platform-scoped
+// `erp_platform` connection (`withPlatformContext`, ../platform_db.ts) now,
+// never the tenant connection: `platform_secret_vault` / `platform_provider_
+// configs` / `platform_secret_audit_log` are platform/super-admin tables that
+// `erp_tenant` has (correctly) never had a grant on — see
+// `20260882000000_platform_db_role.sql` for the full defect + fix.
+import type { PlatformQueryClient } from "../platform_db.ts";
 import {
   decryptLegacyBase64,
   decryptSecretV2,
@@ -73,7 +79,7 @@ export async function decryptCredential(encrypted: string): Promise<string> {
 }
 
 export async function storeSecret(
-  db: TenantQueryClient,
+  db: PlatformQueryClient,
   input: {
     organizationId?: string;
     providerCategory: string;
@@ -106,7 +112,7 @@ export async function storeSecret(
 }
 
 export async function rotateSecret(
-  db: TenantQueryClient,
+  db: PlatformQueryClient,
   secretId: string,
   newCredential: string,
   actorUserId: string,
@@ -133,7 +139,7 @@ export async function rotateSecret(
 }
 
 export async function checkSecretHealth(
-  db: TenantQueryClient,
+  db: PlatformQueryClient,
   secretId: string,
 ): Promise<{ healthy: boolean; status: string }> {
   const rows = await db.queryObject<VaultSecretRow>(
@@ -166,7 +172,7 @@ export async function checkSecretHealth(
 }
 
 export async function resolveFailoverSecret(
-  db: TenantQueryClient,
+  db: PlatformQueryClient,
   secretId: string,
 ): Promise<VaultSecretRow | null> {
   const rows = await db.queryObject<VaultSecretRow>(
@@ -183,7 +189,7 @@ export async function resolveFailoverSecret(
 }
 
 export async function upsertProviderConfig(
-  db: TenantQueryClient,
+  db: PlatformQueryClient,
   input: {
     organizationId?: string;
     providerCategory: string;
@@ -256,7 +262,7 @@ export async function upsertProviderConfig(
 }
 
 export async function listProviderConfigs(
-  db: TenantQueryClient,
+  db: PlatformQueryClient,
   organizationId?: string,
 ): Promise<ProviderConfigRow[]> {
   return await db.queryObject<ProviderConfigRow>(

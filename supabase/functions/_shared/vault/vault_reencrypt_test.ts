@@ -14,11 +14,26 @@
 //     `failed` and left untouched, and does NOT abort the rest of the batch;
 //   - refuses to convert (fails every row, but drops nothing) when
 //     VAULT_ENC_KEY is unconfigured.
+//
+// PRC-A caps 44-49: also pins that the HTTP entrypoint
+// `handleReencryptVaultSecrets` runs on `withPlatformContext` (the new
+// `erp_platform` path), not `withTenantContext` — it is wired into
+// `control_center_router.ts` at `POST /control-center/vault/reencrypt` and
+// previously failed `permission denied` in production exactly like the
+// other vault handlers. Same DB-free wiring idiom as
+// `control_center/platform_providers_handlers_test.ts` (and
+// `qw4_control_center_route_contract_test.ts`): a config with no
+// `supabaseUrl` short-circuits session validation, and the 503 body's error
+// CODE (`PLATFORM_DB_NOT_CONFIGURED` vs `TENANT_DB_NOT_CONFIGURED`) proves
+// which connection path actually ran.
 
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import type { TenantQueryClient } from "../tenant_db.ts";
+import type { AppConfig } from "../config.ts";
+import type { AccessTokenClaims } from "../jwt.ts";
+import { signAccessToken } from "../jwt.ts";
+import type { PlatformQueryClient } from "../platform_db.ts";
 import { encryptLegacyBase64, encryptSecretV2, isV2Ciphertext } from "./vault_crypto.ts";
-import { reencryptLegacyVaultSecrets } from "./vault_reencrypt.ts";
+import { handleReencryptVaultSecrets, reencryptLegacyVaultSecrets } from "./vault_reencrypt.ts";
 import {
   VAULT_CURRENT_KEY_VERSION,
   VAULT_LEGACY_KEY_VERSION,
@@ -87,7 +102,7 @@ Deno.test("reencryptLegacyVaultSecrets converts every v1 row to v2 and is idempo
       legacyRow("s3", "sk-three"),
     ]);
 
-    const first = await reencryptLegacyVaultSecrets(db as unknown as TenantQueryClient);
+    const first = await reencryptLegacyVaultSecrets(db as unknown as PlatformQueryClient);
     assertEquals(first, { scanned: 3, converted: 3, skipped: 0, failed: 0, failedIds: [] });
     for (const row of db.rows) {
       assertEquals(row.key_version, VAULT_CURRENT_KEY_VERSION);
@@ -96,7 +111,7 @@ Deno.test("reencryptLegacyVaultSecrets converts every v1 row to v2 and is idempo
 
     // Second run: no rows left at key_version=1 — proves idempotency (the
     // SELECT itself finds nothing, so nothing is touched a second time).
-    const second = await reencryptLegacyVaultSecrets(db as unknown as TenantQueryClient);
+    const second = await reencryptLegacyVaultSecrets(db as unknown as PlatformQueryClient);
     assertEquals(second, { scanned: 0, converted: 0, skipped: 0, failed: 0, failedIds: [] });
   } finally {
     clearVaultKey();
@@ -110,7 +125,7 @@ Deno.test("reencryptLegacyVaultSecrets skips a row that is already v2-shaped des
     staleRow.encrypted_payload = await encryptSecretV2("sk-already-aes");
     const db = new FakeVaultDb([staleRow]);
 
-    const report = await reencryptLegacyVaultSecrets(db as unknown as TenantQueryClient);
+    const report = await reencryptLegacyVaultSecrets(db as unknown as PlatformQueryClient);
     assertEquals(report, { scanned: 1, converted: 0, skipped: 1, failed: 0, failedIds: [] });
     // Left exactly as it was — key_version is NOT force-bumped for a
     // ciphertext the routine didn't itself write.
@@ -129,7 +144,7 @@ Deno.test("reencryptLegacyVaultSecrets isolates a per-row failure (corrupt legac
     const good2 = legacyRow("s3", "sk-good-two");
     const db = new FakeVaultDb([good1, corrupt, good2]);
 
-    const report = await reencryptLegacyVaultSecrets(db as unknown as TenantQueryClient);
+    const report = await reencryptLegacyVaultSecrets(db as unknown as PlatformQueryClient);
     assertEquals(report.scanned, 3);
     assertEquals(report.converted, 2);
     assertEquals(report.failed, 1);
@@ -152,7 +167,7 @@ Deno.test("reencryptLegacyVaultSecrets fails every row (never drops data) when V
   clearVaultKey();
   const db = new FakeVaultDb([legacyRow("s1", "sk-one"), legacyRow("s2", "sk-two")]);
 
-  const report = await reencryptLegacyVaultSecrets(db as unknown as TenantQueryClient);
+  const report = await reencryptLegacyVaultSecrets(db as unknown as PlatformQueryClient);
   assertEquals(report.scanned, 2);
   assertEquals(report.converted, 0);
   assertEquals(report.failed, 2);
@@ -161,4 +176,62 @@ Deno.test("reencryptLegacyVaultSecrets fails every row (never drops data) when V
   for (const row of db.rows) {
     assertEquals(row.key_version, VAULT_LEGACY_KEY_VERSION);
   }
+});
+
+// ── handleReencryptVaultSecrets HTTP entrypoint — pins the platform wiring ──
+
+const JWT_SECRET = "test-jwt-secret-minimum-32-characters-long";
+const HANDLER_CONFIG = { jwtSecret: JWT_SECRET } as AppConfig;
+
+function reencryptCallerClaims(over: Partial<AccessTokenClaims> = {}): AccessTokenClaims {
+  return {
+    sub: "u1",
+    tenant_id: "org-1",
+    organization_id: "org-1",
+    school_id: null,
+    role: "superAdmin",
+    role_slugs: ["superAdmin"],
+    primary_role: "superAdmin",
+    permissions: ["managePlatformVault"],
+    permissions_version: 1,
+    scope: "organization",
+    school_group_id: null,
+    student_id: null,
+    child_ids: [],
+    session_id: "s1",
+    ...over,
+  };
+}
+
+async function reencryptRequest(over: Partial<AccessTokenClaims> = {}): Promise<Request> {
+  const token = await signAccessToken(JWT_SECRET, reencryptCallerClaims(over), 900);
+  return new Request("https://x/control-center/vault/reencrypt", {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}` },
+  });
+}
+
+Deno.test("handleReencryptVaultSecrets runs on withPlatformContext (503 PLATFORM_DB_NOT_CONFIGURED, not tenant)", async () => {
+  const res = await handleReencryptVaultSecrets(await reencryptRequest(), HANDLER_CONFIG);
+  assertEquals(res.status, 503);
+  const env = await res.json();
+  assertEquals(env.error.code, "PLATFORM_DB_NOT_CONFIGURED");
+});
+
+Deno.test("handleReencryptVaultSecrets denies (403) a school-scope token even though it holds managePlatformVault", async () => {
+  const res = await handleReencryptVaultSecrets(
+    await reencryptRequest({ scope: "school", school_id: "school-1" }),
+    HANDLER_CONFIG,
+  );
+  assertEquals(res.status, 403);
+  const env = await res.json();
+  assertEquals(env.error.code, "FORBIDDEN");
+});
+
+Deno.test("handleReencryptVaultSecrets still denies (403) a caller lacking managePlatformVault (route gate unchanged)", async () => {
+  const res = await handleReencryptVaultSecrets(
+    await reencryptRequest({ permissions: ["viewAdminHub"] }),
+    HANDLER_CONFIG,
+  );
+  assertEquals(res.status, 403);
 });

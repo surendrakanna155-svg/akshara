@@ -15,21 +15,31 @@
 //     ciphertext. Nothing is deleted; a failed row is left exactly as it was.
 //
 // `reencryptLegacyVaultSecrets` is the pure, DB-shaped core (same
-// `TenantQueryClient` seam as the rest of `vault_service.ts`, so it is
+// `PlatformQueryClient` seam as the rest of `vault_service.ts`, so it is
 // testable with the repo's fake-DB idiom with no live database).
 // `handleReencryptVaultSecrets` is a small HTTP entrypoint mirroring the
 // existing `managePlatformVault` handlers in
 // `../control_center/platform_providers_handlers.ts` (same
-// authenticateRequest → requirePermission → withTenantContext shape) so it
-// can be wired into a router by whoever owns that file — see the
-// STOP note in the delivery report; this task builds it but does not wire it
-// in, and does NOT execute it against any live database.
+// authenticateRequest → requirePermission → withPlatformContext shape).
+//
+// PRC-A caps 44-49: this handler IS wired into the router
+// (`control_center_router.ts` → POST /control-center/vault/reencrypt`) — the
+// header note above about it not being wired was stale. It ran on
+// `withTenantContext` (the `erp_tenant` connection), which has no grant on
+// `platform_secret_vault`, so it always failed `permission denied` in
+// production exactly like the other vault handlers; rewired to
+// `withPlatformContext` here.
 
 import type { AppConfig } from "../config.ts";
 import { envelope, errorEnvelope, jsonResponse } from "../http.ts";
 import { authenticateRequest, requirePermission } from "../permission_middleware.ts";
-import { TenantDbNotConfiguredError, withTenantContext, type TenantQueryClient } from "../tenant_db.ts";
-import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
+import {
+  PlatformDbNotConfiguredError,
+  platformDbNotConfiguredResponse,
+  PlatformScopeDeniedError,
+  type PlatformQueryClient,
+  withPlatformContext,
+} from "../platform_db.ts";
 import { decryptLegacyBase64, encryptSecretV2, isV2Ciphertext } from "./vault_crypto.ts";
 import { VAULT_CURRENT_KEY_VERSION, VAULT_LEGACY_KEY_VERSION, type VaultSecretRow } from "./vault_service.ts";
 
@@ -49,7 +59,7 @@ export interface VaultReencryptionReport {
  * touches another).
  */
 export async function reencryptLegacyVaultSecrets(
-  db: TenantQueryClient,
+  db: PlatformQueryClient,
 ): Promise<VaultReencryptionReport> {
   const rows = await db.queryObject<VaultSecretRow>(
     `SELECT * FROM platform_secret_vault WHERE key_version = $1`,
@@ -104,9 +114,8 @@ export async function reencryptLegacyVaultSecrets(
 /**
  * HTTP entrypoint for the routine above, shaped exactly like the existing
  * `managePlatformVault` handlers (`handleRotateVaultSecret` /
- * `handleCheckVaultHealth` in `platform_providers_handlers.ts`) so it can be
- * wired into a router with the same one-line pattern those already use.
- * NOT wired into any router by this change — see delivery report.
+ * `handleCheckVaultHealth` in `platform_providers_handlers.ts`) — wired into
+ * `control_center_router.ts` at `POST /control-center/vault/reencrypt`.
  */
 export async function handleReencryptVaultSecrets(
   req: Request,
@@ -118,12 +127,13 @@ export async function handleReencryptVaultSecrets(
   if (denied) return denied;
 
   try {
-    const report = await withTenantContext(config, auth.claims, (db) =>
+    const report = await withPlatformContext(config, auth.claims, (db) =>
       reencryptLegacyVaultSecrets(db)
     );
     return jsonResponse(envelope(report));
   } catch (error) {
-    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    if (error instanceof PlatformDbNotConfiguredError) return platformDbNotConfiguredResponse(error);
+    if (error instanceof PlatformScopeDeniedError) return errorEnvelope("FORBIDDEN", error.message, 403);
     return errorEnvelope("INTERNAL_ERROR", String(error), 500);
   }
 }
