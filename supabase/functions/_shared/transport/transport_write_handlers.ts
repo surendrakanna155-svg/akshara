@@ -17,6 +17,10 @@ import type { TenantQueryClient } from "../tenant_db.ts";
 import { MAX_BULK_ITEMS } from "../http.ts";
 import { resolveStudentId } from "../sis/sis_student_resolver.ts";
 import { assignFeeStructure } from "../finance/finance_assignments_repository.ts";
+import {
+  cancelInvoice,
+  InvalidInvoiceTransitionError,
+} from "../finance/finance_invoices_repository.ts";
 
 const writeStore = createEntityWriteStore("transport_entities", "Transport");
 const { runWrite } = createModuleWriteHandlers("manageTransport");
@@ -334,47 +338,150 @@ export async function handleTransferStudentTransport(
   });
 }
 
-/** DELETE /transport/allocations/{id} — remove a student's transport allocation. */
+/**
+ * DELETE /transport/allocations/{id} — STOP a student's transport.
+ *
+ * PRC-A caps 4/9 (P0 — real-money over-billing + history loss). This previously
+ * hard-DELETED the allocation row and made NO finance call, so stopping transport
+ * (a) destroyed the enrolment history and (b) left the student's transport invoice
+ * open — the school kept billing a child who no longer rides. It is the exact
+ * inverse of the TRN-9 income seam (handleRaiseTransportDemand), so it now
+ * reverses it:
+ *   1. SOFT-STOP: the allocation row is PRESERVED and marked stopped with an
+ *      effective date (optional `effectiveDate`, defaults to today) — history and
+ *      audit survive, and the read side still sees the row as un-enrolled.
+ *   2. REVOKE THE FEE: every demand raised for this allocation has its invoice
+ *      cancelled via Finance's own cancelInvoice — which (since the PRC-A lockstep
+ *      fix) also releases the still-unpaid remainder from the student's account,
+ *      so they stop being billed AND stop reading as a defaulter.
+ *   3. RELEASE THE DEDUPE KEY: the demand's `dedupeKey` is moved to
+ *      `revokedDedupeKey`. transport_entities_demand_dedupe_key_uniq is a PARTIAL
+ *      index (`WHERE entity_type='demand' AND payload ? 'dedupeKey'`) and the
+ *      raise path dedupes on that same field — so leaving it in place would make a
+ *      later re-enrolment on the same route/year/term return the OLD demand as
+ *      "idempotent" and raise NO new fee (a free ride). Renaming the key drops the
+ *      row out of the index and out of the dedupe read while KEEPING the history.
+ *
+ * An already-PAID transport invoice is deliberately NOT cancelled: that is real
+ * money the parent paid, and reversing it is a Finance refund decision, not a
+ * transport side effect. Such invoices are reported back in `skippedInvoices`
+ * rather than silently ignored.
+ */
+export interface StopStudentTransportResult {
+  stopped: Record<string, unknown>;
+  cancelledInvoices: string[];
+  skippedInvoices: Array<{ invoiceId: string; reason: string }>;
+}
+
+/**
+ * The load-bearing half of {@link handleRemoveStudentTransport}, exported so the
+ * revoke + soft-stop + dedupe-release contract is directly testable without the
+ * handler's auth/tenant plumbing (same pattern as {@link insertDemandIdempotent}).
+ */
+export async function stopStudentTransport(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  allocationId: string,
+  options: { effectiveDate: string; actorId: string | null },
+): Promise<StopStudentTransportResult> {
+  const allocation = await writeStore.find(
+    db,
+    organizationId,
+    schoolId,
+    "allocation",
+    allocationId,
+  );
+  if (!allocation) {
+    throw new WriteNotFoundError(`Transport allocation not found: ${allocationId}`);
+  }
+
+  // ── Revoke the transport fee raised for this allocation ────────────────────
+  const demands = await writeStore.findAll(db, organizationId, schoolId, "demand");
+  const linked = demands.filter((d) =>
+    String(d.allocationId ?? "") === allocationId && d.cancelledAt == null
+  );
+  const cancelledInvoices: string[] = [];
+  const skippedInvoices: Array<{ invoiceId: string; reason: string }> = [];
+
+  for (const demand of linked) {
+    const invoiceId = String(demand.invoiceId ?? "");
+    if (invoiceId) {
+      try {
+        await cancelInvoice(db, organizationId, schoolId, invoiceId);
+        cancelledInvoices.push(invoiceId);
+      } catch (error) {
+        // Paid/already-cancelled is an EXPECTED outcome, not a failure — and it is
+        // thrown JS-side (before any failing statement), so the surrounding
+        // transaction stays clean and needs no savepoint.
+        if (error instanceof InvalidInvoiceTransitionError) {
+          skippedInvoices.push({ invoiceId, reason: error.message });
+        } else {
+          throw error;
+        }
+      }
+    }
+    const { dedupeKey: revokedKey, ...rest } = demand;
+    await writeStore.replace(db, organizationId, schoolId, "demand", String(demand.id), {
+      ...rest,
+      revokedDedupeKey: revokedKey ?? null,
+      cancelledAt: new Date().toISOString(),
+      cancelledEffectiveDate: options.effectiveDate,
+      cancelledBy: options.actorId,
+    });
+  }
+
+  // ── Soft-stop the allocation (row PRESERVED) ───────────────────────────────
+  const stopped = {
+    ...allocation,
+    routeId: "",
+    routeName: "",
+    busNumber: "",
+    transportEnrolled: false,
+    stoppedAt: options.effectiveDate,
+    stoppedBy: options.actorId,
+  };
+  await writeStore.replace(db, organizationId, schoolId, "allocation", allocationId, stopped);
+
+  return { stopped, cancelledInvoices, skippedInvoices };
+}
+
 export async function handleRemoveStudentTransport(
   req: Request,
   config: AppConfig,
 ): Promise<Response> {
   return await runWrite(req, config, async (ctx) => {
-    const { db, organizationId, schoolId, claims, req: request } = ctx;
+    const { db, organizationId, schoolId, body, claims, req: request } = ctx;
     const allocationId = pathSegment(request, 2);
     if (!allocationId) {
       throw new WriteNotFoundError("Allocation id is required");
     }
-    const allocation = await writeStore.find(
+    const effectiveDate = isoDateField(body, "effectiveDate", "effective_date") ??
+      new Date().toISOString().slice(0, 10);
+
+    const { stopped, cancelledInvoices, skippedInvoices } = await stopStudentTransport(
       db,
       organizationId,
       schoolId,
-      "allocation",
       allocationId,
+      { effectiveDate, actorId: claims.sub ?? null },
     );
-    if (!allocation) {
-      throw new WriteNotFoundError(`Transport allocation not found: ${allocationId}`);
-    }
-    await writeStore.remove(db, organizationId, schoolId, "allocation", allocationId);
-    // Clear the route association so the cleared allocation reads as "unassigned".
-    // Also drop the SIS transport-flag so the Student-360 read stops surfacing
-    // the student as transport-enrolled.
-    const cleared = {
-      ...allocation,
-      routeId: "",
-      routeName: "",
-      busNumber: "",
-      transportEnrolled: false,
-    };
+
     await emitMutationAudit(
       db,
       claims,
       moduleEntityAudit("transport.allocation.removed", "transport_allocation", allocationId, {
         removed: true,
+        effectiveDate,
+        cancelledInvoices,
+        skippedInvoices: skippedInvoices.map((s) => s.invoiceId),
       }),
       request,
     );
-    return { payload: cleared, status: 200 };
+    return {
+      payload: { ...stopped, cancelledInvoices, skippedInvoices },
+      status: 200,
+    };
   });
 }
 
