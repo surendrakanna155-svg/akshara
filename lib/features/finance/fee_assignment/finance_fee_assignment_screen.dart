@@ -18,6 +18,7 @@ import '../integration/finance_admissions_handoff_provider.dart';
 import '../invoices/finance_invoice_management_section.dart';
 import '../widgets/finance_handoff_queue.dart';
 import '../widgets/finance_module_scaffold.dart';
+import 'finance_bulk_assign_dialog.dart';
 import 'finance_fee_assignment_provider.dart';
 import '../../../core/errors/error_text.dart';
 
@@ -51,7 +52,26 @@ class FinanceFeeAssignmentScreen extends ConsumerWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const AksharaSectionHeader(title: 'Admissions handoff queue'),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Expanded(
+                child: AksharaSectionHeader(title: 'Admissions handoff queue'),
+              ),
+              // PRC-A gap fix — every assignment used to be one student at a
+              // time via this handoff queue; a real school assigning a fee
+              // structure to a whole class needed this bulk path.
+              AksharaManageAction(
+                permission: Permission.manageFinance,
+                child: OutlinedButton.icon(
+                  key: QaTestKeys.financeBulkAssignButton,
+                  onPressed: () => showFinanceBulkAssignDialog(context, ref),
+                  icon: const Icon(Icons.groups_outlined, size: 18),
+                  label: const Text('Bulk assign'),
+                ),
+              ),
+            ],
+          ),
           Text(
             'Assign fee structure and generate student fee account',
             style: context.aksharaText.bodyMedium,

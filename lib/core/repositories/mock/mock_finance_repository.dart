@@ -24,6 +24,13 @@ String _plainNumber(double value) =>
 class MockFinanceRepository implements FinanceRepository {
   final _FinanceMutableStore _store = _FinanceMutableStore();
 
+  // PRC-A gap fix — bulk/class-wide assignment: tracks "$studentId|
+  // $feeStructureId|$academicYear" tuples already bulk-assigned in this mock
+  // session so a repeat call reports the same skip-a-duplicate semantics as
+  // the real backend (mock has no per-student-id-keyed account row to check
+  // against directly — see bulkAssignFeeStructure below).
+  final Set<String> _bulkAssignedKeys = {};
+
   // FIN-R1..R5 — fee-recovery CRM in-memory state.
   final List<PromiseToPay> _promises = [
     const PromiseToPay(
@@ -1650,6 +1657,61 @@ class MockFinanceRepository implements FinanceRepository {
     );
     _syncInvoiceForFeeAccount(account);
     return account;
+  }
+
+  // PRC-A gap fix — bulk/class-wide fee-structure assignment. The mock has no
+  // per-student-id-keyed account row (accounts are display-string based, not
+  // UUID-joined to a real student), so duplicate detection here is a local
+  // (studentId, feeStructureId, academicYear) set rather than a real DB
+  // lookup — good enough for offline/demo continuity. The important,
+  // certified skip-a-duplicate/abort-on-real-error semantics live server-side
+  // and are proven in finance_assignments_repository_test.ts.
+  @override
+  Future<BulkFeeAssignmentResult> bulkAssignFeeStructure({
+    required RepositoryQuery query,
+    required BulkAssignFeePlanRequest request,
+  }) async {
+    final structure = _store.findFeeStructure(request.feeStructureId);
+    final assigned = <StudentFeeAccount>[];
+    final skipped = <BulkFeeAssignmentSkip>[];
+
+    for (final studentId in request.studentIds) {
+      final key =
+          '$studentId|${request.feeStructureId}|${request.academicYear}';
+      if (!_bulkAssignedKeys.add(key)) {
+        skipped.add(
+          BulkFeeAssignmentSkip(
+            studentId: studentId,
+            reason: 'already_assigned',
+          ),
+        );
+        continue;
+      }
+      final accountId = _store.nextId('acct_');
+      final account = StudentFeeAccount(
+        id: accountId,
+        studentName: 'Student $studentId',
+        admissionNumber: studentId,
+        classLabel: '',
+        feeStructureName: structure.name,
+        totalDue: structure.totalAnnual,
+        totalPaid: '₹0',
+        balance: structure.totalAnnual,
+        status: FeeAccountStatus.pending,
+        lastPaymentDate: '—',
+        installmentPlan: '',
+        feeAssignmentId: accountId,
+      );
+      _store.studentAccounts.insert(0, account);
+      _syncInvoiceForFeeAccount(account);
+      assigned.add(account);
+    }
+
+    return BulkFeeAssignmentResult(
+      assigned: assigned,
+      skipped: skipped,
+      total: request.studentIds.length,
+    );
   }
 
   // #6 — mirrors the real cancelAssignment: closes the account (mock has no

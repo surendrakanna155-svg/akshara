@@ -364,6 +364,38 @@ class FinanceMapper {
     );
   }
 
+  /// PRC-A gap fix — maps the `POST /finance/fee-assignments/bulk` report.
+  /// Each `assigned` entry is the exact same [StudentFeeAccountDto] shape the
+  /// single-assign flow returns (real name/admission/class come straight from
+  /// the server — no client-side correlation needed); `skipped` carries the
+  /// raw studentId + reason (a "why" only, not a resolvable display record).
+  BulkFeeAssignmentResult toBulkFeeAssignmentResult(
+    BulkFeeAssignmentResultDto dto,
+  ) {
+    final raw = dto.raw;
+    final assignedRaw = raw['assigned'] as List<dynamic>? ?? const [];
+    final skippedRaw = raw['skipped'] as List<dynamic>? ?? const [];
+    final assigned = [
+      for (final item in assignedRaw)
+        toStudentAccount(
+          StudentFeeAccountDto.fromJson(item as Map<String, dynamic>),
+        ),
+    ];
+    final skipped = [
+      for (final item in skippedRaw)
+        BulkFeeAssignmentSkip(
+          studentId:
+              (item as Map<String, dynamic>)['studentId'] as String? ?? '',
+          reason: item['reason'] as String? ?? '',
+        ),
+    ];
+    return BulkFeeAssignmentResult(
+      assigned: assigned,
+      skipped: skipped,
+      total: raw['total'] as int? ?? assigned.length + skipped.length,
+    );
+  }
+
   List<InstallmentPlan> toInstallmentPlans(
     FinanceFeeAssignmentResponseDto dto,
   ) {

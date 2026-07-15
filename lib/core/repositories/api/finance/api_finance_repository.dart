@@ -518,6 +518,16 @@ class ApiFinanceRepository implements FinanceRepository {
       _remote.assignFeePlan(query: query, request: request);
 
   @override
+  Future<BulkFeeAssignmentResult> bulkAssignFeeStructure({
+    required RepositoryQuery query,
+    required BulkAssignFeePlanRequest request,
+  }) async {
+    final dto =
+        await _remote.bulkAssignFeeStructure(query: query, request: request);
+    return _mapper.toBulkFeeAssignmentResult(dto);
+  }
+
+  @override
   Future<StudentFeeAccount> cancelFeeAssignment({
     required RepositoryQuery query,
     required String feeAssignmentId,

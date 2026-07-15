@@ -21,6 +21,7 @@ import {
 import { handleStudentLedger } from "./finance_ledger_handlers.ts";
 import {
   handleAssignFeePlan,
+  handleBulkAssignFeeStructures,
   handleCancelFeeAssignment,
   handleCreateFeeAssignment,
   handleGetFeeAssignment,
@@ -186,6 +187,12 @@ export function matchFinanceRoute(
   }
   if (path === "/finance/fee-assignments" && method === "POST") {
     return { handler: handleCreateFeeAssignment, args: [] };
+  }
+
+  // PRC-A gap fix: bulk/class-wide assignment — a literal path checked BEFORE
+  // the /fee-assignments/:id regexes below so "bulk" is never treated as an id.
+  if (path === "/finance/fee-assignments/bulk" && method === "POST") {
+    return { handler: handleBulkAssignFeeStructures, args: [] };
   }
   if (path === "/finance/fee-assignment/assign" && method === "POST") {
     return { handler: handleAssignFeePlan, args: [] };

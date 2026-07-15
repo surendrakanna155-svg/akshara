@@ -111,6 +111,24 @@ class AssignFeePlanRequest {
   final String classLabel;
 }
 
+/// PRC-A gap fix — bulk/class-wide fee-structure assignment
+/// (`POST /finance/fee-assignments/bulk`). Applies [feeStructureId] +
+/// [academicYear] across every id in [studentIds], reusing the exact same
+/// per-student assignment math as [AssignFeePlanRequest]'s single-student
+/// flow; a student who already has this structure for this year is reported
+/// back as skipped, not treated as an error.
+class BulkAssignFeePlanRequest {
+  const BulkAssignFeePlanRequest({
+    required this.feeStructureId,
+    required this.academicYear,
+    required this.studentIds,
+  });
+
+  final String feeStructureId;
+  final String academicYear;
+  final List<String> studentIds;
+}
+
 /// Domain request to record a fee collection against an invoice.
 class CreateCollectionRequest {
   const CreateCollectionRequest({

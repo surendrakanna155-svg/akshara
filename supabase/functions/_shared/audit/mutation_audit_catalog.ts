@@ -378,6 +378,31 @@ export const financeAudit = {
       idempotencyKey: `finance.fee_assignment.cancelled:${assignmentId}`,
     },
   }),
+  // PRC-A gap fix — a bulk/class-wide fee-structure assignment ran (summary of
+  // how many assigned vs skipped-as-duplicate). Mirrors lateFeesAccrued's batch
+  // shape: there is no single entity id for "assigned N students", so
+  // schoolId + feeStructureId + a call-scoped nonce keys idempotency instead.
+  feeAssignmentBulkAssigned: (
+    schoolId: string,
+    feeStructureId: string,
+    assignedCount: number,
+    skippedCount: number,
+    nonce: string,
+  ): MutationAuditSpec => ({
+    ...workflow("financeFeeAssignmentBulkAssigned", "finance_school", schoolId, {
+      schoolId,
+      feeStructureId,
+      assignedCount,
+      skippedCount,
+    }),
+    domain: {
+      eventType: "finance.fee_assignment.bulk_assigned",
+      payload: { schoolId, feeStructureId, assignedCount, skippedCount },
+      sourceModule: "finance",
+      idempotencyKey:
+        `finance.fee_assignment.bulk_assigned:${schoolId}:${feeStructureId}:${nonce}`,
+    },
+  }),
   // FIN-D3: cancellation now carries the mandatory reason for the register/trail.
   collectionCancelled: (collectionId: string, reason = ""): MutationAuditSpec => ({
     ...workflow("collectionCancelled", "finance_collection", collectionId, {

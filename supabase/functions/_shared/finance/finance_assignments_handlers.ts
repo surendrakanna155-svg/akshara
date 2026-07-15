@@ -16,6 +16,7 @@ import {
   HandoffNotReadyError,
   assignFeeStructure,
   assignFromHandoff,
+  bulkAssignFeeStructure,
   cancelAssignment,
   getAssignment,
   getStudentAccount,
@@ -224,6 +225,108 @@ export async function handleCreateFeeAssignment(
     if (error instanceof Error && error.message.startsWith("VALIDATION:")) {
       return errorEnvelope("VALIDATION_ERROR", error.message.slice(11), 422);
     }
+    throw error;
+  }
+}
+
+/**
+ * Client contract: POST /finance/fee-assignments/bulk (PRC-A gap fix — a real
+ * school assigning a fee structure to a whole class had no way to do it
+ * without repeating the single-assign flow per student). Body:
+ * `{ feeStructureId, academicYear, studentIds[] }` (snake/camel accepted, like
+ * every other handler here). manageFinance-gated, same as the single-assign
+ * paths above.
+ *
+ * Partial-failure contract: a student who already has this exact structure
+ * for this academic year is SKIPPED and reported in `skipped` — not a 409 —
+ * because that is the common, expected shape of a class-wide call, not an
+ * error. Any other failure (bad fee structure id, etc.) aborts the whole
+ * batch via the usual error mapping below.
+ */
+export async function handleBulkAssignFeeStructures(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requirePermission(auth.claims, "manageFinance") ??
+    requireSchoolOperationalScope(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) {
+    return errorEnvelope("VALIDATION_ERROR", "Invalid JSON body", 422);
+  }
+
+  const feeStructureId = optionalStr(body, "fee_structure_id", "feeStructureId");
+  const academicYear = optionalStr(body, "academic_year", "academicYear");
+  if (!feeStructureId || !academicYear) {
+    return errorEnvelope(
+      "VALIDATION_ERROR",
+      "fee_structure_id and academic_year are required",
+      422,
+    );
+  }
+
+  const rawStudentIds = body["student_ids"] ?? body["studentIds"];
+  if (!Array.isArray(rawStudentIds) || rawStudentIds.length === 0) {
+    return errorEnvelope(
+      "VALIDATION_ERROR",
+      "student_ids must be a non-empty array",
+      422,
+    );
+  }
+  const studentIds = rawStudentIds.map((id) => String(id));
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const result = await runTenant(config, auth.claims, async (db) => {
+      const bulkResult = await bulkAssignFeeStructure(db, orgId, schoolId, {
+        feeStructureId,
+        academicYear,
+        studentIds,
+        assignedBy: auth.claims.sub,
+      });
+      // Only audit when something actually assigned — an all-duplicate pass
+      // (every student already had this structure) changed nothing, mirroring
+      // FIN-D5's "a zero pass is a read" idiom.
+      if (bulkResult.assigned.length > 0) {
+        await emitMutationAudit(
+          db,
+          auth.claims,
+          financeAudit.feeAssignmentBulkAssigned(
+            schoolId,
+            feeStructureId,
+            bulkResult.assigned.length,
+            bulkResult.skipped.length,
+            `${Date.now()}`,
+          ),
+          req,
+        );
+      }
+      return bulkResult;
+    });
+
+    return jsonResponse(
+      envelope({
+        assigned: result.assigned.map(studentAccountToApi),
+        skipped: result.skipped.map((s) => ({
+          studentId: s.studentId,
+          reason: s.reason,
+        })),
+        total: result.total,
+      }),
+      { status: 201 },
+    );
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    const mapped = mapAssignmentError(error);
+    if (mapped) return mapped;
     throw error;
   }
 }

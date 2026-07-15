@@ -568,6 +568,26 @@ abstract final class QaTestKeys {
   static const financeFeeAccountCreatedSnackbar =
       ValueKey<String>('finance_fee_account_created_snackbar');
 
+  // PRC-A gap fix — bulk/class-wide fee-structure assignment.
+  static const financeBulkAssignButton =
+      ValueKey<String>('finance_bulk_assign_button');
+  static const financeBulkAssignStructureField =
+      ValueKey<String>('finance_bulk_assign_structure_field');
+  static const financeBulkAssignYearField =
+      ValueKey<String>('finance_bulk_assign_year_field');
+  static const financeBulkAssignClassField =
+      ValueKey<String>('finance_bulk_assign_class_field');
+  static const financeBulkAssignSelectAllCheckbox =
+      ValueKey<String>('finance_bulk_assign_select_all_checkbox');
+  static ValueKey<String> financeBulkAssignStudentCheckbox(String studentId) =>
+      ValueKey<String>('finance_bulk_assign_student_checkbox_$studentId');
+  static const financeBulkAssignSubmitButton =
+      ValueKey<String>('finance_bulk_assign_submit_button');
+  static const financeBulkAssignReportDoneButton =
+      ValueKey<String>('finance_bulk_assign_report_done_button');
+  static const financeBulkAssignSuccessSnackbar =
+      ValueKey<String>('finance_bulk_assign_success_snackbar');
+
   static const financeRecordCollectionButton =
       ValueKey<String>('finance_record_collection_button');
 

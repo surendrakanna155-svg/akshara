@@ -11,6 +11,8 @@ abstract final class FinanceApiPaths {
   static const String feeAssignments = '$base/fee-assignments';
   static const String studentAccounts = '$base/student-accounts';
   static const String feeAssignmentAssign = '$base/fee-assignment/assign';
+  // PRC-A gap fix — bulk/class-wide fee-structure assignment.
+  static const String feeAssignmentsBulk = '$feeAssignments/bulk';
   static const String receipts = '$base/receipts';
   static const String defaulters = '$base/defaulters';
   static const String refunds = '$base/refunds';

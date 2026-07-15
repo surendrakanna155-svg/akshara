@@ -355,6 +355,13 @@ class HybridFinanceRepository implements FinanceRepository {
       _api.assignFeePlan(query: query, request: request);
 
   @override
+  Future<BulkFeeAssignmentResult> bulkAssignFeeStructure({
+    required RepositoryQuery query,
+    required BulkAssignFeePlanRequest request,
+  }) =>
+      _api.bulkAssignFeeStructure(query: query, request: request);
+
+  @override
   Future<StudentFeeAccount> cancelFeeAssignment({
     required RepositoryQuery query,
     required String feeAssignmentId,

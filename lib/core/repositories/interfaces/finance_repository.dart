@@ -206,6 +206,16 @@ abstract class FinanceRepository {
     required AssignFeePlanRequest request,
   });
 
+  /// PRC-A gap fix — bulk/class-wide fee-structure assignment (every
+  /// assignment used to be one student at a time via the admissions-handoff
+  /// queue). Reuses the same per-student assignment math as [assignFeePlan];
+  /// a student who already has this exact structure for this academic year is
+  /// reported in the result's `skipped` list, not treated as an error.
+  Future<BulkFeeAssignmentResult> bulkAssignFeeStructure({
+    required RepositoryQuery query,
+    required BulkAssignFeePlanRequest request,
+  });
+
   /// #6 — PATCH .../fee-assignments/:id/cancel. Cancels an active fee
   /// assignment (assignment_status → cancelled) and closes its linked student
   /// account; returns the updated account. manageFinance-gated.

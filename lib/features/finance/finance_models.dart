@@ -221,6 +221,36 @@ class StudentFeeAccount {
   final String? feeAssignmentId;
 }
 
+/// PRC-A gap fix — outcome of a bulk/class-wide fee-structure assignment
+/// (`POST /finance/fee-assignments/bulk`). [assigned] mirrors the
+/// single-assign [StudentFeeAccount] shape for every student the assignment
+/// actually succeeded for; [skipped] reports students who already had this
+/// exact structure for this academic year — NOT an error, since a bulk call
+/// over a whole class routinely includes some already-assigned students.
+@immutable
+class BulkFeeAssignmentResult {
+  const BulkFeeAssignmentResult({
+    required this.assigned,
+    required this.skipped,
+    required this.total,
+  });
+
+  final List<StudentFeeAccount> assigned;
+  final List<BulkFeeAssignmentSkip> skipped;
+  final int total;
+}
+
+@immutable
+class BulkFeeAssignmentSkip {
+  const BulkFeeAssignmentSkip({
+    required this.studentId,
+    required this.reason,
+  });
+
+  final String studentId;
+  final String reason;
+}
+
 @immutable
 class FeeAssignmentDraft {
   const FeeAssignmentDraft({

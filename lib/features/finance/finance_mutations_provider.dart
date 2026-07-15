@@ -364,6 +364,46 @@ final assignFeePlanProvider =
   AssignFeePlanNotifier.new,
 );
 
+/// PRC-A gap fix — bulk/class-wide fee-structure assignment. Every
+/// assignment used to be one student at a time via the admissions-handoff
+/// queue; this wires the client to `POST /finance/fee-assignments/bulk`.
+class BulkAssignFeeStructureNotifier
+    extends AsyncNotifier<BulkFeeAssignmentResult?> {
+  @override
+  FutureOr<BulkFeeAssignmentResult?> build() => null;
+
+  Future<BulkFeeAssignmentResult?> execute(
+    BulkAssignFeePlanRequest request,
+  ) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertManageFinance(ref),
+        auditAction: 'bulkAssignFeeStructure',
+        entityId: request.feeStructureId,
+        metadata: {
+          'academicYear': request.academicYear,
+          'studentCount': '${request.studentIds.length}',
+        },
+        invalidateStudentAccounts: true,
+        action: () =>
+            ref.read(financeRepositoryProvider).bulkAssignFeeStructure(
+                  query: ref.read(repositoryQueryProvider),
+                  request: request,
+                ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final bulkAssignFeeStructureProvider = AsyncNotifierProvider<
+    BulkAssignFeeStructureNotifier, BulkFeeAssignmentResult?>(
+  BulkAssignFeeStructureNotifier.new,
+);
+
 // #6 — PATCH .../fee-assignments/:id/cancel (backend was already built with
 // zero client callers; this is the wiring).
 class CancelFeeAssignmentNotifier extends AsyncNotifier<StudentFeeAccount?> {

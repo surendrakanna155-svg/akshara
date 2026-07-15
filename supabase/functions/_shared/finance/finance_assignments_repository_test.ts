@@ -6,6 +6,7 @@ import {
 } from "../permission_middleware.ts";
 import { assignmentToApi, studentAccountToApi } from "./finance_mapper.ts";
 import {
+  bulkAssignFeeStructure,
   DuplicateAssignmentError,
   HandoffNotReadyError,
   assignFeeStructure,
@@ -19,6 +20,8 @@ const ORG = "a1000000-0000-4000-8000-000000000001";
 const SCHOOL_A = "a2000000-0000-4000-8000-000000000001";
 const STAFF = "a3000000-0000-4000-8000-000000000001";
 const STUDENT = "a4000000-0000-4000-8000-000000000001";
+const STUDENT_2 = "a4000000-0000-4000-8000-000000000002";
+const STUDENT_3 = "a4000000-0000-4000-8000-000000000003";
 const STRUCTURE = "b7000000-0000-4000-8000-000000000001";
 const HANDOFF = "b6000000-0000-4000-8000-000000000001";
 
@@ -430,4 +433,81 @@ Deno.test("assignFeeStructure propagates invoice insert failure", async () => {
     "simulated invoice insert failure",
   );
   assertEquals(db.invoices.length, 0);
+});
+
+// ─── PRC-A gap fix: bulk/class-wide assignment ─────────────────────────────
+
+Deno.test("bulkAssignFeeStructure assigns every student in the batch, reusing assignFeeStructure", async () => {
+  const db = new MockAssignmentsDb();
+  const result = await bulkAssignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    feeStructureId: STRUCTURE,
+    academicYear: "2026-27",
+    studentIds: [STUDENT, STUDENT_2, STUDENT_3],
+    assignedBy: STAFF,
+  });
+
+  assertEquals(result.total, 3);
+  assertEquals(result.assigned.length, 3);
+  assertEquals(result.skipped.length, 0);
+  // Same invoice/account math as the single-student path — not reimplemented.
+  assertEquals(db.assignments.length, 3);
+  assertEquals(db.accounts.length, 3);
+  assertEquals(db.invoices.length, 3);
+  for (const item of result.assigned) {
+    assertEquals(item.account.total_fee, "50000");
+    assertEquals(item.invoice.invoice_status, "issued");
+  }
+});
+
+Deno.test("bulkAssignFeeStructure skips an already-assigned duplicate and reports it — the batch is not poisoned, remaining students still assign", async () => {
+  const db = new MockAssignmentsDb();
+  // STUDENT already has THIS structure for THIS year — a bulk call over a
+  // class routinely includes students like this one.
+  await assignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    studentId: STUDENT,
+    feeStructureId: STRUCTURE,
+    academicYear: "2026-27",
+    assignedBy: STAFF,
+  });
+  assertEquals(db.assignments.length, 1);
+
+  const result = await bulkAssignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    feeStructureId: STRUCTURE,
+    academicYear: "2026-27",
+    studentIds: [STUDENT, STUDENT_2, STUDENT_3],
+    assignedBy: STAFF,
+  });
+
+  assertEquals(result.total, 3);
+  // The duplicate is SKIPPED — not a fatal error for the batch.
+  assertEquals(result.skipped.length, 1);
+  assertEquals(result.skipped[0]?.studentId, STUDENT);
+  assertEquals(result.skipped[0]?.reason, "already_assigned");
+  // The remaining two students — after the duplicate — still assigned.
+  assertEquals(result.assigned.length, 2);
+  assertEquals(
+    result.assigned.map((a) => a.assignment.student_id).sort(),
+    [STUDENT_2, STUDENT_3].sort(),
+  );
+  // 1 pre-existing + 2 new = 3 total; the duplicate did not create a 2nd row
+  // for STUDENT, and did not stop STUDENT_2/STUDENT_3 from being written.
+  assertEquals(db.assignments.length, 3);
+  assertEquals(db.accounts.length, 3);
+  assertEquals(db.invoices.length, 3);
+});
+
+Deno.test("bulkAssignFeeStructure propagates a genuine unexpected error instead of silently skipping it", async () => {
+  const db = new MockAssignmentsDb();
+  db.failOnInvoiceInsert = true;
+  await assertRejects(
+    () =>
+      bulkAssignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+        feeStructureId: STRUCTURE,
+        academicYear: "2026-27",
+        studentIds: [STUDENT, STUDENT_2],
+        assignedBy: STAFF,
+      }),
+    Error,
+    "simulated invoice insert failure",
+  );
 });

@@ -294,6 +294,106 @@ export async function assignFeeStructure(
   return await createAssignmentAndAccount(db, organizationId, schoolId, input);
 }
 
+// ─── Bulk/class-wide assignment (PRC-A gap fix) ────────────────────────────
+// Every assignment used to be one student at a time via the admissions-handoff
+// queue (assignFromHandoff) or a single direct assign (assignFeeStructure) — a
+// real school assigning a fee structure to a whole class had no way to do it
+// without repeating the single-assign flow per student.
+
+// Postgres unique_violation SQLSTATE — finance_fee_assignments has
+// UNIQUE(student_id, fee_structure_id, academic_year); createAssignmentAndAccount
+// already app-level-checks for a duplicate BEFORE inserting, but that check is
+// a plain SELECT-then-INSERT with a TOCTOU gap, so a race (e.g. a second,
+// concurrent bulk call over an overlapping student set) can still surface as a
+// real constraint violation on the INSERT. Mirrors the same local-copy idiom
+// used in transport_write_handlers.ts / admissions_repository.ts /
+// pilot_operations_repository.ts (no shared helper exists for this).
+const PG_UNIQUE_VIOLATION = "23505";
+
+function isUniqueViolation(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const code = (error as { code?: unknown; fields?: { code?: unknown } }).code ??
+    (error as { fields?: { code?: unknown } }).fields?.code;
+  return code === PG_UNIQUE_VIOLATION;
+}
+
+export interface BulkAssignFeeStructureInput {
+  feeStructureId: string;
+  academicYear: string;
+  studentIds: string[];
+  assignedBy: string;
+}
+
+export interface BulkAssignSkipped {
+  studentId: string;
+  reason: string;
+}
+
+export interface BulkAssignResult {
+  assigned: AssignmentWithAccount[];
+  skipped: BulkAssignSkipped[];
+  total: number;
+}
+
+/**
+ * Bulk/class-wide fee-structure assignment. Reuses `assignFeeStructure`
+ * UNCHANGED per student — identical invoice/account math, including the
+ * TRN-9 get-or-create per-year account — inside the SAME transaction the
+ * caller opened via `withTenantContext`, so the whole batch commits or rolls
+ * back together.
+ *
+ * Partial-failure semantics (deliberate design choice): a bulk call over a
+ * class routinely includes students who already have THIS exact structure
+ * assigned for THIS academic year — `assignFeeStructure` throws
+ * `DuplicateAssignmentError` for those. Treating that as fatal would make the
+ * feature unusable (one already-assigned student would abort the whole
+ * class). So a duplicate is SKIPPED AND REPORTED, not fatal, and the loop
+ * continues to the next student. A genuine unexpected error (bad fee
+ * structure, invoice failure, etc.) is NOT swallowed — it propagates and
+ * aborts the whole transaction, because silently half-committing a bulk
+ * assignment would be worse than failing loudly.
+ *
+ * Each per-student attempt is wrapped in its own SAVEPOINT so a Postgres
+ * unique_violation (the app-level check above raced with a concurrent
+ * writer) can be rolled back to WITHOUT poisoning the surrounding
+ * transaction — mirrors `insertDemandIdempotent`'s
+ * SAVEPOINT / ROLLBACK TO SAVEPOINT recovery in transport_write_handlers.ts.
+ */
+export async function bulkAssignFeeStructure(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  input: BulkAssignFeeStructureInput,
+): Promise<BulkAssignResult> {
+  const assigned: AssignmentWithAccount[] = [];
+  const skipped: BulkAssignSkipped[] = [];
+
+  for (const studentId of input.studentIds) {
+    await db.queryObject(`SAVEPOINT bulk_fee_assignment`);
+    try {
+      const result = await assignFeeStructure(db, organizationId, schoolId, {
+        studentId,
+        feeStructureId: input.feeStructureId,
+        academicYear: input.academicYear,
+        assignedBy: input.assignedBy,
+      });
+      await db.queryObject(`RELEASE SAVEPOINT bulk_fee_assignment`);
+      assigned.push(result);
+    } catch (error) {
+      if (error instanceof DuplicateAssignmentError || isUniqueViolation(error)) {
+        await db.queryObject(`ROLLBACK TO SAVEPOINT bulk_fee_assignment`);
+        skipped.push({ studentId, reason: "already_assigned" });
+        continue;
+      }
+      // Any other error is unexpected — let it propagate so withTenantContext
+      // rolls back the whole batch rather than half-committing it silently.
+      throw error;
+    }
+  }
+
+  return { assigned, skipped, total: input.studentIds.length };
+}
+
 export async function cancelAssignment(
   db: TenantQueryClient,
   organizationId: string,

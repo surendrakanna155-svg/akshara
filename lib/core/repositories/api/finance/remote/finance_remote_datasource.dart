@@ -10,6 +10,7 @@ import '../../admissions/dto/api_envelope_dto.dart';
 import '../../../repository_query.dart';
 import '../dto/approve_refund_request_dto.dart';
 import '../dto/assign_fee_plan_request_dto.dart';
+import '../dto/bulk_assign_fee_plan_request_dto.dart';
 import '../dto/confirm_qr_payment_request_dto.dart';
 import '../dto/create_fee_structure_request_dto.dart';
 import '../dto/create_refund_request_dto.dart';
@@ -555,6 +556,22 @@ class FinanceRemoteDataSource {
     return _mapper.toStudentAccount(
       StudentFeeAccountDto.fromJson(_requireData(response)),
     );
+  }
+
+  /// PRC-A gap fix — POST /finance/fee-assignments/bulk. Reuses the exact
+  /// same per-student assignment math as [assignFeePlan]; students who
+  /// already have this exact structure for this academic year come back in
+  /// the response's `skipped` list, not as an error.
+  Future<BulkFeeAssignmentResultDto> bulkAssignFeeStructure({
+    required RepositoryQuery query,
+    required BulkAssignFeePlanRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      FinanceApiPaths.feeAssignmentsBulk,
+      queryParameters: _queryParams(query),
+      data: BulkAssignFeePlanRequestDto.fromDomain(request).toJson(),
+    );
+    return BulkFeeAssignmentResultDto.fromJson(_requireData(response));
   }
 
   /// #6 — PATCH .../fee-assignments/:id/cancel. No body. The handler's
