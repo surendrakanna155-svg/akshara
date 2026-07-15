@@ -2,7 +2,7 @@
   "_registry": "Akshara Canonical Evidence & Knowledge Governance Registry",
   "_authority": "Single store-level source of truth for owned QIE/curriculum evidence + lifecycle state.",
   "_owner_correction": "2026-07-14 evidence-storage governance reconciliation",
-  "generated_at": "2026-07-15T07:54:11Z",
+  "generated_at": "2026-07-15T08:03:15Z",
   "workspace": "/Users/surendrakanna/Documents/Akshara_ERP/curriculum",
   "lifecycle_states": [
     "1_raw_source",

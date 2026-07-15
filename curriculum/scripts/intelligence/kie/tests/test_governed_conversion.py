@@ -159,6 +159,96 @@ class TestAssertionGenerationGate(unittest.TestCase):
                                  "an arrangement", ["a", "b", "c"]))
 
 
+class TestOptionQualityGate(unittest.TestCase):
+    """An option is printed VERBATIM to a student. The source's real distractors are authentic misconception
+    evidence but they are OCR text, so a string can be damaged even when the fact behind it is sound."""
+
+    def _c(self, s):
+        from kie.qie.convert import kvs_compose as KV
+        return KV._option_clean(s)
+
+    def test_accepts_real_options(self):
+        for s in ("linear", "trigonal planar", "the Bohr effect.", "Cu, Fe, Zn, B, Mn",
+                  "polar ice caps and glaciers", "X-ray crystallography"):
+            self.assertTrue(self._c(s), s)
+
+    def test_rejects_ocr_damaged_options(self):
+        for s in ("_!_ increases linearly with t c",      # stray OCR marks
+                  "C decreases with ķ I",                  # latin-extended OCR confusion
+                  "the momentum of `S` remains constant",  # backtick artifact
+                  "a ketone RESPO'iSE",                    # internal-case garbage
+                  ""):
+            self.assertFalse(self._c(s), s)
+
+    def test_rejects_over_long_option(self):
+        self.assertFalse(self._c("Whether KP is greater than, less than or equal to Kc depends upon "
+                                 "the total gas pressure of the system"))
+
+    def test_damaged_distractors_are_dropped_not_shipped(self):
+        from kie.qie.convert import kvs_compose as KV
+        clean = KV._clean_distractors(["linear", "C decreases with ķ I", "square pyramidal", "linear"],
+                                      "trigonal planar")
+        self.assertEqual(clean, ["linear", "square pyramidal"])       # junk dropped, duplicate collapsed
+
+
+class TestAssertionObjectDirection(unittest.TestCase):
+    """Most admitted facts were asked "given X, what is its Y?", so the answer names the OBJECT term and the
+    real distractors are parallel to the object. Authoring those in the source's own direction is what makes
+    them usable — inverting them is what left them unusable."""
+
+    def _o(self, answer, subject_term, predicate, object_term, distractors):
+        from kie.qie.convert import kvs_compose as KV
+        return KV._assert_object_usable(answer, subject_term, predicate, object_term, distractors)
+
+    def _s(self, answer, subject_term, predicate, object_term, distractors):
+        from kie.qie.convert import kvs_compose as KV
+        return KV._assert_usable(answer, subject_term, predicate, object_term, distractors)
+
+    ARGS = ("Angular momentum", "Kepler's second law (constant areal velocity)",
+            "is a consequence of the conservation of", "Angular momentum",
+            ["Energy", "Linear momentum", "None of these"])
+
+    def test_accepts_object_direction_fact(self):
+        self.assertTrue(self._o(*self.ARGS))
+
+    def test_the_two_directions_are_mutually_exclusive(self):
+        """A fact must not be authored twice (once per direction) — that would double-count one concept."""
+        self.assertFalse(self._s(*self.ARGS))
+
+    def test_rejects_giveaway_when_stem_restates_its_answer(self):
+        # stem "A satellite ... always has its acceleration directed toward" + answer repeating it
+        self.assertFalse(self._o("the acceleration of S is always directed towards the earth",
+                                 "A satellite in an elliptical orbit always has its acceleration directed",
+                                 "toward", "the centre of the earth",
+                                 ["the total mechanical energy varies", "the linear momentum is constant",
+                                  "the angular momentum changes direction"]))
+
+    def test_rejects_when_answer_matches_neither_object_nor_is_clean(self):
+        self.assertFalse(self._o("Aschelminthes : Ancylostoma, Enterobius", "Tubifex",
+                                 "belongs to the phylum", "Annelida",
+                                 ["Annelida : Aphrodite", "Mollusca : Teredo", "Arthropoda : Buthus"]))
+
+    def test_rejects_when_ocr_damage_leaves_too_few_clean_distractors(self):
+        self.assertFalse(self._o("Zr and Hf have about the same radius", "Lanthanide contraction", "causes",
+                                 "Zr and Hf to have nearly the same atomic radius",
+                                 ["Zr and Zn have the same oxidation state",
+                                  "Zr and Nb have similar oxidation state",
+                                  "Zr andY have about the same radius"]))       # 3rd is OCR-damaged -> 2 left
+
+    def test_generated_object_direction_items_are_clean_and_verified(self):
+        from kie.qie import compositions as K
+        from kie.qie.convert import kvs_compose as KV
+        tm = {n: t for n, t in KV._TEMPLATES.items() if n.startswith("kvs_factobj_")}
+        if not tm:
+            self.skipTest("no object-direction facts in the local store")
+        for it in K.run(tm, per_template=2, seed="7")["verified_bank"]:
+            self.assertTrue(it["stem"].endswith(":"), it["stem"])
+            self.assertEqual(len(it["options"]), 4)
+            self.assertEqual(list(it["options"].values()).count(it["answer_text"]), 1)
+            for o in it["options"].values():
+                self.assertTrue(KV._option_clean(o), f"{o!r} in {it['stem']!r}")
+
+
 class TestEvidenceRegistry(unittest.TestCase):
     def test_every_store_scans_without_error(self):
         reg = REG.build("2026-01-01T00:00:00Z")
