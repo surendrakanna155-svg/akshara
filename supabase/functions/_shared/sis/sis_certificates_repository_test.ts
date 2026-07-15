@@ -13,6 +13,7 @@ import {
   issueTransferCertificate,
   NoDuesPendingError,
   outstandingForStudent,
+  SIMPLE_CERTIFICATE_TYPES,
 } from "./sis_certificates_repository.ts";
 
 const ORG = "a1000000-0000-4000-8000-000000000001";
@@ -33,6 +34,14 @@ interface StudentSeed {
   sectionName?: string | null;
   academicYear?: string;
   guardianName?: string;
+}
+
+interface FeeAccountSeed {
+  academicYear: string;
+  totalFee: number;
+  amountPaid: number;
+  outstandingAmount: number;
+  status: string;
 }
 
 /**
@@ -57,6 +66,8 @@ class CertMockDb {
   approvedWaivers = new Map<string, number>();
   waiverConsumed: Array<{ studentId: string; issueId: string }> = [];
   clearanceSnapshots: Array<{ issueId: string; amount: number; waiverId: string | null }> = [];
+  // "fee" certificate — student_id -> per-academic-year finance_student_accounts rows.
+  feeAccounts = new Map<string, FeeAccountSeed[]>();
 
   seedStudent(seed: StudentSeed) {
     this.students.set(seed.id, seed);
@@ -66,6 +77,11 @@ class CertMockDb {
   }
   seedApprovedWaiver(studentId: string, coveredAmount: number) {
     this.approvedWaivers.set(studentId, coveredAmount);
+  }
+  seedFeeAccount(studentId: string, account: FeeAccountSeed) {
+    const existing = this.feeAccounts.get(studentId) ?? [];
+    existing.push(account);
+    this.feeAccounts.set(studentId, existing);
   }
 
   // deno-lint-ignore require-await
@@ -147,6 +163,27 @@ class CertMockDb {
       const amounts = this.openAccounts.get(String(args[2])) ?? [];
       const sum = amounts.reduce((a, b) => a + b, 0);
       return [{ outstanding: String(sum) }] as T[];
+    }
+    // "fee" certificate — single-year finance_student_accounts pull (real data,
+    // never fabricated). Preferred-year lookup carries `academic_year = $4`;
+    // the fallback (no current enrollment / no row for that year) omits it and
+    // picks the most recent account by academic_year.
+    if (sql.includes("FROM finance_student_accounts") && sql.includes("total_fee::text")) {
+      const accounts = this.feeAccounts.get(String(args[2])) ?? [];
+      if (accounts.length === 0) return [] as T[];
+      const toRow = (a: FeeAccountSeed) => ({
+        academic_year: a.academicYear,
+        total_fee: String(a.totalFee),
+        amount_paid: String(a.amountPaid),
+        outstanding_amount: String(a.outstandingAmount),
+        status: a.status,
+      });
+      if (sql.includes("academic_year = $4")) {
+        const match = accounts.find((a) => a.academicYear === String(args[3]));
+        return match ? [toRow(match)] as T[] : [] as T[];
+      }
+      const sorted = [...accounts].sort((a, b) => b.academicYear.localeCompare(a.academicYear));
+      return [toRow(sorted[0]!)] as T[];
     }
     // SCE-1 slice 3 — the gate's approved-waiver lookup.
     if (sql.includes("FROM student_clearance_waivers") && sql.includes("status = 'approved'")) {
@@ -300,6 +337,125 @@ Deno.test("issueCertificate: 'transfer' is rejected here (must use the TC engine
     InvalidCertificateTypeError,
   );
   assertEquals(mock.issues.length, 0);
+});
+
+Deno.test("SIMPLE_CERTIFICATE_TYPES includes 'fee' (a plain recorded issuance, no status change)", () => {
+  assertEquals(SIMPLE_CERTIFICATE_TYPES.includes("fee"), true);
+  assertEquals(SIMPLE_CERTIFICATE_TYPES.includes("transfer"), false);
+});
+
+Deno.test("issueCertificate: fee — pulls the REAL finance summary for the current-enrollment academic year", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({
+    id: STUDENT,
+    status: "active",
+    displayName: "Meera Iyer",
+    className: "Grade 10",
+    academicYear: "2026-2027",
+  });
+  mock.seedFeeAccount(STUDENT, {
+    academicYear: "2026-2027",
+    totalFee: 50000,
+    amountPaid: 30000,
+    outstandingAmount: 20000,
+    status: "open",
+  });
+  // A prior year's account must NOT be picked when the current year matches.
+  mock.seedFeeAccount(STUDENT, {
+    academicYear: "2025-2026",
+    totalFee: 45000,
+    amountPaid: 45000,
+    outstandingAmount: 0,
+    status: "closed",
+  });
+  const client = mock as unknown as TenantQueryClient;
+
+  const data = await issueCertificate(client, ORG, SCHOOL, {
+    studentId: STUDENT,
+    type: "fee",
+    reason: "income tax filing",
+    issuedBy: STAFF,
+  });
+
+  // Simple issuance: no serial, no status change.
+  assertEquals(mock.issues.length, 1);
+  assertEquals(mock.issues[0]?.certificate_type, "fee");
+  assertEquals(data.serialNo, null);
+  assertEquals(mock.statusUpdates.length, 0);
+  // The real finance pull — the CURRENT year's account, not the prior one.
+  assertEquals(data.fee, {
+    academicYear: "2026-2027",
+    totalFee: 50000,
+    amountPaid: 30000,
+    outstanding: 20000,
+    accountStatus: "open",
+  });
+});
+
+Deno.test("issueCertificate: fee — falls back to the most recent account when there is no current enrollment", async () => {
+  const mock = new CertMockDb();
+  // No className -> getStudent's enrollment mock returns no current enrollment.
+  mock.seedStudent({ id: STUDENT, status: "alumni" });
+  mock.seedFeeAccount(STUDENT, {
+    academicYear: "2024-2025",
+    totalFee: 40000,
+    amountPaid: 40000,
+    outstandingAmount: 0,
+    status: "closed",
+  });
+  mock.seedFeeAccount(STUDENT, {
+    academicYear: "2025-2026",
+    totalFee: 42000,
+    amountPaid: 42000,
+    outstandingAmount: 0,
+    status: "closed",
+  });
+  const client = mock as unknown as TenantQueryClient;
+
+  const data = await issueCertificate(client, ORG, SCHOOL, {
+    studentId: STUDENT,
+    type: "fee",
+    issuedBy: STAFF,
+  });
+
+  assertEquals(data.fee?.academicYear, "2025-2026", "picks the most recent account, not the oldest");
+  assertEquals(data.fee?.totalFee, 42000);
+});
+
+Deno.test("issueCertificate: fee — no finance account at all -> fee is null, NEVER fabricated", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({ id: STUDENT, status: "active", className: "Grade 3", academicYear: "2026-2027" });
+  // No seedFeeAccount call at all.
+  const client = mock as unknown as TenantQueryClient;
+
+  const data = await issueCertificate(client, ORG, SCHOOL, {
+    studentId: STUDENT,
+    type: "fee",
+    issuedBy: STAFF,
+  });
+
+  assertEquals(data.fee, null);
+  assertEquals(mock.issues.length, 1, "the certificate is still recorded even with no finance data");
+});
+
+Deno.test("issueCertificate: non-fee types never carry a fee summary", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({ id: STUDENT, status: "active", className: "Grade 5" });
+  mock.seedFeeAccount(STUDENT, {
+    academicYear: "2026-2027",
+    totalFee: 10000,
+    amountPaid: 10000,
+    outstandingAmount: 0,
+    status: "closed",
+  });
+  const client = mock as unknown as TenantQueryClient;
+
+  const data = await issueCertificate(client, ORG, SCHOOL, {
+    studentId: STUDENT,
+    type: "bonafide",
+    issuedBy: STAFF,
+  });
+  assertEquals(data.fee, null);
 });
 
 Deno.test("issueCertificate: an unknown type is a validation error", async () => {

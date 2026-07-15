@@ -31,13 +31,14 @@ import {
 import { resolveClearanceDecision } from "../clearance/clearance_gate.ts";
 import { consumeWaiver } from "../clearance/clearance_waiver_repository.ts";
 
-export type CertificateType = "bonafide" | "study" | "conduct" | "transfer";
+export type CertificateType = "bonafide" | "study" | "conduct" | "transfer" | "fee";
 
 /** The non-transfer, self-service certificate types (a plain recorded issuance). */
 export const SIMPLE_CERTIFICATE_TYPES: readonly CertificateType[] = [
   "bonafide",
   "study",
   "conduct",
+  "fee",
 ] as const;
 
 const TC_SEQ_PAD = 4;
@@ -45,7 +46,7 @@ const TC_SEQ_PAD = 4;
 export class InvalidCertificateTypeError extends Error {
   constructor(type: string) {
     super(
-      `Invalid certificate type: ${type}. Expected one of bonafide, study, conduct, transfer.`,
+      `Invalid certificate type: ${type}. Expected one of bonafide, study, conduct, transfer, fee.`,
     );
     this.name = "InvalidCertificateTypeError";
   }
@@ -67,12 +68,29 @@ export class NoDuesPendingError extends Error {
   }
 }
 
+/**
+ * Real finance pull backing the "fee" certificate — total paid / outstanding
+ * for the student's CURRENT academic year, sourced live from
+ * finance_student_accounts (the same table + columns outstandingForStudent
+ * reads). Never fabricated: absent when the student has no account row at all
+ * (e.g. never assigned a fee structure).
+ */
+export interface FeeCertificateSummary {
+  academicYear: string;
+  totalFee: number;
+  amountPaid: number;
+  outstanding: number;
+  accountStatus: string;
+}
+
 export interface CertificateData {
   issueId: string;
   certificateType: CertificateType;
   serialNo: string | null;
   reason: string | null;
   issuedAt: string;
+  /** Only populated for certificateType 'fee'; null for every other type. */
+  fee: FeeCertificateSummary | null;
   /** The certificate payload the client PDF renders from. */
   student: {
     studentId: string;
@@ -109,7 +127,7 @@ interface SchoolRow {
 function assertCertificateType(type: string): CertificateType {
   if (
     type === "bonafide" || type === "study" || type === "conduct" ||
-    type === "transfer"
+    type === "transfer" || type === "fee"
   ) {
     return type;
   }
@@ -164,6 +182,72 @@ export async function outstandingForStudent(
   return Number(rows[0]?.outstanding ?? 0);
 }
 
+interface FeeAccountRow {
+  academic_year: string;
+  total_fee: string;
+  amount_paid: string;
+  outstanding_amount: string;
+  status: string;
+}
+
+/**
+ * Real finance pull backing the "fee" certificate. Reads the SAME
+ * finance_student_accounts columns outstandingForStudent sums, but for a
+ * SINGLE academic year (total_fee/amount_paid/outstanding_amount/status —
+ * never fabricated). Prefers the student's current-enrollment academic year;
+ * falls back to the most recent account row when there is no current
+ * enrollment (or no account for that year), so a certificate can still be
+ * produced for a student between enrollments. Returns null only when the
+ * student has NO finance_student_accounts row at all (never assigned a fee).
+ */
+async function loadFeeSummary(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  studentId: string,
+  preferredAcademicYear: string | null,
+): Promise<FeeCertificateSummary | null> {
+  if (preferredAcademicYear) {
+    const rows = await db.queryObject<FeeAccountRow>(
+      `SELECT academic_year, total_fee::text AS total_fee,
+              amount_paid::text AS amount_paid,
+              outstanding_amount::text AS outstanding_amount, status
+         FROM finance_student_accounts
+        WHERE organization_id = $1
+          AND school_id = $2
+          AND student_id = $3::uuid
+          AND academic_year = $4`,
+      [organizationId, schoolId, studentId, preferredAcademicYear],
+    );
+    if (rows[0]) return toFeeCertificateSummary(rows[0]);
+  }
+
+  const fallback = await db.queryObject<FeeAccountRow>(
+    `SELECT academic_year, total_fee::text AS total_fee,
+            amount_paid::text AS amount_paid,
+            outstanding_amount::text AS outstanding_amount, status
+       FROM finance_student_accounts
+      WHERE organization_id = $1
+        AND school_id = $2
+        AND student_id = $3::uuid
+      ORDER BY academic_year DESC
+      LIMIT 1`,
+    [organizationId, schoolId, studentId],
+  );
+  const row = fallback[0];
+  return row ? toFeeCertificateSummary(row) : null;
+}
+
+function toFeeCertificateSummary(row: FeeAccountRow): FeeCertificateSummary {
+  return {
+    academicYear: row.academic_year,
+    totalFee: Number(row.total_fee),
+    amountPaid: Number(row.amount_paid),
+    outstanding: Number(row.outstanding_amount),
+    accountStatus: row.status,
+  };
+}
+
 /**
  * Atomically allocates the next TC serial for a school and returns the formatted
  * value. Mirrors allocatePublicStudentId EXACTLY: the INSERT ... ON CONFLICT DO
@@ -201,6 +285,7 @@ function buildCertificateData(
   issued: IssueRow,
   detail: StudentDetailData,
   school: SchoolRow,
+  fee: FeeCertificateSummary | null = null,
 ): CertificateData {
   const guardianName = detail.guardians.find((g) => g.is_primary)?.display_name ??
     detail.guardians[0]?.display_name ?? null;
@@ -210,6 +295,7 @@ function buildCertificateData(
     serialNo: issued.serial_no,
     reason: issued.reason,
     issuedAt: issued.issued_at,
+    fee,
     student: {
       studentId: detail.student.id,
       displayName: detail.student.display_name,
@@ -303,7 +389,19 @@ export async function issueCertificate(
     input.issuedBy,
   );
 
-  return buildCertificateData(type, issued, detail, school);
+  // "fee" is the only type that pulls a real finance summary onto the
+  // certificate — the totals are always live-read, never fabricated.
+  const fee = type === "fee"
+    ? await loadFeeSummary(
+      db,
+      organizationId,
+      schoolIdArg,
+      input.studentId,
+      detail.currentEnrollment?.academic_year ?? null,
+    )
+    : null;
+
+  return buildCertificateData(type, issued, detail, school, fee);
 }
 
 export interface IssueTransferCertificateInput {
@@ -525,6 +623,15 @@ export function certificateDataToApi(
     serialNo: data.serialNo ?? "",
     reason: data.reason ?? "",
     issuedAt: data.issuedAt,
+    fee: data.fee
+      ? {
+        academicYear: data.fee.academicYear,
+        totalFee: data.fee.totalFee,
+        amountPaid: data.fee.amountPaid,
+        outstanding: data.fee.outstanding,
+        accountStatus: data.fee.accountStatus,
+      }
+      : null,
     student: {
       studentId: data.student.studentId,
       displayName: data.student.displayName,

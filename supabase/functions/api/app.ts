@@ -64,6 +64,12 @@ import { routeDirector } from "../_shared/director/director_router.ts";
 import { routePredictions } from "../_shared/predictions/predictions_router.ts";
 import { routeOrganizationBuilder } from "../_shared/organization_builder/organization_builder_router.ts";
 import { routeLegal } from "../_shared/legal/legal_router.ts";
+// --- PRC-A Batch 2: request-desk / gate-pass / complaints / health ---
+import { routeCertificateDesk } from "../_shared/certificate_desk/certificate_desk_router.ts";
+import { routeGatePass } from "../_shared/gate_pass/gate_pass_router.ts";
+import { routeComplaints } from "../_shared/complaints/complaints_router.ts";
+import { routeStudentHealth } from "../_shared/student_health/student_health_router.ts";
+// --- end PRC-A Batch 2 ---
 // --- B1 school-config (AgentE) ---
 import { routeSchoolConfig } from "../_shared/school_config/school_config_router.ts";
 // --- end B1 school-config (AgentE) ---
@@ -97,6 +103,19 @@ export async function routeModuleRequest(
     routeAdmissions,
     routeFinance,
     routeSis,
+    // --- PRC-A Batch 2 (caps 101–127, 136–148) ---
+    // Deliberately NOT wrapped in withEntitlement: these are core school
+    // operations (issuing a certificate, releasing a child at the gate,
+    // recording an infirmary visit, raising a complaint), not upsell modules.
+    // Gating them behind a plan would make a safety/records capability
+    // purchasable, which is not a decision to make implicitly here.
+    routeCertificateDesk,
+    routeGatePass,
+    routeComplaints,
+    // `/student-health`, not `/health` — the system health/readiness endpoints
+    // are matched earlier in handleRequest and must never be shadowed.
+    routeStudentHealth,
+    // --- end PRC-A Batch 2 ---
     routeExamAdministration,
     routeAttendance,
     routeStaffAttendance,
