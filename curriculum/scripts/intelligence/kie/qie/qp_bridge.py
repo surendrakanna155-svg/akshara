@@ -175,8 +175,11 @@ def _governed_concepts(subjects) -> Tuple[Dict[str, object], Dict[str, Tuple[str
     except sqlite3.Error:
         pass
     try:
-        rows += list(c.execute("SELECT DISTINCT subject, concept_candidate FROM governed_relation "
-                               "WHERE status='certified'"))
+        # relation-granularity concepts ("Physics :: Ohm's law"): a certified relation IS a distinct syllabus
+        # concept, and qpgen dedups by (concept, question_type) — chapter-level binding would collapse every
+        # relation of a chapter into one paper slot.
+        rows += [(s, f"{s} :: {n}") for s, n in
+                 c.execute("SELECT DISTINCT subject, name FROM governed_relation WHERE status='certified'")]
     except sqlite3.Error:
         pass
     try:

@@ -14,7 +14,8 @@ from typing import Dict, Optional
 
 import sympy as sp
 from sympy.physics.units import (ampere, candela, coulomb, farad, henry, hertz, joule, kelvin,
-                                 kilogram, meter, mole, newton, ohm, pascal, second, tesla, volt, watt, weber)
+                                 kilogram, meter, mole, newton, ohm, pascal, second, siemens, tesla, volt,
+                                 watt, weber)
 from sympy.physics.units.systems.si import SI
 
 _DS = SI.get_dimension_system()
@@ -36,6 +37,7 @@ UNITS: Dict[str, object] = {
     "ohm": ohm, "Ohm": ohm, "Ω": ohm,
     "F": farad, "farad": farad,
     "H": henry, "henry": henry,
+    "S": siemens, "siemens": siemens,
     "Hz": hertz, "hertz": hertz,
     "Pa": pascal, "pascal": pascal,
     "T": tesla, "tesla": tesla,

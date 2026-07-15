@@ -144,8 +144,11 @@ def _template(rel: dict) -> Optional[CompositionTemplate]:
         v = _eval(p["rel"], p["vals"])
         return v is not None and abs(v - env["ans"]) <= 1e-9 * max(abs(v), 1.0)
 
+    # Bind at RELATION granularity, not chapter: "Ohm's law", "Drift speed" and "Wheatstone bridge" are each a
+    # real, distinct syllabus concept. qpgen dedups by (concept, question_type), so chapter-level binding would
+    # collapse every relation of a chapter into a single paper slot.
     return CompositionTemplate(
-        f"relnum_{_slug(rel['name'])}", rel["concept_candidate"], setup,
+        f"relnum_{_slug(rel['name'])}", f"{rel['subject']} :: {rel['name']}", setup,
         [C.Step("ans", "rel_eval", ("payload",))], "ans", e2e, stem, distractors,
         subject=rel["subject"], gen_prefix="GENREL_", fmt=_fmt)
 
