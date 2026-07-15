@@ -304,6 +304,45 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   // JWT/permission — listed here for inventory completeness (permission: null).
   { method: "POST", path: "/communications/delivery/webhook", permission: null, scope: "school", module: "webhook" },
   { method: "POST", path: "/webhooks/razorpay", permission: null, scope: "school", module: "webhook" },
+  // ─── PRC-A Batch 2 ────────────────────────────────────────────────────────
+  // Certificate Request Desk (caps 136–148). Raise/list are also reachable in
+  // `parent` scope for a guardian's own children; the staff rule is listed here
+  // because the inventory keys one rule per (method, path).
+  { method: "POST", path: "/certificate-requests", permission: "requestStudentCertificate", scope: "school", module: "certificate_desk" },
+  { method: "GET", path: "/certificate-requests", permission: "requestStudentCertificate", scope: "school", module: "certificate_desk" },
+  { method: "GET", path: "/certificate-requests/:id", permission: "requestStudentCertificate", scope: "school", module: "certificate_desk" },
+  { method: "POST", path: "/certificate-requests/:id/cancel", permission: "approveCertificateRequest", scope: "school", module: "certificate_desk" },
+  // Gate Pass / early pickup (caps 109–118). Approve/reject go through the
+  // shared F2 /approvals endpoints (type `gatePass`), not a bespoke route.
+  { method: "POST", path: "/gate-passes", permission: "requestGatePass", scope: "school", module: "gate_pass" },
+  { method: "GET", path: "/gate-passes", permission: "requestGatePass", scope: "school", module: "gate_pass" },
+  { method: "GET", path: "/gate-passes/:id", permission: "requestGatePass", scope: "school", module: "gate_pass" },
+  { method: "POST", path: "/gate-passes/:id/verify", permission: "verifyGatePass", scope: "school", module: "gate_pass" },
+  { method: "POST", path: "/gate-passes/:id/cancel", permission: "requestGatePass", scope: "school", module: "gate_pass" },
+  // Complaints / internal issues (caps 101–108).
+  { method: "POST", path: "/complaints", permission: "raiseComplaint", scope: "school", module: "complaints" },
+  { method: "GET", path: "/complaints", permission: "raiseComplaint", scope: "school", module: "complaints" },
+  { method: "GET", path: "/complaints/:id", permission: "raiseComplaint", scope: "school", module: "complaints" },
+  { method: "POST", path: "/complaints/:id/assign", permission: "manageComplaints", scope: "school", module: "complaints" },
+  { method: "POST", path: "/complaints/:id/status", permission: "manageComplaints", scope: "school", module: "complaints" },
+  { method: "POST", path: "/complaints/:id/comment", permission: "raiseComplaint", scope: "school", module: "complaints" },
+  { method: "POST", path: "/complaints/:id/vendor", permission: "manageComplaints", scope: "school", module: "complaints" },
+  // Student Health / Infirmary (caps 119–127) — owner decision #1 need-to-know.
+  // NOTE the asymmetry, it is deliberate: the clinical routes require
+  // `viewStudentHealthRecord`/`manageStudentHealth` (granted to health staff and
+  // explicitly authorised leadership ONLY), while the teacher-facing care-alert
+  // route requires only `viewStudentCareAlert` AND is additionally narrowed in
+  // the handler to students that caller actually teaches.
+  { method: "POST", path: "/student-health/incidents", permission: "manageStudentHealth", scope: "school", module: "student_health" },
+  { method: "GET", path: "/student-health/incidents", permission: "viewStudentHealthRecord", scope: "school", module: "student_health" },
+  { method: "POST", path: "/student-health/care-alerts", permission: "manageStudentHealth", scope: "school", module: "student_health" },
+  { method: "PATCH", path: "/student-health/care-alerts/:id", permission: "manageStudentHealth", scope: "school", module: "student_health" },
+  { method: "POST", path: "/student-health/authorizations", permission: "manageStudentHealth", scope: "school", module: "student_health" },
+  { method: "POST", path: "/student-health/authorizations/:id/revoke", permission: "manageStudentHealth", scope: "school", module: "student_health" },
+  { method: "POST", path: "/student-health/authorizations/:id/administer", permission: "administerStudentMedication", scope: "school", module: "student_health" },
+  { method: "GET", path: "/student-health/students/:studentId/care-alert", permission: "viewStudentCareAlert", scope: "school", module: "student_health" },
+  { method: "GET", path: "/student-health/students/:studentId/record", permission: "viewStudentHealthRecord", scope: "school", module: "student_health" },
+  { method: "GET", path: "/student-health/access-log", permission: "viewStudentHealthRecord", scope: "school", module: "student_health" },
 ];
 
 export const RBAC_MODULE_PERMISSIONS = [
@@ -328,4 +367,10 @@ export const RBAC_MODULE_PERMISSIONS = [
   "viewDirectorPortal", "manageDirectorPortal",
   "viewOrganizationBuilder", "manageOrganizationBuilder",
   "viewDynamicWidgets", "manageDynamicWidgets",
+  // PRC-A Batch 2.
+  "requestStudentCertificate", "approveCertificateRequest",
+  "requestGatePass", "approveGatePass", "verifyGatePass",
+  "raiseComplaint", "manageComplaints", "viewComplaintsPrincipal",
+  "manageStudentHealth", "viewStudentHealthRecord", "viewStudentCareAlert",
+  "administerStudentMedication",
 ] as const;

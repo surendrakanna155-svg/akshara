@@ -24,6 +24,7 @@ import type { AccessTokenClaims } from "../jwt.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { submitApproval } from "../approval/approval_repository.ts";
+import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
 import {
   cancelGatePass,
   createGatePass,
@@ -140,7 +141,17 @@ export async function handleCreateGatePass(req: Request, config: AppConfig): Pro
         payload: { studentId, passType, scheduledAt: scheduledAtDate.toISOString() },
       });
 
-      return await linkApprovalRequest(db, orgId, schoolId, row.id, approval.id);
+      const linked = await linkApprovalRequest(db, orgId, schoolId, row.id, approval.id);
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        moduleEntityAudit("gatePass.pass.raised", "gate_pass", linked.id, {
+          studentId,
+          passType,
+        }),
+        req,
+      );
+      return linked;
     });
     return jsonResponse(envelope(gatePassToApi(created)), { status: 201 });
   } catch (error) {
@@ -230,8 +241,31 @@ export async function handleVerifyGatePass(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const row = await withTenantContext(config, auth.claims, (db) =>
-      verifyGatePassCredential(db, orgId, schoolId, id, credential, auth.claims.sub, note));
+    const row = await withTenantContext(config, auth.claims, async (db) => {
+      const verified = await verifyGatePassCredential(
+        db,
+        orgId,
+        schoolId,
+        id,
+        credential,
+        auth.claims.sub,
+        note,
+      );
+      // "Who released this child, and when" is THE audit question this module
+      // exists to answer. Emitted inside the same transaction as the guarded
+      // status flip, so an audit row cannot survive a rolled-back release.
+      // The credential itself is never recorded — only the fact of the release.
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        moduleEntityAudit("gatePass.pass.verified", "gate_pass", verified.id, {
+          studentId: verified.student_id,
+          passType: verified.pass_type,
+        }),
+        req,
+      );
+      return verified;
+    });
     return jsonResponse(envelope({ ...gatePassToApi(row), verified: true }));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
@@ -269,8 +303,25 @@ export async function handleCancelGatePass(
   const actorCanApprove = auth.claims.permissions.includes("approveGatePass");
 
   try {
-    const row = await withTenantContext(config, auth.claims, (db) =>
-      cancelGatePass(db, orgId, schoolId, id, auth.claims.sub, actorCanApprove));
+    const row = await withTenantContext(config, auth.claims, async (db) => {
+      const cancelled = await cancelGatePass(
+        db,
+        orgId,
+        schoolId,
+        id,
+        auth.claims.sub,
+        actorCanApprove,
+      );
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        moduleEntityAudit("gatePass.pass.cancelled", "gate_pass", cancelled.id, {
+          studentId: cancelled.student_id,
+        }),
+        req,
+      );
+      return cancelled;
+    });
     return jsonResponse(envelope(gatePassToApi(row)));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
