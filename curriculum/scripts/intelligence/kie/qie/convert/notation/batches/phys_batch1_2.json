@@ -1,0 +1,656 @@
+{
+ "batch": "phys_batch1_2",
+ "extractor": "vision_transcription(opus-4.8) [proposes only; sympy certifies]",
+ "now": "2026-07-15T00:00:00Z",
+ "subject": "Physics",
+ "note": "Physics notation recovery, batches 1-2 (relations that first proved the layer). RECONSTRUCTED from qie.db on 2026-07-15: these predate the batches layer and were authored in a session scratchpad that no longer exists, so this file is now their only reproducible record. Each was transcribed from a rendered page image of an owned NCERT source and certified by the locked deterministic hierarchy; the verdicts are reproduced by replaying this file.",
+ "controls_note": "The two rejected records from those batches, kept as controls: damaged transcriptions that the dimensional gate refused. One of them scored answer-key corroboration 5/15 — real exam questions 'confirming' wrong physics — and was overruled by the gate.",
+ "relations": [
+  {
+   "name": "Work-energy theorem",
+   "subject": "Physics",
+   "concept_candidate": "Physics :: Work Energy And Power",
+   "exam": "NEET",
+   "equation": "W_net = K_f - K_i",
+   "display": "K_f − K_i = W_net",
+   "lhs_unit": "J",
+   "symbols": {
+    "W_net": "J",
+    "K_f": "J",
+    "K_i": "J"
+   },
+   "meanings": {
+    "W_net": "work done by the net force",
+    "K_f": "final kinetic energy",
+    "K_i": "initial kinetic energy"
+   },
+   "constants": [],
+   "constraints": [],
+   "value_ranges": {},
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_12/Textbooks/NCERT_Class12_keph1dd.zip",
+    "entry": "keph1dd/keph105.pdf",
+    "page": 15,
+    "eq_label": "SUMMARY.1",
+    "image": "/Users/surendrakanna/Documents/Akshara_ERP/curriculum/knowledge/kie/notation_pages/ee3e3c996398ec33d330_dpi160.png",
+    "dpi": 160,
+    "source_ref": "NCERT_Class12_keph1dd.zip:keph1dd/keph105.pdf:p15"
+   }
+  },
+  {
+   "name": "Gravitational potential energy near Earth's surface",
+   "subject": "Physics",
+   "concept_candidate": "Physics :: Work Energy And Power",
+   "exam": "NEET",
+   "equation": "V = m*g*x",
+   "display": "V(x) = m g x",
+   "lhs_unit": "J",
+   "symbols": {
+    "V": "J",
+    "m": "kg",
+    "g": "m s^-2",
+    "x": "m"
+   },
+   "meanings": {
+    "V": "gravitational potential energy",
+    "m": "mass",
+    "g": "acceleration due to gravity",
+    "x": "height above the surface"
+   },
+   "constants": [
+    {
+     "symbol": "g",
+     "value": 9.8,
+     "unit": "m s^-2"
+    }
+   ],
+   "constraints": [
+    "variation of g with height ignored"
+   ],
+   "value_ranges": {},
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_12/Textbooks/NCERT_Class12_keph1dd.zip",
+    "entry": "keph1dd/keph105.pdf",
+    "page": 15,
+    "eq_label": "SUMMARY.5",
+    "image": "/Users/surendrakanna/Documents/Akshara_ERP/curriculum/knowledge/kie/notation_pages/ee3e3c996398ec33d330_dpi160.png",
+    "dpi": 160,
+    "source_ref": "NCERT_Class12_keph1dd.zip:keph1dd/keph105.pdf:p15"
+   }
+  },
+  {
+   "name": "Elastic potential energy of a spring",
+   "subject": "Physics",
+   "concept_candidate": "Physics :: Work Energy And Power",
+   "exam": "NEET",
+   "equation": "V = k*x**2/2",
+   "display": "V(x) = ½ k x²",
+   "lhs_unit": "J",
+   "symbols": {
+    "V": "J",
+    "k": "N m^-1",
+    "x": "m"
+   },
+   "meanings": {
+    "V": "elastic potential energy",
+    "k": "spring force constant",
+    "x": "extension"
+   },
+   "constants": [],
+   "constraints": [],
+   "value_ranges": {},
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_12/Textbooks/NCERT_Class12_keph1dd.zip",
+    "entry": "keph1dd/keph105.pdf",
+    "page": 15,
+    "eq_label": "SUMMARY.6",
+    "image": "/Users/surendrakanna/Documents/Akshara_ERP/curriculum/knowledge/kie/notation_pages/ee3e3c996398ec33d330_dpi160.png",
+    "dpi": 160,
+    "source_ref": "NCERT_Class12_keph1dd.zip:keph1dd/keph105.pdf:p15"
+   }
+  },
+  {
+   "name": "Elastic collision of equal masses (glancing)",
+   "subject": "Physics",
+   "concept_candidate": "Physics :: Work Energy And Power",
+   "exam": "NEET",
+   "equation": "v1i**2 = v1f**2 + v2f**2",
+   "display": "v₁ᵢ² = v₁f² + v₂f²",
+   "lhs_unit": "m^2 s^-2",
+   "symbols": {
+    "v1i": "m s^-1",
+    "v1f": "m s^-1",
+    "v2f": "m s^-1"
+   },
+   "meanings": {
+    "v1i": "initial speed of body 1",
+    "v1f": "final speed of body 1",
+    "v2f": "final speed of body 2"
+   },
+   "constants": [],
+   "constraints": [
+    "elastic collision",
+    "m1 = m2",
+    "target initially at rest"
+   ],
+   "value_ranges": {},
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_12/Textbooks/NCERT_Class12_keph1dd.zip",
+    "entry": "keph1dd/keph105.pdf",
+    "page": 15,
+    "eq_label": "(5.32)",
+    "image": "/Users/surendrakanna/Documents/Akshara_ERP/curriculum/knowledge/kie/notation_pages/ee3e3c996398ec33d330_dpi160.png",
+    "dpi": 160,
+    "source_ref": "NCERT_Class12_keph1dd.zip:keph1dd/keph105.pdf:p15"
+   }
+  },
+  {
+   "name": "Gravitational potential energy of two particles",
+   "subject": "Physics",
+   "concept_candidate": "Physics :: Gravitation",
+   "exam": "NEET",
+   "equation": "V = -G*m1*m2/r",
+   "display": "V = − G m₁ m₂ / r",
+   "lhs_unit": "J",
+   "symbols": {
+    "V": "J",
+    "G": "N m^2 kg^-2",
+    "m1": "kg",
+    "m2": "kg",
+    "r": "m"
+   },
+   "meanings": {
+    "V": "gravitational potential energy",
+    "G": "universal gravitational constant",
+    "m1": "mass of particle 1",
+    "m2": "mass of particle 2",
+    "r": "separation"
+   },
+   "constants": [
+    {
+     "symbol": "G",
+     "value": 6.674e-11,
+     "unit": "N m^2 kg^-2"
+    }
+   ],
+   "constraints": [
+    "zero of potential energy taken at infinity"
+   ],
+   "value_ranges": {
+    "m1": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 1e+24
+    },
+    "m2": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 1000.0
+    },
+    "r": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 1000000.0
+    }
+   },
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_12/Textbooks/NCERT_Class12_keph1dd.zip",
+    "entry": "keph1dd/keph107.pdf",
+    "page": 14,
+    "eq_label": "PONDER.5",
+    "image": "/Users/surendrakanna/Documents/Akshara_ERP/curriculum/knowledge/kie/notation_pages/a700c6b32317bdbf59f8_dpi160.png",
+    "dpi": 160,
+    "source_ref": "NCERT_Class12_keph1dd.zip:keph1dd/keph107.pdf:p14"
+   }
+  },
+  {
+   "name": "Kepler's third law",
+   "subject": "Physics",
+   "concept_candidate": "Physics :: Gravitation",
+   "exam": "NEET",
+   "equation": "T**2 = K_S*R**3",
+   "display": "T² = K_S R³",
+   "lhs_unit": "s^2",
+   "symbols": {
+    "T": "s",
+    "K_S": "s^2 m^-3",
+    "R": "m"
+   },
+   "meanings": {
+    "T": "orbital period",
+    "K_S": "Kepler constant (same for all planets in circular orbits)",
+    "R": "orbital radius"
+   },
+   "constants": [],
+   "constraints": [
+    "circular orbits"
+   ],
+   "value_ranges": {},
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_12/Textbooks/NCERT_Class12_keph1dd.zip",
+    "entry": "keph1dd/keph107.pdf",
+    "page": 14,
+    "eq_label": "PONDER.3",
+    "image": "/Users/surendrakanna/Documents/Akshara_ERP/curriculum/knowledge/kie/notation_pages/a700c6b32317bdbf59f8_dpi160.png",
+    "dpi": 160,
+    "source_ref": "NCERT_Class12_keph1dd.zip:keph1dd/keph107.pdf:p14"
+   }
+  },
+  {
+   "name": "Coulomb's law",
+   "subject": "Physics",
+   "concept_candidate": "Physics :: Electric Charges And Fields",
+   "exam": "NEET",
+   "equation": "F = 1/(4*pi*eps0)*q1*q2/r**2",
+   "display": "F = (1/4πε₀) |q₁q₂| / r²",
+   "lhs_unit": "N",
+   "symbols": {
+    "F": "N",
+    "eps0": "C^2 N^-1 m^-2",
+    "q1": "C",
+    "q2": "C",
+    "r": "m"
+   },
+   "meanings": {
+    "F": "electrostatic force between two point charges",
+    "eps0": "permittivity of free space",
+    "q1": "first point charge",
+    "q2": "second point charge",
+    "r": "separation"
+   },
+   "constants": [
+    {
+     "symbol": "eps0",
+     "value": 8.854e-12,
+     "unit": "C^2 N^-1 m^-2"
+    }
+   ],
+   "constraints": [
+    "point charges",
+    "vacuum/free space"
+   ],
+   "value_ranges": {
+    "q1": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 1e-06
+    },
+    "q2": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 1e-06
+    },
+    "r": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 0.1
+    }
+   },
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_11/Textbooks/NCERT_Class11_leph1dd.zip",
+    "entry": "leph101.pdf",
+    "page": 7,
+    "eq_label": "(1.2)",
+    "image": "/Users/surendrakanna/Documents/Akshara_ERP/curriculum/knowledge/kie/notation_pages/58107960e3702cc4e431_dpi160.png",
+    "dpi": 160,
+    "source_ref": "NCERT_Class11_leph1dd.zip:leph101.pdf:p7"
+   }
+  },
+  {
+   "name": "Resistance (Ohm's law form)",
+   "subject": "Physics",
+   "concept_candidate": "Physics :: Current Electricity",
+   "exam": "NEET",
+   "equation": "R = V/I",
+   "display": "R = V / I",
+   "lhs_unit": "ohm",
+   "symbols": {
+    "R": "ohm",
+    "V": "V",
+    "I": "A"
+   },
+   "meanings": {
+    "R": "resistance",
+    "V": "potential difference across the conductor",
+    "I": "current through the conductor"
+   },
+   "constants": [],
+   "constraints": [],
+   "value_ranges": {
+    "V": {
+     "lo": 2,
+     "hi": 12
+    },
+    "I": {
+     "lo": 1,
+     "hi": 6
+    }
+   },
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_11/Textbooks/NCERT_Class11_leph1dd.zip",
+    "entry": "leph103.pdf",
+    "page": 23,
+    "eq_label": "quantity-table",
+    "image": "/Users/surendrakanna/Documents/Akshara_ERP/curriculum/knowledge/kie/notation_pages/10bda3e3945ee953823e_dpi160.png",
+    "dpi": 160,
+    "source_ref": "NCERT_Class11_leph1dd.zip:leph103.pdf:p23"
+   }
+  },
+  {
+   "name": "Resistance from resistivity",
+   "subject": "Physics",
+   "concept_candidate": "Physics :: Current Electricity",
+   "exam": "NEET",
+   "equation": "R = rho*l/Ar",
+   "display": "R = ρ l / A",
+   "lhs_unit": "ohm",
+   "symbols": {
+    "R": "ohm",
+    "rho": "ohm m",
+    "l": "m",
+    "Ar": "m^2"
+   },
+   "meanings": {
+    "R": "resistance",
+    "rho": "resistivity of the material",
+    "l": "length of the conductor",
+    "Ar": "cross-sectional area"
+   },
+   "constants": [],
+   "constraints": [],
+   "value_ranges": {
+    "rho": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 1e-08
+    },
+    "l": {
+     "lo": 1,
+     "hi": 9
+    },
+    "Ar": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 1e-06
+    }
+   },
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_11/Textbooks/NCERT_Class11_leph1dd.zip",
+    "entry": "leph103.pdf",
+    "page": 23,
+    "eq_label": "quantity-table",
+    "image": "/Users/surendrakanna/Documents/Akshara_ERP/curriculum/knowledge/kie/notation_pages/10bda3e3945ee953823e_dpi160.png",
+    "dpi": 160,
+    "source_ref": "NCERT_Class11_leph1dd.zip:leph103.pdf:p23"
+   }
+  },
+  {
+   "name": "Drift speed of charge carriers",
+   "subject": "Physics",
+   "concept_candidate": "Physics :: Current Electricity",
+   "exam": "NEET",
+   "equation": "v_d = q_e*E*tau/m",
+   "display": "v_d = e E τ / m",
+   "lhs_unit": "m s^-1",
+   "symbols": {
+    "v_d": "m s^-1",
+    "q_e": "C",
+    "E": "V m^-1",
+    "tau": "s",
+    "m": "kg"
+   },
+   "meanings": {
+    "v_d": "drift speed",
+    "q_e": "magnitude of the electron charge",
+    "E": "electric field in the conductor",
+    "tau": "relaxation time",
+    "m": "mass of the electron"
+   },
+   "constants": [
+    {
+     "symbol": "q_e",
+     "value": 1.602e-19,
+     "unit": "C"
+    },
+    {
+     "symbol": "m",
+     "value": 9.11e-31,
+     "unit": "kg"
+    }
+   ],
+   "constraints": [],
+   "value_ranges": {
+    "E": {
+     "lo": 1,
+     "hi": 9
+    },
+    "tau": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 1e-14
+    }
+   },
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_11/Textbooks/NCERT_Class11_leph1dd.zip",
+    "entry": "leph103.pdf",
+    "page": 23,
+    "eq_label": "quantity-table",
+    "image": "/Users/surendrakanna/Documents/Akshara_ERP/curriculum/knowledge/kie/notation_pages/10bda3e3945ee953823e_dpi160.png",
+    "dpi": 160,
+    "source_ref": "NCERT_Class11_leph1dd.zip:leph103.pdf:p23"
+   }
+  },
+  {
+   "name": "Mobility of charge carriers",
+   "subject": "Physics",
+   "concept_candidate": "Physics :: Current Electricity",
+   "exam": "NEET",
+   "equation": "mu = v_d/E",
+   "display": "μ = v_d / E",
+   "lhs_unit": "m^2 V^-1 s^-1",
+   "symbols": {
+    "mu": "m^2 V^-1 s^-1",
+    "v_d": "m s^-1",
+    "E": "V m^-1"
+   },
+   "meanings": {
+    "mu": "mobility",
+    "v_d": "drift speed",
+    "E": "electric field"
+   },
+   "constants": [],
+   "constraints": [],
+   "value_ranges": {
+    "v_d": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 0.0001
+    },
+    "E": {
+     "lo": 1,
+     "hi": 9
+    }
+   },
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_11/Textbooks/NCERT_Class11_leph1dd.zip",
+    "entry": "leph103.pdf",
+    "page": 23,
+    "eq_label": "quantity-table",
+    "image": "/Users/surendrakanna/Documents/Akshara_ERP/curriculum/knowledge/kie/notation_pages/10bda3e3945ee953823e_dpi160.png",
+    "dpi": 160,
+    "source_ref": "NCERT_Class11_leph1dd.zip:leph103.pdf:p23"
+   }
+  },
+  {
+   "name": "Current density",
+   "subject": "Physics",
+   "concept_candidate": "Physics :: Current Electricity",
+   "exam": "NEET",
+   "equation": "j = I/Ar",
+   "display": "j = I / A",
+   "lhs_unit": "A m^-2",
+   "symbols": {
+    "j": "A m^-2",
+    "I": "A",
+    "Ar": "m^2"
+   },
+   "meanings": {
+    "j": "current density",
+    "I": "current",
+    "Ar": "cross-sectional area"
+   },
+   "constants": [],
+   "constraints": [],
+   "value_ranges": {
+    "I": {
+     "lo": 1,
+     "hi": 9
+    },
+    "Ar": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 1e-06
+    }
+   },
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_11/Textbooks/NCERT_Class11_leph1dd.zip",
+    "entry": "leph103.pdf",
+    "page": 23,
+    "eq_label": "quantity-table",
+    "image": "/Users/surendrakanna/Documents/Akshara_ERP/curriculum/knowledge/kie/notation_pages/10bda3e3945ee953823e_dpi160.png",
+    "dpi": 160,
+    "source_ref": "NCERT_Class11_leph1dd.zip:leph103.pdf:p23"
+   }
+  },
+  {
+   "name": "Wheatstone bridge null condition",
+   "subject": "Physics",
+   "concept_candidate": "Physics :: Current Electricity",
+   "exam": "NEET",
+   "equation": "R1 = R2*R3/R4",
+   "display": "R₁/R₂ = R₃/R₄  (null point)",
+   "lhs_unit": "ohm",
+   "symbols": {
+    "R1": "ohm",
+    "R2": "ohm",
+    "R3": "ohm",
+    "R4": "ohm"
+   },
+   "meanings": {
+    "R1": "unknown resistance",
+    "R2": "second arm resistance",
+    "R3": "third arm resistance",
+    "R4": "fourth arm resistance"
+   },
+   "constants": [],
+   "constraints": [
+    "bridge balanced (null point: no galvanometer deflection)"
+   ],
+   "value_ranges": {},
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_11/Textbooks/NCERT_Class11_leph1dd.zip",
+    "entry": "leph103.pdf",
+    "page": 23,
+    "eq_label": "quantity-table",
+    "image": "/Users/surendrakanna/Documents/Akshara_ERP/curriculum/knowledge/kie/notation_pages/10bda3e3945ee953823e_dpi160.png",
+    "dpi": 160,
+    "source_ref": "NCERT_Class11_leph1dd.zip:leph103.pdf:p23"
+   }
+  },
+  {
+   "name": "Electrical conductivity",
+   "subject": "Physics",
+   "concept_candidate": "Physics :: Current Electricity",
+   "exam": "NEET",
+   "equation": "sigma = 1/rho",
+   "display": "σ = 1/ρ",
+   "lhs_unit": "S m^-1",
+   "symbols": {
+    "sigma": "S m^-1",
+    "rho": "ohm m"
+   },
+   "meanings": {
+    "sigma": "electrical conductivity",
+    "rho": "resistivity"
+   },
+   "constants": [],
+   "constraints": [
+    "source unit column reads 'S'; its dimensions column [M^-1 L^-3 T^3 A^2] gives S m^-1"
+   ],
+   "value_ranges": {
+    "rho": {
+     "lo": 1,
+     "hi": 9,
+     "scale": 1e-08
+    }
+   },
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_11/Textbooks/NCERT_Class11_leph1dd.zip",
+    "entry": "leph103.pdf",
+    "page": 23,
+    "eq_label": "quantity-table",
+    "image": "/Users/surendrakanna/Documents/Akshara_ERP/curriculum/knowledge/kie/notation_pages/10bda3e3945ee953823e_dpi160.png",
+    "dpi": 160,
+    "source_ref": "NCERT_Class11_leph1dd.zip:leph103.pdf:p23"
+   }
+  }
+ ],
+ "controls": [
+  {
+   "name": "[CONTROL] Coulomb with OCR-lost exponent",
+   "subject": "Physics",
+   "concept_candidate": "Physics :: Electric Charges And Fields",
+   "exam": "NEET",
+   "equation": "F = 1/(4*pi*eps0)*q1*q2/r",
+   "display": "F = (1/4πε₀) q₁q₂ / r  [damaged]",
+   "lhs_unit": "N",
+   "symbols": {
+    "F": "N",
+    "eps0": "C^2 N^-1 m^-2",
+    "q1": "C",
+    "q2": "C",
+    "r": "m"
+   },
+   "meanings": {},
+   "constants": [],
+   "constraints": [],
+   "value_ranges": {},
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_11/Textbooks/NCERT_Class11_leph1dd.zip",
+    "entry": "leph101.pdf",
+    "page": 7,
+    "eq_label": "(1.2)-damaged",
+    "image": "/Users/surendrakanna/Documents/Akshara_ERP/curriculum/knowledge/kie/notation_pages/58107960e3702cc4e431_dpi160.png",
+    "dpi": 160,
+    "source_ref": "NCERT_Class11_leph1dd.zip:leph101.pdf:p7"
+   }
+  },
+  {
+   "name": "[CONTROL] spring PE with lost square",
+   "subject": "Physics",
+   "concept_candidate": "Physics :: Work Energy And Power",
+   "exam": "NEET",
+   "equation": "V = k*x/2",
+   "display": "V = ½ k x  [damaged]",
+   "lhs_unit": "J",
+   "symbols": {
+    "V": "J",
+    "k": "N m^-1",
+    "x": "m"
+   },
+   "meanings": {},
+   "constants": [],
+   "constraints": [],
+   "value_ranges": {},
+   "provenance": {
+    "store_path": "resources/foundation/NCERT/Class_12/Textbooks/NCERT_Class12_keph1dd.zip",
+    "entry": "keph1dd/keph105.pdf",
+    "page": 15,
+    "eq_label": "SUMMARY.6-damaged",
+    "image": "/Users/surendrakanna/Documents/Akshara_ERP/curriculum/knowledge/kie/notation_pages/ee3e3c996398ec33d330_dpi160.png",
+    "dpi": 160,
+    "source_ref": "NCERT_Class12_keph1dd.zip:keph1dd/keph105.pdf:p15"
+   }
+  }
+ ]
+}

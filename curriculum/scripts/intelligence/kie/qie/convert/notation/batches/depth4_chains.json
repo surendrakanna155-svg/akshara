@@ -1,0 +1,167 @@
+{
+ "set": "depth4_chains",
+ "note": "Compositional chains over CERTIFIED relations — the depth-4/5 (HARD) lane. Each chain feeds one certified relation's solved symbol into the next, which is what a real JEE/NEET multi-step item asks. No new knowledge is asserted: only the WIRING is certified, and the load-bearing gate is junction dimensional compatibility. Stems state the givens and ask for the target WITHOUT revealing the route — the student must supply the chain.",
+ "controls_note": "Deliberately mis-wired chains. Each must be REJECTED. The joule -> joule/mole feed is the exact silent-nonsense failure the junction gate exists to stop; it is dimensionally wrong yet arithmetically fine, so no numeric check would catch it.",
+ "chains": [
+  {
+   "name": "Current density from conductivity",
+   "subject": "Physics",
+   "exam": "JEE Advanced",
+   "concept_candidate": "Physics :: Current Electricity",
+   "narrative": "A uniform conductor of the stated material and dimensions is connected across a steady potential difference.",
+   "steps": [
+    {"out": "rho", "relation": "Electrical conductivity", "solve_for": "rho", "feeds": {}},
+    {"out": "R", "relation": "Resistance from resistivity", "solve_for": "R", "feeds": {"rho": "rho"}},
+    {"out": "I", "relation": "Resistance (Ohm's law form)", "solve_for": "I", "feeds": {"R": "R"}},
+    {"out": "j", "relation": "Current density", "solve_for": "j", "feeds": {"I": "I"}}
+   ],
+   "answer": "j",
+   "givens": {
+    "sigma": {"lo": 1, "hi": 9, "scale": 1e6},
+    "l": {"lo": 1, "hi": 9},
+    "Ar": {"lo": 1, "hi": 9, "scale": 1e-6},
+    "V": {"lo": 2, "hi": 12}
+   }
+  },
+  {
+   "name": "Wheatstone arm current",
+   "subject": "Physics",
+   "exam": "JEE Advanced",
+   "concept_candidate": "Physics :: Current Electricity",
+   "narrative": "In a balanced Wheatstone bridge the arm R2 is a uniform wire of the stated material and dimensions, and the potential difference across the unknown arm R1 is as stated.",
+   "steps": [
+    {"out": "rho", "relation": "Electrical conductivity", "solve_for": "rho", "feeds": {}},
+    {"out": "R2", "relation": "Resistance from resistivity", "solve_for": "R", "feeds": {"rho": "rho"}},
+    {"out": "R1", "relation": "Wheatstone bridge null condition", "solve_for": "R1", "feeds": {"R2": "R2"}},
+    {"out": "I", "relation": "Resistance (Ohm's law form)", "solve_for": "I", "feeds": {"R": "R1"}}
+   ],
+   "answer": "I",
+   "meaning_overrides": {
+    "V": "potential difference across the unknown arm R1",
+    "I": "current through the unknown arm R1",
+    "sigma": "electrical conductivity of the wire forming arm R2",
+    "l": "length of the wire forming arm R2",
+    "Ar": "cross-sectional area of the wire forming arm R2"
+   },
+   "givens": {
+    "sigma": {"lo": 1, "hi": 9, "scale": 1e6},
+    "l": {"lo": 1, "hi": 9},
+    "Ar": {"lo": 1, "hi": 9, "scale": 1e-7},
+    "R3": {"lo": 2, "hi": 9},
+    "R4": {"lo": 2, "hi": 9},
+    "V": {"lo": 2, "hi": 12}
+   }
+  },
+  {
+   "name": "Enthalpy of gas expansion",
+   "subject": "Chemistry",
+   "exam": "JEE Advanced",
+   "concept_candidate": "Chemistry :: Thermodynamics",
+   "narrative": "An ideal gas expands against a constant external pressure equal to its own initial pressure, absorbing heat.",
+   "meaning_overrides": {
+    "T": "initial absolute temperature of the gas",
+    "V": "initial volume of the gas"
+   },
+   "steps": [
+    {"out": "p", "relation": "Ideal gas equation", "solve_for": "p", "feeds": {}},
+    {"out": "w", "relation": "Work of gas expansion", "solve_for": "w", "feeds": {"p_ex": "p"}},
+    {"out": "dU", "relation": "First law of thermodynamics", "solve_for": "dU", "feeds": {"w": "w"}},
+    {"out": "dH", "relation": "Enthalpy from internal energy", "solve_for": "dH", "feeds": {"dU": "dU"}}
+   ],
+   "answer": "dH",
+   "givens": {
+    "n": {"lo": 1, "hi": 9},
+    "T": {"lo": 2, "hi": 9, "scale": 50.0},
+    "V": {"lo": 1, "hi": 9, "scale": 1e-3},
+    "dV": {"lo": 1, "hi": 9, "scale": 1e-4},
+    "q": {"lo": 2, "hi": 9, "scale": 100.0},
+    "dn_g": {"lo": 1, "hi": 3}
+   }
+  },
+  {
+   "name": "Enthalpy from heat capacity",
+   "subject": "Chemistry",
+   "exam": "JEE Main",
+   "concept_candidate": "Chemistry :: Thermodynamics",
+   "narrative": "An ideal gas is warmed and allowed to expand against a constant external pressure equal to its own initial pressure.",
+   "meaning_overrides": {
+    "T": "initial absolute temperature of the gas",
+    "V": "initial volume of the gas"
+   },
+   "steps": [
+    {"out": "p", "relation": "Ideal gas equation", "solve_for": "p", "feeds": {}},
+    {"out": "w", "relation": "Work of gas expansion", "solve_for": "w", "feeds": {"p_ex": "p"}},
+    {"out": "q", "relation": "Heat capacity relation", "solve_for": "q", "feeds": {}},
+    {"out": "dU", "relation": "First law of thermodynamics", "solve_for": "dU", "feeds": {"w": "w", "q": "q"}},
+    {"out": "dH", "relation": "Enthalpy from internal energy", "solve_for": "dH", "feeds": {"dU": "dU"}}
+   ],
+   "answer": "dH",
+   "givens": {
+    "n": {"lo": 1, "hi": 9},
+    "T": {"lo": 2, "hi": 9, "scale": 50.0},
+    "V": {"lo": 1, "hi": 9, "scale": 1e-3},
+    "dV": {"lo": 1, "hi": 9, "scale": 1e-4},
+    "C": {"lo": 2, "hi": 9, "scale": 10.0},
+    "dT": {"lo": 2, "hi": 9},
+    "dn_g": {"lo": 1, "hi": 3}
+   }
+  }
+ ],
+ "controls": [
+  {
+   "name": "CONTROL joule into molar slot",
+   "subject": "Chemistry",
+   "exam": "NEET",
+   "concept_candidate": "Chemistry :: Thermodynamics",
+   "narrative": "DAMAGED: feeds an extensive enthalpy (J) into a molar reaction-enthalpy slot (J/mol).",
+   "steps": [
+    {"out": "p", "relation": "Ideal gas equation", "solve_for": "p", "feeds": {}},
+    {"out": "w", "relation": "Work of gas expansion", "solve_for": "w", "feeds": {"p_ex": "p"}},
+    {"out": "dU", "relation": "First law of thermodynamics", "solve_for": "dU", "feeds": {"w": "w"}},
+    {"out": "dH", "relation": "Enthalpy from internal energy", "solve_for": "dH", "feeds": {"dU": "dU"}},
+    {"out": "dG", "relation": "Gibbs energy change", "solve_for": "dG_r", "feeds": {"dH_r": "dH"}}
+   ],
+   "answer": "dG",
+   "givens": {
+    "n": {"lo": 1, "hi": 9}, "T": {"lo": 2, "hi": 9, "scale": 50.0}, "V": {"lo": 1, "hi": 9, "scale": 1e-3},
+    "dV": {"lo": 1, "hi": 9, "scale": 1e-4}, "q": {"lo": 2, "hi": 9, "scale": 100.0},
+    "dn_g": {"lo": 1, "hi": 3}, "dS_r": {"lo": 2, "hi": 9, "scale": 10.0}
+   }
+  },
+  {
+   "name": "CONTROL resistance into current slot",
+   "subject": "Physics",
+   "exam": "NEET",
+   "concept_candidate": "Physics :: Current Electricity",
+   "narrative": "DAMAGED: feeds a resistance (ohm) straight into a current (A) slot.",
+   "steps": [
+    {"out": "rho", "relation": "Electrical conductivity", "solve_for": "rho", "feeds": {}},
+    {"out": "R", "relation": "Resistance from resistivity", "solve_for": "R", "feeds": {"rho": "rho"}},
+    {"out": "j", "relation": "Current density", "solve_for": "j", "feeds": {"I": "R"}}
+   ],
+   "answer": "j",
+   "givens": {
+    "sigma": {"lo": 1, "hi": 9, "scale": 1e7}, "l": {"lo": 1, "hi": 9},
+    "Ar": {"lo": 1, "hi": 9, "scale": 1e-6}
+   }
+  },
+  {
+   "name": "CONTROL unresolved free symbol",
+   "subject": "Physics",
+   "exam": "NEET",
+   "concept_candidate": "Physics :: Current Electricity",
+   "narrative": "DAMAGED: the potential difference V is never supplied, so the chain cannot close.",
+   "steps": [
+    {"out": "rho", "relation": "Electrical conductivity", "solve_for": "rho", "feeds": {}},
+    {"out": "R", "relation": "Resistance from resistivity", "solve_for": "R", "feeds": {"rho": "rho"}},
+    {"out": "I", "relation": "Resistance (Ohm's law form)", "solve_for": "I", "feeds": {"R": "R"}},
+    {"out": "j", "relation": "Current density", "solve_for": "j", "feeds": {"I": "I"}}
+   ],
+   "answer": "j",
+   "givens": {
+    "sigma": {"lo": 1, "hi": 9, "scale": 1e7}, "l": {"lo": 1, "hi": 9},
+    "Ar": {"lo": 1, "hi": 9, "scale": 1e-6}
+   }
+  }
+ ]
+}

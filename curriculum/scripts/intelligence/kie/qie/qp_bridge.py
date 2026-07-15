@@ -38,6 +38,9 @@ def _engine_pool(subjects, seed: int, per: int = 14) -> List[dict]:
     from kie.qie import physics, chemistry, genetics, biology  # noqa: F401
     from kie.qie.convert import kvs_compose  # noqa: F401 — registers governed-KVS templates (verified facts)
     from kie.qie.convert.notation import relation_compose  # noqa: F401 — CERTIFIED recovered relations (numeric)
+    # CERTIFIED depth-4/5 chains — the HARD lane. A single relation is one operator application (depth 1) and
+    # can only ever be MEDIUM, so every blueprint's hard cells stay empty without these.
+    from kie.qie.convert.notation import chain_compose  # noqa: F401
     subs = set(subjects)
     out: List[dict] = []
 
@@ -183,6 +186,14 @@ def _governed_concepts(subjects) -> Tuple[Dict[str, object], Dict[str, Tuple[str
     except sqlite3.Error:
         pass
     try:
+        # CERTIFIED depth-4/5 chains. A chain composes already-certified relations, so it asserts no new
+        # knowledge — but it IS a distinct syllabus concept ("Wheatstone arm current"), and it is the only
+        # thing that can fill a blueprint's HARD cells (depth>=4). Certified at import by chains.certify.
+        from kie.qie.convert.notation import chain_compose as chain_mod
+        rows += [(ch.subject, f"{ch.subject} :: {ch.name}") for ch in chain_mod.CHAINS]
+    except Exception:
+        pass
+    try:
         for subj, cc in rows:
             if subj not in subj_set or not cc:
                 continue
@@ -203,9 +214,9 @@ def _governed_concepts(subjects) -> Tuple[Dict[str, object], Dict[str, Tuple[str
 def _bind(item: dict, scope) -> Optional[Tuple[str, str]]:
     """Bind to the first in-scope certified concept matching a target (exact title preferred, then the
     shortest title CONTAINING the target). Returns None if no precise in-scope concept exists (→ skipped)."""
-    if item["frame_id"].startswith(("kvs_", "relnum_")):
-        # governed item (verified KVS fact, or a CERTIFIED source-recovered relation) -> its own verified
-        # chapter, now a first-class in-scope concept. Exact and subject-safe.
+    if item["frame_id"].startswith(("kvs_", "relnum_", "chain_")):
+        # governed item (verified KVS fact, a CERTIFIED source-recovered relation, or a CERTIFIED depth-4/5
+        # chain over them) -> its own verified concept, now first-class in-scope. Exact and subject-safe.
         gc = getattr(scope, "gov_by_chapter", {}).get(item.get("concept"))
         if gc:
             return gc
