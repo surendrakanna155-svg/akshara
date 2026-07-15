@@ -37,6 +37,7 @@ def _engine_pool(subjects, seed: int, per: int = 14) -> List[dict]:
     # importing the domain modules registers their operators/templates into the shared registry
     from kie.qie import physics, chemistry, genetics, biology  # noqa: F401
     from kie.qie.convert import kvs_compose  # noqa: F401 — registers governed-KVS templates (verified facts)
+    from kie.qie.convert.notation import relation_compose  # noqa: F401 — CERTIFIED recovered relations (numeric)
     subs = set(subjects)
     out: List[dict] = []
 
@@ -166,9 +167,20 @@ def _governed_concepts(subjects) -> Tuple[Dict[str, object], Dict[str, Tuple[str
         return out, by_chapter
     subj_set = set(subjects)
     c = sqlite3.connect(f"file:{QS.QIE_DB_PATH}?mode=ro", uri=True)
+    # chapters carrying governed knowledge: verified qualitative FACTS and/or CERTIFIED recovered RELATIONS
+    rows = []
     try:
-        for subj, cc in c.execute("SELECT DISTINCT subject, concept_candidate FROM governed_fact "
-                                  "WHERE status='verified'"):
+        rows += list(c.execute("SELECT DISTINCT subject, concept_candidate FROM governed_fact "
+                               "WHERE status='verified'"))
+    except sqlite3.Error:
+        pass
+    try:
+        rows += list(c.execute("SELECT DISTINCT subject, concept_candidate FROM governed_relation "
+                               "WHERE status='certified'"))
+    except sqlite3.Error:
+        pass
+    try:
+        for subj, cc in rows:
             if subj not in subj_set or not cc:
                 continue
             title = _clean_title(cc.split("::")[-1].strip())
@@ -188,8 +200,9 @@ def _governed_concepts(subjects) -> Tuple[Dict[str, object], Dict[str, Tuple[str
 def _bind(item: dict, scope) -> Optional[Tuple[str, str]]:
     """Bind to the first in-scope certified concept matching a target (exact title preferred, then the
     shortest title CONTAINING the target). Returns None if no precise in-scope concept exists (→ skipped)."""
-    if item["frame_id"].startswith("kvs_"):
-        # governed-KVS item -> its own verified chapter (now a first-class in-scope concept). Exact, subject-safe.
+    if item["frame_id"].startswith(("kvs_", "relnum_")):
+        # governed item (verified KVS fact, or a CERTIFIED source-recovered relation) -> its own verified
+        # chapter, now a first-class in-scope concept. Exact and subject-safe.
         gc = getattr(scope, "gov_by_chapter", {}).get(item.get("concept"))
         if gc:
             return gc

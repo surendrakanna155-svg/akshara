@@ -2,7 +2,7 @@
   "_registry": "Akshara Canonical Evidence & Knowledge Governance Registry",
   "_authority": "Single store-level source of truth for owned QIE/curriculum evidence + lifecycle state.",
   "_owner_correction": "2026-07-14 evidence-storage governance reconciliation",
-  "generated_at": "2026-07-15T00:45:00Z",
+  "generated_at": "2026-07-15T02:15:00Z",
   "workspace": "/Users/surendrakanna/Documents/Akshara_ERP/curriculum",
   "lifecycle_states": [
     "1_raw_source",
@@ -15,11 +15,11 @@
     "q_quarantine"
   ],
   "totals": {
-    "stores": 22,
-    "total_bytes": 63727267840,
+    "stores": 23,
+    "total_bytes": 63728304128,
     "total_human": "59.4 GB",
     "by_scope": {
-      "in_scope": 7,
+      "in_scope": 8,
       "held": 4,
       "mixed": 4,
       "out_of_scope": 1,
@@ -30,7 +30,8 @@
       "q_quarantine": 5,
       "3_extracted_evidence": 2,
       "2_ocr_normalized": 3,
-      "7_qie_available": 1
+      "7_qie_available": 1,
+      "4_recovered_notation": 1
     }
   },
   "stores": [
@@ -574,7 +575,10 @@
         "distractor_dna": 274,
         "item_model": 84,
         "item_model_ai_validated": 39,
-        "pilot_verified_item": 1496
+        "pilot_verified_item": 1496,
+        "governed_fact_verified": 92,
+        "governed_relation_certified": 7,
+        "governed_relation_rejected": 2
       }
     },
     {
@@ -629,6 +633,40 @@
       "exists": true,
       "size_bytes": 267059200,
       "size_human": "254.7 MB",
+      "live": {}
+    },
+    {
+      "canonical_id": "NOTATION_PAGES",
+      "physical_path": "knowledge/kie/notation_pages",
+      "role": "staging_derived",
+      "state": "4_recovered_notation",
+      "scope": "in_scope",
+      "purpose": "Rendered source page images for math-capable NOTATION RECOVERY (owner decision A) \u2014 the cache backing exact symbol/subscript/superscript/unit recovery where every OCR text lane is damaged.",
+      "source_type": "derived_render",
+      "media": "image",
+      "provenance_level": "derived",
+      "git": "gitignored_local_only",
+      "detail_manifest": null,
+      "depends_on_code": [
+        "scripts/intelligence/kie/qie/convert/notation/sources.py"
+      ],
+      "duplicate_of": null,
+      "subjects": [
+        "Physics",
+        "Chemistry",
+        "Mathematics"
+      ],
+      "exams_boards": [
+        "NCERT"
+      ],
+      "classes": [],
+      "languages": [
+        "en"
+      ],
+      "notes": "Deterministic + idempotent re-render from owned PDFs; certified output lands in qie.db governed_relation.",
+      "exists": true,
+      "size_bytes": 1036288,
+      "size_human": "1012.0 KB",
       "live": {}
     },
     {

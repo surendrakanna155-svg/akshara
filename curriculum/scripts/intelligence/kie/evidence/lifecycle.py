@@ -171,6 +171,15 @@ STORES: List[Store] = [
     Store("KDB_PARSED", "knowledge/kie/parsed", Role.STAGING, State.OCR_NORMALIZED, Scope.IN_SCOPE,
           "Per-document parsed outputs (phase2/phase4 intermediate).", "derived_parse", "ocr_text",
           "derived", Git.IGNORED_LOCAL),
+    Store("NOTATION_PAGES", "knowledge/kie/notation_pages", Role.STAGING, State.RECOVERED_NOTATION,
+          Scope.IN_SCOPE,
+          "Rendered source page images for math-capable NOTATION RECOVERY (owner decision A) — the cache "
+          "backing exact symbol/subscript/superscript/unit recovery where every OCR text lane is damaged.",
+          "derived_render", "image", "derived", Git.IGNORED_LOCAL,
+          depends_on_code=("scripts/intelligence/kie/qie/convert/notation/sources.py",),
+          subjects=("Physics", "Chemistry", "Mathematics"), exams_boards=("NCERT",),
+          notes="Deterministic + idempotent re-render from owned PDFs; certified output lands in "
+                "qie.db governed_relation."),
     # ---- GOVERNANCE / INDEX LAYER (git-tracked, compact) -------------------------------------------------
     Store("GOV_PROVENANCE_MANIFEST", "PROVENANCE_MANIFEST.json", Role.GOVERNANCE, State.RAW_SOURCE,
           Scope.MIXED, "Per-file provenance manifest for the curriculum/board acquisition universe (839 "

@@ -1,8 +1,8 @@
 # Akshara — Canonical Evidence & Knowledge Governance Registry
 
-**Generated:** 2026-07-15T00:45:00Z · **Authority:** single store-level source of truth for ALL owned QIE/curriculum evidence + its lifecycle state. Re-run `python -m kie.evidence.registry` to refresh.
+**Generated:** 2026-07-15T02:15:00Z · **Authority:** single store-level source of truth for ALL owned QIE/curriculum evidence + its lifecycle state. Re-run `python -m kie.evidence.registry` to refresh.
 
-**Totals:** 22 stores · 59.4 GB · by scope {'in_scope': 7, 'held': 4, 'mixed': 4, 'out_of_scope': 1, 'n_a': 6} · by state {'1_raw_source': 11, 'q_quarantine': 5, '3_extracted_evidence': 2, '2_ocr_normalized': 3, '7_qie_available': 1}
+**Totals:** 23 stores · 59.4 GB · by scope {'in_scope': 8, 'held': 4, 'mixed': 4, 'out_of_scope': 1, 'n_a': 6} · by state {'1_raw_source': 11, 'q_quarantine': 5, '3_extracted_evidence': 2, '2_ocr_normalized': 3, '7_qie_available': 1, '4_recovered_notation': 1}
 
 Lifecycle: `1_raw → 2_ocr → 3_extracted → 4_recovered → 5_verified → 6_concept_bound → 7_qie_available` (`q_quarantine` = rejected/out-of-scope/superseded).
 
@@ -23,9 +23,10 @@ Lifecycle: `1_raw → 2_ocr → 3_extracted → 4_recovered → 5_verified → 6
 | STG_QCORPUS | `staging/qcorpus_noncert` | staging_derived | 3_extracted_evidence | in_scope | 1.1 GB | 22759 Q / 865 docs |
 | STG_BOARD_CURRICULUM | `staging/board_curriculum` | staging_derived | 2_ocr_normalized | mixed | 1.1 GB |  |
 | KDB_KIE | `knowledge/kie/kie.db` | knowledge_db | 3_extracted_evidence | in_scope | 157.1 MB | chunks:42141 concepts:3006 formulas:317 (w/symbols:0) |
-| KDB_QIE | `knowledge/kie/qie.db` | knowledge_db | 7_qie_available | in_scope | 3.1 MB | KVS≥2:77 tier2:411 SF:14 seq:17 cmp:8 distr:274 bank:1496 |
+| KDB_QIE | `knowledge/kie/qie.db` | knowledge_db | 7_qie_available | in_scope | 3.1 MB | facts:92 SF:14 seq:17 cmp:8 distr:274 · relations:7 cert/2 rej · bank:1496 |
 | KDB_INTAKE_STAGING | `knowledge/kie/intake/staging` | knowledge_db | 2_ocr_normalized | mixed | 13.1 MB |  |
 | KDB_PARSED | `knowledge/kie/parsed` | staging_derived | 2_ocr_normalized | in_scope | 254.7 MB |  |
+| NOTATION_PAGES | `knowledge/kie/notation_pages` | staging_derived | 4_recovered_notation | in_scope | 1012.0 KB |  |
 | GOV_PROVENANCE_MANIFEST | `PROVENANCE_MANIFEST.json` | governance_index | 1_raw_source | mixed | 1008.0 KB |  |
 | GOV_INDEXES | `indexes` | governance_index | 1_raw_source | n_a | 1.4 MB |  |
 | GOV_REPORTS | `reports` | governance_index | 1_raw_source | n_a | 2.3 MB |  |

@@ -218,3 +218,33 @@ CREATE TABLE IF NOT EXISTS governed_fact (
 CREATE INDEX IF NOT EXISTS idx_gf_subject_lane ON governed_fact(subject, lane);
 CREATE INDEX IF NOT EXISTS idx_gf_status ON governed_fact(status);
 CREATE INDEX IF NOT EXISTS idx_gf_concept ON governed_fact(concept_candidate);
+
+-- ── GOVERNED RELATION (notation recovery, owner decision A) — an exact quantitative relation recovered from a
+-- rendered page of an OWNED source and certified DETERMINISTICALLY (symbolic + dimensional + domain +
+-- round-trip; answer-key as corroboration only). Every row records the exact source page it was read from and
+-- the per-gate verification evidence, so any claim is traceable back to the owned evidence. Arithmetic-induced
+-- or guessed relations are NEVER admitted here (see GOVERNED_CONVERSION_BATCH2_AND_NOTATION_FINDING.md).
+CREATE TABLE IF NOT EXISTS governed_relation (
+  relation_id       TEXT PRIMARY KEY,          -- hash of (subject | canonical equation)
+  name              TEXT NOT NULL,             -- e.g. "Coulomb's law"
+  subject           TEXT NOT NULL,             -- deterministically gated by the source document's subject
+  concept_candidate TEXT NOT NULL,             -- "Subject :: Chapter" (doc-grounded, first-class in-scope)
+  exam              TEXT,
+  equation          TEXT NOT NULL,             -- canonical parseable form, e.g. "F = 1/(4*pi*eps0)*q1*q2/r**2"
+  display           TEXT,                      -- human/render form with real notation (subscripts etc.)
+  lhs_unit          TEXT NOT NULL,             -- SI unit of the subject of the relation
+  symbols           TEXT NOT NULL,             -- json {symbol: unit}
+  meanings          TEXT,                      -- json {symbol: meaning} (symbol->quantity binding)
+  constants         TEXT,                      -- json [{symbol, value, unit}] (e.g. eps0 = 8.854e-12 C^2N^-1m^-2)
+  constraints       TEXT,                      -- json: domains/validity conditions read from the source
+  value_ranges      TEXT,                      -- json {symbol:{lo,hi,scale}} — instance-parameter realism for
+                                               -- generation ONLY (the certified knowledge is the relation)
+  provenance        TEXT NOT NULL,             -- json: store_path, entry, page, eq_label, image, dpi, doc_id
+  verification      TEXT NOT NULL,             -- json: per-gate results + corroboration counts
+  status            TEXT NOT NULL,             -- certified | rejected | quarantined
+  reject_reason     TEXT,
+  extractor         TEXT,                      -- transcription assistant id (proposes only; never certifies)
+  created_at        TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_gr_subject ON governed_relation(subject, status);
+CREATE INDEX IF NOT EXISTS idx_gr_concept ON governed_relation(concept_candidate);

@@ -97,6 +97,10 @@ def _qie_knowledge_state(dbpath: Path) -> dict:
     st["item_model"] = q("SELECT COUNT(*) FROM item_model")
     st["item_model_ai_validated"] = q("SELECT COUNT(*) FROM item_model WHERE certification_status='ai_validated'")
     st["pilot_verified_item"] = q("SELECT COUNT(*) FROM pilot_verified_item")
+    st["governed_fact_verified"] = q("SELECT COUNT(*) FROM governed_fact WHERE status='verified'")
+    # notation lane (owner decision A): relations recovered from owned source images + deterministically certified
+    st["governed_relation_certified"] = q("SELECT COUNT(*) FROM governed_relation WHERE status='certified'")
+    st["governed_relation_rejected"] = q("SELECT COUNT(*) FROM governed_relation WHERE status='rejected'")
     c.close()
     return st
 
@@ -201,10 +205,10 @@ def render_md(reg: dict) -> str:
         if r["canonical_id"] == "STG_QCORPUS":
             detail = f"{lv.get('extracted_questions','?')} Q / {lv.get('corpus_inventory','?')} docs"
         elif r["canonical_id"] == "KDB_QIE":
-            detail = (f"KVS≥2:{lv.get('kvs_assertion_corroborated_ge2')} tier2:{lv.get('tier2_agree')} "
-                      f"SF:{lv.get('kvs_structure_function')} seq:{lv.get('kvs_sequence')} "
-                      f"cmp:{lv.get('kvs_comparison')} distr:{lv.get('distractor_dna')} "
-                      f"bank:{lv.get('pilot_verified_item')}")
+            detail = (f"facts:{lv.get('governed_fact_verified')} SF:{lv.get('kvs_structure_function')} "
+                      f"seq:{lv.get('kvs_sequence')} cmp:{lv.get('kvs_comparison')} "
+                      f"distr:{lv.get('distractor_dna')} · relations:{lv.get('governed_relation_certified')} "
+                      f"cert/{lv.get('governed_relation_rejected')} rej · bank:{lv.get('pilot_verified_item')}")
         elif r["canonical_id"] == "KDB_KIE":
             detail = (f"chunks:{lv.get('chunks')} concepts:{lv.get('concepts')} "
                       f"formulas:{lv.get('formulas')} (w/symbols:{lv.get('formulas_with_symbols')})")

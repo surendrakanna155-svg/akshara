@@ -43,6 +43,7 @@ def migrate(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA_PATH.read_text())
     # Phase C additive migration for pre-existing stores (CREATE TABLE IF NOT EXISTS won't add columns).
     _add_column_if_missing(conn, "question_dna", "assessment_profile", "TEXT")
+    _add_column_if_missing(conn, "governed_relation", "value_ranges", "TEXT")
     conn.execute(
         "INSERT INTO qie_meta(key, value) VALUES ('schema_version', ?) "
         "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
