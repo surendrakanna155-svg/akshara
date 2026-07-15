@@ -325,6 +325,20 @@ class HybridSchoolCompletionRepository implements SchoolCompletionRepository {
       _api.listSyllabusChapters(query: query, academicYearId: academicYearId);
 
   @override
+  Future<List<SyllabusTopic>> listSyllabusTopics({
+    required RepositoryQuery query,
+    String? className,
+    String? subjectId,
+    String? chapterId,
+  }) =>
+      _api.listSyllabusTopics(
+        query: query,
+        className: className,
+        subjectId: subjectId,
+        chapterId: chapterId,
+      );
+
+  @override
   Future<void> completeTopic({
     required RepositoryQuery query,
     required String topicId,

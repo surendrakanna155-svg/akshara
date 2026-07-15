@@ -1625,6 +1625,12 @@ abstract final class QaTestKeys {
   static ValueKey<String> subjectEditButton(String subjectId) =>
       ValueKey<String>('subject_edit_button_$subjectId');
 
+  static const lessonLogCreateSubmitButton =
+      ValueKey<String>('lesson_log_create_submit_button');
+
+  static const lessonLogTopicLinkSubmitButton =
+      ValueKey<String>('lesson_log_topic_link_submit_button');
+
   static ValueKey<String> atRiskStudentRow(String studentId) =>
       ValueKey<String>('at_risk_student_$studentId');
 

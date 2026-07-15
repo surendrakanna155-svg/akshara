@@ -66,6 +66,19 @@ const List<AdminNavDestination> kAllAdminNavDestinations = [
     selectedIcon: Icons.assignment,
     requiredPermission: Permission.viewExams,
   ),
+  // P1 fix (PRC-A caps 58-65) — the School Completion hub (~20 screens:
+  // subjects, timetables, syllabus automation, lesson logs, academic progress,
+  // communications, pilot toolkit) had routes + real screens but ZERO inbound
+  // navigation — reachable only by typing the URL. Gated on the SAME
+  // permission already used for the hub route itself (route_guards.dart).
+  AdminNavDestination(
+    module: AdminModule.schoolCompletion,
+    route: RouteNames.schoolCompletionHub,
+    label: 'School Completion',
+    icon: Icons.dashboard_customize_outlined,
+    selectedIcon: Icons.dashboard_customize,
+    requiredPermission: Permission.viewSubjects,
+  ),
   AdminNavDestination(
     module: AdminModule.hr,
     route: RouteNames.hrDashboard,
@@ -327,6 +340,14 @@ const Map<AdminModule, AdminModuleInfo> kAdminModuleInfo = {
     description:
         'Student Information System (SIS-01 → SIS-05) — registry, profiles, conversion.',
     route: RouteNames.sisDashboard,
+  ),
+  AdminModule.schoolCompletion: AdminModuleInfo(
+    module: AdminModule.schoolCompletion,
+    title: 'School Completion',
+    description:
+        'Subjects, timetables, syllabus automation, lesson logs, academic '
+        'progress, communications, and the pilot onboarding toolkit.',
+    route: RouteNames.schoolCompletionHub,
   ),
   AdminModule.hr: AdminModuleInfo(
     module: AdminModule.hr,

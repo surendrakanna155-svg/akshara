@@ -402,6 +402,24 @@ class SchoolCompletionRemoteDataSource {
     return _items(response);
   }
 
+  Future<List<Map<String, dynamic>>> listSyllabusTopics({
+    required RepositoryQuery query,
+    String? className,
+    String? subjectId,
+    String? chapterId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      SchoolCompletionApiPaths.syllabusTopics,
+      queryParameters: {
+        ..._params(query),
+        if (className != null) 'className': className,
+        if (subjectId != null) 'subjectId': subjectId,
+        if (chapterId != null) 'chapterId': chapterId,
+      },
+    );
+    return _items(response);
+  }
+
   Future<void> completeTopic({
     required RepositoryQuery query,
     required Map<String, dynamic> body,

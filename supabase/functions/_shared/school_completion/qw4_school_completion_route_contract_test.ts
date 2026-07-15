@@ -129,6 +129,9 @@ const ROUTES: Row[] = [
   { method: "POST", path: "/school/syllabus/generate", slug: "manageSyllabus", body: { academicYearId: "ay-1", className: "8-A", subjectId: "s-1", subjectName: "Math" } },
   { method: "POST", path: "/school/syllabus/clone", slug: "manageSyllabus", body: { fromYearId: "ay-1", toYearId: "ay-2" } },
   { method: "GET", path: "/school/syllabus/chapters", slug: "viewAcademicProgress" },
+  // P1 fix (caps 58-61) — real topic picker backing the teacher's daily-capture
+  // UI so the client can send a REAL topicId instead of a fabricated one.
+  { method: "GET", path: "/school/syllabus/topics", slug: "viewAcademicProgress" },
   { method: "POST", path: "/school/academic/complete-topic", slug: "manageAcademicProgress", body: { topicId: "t-1" } },
   { method: "GET", path: "/school/academic/teacher-progress", slug: "viewAcademicProgress" },
   { method: "GET", path: "/school/academic/principal-progress", slug: "viewAcademicProgress" },

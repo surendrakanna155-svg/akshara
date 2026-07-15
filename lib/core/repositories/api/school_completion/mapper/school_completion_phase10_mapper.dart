@@ -38,6 +38,16 @@ class SchoolCompletionPhase10Mapper {
         status: json['status'] as String? ?? 'pending',
       );
 
+  SyllabusTopic toTopic(Map<String, dynamic> json) => SyllabusTopic(
+        id: json['id'] as String? ?? '',
+        subjectId: json['subjectId'] as String? ?? json['subject_id'] as String? ?? '',
+        className: json['className'] as String? ?? json['class_name'] as String? ?? '',
+        chapterId: json['chapterId'] as String? ?? json['chapter_id'] as String?,
+        topicName: json['topicName'] as String? ?? json['topic_name'] as String? ?? '',
+        sequenceOrder: json['sequenceOrder'] as int? ?? json['sequence_order'] as int? ?? 0,
+        status: json['status'] as String? ?? 'pending',
+      );
+
   TeacherProgressDashboard toTeacherProgress(Map<String, dynamic> json) {
     final alerts = json['pendingAlerts'] ?? json['pending_alerts'];
     return TeacherProgressDashboard(
@@ -46,8 +56,25 @@ class SchoolCompletionPhase10Mapper {
       chaptersCompleted: json['chaptersCompleted'] as int? ?? json['chapters_completed'] as int? ?? 0,
       chaptersTotal: json['chaptersTotal'] as int? ?? json['chapters_total'] as int? ?? 0,
       coveragePercent: json['coveragePercent'] as int? ?? json['coverage_percent'] as int? ?? 0,
-      pendingAlerts: alerts is List ? alerts.map((e) => e.toString()).toList() : const [],
+      pendingAlerts: alerts is List ? alerts.map(_formatPendingAlert).toList() : const [],
     );
+  }
+
+  /// Formats one `PendingSyllabusAlert` JSON object into a readable message.
+  /// Previously this did a naive `.toString()` on the raw map (e.g.
+  /// `{className: Grade 7, ..., daysPending: 7}`) and `daysPending` was a
+  /// backend-hardcoded `7`; both are fixed together — the backend now computes
+  /// a real day count and this builds a proper sentence from it (P1 fix, cap 65).
+  String _formatPendingAlert(dynamic e) {
+    if (e is! Map) return e.toString();
+    final topicName = e['topicName'] ?? e['topic_name'] ?? 'Topic';
+    final className = e['className'] ?? e['class_name'];
+    final daysPending = e['daysPending'] ?? e['days_pending'];
+    final classPart = (className != null && '$className'.isNotEmpty) ? ' ($className)' : '';
+    final daysPart = daysPending != null
+        ? ' — pending ${daysPending}d'
+        : '';
+    return '$topicName$classPart$daysPart';
   }
 
   PrincipalAcademicDashboard toPrincipalProgress(Map<String, dynamic> json) {

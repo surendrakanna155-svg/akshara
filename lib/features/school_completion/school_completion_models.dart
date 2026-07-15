@@ -482,6 +482,30 @@ class SyllabusChapter {
   final String status;
 }
 
+/// A REAL syllabus topic row (`syllabus_topics.id` is the value
+/// [SchoolCompletionRepository.completeTopic] must receive as `topicId` — the
+/// daily-capture UI previously fabricated this id, which failed the
+/// `syllabus_topic_completions` FK; see `listSyllabusTopics`).
+class SyllabusTopic {
+  const SyllabusTopic({
+    required this.id,
+    required this.subjectId,
+    required this.className,
+    required this.chapterId,
+    required this.topicName,
+    required this.sequenceOrder,
+    required this.status,
+  });
+
+  final String id;
+  final String subjectId;
+  final String className;
+  final String? chapterId;
+  final String topicName;
+  final int sequenceOrder;
+  final String status;
+}
+
 class TeacherProgressDashboard {
   const TeacherProgressDashboard({
     required this.topicsCompleted,

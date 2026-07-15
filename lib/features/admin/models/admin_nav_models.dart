@@ -10,6 +10,7 @@ enum AdminModule {
   finance,
   sis,
   exams,
+  schoolCompletion,
   hr,
   employee,
   management,

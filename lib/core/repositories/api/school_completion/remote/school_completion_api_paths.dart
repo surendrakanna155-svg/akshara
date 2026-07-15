@@ -49,6 +49,7 @@ abstract final class SchoolCompletionApiPaths {
   static const String syllabusGenerate = '/school/syllabus/generate';
   static const String syllabusClone = '/school/syllabus/clone';
   static const String syllabusChapters = '/school/syllabus/chapters';
+  static const String syllabusTopics = '/school/syllabus/topics';
   static const String completeTopic = '/school/academic/complete-topic';
   static const String teacherProgress = '/school/academic/teacher-progress';
   static const String principalAcademicProgress =

@@ -64,6 +64,19 @@ class TeacherShell extends ConsumerWidget {
         label: 'Parent Concerns',
         icon: Icons.forum_outlined,
       ),
+      // P1 fix — the syllabus daily-capture UI (Lesson Logs) and the teacher's
+      // own coverage dashboard (Academic Progress) had routes + real screens
+      // but NO inbound navigation for the teacher persona; un-buried here.
+      MoreNavDestination(
+        route: RouteNames.lessonLogs,
+        label: 'Lesson Logs',
+        icon: Icons.history_edu_outlined,
+      ),
+      MoreNavDestination(
+        route: RouteNames.academicProgress,
+        label: 'Syllabus Progress',
+        icon: Icons.track_changes_outlined,
+      ),
       MoreNavDestination(
         route: RouteNames.teacherProfile,
         label: 'Profile',
