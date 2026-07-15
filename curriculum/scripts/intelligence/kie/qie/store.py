@@ -44,6 +44,12 @@ def migrate(conn: sqlite3.Connection) -> None:
     # Phase C additive migration for pre-existing stores (CREATE TABLE IF NOT EXISTS won't add columns).
     _add_column_if_missing(conn, "question_dna", "assessment_profile", "TEXT")
     _add_column_if_missing(conn, "governed_relation", "value_ranges", "TEXT")
+    # owner decision B (2026-07-15): topic-granularity binding for the qualitative lane
+    _add_column_if_missing(conn, "governed_fact", "topic", "TEXT")
+    _add_column_if_missing(conn, "governed_fact", "topic_evidence", "TEXT")
+    # must follow the ALTER above: on a pre-existing store the column does not exist until then, so this
+    # index cannot live in store_schema.sql (it would run first and fail with "no such column: topic")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_gf_topic ON governed_fact(subject, topic)")
     conn.execute(
         "INSERT INTO qie_meta(key, value) VALUES ('schema_version', ?) "
         "ON CONFLICT(key) DO UPDATE SET value = excluded.value",

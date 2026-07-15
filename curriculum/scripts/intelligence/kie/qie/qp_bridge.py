@@ -173,8 +173,16 @@ def _governed_concepts(subjects) -> Tuple[Dict[str, object], Dict[str, Tuple[str
     # chapters carrying governed knowledge: verified qualitative FACTS and/or CERTIFIED recovered RELATIONS
     rows = []
     try:
-        rows += list(c.execute("SELECT DISTINCT subject, concept_candidate FROM governed_fact "
-                               "WHERE status='verified'"))
+        # Owner decision B (2026-07-15): bind a governed fact at its certified TOPIC — the smallest genuine
+        # curriculum concept its evidence supports ("Biology :: Uricotelism") — falling back to its chapter
+        # when no topic was certified. Chapter binding capped NEET Biology at 42% forever: qpgen dedups by
+        # (concept_code, question_type) GLOBALLY per paper, so one chapter = ONE question. Topics are gated by
+        # the same subject hard-gate + concept sanitizer as every other concept, plus evidence grounding.
+        from kie.qie.convert import topics as topics_mod
+        for _s, _cc, _tp in c.execute("SELECT DISTINCT subject, concept_candidate, topic FROM governed_fact "
+                                      "WHERE status='verified'"):
+            rows.append((_s, topics_mod.concept_key(
+                {"subject": _s, "concept_candidate": _cc, "topic": _tp})))
     except sqlite3.Error:
         pass
     try:

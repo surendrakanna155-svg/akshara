@@ -134,13 +134,17 @@ def _load(qconn: sqlite3.Connection) -> dict:
     seq: List[dict] = []
     asrt: List[dict] = []
     asrt_obj: List[dict] = []
-    for r in qconn.execute("SELECT subject,exam,concept_candidate,lane,structured,answer_text,distractors "
-                           "FROM governed_fact WHERE status='verified'"):
+    from kie.qie.convert import topics as TP
+    for r in qconn.execute("SELECT subject,exam,concept_candidate,topic,lane,structured,answer_text,"
+                           "distractors FROM governed_fact WHERE status='verified'"):
         try:
             s = json.loads(r["structured"] or "{}")
         except Exception:
             s = {}
-        base = {"subject": r["subject"], "exam": r["exam"], "concept": r["concept_candidate"]}
+        # owner decision B: bind at the fact's certified TOPIC ("Biology :: Uricotelism"), falling back to its
+        # chapter when no topic was certified. qpgen dedups by (concept, question_type) GLOBALLY per paper, so
+        # chapter binding collapsed every fact of a chapter into ONE question.
+        base = {"subject": r["subject"], "exam": r["exam"], "concept": TP.concept_key(dict(r))}
         if r["lane"] == "STRUCTURE_FUNCTION" and s.get("structure") and s.get("function"):
             sf.append({**base, "structure": s["structure"], "function": s["function"],
                        "location": s.get("location"), "system": s.get("system")})

@@ -213,11 +213,23 @@ CREATE TABLE IF NOT EXISTS governed_fact (
   status            TEXT NOT NULL,             -- verified | rejected | quarantined
   reject_reason     TEXT,
   item_hash         TEXT,                       -- sha256(stem|options|answer) — examiner-cache key (no re-run)
+  -- OWNER DECISION B (2026-07-15): the smallest GENUINE curriculum concept this fact teaches, e.g.
+  -- "Uricotelism" inside chapter "Excretory Products And Their Elimination". AUTHORED (short, ≤5 words) —
+  -- never a truncation of subject_term/source prose — and admitted only after the deterministic topic gates
+  -- (subject hard-gate + qpgen concept sanitizer + EVIDENCE GROUNDING). NULL = no clean grounded topic, so the
+  -- fact keeps its chapter binding (honest fallback). Rationale: qpgen dedups by (concept_code,question_type)
+  -- GLOBALLY per paper, so chapter binding meant one chapter = ONE question and capped NEET Biology at 42%
+  -- forever (938 candidates / 38 chapters). Same fix relation-granularity already proved (+8 vs +1).
+  topic             TEXT,
+  topic_evidence    TEXT,                       -- json: per-gate topic verification (grounding span, gates)
   created_at        TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_gf_subject_lane ON governed_fact(subject, lane);
 CREATE INDEX IF NOT EXISTS idx_gf_status ON governed_fact(status);
 CREATE INDEX IF NOT EXISTS idx_gf_concept ON governed_fact(concept_candidate);
+-- NOTE: the index on governed_fact(subject, topic) is created in store.migrate(), NOT here. On a
+-- pre-existing store `CREATE TABLE IF NOT EXISTS` above is a no-op, so `topic` only exists after the
+-- additive ALTER — indexing it in this script would run first and fail with "no such column: topic".
 
 -- ── GOVERNED RELATION (notation recovery, owner decision A) — an exact quantitative relation recovered from a
 -- rendered page of an OWNED source and certified DETERMINISTICALLY (symbolic + dimensional + domain +

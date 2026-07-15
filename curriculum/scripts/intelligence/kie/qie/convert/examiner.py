@@ -56,6 +56,16 @@ def select_batch(cands: List, qconn, n: int = 60, lanes: Optional[tuple] = None,
     return pool[:n]
 
 
+TOPIC_BRIEF = (
+    "topic: REQUIRED (owner decision B). The smallest GENUINE curriculum concept this fact teaches — "
+    "'Uricotelism' inside the chapter 'Excretory Products And Their Elimination'. Author it SHORT (<=5 words, "
+    "the qpgen sanitizer cap); NEVER truncate the stem/subject_term prose. Every significant word must appear "
+    "in the fact's own evidence — an ungrounded or invented name is refused by kie.qie.convert.topics.certify "
+    "and the fact falls back to chapter binding. Two facts teaching the SAME concept SHOULD share a topic; "
+    "never split a topic to win an extra paper slot. Never restate the ANSWER (a title is a giveaway)."
+)
+
+
 def worksheet(batch: List) -> List[dict]:
     """The examination worksheet the independent examiner reads. Includes the SOURCE answer key (evidence to
     be re-derived, NOT trusted) and the doc-grounded concept binding (to confirm on-topic)."""
@@ -71,6 +81,13 @@ def worksheet(batch: List) -> List[dict]:
     return out
 
 
+def write_worksheet_brief(path: str) -> None:
+    """Emit the authoring brief alongside a worksheet, so a new batch's facts carry topics from the start
+    (without it, every new fact silently reverts to chapter binding — the ceiling decision B removed)."""
+    with open(path, "w") as f:
+        f.write(TOPIC_BRIEF + "\n")
+
+
 def write_worksheet(batch: List, path: str) -> None:
     with open(path, "w") as f:
         json.dump({"n": len(batch), "items": worksheet(batch)}, f, indent=2)
@@ -80,7 +97,10 @@ def ingest_verdicts(qconn, batch: List, verdicts: List[dict], now: str,
                     verifier_model: str = "governed_examiner") -> dict:
     """Apply examiner verdicts: register verified facts (projected to KVS + distractors), persist rejects.
     Verdict schema per item: {item_hash, keep:bool, answer_correct:bool, on_topic:bool, fact_text, structured,
-    corrected_answer?, reason}. A fact is admitted only when keep && answer_correct && on_topic."""
+    topic?, corrected_answer?, reason}. A fact is admitted only when keep && answer_correct && on_topic.
+    `topic` (owner decision B) is PROPOSED here and certified deterministically by
+    `kie.qie.convert.topics.certify` — an ungrounded/invented/truncated topic is refused and the fact keeps
+    its chapter binding. See TOPIC_BRIEF."""
     by_hash = {getattr(c, "_item_hash", _item_hash(c)): c for c in batch}
     v_by_hash = {v.get("item_hash"): v for v in verdicts}
     metrics = {"in": len(batch), "verified": 0, "rejected": 0, "kvs": defaultdict(int),

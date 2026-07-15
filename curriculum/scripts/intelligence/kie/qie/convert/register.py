@@ -116,11 +116,37 @@ def register_verified(qconn: sqlite3.Connection, cand, verdict: dict, now: str,
          json.dumps([t for l, t in (cand.options or {}).items() if (t or '').strip().lower() != answer.lower()]),
          json.dumps(provenance), json.dumps(verification), verifier_model, "verified", None,
          verdict.get("item_hash"), now))
+    # Owner decision B: the examiner PROPOSES a topic; the deterministic gates decide. An ungrounded,
+    # invented or truncated topic is refused and the fact keeps its chapter binding (honest fallback), so a
+    # bad proposal can never mint a concept — it can only fail to add one.
+    topic_verdict = _certify_topic(qconn, fid, verdict, cand, answer)
+
     store = _project_kvs(qconn, cand.lane, fid, cand.subject, cand.concept_candidate,
                          verdict.get("structured") or {}, answer, evidence, now)
     nd = _seed_distractors(qconn, fid, cand.options, answer, cand.concept_candidate, now)
     qconn.commit()
-    return {"registered": True, "kvs_store": store, "distractors": nd, "fact_id": fid}
+    return {"registered": True, "kvs_store": store, "distractors": nd, "fact_id": fid,
+            "topic": topic_verdict.get("topic"), "topic_status": topic_verdict.get("status")}
+
+
+def _certify_topic(qconn: sqlite3.Connection, fid: str, verdict: dict, cand, answer: str) -> dict:
+    """Certify a proposed topic against the fact's own evidence and persist it when it survives."""
+    proposed = (verdict.get("topic") or "").strip()
+    if not proposed:
+        return {"status": "absent", "topic": None}
+    from kie.qie.convert import topics as TP
+    fact = {"subject": cand.subject, "concept_candidate": cand.concept_candidate,
+            "fact_text": verdict.get("fact_text") or "", "answer_text": answer,
+            "structured": json.dumps(verdict.get("structured") or {}),
+            "provenance": json.dumps({"stem_excerpt": cand.stem[:180], "chapter": cand.chapter_hint})}
+    v = TP.certify(proposed, fact)
+    if v["status"] != "certified":
+        return {"status": "rejected", "topic": None, "failed_gates": v["failed_gates"]}
+    safe = {g: {k: x for k, x in d.items() if isinstance(x, (bool, str, int, float, list))}
+            for g, d in v["gates"].items()}
+    qconn.execute("UPDATE governed_fact SET topic=?, topic_evidence=? WHERE fact_id=?",
+                  (v["topic"], json.dumps({"gates": safe, "proposed": proposed}), fid))
+    return {"status": "certified", "topic": v["topic"]}
 
 
 def register_rejected(qconn: sqlite3.Connection, cand, verdict: dict, now: str, verifier_model: str) -> None:
