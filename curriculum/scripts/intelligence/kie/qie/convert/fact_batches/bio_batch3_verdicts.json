@@ -1,0 +1,577 @@
+{
+ "batch": "bio_batch3",
+ "examiner": "governed_examiner (independent re-derivation; the source key is evidence, never authority)",
+ "verdicts": [
+  {
+   "item_hash": "4efaf60e3f0fe2b05729e566",
+   "keep": false,
+   "answer_correct": false,
+   "on_topic": true,
+   "fact_text": "",
+   "reason": "AMBIGUOUS KEY: two options are man-made — 'Agro ecosystem' AND 'Ecosystem of artificial lakes and dams'. An item admitting two correct options is rejected even though the source marked one."
+  },
+  {
+   "item_hash": "92c8a239a502f042a44acea7",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "Treatment of snake-bite with antivenom is artificially acquired passive immunity: ready-made antibodies are administered, so the body does not make its own.",
+   "structured": {
+    "subject_term": "Treatment of snake-bite by antivenom",
+    "predicate": "is an example of",
+    "object_term": "artificially acquired passive immunity"
+   },
+   "topic": "Artificially acquired passive immunity",
+   "reason": "re-derived: antivenom supplies preformed antibodies (passive) and is administered (artificial)."
+  },
+  {
+   "item_hash": "239866375179af5b87cf19d3",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "Humus is the product of humification; it is colloidal, nutrient-rich and highly resistant to microbial action, and is broken down further by mineralisation, not by humification.",
+   "structured": {
+    "subject_term": "Humus",
+    "predicate": "is further degraded by",
+    "object_term": "mineralisation (it is the product of humification, not further degraded by it)"
+   },
+   "topic": "Humus",
+   "reason": "re-derived: humification FORMS humus; further breakdown is mineralisation, so the keyed statement is the false one."
+  },
+  {
+   "item_hash": "dc029ac3187fd4c383b909e4",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "As a leaf loses water, stomata close in this order: abscisic acid is released by leaf cells, potassium ions leave the guard cells, water passively leaves the guard cells, and the pressure potential of the guard cells falls.",
+   "structured": {
+    "process": "closing of stomata as a leaf loses water",
+    "ordered_steps": [
+     "abscisic acid is released by leaf cells",
+     "potassium ions leave guard cells",
+     "water passively leaves guard cells",
+     "pressure potential in guard cells decreases"
+    ]
+   },
+   "topic": "Closing of stomata",
+   "reason": "re-derived: ABA is the signal; K+ efflux precedes osmotic water loss, which lowers turgor."
+  },
+  {
+   "item_hash": "767738414ea11d12f85bb111",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "Tropical regions have greater biological diversity because tropical latitudes have remained relatively undisturbed for millions of years, tropical environments are less seasonal and more predictable, and more solar energy is available there.",
+   "structured": {
+    "subject_term": "The greater biological diversity of tropical regions",
+    "predicate": "is explained by",
+    "object_term": "long undisturbed history, a less seasonal and more predictable environment, and greater available solar energy"
+   },
+   "topic": "Tropical biological diversity",
+   "reason": "re-derived: all three are the standard explanations; 'All of these' is correct."
+  },
+  {
+   "item_hash": "2a732640755e90aaa2acebbe",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "Myasthenia gravis is an autoimmune disorder in which antibodies attack acetylcholine receptors at the neuromuscular junction, causing muscle weakness.",
+   "structured": {
+    "subject_term": "Myasthenia gravis",
+    "predicate": "is",
+    "object_term": "an autoimmune disorder"
+   },
+   "topic": "Myasthenia gravis",
+   "reason": "re-derived: osteoporosis, muscular dystrophy and gout are not autoimmune; myasthenia gravis is."
+  },
+  {
+   "item_hash": "6a97a27fbf67742d87b51ecb",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "Phenyl mercuric acetate is used as an antitranspirant: it reduces transpiration by promoting stomatal closure.",
+   "structured": {
+    "subject_term": "Phenyl mercuric acetate",
+    "predicate": "is used as",
+    "object_term": "an antitranspirant"
+   },
+   "topic": "Antitranspirants",
+   "reason": "re-derived: PMA is the standard antitranspirant; the other three are not."
+  },
+  {
+   "item_hash": "da7f26b68a6e0619a0a5b36b",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "FOAM (Friends of the Arcata Marsh) is the citizens' group responsible for the integrated sewage and water treatment process at the Arcata marsh.",
+   "structured": {
+    "subject_term": "FOAM (Friends of the Arcata Marsh)",
+    "predicate": "is responsible for the integrated process of",
+    "object_term": "sewage and water treatment"
+   },
+   "topic": "Arcata Marsh sewage treatment",
+   "reason": "re-derived: the Arcata case study is an integrated sewage-treatment marsh."
+  },
+  {
+   "item_hash": "45568c78e4cfa5b4b027b758",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "In the monocot stem the xylem vessels of a vascular bundle are arranged in a Y-shaped manner, with the protoxylem at the base of the Y.",
+   "structured": {
+    "subject_term": "A Y-shaped arrangement of xylem vessels",
+    "predicate": "is found in",
+    "object_term": "the monocot stem"
+   },
+   "topic": "Y-shaped xylem arrangement",
+   "reason": "re-derived: the Y/V-shaped meta- and protoxylem arrangement is characteristic of the monocot stem."
+  },
+  {
+   "item_hash": "389367d66b1ff7df45288bca",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "Covered smut of barley is caused by Ustilago hordei; Ustilago nuda causes loose smut of barley, so pairing covered smut with Ustilago nuda is incorrect.",
+   "structured": {
+    "subject_term": "Covered smut of barley",
+    "predicate": "is caused by",
+    "object_term": "Ustilago hordei (Ustilago nuda causes loose smut)"
+   },
+   "topic": "Covered smut of barley",
+   "reason": "re-derived: U. nuda = loose smut, U. hordei = covered smut; the other three pairings are correct."
+  },
+  {
+   "item_hash": "2ecea55b44fe79d92c8f3933",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "Isozymes are different molecular forms of the same enzyme catalysing the same reaction; alpha-amylase, glucokinase and lactate dehydrogenase all occur as isozymes.",
+   "structured": {
+    "subject_term": "Alpha-amylase, glucokinase and lactate dehydrogenase",
+    "predicate": "are all examples of",
+    "object_term": "isozymes (multiple molecular forms of one enzyme)"
+   },
+   "topic": "Isozymes",
+   "reason": "re-derived: each of the three is a documented isozyme family, so 'All of these' holds."
+  },
+  {
+   "item_hash": "1e69d870de04d440a931cba3",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "If the loop of Henle were absent from the mammalian nephron the urine would be more dilute, because the loop builds the medullary concentration gradient needed to concentrate urine.",
+   "structured": {
+    "subject_term": "A mammalian nephron without the loop of Henle",
+    "predicate": "would produce",
+    "object_term": "more dilute urine"
+   },
+   "topic": "Loop of Henle",
+   "reason": "re-derived: the counter-current loop creates the medullary osmotic gradient; without it, no concentration."
+  },
+  {
+   "item_hash": "6e17095cc26c1c044a1fed7c",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "The eye of the octopus and the eye of the cat differ in structure but perform the same function: they are analogous organs produced by convergent evolution.",
+   "structured": {
+    "subject_term": "The eye of an octopus and the eye of a cat",
+    "predicate": "are",
+    "object_term": "analogous organs that evolved by convergent evolution"
+   },
+   "topic": "Analogous organs",
+   "reason": "re-derived: different structure + same function = analogy, which arises by convergence."
+  },
+  {
+   "item_hash": "b92d8d7969f25997236e8485",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "In a dicotyledonous stem the tissues occur from outside to inside in the order phellem, endodermis, pericycle, phloem.",
+   "structured": {
+    "process": "tissues of a dicot stem from outside to inside",
+    "ordered_steps": [
+     "phellem",
+     "endodermis",
+     "pericycle",
+     "phloem"
+    ]
+   },
+   "topic": "Tissues of dicot stem",
+   "reason": "re-derived: periderm (phellem) is outermost, then the innermost cortex layer (endodermis), then pericycle, then phloem."
+  },
+  {
+   "item_hash": "a95c7fbbbbbfd1524053b90c",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "Meristem culture is the best tissue-culture method for obtaining virus-free plants, because the apical meristem is normally free of virus particles.",
+   "structured": {
+    "subject_term": "Obtaining virus-free plants through tissue culture",
+    "predicate": "is best achieved by",
+    "object_term": "meristem culture"
+   },
+   "topic": "Meristem culture",
+   "reason": "re-derived: viruses lag behind the dividing apical meristem, so meristem tips are virus-free."
+  },
+  {
+   "item_hash": "c3e3f92cb3484d19aafdae03",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "Atrial natriuretic factor inhibits aldosterone secretion; it does not stimulate it. ANF also inhibits renin release, promotes salt loss in urine and inhibits sodium reabsorption.",
+   "structured": {
+    "subject_term": "Atrial natriuretic factor (ANF)",
+    "predicate": "acts on aldosterone by",
+    "object_term": "inhibiting its secretion (not stimulating it)"
+   },
+   "topic": "Atrial natriuretic factor",
+   "reason": "re-derived: ANF opposes the renin-angiotensin-aldosterone axis, so 'stimulates aldosterone' is the odd one out."
+  },
+  {
+   "item_hash": "7e463baa6844b6000f167ec2",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "The Western Ghats are a biodiversity hotspot of India; the Indo-Gangetic plain, Eastern Ghats and Aravalli hills are not.",
+   "structured": {
+    "subject_term": "The Western Ghats",
+    "predicate": "are",
+    "object_term": "a biodiversity hotspot of India"
+   },
+   "topic": "Biodiversity hotspots in India",
+   "reason": "re-derived: India's hotspots are the Western Ghats-Sri Lanka, Indo-Burma and Himalaya."
+  },
+  {
+   "item_hash": "50de8d783500f7f62e6856e0",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "Phosphorus does not maintain the osmotic pressure of body fluids; that is done by sodium, potassium and chloride. Phosphorus is a component of bone, ATP and nucleic acids.",
+   "structured": {
+    "subject_term": "Phosphorus",
+    "predicate": "does not",
+    "object_term": "maintain the osmotic pressure of body fluids (sodium, potassium and chloride do)"
+   },
+   "topic": "Phosphorus in the body",
+   "reason": "re-derived: the other three statements (iodine/thyroxine, calcium/nerve excitability, potassium/acid-base) are correct."
+  },
+  {
+   "item_hash": "c6c72cc00fe1ba75bb1ffbee",
+   "keep": false,
+   "answer_correct": false,
+   "on_topic": true,
+   "fact_text": "",
+   "reason": "MALFORMED ITEM: options (a) '(i) and  (iv)' and (b) '(i) and (iv)' are the same option duplicated, so the item has two identical correct choices. The keyed content is also a statement-label reference spanning two unrelated claims, not one atomic fact."
+  },
+  {
+   "item_hash": "8779169fdcc5f19666b562fb",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "The germ pore of a pollen grain is the site through which the pollen tube emerges at germination.",
+   "structured": {
+    "structure": "germ pore of a pollen grain",
+    "function": "initiation and emergence of the pollen tube",
+    "location": "exine of the pollen grain",
+    "system": "male gametophyte"
+   },
+   "topic": "Germ pore",
+   "reason": "re-derived: the exine is absent at the germ pore, letting the tube emerge; radicle emergence is a seed event."
+  },
+  {
+   "item_hash": "d0611d62ed889917a409eff4",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "The trp operon regulates tryptophan synthesis in E. coli by transcriptional control: tryptophan acts as a corepressor that switches transcription off.",
+   "structured": {
+    "subject_term": "Regulation of tryptophan synthesis in E. coli",
+    "predicate": "acts through",
+    "object_term": "transcriptional control"
+   },
+   "topic": "Tryptophan operon",
+   "reason": "re-derived: the trp repressor-corepressor complex blocks the operator, i.e. control at transcription."
+  },
+  {
+   "item_hash": "acf68454c4bbed1af4a9e5d5",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "RNA is chemically more reactive and has lower stability than DNA, because its 2'-OH group makes it prone to hydrolysis; the greater stability of DNA is why it is the genetic material.",
+   "structured": {
+    "subject_term": "RNA compared with DNA",
+    "predicate": "is",
+    "object_term": "more reactive and less stable"
+   },
+   "topic": "Stability of RNA and DNA",
+   "reason": "re-derived: the 2'-OH of ribose makes RNA labile; DNA's 2'-deoxy sugar is the stable form."
+  },
+  {
+   "item_hash": "2c1bd34d10ebf53a7fa2fdf3",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "The flipper of a seal and the wing of a bird are homologous organs: both are modified vertebrate forelimbs sharing a common ancestral plan.",
+   "structured": {
+    "subject_term": "The flipper of a seal and the wing of a bird",
+    "predicate": "are",
+    "object_term": "homologous organs"
+   },
+   "topic": "Homologous organs",
+   "reason": "re-derived: shared forelimb ancestry = homology; bird/insect wings and human hand/bird wing pairings are misstated."
+  },
+  {
+   "item_hash": "52f8a0b24b8552aec620910e",
+   "keep": false,
+   "answer_correct": false,
+   "on_topic": true,
+   "fact_text": "",
+   "reason": "SOURCE KEY WRONG: statement III is CORRECT — NCERT states the innermost cortex layer of the dicot stem is rich in starch grains and is called the starch sheath. Only statement II (Casparian strips occur in the ROOT endodermis, not the stem) is incorrect, so the key should be 'Only II', not 'II & III'."
+  },
+  {
+   "item_hash": "8a2027d140c54169ebed37cb",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "The elbow is a hinge joint: it allows movement in one plane only, between the humerus and the ulna.",
+   "structured": {
+    "subject_term": "The elbow joint",
+    "predicate": "is an example of",
+    "object_term": "a hinge joint"
+   },
+   "topic": "Elbow joint",
+   "reason": "re-derived: uniaxial flexion/extension only = hinge; not gliding, ball-and-socket or pivot."
+  },
+  {
+   "item_hash": "816b57875c95d2a43f37ff4a",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "The pathway of sperm transport in the male reproductive tract runs epididymis, then vas deferens, then urethra.",
+   "structured": {
+    "process": "pathway of sperm transport in the male reproductive system",
+    "ordered_steps": [
+     "epididymis",
+     "vas deferens",
+     "urethra"
+    ]
+   },
+   "topic": "Sperm transport pathway",
+   "reason": "re-derived: rete testis and vas efferentia precede the epididymis; of the options only this order is correct."
+  },
+  {
+   "item_hash": "f764eb819b3e4b32ee7ee77a",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "In potato, dahlia, ginger and banana new plantlets arise by vegetative propagation from the nodes of the modified stem.",
+   "structured": {
+    "subject_term": "New plantlets of potato, dahlia, ginger and banana",
+    "predicate": "arise from",
+    "object_term": "the nodes of the modified stem"
+   },
+   "topic": "Vegetative propagation by stem",
+   "reason": "re-derived: the potato 'eye', the ginger rhizome bud and the banana sucker are all nodal buds of a modified stem."
+  },
+  {
+   "item_hash": "f1cee975ce130dc20811d4d2",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "The offspring of oviparous animals are at greater risk than those of viviparous animals because embryonic care and protection inside the mother's body is lacking.",
+   "structured": {
+    "subject_term": "The offspring of oviparous animals compared with viviparous animals",
+    "predicate": "are at greater risk because",
+    "object_term": "proper embryonic care and protection is lesser"
+   },
+   "topic": "Oviparous and viviparous animals",
+   "reason": "re-derived: eggs develop outside the parent, so protection is reduced; the embryo does develop, so the other options fail."
+  },
+  {
+   "item_hash": "cd47eed5ff8a69c3bc57ee49",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "Cyclic AMP is a common second messenger in hormone action: a peptide hormone binding its membrane receptor raises cyclic AMP inside the cell.",
+   "structured": {
+    "subject_term": "Cyclic AMP",
+    "predicate": "is",
+    "object_term": "a common second messenger in hormone action"
+   },
+   "topic": "Second messenger",
+   "reason": "re-derived: thyroid hormone, ADH and epinephrine are hormones (first messengers); cAMP is the intracellular messenger."
+  },
+  {
+   "item_hash": "c4ae3a3019056c80f7a89672",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "The predator star fish Pisaster helps maintain the species diversity of some invertebrates by preventing any one prey species from dominating.",
+   "structured": {
+    "subject_term": "The predator star fish Pisaster",
+    "predicate": "helps maintain",
+    "object_term": "the species diversity of some invertebrates"
+   },
+   "topic": "Predator star fish Pisaster",
+   "reason": "re-derived: Paine's keystone-predator experiment; predators do not normally drive prey extinct, so (iii) is false."
+  },
+  {
+   "item_hash": "fd63874d7ba01b36748334cc",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "An important consequence of geographical isolation is speciation through reproductive isolation: separated populations diverge until they can no longer interbreed.",
+   "structured": {
+    "subject_term": "Geographical isolation",
+    "predicate": "leads to",
+    "object_term": "speciation through reproductive isolation"
+   },
+   "topic": "Geographical isolation",
+   "reason": "re-derived: isolation blocks gene flow, so divergence accumulates until reproductive isolation is complete."
+  },
+  {
+   "item_hash": "ce3eb536e38ee386dd897675",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "Rosie, the first transgenic animal to give human alpha-lactalbumin-enriched milk, was a cow, not a buffalo.",
+   "structured": {
+    "subject_term": "Rosie, the first transgenic animal producing human alpha-lactalbumin-enriched milk",
+    "predicate": "was",
+    "object_term": "a cow (not a buffalo)"
+   },
+   "topic": "Transgenic cow Rosie",
+   "reason": "re-derived: Rosie was a transgenic COW, so statement (i) is incorrect; restriction enzymes cut DNA, they do not isolate it from other macromolecules, so (ii) is incorrect too."
+  },
+  {
+   "item_hash": "509a228a6937b324309f88bd",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "Restriction enzymes (restriction endonucleases) such as EcoRI, Hind III and Bam HI are called molecular scissors because they cut DNA at specific recognition sequences.",
+   "structured": {
+    "subject_term": "EcoRI, Hind III and Bam HI",
+    "predicate": "are all",
+    "object_term": "restriction enzymes, the molecular scissors of recombinant DNA technology"
+   },
+   "topic": "Restriction enzymes",
+   "reason": "re-derived: all three are type-II restriction endonucleases, so 'All of these' holds."
+  },
+  {
+   "item_hash": "ee54ef9a79e497fa8d2ff71b",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "In increasing order of organizational complexity the sequence is population, species, community, ecosystem: a species comprises many populations, a community many species, and an ecosystem a community with its abiotic surroundings.",
+   "structured": {
+    "process": "increasing order of organizational complexity",
+    "ordered_steps": [
+     "population",
+     "species",
+     "community",
+     "ecosystem"
+    ]
+   },
+   "topic": "Organizational complexity",
+   "reason": "re-derived: each level contains the previous one; the other three orders break that nesting."
+  },
+  {
+   "item_hash": "2b5b4e346e8b1360ef31a1dd",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "It is false that external fertilization protects the offspring: the young are left exposed to predators, which is why such organisms release very large numbers of gametes.",
+   "structured": {
+    "subject_term": "External fertilization",
+    "predicate": "does not",
+    "object_term": "protect the offspring from predators (a large number of gametes are wasted instead)"
+   },
+   "topic": "External fertilization",
+   "reason": "re-derived: lack of parental protection is the DISadvantage of external fertilization; the other three statements are true."
+  },
+  {
+   "item_hash": "b95df36983324a166d17656b",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "Quantifying the species genome is not a step in understanding biodiversity; naming the species, looking at related species and assessing its geographic range are.",
+   "structured": {
+    "subject_term": "Quantifying the species genome",
+    "predicate": "is not",
+    "object_term": "a step in understanding biodiversity"
+   },
+   "topic": "Steps in understanding biodiversity",
+   "reason": "re-derived: biodiversity assessment is taxonomic and distributional, not genomic."
+  },
+  {
+   "item_hash": "51f3d0625321c493dd4257d8",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "In C4 plants the agranal chloroplasts are found in the bundle sheath cells, while the mesophyll cells have granal chloroplasts.",
+   "structured": {
+    "subject_term": "Agranal chloroplasts of C4 plants",
+    "predicate": "are found in",
+    "object_term": "the bundle sheath cells"
+   },
+   "topic": "Agranal chloroplasts in C4 plants",
+   "reason": "re-derived: Kranz anatomy — bundle sheath chloroplasts lack grana and run the Calvin cycle."
+  },
+  {
+   "item_hash": "909628afdde49060e489ba7a",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "Oxaloacetic acid is a 4-carbon compound; citric acid has 6 carbons, and phosphoglyceric acid and phosphoenol pyruvate have 3 each.",
+   "structured": {
+    "subject_term": "Oxaloacetic acid",
+    "predicate": "is",
+    "object_term": "a 4-carbon compound"
+   },
+   "topic": "Oxaloacetic acid",
+   "reason": "re-derived by counting carbons: OAA C4, citrate C6, PGA C3, PEP C3."
+  },
+  {
+   "item_hash": "5e1de9f95f747eb927680910",
+   "keep": false,
+   "answer_correct": false,
+   "on_topic": true,
+   "fact_text": "",
+   "reason": "KEY NOT INDEPENDENTLY DERIVABLE: statement (i) (leucocytes disintegrate in the spleen and liver) is CORRECT, so keying it as 'wrong' is not defensible. Only (iii) is clearly misattributed (detoxification of protein toxins is an eosinophil/basophil role, not a neutrophil one). The key '(i) and (iii)' cannot be re-derived."
+  },
+  {
+   "item_hash": "8e6dc78896347808bb874f88",
+   "keep": true,
+   "answer_correct": true,
+   "on_topic": true,
+   "fact_text": "Hexokinase converting glucose to glucose-6-phosphate is inhibited by its own product glucose-6-phosphate: this is feedback allosteric inhibition, the product binding a site other than the active site.",
+   "structured": {
+    "subject_term": "Inhibition of hexokinase by its product glucose-6-phosphate",
+    "predicate": "is an example of",
+    "object_term": "feedback allosteric inhibition"
+   },
+   "topic": "Allosteric inhibition of hexokinase",
+   "reason": "re-derived: the product binds a regulatory (allosteric) site, not the substrate site, so it is not competitive inhibition."
+  }
+ ],
+ "note": "The examiner's verdicts for Biology batch 3 — the record of the judgment, which is the token-expensive part of this lane and the part qie.db (gitignored) would otherwise be the only copy of. Each verdict is an INDEPENDENT re-derivation: the source answer key is evidence, never authority. A fact is admitted only when keep && answer_correct && on_topic. Verdicts are cached by item_hash so refuted evidence is never re-examined.",
+ "result": {
+  "in": 40,
+  "verified": 36,
+  "rejected": 4,
+  "survival_pct": 90.0,
+  "kvs": {
+   "kvs_assertion": 31,
+   "kvs_sequence": 4,
+   "kvs_structure_function": 1
+  },
+  "distractors": 105
+ },
+ "rejections_are_the_point": [
+  "52f8a0b24b8552aec620910e — the SOURCE KEY IS WRONG: NCERT states the dicot-stem endodermis is rich in starch grains (the 'starch sheath'), so statement III is correct and the key 'II & III' cannot stand. Caught by re-derivation, not by agreeing with the key.",
+  "4efaf60e3f0fe2b05729e566 — ambiguous key: two options are man-made.",
+  "c6c72cc00fe1ba75bb1ffbee — malformed: options (a) and (b) are the same option duplicated.",
+  "5e1de9f95f747eb927680910 — key not independently derivable."
+ ]
+}

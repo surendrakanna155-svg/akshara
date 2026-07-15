@@ -1,0 +1,153 @@
+{
+ "set": "bio_batch3",
+ "authored_by": "governed_examiner (proposes only; kie.qie.convert.topics gates certify)",
+ "decision": "OWNER DECISION B (2026-07-15) — topic granularity for the qualitative lane.",
+ "note": "Topics for the Biology batch-3 facts, authored at EXAMINER time (not back-filled). Each is the smallest genuine curriculum concept its fact's evidence supports and is certified by the same deterministic gates. Committed because qie.db is a gitignored derived store.",
+ "fixups": "'Arcata Marsh sewage treatment' -> 'Integrated sewage and water treatment': 'Arcata' trips the FROZEN qpgen anagram heuristic (a letter at >=45% of a >=5-letter word), so the fact fell back to chapter binding. The gate rejecting a true name is a defect, but qpgen stays frozen — so the topic is re-authored, never the gate.",
+ "topics": [
+  {
+   "fact_id": "GF_e3c63f9b276536e721",
+   "topic": "Agranal chloroplasts in C4 plants"
+  },
+  {
+   "fact_id": "GF_edd719f1a705d868ac",
+   "topic": "Allosteric inhibition of hexokinase"
+  },
+  {
+   "fact_id": "GF_01a35094df62da2907",
+   "topic": "Analogous organs"
+  },
+  {
+   "fact_id": "GF_22ba92835a07359b89",
+   "topic": "Antitranspirants"
+  },
+  {
+   "fact_id": "GF_2739c57d108c2d81bb",
+   "topic": "Artificially acquired passive immunity"
+  },
+  {
+   "fact_id": "GF_5b0785b700184f86d8",
+   "topic": "Atrial natriuretic factor"
+  },
+  {
+   "fact_id": "GF_0e7f04f32c8f4583cf",
+   "topic": "Biodiversity hotspots in India"
+  },
+  {
+   "fact_id": "GF_2742482fdeb7ecb1d5",
+   "topic": "Closing of stomata"
+  },
+  {
+   "fact_id": "GF_fa9405dee0e3ee6b69",
+   "topic": "Covered smut of barley"
+  },
+  {
+   "fact_id": "GF_402f48818cbdef8dc7",
+   "topic": "Elbow joint"
+  },
+  {
+   "fact_id": "GF_47ec239589d103cdb3",
+   "topic": "External fertilization"
+  },
+  {
+   "fact_id": "GF_a1097cfef10985797a",
+   "topic": "Geographical isolation"
+  },
+  {
+   "fact_id": "GF_f09ee97eb7c60a84f6",
+   "topic": "Germ pore"
+  },
+  {
+   "fact_id": "GF_8ebbeca19b091a80b3",
+   "topic": "Homologous organs"
+  },
+  {
+   "fact_id": "GF_890be64e427a6eeb57",
+   "topic": "Humus"
+  },
+  {
+   "fact_id": "GF_0c1e94bfdf1dfd0c9b",
+   "topic": "Integrated sewage and water treatment"
+  },
+  {
+   "fact_id": "GF_c5475b1191f0edc5e7",
+   "topic": "Isozymes"
+  },
+  {
+   "fact_id": "GF_0eb4f1a262456ce180",
+   "topic": "Loop of Henle"
+  },
+  {
+   "fact_id": "GF_3adb25edfa5ac69770",
+   "topic": "Meristem culture"
+  },
+  {
+   "fact_id": "GF_8d04bf47f71feffb84",
+   "topic": "Myasthenia gravis"
+  },
+  {
+   "fact_id": "GF_09a23a3497b59af1a3",
+   "topic": "Organizational complexity"
+  },
+  {
+   "fact_id": "GF_7ac5b3d549b6086a94",
+   "topic": "Oviparous and viviparous animals"
+  },
+  {
+   "fact_id": "GF_27e1b3e75981cd5c23",
+   "topic": "Oxaloacetic acid"
+  },
+  {
+   "fact_id": "GF_5030df1901c2edab14",
+   "topic": "Phosphorus in the body"
+  },
+  {
+   "fact_id": "GF_a2f0127c6c774970ea",
+   "topic": "Predator star fish Pisaster"
+  },
+  {
+   "fact_id": "GF_e0a15b0f8945821830",
+   "topic": "Restriction enzymes"
+  },
+  {
+   "fact_id": "GF_4b04ef81f6e997ef25",
+   "topic": "Second messenger"
+  },
+  {
+   "fact_id": "GF_24760c6ad8ce011fc9",
+   "topic": "Sperm transport pathway"
+  },
+  {
+   "fact_id": "GF_8c7cda198fba4b70f4",
+   "topic": "Stability of RNA and DNA"
+  },
+  {
+   "fact_id": "GF_8d18da4c2c7da4773c",
+   "topic": "Steps in understanding biodiversity"
+  },
+  {
+   "fact_id": "GF_1b1af09bc7f18869a6",
+   "topic": "Tissues of dicot stem"
+  },
+  {
+   "fact_id": "GF_1a18280813bf3553e1",
+   "topic": "Transgenic cow Rosie"
+  },
+  {
+   "fact_id": "GF_2b81feaf680b36fe3c",
+   "topic": "Tropical biological diversity"
+  },
+  {
+   "fact_id": "GF_ba5e87885db9c4b464",
+   "topic": "Tryptophan operon"
+  },
+  {
+   "fact_id": "GF_ac9ab62ae4653f0aea",
+   "topic": "Vegetative propagation by stem"
+  },
+  {
+   "fact_id": "GF_ee1ed1dce767e866b5",
+   "topic": "Y-shaped xylem arrangement"
+  }
+ ]
+}
