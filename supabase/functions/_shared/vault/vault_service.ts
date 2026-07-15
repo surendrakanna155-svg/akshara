@@ -1,4 +1,19 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
+import {
+  decryptLegacyBase64,
+  decryptSecretV2,
+  encryptSecretV2,
+  isV2Ciphertext,
+  VaultEncryptionNotConfiguredError,
+  vaultEncryptionConfigured,
+} from "./vault_crypto.ts";
+
+export { VaultEncryptionNotConfiguredError, vaultEncryptionConfigured };
+
+/** Current on-disk encryption scheme: AES-256-GCM (see `vault_crypto.ts`). */
+export const VAULT_CURRENT_KEY_VERSION = 2;
+/** Legacy on-disk scheme: reversible Base64 — pre-dates AES-256-GCM. */
+export const VAULT_LEGACY_KEY_VERSION = 1;
 
 export interface VaultSecretRow {
   id: string;
@@ -31,12 +46,30 @@ const SUPPORTED_PROVIDERS = {
   sms: ["msg91", "stub"],
 } as const;
 
-export function encryptCredential(plaintext: string, _keyVersion = 1): string {
-  return btoa(unescape(encodeURIComponent(plaintext)));
+/**
+ * Encrypts a provider credential for storage (AES-256-GCM, `VAULT_ENC_KEY`).
+ * Throws `VaultEncryptionNotConfiguredError` when no key is configured —
+ * secrets are NEVER stored unencrypted, so callers (storeSecret/rotateSecret)
+ * fail closed rather than falling back to plaintext/Base64.
+ */
+export async function encryptCredential(plaintext: string): Promise<string> {
+  return await encryptSecretV2(plaintext);
 }
 
-export function decryptCredential(encrypted: string): string {
-  return decodeURIComponent(escape(atob(encrypted)));
+/**
+ * Decrypts a stored credential. Transparently handles BOTH schemes so nothing
+ * breaks mid-migration:
+ *   - `v2:`-prefixed (key_version=2, AES-256-GCM) — the current scheme.
+ *   - legacy Base64 (key_version=1, no prefix) — pre-existing rows; decodes
+ *     with no key required.
+ * A `v2` ciphertext with the wrong/missing key throws (GCM tag check) — it
+ * never silently returns garbage.
+ */
+export async function decryptCredential(encrypted: string): Promise<string> {
+  if (isV2Ciphertext(encrypted)) {
+    return await decryptSecretV2(encrypted);
+  }
+  return decryptLegacyBase64(encrypted);
 }
 
 export async function storeSecret(
@@ -49,13 +82,19 @@ export async function storeSecret(
     actorUserId: string;
   },
 ): Promise<VaultSecretRow> {
-  const encrypted = encryptCredential(input.credential);
+  const encrypted = await encryptCredential(input.credential);
   const rows = await db.queryObject<VaultSecretRow>(
     `INSERT INTO platform_secret_vault (
-       organization_id, provider_category, provider_name, encrypted_payload, last_rotated_at
-     ) VALUES ($1, $2, $3, $4, now())
+       organization_id, provider_category, provider_name, encrypted_payload, key_version, last_rotated_at
+     ) VALUES ($1, $2, $3, $4, $5, now())
      RETURNING *`,
-    [input.organizationId ?? null, input.providerCategory, input.providerName, encrypted],
+    [
+      input.organizationId ?? null,
+      input.providerCategory,
+      input.providerName,
+      encrypted,
+      VAULT_CURRENT_KEY_VERSION,
+    ],
   );
   const secret = rows[0]!;
   await db.queryObject(
@@ -72,13 +111,18 @@ export async function rotateSecret(
   newCredential: string,
   actorUserId: string,
 ): Promise<VaultSecretRow> {
-  const encrypted = encryptCredential(newCredential);
+  const encrypted = await encryptCredential(newCredential);
+  // `key_version` records the ENCRYPTION SCHEME the row is stored under (1 =
+  // legacy Base64, 2 = AES-256-GCM) — not a rotation-count. Every rotation
+  // now re-encrypts with the current scheme, so it's set (not incremented) to
+  // VAULT_CURRENT_KEY_VERSION; this also upgrades a legacy row to v2 the
+  // moment its credential is next rotated, ahead of the bulk backfill.
   const rows = await db.queryObject<VaultSecretRow>(
     `UPDATE platform_secret_vault
-     SET encrypted_payload = $2, key_version = key_version + 1,
+     SET encrypted_payload = $2, key_version = $3,
          last_rotated_at = now(), health_status = 'unknown', updated_at = now()
      WHERE id = $1 RETURNING *`,
-    [secretId, encrypted],
+    [secretId, encrypted, VAULT_CURRENT_KEY_VERSION],
   );
   await db.queryObject(
     `INSERT INTO platform_secret_audit_log (secret_id, action, actor_user_id)
@@ -101,7 +145,7 @@ export async function checkSecretHealth(
 
   let healthy = false;
   try {
-    const decrypted = decryptCredential(secret.encrypted_payload);
+    const decrypted = await decryptCredential(secret.encrypted_payload);
     healthy = decrypted.length > 0;
   } catch {
     healthy = false;

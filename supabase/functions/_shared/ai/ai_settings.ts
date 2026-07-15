@@ -88,7 +88,7 @@ export async function resolveAiConfig(
     if (row?.encrypted_payload) {
       const provider = mapProviderName(row.provider_name);
       if (provider) {
-        const apiKey = decryptCredential(row.encrypted_payload).trim();
+        const apiKey = (await decryptCredential(row.encrypted_payload)).trim();
         const cfgModel = typeof row.config?.model === "string"
           ? (row.config.model as string).trim()
           : "";
