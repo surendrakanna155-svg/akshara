@@ -1,7 +1,33 @@
-# Decision B — concept granularity for the qualitative lane (OWNER DECISION REQUIRED)
+# Decision B — concept granularity for the qualitative lane
 
-**Raised:** 2026-07-15 · **Branch:** `feature/qp-content-readiness` · **Status:** ⏸ awaiting owner
-**Nothing has been built for this.** No gate weakened, no scope opened. This is a measured finding + a choice.
+**Raised:** 2026-07-15 · **Branch:** `feature/qp-content-readiness`
+**Status: ✅ RESOLVED — owner chose Option B. Implemented `15feaea2`.**
+
+> **Owner (2026-07-15):** *"Choose Option B. Approve governed topic-level concept granularity for the
+> qualitative Biology lane. Use short, authored, evidence-grounded topic names per verified fact. Preserve the
+> subject hard-gate, concept sanitizer, provenance, verification hierarchy, and chapter fallback. Do not derive
+> concept titles by blindly truncating subject_term or source prose. Do not create artificial topic names
+> merely to bypass qpgen deduplication. Apply the same lesson already proven by relation-granularity: bind at
+> the smallest genuine curriculum/domain concept supported by the verified evidence."*
+
+**As built** (`kie/qie/convert/topics.py`; see the handoff §5): both prohibitions are enforced
+**mechanically**, not by convention —
+* *"no artificial names to bypass dedup"* → the **GROUNDING** gate: every significant topic word must occur in
+  that fact's own verified evidence. "Nitrogen excretion strategy" and "VSEPR theory" are plausible and both
+  REFUSED.
+* *"no blind truncation of prose"* → the **NOT_TRUNCATED** gate: every significant word must survive
+  `_clean_title`'s 5-word cap, so prose cut down to fit is refused.
+* subject hard-gate inherited · same `sanitize.is_clean_concept` as every other concept · per-gate evidence in
+  `governed_fact.topic_evidence` · **chapter fallback** when a topic is refused (strictly additive).
+
+**Measured effect:** bindable concepts 58 → 91 at back-fill (Biology 27 → 53), and after the first
+topic-native examiner batch Biology reaches **89 bindable**. NEET **61 → 76** on the change alone, and the
+Biology lane became genuinely additive — the 36-fact batch that followed bought +9 slots where chapter
+binding would have bought ~3.
+
+The analysis that led to the decision is preserved below, unchanged.
+
+---
 
 ---
 

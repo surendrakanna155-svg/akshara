@@ -1,7 +1,7 @@
 # QIE — fresh-session handoff (authoritative resume point)
 
-**Date:** 2026-07-15 · **Branch:** `feature/qp-content-readiness` · **Tip:** `b79a785e` · **Working tree:** clean
-on the QIE lanes · **Tests:** 621 green (`python -m unittest discover -s kie/tests`)
+**Date:** 2026-07-15 · **Branch:** `feature/qp-content-readiness` · **Tip:** `94b74162` · **Working tree:** clean
+on the QIE lanes · **Tests:** 645 green (`python -m unittest discover -s kie/tests`)
 
 **Read this instead of re-auditing.** Everything below is committed and verified. Do NOT re-derive it.
 
@@ -11,10 +11,11 @@ on the QIE lanes · **Tests:** 621 green (`python -m unittest discover -s kie/te
 - Python venv: `curriculum/.venv/bin/python` (3.14). Run modules from `curriculum/scripts/intelligence/`
   (so `import kie` resolves), e.g. `cd curriculum/scripts/intelligence && ../../.venv/bin/python -m unittest discover -s kie/tests`.
 - Deps present: PyMuPDF 1.28, sympy 1.14, PIL. No network needed.
-- Lanes: this worktree = **K (QIE) lane**. The ERP lane lives in a *separate* worktree (`Akshara_ERP-drp`) —
-  do not touch it. Check `git branch --show-current` before every commit.
-- ⚠ Other lanes leave files dirty in `curriculum/` (`PROVENANCE_MANIFEST.json`, `configs/`, `discovery/`,
-  `reports/`, `scripts/download/`). They are **not yours** — stage QIE paths explicitly, never `git add -A`.
+- Lanes: this worktree = **K (QIE) lane**. The ERP lane is a *separate* worktree (`Akshara_ERP-drp`) — do not
+  touch it. Check `git branch --show-current` before every commit.
+- ⚠ Other lanes leave files dirty in `curriculum/` and `docs/` (`PROVENANCE_MANIFEST.json`, `configs/`,
+  `discovery/`, `reports/`, `scripts/download/`, `docs/roadmap/`, `docs/execution/`). They are **not yours** —
+  stage QIE paths explicitly, **never `git add -A`**.
 
 ## 2. Locked scope (unchanged)
 **In scope:** JEE Main, JEE Advanced, NEET, NCERT/CBSE 6–10 Math & Science, NCERT/CBSE 11–12 Math/Physics/
@@ -25,143 +26,128 @@ acquisition, Question-Bank promotion/materialization.
 the pilot bank (not promoted).
 
 ## 3. Owner decisions (locked — do not re-litigate)
-- **Decision A (RESOLVED):** verified **governed-fact chapters** and **certified relations** are *first-class
-  in-scope concepts* for the qpgen boundary, guarded by the deterministic subject gate + the same
-  `qpgen/sanitize.is_clean_concept` gate as every other concept. Extended (`996d65db`) to **certified chains**,
-  which compose already-certified relations and so assert no new knowledge.
-- **Decision A/notation (RESOLVED):** a governed **math-capable notation recovery** layer over already-owned
-  source PDFs/page-images. Reusable layer, not a one-off.
-- **Standing law:** wrong knowledge is worse than missing knowledge. Never weaken a gate to raise yield. LLM
+- **Decision A (RESOLVED):** verified governed facts and certified relations are *first-class in-scope
+  concepts* for the qpgen boundary, guarded by the deterministic subject gate + `sanitize.is_clean_concept`.
+  Extended to **certified chains** (`996d65db`), which compose already-certified relations and assert no new
+  knowledge.
+- **Decision B (RESOLVED + IMPLEMENTED `15feaea2`):** the qualitative lane binds at **TOPIC** granularity —
+  the smallest genuine curriculum concept the verified evidence supports (`Biology :: Uricotelism`) — with
+  **short authored** topic names, the same subject + sanitizer guards, and a **chapter fallback**. Owner's two
+  prohibitions are enforced *mechanically*, not by convention (§5, `kie/qie/convert/topics.py`).
+- **Standing law:** wrong knowledge is worse than missing knowledge. Never weaken a gate for yield. LLM
   **proposes**; deterministic checks **certify**. No source-question cloning.
 
-## 4. Measured state — the REAL denominator (seed 7, `boundary_ok`, 0 violations, 0 forced fills)
+## 4. Measured state (seed 7, `boundary_ok`, 0 violations, 0 forced fills)
 
-| exam | blueprint | qie-servable | **filled** | % | **hard filled** |
-|---|---|---|---|---|---|
-| NEET | 180 | 180 | **61** | 33% | **4 / 40** |
-| JEE Main | 75 | 75 | **49** | 65% | **6 / 15** |
-| JEE Advanced | 33 | 30 (3 = `match`, left to authoring) | **24** | 80% | **6 / 12** |
+| exam | qie-servable | **filled** | % | **hard filled** |
+|---|---|---|---|---|
+| NEET | 180 | **103** | 57% | **5 / 40** |
+| JEE Main | 75 | **53** | 70% | **7 / 15** |
+| JEE Advanced | 30 (+3 `match` → authoring) | **25** | 83% | **7 / 12** |
 
-Trajectory this session: NEET 38 → 52 → 56 → **61** · JEE Main 29 → 43 → 47 → **49** · JEE Adv 17 → 20 → **24**.
+NEET by subject: Physics **33**/45 · Chemistry **22**/45 · Biology **48**/90.
+Session trajectory: NEET **38 → 103** · JEE Main **29 → 53** · JEE Advanced **17 → 25**.
 
 ```python
 from kie.qie import qp_bridge as QB; from kie.qpgen.models import PaperRequest
 paper, report = QB.generate_paper(PaperRequest(exam="NEET", seed=7), per=18)
-filled = [s for s in paper.slots if s.status == "filled"]        # paper.warnings names every shortfall
+filled = [s for s in paper.slots if s.status == "filled"]     # paper.warnings names every shortfall
 ```
-⚠ **`per` is inert.** qpgen dedups by `(concept, question_type)`, so exactly ONE item lands per concept per
-type: `per=18`, `30` and `60` give identical papers. **Coverage scales with DISTINCT CONCEPTS, nothing else.**
-Read `paper.warnings` — it names the exact shortfall per section. That is the only honest progress metric.
+⚠ **`per` is inert.** qpgen dedups by `(concept, question_type)` and `used_ct` is **global across the paper**,
+so exactly ONE item lands per concept per type: `per=18/30/60` give identical papers. **Coverage scales with
+DISTINCT CONCEPTS, nothing else.** `paper.warnings` is the only honest progress metric.
 
 ## 5. What exists (committed, working)
 
-### Canonical evidence registry
-`curriculum/EVIDENCE_REGISTRY.{json,md}` + `EVIDENCE_MIGRATION_MAP.md`. Store-level source of truth: **23
-stores / 59.4 GB**, lifecycle-stated. Regenerate: `python -m kie.evidence.registry` (read-only; do NOT pass a
-backdated `REGISTRY_NOW` — it makes the stamp go backwards). No files were moved; the migration map holds the
-deferred layout.
+### Governed TOPIC layer — `kie/qie/convert/topics.py` (decision B)
+`python -m kie.qie.convert.topics [set] [--apply] [--coverage]`. The LLM proposes a topic; deterministic gates
+certify it: **PRESENT · NOT_TRUNCATED · SANITIZER · SUBJECT · GROUNDING · NOT_CHAPTER**.
+- **GROUNDING** = every significant topic word must occur in *that fact's own verified evidence*. This is what
+  forbids inventing a name to buy a dedup slot ("Nitrogen excretion strategy", "VSEPR theory" → REFUSED).
+- **NOT_TRUNCATED** = every significant word must survive `_clean_title`, so prose cut to 5 words is refused.
+- Refused topic → the fact keeps its **chapter** binding (strictly additive; coverage can never drop).
+Committed sets: `topic_sets/backfill_v1.json` (92) · `topic_sets/bio_batch3.json` (36).
+Wired into the admission path (`register._certify_topic`) + `examiner.TOPIC_BRIEF`, so **new** facts carry
+topics from the start. **Bindable concepts: Biology 89 · Chemistry 27 · Physics 11** (was 27/20/11 chapters).
 
 ### Governed qualitative conversion — `kie/qie/convert/`
-`docmeta` → `candidates` (1,774 clean non-numeric queued) → `examiner` (cached by item_hash) → `register` →
-`kvs_compose`. **92 verified facts / 20 rejected.** Subjects: Biology 54 · Chemistry 27 · Physics 11.
+`docmeta` → `candidates` → `examiner` (cached by item_hash) → `register` → `kvs_compose` (BOTH assertion
+directions + option-quality gate). **128 verified facts** (Biology 90 · Chemistry 27 · Physics 11).
+Examiner verdicts are committed: `fact_batches/bio_batch3_verdicts.json`.
 
 ### Notation recovery — `kie/qie/convert/notation/`
-`sources` → `targets` → *(vision transcription — PROPOSES ONLY)* → `dimensions` → `verify` → `register` →
-`relation_compose`. **Locked hierarchy (mandatory):** PROVENANCE · SYMBOLIC · DIMENSIONAL · DOMAIN ·
-ROUND-TRIP. **ANSWER-KEY is CORROBORATION ONLY — never sufficient.**
-**28 relations certified / 5 rejected** — Physics 14, **Chemistry 14** (thermodynamics ×8, kinetics ×2,
-electrochemistry ×3, solutions ×1). Chemistry went from 3-per-paper to parity with Physics/Biology.
+Locked hierarchy (mandatory): PROVENANCE · SYMBOLIC · DIMENSIONAL · DOMAIN · ROUND-TRIP.
+**ANSWER-KEY is CORROBORATION ONLY — never sufficient.**
+**41 relations certified / 8 controls** — Physics 27 (mechanics, gravitation, electrostatics, current
+electricity, **oscillations**, **laws of motion**), Chemistry 14 (thermo, kinetics, electrochem, solutions).
 
-### ⭐ Reproducible BATCHES — `kie/qie/convert/notation/batches/`
-`qie.db` is a **gitignored derived store**, so a batch file is the ONLY reproducible record of an admission.
-The earlier batch scripts lived in a session scratchpad and are **GONE** — that gap is now closed:
+### Reproducible BATCHES + CHAINS
 ```
-python -m kie.qie.convert.notation.batches                  # list
-python -m kie.qie.convert.notation.batches chem_batch3      # dry run (certify only)
-python -m kie.qie.convert.notation.batches chem_batch3 --register
+python -m kie.qie.convert.notation.batches                 # list relation batches
+python -m kie.qie.convert.notation.batches chem_batch3     # dry run · --register to admit
 ```
-`phys_batch1_2.json` (14 + 2 controls) · `chem_batch3.json` (14 + 3 controls). The lane **rebuilds from the
-repo alone into an empty store: 28 certified / 5 controls held / 4-of-4 chains certifying.**
-Control discipline is **mechanical**: `run()` certifies controls FIRST and raises `ControlBreach` rather than
-admit anything if a damaged control ever passes.
+`phys_batch1_2` · `chem_batch3` · `phys_batch4` · chain set `depth4_chains`.
+**The lane rebuilds from the repo alone into an empty store: 41 certified / 8 controls held / 5-of-5 chains**
+— pinned by `test_the_whole_lane_rebuilds_from_the_repo_alone`. Control discipline is MECHANICAL: `run()`
+certifies controls FIRST and raises `ControlBreach` rather than admit anything.
 
-### ⭐ Depth-4/5 CHAINS — `kie/qie/convert/notation/{chains.py, chain_compose.py}` (the HARD lane)
-A single relation is ONE operator application (depth 1) → can only ever be MEDIUM. Every blueprint reserves
-its hard cells for multi-concept work, so **more single relations can never fill one**. A chain feeds one
-certified relation's solved symbol into the next; depth is earned from the DAG by `compose.reasoning_depth`,
-never asserted. Gates (all mandatory): **STEPS_CERTIFIED · SOLVABLE (unique real branch; ambiguous ± rejected)
-· JUNCTION (base-dimension compatibility at every hand-off) · CLOSURE · DEPTH**.
-**4 chains certified at depth 4** (`batches/depth4_chains.json`) / 3 mis-wired controls rejected.
+### Depth-4/5 CHAINS — `notation/{chains,chain_compose}.py` (the HARD lane)
+A single relation is ONE operator application (depth 1) → only ever MEDIUM, so **more single relations can
+never fill a hard cell**. Gates: **STEPS_CERTIFIED · SOLVABLE (unique real branch; ambiguous ± refused) ·
+JUNCTION (base-dimension compatibility at every hand-off) · CLOSURE · DEPTH**. Depth is earned from the DAG by
+`compose.reasoning_depth`, never asserted. **5 chains certified at depth 4 / 3 mis-wired controls rejected.**
 
 ## 6. Hard-won lessons — DO NOT REPEAT THESE MISTAKES
-1. **⛔ NEVER retry blind arithmetic relation-induction.** ~90% false positives; `V=IR` is just `a×b` so it
-   matched *Waves, Calorimetry, Motion*. Nothing was registered from it — correctly.
-2. **Answer-key can never certify alone.** A *damaged* control (`½kx`, lost square) scored answer-key
-   corroboration **5/15** — real questions "confirmed" wrong physics — and the dimensional gate overruled it.
-   Pinned by `test_answer_key_alone_cannot_certify`; the control itself is preserved in `phys_batch1_2.json`.
-3. **The dimensional gate outranks the source.** NCERT's unit column says conductivity is "S" but its own
-   dimensions column gives S m⁻¹; the verbatim transcription was rejected.
-4. **A gate that rejects truth is also a defect.** Fixed: like-unit cancellation; `positive=True` vs `real=True`;
-   a **missing unit** silently rejecting a correct relation → extend `dimensions.UNITS` when adding a subject.
-5. **qpgen dedups by (concept, question_type)** → bind at **relation granularity**, never chapter.
-6. **Governed concept titles must pass `sanitize.is_clean_concept`** (MAX_WORDS=5). Note `pH`-style names are
-   rejected as OCR-garbage (`[a-z][A-Z]`), so a pH relation would certify but never bind.
-7. **NCERT class labels are SWAPPED:** `NCERT_Class11_lech1dd.zip` = Class **XII** Chemistry Part I;
-   `NCERT_Class12_kech1dd.zip` = Class **XI**. Trust `sources.entry_title()`. (`lech2dd.zip` is a corrupt zip.)
+1. **⛔ NEVER retry blind arithmetic relation-induction.** ~90% false positives.
+2. **Answer-key can never certify alone.** A *damaged* control scored answer-key corroboration **5/15** and the
+   dimensional gate overruled it. The control is preserved in `phys_batch1_2.json`.
+3. **The dimensional gate outranks the source** (it overruled NCERT's own unit column).
+4. **A gate that rejects truth is also a defect** — as much as one that admits junk. Seen repeatedly:
+   like-unit cancellation; `positive=True` vs `real=True`; a missing unit; the option gate below.
+5. **qpgen dedups by (concept, question_type), globally per paper** → bind at the smallest genuine concept.
+   Chapter binding capped NEET Biology at **42% forever**; that is what decision B fixed.
+6. **Concept titles must pass `sanitize.is_clean_concept`** (MAX_WORDS=5). ⚠ Its anagram heuristic (a letter at
+   ≥45% of a ≥5-letter word) false-positives on **"Mosses"**, **"mirror"**, **"Arcata"** — author around it;
+   **qpgen stays frozen**. `pH`-style names are rejected too ([a-z][A-Z]).
+7. **NCERT class labels are SWAPPED:** `NCERT_Class11_lech1dd.zip` = Class **XII** Chemistry;
+   `NCERT_Class12_keph1dd.zip` = Class **XI** Physics. Trust `sources.entry_title()`. (`lech2dd.zip` is corrupt.)
 8. `kie.db` concepts are noisy. Never bind by naive title substring.
-9. Don't print the formula/route in a generated stem — author from recovered **meanings**.
+9. Don't print the formula/route in a stem — author from recovered **meanings**.
 10. Never trust a piped exit code — read the `Ran N tests / OK` tally.
-11. **A chain junction can be arithmetically fine and physically nonsense.** Feeding an extensive enthalpy (J)
-    into a molar reaction-enthalpy slot (J/mol) — *an error this session designed in and the JUNCTION gate
-    caught*. No answer-check would ever notice. Same shape as lesson 2.
-12. **Correct arithmetic ≠ a realistic quantity.** The first chain items computed j ≈ 1.3×10⁸ A/m² (would
-    vaporise copper). The physics was right; the instance ranges weren't. Tune `value_ranges`/`givens`.
-13. **A symbol's ROLE changes once composed.** `V` in the Wheatstone chain is the drop across the unknown arm,
-    not "across the conductor" as the standalone Ohm's-law record words it → per-chain `meaning_overrides`.
-14. **Options print VERBATIM to a student.** Real distractors are authentic misconception evidence but they are
-    OCR text — a string can be damaged even when the fact is sound. Drop damaged strings; skip the fact if <3
-    clean distractors remain (honest shortfall, never junk).
-15. **Verify the handoff's own diagnosis against the data** — §7.3's assertion-direction diagnosis was wrong
-    (see §8).
+11. **A chain junction can be arithmetically fine and physically nonsense** — feeding J into a J/mol slot. *This
+    session designed that in and the JUNCTION gate caught it.* Now a pinned control.
+12. **Correct arithmetic ≠ a realistic quantity** (first chain items computed j ≈ 1.3×10⁸ A/m²). Tune ranges.
+13. **A symbol's ROLE changes once composed** → per-chain `meaning_overrides`.
+14. **Options print VERBATIM to students, and the ANSWER is an option too.** Use `sanitize.stem_quality_ok`
+    (the PROSE gate) — **NOT** `_looks_like_ocr_garbage`, which is the *concept-title* gate and rejects real
+    biochemistry (`Acetyl CoA`, `mRNA`, `NaOH`, `pH`). Length is a runaway bound (130), not a quality proxy.
+15. **Verify the handoff's own diagnosis against the data** — a previous §7.3 was wrong and a previous §7.1
+    priority was invalidated by measurement.
+16. **Concept titles are NOT printed to students** (only stem + options are; titles appear in the teacher's
+    marking scheme + JSON). So prefer an accurate topic name over a contorted one.
 
 ## 7. Remaining work — ordered by measured value
-0. ⏸ **OWNER DECISION B OPEN — read `DECISION_B_CONCEPT_GRANULARITY.md` BEFORE touching the qualitative lane.**
-   Measured: the qualitative lane binds facts at **chapter** granularity, and qpgen's `(concept_code,
-   question_type)` dedup is **global across a paper**, so **one chapter = ONE question in the whole paper**.
-   Biology has **938 candidates but only 38 chapters** → NEET Biology is capped at **42% forever** (demand 90);
-   Chemistry at 64%. 27 Biology chapters already carry facts, so **examining all ~900 remaining Biology
-   candidates buys at most +11 slots and then stops dead** — the rest would be verified, correct, and
-   invisible. Relations don't have this problem because lesson 5 fixed them to bind at relation granularity;
-   the qualitative lane never got that fix, because Decision A's wording froze it at "governed-fact chapters".
-   **Do NOT spend an examiner run on Biology until this is decided.**
-1. ~~Biology qualitative batch 3+~~ → **BLOCKED on Decision B** (worth ≤ +11 slots under the status quo).
-2. **More depth-4/5 chains** (`batches/depth4_chains.json`). The lane is OPEN and each certified chain = +1 hard
-   slot in every paper. NEET's 40 hard slots are the largest structural headroom (4 filled). Chemistry
-   electrochemistry (E_cell → ΔG → K) is depth 3 — needs one more certified link to qualify.
-3. **Notation breadth** — all Maths and most NCERT Physics chapters are still untouched; each SUMMARY page
-   ≈ 5–8 relations, and each new relation is also new chain material. Copy `batches/chem_batch3.json`; always
-   include ≥1 deliberately damaged adversarial control and confirm it is REJECTED.
-4. **Prefixed/non-SI units** are still absent from `dimensions.UNITS` (`kJ`, `bar`, `atm`, `dm³`, `cm`, `mL`).
-   Batch 3 didn't need them (SI declared throughout). Add from sympy's own definitions — never hand-rolled
-   factors, and avoid a generic prefix splitter (`cd` = candela, not centi-day).
+1. **Biology: 48 of 90.** 89 concepts are bindable but only 48 generate — the limiter is now item generation,
+   not binding. Measured breakdown of the 39 non-generating facts: **18 are NEGATIVE/"EXCEPT" items** ("Which
+   is NOT a function of ANF?") where the answer is the FALSE statement and the real distractors are the TRUE
+   ones. No existing direction fits them; they need a **negative lane** + an examiner-time `negation` slot
+   (inferring negativity from a mismatch would be a guess — do not). Remainder: 7 giveaway, 6 <3 distractors,
+   5 no slots (all correct refusals).
+2. **More qualitative batches** — ~860 Biology + ~240 Chemistry candidates remain at ~90% survival. Now
+   genuinely additive (decision B). ~25% of admitted facts currently generate, so budget accordingly.
+3. **More depth-4/5 chains.** Each certified chain = +1 hard slot in EVERY paper; NEET's 40 hard slots are the
+   largest structural headroom (5 filled). Chains are limited by the relation set, so notation breadth feeds
+   this lane. Electrochemistry (E_cell → ΔG → K) is depth 3 — needs one more certified link.
+4. **Notation breadth** — still untouched: Motion, Rotational Motion, Thermal, Kinetic Theory, Waves,
+   Magnetism, EMI, AC, Optics, Modern Physics; **all of Maths**. Each SUMMARY page ≈ 5–13 relations. Copy
+   `batches/phys_batch4.json`; always ship ≥1 deliberately damaged control and confirm it is REJECTED.
+5. **Prefixed/non-SI units** absent from `dimensions.UNITS` (`kJ`, `bar`, `atm`, `dm³`, `cm`, `mL`). Add from
+   sympy's own definitions — never hand-rolled factors, and avoid a generic prefix splitter (`cd` = candela).
 
-## 8. Correction to the previous handoff (verified against the data)
-The old §7.3 claimed 42/52 assertions failed because the source asked *term→definition* and the fix was to
-re-author slots at **examiner** time. **That was wrong.** The slots were already in the source's direction.
-Measured: 33 DIRECTION / 10 OK / 7 list-answer / 2 giveaway — and in the DIRECTION failures the answer
-corresponds to the **object_term**, with the real distractors parallel to the **object**. `_assert_usable` only
-supported "what is X?" (answer≈subject_term). The fix was a second template authoring the stem in the source's
-own direction (`"{subject_term} {predicate}:"`) — **no examiner call, no new evidence, no token spend.**
-Of the 33, only 17 are truly object-direction; 10 survive the quality gates (7 dropped by the new
-option-quality gate as OCR-damaged — honestly, rather than shipping junk).
-**Known residue:** a pronounceable OCR typo (`tmpredictable` for "unpredictable") still passes the
-dictionary-free option gate. One cosmetic distractor; stem and key are correct. Inventing a heuristic to catch
-it risks rejecting real terms (mRNA, sp3d2).
-
-## 9. Safety constraints (non-negotiable)
+## 8. Safety constraints (non-negotiable)
 - Register **only** certified/verified records; persist rejects (never re-examine refuted evidence).
-- LLM proposes; **sympy/deterministic gates certify**. Never certify by model agreement.
-- Every admitted record keeps provenance (owned source page / doc+question) **and** per-gate verification.
+- LLM proposes; **deterministic gates certify**. Never certify by model agreement.
+- Every admitted record keeps provenance **and** per-gate verification.
 - Every batch ships ≥1 **deliberately damaged adversarial control**, and it must be REJECTED.
 - `qpgen` internals frozen; `kie.db` read-only; bank not promoted; HELD scopes stay held.
 - Raw/derived bulk stays **gitignored/local** (`knowledge/`, `resources/`, `staging/`). Commit only code,
@@ -169,27 +155,26 @@ it risks rejecting real terms (mRNA, sp3d2).
 - Token discipline: deterministic first; reserve model reasoning for genuinely ambiguous extraction/examiner
   calls; batch; cache. **No agent swarms.**
 
-## 10. Genuine blockers
-**One owner decision is OPEN: Decision B (concept granularity)** — see §7.0 and
-`DECISION_B_CONCEPT_GRANULARITY.md`. It gates the qualitative lane (the only lane that can move Biology) and
-it re-orders the roadmap. Nothing has been built for it. Everything else in §7 is known, scoped, unblocked
-work — items 2–4 need no decision and can proceed immediately.
+## 9. Genuine blockers
+**None.** No owner decision is outstanding (B is resolved and implemented). Everything in §7 is known, scoped,
+unblocked work.
 
-## 11. Key file map
+## 10. Key file map
 ```
-curriculum/EVIDENCE_REGISTRY.{json,md}, EVIDENCE_MIGRATION_MAP.md   # canonical inventory + deferred moves
+curriculum/EVIDENCE_REGISTRY.{json,md}, EVIDENCE_MIGRATION_MAP.md
 curriculum/scripts/intelligence/kie/
   evidence/{lifecycle,registry}.py
-  qie/convert/{docmeta,candidates,examiner,register,kvs_compose}.py  # kvs_compose: BOTH assertion directions
+  qie/convert/{docmeta,candidates,examiner,register,kvs_compose}.py
+  qie/convert/topics.py · topic_sets/{backfill_v1,bio_batch3}.json      # decision B
+  qie/convert/fact_batches/bio_batch3_verdicts.json                     # examiner judgment record
   qie/convert/notation/{sources,targets,dimensions,verify,register,relation_compose}.py
-  qie/convert/notation/{chains,chain_compose}.py                     # depth-4/5 HARD lane
-  qie/convert/notation/batches/                                      # REPRODUCIBLE admissions + chain defs
-    __init__.py __main__.py phys_batch1_2.json chem_batch3.json depth4_chains.json
-  qie/store_schema.sql · qie/qp_bridge.py                            # ONLY qpgen integration point
-  tests/{test_governed_conversion,test_notation_recovery,test_notation_chains}.py
+  qie/convert/notation/{chains,chain_compose}.py                        # depth-4/5 HARD lane
+  qie/convert/notation/batches/                                         # reproducible admissions + chain defs
+    __init__.py __main__.py phys_batch1_2.json chem_batch3.json phys_batch4.json depth4_chains.json
+  qie/store_schema.sql · qie/store.py · qie/qp_bridge.py                # ONLY qpgen integration point
+  tests/{test_governed_conversion,test_governed_topics,test_notation_recovery,test_notation_chains}.py
 docs/question-intelligence-quality/
-  EVIDENCE_RECONCILIATION.md · GOVERNED_CONVERSION_CHECKPOINT.md
-  GOVERNED_CONVERSION_BATCH1_AND_STORAGE_GOVERNANCE.md
-  GOVERNED_CONVERSION_BATCH2_AND_NOTATION_FINDING.md · NOTATION_RECOVERY_CAPABILITY.md
-  QIE_SESSION_HANDOFF.md                                             # this file
+  DECISION_B_CONCEPT_GRANULARITY.md                                     # RESOLVED — implemented 15feaea2
+  NOTATION_RECOVERY_CAPABILITY.md · GOVERNED_CONVERSION_*.md
+  QIE_SESSION_HANDOFF.md                                                # this file
 ```
