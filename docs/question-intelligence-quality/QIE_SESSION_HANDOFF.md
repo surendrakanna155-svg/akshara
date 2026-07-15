@@ -125,10 +125,16 @@ never asserted. Gates (all mandatory): **STEPS_CERTIFIED · SOLVABLE (unique rea
     (see §8).
 
 ## 7. Remaining work — ordered by measured value
-1. **Biology Section A: 20 of 70 — the single largest gap** (plus Biology hard 0/20, which chains cannot serve:
-   Biology has no relations). Path = **qualitative batch 3+**: ~1,660 clean candidates queued at 76–88% yield.
-   `examiner.select_batch(cands, conn, n=..., lanes=..., prioritize_subjects=["Biology"])` → worksheet →
-   examine → `ingest_verdicts`. This is the only lane that moves Biology.
+0. ⏸ **OWNER DECISION B OPEN — read `DECISION_B_CONCEPT_GRANULARITY.md` BEFORE touching the qualitative lane.**
+   Measured: the qualitative lane binds facts at **chapter** granularity, and qpgen's `(concept_code,
+   question_type)` dedup is **global across a paper**, so **one chapter = ONE question in the whole paper**.
+   Biology has **938 candidates but only 38 chapters** → NEET Biology is capped at **42% forever** (demand 90);
+   Chemistry at 64%. 27 Biology chapters already carry facts, so **examining all ~900 remaining Biology
+   candidates buys at most +11 slots and then stops dead** — the rest would be verified, correct, and
+   invisible. Relations don't have this problem because lesson 5 fixed them to bind at relation granularity;
+   the qualitative lane never got that fix, because Decision A's wording froze it at "governed-fact chapters".
+   **Do NOT spend an examiner run on Biology until this is decided.**
+1. ~~Biology qualitative batch 3+~~ → **BLOCKED on Decision B** (worth ≤ +11 slots under the status quo).
 2. **More depth-4/5 chains** (`batches/depth4_chains.json`). The lane is OPEN and each certified chain = +1 hard
    slot in every paper. NEET's 40 hard slots are the largest structural headroom (4 filled). Chemistry
    electrochemistry (E_cell → ΔG → K) is depth 3 — needs one more certified link to qualify.
@@ -164,7 +170,10 @@ it risks rejecting real terms (mRNA, sp3d2).
   calls; batch; cache. **No agent swarms.**
 
 ## 10. Genuine blockers
-**None.** No owner decision is outstanding. Everything in §7 is known, scoped work.
+**One owner decision is OPEN: Decision B (concept granularity)** — see §7.0 and
+`DECISION_B_CONCEPT_GRANULARITY.md`. It gates the qualitative lane (the only lane that can move Biology) and
+it re-orders the roadmap. Nothing has been built for it. Everything else in §7 is known, scoped, unblocked
+work — items 2–4 need no decision and can proceed immediately.
 
 ## 11. Key file map
 ```
