@@ -30,7 +30,12 @@ import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import type { AppConfig } from "../config.ts";
 import type { AccessTokenClaims } from "../jwt.ts";
 import { signAccessToken } from "../jwt.ts";
-import { requireEntitlement, withEntitlement, type ModuleRoute } from "./entitlement_middleware.ts";
+import {
+  gateSubscriptionStatus,
+  requireEntitlement,
+  withEntitlement,
+  type ModuleRoute,
+} from "./entitlement_middleware.ts";
 
 const SECRET = "test-jwt-secret-minimum-32-characters-long";
 const config = { jwtSecret: SECRET } as AppConfig;
@@ -69,6 +74,37 @@ Deno.test("QA-B-065: a plan WITHOUT the module slug is 402 PLAN_UPGRADE_REQUIRED
     assertEquals(res?.status, 402, `${slug} did not 402 for a plan lacking it`);
     const body = await res!.json();
     assertEquals(body.error.code, "PLAN_UPGRADE_REQUIRED", `${slug} wrong error code`);
+  }
+});
+
+// ─── PRC-A cap 57: subscription STATUS is enforced, not just decorative ──────
+
+Deno.test("PRC-A cap 57: a SUSPENDED subscription is blocked (402 SUBSCRIPTION_SUSPENDED)", async () => {
+  const res = gateSubscriptionStatus("suspended");
+  assertEquals(res?.status, 402);
+  const body = await res!.json();
+  assertEquals(body.error.code, "SUBSCRIPTION_SUSPENDED");
+});
+
+Deno.test("PRC-A cap 57: suspension is plan-INDEPENDENT — it blocks even a module the plan fully allows", async () => {
+  for (const { slug } of WRAPPED) {
+    // The org's plan explicitly grants this module...
+    const allowed = new Set(["module.admissions", slug]);
+    assertEquals(requireEntitlement(allowed, slug), null, `${slug} setup wrong`);
+    // ...but the subscription is suspended, and enforceEntitlement runs the
+    // status gate BEFORE gateModuleAccess, so the plan never gets consulted.
+    // Before this fix, status was resolved and returned but never read: a
+    // suspended org kept full API access to every module its plan allowed.
+    const res = gateSubscriptionStatus("suspended");
+    assertEquals(res?.status, 402, `${slug} was reachable while suspended`);
+    const body = await res!.json();
+    assertEquals(body.error.code, "SUBSCRIPTION_SUSPENDED");
+  }
+});
+
+Deno.test("PRC-A cap 57: trial / active / grace all still pass (grace is a grace window, not a block)", () => {
+  for (const status of ["trial", "active", "grace"]) {
+    assertEquals(gateSubscriptionStatus(status), null, `${status} was wrongly blocked`);
   }
 });
 
