@@ -4,6 +4,13 @@
 // they are authenticated with a shared-secret HMAC-SHA256 over the raw request
 // body (same scheme as the Razorpay webhook). The tenant is then derived from the
 // matched delivery row (see handleDeliveryWebhook), never from the payload itself.
+//
+// PRC-A Batch 5 (owner-idea 25) — the private hmacHex + timingSafeEqualHex here
+// were one of three near-duplicate copies; verification now goes through the one
+// canonical constant-time verifier in `../webhook_hmac.ts` (which also closes the
+// small length-leak in the old local compare — it compared over full max length).
+
+import { verifyHmacSha256Hex } from "../webhook_hmac.ts";
 
 export interface CommunicationWebhookConfig {
   /** Shared secret; when null the webhook runs in stub mode (local/cert only). */
@@ -18,35 +25,6 @@ export function loadCommunicationWebhookConfig(): CommunicationWebhookConfig {
   return { secret, stubMode: secret === null || secret.length === 0 };
 }
 
-/** Lowercase hex HMAC-SHA256 of `body` keyed by `secret`. */
-async function hmacHex(secret: string, body: string): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const digest = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    new TextEncoder().encode(body),
-  );
-  return [...new Uint8Array(digest)]
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-/** Constant-time compare of two equal-length hex strings. */
-function timingSafeEqualHex(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let mismatch = 0;
-  for (let i = 0; i < a.length; i++) {
-    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return mismatch === 0;
-}
-
 /**
  * Verifies the `x-akshara-signature` header against the raw body. In stub mode
  * (no secret configured) any request is accepted so local/cert runs work without
@@ -58,7 +36,5 @@ export async function verifyCommunicationWebhookSignature(
   signature: string | null,
 ): Promise<boolean> {
   if (config.stubMode) return true;
-  if (!config.secret || !signature) return false;
-  const expected = await hmacHex(config.secret, body);
-  return timingSafeEqualHex(expected, signature.trim().toLowerCase());
+  return await verifyHmacSha256Hex(config.secret, body, signature);
 }

@@ -28,8 +28,12 @@ class MockPaymentDb {
     }
 
     if (sql.includes("INSERT INTO payment_webhook_events")) {
-      this.webhookIds.add(args[0] as string);
-      return [] as T[];
+      // Models `ON CONFLICT (id) DO NOTHING RETURNING id`: the first insert of an
+      // id wins (returns the row); a replay of the same id conflicts (no row).
+      const eventId = args[0] as string;
+      if (this.webhookIds.has(eventId)) return [] as T[];
+      this.webhookIds.add(eventId);
+      return [{ id: eventId }] as T[];
     }
 
     if (sql.includes("UPDATE payment_intents") && sql.includes("status = 'captured'")) {

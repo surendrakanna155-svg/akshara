@@ -1,4 +1,5 @@
 import type { RazorpayConfig } from "./razorpay_config.ts";
+import { hmacSha256Hex, timingSafeEqualHex } from "../webhook_hmac.ts";
 
 export interface RazorpayOrder {
   id: string;
@@ -90,22 +91,11 @@ export async function verifyRazorpayWebhookSignature(
   if (!config.webhookSecret || !signature) {
     return false;
   }
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(config.webhookSecret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const digest = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    new TextEncoder().encode(body),
-  );
-  const expected = [...new Uint8Array(digest)]
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-  return expected === signature;
+  // PRC-A Batch 5 — was `expected === signature` (timing-unsafe, a money-path
+  // side channel). Now constant-time via the shared verifier. Razorpay sends the
+  // webhook signature as lowercase hex, so compare directly against the hex digest.
+  const expected = await hmacSha256Hex(config.webhookSecret, body);
+  return timingSafeEqualHex(expected, signature);
 }
 
 export async function verifyRazorpayPaymentSignature(
@@ -120,21 +110,10 @@ export async function verifyRazorpayPaymentSignature(
   if (!config.keySecret) {
     return false;
   }
+  // PRC-A Batch 5 — constant-time (was `expected === signature`). This gate
+  // confirms a completed payment (order|payment), so a forgeable signature would
+  // let an attacker mark an order paid.
   const payload = `${orderId}|${paymentId}`;
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(config.keySecret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const digest = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    new TextEncoder().encode(payload),
-  );
-  const expected = [...new Uint8Array(digest)]
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-  return expected === signature;
+  const expected = await hmacSha256Hex(config.keySecret, payload);
+  return timingSafeEqualHex(expected, signature);
 }

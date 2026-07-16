@@ -253,21 +253,25 @@ export async function recordWebhookEvent(
   organizationId: string | null,
   schoolId: string | null = null,
 ): Promise<boolean> {
-  const existing = await db.queryObject<{ id: string }>(
-    `SELECT id FROM payment_webhook_events WHERE id = $1`,
-    [eventId],
-  );
-  if (existing.length > 0) {
-    return false;
-  }
-  await db.queryObject(
+  // PRC-A Batch 5 — atomic replay guard (owner-idea 25). The old SELECT-then-INSERT
+  // was check-then-act: two concurrent deliveries of the SAME webhook could both
+  // see zero rows and both proceed to process the event (e.g. credit a payment)
+  // twice; and the loser's bare INSERT would raise a PK violation that surfaces as
+  // a 500, provoking yet another provider retry. `id` is the primary key, so
+  // Postgres already serialises concurrent inserts — `ON CONFLICT DO NOTHING
+  // RETURNING id` lets it pick the single winner in ONE statement. A returned row
+  // means WE claimed this event first (process it); no row means a concurrent or
+  // earlier delivery already claimed it (skip, cleanly, no throw).
+  const inserted = await db.queryObject<{ id: string }>(
     `INSERT INTO payment_webhook_events (
        id, organization_id, event_type, payload,
        resolved_organization_id, resolved_school_id
-     ) VALUES ($1, $2, $3, $4::jsonb, $5, $6)`,
+     ) VALUES ($1, $2, $3, $4::jsonb, $5, $6)
+     ON CONFLICT (id) DO NOTHING
+     RETURNING id`,
     [eventId, organizationId, eventType, JSON.stringify(payload), organizationId, schoolId],
   );
-  return true;
+  return inserted.length > 0;
 }
 
 export async function findRequestByInstallment(
