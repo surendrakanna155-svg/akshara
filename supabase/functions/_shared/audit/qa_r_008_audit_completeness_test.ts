@@ -105,6 +105,9 @@ const GENERIC_FACTORY_MODULES = new Set<string>([
   "certificate_desk",
   "gate_pass",
   "complaints",
+  // PRC-A Batch 3 — the /ai-wallet/grant mutation audits via moduleEntityAudit
+  // ("aiWallet.credit_granted") inside the same tenant transaction as the insert.
+  "aiWallet",
 ]);
 
 /**

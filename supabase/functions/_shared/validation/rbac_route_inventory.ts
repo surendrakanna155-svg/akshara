@@ -320,6 +320,11 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "POST", path: "/gate-passes/:id/verify", permission: "verifyGatePass", scope: "school", module: "gate_pass" },
   { method: "POST", path: "/gate-passes/:id/cancel", permission: "requestGatePass", scope: "school", module: "gate_pass" },
   // Complaints / internal issues (caps 101–108).
+  // PRC-A Batch 3 (caps 37–43) — AI credit wallet. Org-scoped: credits are an
+  // organization fact (org-scoped AI surfaces call with school_id NULL). Read is
+  // org-level; grant is platform-only (manageAiCredits → superAdmin).
+  { method: "GET", path: "/ai-wallet", permission: "viewAiWallet", scope: "organization", module: "aiWallet" },
+  { method: "POST", path: "/ai-wallet/grant", permission: "manageAiCredits", scope: "organization", module: "aiWallet" },
   { method: "POST", path: "/complaints", permission: "raiseComplaint", scope: "school", module: "complaints" },
   { method: "GET", path: "/complaints", permission: "raiseComplaint", scope: "school", module: "complaints" },
   { method: "GET", path: "/complaints/:id", permission: "raiseComplaint", scope: "school", module: "complaints" },
@@ -373,4 +378,6 @@ export const RBAC_MODULE_PERMISSIONS = [
   "raiseComplaint", "manageComplaints", "viewComplaintsPrincipal",
   "manageStudentHealth", "viewStudentHealthRecord", "viewStudentCareAlert",
   "administerStudentMedication",
+  // PRC-A Batch 3 — AI credit wallet.
+  "viewAiWallet", "manageAiCredits",
 ] as const;

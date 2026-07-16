@@ -41,6 +41,7 @@ import { routeCommunication } from "../_shared/communication/communication_route
 import { routePilotOperations } from "../_shared/pilot/pilot_operations_router.ts";
 import { routeOnboarding } from "../_shared/onboarding/onboarding_router.ts";
 import { routeCopilot } from "../_shared/copilot/copilot_router.ts";
+import { routeAiWallet } from "../_shared/ai/ai_wallet_router.ts";
 import { routeSearch } from "../_shared/search/search_router.ts";
 import { routeAnalytics } from "../_shared/analytics/analytics_router.ts";
 import { routeEducation } from "../_shared/education/education_router.ts";
@@ -172,6 +173,11 @@ export async function routeModuleRequest(
     routeEducation,
     routeIntelligence,
     routeCopilot,
+    // PRC-A Batch 3 (caps 37–43) — AI credit wallet. NOT withEntitlement-wrapped:
+    // the wallet IS the commercial metering for AI usage, so gating it behind a
+    // plan entitlement would be circular. Read (viewAiWallet) is org-level; grant
+    // (manageAiCredits) is platform-only — both enforced in the handlers.
+    routeAiWallet,
     // W2.S — Universal School Search (deterministic, RBAC-scoped entity resolver).
     routeSearch,
     routeCommunication,
