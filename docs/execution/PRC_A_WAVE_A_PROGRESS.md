@@ -639,3 +639,35 @@ The "static mock served as live" cost defect is fixed for the fuel KPI + cost-su
 + `snapshot_occupancy` are still static seed; per-vehicle/route cost rollups; richer
 expense types (odometer fuel logs); driver→route write path; effective-date model; and
 a Flutter expense-entry UI. Tracked for subsequent slices.
+
+## ✅ SLICE 2 — occupancy + fuelTrend recompute — LIVE CERTIFIED (2026-07-16, code-only)
+The last two transport figures that were STATIC SEED served as live are now computed.
+**Commits:** `5afa90ba` (backend + tests) · cert (this line). No migration (pure recompute).
+
+- `handleOccupancyMetrics`: LIVE — totalCapacity = SUM of active vehicle capacities,
+  allocatedSeats = COUNT of allocations, utilizationPercent = allocated/capacity
+  (0 when no fleet), unassignedStudents = max(0, active-route studentCount −
+  allocatedSeats). Regex-guarded numeric casts. Replaces `{860,842,2,88}`.
+- `handleReports`: overlays a LIVE monthly fuel trend off `transport_expenses`
+  (lakhs; `targetLakhs=null`; sparse months are honest gaps) over the static
+  `snapshot_reports.fuelTrend`.
+- Pure `computeOccupancy` + `withLiveFuelTrend` unit-tested (5). deno **3437/0/3ign** (+5).
+
+Deployed edge-only (backup → rsync 3 files → restart; routes 401; errors 0). Cert:
+[`live_cert_batch8s2_occupancy_fueltrend.sql`](../../scripts/qa/live_cert_batch8s2_occupancy_fueltrend.sql)
+— **5/5 probes PASS** on real Postgres, residue 0:
+
+| # | Claim | Verdict |
+|---|---|---|
+| 1 | occupancy computed live = **48/1** (real School A), no longer the **860/842** static seed | **PASS** |
+| 2 | utilizationPercent = round(allocated/capacity×100) — internally consistent | **PASS** |
+| 3 | RLS: a different tenant sees 0/0 of org-A's fleet | **PASS** |
+| 4 | reports fuel trend sums the transport_expenses ledger (₹62k → 0.62 lakhs) | **PASS** |
+| 5 | regex-guarded cast survives a malformed `"n/a"` capacity payload (no error) | **PASS** |
+
+⇒ **Batch 8 slice 2 = LIVE CERTIFIED.** The transport dashboard's cost, occupancy,
+and fuel-trend figures are ALL now live-derived — the "static mock served as live"
+class of defect is closed for transport (the seed rows remain in the table but no
+endpoint serves them). Remaining transport work (per-vehicle rollups, odometer fuel
+logs, driver→route write, effective dates, Flutter UI) is future scope, not a
+served-mock correctness defect.
