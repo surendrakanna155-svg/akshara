@@ -190,6 +190,38 @@ export async function getTransportIncome(
   return { billed: rows[0]?.billed ?? "0", collected: rows[0]?.collected ?? "0" };
 }
 
+/**
+ * Batch 8 slice 2: monthly recorded fuel spend for the last `months` months,
+ * as the live replacement for snapshot_reports.fuelTrend (a static seed array).
+ * Amounts are returned in lakhs to match the existing trend shape; `targetLakhs`
+ * is null because there is no configured target to fabricate. Months with no fuel
+ * are simply absent (an honest sparse trend, never fabricated zeros).
+ */
+export async function getMonthlyFuelTrend(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  months = 6,
+): Promise<{ label: string; amountLakhs: number; targetLakhs: null }[]> {
+  const rows = await db.queryObject<{ label: string; total: string }>(
+    `SELECT to_char(date_trunc('month', incurred_on), 'Mon YYYY') AS label,
+            COALESCE(SUM(amount), 0)::text AS total
+       FROM transport_expenses
+      WHERE organization_id = $1 AND school_id = $2 AND status = 'recorded'
+        AND category = 'fuel'
+        AND incurred_on >= (date_trunc('month', timezone('utc', now()))
+              - (($3 || ' months')::interval))::date
+      GROUP BY date_trunc('month', incurred_on)
+      ORDER BY date_trunc('month', incurred_on)`,
+    [orgId, schoolId, String(months)],
+  );
+  return rows.map((r) => ({
+    label: r.label,
+    amountLakhs: Number((Number(r.total) / 100000).toFixed(2)),
+    targetLakhs: null,
+  }));
+}
+
 /** Month-to-date recorded fuel spend — the live value for the dashboard KPI that
  * used to be the hardcoded "₹84K" placeholder. */
 export async function getMonthToDateFuel(
