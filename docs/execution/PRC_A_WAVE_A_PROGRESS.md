@@ -208,14 +208,34 @@ No Part 7B *Automatic Failure Condition* triggered; **no open P0**; no critical 
 
 ⇒ **Batch 2 BUILD = complete. Batch 2 CERTIFICATION = NOT DONE.** Do not claim LIVE/CERTIFIED from these green tests.
 
-### 🔒 P1 tracked into the deploy/cert wave — the live-probe list (blocked: VPS SSH refusing publickey)
+## ✅ LIVE-POSTGRES PROOF — money P0 #1 (account resolution) CERTIFIED 2026-07-16
+
+**VPS restored.** Ran the first item that the fake DB structurally could not judge. Probe is committed + reproducible: [`scripts/qa/live_probe_money_p0_account_resolution.sql`](../../scripts/qa/live_probe_money_p0_account_resolution.sql) (real `akshara_db`, seeded tuition+transport structure→assignment→account→invoice chain for one student, all inside `BEGIN … ROLLBACK`).
+
+**Result on real Postgres:**
+| Join | Rows | Verdict |
+|---|---|---|
+| **OLD** `fsa.fee_assignment_id = fi.fee_assignment_id` | **0** | **P0 REPRODUCED** — the transport invoice resolves to NO account ⇒ payment not collectible, late fee silently never accrues (under-billing), concession 422 |
+| **NEW** `student_id + academic_year` | **1** | **FIX CONFIRMED** — the transport invoice resolves to the student's account |
+
+Prod schema independently confirms the premise: `finance_student_accounts` is `UNIQUE (student_id, academic_year)` with `fee_assignment_id NOT NULL` — ONE account per student-year, its `fee_assignment_id` frozen at the FIRST assignment, while TRN-9 reuses that account for later structures.
+**Residue check after ROLLBACK: `students=0 structures=0 invoices=0`** — nothing persisted; prod untouched.
+⇒ **Cap: money P0 #1 = CERTIFIED (live).** The defect was real, and the fix is real — now proven by Postgres, not by a mock.
+
+### 🔒 P1 — the live-probe list (VPS is now UP; these remain UNPROVEN until run)
+⚠ The 6 pending migrations (`20260882`–`20260887`, incl. **two new DB roles** `erp_platform` + `healthStaff`) and the PRC-A edge bundle are **NOT deployed** — prod is at `20260881`. Batch 2's tables do not exist on prod, so items 1–6 below cannot be probed until that deploy happens. **Deploy to SHARED prod is owner-gated** (see the deploy note at the end of this section).
 1. RLS tenant isolation on all Batch 2 tables (org/school predicates actually block cross-tenant reads).
 2. Parent/guardian scoping via the `student_guardians` subquery — a parent sees only their own child's certificate requests / gate passes / complaints / health rows.
 3. `teacherTeachesStudent` — the live 3-way UNION over roster/section-labels/timetable, incl. the `sis_student_enrollments.section_id` NULL soft-FK edge.
 4. Immutability of `student_medication_administration_log` + `student_health_access_log` at the GRANT/RLS level (today proven only by source/migration text inspection).
 5. `healthStaff` role + its 3 grants resolving end-to-end through live `role_permissions` → JWT → `claims.permissions`.
 6. Partial-unique constraints (`uq_gate_passes_open_slot`, the cert-desk open-request guard) — the constraint-violation catch matches an error string never triggered against real Postgres.
-7. **The two money P0s from `4bc1046b`** (2nd-structure account resolution + cancel-invoice lockstep) — still uncertified for the same JOIN-blindness reason.
+7. **Money P0 #2 — `cancelInvoice` lockstep** (`4bc1046b`): still uncertified. Unlike #1 it is not a pure JOIN-semantics question — it needs the FIXED edge deployed to exercise the guarded status write + the account release under concurrency. → certify in the deploy wave.
+   *(Money P0 #1 — account resolution — is now **CERTIFIED live**; see the section above.)*
+
+### 🚧 Deploy gate — needs an owner decision before prod
+Prod is at `20260881`; local is at `20260887`. Pending: **6 migrations** (`20260882` platform DB role · `20260883` fee-structure class binding · `20260884`–`20260887` Batch 2) **creating two new DB roles** (`erp_platform`, `healthStaff`), plus the whole PRC-A edge bundle (money-path changes incl. the fee-concession rewire, transport-stop revoke, bulk assign, AES vault, proration, + the 4 Batch 2 modules). This is a **shared** production host (velora-salon / n8n / redis also live here — never touch).
+**Known deploy dependency:** the AES vault path **fails closed** without `VAULT_ENC_KEY` provisioned in the prod edge env; deploying it unprovisioned would break storing/rotating provider secrets. Owner decision #2 authorised the key — it must be **set at deploy time**, and existing base64 secrets re-encrypted via `POST /control-center/vault/reencrypt`, with rollback evidence.
 
 ### Honest residue (not fixed, deliberately not hidden)
 - **No parent-facing UI** for cert-requests / gate-pass / complaints. The API supports parent scope and RLS allows parent SELECT+INSERT, but no parent screen exists.
