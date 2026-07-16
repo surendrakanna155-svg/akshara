@@ -1,5 +1,11 @@
 # PRC-B — Product Correctness, Invariant & Edge-Case Certification
 
+> ## 🔒 FROZEN — owner-accepted 2026-07-16 (tip `671d07a3`). All 12 categories certified, zero defects.
+> This certification record is frozen: the artifacts (`prc_b_money_formula_cert_test.ts`,
+> `prc_b_datetime_cert_test.ts`, `scripts/qa/live_cert_prcb_*.sql`) and the verdicts below are the
+> authoritative PRC-B record. Do not deepen/re-run unless a genuine correctness regression is found.
+
+
 **Wave:** PRC-B (opened 2026-07-16, after PRC-A implementation complete at tip `707fa91f`).
 **Authority:** `../roadmap/PRODUCT_REALITY_CORRECTNESS_PROGRAM_TRACKER.md` §3 (12 invariant categories, ~230 IDs).
 **Nature:** a CERTIFICATION program over EXISTING functionality — no new features (PRC-B-M-02/03). Every certification is evidence-based: a pure-function unit assertion, a live-Postgres probe as the real `erp_tenant` role, or an already-produced PRC-A live-cert.
