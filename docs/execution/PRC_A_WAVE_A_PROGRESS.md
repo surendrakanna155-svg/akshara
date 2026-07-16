@@ -525,3 +525,57 @@ inside `BEGIN…ROLLBACK`; residue asserted 0 after.
   intact for its own onboarding-analytics screen (backward compat); the canonical
   path is now the pipeline. (4) live external WhatsApp send stays provider-gated
   (msg91/gupshup creds) — cert proves ROUTING + escalation, not the third-party API.
+
+---
+
+# 🔨 PRC-A BATCH 7 — TALLY ACCOUNTING EXPORT (owner-future-idea 11)
+
+A Tally-importable Receipt-voucher export off the CERTIFIED `finance_collections`
+ledger + a per-school ledger-name map. Read-only; never mutates finance.
+
+**Commits:** `60fd5069` (backend + tests) · cert (this section). Migration **`20260891`**.
+
+## Design (honest scope)
+- Each completed collection → ONE Tally Receipt voucher: Dr `<cash/bank by payment
+  method>` (deemed-positive, negative amount), Cr `<fee income ledger>` (positive) —
+  correct, balanced double-entry, XML-escaped (injection-safe).
+- **No per-collection head split exists** in the schema (head-wise paid amounts live
+  only at the INVOICE level in `finance_invoice_head_allocations`), so the export
+  credits a single configurable Fee Income ledger rather than fabricating per-receipt
+  per-head precision. Head-level GL is deliberately out of scope — documented, not faked.
+- Pure generator `finance_tally_export.ts` (Tally ENVELOPE, method→ledger routing,
+  escaping, empty-set safe) — 9 unit tests. `finance_tally_ledger_map` (RLS'd, ledger-
+  name CHECK, no DELETE grant). Reuses `viewFinance` (export) / `manageFinance` (config).
+- `GET /finance/reports/tally-export?from=&to=&format=` (`?format=xml` → downloadable
+  file, else JSON envelope + voucher count) · `GET/PUT /finance/tally-ledger-map`.
+
+## ✅ DEPLOYED — 2026-07-16 (prod `20260890` → `20260891`, edge)
+Backup → migration as `supabase_admin --single-transaction` with ledger INSERT →
+rsync (exactly the 5 Batch-7 files, 0 deletions) → restart (clean). Schema live:
+ledger `20260891`, `finance_tally_ledger_map` `rls=t forced=t`, erp_tenant grants
+INSERT/SELECT/UPDATE (no DELETE). Route contract `127.0.0.1:3000`:
+`GET /finance/reports/tally-export`, `GET`+`PUT /finance/tally-ledger-map` all **401**;
+errors since restart **0**.
+
+## ✅ LIVE CERTIFIED — 2026-07-16. 9/9 probes PASS on real Postgres.
+Reproducible: [`live_cert_batch7_tally_export.sql`](../../scripts/qa/live_cert_batch7_tally_export.sql).
+Probes ran as the REAL `erp_tenant` role via `app.set_request_context(...)` inside
+`BEGIN…ROLLBACK`; residue 0. Uses School A's EXISTING collections (the join is what
+the fake DB never evaluates — the same blind spot that let the fee-reductions engine
+ship "certified" with a broken join, PRC-A-D-04).
+
+| # | Claim | Verdict |
+|---|---|---|
+| 1 | export query joins collections→invoices, returns only completed receipts (1 voucher on real data) | **PASS** |
+| 2 | status filter drops cancelled/refunded/partially_refunded (June total=7, completed=1) | **PASS** |
+| 3 | RLS: a different tenant cannot export another org's collections | **PASS** |
+| 4–6 | RLS: ledger-map isolation — sibling school 0, other tenant 0, owning school 1 | **PASS** |
+| 7 | ledger-name CHECK rejects a blank ledger | **PASS** |
+| 8 | append-only: `erp_tenant` cannot DELETE a map | **PASS** |
+| 9 | backward-safe: unconfigured school → no map row → generator uses defaults | **PASS** |
+
+⇒ **Batch 7 = LIVE CERTIFIED.** No open P0. Backend `deno` **3426/0/3ign** (+9).
+**Honest residue:** no Flutter export UI yet (client fast-follow — the API is usable);
+head-level GL out of scope (data model lacks a per-collection head split); the actual
+IMPORT into a live Tally instance is the school's external step (the ERP integration
+point — a correct, well-formed export — is certified).
