@@ -442,3 +442,86 @@ churning a certified module.
 - **IMPLEMENTED + DEPLOYED + LIVE CERTIFIED:** wallet core, admit-clause double-spend safety, HTTP APIs, RBAC, audit, RLS, constraints, immutability — all proven on prod Postgres.
 - **IMPLEMENTED, not yet certified-live:** the Flutter Control Center wallet panel (client UI — ships in a release build, not the edge; verified by `flutter analyze`/widget tests, not a Postgres probe).
 - **Honest residue:** cross-org top-up (a platform superAdmin crediting an ARBITRARY other org) needs an act-as-org tenant context this codebase lacks — deliberately out of scope, not faked; low-balance ALERT dispatch (cap 40) computes `walletHealth` but is not yet wired to a notification channel; storage-quota (31–36) still absent.
+
+---
+
+# 🔨 PRC-A BATCH 6 — COMMUNICATION CHANNEL ORCHESTRATOR (owner-future-idea 24)
+
+WhatsApp promoted to a **first-class channel** in the canonical notification
+pipeline + a **per-school escalation/fallback** policy. Extends existing
+architecture; introduces no competing delivery path.
+
+**Commits:** `deece450` (backend + tests) · cert (this section).
+
+## The stranded-provider problem the audit flagged
+A real msg91/gupshup provider (`school_completion/whatsapp_providers.ts`) existed
+but was reachable ONLY through a synchronous `communication_bridge_service` that
+wrote to a SEPARATE analytics table (`communication_delivery_events`) — never the
+canonical `notification_deliveries` ledger (queue + retry + broadcasts + reports).
+The main channel switch only accepted `sms|email|push`; there was no escalation
+anywhere.
+
+## Design (reuse, never duplicate)
+- `NotificationChannel += 'whatsapp'`; `sendViaProvider` routes it to the EXISTING
+  `sendWhatsAppMessage` with the EXISTING per-school `whatsapp_provider_configs`.
+  No new send code. Unconfigured school → honest "not configured" failure (never a
+  fabricated "sent", GAP-P1-9). The provider config IS the activation gate — ships
+  effectively dark, no extra flag.
+- `processDeliveryQueue` threads the per-school WhatsApp config (cached) and, on a
+  **TERMINAL** failure (retries exhausted), consults the school escalation policy
+  to enqueue a fresh delivery on the next channel in the chain — linked by
+  `escalated_from` + `escalation_depth` (chain-length loop bound). **No policy →
+  no escalation → pre-Batch-6 behaviour preserved byte-for-byte.**
+- Pure `communication_escalation.ts` (position-based, never backwards; depth-guarded;
+  chain validation) — exhaustively unit-tested.
+- Migration `20260890`: both channel CHECKs += `whatsapp`; `escalated_from` +
+  `escalation_depth` on `notification_deliveries`; RLS'd `communication_channel_policies`
+  (org+school, chain-vocabulary CHECK, no DELETE grant — retire via `is_active`).
+- Channel-policy CRUD (`GET/PUT /communications/channel-policy`) reuses the EXISTING
+  `manageCommunications` permission — no new slug.
+
+## ✅ DEPLOYED — 2026-07-16 (prod `20260889` → `20260890`, edge)
+Backup (DB 34438 lines + edge 1.5M) → migration applied as `supabase_admin
+--single-transaction` with its ledger INSERT → `rsync --delete --exclude='*_test.ts'`
+(exactly the 9 Batch-6 files, 0 deletions) → `docker restart akshara-edge` (clean
+boot). Schema verified live: ledger `20260890`, both channel CHECKs carry `whatsapp`,
+policy table `rls=t forced=t`, both new columns present, erp_tenant grants =
+INSERT/SELECT/UPDATE (no DELETE). Route contract on `127.0.0.1:3000`: `/health` **200**,
+`GET`+`PUT /communications/channel-policy` **401** (route exists + auth-gated),
+`/channel-policy/nope` **404**, level-50 since restart **0**.
+
+## ✅ LIVE CERTIFIED — 2026-07-16. 9/9 probes PASS on real Postgres.
+Reproducible: [`live_cert_batch6_whatsapp_escalation.sql`](../../scripts/qa/live_cert_batch6_whatsapp_escalation.sql).
+All probes ran as the REAL `erp_tenant` role via `app.set_request_context(...)`
+inside `BEGIN…ROLLBACK`; residue asserted 0 after.
+
+| # | Claim | Verdict |
+|---|---|---|
+| 1 | channel CHECK accepts `whatsapp` as a first-class channel | **PASS** |
+| 2 | channel CHECK rejects an unknown channel | **PASS** |
+| 3 | RLS: a sibling school cannot see another school's policy | **PASS** |
+| 4 | RLS: a different tenant cannot see the policy | **PASS** |
+| 5 | RLS control: the owning school sees its own policy | **PASS** |
+| 6 | chain-vocabulary CHECK rejects an un-routable channel | **PASS** |
+| 7 | **escalation enqueues the next channel (sms) on TERMINAL failure** with `escalated_from` linkage + `escalation_depth=1` (verbatim production enqueue/fail/enqueue SQL — the fake DB cannot evaluate this) | **PASS** |
+| 8 | append-only: `erp_tenant` cannot DELETE a policy | **PASS** |
+| 9 | backward compatible: no policy row → escalation disabled | **PASS** |
+
+⇒ **Batch 6 = LIVE CERTIFIED.** No open P0. Backend `deno` **3417/0/3ign** (+15).
+
+## State distinction (certification discipline)
+- **IMPLEMENTED + DEPLOYED + LIVE CERTIFIED:** the WhatsApp channel routing,
+  escalation policy (RLS, chain-vocab CHECK, append-only), and the escalate-on-
+  terminal-failure enqueue — all proven on prod Postgres.
+- **IMPLEMENTED, not yet certified-live:** the escalation TS orchestration
+  (`processDeliveryQueue`/`computeEscalationTarget`) is unit-tested (15 tests) and
+  type-checked; the live cert proves the DB half it emits.
+- **Honest residue (documented, not hidden):** (1) no Flutter Control Center
+  channel-policy panel yet (client UI, fast-follow — the API is fully usable).
+  (2) WhatsApp recipient **phone resolution** is not done in the drain — it reuses
+  `recipient_user_id` exactly as the existing SMS path does; a real msg91/gupshup
+  send needs a phone lookup (a shared pre-existing gap across SMS+WhatsApp, not
+  introduced here). (3) the school_completion synchronous WhatsApp bridge is left
+  intact for its own onboarding-analytics screen (backward compat); the canonical
+  path is now the pipeline. (4) live external WhatsApp send stays provider-gated
+  (msg91/gupshup creds) — cert proves ROUTING + escalation, not the third-party API.
