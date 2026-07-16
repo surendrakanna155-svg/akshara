@@ -671,3 +671,53 @@ class of defect is closed for transport (the seed rows remain in the table but n
 endpoint serves them). Remaining transport work (per-vehicle rollups, odometer fuel
 logs, driver→route write, effective dates, Flutter UI) is future scope, not a
 served-mock correctness defect.
+
+---
+
+# 🔨 PRC-A BATCH 9 — UPLOAD MALWARE-SCAN INFRASTRUCTURE (owner-future-idea 29)
+
+The scan-result ledger + integration points so an AV engine plugs in later
+(owner decision #4's media-prep policy names a "malware pipeline" step). Honest
+ship-dark — records the truth, never fabricates protection.
+
+**Commits:** `ec5586ae` (backend + tests) · cert (this section). Migration **`20260893`**.
+
+## Design (honesty-first)
+- `initialScanStatus()`: an un-scanned upload is recorded **'skipped'** ("we did not
+  scan this") — **never a fabricated 'clean'**. Enabled-but-no-engine → 'error';
+  enabled+engine → 'pending' (queued for the external AV).
+- `resolveScanDisposition()`: serving gated behind `MALWARE_SCAN_ENFORCEMENT`
+  (default OFF → allow all, zero behaviour change). ON: infected→block, pending/
+  error→hold, clean/skipped/missing→allow — so turning enforcement on WITHOUT an AV
+  can never take uploads offline, and legacy objects are never retroactively blocked.
+- RLS'd `upload_scan_results` (status CHECK, no DELETE grant — verdict is an UPDATE
+  with a `status='pending'` guard). Wired into memories: confirm records (best-effort,
+  fail-open); download + share gate on the disposition. Reuses module permissions.
+
+## ✅ DEPLOYED — 2026-07-16 (prod `20260892` → `20260893`, edge)
+Backup → migration `--single-transaction` + ledger → rsync (3 files, 0 deletions) →
+restart (clean). Schema live: `upload_scan_results` `rls=t forced=t`, grants
+INSERT/SELECT/UPDATE (no DELETE). Health 200, memories download 401, errors 0.
+
+## ✅ LIVE CERTIFIED — 2026-07-16. 8/8 probes PASS on real Postgres.
+Reproducible: [`live_cert_batch9_upload_scan.sql`](../../scripts/qa/live_cert_batch9_upload_scan.sql).
+As the real `erp_tenant` role, `BEGIN…ROLLBACK`, residue 0.
+
+| # | Claim | Verdict |
+|---|---|---|
+| 1 | a dark upload is recorded honest **'skipped'**, not 'clean' | **PASS** |
+| 2 | status CHECK rejects an unknown verdict | **PASS** |
+| 3 | idempotent record: a re-confirm neither duplicates nor downgrades | **PASS** |
+| 4 | verdict guard: a pending scan resolves once; a stale second verdict is a no-op | **PASS** |
+| 5–7 | RLS isolation: sibling school 0, other tenant 0, owning school 2 | **PASS** |
+| 8 | append-only: `erp_tenant` cannot DELETE a scan record | **PASS** |
+
+Plus the pure honesty/gate logic unit-certified (9 tests: default→skipped never clean,
+enforcement-off always allows, infected blocks, skipped/legacy pass).
+
+⇒ **Batch 9 = LIVE CERTIFIED.** The internal malware-scan mechanism is in place and
+honest. **External activation gate (owner-controlled):** provision an AV engine
+(`MALWARE_SCAN_ENABLED`/`MALWARE_SCAN_ENGINE` + the AV call) and flip
+`MALWARE_SCAN_ENFORCEMENT` — the actual scanning is the external dependency, isolated
+exactly as owner decision #4 requires. Admissions/complaints upload paths are the
+same-pattern fast-follow.
