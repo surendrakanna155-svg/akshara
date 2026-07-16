@@ -254,6 +254,32 @@ enum Permission {
   // FV-PLAT-11 — White Label Platform
   viewWhiteLabelPlatform,
   manageWhiteLabelPlatform,
+
+  // PRC-A Batch 2 — Certificate Request Desk (caps 136–148)
+  requestStudentCertificate,
+  approveCertificateRequest,
+
+  // PRC-A Batch 2 — Gate Pass / early pickup (caps 109–118)
+  requestGatePass,
+  approveGatePass,
+  verifyGatePass,
+
+  // PRC-A Batch 2 — Complaints / internal issues (caps 101–108)
+  raiseComplaint,
+  manageComplaints,
+  viewComplaintsPrincipal,
+
+  // PRC-A Batch 2 — Student Health / Infirmary (caps 119–127).
+  // Owner decision #1: strict need-to-know. `viewStudentHealthRecord` is health
+  // staff + explicitly authorised leadership ONLY; teaching roles get
+  // `viewStudentCareAlert`, which carries no clinical detail and is further
+  // narrowed server-side to students that caller actually teaches. Never widen
+  // these on the client to "make the UI simpler" — the server is the authority,
+  // but a client that requests the wrong one leaks intent.
+  manageStudentHealth,
+  viewStudentHealthRecord,
+  viewStudentCareAlert,
+  administerStudentMedication,
 }
 
 /// Immutable set of [Permission] values for a session.

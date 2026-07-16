@@ -118,6 +118,21 @@ abstract final class RouteNames {
   static const String dynamicWidgets = '/dynamic-widgets';
   static const String dynamicWidgetLayout = '/dynamic-widgets/layout';
   static const String dynamicWidgetRuntime = '/dynamic-widgets/runtime';
+  // PRC-A Batch 2 — request desk / gate pass / complaints / health.
+  // Staff-facing desks live under the admin hub; the parent-facing raise
+  // surfaces hang off /parent so the parent shell can reach them.
+  static const String certificateRequests = '/certificate-requests';
+  static const String gatePasses = '/gate-passes';
+  static const String complaints = '/complaints';
+  static const String complaintDetail = '/complaints/detail';
+  // `/student-health`, mirroring the API prefix — NOT `/health`, which is a
+  // system endpoint namespace.
+  static const String studentHealth = '/student-health';
+  static const String studentHealthRecord = '/student-health/record';
+  static const String parentGatePasses = '/parent/gate-passes';
+  static const String parentCertificateRequests = '/parent/certificate-requests';
+  static const String parentComplaints = '/parent/complaints';
+
   static const String teacherAssistant = '/teacher-assistant';
   static const String parentInsights = '/parent/insights';
   static const String principalCommand = '/principal-command';
