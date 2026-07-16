@@ -9,6 +9,8 @@ import {
 } from "../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
+import { enforceStorageQuota } from "../storage/storage_quota_enforcement.ts";
+import { recordStorageUsage } from "../storage/storage_quota_repository.ts";
 import { emitMutationAudit, schoolMemoriesAudit } from "../audit/mutation_audit_catalog.ts";
 import {
   buildMemoryAnalytics,
@@ -238,6 +240,13 @@ export async function handleMemoryUploadPresign(
   if (uploadError) {
     return errorEnvelope("VALIDATION_ERROR", uploadError, 422);
   }
+  // PRC-A Batch 4 — cumulative storage quota (caps 31–36). validateUpload above
+  // is the PER-FILE cap; this is the ORG-cumulative cap. Inert unless
+  // STORAGE_QUOTA_ENFORCEMENT=true AND the plan sets a limit (both dark today),
+  // so this is a no-op on the current deploy. Uses the client-declared size, the
+  // same value validateUpload already trusts.
+  const quotaDenied = await enforceStorageQuota(config, auth.claims, body.sizeBytes ?? 0);
+  if (quotaDenied) return quotaDenied;
 
   const orgId = organizationIdFromClaims(auth.claims);
   const schoolId = schoolIdFromClaims(auth.claims);
@@ -288,6 +297,11 @@ export async function handleMemoryUploadConfirm(
     storagePath?: string;
     title?: string;
     mediaType?: string;
+    // PRC-A Batch 4 — the client echoes the size it declared at presign so the
+    // durable upload is counted against the org storage quota. Optional: a
+    // missing/zero value simply records nothing (fail-open under-count, never a
+    // crash) rather than blocking a confirm.
+    sizeBytes?: number;
   }>(req);
   if (!body) {
     return errorEnvelope("VALIDATION_ERROR", "Request body required", 422);
@@ -313,6 +327,23 @@ export async function handleMemoryUploadConfirm(
       await emitMutationAudit(db, auth.claims, schoolMemoriesAudit.mediaUploaded(row.id), req);
       return row;
     });
+    // PRC-A Batch 4 — count the durable upload against the org storage quota, in a
+    // SEPARATE best-effort transaction. It is deliberately NOT folded into the
+    // confirm txn above: a failed INSERT aborts a Postgres transaction, so an
+    // in-txn recording error would roll back the (already successful) media row +
+    // audit. Recording is always on (usage is real before enforcement flips on);
+    // a zero/absent size records nothing. Must never fail a confirm → fail-open.
+    try {
+      await withTenantContext(config, auth.claims, (db) =>
+        recordStorageUsage(db, { organizationId: orgId, schoolId }, {
+          deltaBytes: body.sizeBytes ?? 0,
+          category: "memories",
+          objectKey: body.storagePath!,
+          actorId: auth.claims.sub,
+        }));
+    } catch (recErr) {
+      console.error("storage usage record (memories) failed:", recErr);
+    }
     const downloadUrl = await createMemoryDownloadUrl(config, body.storagePath!);
     return jsonResponse(envelope({
       id: media.id,

@@ -40,6 +40,8 @@ export interface ResolvedSubscription {
   limits: {
     students: number | null;
     schools: number | null;
+    /** PRC-A Batch 4 — plan storage cap in BYTES. null = unlimited. */
+    storageBytes: number | null;
     graceBufferPercent: number;
   };
   usage: {
@@ -94,6 +96,7 @@ export async function resolveSubscription(
     limits: {
       students: resolveStudentLimit(subscription, plan),
       schools: resolveSchoolLimit(subscription, plan),
+      storageBytes: resolveStorageLimit(subscription, plan),
       graceBufferPercent: plan.graceBufferPercent,
     },
     usage: {
@@ -119,6 +122,15 @@ function resolveSchoolLimit(
   return plan.maxSchools;
 }
 
+// PRC-A Batch 4 — storage cap in bytes. Plan-level only for now (no per-org
+// override column yet), so it is simply the plan's value. null = unlimited.
+function resolveStorageLimit(
+  _sub: OrgSubscriptionRow | null,
+  plan: PlanWithEntitlements,
+): number | null {
+  return plan.maxStorageBytes;
+}
+
 function emptyTrialPlan(): PlanWithEntitlements {
   return {
     slug: FALLBACK_PLAN_SLUG,
@@ -128,6 +140,7 @@ function emptyTrialPlan(): PlanWithEntitlements {
     studentSlabMin: 0,
     studentSlabMax: 100,
     maxSchools: 1,
+    maxStorageBytes: null, // Trial fallback = unlimited (enforcement is also dark).
     graceBufferPercent: 10,
     trialLengthDays: 30,
     trialGraceDays: 7,

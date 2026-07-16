@@ -42,6 +42,7 @@ import { routePilotOperations } from "../_shared/pilot/pilot_operations_router.t
 import { routeOnboarding } from "../_shared/onboarding/onboarding_router.ts";
 import { routeCopilot } from "../_shared/copilot/copilot_router.ts";
 import { routeAiWallet } from "../_shared/ai/ai_wallet_router.ts";
+import { routeStorageQuota } from "../_shared/storage/storage_quota_router.ts";
 import { routeSearch } from "../_shared/search/search_router.ts";
 import { routeAnalytics } from "../_shared/analytics/analytics_router.ts";
 import { routeEducation } from "../_shared/education/education_router.ts";
@@ -178,6 +179,10 @@ export async function routeModuleRequest(
     // plan entitlement would be circular. Read (viewAiWallet) is org-level; grant
     // (manageAiCredits) is platform-only — both enforced in the handlers.
     routeAiWallet,
+    // PRC-A Batch 4 (caps 31-36) - storage quota (read-only usage + plan limit).
+    // Not withEntitlement-wrapped: knowing your storage usage is not itself a plan
+    // feature. Enforcement lives at the upload presign points, dark by default.
+    routeStorageQuota,
     // W2.S — Universal School Search (deterministic, RBAC-scoped entity resolver).
     routeSearch,
     routeCommunication,

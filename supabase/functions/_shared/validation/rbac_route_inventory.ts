@@ -325,6 +325,9 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   // org-level; grant is platform-only (manageAiCredits → superAdmin).
   { method: "GET", path: "/ai-wallet", permission: "viewAiWallet", scope: "organization", module: "aiWallet" },
   { method: "POST", path: "/ai-wallet/grant", permission: "manageAiCredits", scope: "organization", module: "aiWallet" },
+  // PRC-A Batch 4 (caps 31–36) — storage quota. Read-only; usage is written
+  // internally by the upload/delete paths, so there is no mutating route here.
+  { method: "GET", path: "/storage/quota", permission: "viewStorageQuota", scope: "organization", module: "storageQuota" },
   { method: "POST", path: "/complaints", permission: "raiseComplaint", scope: "school", module: "complaints" },
   { method: "GET", path: "/complaints", permission: "raiseComplaint", scope: "school", module: "complaints" },
   { method: "GET", path: "/complaints/:id", permission: "raiseComplaint", scope: "school", module: "complaints" },
@@ -380,4 +383,6 @@ export const RBAC_MODULE_PERMISSIONS = [
   "administerStudentMedication",
   // PRC-A Batch 3 — AI credit wallet.
   "viewAiWallet", "manageAiCredits",
+  // PRC-A Batch 4 — storage quota.
+  "viewStorageQuota",
 ] as const;
