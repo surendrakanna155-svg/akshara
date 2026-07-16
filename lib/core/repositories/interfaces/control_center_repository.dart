@@ -59,4 +59,9 @@ abstract class ControlCenterRepository {
     required String reason,
     String? externalRef,
   });
+
+  /// PRC-A Batch 4 — the org's cumulative storage usage + plan limit
+  /// (`viewStorageQuota`). Read-only: usage is written internally by the
+  /// upload/delete paths, not through a client mutation.
+  Future<StorageQuotaData> getStorageQuota({required RepositoryQuery query});
 }

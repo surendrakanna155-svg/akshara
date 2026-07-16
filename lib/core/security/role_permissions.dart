@@ -180,6 +180,9 @@ class RolePermissionMatrix {
       // same as having no wallet.
       Permission.viewAiWallet,
       Permission.manageAiCredits,
+      // PRC-A Batch 4 (20260889): storage quota. superAdmin is named alongside
+      // organizationOwner/organizationAdmin/management in the seeding.
+      Permission.viewStorageQuota,
     },
     ErpRole.schoolAdmin: {
       Permission.viewAdminHub,
@@ -308,6 +311,8 @@ class RolePermissionMatrix {
       // server's organizationOwner + organizationAdmin roles (see
       // viewOrganizationBuilder / viewDirectorPortal above for precedent).
       Permission.viewAiWallet,
+      // PRC-A Batch 4 (20260889): storage quota — same schoolAdmin stand-in.
+      Permission.viewStorageQuota,
     },
     ErpRole.principal: {
       Permission.viewAdminHub,
@@ -583,6 +588,8 @@ class RolePermissionMatrix {
       // PRC-A Batch 3 (20260888): management is explicitly named alongside
       // superAdmin/organizationOwner/organizationAdmin in the seeding.
       Permission.viewAiWallet,
+      // PRC-A Batch 4 (20260889): storage quota — same seeding precedent.
+      Permission.viewStorageQuota,
     },
     ErpRole.financeAdmin: {
       Permission.viewAdminHub,

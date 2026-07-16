@@ -287,6 +287,12 @@ enum Permission {
   // superAdmin ONLY (granting credit is a platform act, not a tenant one).
   viewAiWallet,
   manageAiCredits,
+
+  // PRC-A Batch 4 — storage quota (caps 31–36). Seeded server-side in
+  // 20260889000000_storage_quota.sql: viewStorageQuota -> superAdmin,
+  // organizationOwner, organizationAdmin, management. Deliberately no manage
+  // permission — the limit is set by the PLAN, not granted ad hoc.
+  viewStorageQuota,
 }
 
 /// Immutable set of [Permission] values for a session.

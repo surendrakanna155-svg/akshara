@@ -222,3 +222,16 @@ class AiWalletGrantResponseDto {
 
   final Map<String, dynamic> raw;
 }
+
+/// GET /storage/quota — `{ planName, usedBytes, limitBytes, availableBytes,
+/// health, enforced }`.
+class StorageQuotaResponseDto {
+  const StorageQuotaResponseDto({required this.raw});
+
+  factory StorageQuotaResponseDto.fromJson(Map<String, dynamic> json) {
+    final envelope = ApiEnvelopeDto.fromJson(json);
+    return StorageQuotaResponseDto(raw: envelope.requireData());
+  }
+
+  final Map<String, dynamic> raw;
+}

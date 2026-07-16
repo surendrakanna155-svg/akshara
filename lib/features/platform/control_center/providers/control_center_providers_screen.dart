@@ -49,6 +49,7 @@ class _ControlCenterProvidersScreenState extends ConsumerState<ControlCenterProv
   Widget build(BuildContext context) {
     final data = ref.watch(controlCenterProvidersDataProvider);
     final wallet = ref.watch(controlCenterAiWalletFutureProvider);
+    final storageQuota = ref.watch(controlCenterStorageQuotaFutureProvider);
 
     return ControlCenterModuleScaffold(
       screen: ControlCenterScreen.providers,
@@ -81,6 +82,7 @@ class _ControlCenterProvidersScreenState extends ConsumerState<ControlCenterProv
               child: _configureForm(),
             ),
             _aiWalletSection(wallet),
+            _storageQuotaSection(storageQuota),
           ],
         ),
       ),
@@ -283,6 +285,129 @@ class _ControlCenterProvidersScreenState extends ConsumerState<ControlCenterProv
     } finally {
       if (mounted) setState(() => _grantingCredits = false);
     }
+  }
+
+  /// PRC-A Batch 4 — Storage Quota. Read-only: usage is written internally by
+  /// the upload/delete paths, so unlike the wallet there is no mutation form
+  /// here — the whole section is gated on `viewStorageQuota`.
+  Widget _storageQuotaSection(AsyncValue<StorageQuotaData> storageQuota) {
+    return PermissionGuard(
+      permission: Permission.viewStorageQuota,
+      fallback: const SizedBox.shrink(),
+      child: Padding(
+        padding: const EdgeInsets.only(top: AksharaSpacing.s2),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Divider(height: 32),
+            const Text('Storage', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: AksharaSpacing.s2),
+            storageQuota.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s6),
+                child: AksharaLoadingState(semanticLabel: 'Loading storage quota'),
+              ),
+              error: (e, _) =>
+                  AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
+              data: (data) => _storageQuotaCard(data),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _storageQuotaCard(StorageQuotaData data) {
+    final limit = data.limitBytes;
+    final used = data.usedBytes;
+    final progress = (limit != null && limit > 0) ? (used / limit).clamp(0.0, 1.0) : 0.0;
+    final color = _storageQuotaHealthColor(data.health);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  data.planName,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(width: AksharaSpacing.s3),
+                _storageQuotaHealthChip(data.health),
+              ],
+            ),
+            const SizedBox(height: AksharaSpacing.s2),
+            Text(
+              limit != null
+                  ? '${_formatBytes(used)} of ${_formatBytes(limit)} used'
+                  : '${_formatBytes(used)} used · unlimited plan',
+            ),
+            if (limit != null) ...[
+              const SizedBox(height: AksharaSpacing.s2),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 8,
+                  backgroundColor: color.withValues(alpha: 0.15),
+                  valueColor: AlwaysStoppedAnimation<Color>(color),
+                ),
+              ),
+            ],
+            if (!data.enforced) ...[
+              const SizedBox(height: AksharaSpacing.s2),
+              Text(
+                'Not enforced yet — the cap is not currently blocking uploads.',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                  color: Theme.of(context).hintColor,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _storageQuotaHealthColor(StorageQuotaHealth health) {
+    return switch (health) {
+      StorageQuotaHealth.unlimited => Colors.blueGrey,
+      StorageQuotaHealth.healthy => Colors.green,
+      StorageQuotaHealth.low => Colors.amber,
+      StorageQuotaHealth.full => Colors.red,
+    };
+  }
+
+  Widget _storageQuotaHealthChip(StorageQuotaHealth health) {
+    final color = _storageQuotaHealthColor(health);
+    final label = switch (health) {
+      StorageQuotaHealth.unlimited => 'Unlimited',
+      StorageQuotaHealth.healthy => 'Healthy',
+      StorageQuotaHealth.low => 'Low',
+      StorageQuotaHealth.full => 'Full',
+    };
+    return Chip(
+      label: Text(label),
+      backgroundColor: color.withValues(alpha: 0.15),
+      labelStyle: TextStyle(color: color, fontWeight: FontWeight.bold),
+      side: BorderSide(color: color),
+      visualDensity: VisualDensity.compact,
+    );
+  }
+
+  /// Human-readable byte formatting — GiB/MiB/KiB, falling back to raw bytes.
+  String _formatBytes(int bytes) {
+    const gib = 1024 * 1024 * 1024;
+    const mib = 1024 * 1024;
+    const kib = 1024;
+    if (bytes >= gib) return '${(bytes / gib).toStringAsFixed(2)} GiB';
+    if (bytes >= mib) return '${(bytes / mib).toStringAsFixed(1)} MiB';
+    if (bytes >= kib) return '${(bytes / kib).toStringAsFixed(1)} KiB';
+    return '$bytes B';
   }
 
   Widget _usagePanel(PlatformUsageAnalytics usage) {

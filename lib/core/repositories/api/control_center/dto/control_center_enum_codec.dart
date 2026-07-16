@@ -77,6 +77,15 @@ abstract final class ControlCenterEnumCodec {
 
   static String aiWalletHealthToApi(AiWalletHealth health) => health.name;
 
+  static StorageQuotaHealth parseStorageQuotaHealth(String? value) {
+    return StorageQuotaHealth.values.firstWhere(
+      (health) => health.name == value,
+      orElse: () => StorageQuotaHealth.healthy,
+    );
+  }
+
+  static String storageQuotaHealthToApi(StorageQuotaHealth health) => health.name;
+
   static IconData iconForKpi(String? iconName, String? accentName) {
     if (iconName != null && iconName.isNotEmpty) {
       return switch (iconName) {

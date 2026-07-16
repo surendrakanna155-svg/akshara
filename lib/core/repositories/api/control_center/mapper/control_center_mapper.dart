@@ -411,6 +411,21 @@ class ControlCenterMapper {
     );
   }
 
+  /// PRC-A Batch 4 — `limitBytes`/`availableBytes` are NULLABLE (null =
+  /// unlimited plan); `enforced` defaults false (the dark master switch is
+  /// off unless the backend explicitly says otherwise).
+  StorageQuotaData toStorageQuota(StorageQuotaResponseDto dto) {
+    final raw = dto.raw;
+    return StorageQuotaData(
+      planName: raw['planName'] as String? ?? '',
+      usedBytes: raw['usedBytes'] as int? ?? 0,
+      limitBytes: raw['limitBytes'] as int?,
+      availableBytes: raw['availableBytes'] as int?,
+      health: ControlCenterEnumCodec.parseStorageQuotaHealth(raw['health'] as String?),
+      enforced: raw['enforced'] as bool? ?? false,
+    );
+  }
+
   List<AiCreditEntry> _mapAiCreditEntries(List<dynamic> items) {
     return [
       for (final item in items)

@@ -221,6 +221,14 @@ class ControlCenterRemoteDataSource {
     return AiWalletGrantResponseDto.fromJson(_responseMap(response));
   }
 
+  Future<StorageQuotaResponseDto> fetchStorageQuota({required RepositoryQuery query}) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ControlCenterApiPaths.storageQuota,
+      queryParameters: _queryParams(query),
+    );
+    return StorageQuotaResponseDto.fromJson(_responseMap(response));
+  }
+
   Map<String, dynamic> _queryParams(RepositoryQuery query) {
     return {
       'tenantId': query.tenantId,

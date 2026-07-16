@@ -26,4 +26,9 @@ abstract final class ControlCenterApiPaths {
   /// (view) audiences, not only the platform Control Center.
   static const String aiWallet = '/ai-wallet';
   static const String aiWalletGrant = '/ai-wallet/grant';
+
+  /// PRC-A Batch 4 — storage quota. NOT nested under [base]: the backend
+  /// router mounts it at its own top-level prefix (`routeStorageQuota`,
+  /// prefix `/storage/quota`), mirroring [aiWallet].
+  static const String storageQuota = '/storage/quota';
 }

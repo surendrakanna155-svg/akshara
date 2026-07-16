@@ -183,6 +183,40 @@ class AiWalletData {
   final List<AiCreditEntry> entries;
 }
 
+/// PRC-A Batch 4 — storage quota health verdict (mirrors `storageQuotaHealth()`
+/// in `storage_quota_repository.ts`): unlimited (no plan cap) / healthy /
+/// low (near the cap) / full (at or over the cap).
+enum StorageQuotaHealth { unlimited, healthy, low, full }
+
+@immutable
+class StorageQuotaData {
+  const StorageQuotaData({
+    required this.planName,
+    required this.usedBytes,
+    required this.limitBytes,
+    required this.availableBytes,
+    required this.health,
+    required this.enforced,
+  });
+
+  final String planName;
+
+  /// Cumulative bytes stored, summed from the org's usage ledger.
+  final int usedBytes;
+
+  /// NULL = unlimited plan.
+  final int? limitBytes;
+
+  /// NULL when [limitBytes] is unlimited.
+  final int? availableBytes;
+
+  final StorageQuotaHealth health;
+
+  /// Whether the cap is actually acting right now (a dark master switch) — the
+  /// UI must not present the cap as active when this is false.
+  final bool enforced;
+}
+
 enum PlatformSchoolStatus { active, trial, suspended, churnRisk }
 
 enum SubscriptionPlan { standard, premium, enterprise }

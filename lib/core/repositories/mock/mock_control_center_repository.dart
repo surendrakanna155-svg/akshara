@@ -852,4 +852,21 @@ class MockControlCenterRepository implements ControlCenterRepository {
       entries: entries,
     );
   }
+
+  /// PRC-A Batch 4 — 2.1 GiB used of a 5 GiB plan limit; enforcement is
+  /// shipped dark (mirrors the real deploy — `STORAGE_QUOTA_ENFORCEMENT`
+  /// defaults off).
+  @override
+  Future<StorageQuotaData> getStorageQuota({required RepositoryQuery query}) async {
+    const usedBytes = 2254857830; // ~2.1 GiB
+    const limitBytes = 5368709120; // 5 GiB
+    return const StorageQuotaData(
+      planName: 'Standard',
+      usedBytes: usedBytes,
+      limitBytes: limitBytes,
+      availableBytes: limitBytes - usedBytes,
+      health: StorageQuotaHealth.healthy,
+      enforced: false,
+    );
+  }
 }

@@ -254,4 +254,10 @@ class ApiControlCenterRepository implements ControlCenterRepository {
     );
     return _mapper.toAiWalletGrant(dto);
   }
+
+  @override
+  Future<StorageQuotaData> getStorageQuota({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchStorageQuota(query: query);
+    return _mapper.toStorageQuota(dto);
+  }
 }

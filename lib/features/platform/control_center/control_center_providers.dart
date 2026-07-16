@@ -335,3 +335,10 @@ final controlCenterAiWalletFutureProvider = FutureProvider<AiWalletData>((ref) a
         query: ref.watch(repositoryQueryProvider),
       );
 });
+
+// PRC-A Batch 4 — Storage Quota (viewStorageQuota).
+final controlCenterStorageQuotaFutureProvider = FutureProvider<StorageQuotaData>((ref) async {
+  return ref.read(controlCenterRepositoryProvider).getStorageQuota(
+        query: ref.watch(repositoryQueryProvider),
+      );
+});
