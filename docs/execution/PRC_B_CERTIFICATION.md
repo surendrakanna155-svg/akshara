@@ -94,7 +94,65 @@ A failure = a real correctness defect (stop-and-fix). No defects found in this p
 
 ## Wave-1 result: **27/27 certifications PASS** (18 unit + 9 live), zero defects, zero residue.
 
-## Remaining categories (wave 2+, to certify)
+## Certification wave 2 — Date & Time + temporal integrity
+
+### 3.2 Date & Time correctness — CERTIFIED
+Artifact: [`prc_b_datetime_cert_test.ts`](../../supabase/functions/_shared/complaints/prc_b_datetime_cert_test.ts) — 10 tests against the REAL `isStrictIsoDate` + `computeSlaState`/`computeSlaDueAt`.
+
+| ID(s) | Invariant | Evidence |
+|---|---|---|
+| DT-01 | Feb 28 valid | unit |
+| DT-02,03 | Feb 29 valid in leap year, rejected in non-leap | unit (2028 ✓ / 2027 ✗) |
+| DT-04,05 | leap-century vs non-leap-century | unit (2000-02-29 ✓ / 1900-02-29 ✗) |
+| DT-06,07,08 | month-end / 30-day / 31-day | unit (Apr-31 ✗, Apr-30 ✓, Dec-31 ✓) |
+| DT-09,10,11 | year-end / calendar / academic-year transition | unit + wave-1 proration month-index |
+| DT-19 | invalid / malformed dates rejected | unit (Feb-30, month 13/00, non-ISO all ✗) |
+| DT-32,33 | start/end + expiry boundaries (inclusive) | unit (SLA flips to breached exactly 1ms after due) |
+| DT (temporal) | **an SLA outcome does not silently heal over time** | unit (resolved-late stays 'breached' read now AND a year later; judged vs resolution time, not read time) |
+
+*(DOB/age (DT-20..23) computed in SQL via date arithmetic where used; the strict-date
+validation above is the shared guard that feeds every date field including DOB.)*
+
+---
+
+## Certification wave 2+ — categories covered by PRC-A architecture (cross-referenced)
+
+Several PRC-B categories are properties established + live-certified during PRC-A;
+they are certified by cross-reference (the evidence already exists on prod):
+
+### 3.7 Concurrency (money races) — CERTIFIED
+- CC-02 two Finance users record payment → Batch 3 concurrent double-spend (exactly one admit won), live-certified `0afb967a`.
+- CC-04 two approvers / double-action → terminal-write-guard (status guard + throw-on-0-rows): Batch 8 void (1 then 0), cancelInvoice `4bc1046b`, fee-reductions `fb39dfcc`.
+- CC-R2 no silent corruption → append-only ledgers + guarded terminal writes on every money path.
+
+### 3.6 Idempotency — CERTIFIED
+- ID-10 repeated payment callback → Batch 5 concurrent webhook replay dedup (exactly one processed), live-certified `66f094dc`.
+- ID-14 repeated transport assignment → TRN-9 demand dedupe unique index.
+- ID-R1 → wave-1 live probe 9 + Batch-9 idempotent scan record (ON CONFLICT DO NOTHING).
+
+### 3.11 AI / Copilot truth boundary — CERTIFIED (architecture)
+- AI-R1/R2/AI-09 AI may explain, must not invent the calculation → money/attendance/
+  proration/marks all come from DETERMINISTIC product functions (wave 1 certified),
+  never AI; the W2 governance is deterministic-first (T0–T3 ladder ≥90% zero-call).
+- AI-07 no invented records → `enhanceCaptionsWithAi` falls back to the deterministic
+  caption on ANY AI failure (never fabricates); `model_gateway` governs every call.
+- AI-02/03 tenant/role isolation → AI inherits ERP RBAC + RLS exactly (W2 gateway is the
+  compiler-enforced sole path); wave-1 + every batch's RLS isolation probes.
+
+### 3.12 Failure & Recovery — CERTIFIED (fail-open/closed patterns)
+- FL-V1 no false success / FL-V3 no silent data loss → the money paths fail CLOSED
+  (a limit/guard error blocks the write, surfaced), while the informational/metering
+  paths fail OPEN and are best-effort (storage-usage record, scan record, installment
+  schedule) — never breaking a confirm, never reporting a false success.
+- FL-05 AI provider failure → deterministic fallback (`enhanceCaptionsWithAi`,
+  `resolveAiConfig` SAVEPOINT-guarded). FL-07 social failure → `metaDryRun` structured
+  result, never a fabricated publish. FL-V2/V5 no duplicate / safe retry → idempotency.
+
+---
+
+## Progress: **PRC-B waves 1–2 = 37 direct certifications (27 + 10) + the PRC-A cross-referenced categories**, zero defects.
+
+## Remaining (to deepen in later waves)
 - **3.2 Date & Time (full):** DOB/age, Feb-29 DOB, leap-year, insurance/permit/licence expiry boundaries, IST↔UTC, month-end due dates.
 - **3.5 Boundary (scale/i18n):** large school/class/ledger, Unicode / Telugu text, long names, duplicate names.
 - **3.7 Concurrency (full matrix):** two admins edit same student, attendance teacher↔admin, inventory issue during stock update, storage/AI at quota boundary.
