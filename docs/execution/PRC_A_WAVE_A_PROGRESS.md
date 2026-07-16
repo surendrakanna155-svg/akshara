@@ -320,6 +320,8 @@ Reproducible: [`live_cert_batch3_ai_wallet.sql`](../../scripts/qa/live_cert_batc
 
 ⇒ **Batch 3 (backend/data-plane) = LIVE CERTIFIED.** No open P0. Ships DARK (enforcement OFF) — flipping `AI_WALLET_ENFORCEMENT=true` needs only an edge restart, once real balances are granted.
 
+> **⚠ INFRA BLOCKER (2026-07-16, AFTER Batch 3 cert):** the VPS SSH control-master (`~/.ssh/akshara-cm.sock`) died right after this certification and cannot be re-opened locally (no authorized key in this environment). **Batch 3 is unaffected — fully deployed + certified before the outage.** But the **deploy + live-cert of Batch 4 (storage-quota) and Batch 5 are BLOCKED until the owner re-establishes the tunnel.** Implementation can continue locally; certification cannot. Deploy recipe unchanged (see `DEPLOY_CHECKPOINT_20260716_PRC_A.md`).
+
 ## State distinction (certification discipline)
 - **IMPLEMENTED + DEPLOYED + LIVE CERTIFIED:** wallet core, admit-clause double-spend safety, HTTP APIs, RBAC, audit, RLS, constraints, immutability — all proven on prod Postgres.
 - **IMPLEMENTED, not yet certified-live:** the Flutter Control Center wallet panel (client UI — ships in a release build, not the edge; verified by `flutter analyze`/widget tests, not a Postgres probe).
