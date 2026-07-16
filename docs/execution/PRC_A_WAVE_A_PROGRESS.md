@@ -721,3 +721,55 @@ honest. **External activation gate (owner-controlled):** provision an AV engine
 `MALWARE_SCAN_ENFORCEMENT` — the actual scanning is the external dependency, isolated
 exactly as owner decision #4 requires. Admissions/complaints upload paths are the
 same-pattern fast-follow.
+
+---
+
+# 🔨 PRC-A BATCH 10 — MARKETING INTERNAL WORK (owner decision #4)
+
+Owner #4: "build ALL internal work now, isolate only the external activation gate."
+The internal, buildable-now pieces — a per-tenant brand profile, minimum-relevant-
+asset selection, and a provider-neutral poster engine — built + certified. Only the
+image RENDER (paid provider) and live Meta/IG publish (App Review) stay external.
+
+**Commits:** `d97e2db0` (backend + tests) · cert (this section). Migration **`20260894`**.
+
+## Design (build internal, isolate external — never fabricate)
+- `brand_profiles` (RLS'd, per org+school: logo/tagline/theme JSONB/assets JSONB,
+  array/object CHECKs, no DELETE — retire via is_active). Reuses the promotion
+  permissions (view/manageAchievementPromotion) — no new slug.
+- `brand_asset_selection.ts` (pure): `selectRelevantAssets` scores by tag/keyword
+  overlap, logo-first, capped at 3 — the MINIMUM relevant set, never the whole
+  library; deterministic; non-empty when assets exist.
+- `poster_engine.ts`: canonical image-gen interface mirroring `anthropic_client`'s
+  provider-union + `metaDryRun`'s "no config → structured, never fabricate". Dark by
+  default: `generatePoster` returns an honest `provider_not_configured` (imageUrl=null),
+  never a fabricated poster; always returns the render brief for the eventual provider.
+- `POST /promotions/poster/preview` = the one-click purpose→assets→brief flow up to
+  the dark render; `GET/PUT /promotions/brand-profile`.
+
+## ✅ DEPLOYED — 2026-07-16 (prod `20260893` → `20260894`, edge)
+Backup → migration `--single-transaction` + ledger → rsync (6 files, 0 deletions) →
+restart (clean). Schema live: `brand_profiles` `rls=t forced=t`, grants
+INSERT/SELECT/UPDATE (no DELETE). All 3 routes 401; errors 0.
+
+## ✅ LIVE CERTIFIED — 2026-07-16. 7/7 probes PASS on real Postgres.
+Reproducible: [`live_cert_batch10_brand_profiles.sql`](../../scripts/qa/live_cert_batch10_brand_profiles.sql).
+As the real `erp_tenant` role, `BEGIN…ROLLBACK`, residue 0.
+
+| # | Claim | Verdict |
+|---|---|---|
+| 1 | brand profile stores theme (object) + assets (array) round-trip | **PASS** |
+| 2 | assets CHECK rejects a non-array payload | **PASS** |
+| 3 | idempotent upsert keeps one profile per school and updates it | **PASS** |
+| 4–6 | RLS isolation: sibling school 0, other tenant 0, owning school 1 | **PASS** |
+| 7 | append-only: `erp_tenant` cannot DELETE a brand profile | **PASS** |
+
+Plus the pure marketing logic unit-certified (10 tests: minimum-relevant selection never
+returns all/empty, logo-first, deterministic; poster dark never fabricates a URL).
+
+⇒ **Batch 10 = LIVE CERTIFIED.** The internal marketing work is complete + honest.
+**External activation gate (owner-controlled):** an image-gen provider
+(`POSTER_IMAGE_PROVIDER`/`POSTER_IMAGE_API_KEY` + the render call) for real posters, and
+Meta App Review + `META_APP_ID/SECRET`/`SOCIAL_TOKEN_ENC_KEY` for live FB/IG publish
+(the social OAuth/token/Graph backend already exists behind `metaDryRun`). A Flutter
+marketing screen is client-side fast-follow.
