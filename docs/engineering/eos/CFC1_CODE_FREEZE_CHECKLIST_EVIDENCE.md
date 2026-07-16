@@ -1,5 +1,28 @@
 # CFC-1 — Code Freeze Checklist · Evidence Record
 
+> ## ✅ CANONICAL RE-RUN — post-PRC-B (2026-07-16, tip `17e3ecd4`) · **PASS 10/10**
+> CFC-1's canonical position is AFTER PRC-B (RECON-2). This is the authoritative run, on the code that
+> includes all PRC-A batches (2–10) + the PRC-B certification. The 2026-07-14 record below is prior history.
+>
+> | # | Item | Verdict | Fresh evidence (2026-07-16) |
+> |---|---|---|---|
+> | 1 | No TODO/FIXME/HACK in prod code | ✅ CLEAN | `grep -rnE "TODO\|FIXME\|HACK\b" lib supabase/functions` (tests excluded) → **0 hits** |
+> | 2 | No mock reachable in release builds | ✅ PASS | PRC-A batches added NO mocks (all honest ship-dark); prior reachability audit stands; SEC-2 release-build guard still fires (signed pilot binary = owner keystore at P6) |
+> | 3 | No fake/stub APIs enabled | ✅ CLEAN | every ship-dark feature returns an HONEST "not configured" — malware-scan records `skipped` never `clean` (Batch 9), poster engine returns `provider_not_configured` never a fabricated URL (Batch 10), WhatsApp unconfigured → honest failure (Batch 6). Certified in PRC-B (no fabrication). |
+> | 4 | No debug code in release paths | ✅ CLEAN | 2 `console.log` = structured JSON **production** logging (request logger `app.ts:232` + access-denied audit) — not debug; 9 `console.error` = fail-open observability; Flutter debug carried (kReleaseMode-guarded). `flutter analyze` **0 issues**. |
+> | 5 | No temporary feature flags | ✅ PASS | the new gates (`AI_WALLET_ENFORCEMENT`, `STORAGE_QUOTA_ENFORCEMENT`, `MALWARE_SCAN_ENFORCEMENT`, `POSTER_IMAGE_PROVIDER`) are PERMANENT canonical activation gates (same dark-default pattern as entitlement/wallet), not temporary constructs. |
+> | 6 | No commented-out prod code | ✅ CLEAN | heuristic sweep → 1 hit, **explanatory prose** (`poster_engine.ts:9` "returns an HONEST…"). 0 commented-out blocks. |
+> | 7 | No temporary bypasses | ✅ CLEAN | keyword sweep over the new batch files → **0**; the erp_tenant non-bypass RLS wall re-proven in every PRC-A batch + PRC-B live probes. |
+> | 8 | No unfinished migrations (repo head == deployed head) | ✅ GREEN | repo head `20260894000000_brand_profiles` **==** live deployed head `20260894` — **in sync** (all 10 batches deployed). |
+> | 9 | No uncommitted work (clean tree) | ✅ PASS | ERP worktree `git status` clean at `17e3ecd4`. K-lane carve-out (owner ruling) unchanged. |
+> | 10 | No known open P0/P1 | ✅ PASS | **PRC-A + PRC-B found ZERO defects**; all 10 batches LIVE CERTIFIED; the CFC-1 DS-lint regression it DID find (12 raw TextStyle in the Control Center panel) was **fixed** (`17e3ecd4`, migrated onto textTheme tokens, baseline ratcheted 159→155). Residuals all external-gated (Meta App Review, image-gen/AV providers, VAULT_ENC_KEY, owner keystore) — none an open code P0/P1. |
+>
+> **Regression (fresh, this run):** `flutter analyze` **0 issues** · `flutter test` **+4086 ~1 · All tests passed** · `deno test -A supabase/functions/` **3484 / 0 / 3 ign** · `deno check api/index.ts` clean · repo head == live head `20260894` · edge `/health` 200.
+>
+> **EOS gate (RELEASE scope): PASS.** The gate did its job — caught the one DS regression and it was fixed before freeze. Next: **FREEZE-1**.
+
+---
+
 **Date:** 2026-07-14 · **Branch:** `feature/data-reliability-platform` (ERP lane, worktree `Akshara_ERP-drp`) · **Base tip:** `3f42a9b5`
 **Gate law:** [`../../roadmap/FINAL_EXECUTION_MASTER_ROADMAP.md`](../../roadmap/FINAL_EXECUTION_MASTER_ROADMAP.md) → GATE CFC-1 — all 10 items green **in one sweep on one commit**, per-item committed evidence, EOS RELEASE-scope PASS.
 **Scope ruling (owner, 2026-07-14):** **FREEZE-1 K-lane carve-out APPROVED** — the Knowledge/QP lane (K-2, `curriculum/**`, branch `feature/qp-content-readiness`) is an independent parallel workstream that does **not** block the ERP feature freeze. Items 9/10 are therefore evaluated against the **ERP freeze scope** (everything except the carved-out K lane), exactly as the roadmap's FREEZE-1 entry clause permits (*"or an explicit owner carve-out excluding the K lane from the ERP freeze"*).
