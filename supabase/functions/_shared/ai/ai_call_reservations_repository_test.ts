@@ -16,7 +16,18 @@ function args(overrides: Partial<ReserveArgs> = {}): ReserveArgs {
     userId: "u-1",
     surface: "copilot",
     estimatedCostMicros: 5_000,
-    limits: { userCallsPerHour: 30, schoolCallsPerDay: 500, monthlySpendCapMicros: 1_000_000 },
+    // PRC-A Batch 3: these pre-wallet tests assert the rate/spend gates in
+    // isolation, so the wallet is explicitly OFF here — the same state every
+    // existing deployment is in until AI_WALLET_ENFORCEMENT is flipped. Wallet
+    // behaviour has its own tests; leaving this implicit would let a future
+    // default flip silently change what these assert.
+    creditsRequired: 0,
+    limits: {
+      userCallsPerHour: 30,
+      schoolCallsPerDay: 500,
+      monthlySpendCapMicros: 1_000_000,
+      walletEnforced: false,
+    },
     now: NOW,
     ...overrides,
   };

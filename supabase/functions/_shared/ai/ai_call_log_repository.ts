@@ -19,7 +19,15 @@ export type AiCallOutcome =
   | "fallback_timeout"
   | "fallback_error"
   /** Reply failed the output guard (output_guard.ts) → discarded, fallback served. */
-  | "fallback_guard";
+  | "fallback_guard"
+  /**
+   * PRC-A Batch 3 — the org has no purchased AI credits left (owner decision #3).
+   * Deliberately distinct from `fallback_spend_cap`: that is OUR cost governance
+   * throttling us, this is the school running out of what it bought. Different
+   * cause, different remedy (top up vs wait for the 1st), so the cost panel must
+   * not conflate them.
+   */
+  | "fallback_wallet_empty";
 
 export interface AiCallLogEntry {
   organizationId: string;
@@ -36,6 +44,17 @@ export interface AiCallLogEntry {
   latencyMs: number;
   cacheWritten: boolean;
   fallbackUsed: boolean;
+  /**
+   * PRC-A Batch 3 — product credits this call consumed from the org's wallet
+   * (owner decision #3). Integer units, NOT currency: independent of
+   * `estimatedCostMicros`, which stays our provider-cost governance number.
+   *
+   * Optional and defaulted to 0 so every existing caller compiles and behaves
+   * unchanged. 0 is also the correct value whenever the wallet is not enforced
+   * or the call never reached the provider — a denied call must never be charged
+   * against a school's purchased credits.
+   */
+  creditsDebited?: number;
 }
 
 export interface AiTenantScope {
@@ -61,11 +80,20 @@ export async function recordAiCall(
   entry: AiCallLogEntry,
 ): Promise<void> {
   await db.queryObject(
+    // PRC-A Batch 3: `credits_debited` rides THIS statement, deliberately — not a
+    // separate best-effort write. The wallet debit and the record of the call it
+    // pays for must be atomically inseparable: if the debit could be lost after
+    // the row landed, the call was served and never charged (free usage). Sitting
+    // in the same INSERT, either both exist or neither does — and "neither" is
+    // already the pre-existing unlogged-call case that the spend cap shares, so
+    // the wallet inherits exactly the same failure mode rather than a new one.
+    // It sits ALONGSIDE estimated_cost_micros, never replacing it, so provider
+    // cost governance and the purchased wallet stay reconcilable from one row.
     `INSERT INTO ai_call_log (
        organization_id, school_id, user_id, surface, provider, model, outcome,
        input_tokens, output_tokens, estimated_cost_micros, latency_ms,
-       cache_written, fallback_used
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+       cache_written, fallback_used, credits_debited
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
     [
       entry.organizationId,
       entry.schoolId,
@@ -80,6 +108,7 @@ export async function recordAiCall(
       Math.trunc(entry.latencyMs),
       entry.cacheWritten,
       entry.fallbackUsed,
+      Math.max(0, Math.trunc(entry.creditsDebited ?? 0)),
     ],
   );
 }

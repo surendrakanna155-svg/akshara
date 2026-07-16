@@ -45,6 +45,9 @@ import {
   reserveOutOfBand,
 } from "./ai_call_reservations_repository.ts";
 import { logAiDegradation } from "./ai_telemetry.ts";
+import { aiWalletEnforcementEnabled } from "./ai_wallet_enforcement.ts";
+import { readWalletBalance } from "./ai_wallet_repository.ts";
+import { reservedCreditsFor } from "./ai_wallet_units.ts";
 import { embeddingsConfigured, embedText } from "./embeddings_client.ts";
 import {
   findNearestCachedResponse,
@@ -69,6 +72,15 @@ export interface GatewayLimits {
   schoolCallsPerDay: number;
   /** Per-school calendar-month spend cap in micro-USD (0 = no cap). */
   monthlySpendCapMicros: number;
+  /**
+   * PRC-A Batch 3 — is the org's purchased credit wallet enforced?
+   *
+   * Read from the env master switch, NOT from the per-school provider config: the
+   * wallet is a commercial fact about what the org bought, so a school editing its
+   * own AI settings must never be able to switch its own wallet off. The three
+   * limits above are self-governance a school may legitimately tune; this is not.
+   */
+  walletEnforced: boolean;
 }
 
 /** Conservative defaults: rate limits ON, and a non-zero monthly $ backstop ON
@@ -84,6 +96,10 @@ export const DEFAULT_LIMITS: GatewayLimits = {
   userCallsPerHour: 30,
   schoolCallsPerDay: 500,
   monthlySpendCapMicros: 1_000_000_000,
+  // Default OFF. A 0 balance would otherwise deny every AI call for every org
+  // that has never been granted credit — i.e. all of them, on the deploy that
+  // ships this. See ai_wallet_enforcement.ts.
+  walletEnforced: false,
 };
 
 function positiveNum(value: unknown, fallback: number): number {
@@ -117,6 +133,12 @@ export function resolveLimits(config?: Record<string, unknown> | null): GatewayL
       c.ai_monthly_spend_cap_micros,
       envNum("AI_MONTHLY_SPEND_CAP_MICROS", DEFAULT_LIMITS.monthlySpendCapMicros),
     ),
+    // Deliberately NOT read from `c` (the per-school provider config). The three
+    // limits above are self-governance a school may tune from its own admin
+    // panel; the wallet is a commercial fact about what the org purchased. If it
+    // were config-driven, a school could disable its own wallet by editing its
+    // AI settings — which is the same as having no wallet at all.
+    walletEnforced: aiWalletEnforcementEnabled(),
   };
 }
 
@@ -171,9 +193,32 @@ export interface GatewayUsage {
   userCallsLastHour: number;
   schoolCallsToday: number;
   monthSpendMicros: number;
+  /**
+   * PRC-A Batch 3 — org wallet credits available (granted - debited - reserved).
+   *
+   * This exists on the LEGACY window-count path on purpose. `runReservation`
+   * normally enforces the wallet inside its atomic admit clause, but when the
+   * reservation connection is unavailable the gateway degrades to
+   * `readUsage` + `decideGateway` (see the ReservationsUnavailableError branch in
+   * runGateway). If the wallet were only wired into the reservation path, a
+   * reservation-infra outage would silently become a FREE-USAGE BYPASS rather
+   * than merely a rate-limit bypass — an outage would be the cheapest way to
+   * spend credits you do not have. Both paths must carry the balance.
+   *
+   * Optional so every existing caller/test compiles unchanged; absent means the
+   * wallet term is skipped, which is correct when the wallet is not enforced.
+   */
+  walletAvailableUnits?: number;
+  /** Credits this specific call needs. Paired with walletAvailableUnits. */
+  walletRequiredUnits?: number;
 }
 
-export type GatewayDenyReason = "no_key" | "rate_user" | "rate_school" | "spend_cap";
+export type GatewayDenyReason =
+  | "no_key"
+  | "rate_user"
+  | "rate_school"
+  | "spend_cap"
+  | "wallet_empty";
 
 export interface GatewayDecision {
   allow: boolean;
@@ -200,6 +245,15 @@ export function decideGateway(
   ) {
     return { allow: false, reason: "spend_cap" };
   }
+  // Wallet last, matching runReservation's admit-clause order so both paths name
+  // the same gate for the same call. Only evaluated when the caller supplied a
+  // balance (i.e. the wallet is enforced) — otherwise inert.
+  if (
+    usage.walletAvailableUnits !== undefined &&
+    usage.walletAvailableUnits < (usage.walletRequiredUnits ?? 0)
+  ) {
+    return { allow: false, reason: "wallet_empty" };
+  }
   return { allow: true };
 }
 
@@ -213,6 +267,11 @@ function denyOutcome(reason: GatewayDenyReason): AiCallOutcome {
       return "fallback_rate_school";
     case "spend_cap":
       return "fallback_spend_cap";
+    case "wallet_empty":
+      // A distinct outcome, not folded into fallback_spend_cap: "you ran out of
+      // the credits you bought" and "we hit our own cost governance" are
+      // different events with different remedies (top up vs wait for the 1st).
+      return "fallback_wallet_empty";
   }
 }
 
@@ -324,7 +383,26 @@ async function defaultReadUsage(
     countSchoolCallsSince(db, scope, hoursAgoIso(now, 24)),
     sumSchoolCostMicrosSince(db, scope, monthStartIso(now)),
   ]);
-  return { userCallsLastHour, schoolCallsToday, monthSpendMicros };
+  // PRC-A Batch 3 (hazard H3): the wallet balance is read on the LEGACY path too.
+  // This path only runs when the reservation connection is unavailable — exactly
+  // when it would be most tempting to skip the balance. Skipping it would make a
+  // reservation-infra outage a free-usage bypass. Read only when the wallet is
+  // actually enforced, so the default path costs no extra query.
+  //
+  // This read is genuinely check-then-act (the atomic admit lives in
+  // runReservation), so it is weaker than the primary path — but weaker-and-
+  // enforced is strictly better than not-enforced, and this branch is already
+  // the degraded mode for the rate/spend gates too.
+  if (!aiWalletEnforcementEnabled()) {
+    return { userCallsLastHour, schoolCallsToday, monthSpendMicros };
+  }
+  const balance = await readWalletBalance(db, scope);
+  return {
+    userCallsLastHour,
+    schoolCallsToday,
+    monthSpendMicros,
+    walletAvailableUnits: balance.availableUnits,
+  };
 }
 
 /** Run a telemetry write inside a savepoint so a DB-level failure cannot
@@ -559,6 +637,12 @@ export async function runGateway(
   }
   const limits = resolveLimits(cfg.rawConfig);
   const hasKey = !!cfg.apiKey;
+  // Product credits this call costs. Deterministic from the model tier — NOT
+  // derived from estimated_cost_micros, which would smuggle currency semantics
+  // back into a unit-denominated wallet (owner decision #3). Computed once and
+  // used for BOTH the reservation hold and the settle-time debit, so a call can
+  // never be held at one price and charged at another.
+  const creditsForThisCall = limits.walletEnforced ? reservedCreditsFor(cfg.model) : 0;
 
   // Admission control. Preferred: the atomic reservation (A5) — committed
   // out-of-band BEFORE the provider call, so concurrent requests can never
@@ -578,6 +662,10 @@ export async function runGateway(
           userId: ctx.userId ?? null,
           surface: ctx.surface,
           estimatedCostMicros: estimateReservationMicros(cfg.model, input),
+          // Hold the credits on the reservation row itself, so a concurrent
+          // admit sees them immediately. This is what makes the wallet
+          // double-spend-proof without a lock of its own.
+          creditsRequired: creditsForThisCall,
           limits,
           now,
         });
@@ -605,6 +693,22 @@ export async function runGateway(
         // provider-bounded — but say so where an operator can see it (P2-8).
         logAiDegradation("gateway.read_usage", err, { surface: ctx.surface });
         usage = { userCallsLastHour: 0, schoolCallsToday: 0, monthSpendMicros: 0 };
+        // PRC-A Batch 3 — the wallet FAILS CLOSED here, unlike the rate/spend
+        // gates above which deliberately fail open. The asymmetry is intended:
+        // rate/spend are OUR self-governance (failing open costs us a bounded
+        // amount and keeps schools working), whereas the wallet is the
+        // commercial boundary — failing open serves calls the school has not
+        // paid for, and a DB blip becomes free usage. Denying costs the user
+        // only the deterministic fallback response they would get anyway, so the
+        // safe direction is cheap here. Only applies when the wallet is enforced.
+        if (limits.walletEnforced) {
+          usage.walletAvailableUnits = -1;
+        }
+      }
+      // Tell decideGateway what this call needs; without it the wallet term is
+      // inert on this path (available >= 0 always passes).
+      if (limits.walletEnforced) {
+        usage.walletRequiredUnits = creditsForThisCall;
       }
       decision = decideGateway(hasKey, limits, usage);
     }
@@ -621,6 +725,11 @@ export async function runGateway(
       latencyMs: 0,
       cacheWritten: false,
       fallbackUsed: true,
+      // No reservation was taken and the provider was never consulted, so no
+      // credit is consumed. A school must never be charged for a call we
+      // refused — least of all for a wallet_empty refusal, which would drive
+      // the balance further negative for doing nothing.
+      creditsDebited: 0,
     });
     return {
       text: fallbackText,
@@ -664,6 +773,12 @@ export async function runGateway(
         latencyMs,
         cacheWritten: false,
         fallbackUsed: true,
+        // ONE RULE: debit iff the reservation is consumed (see the
+        // settleReservation call directly below). The provider WAS consulted and
+        // billed us, so the credit is spent — exactly as estimated_cost_micros
+        // is. Tying the debit to the same condition as the consume is what keeps
+        // wallet and reservation from ever disagreeing.
+        creditsDebited: creditsForThisCall,
       });
       // Record-then-consume: if the consume is lost the reservation stays
       // pending until the TTL sweep (over-count, conservative). The one
@@ -700,6 +815,9 @@ export async function runGateway(
           latencyMs,
           cacheWritten: false,
           fallbackUsed: true,
+          // Consumed below => debited. The model was consulted and billed even
+          // though its reply failed the output guard.
+          creditsDebited: creditsForThisCall,
         });
         await settleReservation(deps, reservationId, true, estimatedCostMicros);
         return {
@@ -736,6 +854,8 @@ export async function runGateway(
       latencyMs,
       cacheWritten,
       fallbackUsed: false,
+      // Consumed below => debited. The served answer is what the credit bought.
+      creditsDebited: creditsForThisCall,
     });
     await settleReservation(deps, reservationId, true, estimatedCostMicros);
     return {
@@ -762,6 +882,10 @@ export async function runGateway(
       latencyMs,
       cacheWritten: false,
       fallbackUsed: true,
+      // The reservation is RELEASED below, not consumed, so by the one rule
+      // (debit iff consumed) nothing is charged. No tokens were billed, so the
+      // school must not lose a credit to our timeout.
+      creditsDebited: 0,
     });
     // No tokens were billed on a timeout/transport failure — free the slot.
     await settleReservation(deps, reservationId, false, 0);

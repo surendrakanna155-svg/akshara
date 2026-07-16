@@ -165,7 +165,14 @@ Deno.test("decideGateway: denies with no key", () => {
 });
 
 Deno.test("decideGateway: per-user then per-school then spend-cap ordering", () => {
-  const limits = { userCallsPerHour: 5, schoolCallsPerDay: 10, monthlySpendCapMicros: 1000 };
+  // walletEnforced: false — these assert the rate/spend gates in isolation, in
+  // the same state every deployment runs in until AI_WALLET_ENFORCEMENT flips.
+  const limits = {
+    userCallsPerHour: 5,
+    schoolCallsPerDay: 10,
+    monthlySpendCapMicros: 1000,
+    walletEnforced: false,
+  };
   assertEquals(
     decideGateway(true, limits, { ...ZERO, userCallsLastHour: 5 }),
     { allow: false, reason: "rate_user" },
@@ -181,7 +188,12 @@ Deno.test("decideGateway: per-user then per-school then spend-cap ordering", () 
 });
 
 Deno.test("decideGateway: a 0 limit disables that gate", () => {
-  const limits = { userCallsPerHour: 0, schoolCallsPerDay: 0, monthlySpendCapMicros: 0 };
+  const limits = {
+    userCallsPerHour: 0,
+    schoolCallsPerDay: 0,
+    monthlySpendCapMicros: 0,
+    walletEnforced: false,
+  };
   assertEquals(
     decideGateway(true, limits, { userCallsLastHour: 9999, schoolCallsToday: 9999, monthSpendMicros: 9e9 }),
     { allow: true },
