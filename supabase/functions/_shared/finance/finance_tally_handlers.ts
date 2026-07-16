@@ -56,6 +56,11 @@ export async function handleTallyExport(
   if (from > to) {
     return errorEnvelope("VALIDATION_ERROR", "from must be on or before to", 422);
   }
+  // P5 (red-team #2): cap the export span so an unbounded range (e.g. 1900→9999)
+  // can't load + serialize every collection into one in-memory XML string (DoS).
+  if ((Date.parse(to) - Date.parse(from)) / 86400000 > 400) {
+    return errorEnvelope("VALIDATION_ERROR", "date range too large (max 400 days per export)", 422);
+  }
 
   const orgId = organizationIdFromClaims(auth.claims);
   const schoolId = schoolIdFromClaims(auth.claims);

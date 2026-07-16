@@ -455,16 +455,55 @@ export async function fetchPendingDeliveries(
   );
 }
 
+/**
+ * P5 (red-team #1): atomically CLAIM up to `limit` due deliveries for one org,
+ * flipping them 'pending' → 'sending' in a single statement. `FOR UPDATE SKIP
+ * LOCKED` makes concurrent drains claim DISJOINT sets — a delivery is sent by
+ * exactly one drain, so no message (or escalation) is duplicated. Also reclaims
+ * deliveries orphaned in 'sending' by a drain that died mid-send (older than the
+ * lease window) — at-least-once delivery, bounded by the lease, which for
+ * notifications is correct (a rare post-crash duplicate beats a lost message).
+ * Mirrors claimDueScheduledBroadcasts.
+ */
+export async function claimPendingDeliveries(
+  db: TenantQueryClient,
+  orgId: string,
+  limit = 50,
+  leaseMinutes = 10,
+): Promise<NotificationDeliveryRow[]> {
+  return await db.queryObject<NotificationDeliveryRow>(
+    `UPDATE notification_deliveries
+        SET status = 'sending', updated_at = timezone('utc', now())
+      WHERE id IN (
+        SELECT id FROM notification_deliveries
+         WHERE organization_id = $1
+           AND (
+             (status = 'pending'
+               AND (next_retry_at IS NULL OR next_retry_at <= timezone('utc', now())))
+             OR (status = 'sending'
+               AND updated_at < timezone('utc', now()) - ($3 || ' minutes')::interval)
+           )
+         ORDER BY created_at
+         LIMIT $2
+         FOR UPDATE SKIP LOCKED
+      )
+      RETURNING *`,
+    [orgId, limit, String(leaseMinutes)],
+  );
+}
+
 export async function markDeliverySent(
   db: TenantQueryClient,
   deliveryId: string,
   providerRef: string | null,
 ): Promise<void> {
+  // P5 (red-team #1): guard on the 'sending' claim so only the drain that claimed
+  // this delivery marks it sent (a lost/expired claim is a no-op, not a double-write).
   await db.queryObject(
     `UPDATE notification_deliveries
      SET status = 'sent', provider_ref = $2, sent_at = timezone('utc', now()),
          updated_at = timezone('utc', now())
-     WHERE id = $1`,
+     WHERE id = $1 AND status = 'sending'`,
     [deliveryId, providerRef],
   );
 }
@@ -482,22 +521,29 @@ export async function markDeliveryFailed(
 ): Promise<{ terminal: boolean }> {
   const nextRetry = delivery.retry_count + 1;
   if (nextRetry >= delivery.max_retries) {
-    await db.queryObject(
+    // P5 (red-team #1): the terminal transition is guarded on the 'sending' claim
+    // and RETURNS the id, so `terminal` is true ONLY when THIS drain owned the
+    // claim and actually flipped it to 'failed' — a lost claim never escalates
+    // (Batch-6 escalation fires only on a real terminal transition).
+    const rows = await db.queryObject<{ id: string }>(
       `UPDATE notification_deliveries
        SET status = 'failed', retry_count = $2, last_error = $3,
            updated_at = timezone('utc', now())
-       WHERE id = $1`,
+       WHERE id = $1 AND status = 'sending'
+       RETURNING id`,
       [delivery.id, nextRetry, error],
     );
-    return { terminal: true };
+    return { terminal: rows.length > 0 };
   }
+  // Reschedule: hand the claimed row back to 'pending' with a backoff so a future
+  // drain re-claims it (guarded on the 'sending' claim).
   const backoffMinutes = Math.pow(2, nextRetry);
   await db.queryObject(
     `UPDATE notification_deliveries
-     SET retry_count = $2, last_error = $3,
+     SET status = 'pending', retry_count = $2, last_error = $3,
          next_retry_at = timezone('utc', now()) + ($4 || ' minutes')::interval,
          updated_at = timezone('utc', now())
-     WHERE id = $1`,
+     WHERE id = $1 AND status = 'sending'`,
     [delivery.id, nextRetry, error, String(backoffMinutes)],
   );
   return { terminal: false };

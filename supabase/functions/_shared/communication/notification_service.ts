@@ -9,9 +9,9 @@ import { localizeNotification, normalizeParentLanguage } from "./parent_comms_lo
 import { computeEscalationTarget } from "./communication_escalation.ts";
 import {
   type ChannelPolicyRow,
+  claimPendingDeliveries,
   enqueueDelivery,
   fetchActiveDeviceToken,
-  fetchPendingDeliveries,
   getChannelPolicy,
   getTemplateByCode,
   markDeliveryFailed,
@@ -87,7 +87,10 @@ export async function processDeliveryQueue(
   req?: Request,
 ): Promise<{ processed: number; sent: number; failed: number; escalated: number }> {
   const config = loadNotificationProviderConfig();
-  const pending = await fetchPendingDeliveries(db, orgId);
+  // P5 (red-team #1): CLAIM the due deliveries (pending → sending) instead of a
+  // plain read, so two concurrent drains for this org get disjoint sets and no
+  // message/escalation is duplicated.
+  const pending = await claimPendingDeliveries(db, orgId);
   let sent = 0;
   let failed = 0;
   let escalated = 0;

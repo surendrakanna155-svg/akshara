@@ -174,6 +174,8 @@ function parseRange(req: Request): { from: string; to: string } | null {
   const from = url.searchParams.get("from") ?? "";
   const to = url.searchParams.get("to") ?? "";
   if (!ISO_DATE.test(from) || !ISO_DATE.test(to) || from > to) return null;
+  // P5 (red-team #2): cap the span so an unbounded range can't load every expense.
+  if ((Date.parse(to) - Date.parse(from)) / 86400000 > 400) return null;
   return { from, to };
 }
 
