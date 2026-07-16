@@ -280,6 +280,13 @@ enum Permission {
   viewStudentHealthRecord,
   viewStudentCareAlert,
   administerStudentMedication,
+
+  // PRC-A Batch 3 — AI credit wallet (caps 37–43). Seeded server-side in
+  // 20260888000000_ai_credit_wallet.sql: viewAiWallet -> superAdmin,
+  // organizationOwner, organizationAdmin, management; manageAiCredits ->
+  // superAdmin ONLY (granting credit is a platform act, not a tenant one).
+  viewAiWallet,
+  manageAiCredits,
 }
 
 /// Immutable set of [Permission] values for a session.

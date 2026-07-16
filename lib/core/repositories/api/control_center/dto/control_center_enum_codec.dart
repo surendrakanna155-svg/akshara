@@ -68,6 +68,15 @@ abstract final class ControlCenterEnumCodec {
 
   static String erpModuleIdToApi(ErpModuleId module) => module.name;
 
+  static AiWalletHealth parseAiWalletHealth(String? value) {
+    return AiWalletHealth.values.firstWhere(
+      (health) => health.name == value,
+      orElse: () => AiWalletHealth.healthy,
+    );
+  }
+
+  static String aiWalletHealthToApi(AiWalletHealth health) => health.name;
+
   static IconData iconForKpi(String? iconName, String? accentName) {
     if (iconName != null && iconName.isNotEmpty) {
       return switch (iconName) {

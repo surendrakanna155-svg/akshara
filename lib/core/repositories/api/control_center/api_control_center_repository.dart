@@ -228,4 +228,30 @@ class ApiControlCenterRepository implements ControlCenterRepository {
     );
     return _mapper.toDeal(raw);
   }
+
+  @override
+  Future<AiWalletData> getAiWallet({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchAiWallet(query: query);
+    return _mapper.toAiWallet(dto);
+  }
+
+  @override
+  Future<AiWalletData> grantAiCredits({
+    required RepositoryQuery query,
+    required String entryType,
+    required int units,
+    required String reason,
+    String? externalRef,
+  }) async {
+    final dto = await _remote.grantAiCredits(
+      query: query,
+      body: {
+        'entryType': entryType,
+        'units': units,
+        'reason': reason,
+        if (externalRef != null) 'externalRef': externalRef,
+      },
+    );
+    return _mapper.toAiWalletGrant(dto);
+  }
 }

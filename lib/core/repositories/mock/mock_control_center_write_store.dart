@@ -12,14 +12,18 @@ final class MockControlCenterWriteStore {
 
   final List<PlatformSchool> schools = [];
   final List<CrmDeal> deals = [];
+  final List<AiCreditEntry> aiCreditEntries = [];
   int _schoolSequence = 9000;
   int _dealSequence = 900;
+  int _aiCreditSequence = 500;
 
   void reset() {
     schools.clear();
     deals.clear();
+    aiCreditEntries.clear();
     _schoolSequence = 9000;
     _dealSequence = 900;
+    _aiCreditSequence = 500;
   }
 
   /// Onboards a new school. New schools start on a trial plan footing with a
@@ -67,6 +71,42 @@ final class MockControlCenterWriteStore {
     );
     deals.insert(0, deal);
     return deal;
+  }
+
+  /// Appends a signed credit-ledger row, enforcing the same sign rules as
+  /// `ai_credit_entries_units_sign_check` / `grantCredits()` server-side —
+  /// there is no UPDATE/DELETE path by design (a compensating row only).
+  AiCreditEntry grantAiCredits({
+    required String entryType,
+    required int units,
+    required String reason,
+    String? externalRef,
+  }) {
+    final trimmedReason = reason.trim();
+    if (trimmedReason.isEmpty) {
+      throw StateError('reason is required');
+    }
+    if (units == 0) {
+      throw StateError('units must be a non-zero integer');
+    }
+    if (entryType == 'top_up' && units <= 0) {
+      throw StateError('a top_up must add credit (units > 0)');
+    }
+    if (entryType == 'expiry' && units >= 0) {
+      throw StateError('an expiry must remove credit (units < 0)');
+    }
+
+    final entry = AiCreditEntry(
+      id: 'AICR-${++_aiCreditSequence}',
+      entryType: entryType,
+      units: units,
+      reason: trimmedReason,
+      actorId: 'mock_super_admin',
+      externalRef: externalRef,
+      createdAt: DateTime.now().toUtc().toIso8601String(),
+    );
+    aiCreditEntries.insert(0, entry);
+    return entry;
   }
 
   static SubscriptionPlan _parsePlan(String raw) {

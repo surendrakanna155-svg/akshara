@@ -19,4 +19,11 @@ abstract final class ControlCenterApiPaths {
   static const String providers = '$base/providers';
   static const String usage = '$base/usage';
   static const String features = '$base/features';
+
+  /// PRC-A Batch 3 — AI credit wallet. NOT nested under [base]: the backend
+  /// router mounts it at its own top-level prefix (`routeAiWallet`, prefix
+  /// `/ai-wallet`) since it serves both the platform (grant) and org-level
+  /// (view) audiences, not only the platform Control Center.
+  static const String aiWallet = '/ai-wallet';
+  static const String aiWalletGrant = '/ai-wallet/grant';
 }

@@ -46,4 +46,17 @@ abstract class ControlCenterRepository {
     required RepositoryQuery query,
     required CreateCrmLeadRequest request,
   });
+
+  /// PRC-A Batch 3 — AI credit wallet balance + recent ledger (`viewAiWallet`).
+  Future<AiWalletData> getAiWallet({required RepositoryQuery query});
+
+  /// Grants a signed credit-ledger entry ('top_up' | 'adjustment' | 'expiry')
+  /// and returns the resulting balance (`manageAiCredits`, superAdmin only).
+  Future<AiWalletData> grantAiCredits({
+    required RepositoryQuery query,
+    required String entryType,
+    required int units,
+    required String reason,
+    String? externalRef,
+  });
 }
