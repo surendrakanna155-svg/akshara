@@ -579,3 +579,63 @@ ship "certified" with a broken join, PRC-A-D-04).
 head-level GL out of scope (data model lacks a per-collection head split); the actual
 IMPORT into a live Tally instance is the school's external step (the ERP integration
 point — a correct, well-formed export — is certified).
+
+---
+
+# 🔨 PRC-A BATCH 8 (slice 1) — TRANSPORT EXPENSE DOMAIN + LIVE COST RECOMPUTE (caps 14–17)
+
+The cost side of transport, off a REAL relational ledger — and the death of the
+static-mock cost served as live. Multi-slice; this first slice ships the ledger +
+cost recompute + kills the fake fuel KPI.
+
+**Commits:** `69f5b30e` (backend + tests) · cert (this section). Migration **`20260892`**.
+
+## The defect
+The transport fleet fuel/maintenance/expense sub-domain did NOT exist, and the
+dashboard `Fuel Cost (MTD) = ₹84K — Finance integration placeholder` KPI was a
+STATIC SEED literal served verbatim to real pilot users (`config/live_release.json`
+sets `TRANSPORT_API_ENABLED=true`). Every downstream cost figure was un-real.
+
+## Design (reuse the architecture, not a table)
+- `transport_expenses` is a RELATIONAL ledger (typed numeric columns for aggregation),
+  NOT crammed into the JSONB `transport_entities` store — because a cost ledger needs
+  SUM-by-category/date. Reuses the EXACT `transport_entities` RLS shape + erp_tenant
+  grants. `status recorded|void`, no DELETE grant (void, not delete — auditable).
+- `handleDashboard` now recomputes the `fuel` KPI from the ledger (MTD); no data →
+  honest `₹0` / "No fuel expense recorded", never a fabricated figure. Other KPIs and
+  the empty-state contract unchanged.
+- `GET /transport/cost-summary` = real income-vs-expense: recorded expenses (total +
+  by category) vs. the EXISTING transport income seam (`finance_invoice_head_allocations`
+  where `fee_head LIKE 'transport:%'`, verified NUMERIC rupees — same unit, no scaling).
+- Void uses the money-integrity terminal-write-guard (`status='recorded'` + throw-on-0-rows).
+  Reuses `viewTransport`/`manageTransport` — no new slug.
+
+## ✅ DEPLOYED — 2026-07-16 (prod `20260891` → `20260892`, edge)
+Backup → migration `--single-transaction` + ledger INSERT → rsync (exactly the 5
+Batch-8 files, 0 deletions) → restart (clean). Schema live: `transport_expenses`
+`rls=t forced=t`, grants INSERT/SELECT/UPDATE (no DELETE). Route contract
+`127.0.0.1:3000`: `GET /transport/cost-summary`, `GET`+`POST /transport/expenses`
+all **401**; errors since restart **0**.
+
+## ✅ LIVE CERTIFIED — 2026-07-16. 11/11 probes PASS on real Postgres.
+Reproducible: [`live_cert_batch8_transport_expenses.sql`](../../scripts/qa/live_cert_batch8_transport_expenses.sql).
+Probes ran as the REAL `erp_tenant` role via `app.set_request_context(...)` inside
+`BEGIN…ROLLBACK`; residue 0.
+
+| # | Claim | Verdict |
+|---|---|---|
+| 1 | cost recompute: SUM by category correct (5000/1500/6500) | **PASS** |
+| 2 | month-to-date fuel recompute = 5000 (replaces the ₹84K placeholder) | **PASS** |
+| 3–4 | category CHECK rejects unknown; amount CHECK rejects ≤0 | **PASS** |
+| 5 | **void terminal-guard: 1 then 0 — no concurrent/repeat double-void** | **PASS** |
+| 6 | a voided expense drops out of the recorded cost total (2000/3500) | **PASS** |
+| 7–9 | RLS isolation: sibling school 0, other tenant 0, owning school 3 | **PASS** |
+| 10 | **cross-module income JOIN** (head_allocations→invoices, `transport:%`) resolves on real Postgres (0/0 — School A has no transport heads, but the join the fake DB can't evaluate executes) | **PASS** |
+| 11 | append-only: `erp_tenant` cannot DELETE an expense | **PASS** |
+
+⇒ **Batch 8 slice 1 = LIVE CERTIFIED.** No open P0. Backend `deno` **3432/0/3ign** (+6).
+The "static mock served as live" cost defect is fixed for the fuel KPI + cost-summary.
+**Remaining transport-domain slices (not this batch):** the `snapshot_reports.fuelTrend`
++ `snapshot_occupancy` are still static seed; per-vehicle/route cost rollups; richer
+expense types (odometer fuel logs); driver→route write path; effective-date model; and
+a Flutter expense-entry UI. Tracked for subsequent slices.
