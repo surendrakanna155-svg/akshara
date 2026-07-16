@@ -84,14 +84,28 @@ export function requireAnyPermission(
   );
 }
 
-/** Admissions operational tables require an active school scope with school_id. */
+/**
+ * School-operational tables require an active school scope with a school_id.
+ *
+ * Used by ~98 call sites across every module — NOT just admissions. The message
+ * used to be hardcoded to "Admissions operational data requires school scope", a
+ * copy-paste artifact from the module it was first written for: a Student Health
+ * or Finance caller was told about *Admissions*, and that wrong domain name was
+ * then captured verbatim in the 403 body, the request log and the access-denied
+ * audit. Harmless to security (the gate denied correctly either way), actively
+ * misleading to anyone reading the trail.
+ *
+ * `domain` is optional so all 98 existing call sites keep working unchanged and
+ * simply get an accurate, domain-neutral message; pass it to name the module.
+ */
 export function requireSchoolOperationalScope(
   claims: AccessTokenClaims,
+  domain?: string,
 ): Response | null {
   if (claims.scope !== "school" || !claims.school_id) {
     return errorEnvelope(
       "FORBIDDEN",
-      "Admissions operational data requires school scope",
+      `${domain ?? "This"} operational data requires school scope`,
       403,
     );
   }

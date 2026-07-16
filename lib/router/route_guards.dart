@@ -24,6 +24,27 @@ import 'route_names.dart';
 
 /// Required [Permission] for each admin ERP route prefix.
 const Map<String, Permission> kErpRouteViewPermissions = {
+  // ─── PRC-A Batch 2 ──────────────────────────────────────────────────────
+  // One permission per route prefix (longest-prefix match), so each is the
+  // BROADEST permission that should reach the screen; narrower affordances
+  // inside are gated per-widget.
+  //
+  // certificate-requests -> requestStudentCertificate: the desk is for raising
+  // and tracking. Approvers (management/superAdmin/org admins hold
+  // approveCertificateRequest but NOT requestStudentCertificate) decide in the
+  // Approval Center, not here — so they are deliberately not routed to the desk.
+  RouteNames.certificateRequests: Permission.requestStudentCertificate,
+  RouteNames.gatePasses: Permission.requestGatePass,
+  RouteNames.complaints: Permission.raiseComplaint,
+  // student-health -> viewStudentHealthRecord (owner decision #1: health staff +
+  // explicitly authorised leadership ONLY — principal/vicePrincipal can read the
+  // console; the record/manage/administer affordances inside are separately
+  // gated on manageStudentHealth / administerStudentMedication, which only
+  // healthStaff holds). A teacher holds ONLY viewStudentCareAlert and therefore
+  // can never reach this route at all — the care alert is surfaced to them
+  // elsewhere, never here.
+  RouteNames.studentHealth: Permission.viewStudentHealthRecord,
+  // ─── end PRC-A Batch 2 ──────────────────────────────────────────────────
   RouteNames.admin: Permission.viewAdminHub,
   RouteNames.admissions: Permission.viewAdmissions,
   RouteNames.finance: Permission.viewFinance,

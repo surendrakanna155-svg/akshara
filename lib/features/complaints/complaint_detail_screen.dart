@@ -97,7 +97,10 @@ class _ComplaintDetailBody extends ConsumerWidget {
         const SizedBox(height: AksharaSpacing.s5),
         AksharaManageAction(
           permission: Permission.manageComplaints,
-          auditRoute: RouteNames.complaintDetail,
+          // This screen is pushed from ComplaintsScreen rather than routed, so
+          // there is no /complaints/detail route to name; a denied action is
+          // audited against the route the user is actually on.
+          auditRoute: RouteNames.complaints,
           child: _ManageActionsRow(complaint: complaint),
         ),
         const SizedBox(height: AksharaSpacing.s5),

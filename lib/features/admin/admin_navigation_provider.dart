@@ -66,6 +66,46 @@ const List<AdminNavDestination> kAllAdminNavDestinations = [
     selectedIcon: Icons.assignment,
     requiredPermission: Permission.viewExams,
   ),
+  // PRC-A Batch 2 — the four new day-to-day desks. Each is gated on the SAME
+  // permission as its route in kErpRouteViewPermissions (route_guards.dart), so
+  // the tile and the route agree: a tile can never advertise a screen its
+  // holder would be bounced out of. Placed next to SIS/Exams — these are
+  // front-office surfaces used many times a day, not back-office config.
+  AdminNavDestination(
+    module: AdminModule.certificateDesk,
+    route: RouteNames.certificateRequests,
+    label: 'Certificates',
+    icon: Icons.workspace_premium_outlined,
+    selectedIcon: Icons.workspace_premium,
+    requiredPermission: Permission.requestStudentCertificate,
+  ),
+  AdminNavDestination(
+    module: AdminModule.gatePass,
+    route: RouteNames.gatePasses,
+    label: 'Gate Pass',
+    icon: Icons.badge_outlined,
+    selectedIcon: Icons.badge,
+    requiredPermission: Permission.requestGatePass,
+  ),
+  AdminNavDestination(
+    module: AdminModule.complaints,
+    route: RouteNames.complaints,
+    label: 'Complaints',
+    icon: Icons.report_problem_outlined,
+    selectedIcon: Icons.report_problem,
+    requiredPermission: Permission.raiseComplaint,
+  ),
+  // Owner decision #1: health staff + explicitly authorised leadership only. A
+  // teacher holds only viewStudentCareAlert, so this tile never renders for
+  // them — which is the intent, not an oversight.
+  AdminNavDestination(
+    module: AdminModule.studentHealth,
+    route: RouteNames.studentHealth,
+    label: 'Infirmary',
+    icon: Icons.medical_services_outlined,
+    selectedIcon: Icons.medical_services,
+    requiredPermission: Permission.viewStudentHealthRecord,
+  ),
   // P1 fix (PRC-A caps 58-65) — the School Completion hub (~20 screens:
   // subjects, timetables, syllabus automation, lesson logs, academic progress,
   // communications, pilot toolkit) had routes + real screens but ZERO inbound
@@ -334,6 +374,41 @@ const Map<AdminModule, AdminModuleInfo> kAdminModuleInfo = {
         'cards, and hall tickets.',
     route: RouteNames.examAdministration,
   ),
+  // ─── PRC-A Batch 2 ────────────────────────────────────────────────────────
+  AdminModule.certificateDesk: AdminModuleInfo(
+    module: AdminModule.certificateDesk,
+    title: 'Certificates',
+    description:
+        'Certificate request desk — parents and staff request bonafide, study, '
+        'conduct, fee and transfer certificates; approval issues them through '
+        'the certified issuance engine.',
+    route: RouteNames.certificateRequests,
+  ),
+  AdminModule.gatePass: AdminModuleInfo(
+    module: AdminModule.gatePass,
+    title: 'Gate Pass',
+    description:
+        'Early pickup and authorised exit — request, approve, and verify a '
+        'single-use pass at the gate before a child is released.',
+    route: RouteNames.gatePasses,
+  ),
+  AdminModule.complaints: AdminModuleInfo(
+    module: AdminModule.complaints,
+    title: 'Complaints',
+    description:
+        'School-internal issues — raise, assign, track against an SLA, and '
+        'resolve; optionally attributed to a vendor with a repair cost.',
+    route: RouteNames.complaints,
+  ),
+  AdminModule.studentHealth: AdminModuleInfo(
+    module: AdminModule.studentHealth,
+    title: 'Infirmary',
+    description:
+        'Student health — infirmary visits, medication authorizations and '
+        'administration. Need-to-know access, audited on every sensitive read.',
+    route: RouteNames.studentHealth,
+  ),
+  // ─── end PRC-A Batch 2 ────────────────────────────────────────────────────
   AdminModule.sis: AdminModuleInfo(
     module: AdminModule.sis,
     title: 'Student SIS',

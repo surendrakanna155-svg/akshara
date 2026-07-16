@@ -1,5 +1,11 @@
 import 'dart:async';
 
+// PRC-A Batch 2 — request desk / gate pass / complaints / student health.
+import '../features/certificate_desk/certificate_requests_screen.dart';
+import '../features/complaints/complaints_screen.dart';
+import '../features/gate_pass/gate_passes_screen.dart';
+import '../features/student_health/infirmary/student_health_infirmary_screen.dart';
+
 import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -1822,6 +1828,41 @@ GoRouter createAppRouter({
               ),
             ],
           ),
+          // ─── PRC-A Batch 2 ────────────────────────────────────────────────
+          // Single-screen desks — no sub-routes: the complaint detail and the
+          // student health record are pushed from inside their own screens.
+          // Route-level RBAC is centralized in kErpRouteViewPermissions
+          // (route_guards.dart), which the admin shell's ErpRouteGuard applies —
+          // NOT per-GoRoute.
+          GoRoute(
+            path: RouteNames.certificateRequests,
+            name: 'certificateRequests',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: CertificateRequestsScreen(),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.gatePasses,
+            name: 'gatePasses',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: GatePassesScreen(),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.complaints,
+            name: 'complaints',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: ComplaintsScreen(),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.studentHealth,
+            name: 'studentHealth',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: StudentHealthInfirmaryScreen(),
+            ),
+          ),
+          // ─── end PRC-A Batch 2 ────────────────────────────────────────────
           GoRoute(
             path: RouteNames.hostel,
             name: 'hostel',
