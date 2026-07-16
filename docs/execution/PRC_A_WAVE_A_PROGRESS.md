@@ -391,6 +391,53 @@ restart) activates it, once usage has been metering for real.
   trusts the client-declared size, consistent with the existing per-file cap);
   low-storage ALERT dispatch (health is exposed via the API, no notification yet).
 
+---
+
+# 🔨 PRC-A BATCH 5 — WEBHOOK HMAC HARDENING + ATOMIC REPLAY GUARD (owner-idea 25)
+
+The shared webhook-HMAC framework the audit flagged, plus two REAL money-path defects
+found while extracting it. **Code-only — no migration.**
+
+**Commit:** `4bdda08b` (backend + this cert).
+
+## Two defects fixed on the Razorpay money path
+1. **Timing-unsafe signature comparison (P1-sec).** `razorpay_client.ts` verified BOTH
+   the webhook signature and the payment-confirmation signature with a plain
+   `expected === signature`. A `===` short-circuits at the first differing byte — an
+   attacker can time the response to learn how many leading bytes of a forged
+   signature are correct and rebuild a valid one byte-by-byte. On the webhook that
+   authorises a payment capture, that is a money-integrity hole. Now constant-time.
+2. **Check-then-act replay guard (TOCTOU).** `recordWebhookEvent` did
+   SELECT-then-INSERT: two concurrent deliveries of the SAME webhook could both see
+   zero rows and both process the event (e.g. credit a payment) twice; the loser's
+   bare INSERT also raised a PK violation → 500 → provider retry. Now ONE atomic
+   `INSERT … ON CONFLICT (id) DO NOTHING RETURNING id`.
+
+New canonical `_shared/webhook_hmac.ts` (constant-time `verifyHmacSha256Hex`); razorpay
++ communication now use it (comms' two private copies deleted; gate_pass left — it is
+certified and its copy serves OTP, not webhooks). Backend **3402 / 0 / 3 ign** (+8);
+payment + communication **138 / 0**.
+
+## ✅ DEPLOYED — 2026-07-16 (edge only; no schema change)
+Edge backed up → rsync → restart → health. `/webhooks/razorpay` **200** (acks; verify
+gates processing internally — unchanged), `/communications/delivery/webhook` **401**,
+level-50 **0**.
+
+## ✅ LIVE CERTIFIED — 2026-07-16.
+Reproducible: [`live_cert_batch5_webhook_replay.sql`](../../scripts/qa/live_cert_batch5_webhook_replay.sh).
+
+| Claim | Verdict | Evidence |
+|---|---|---|
+| **Atomic replay dedup under real concurrency** | **PASS** | Two CONCURRENT backends run the VERBATIM production `INSERT … ON CONFLICT (id) DO NOTHING RETURNING id` as real `erp_tenant` for the SAME event id: **exactly one** claimed it (Session A returned the id, Session B returned **0 rows**); **1** row persisted. The fake DB cannot evaluate this. Residue **0**. |
+| **Constant-time HMAC verify** | **unit-certified** | 8 verifier tests (correct/tampered/wrong-secret/normalised/length-safe) + 138 payment/comms tests confirm accept/reject is behaviour-preserving. The constant-time property is verified by code (the compare folds every byte, no early return) — a single-probe timing measurement is not a meaningful live test, so none is claimed. |
+
+⇒ **Batch 5 = LIVE CERTIFIED** (atomic replay) + **HMAC hardening shipped** (unit-certified, behaviour-preserving). No open P0.
+
+## Residue
+gate_pass_crypto keeps its own `timingSafeEqualHex` (certified Batch 2 code, serves
+OTP/QR not webhooks) — consolidating it is a low-value follow-up, deliberately not
+churning a certified module.
+
 ## State distinction (certification discipline)
 - **IMPLEMENTED + DEPLOYED + LIVE CERTIFIED:** wallet core, admit-clause double-spend safety, HTTP APIs, RBAC, audit, RLS, constraints, immutability — all proven on prod Postgres.
 - **IMPLEMENTED, not yet certified-live:** the Flutter Control Center wallet panel (client UI — ships in a release build, not the edge; verified by `flutter analyze`/widget tests, not a Postgres probe).
