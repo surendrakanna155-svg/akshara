@@ -159,6 +159,10 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "GET", path: "/communications/audience-segments", permission: "viewCommunications", scope: "school", module: "communication" },
   { method: "POST", path: "/communications/audience-segments", permission: "sendBroadcast", scope: "school", module: "communication" },
   { method: "DELETE", path: "/communications/audience-segments/:id", permission: "sendBroadcast", scope: "school", module: "communication" },
+  // Batch 6: per-school channel escalation policy (WhatsApp orchestrator). Same
+  // admin gate as the delivery-queue processor + template management.
+  { method: "GET", path: "/communications/channel-policy", permission: "manageCommunications", scope: "school", module: "communication" },
+  { method: "PUT", path: "/communications/channel-policy", permission: "manageCommunications", scope: "school", module: "communication" },
   // COM-D1: acknowledge a delivery (signed receipt). Recipient-owned, like
   // mark-read — no permission slug; the recipient RLS policy enforces ownership.
   { method: "POST", path: "/communications/notifications/:id/acknowledge", permission: null, scope: "parent", module: "communication" },

@@ -46,6 +46,23 @@ export interface NotificationDeliveryRow {
   route: string | null;
   sent_at: string | null;
   created_at: string;
+  /** Batch 6: the delivery whose terminal failure spawned this one (NULL for a
+   * primary send). */
+  escalated_from: string | null;
+  /** Batch 6: hop count from the primary send (0 = primary). Bounds escalation. */
+  escalation_depth: number;
+}
+
+/** Batch 6: a per-school escalation policy row (communication_channel_policies). */
+export interface ChannelPolicyRow {
+  id: string;
+  organization_id: string;
+  school_id: string;
+  escalation_chain: string[];
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface CommThreadRow {
@@ -330,13 +347,18 @@ export async function enqueueDelivery(
     renderedBody: string;
     childContext?: string | null;
     route?: string | null;
+    /** Batch 6: set when this delivery is an escalation follow-up — links it to
+     * the terminally-failed delivery and records its hop count. */
+    escalatedFrom?: string | null;
+    escalationDepth?: number;
   },
 ): Promise<NotificationDeliveryRow> {
   const rows = await db.queryObject<NotificationDeliveryRow>(
     `INSERT INTO notification_deliveries (
        organization_id, school_id, recipient_user_id, channel, template_id,
-       category, rendered_subject, rendered_body, child_context, route, status
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending')
+       category, rendered_subject, rendered_body, child_context, route, status,
+       escalated_from, escalation_depth
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending', $11, $12)
      RETURNING *`,
     [
       input.organizationId,
@@ -349,6 +371,8 @@ export async function enqueueDelivery(
       input.renderedBody,
       input.childContext ?? null,
       input.route ?? null,
+      input.escalatedFrom ?? null,
+      input.escalationDepth ?? 0,
     ],
   );
   return rows[0]!;
@@ -445,11 +469,17 @@ export async function markDeliverySent(
   );
 }
 
+/**
+ * Record a delivery attempt failure. Reschedules with exponential backoff while
+ * retries remain; flips the row to terminal `status='failed'` once
+ * `max_retries` is reached. Returns `{ terminal }` so the drain knows when a
+ * delivery has genuinely given up and escalation (Batch 6) may fire.
+ */
 export async function markDeliveryFailed(
   db: TenantQueryClient,
   delivery: NotificationDeliveryRow,
   error: string,
-): Promise<void> {
+): Promise<{ terminal: boolean }> {
   const nextRetry = delivery.retry_count + 1;
   if (nextRetry >= delivery.max_retries) {
     await db.queryObject(
@@ -459,7 +489,7 @@ export async function markDeliveryFailed(
        WHERE id = $1`,
       [delivery.id, nextRetry, error],
     );
-    return;
+    return { terminal: true };
   }
   const backoffMinutes = Math.pow(2, nextRetry);
   await db.queryObject(
@@ -470,6 +500,54 @@ export async function markDeliveryFailed(
      WHERE id = $1`,
     [delivery.id, nextRetry, error, String(backoffMinutes)],
   );
+  return { terminal: false };
+}
+
+/** Batch 6: load the caller's school escalation policy, or null when none is
+ * configured (→ escalation disabled, existing behaviour preserved). */
+export async function getChannelPolicy(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+): Promise<ChannelPolicyRow | null> {
+  const rows = await db.queryObject<ChannelPolicyRow>(
+    `SELECT * FROM communication_channel_policies
+      WHERE organization_id = $1 AND school_id = $2`,
+    [orgId, schoolId],
+  );
+  return rows[0] ?? null;
+}
+
+/** Batch 6: upsert the caller's school escalation policy (one row per school). */
+export async function upsertChannelPolicy(
+  db: TenantQueryClient,
+  input: {
+    organizationId: string;
+    schoolId: string;
+    escalationChain: string[];
+    isActive: boolean;
+    createdBy: string;
+  },
+): Promise<ChannelPolicyRow> {
+  const rows = await db.queryObject<ChannelPolicyRow>(
+    `INSERT INTO communication_channel_policies (
+       organization_id, school_id, escalation_chain, is_active, created_by
+     ) VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (organization_id, school_id)
+     DO UPDATE SET
+       escalation_chain = EXCLUDED.escalation_chain,
+       is_active = EXCLUDED.is_active,
+       updated_at = timezone('utc', now())
+     RETURNING *`,
+    [
+      input.organizationId,
+      input.schoolId,
+      input.escalationChain,
+      input.isActive,
+      input.createdBy,
+    ],
+  );
+  return rows[0]!;
 }
 
 export async function listThreadsForUser(

@@ -10,6 +10,7 @@ import {
   handleDeleteAudienceSegment,
   handleDeliveryMetrics,
   handleDeliveryWebhook,
+  handleGetChannelPolicy,
   handleListAudienceSegments,
   handleListTemplates,
   handleMarkAllNotificationsRead,
@@ -26,6 +27,7 @@ import {
   handleTeacherSendMessage,
   handleUnregisterDeviceToken,
   handleUpdateTemplate,
+  handleUpsertChannelPolicy,
 } from "./communication_handlers.ts";
 
 /** MJ-M12: matches `/communications/templates/{id}` — a single non-empty,
@@ -118,6 +120,13 @@ export function matchCommunicationRoute(
   }
   if (method === "POST" && path === "/communications/notifications/process-queue") {
     return { handler: handleProcessNotificationQueue };
+  }
+  // Batch 6: per-school channel escalation policy (WhatsApp orchestrator).
+  if (method === "GET" && path === "/communications/channel-policy") {
+    return { handler: handleGetChannelPolicy };
+  }
+  if (method === "PUT" && path === "/communications/channel-policy") {
+    return { handler: handleUpsertChannelPolicy };
   }
   if (method === "GET" && path === "/communications/delivery/metrics") {
     return { handler: handleDeliveryMetrics };

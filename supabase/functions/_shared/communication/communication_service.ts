@@ -22,12 +22,16 @@ import {
   listThreadsForUser,
   listUnreadBroadcastRecipientIds,
   resolveBroadcastRecipients,
+  type ChannelPolicyRow,
+  getChannelPolicy,
+  upsertChannelPolicy,
   type CommAudienceSegmentRow,
   type CommBroadcastRow,
   type CommMessageRow,
   type CommThreadRow,
 } from "./communication_repository.ts";
 import { enqueueNotificationRequested, processDeliveryQueue } from "./notification_service.ts";
+import { validateEscalationChain } from "./communication_escalation.ts";
 
 /**
  * PERF-1: hard cap on the recipients fanned out in a single broadcast so a
@@ -648,9 +652,9 @@ export async function createNotificationTemplate(
     throw new CommunicationValidationError("Template code is required");
   }
   const channel = input.channel.trim();
-  if (!["sms", "email", "push"].includes(channel)) {
+  if (!["sms", "email", "push", "whatsapp"].includes(channel)) {
     throw new CommunicationValidationError(
-      "channel must be one of sms, email, push",
+      "channel must be one of sms, email, push, whatsapp",
     );
   }
   const bodyTemplate = input.bodyTemplate.trim();
@@ -731,9 +735,9 @@ export async function updateNotificationTemplate(
     throw new CommunicationValidationError("Template code cannot be empty");
   }
   const channel = input.channel?.trim();
-  if (channel !== undefined && !["sms", "email", "push"].includes(channel)) {
+  if (channel !== undefined && !["sms", "email", "push", "whatsapp"].includes(channel)) {
     throw new CommunicationValidationError(
-      "channel must be one of sms, email, push",
+      "channel must be one of sms, email, push, whatsapp",
     );
   }
   const bodyTemplate = input.bodyTemplate?.trim();
@@ -782,6 +786,88 @@ export async function updateNotificationTemplate(
   );
 
   return templateToApi(row);
+}
+
+/** Batch 6: API shape for a school's channel escalation policy. When no policy
+ * row exists the school has escalation OFF (existing behaviour). */
+function channelPolicyToApi(row: ChannelPolicyRow | null): Record<string, unknown> {
+  if (!row) {
+    return { configured: false, escalationChain: [], isActive: false };
+  }
+  return {
+    configured: true,
+    escalationChain: row.escalation_chain,
+    isActive: row.is_active,
+    updatedAt: row.updated_at,
+  };
+}
+
+/**
+ * Batch 6: read the caller's school channel escalation policy. Returns a
+ * not-configured shape (never throws) when the school has never set one.
+ */
+export async function getChannelPolicyForSchool(
+  db: TenantQueryClient,
+  claims: AccessTokenClaims,
+): Promise<Record<string, unknown>> {
+  const schoolId = requireSchool(claims);
+  const row = await getChannelPolicy(db, claims.tenant_id, schoolId);
+  return channelPolicyToApi(row);
+}
+
+/**
+ * Batch 6: create/replace the caller's school channel escalation policy. The
+ * chain is validated against the known channel vocabulary (no unknowns, no
+ * duplicates) so a bad chain can never be persisted; the write is audited.
+ */
+export async function upsertChannelPolicyForSchool(
+  db: TenantQueryClient,
+  claims: AccessTokenClaims,
+  input: { escalationChain: unknown; isActive?: boolean },
+  req?: Request,
+): Promise<Record<string, unknown>> {
+  if (claims.scope !== "school") {
+    throw new CommunicationValidationError(
+      "Channel policy management requires school scope",
+    );
+  }
+  const schoolId = requireSchool(claims);
+  const chainError = validateEscalationChain(input.escalationChain);
+  if (chainError) {
+    throw new CommunicationValidationError(chainError);
+  }
+  const escalationChain = (input.escalationChain as string[]).map((c) => c.trim());
+  const isActive = input.isActive ?? true;
+
+  const row = await upsertChannelPolicy(db, {
+    organizationId: claims.tenant_id,
+    schoolId,
+    escalationChain,
+    isActive,
+    createdBy: claims.sub,
+  });
+
+  await recordMutationAudit(
+    db,
+    claims,
+    {
+      eventType: "communicationChannelPolicyUpserted",
+      category: "configuration",
+      entityType: "communication_channel_policy",
+      entityId: row.id,
+      metadata: { escalationChain: row.escalation_chain, isActive: row.is_active },
+      correlationId: req ? correlationIdFromRequest(req) : undefined,
+    },
+    {
+      eventType: "communication.channel_policy.upserted",
+      payload: { policyId: row.id, escalationChain: row.escalation_chain, isActive: row.is_active },
+      sourceModule: "communication",
+      idempotencyKey: `communication.channel_policy:${row.id}:${Date.now()}`,
+    },
+    req,
+  );
+
+  return channelPolicyToApi(row);
 }
 
 /**

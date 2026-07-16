@@ -1,6 +1,6 @@
 import { fcmV1Configured } from "./fcm_v1_client.ts";
 
-export type NotificationChannel = "sms" | "email" | "push";
+export type NotificationChannel = "sms" | "email" | "push" | "whatsapp";
 
 export interface NotificationProviderConfig {
   sms: { stubMode: boolean; accountSid: string | null; authToken: string | null; fromNumber: string | null };
