@@ -201,7 +201,36 @@ Vault platform-DB path (makes 45 + 44–49 real) → bulk fee assignment (66/69,
 - **`requireSchoolOperationalScope` (~98 call sites, EVERY module)** hardcoded *"Admissions operational data requires school scope"* — a copy-paste artifact. A Student Health caller was told about Admissions, and that wrong domain was captured verbatim in the 403 body, request log and access-denied audit. Never a security bug; actively misleading in the trail for the most sensitive domain. Now domain-neutral + optional label; no test asserted the old string.
 - Migration numbering: `20260884` was "queued" for caps 62/63 in the handoff but referenced **nowhere** in the repo. Batch 2 takes `20260884`–`20260887` **contiguously**; caps 62/63 get a fresh higher number when built (a gap would make them sort behind already-applied migrations).
 
-## EOS GATE: **CONDITIONAL PASS** — Merge/QA only. **BLOCKED at Staging/Pilot/Production.**
+## ✅ BATCH 2 — LIVE CERTIFIED (2026-07-16). All 6 owner-required probes PASS.
+
+Deployed (`fefcede1`, prod `20260881`→`20260887`), then every remaining item certified against **real Postgres** as the **real `erp_tenant` role**, using `app.set_request_context(...)` — byte-identical to what `withTenantContext` does in production, so RLS is genuinely evaluated, not simulated. All probes ran inside `BEGIN…ROLLBACK`.
+Reproducible artifacts: [`live_probe_money_p0_account_resolution.sql`](../../scripts/qa/live_probe_money_p0_account_resolution.sql) · [`live_cert_batch2_rls_parent_scoping.sql`](../../scripts/qa/live_cert_batch2_rls_parent_scoping.sql) · [`live_cert_batch2_teacher_scoping.sql`](../../scripts/qa/live_cert_batch2_teacher_scoping.sql) · [`live_cert_batch2_rbac_constraints_money_p0_2.sql`](../../scripts/qa/live_cert_batch2_rbac_constraints_money_p0_2.sql)
+
+| # | Owner-required probe | Verdict | Exact evidence |
+|---|---|---|---|
+| 1 | **RLS tenant isolation** | **PASS** | org B context reading org A's clinical rows → **0** `student_health_incidents`, **0** `student_care_alerts`. **Control:** org A context reading its OWN row → **1** (proves the isolation probe is not a vacuous false-pass). |
+| 2 | **Parent/guardian scoping** | **PASS** | ParentA (`scope=parent`, `app.parent_user_id=ParentA`): own child's alert = **1**; the OTHER parent's child's alert = **0**. |
+| 3 | **teacherTeachesStudent** | **PASS** | Verbatim production SQL. Teacher DOES teach StudentA → **1 link** (care alert allowed). Teacher does NOT teach StudentB → **0 links** ⇒ **fails CLOSED**. |
+| 4 | **healthStaff resolution** | **PASS** | `role_permissions[healthStaff]` = `administerStudentMedication, manageStudentHealth, viewStudentCareAlert, viewStudentHealthRecord` (4 = the designed set). `manageStudentHealth` → **healthStaff ONLY**. `administerStudentMedication` → **healthStaff ONLY** (a genuinely separate gate). **0** teaching/admin roles hold `viewStudentHealthRecord`. |
+| 5 | **Unique constraints** | **PASS** | Postgres raised `unique_violation` on the 2nd open pass: `duplicate key value violates unique constraint "uq_gate_passes_open_slot"`; and on the 2nd open request: `"uq_sis_certificate_requests_open"`. Both exception-trapped, so PASS is explicit. |
+| 6 | **Money P0 #2 — cancelInvoice lockstep** | **PASS** | Verbatim production statements. Account outstanding **8000.00 → 0.00**, `total_fee` → **0.00** (without lockstep the student stays a FALSE DEFAULTER and their no-dues/TC gate stays blocked). **Double-cancel guard:** 1st cancel matched **1** row, 2nd matched **0** ⇒ the release cannot be applied twice (the old unguarded read was TOCTOU). |
+
+Plus, certified at deploy time: **money P0 #1** (OLD join → **0 rows** = defect reproduced; NEW join → **1 row** = fix confirmed) · **immutable logs genuinely enforced** (as `erp_tenant`, Postgres refused UPDATE of the medication administration log and DELETE of the health access log + complaint timeline — *permission denied*) · **route contract** (`/health` still 200 ⇒ not shadowed by `/student-health`; all 5 routes 401; unmatched-in-prefix 404) · **RT-15 intact** (`erp_tenant` holds NO grants on `platform_secret_vault`).
+
+**Probe residue on prod: `students(0) users(0) orgs(0) classes(0) structures(0) invoices(0) care_alerts(0)`** — every probe rolled back cleanly. *(Three `ZZ …` students dated 2026-06-23 exist from a prior session's test data — verified NOT mine.)*
+
+⚠ **One correction, recorded honestly:** an earlier assertion "healthStaff resolves to exactly 3 permissions" reported FAIL. That was **the probe's error, not a code defect** — the design (and the migration) deliberately grants a 4th, `viewStudentCareAlert`, because health staff author the care alerts they read. Expectation corrected; the security-critical half (clinical perms are healthStaff-only) passes independently.
+
+### ⇒ EOS GATE RE-RUN: **PASS**. Batch 2 = **LIVE CERTIFIED**.
+Part 7B — *Mandatory Certification Rules* is now satisfied: critical workflows are verified and required permissions are verified, on real Postgres. No open P0. No automatic-failure condition.
+
+### Still open (does NOT block Batch 2 certification — tracked)
+- **Caps 44–49 remain PARTIAL by owner decision** — `VAULT_ENC_KEY` deliberately unprovisioned; the AES vault fails closed. No fake-encrypted secrets exist.
+- Residue: no parent-facing UI · parent cannot self-cancel · no complaint reassignment · 295 stale `*_test.ts` in the prod edge tree (pre-existing, never executed).
+
+---
+
+## (superseded) EOS GATE at BUILD close: **CONDITIONAL PASS** — Merge/QA only. **BLOCKED at Staging/Pilot/Production.**
 No Part 7B *Automatic Failure Condition* triggered; **no open P0**; no critical regression. But Part 7B — *Mandatory Certification Rules* is not satisfiable today:
 - **"Critical workflows are unverified"** — raise→approve→issue, gate verify, and the care-alert journey have never run against real Postgres.
 - **"Required permissions are unverified"** — code-level gates are proven (103 handler/router tests); **RLS is not**. The fake DB pattern-matches SQL and evaluates **neither JOINs nor RLS**, which is precisely how the fee-reductions engine once shipped "certified" with a broken join.
