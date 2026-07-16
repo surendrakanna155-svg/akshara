@@ -74,7 +74,7 @@ class _ControlCenterProvidersScreenState extends ConsumerState<ControlCenterProv
             ),
             _usagePanel(snapshot.usage),
             const Divider(height: 32),
-            const Text('Configured providers', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('Configured providers', style: Theme.of(context).textTheme.titleSmall),
             ...snapshot.providers.map(_providerTile),
             const Divider(height: 32),
             AksharaManageAction(
@@ -102,7 +102,7 @@ class _ControlCenterProvidersScreenState extends ConsumerState<ControlCenterProv
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Divider(height: 32),
-            const Text('AI Credit Wallet', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('AI Credit Wallet', style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: AksharaSpacing.s2),
             wallet.when(
               loading: () => const Padding(
@@ -116,7 +116,7 @@ class _ControlCenterProvidersScreenState extends ConsumerState<ControlCenterProv
                 children: [
                   _aiWalletBalanceCard(data.balance),
                   const SizedBox(height: AksharaSpacing.s3),
-                  const Text('Recent ledger', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text('Recent ledger', style: Theme.of(context).textTheme.titleSmall),
                   if (data.entries.isEmpty)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s2),
@@ -149,7 +149,7 @@ class _ControlCenterProvidersScreenState extends ConsumerState<ControlCenterProv
               children: [
                 Text(
                   'Available: ${balance.availableUnits}',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(width: AksharaSpacing.s3),
                 _aiWalletHealthChip(balance.health),
@@ -186,7 +186,7 @@ class _ControlCenterProvidersScreenState extends ConsumerState<ControlCenterProv
     return Chip(
       label: Text(label),
       backgroundColor: color.withValues(alpha: 0.15),
-      labelStyle: TextStyle(color: color, fontWeight: FontWeight.bold),
+      labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(color: color, fontWeight: FontWeight.bold),
       side: BorderSide(color: color),
       visualDensity: VisualDensity.compact,
     );
@@ -206,7 +206,7 @@ class _ControlCenterProvidersScreenState extends ConsumerState<ControlCenterProv
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Grant credits', style: TextStyle(fontWeight: FontWeight.bold)),
+        Text('Grant credits', style: Theme.of(context).textTheme.titleSmall),
         DropdownButtonFormField<String>(
           initialValue: _aiWalletEntryType,
           decoration: const InputDecoration(labelText: 'Entry type'),
@@ -300,7 +300,7 @@ class _ControlCenterProvidersScreenState extends ConsumerState<ControlCenterProv
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Divider(height: 32),
-            const Text('Storage', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('Storage', style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: AksharaSpacing.s2),
             storageQuota.when(
               loading: () => const Padding(
@@ -332,7 +332,7 @@ class _ControlCenterProvidersScreenState extends ConsumerState<ControlCenterProv
               children: [
                 Text(
                   data.planName,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(width: AksharaSpacing.s3),
                 _storageQuotaHealthChip(data.health),
@@ -360,11 +360,10 @@ class _ControlCenterProvidersScreenState extends ConsumerState<ControlCenterProv
               const SizedBox(height: AksharaSpacing.s2),
               Text(
                 'Not enforced yet — the cap is not currently blocking uploads.',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic,
-                  color: Theme.of(context).hintColor,
-                ),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontStyle: FontStyle.italic,
+                      color: Theme.of(context).hintColor,
+                    ),
               ),
             ],
           ],
@@ -393,7 +392,7 @@ class _ControlCenterProvidersScreenState extends ConsumerState<ControlCenterProv
     return Chip(
       label: Text(label),
       backgroundColor: color.withValues(alpha: 0.15),
-      labelStyle: TextStyle(color: color, fontWeight: FontWeight.bold),
+      labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(color: color, fontWeight: FontWeight.bold),
       side: BorderSide(color: color),
       visualDensity: VisualDensity.compact,
     );
@@ -418,7 +417,7 @@ class _ControlCenterProvidersScreenState extends ConsumerState<ControlCenterProv
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Usage · ${usage.totalEvents} events',
-                style: const TextStyle(fontWeight: FontWeight.bold)),
+                style: Theme.of(context).textTheme.titleSmall),
             Text('Estimated cost ₹${usage.totalCostInr.toStringAsFixed(0)}'),
             const SizedBox(height: 8),
             ...usage.byCategory.entries.map(
@@ -448,7 +447,7 @@ class _ControlCenterProvidersScreenState extends ConsumerState<ControlCenterProv
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Configure provider', style: TextStyle(fontWeight: FontWeight.bold)),
+        Text('Configure provider', style: Theme.of(context).textTheme.titleSmall),
         DropdownButtonFormField<String>(
           initialValue: _category,
           decoration: const InputDecoration(labelText: 'Category'),
