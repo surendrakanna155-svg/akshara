@@ -73,6 +73,11 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "GET", path: "/transport/settings", permission: "viewTransport", scope: "school", module: "transport" },
   { method: "GET", path: "/transport/occupancy-metrics", permission: "viewTransport", scope: "school", module: "transport" },
   { method: "GET", path: "/transport/routes/:id/roster", permission: "viewTransport", scope: "school", module: "transport" },
+  // Batch 8: transport expense domain (reads=viewTransport, writes=manageTransport).
+  { method: "GET", path: "/transport/expenses", permission: "viewTransport", scope: "school", module: "transport" },
+  { method: "GET", path: "/transport/cost-summary", permission: "viewTransport", scope: "school", module: "transport" },
+  { method: "POST", path: "/transport/expenses", permission: "manageTransport", scope: "school", module: "transport" },
+  { method: "POST", path: "/transport/expenses/:id/void", permission: "manageTransport", scope: "school", module: "transport" },
   { method: "POST", path: "/transport/routes", permission: "manageTransport", scope: "school", module: "transport" },
   { method: "POST", path: "/transport/routes/:id/activate", permission: "manageTransport", scope: "school", module: "transport" },
   { method: "POST", path: "/transport/routes/:id/stops", permission: "manageTransport", scope: "school", module: "transport" },

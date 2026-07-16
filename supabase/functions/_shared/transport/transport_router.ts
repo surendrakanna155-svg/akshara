@@ -35,6 +35,12 @@ import {
   handleUpdateStop,
   handleUpdateVehicle,
 } from "./transport_write_handlers.ts";
+import {
+  handleCostSummary,
+  handleListExpenses,
+  handleRecordExpense,
+  handleVoidExpense,
+} from "./transport_expenses_handlers.ts";
 
 type RouteHandler = (req: Request, config: AppConfig) => Promise<Response>;
 
@@ -51,6 +57,9 @@ function matchTransportRoute(method: string, path: string): { handler: RouteHand
       "/transport/reports": handleReports,
       "/transport/settings": handleSettings,
       "/transport/occupancy-metrics": handleOccupancyMetrics,
+      // Batch 8: transport expense domain (real cost, no static mock).
+      "/transport/expenses": handleListExpenses,
+      "/transport/cost-summary": handleCostSummary,
     };
     const handler = routes[path] as RouteHandler | undefined;
     if (handler) return { handler };
@@ -94,6 +103,15 @@ function matchTransportRoute(method: string, path: string): { handler: RouteHand
     // TRN-9: raise a Finance transport-fee demand.
     if (path === "/transport/demands") {
       return { handler: handleRaiseTransportDemand };
+    }
+    // Batch 8: record / void a transport expense.
+    if (path === "/transport/expenses") {
+      return { handler: handleRecordExpense };
+    }
+    const voidExpenseMatch = path.match(/^\/transport\/expenses\/([^/]+)\/void$/);
+    if (voidExpenseMatch) {
+      const id = decodeURIComponent(voidExpenseMatch[1]!);
+      return { handler: (req, config) => handleVoidExpense(req, config, id) };
     }
     if (/^\/transport\/routes\/[^/]+\/activate$/.test(path)) {
       return { handler: handleActivateRoute };

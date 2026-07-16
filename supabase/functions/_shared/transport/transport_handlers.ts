@@ -15,6 +15,7 @@ import {
   listEntities,
   TransportSnapshotNotFoundError,
 } from "./transport_read_repository.ts";
+import { getMonthToDateFuel } from "./transport_expenses_repository.ts";
 
 function parsePagination(url: URL): { page: number; pageSize: number } {
   const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
@@ -114,8 +115,69 @@ async function handleList(
   }
 }
 
+/** Format a rupee amount in the compact style the dashboard KPIs use (₹84K/₹1.2L).
+ * Exported for unit testing. */
+export function formatInr(n: number): string {
+  if (n >= 100000) return `₹${(n / 100000).toFixed(1)}L`;
+  if (n >= 1000) return `₹${Math.round(n / 1000)}K`;
+  return `₹${Math.round(n)}`;
+}
+
+/**
+ * Batch 8: overlay the LIVE month-to-date fuel spend onto the dashboard's `fuel`
+ * KPI, replacing the static "₹84K — Finance integration placeholder" seed literal.
+ * When nothing is recorded the KPI honestly reads ₹0 / "No fuel expense recorded"
+ * — never a fabricated figure. All other KPIs pass through unchanged.
+ */
+export function withLiveFuelKpi(snapshot: unknown, mtdFuel: number): unknown {
+  if (!snapshot || typeof snapshot !== "object") return snapshot;
+  const snap = snapshot as Record<string, unknown>;
+  const kpis = snap.kpis;
+  if (!Array.isArray(kpis)) return snapshot;
+  const updated = kpis.map((k) => {
+    if (k && typeof k === "object" && (k as Record<string, unknown>).id === "fuel") {
+      return {
+        ...(k as Record<string, unknown>),
+        value: formatInr(mtdFuel),
+        detail: mtdFuel > 0
+          ? "Live from transport expense ledger (MTD)"
+          : "No fuel expense recorded (MTD)",
+      };
+    }
+    return k;
+  });
+  return { ...snap, kpis: updated };
+}
+
 export async function handleDashboard(req: Request, config: AppConfig): Promise<Response> {
-  return await handleSnapshot(req, config, "snapshot_dashboard", "Failed to load transport dashboard");
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requireTransportRead(auth.claims);
+  if (denied) return denied;
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const { snapshot, mtdFuel } = await runTenant(config, auth.claims, async (db) => {
+      const snapshot = await getSnapshot(db, orgId, schoolId, "snapshot_dashboard");
+      const mtdFuel = await getMonthToDateFuel(db, orgId, schoolId);
+      return { snapshot, mtdFuel };
+    });
+    return jsonResponse(envelope(withLiveFuelKpi(snapshot, mtdFuel)));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    if (error instanceof TransportSnapshotNotFoundError) {
+      // Same empty-state contract as handleSnapshot: a freshly onboarded school
+      // with no derived snapshot gets a clean empty payload, not a 404.
+      return jsonResponse(envelope({}));
+    }
+    console.error("handleDashboard error:", error);
+    return errorEnvelope("INTERNAL_ERROR", "Failed to load transport dashboard", 500);
+  }
 }
 
 export async function handleRoutes(req: Request, config: AppConfig): Promise<Response> {
