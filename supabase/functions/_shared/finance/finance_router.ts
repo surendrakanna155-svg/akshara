@@ -93,6 +93,11 @@ import {
 } from "./finance_recovery_handlers.ts";
 import { handleFinanceReports } from "./finance_reports_handlers.ts";
 import {
+  handleGetTallyLedgerMap,
+  handleTallyExport,
+  handleUpsertTallyLedgerMap,
+} from "./finance_tally_handlers.ts";
+import {
   handleGetSettings,
   handleUpdateSettings,
 } from "./finance_settings_handlers.ts";
@@ -415,6 +420,16 @@ export function matchFinanceRoute(
   }
   if (path === "/finance/reports" && method === "GET") {
     return { handler: handleFinanceReports, args: [] };
+  }
+  // Batch 7: Tally accounting export (owner-idea 11).
+  if (path === "/finance/reports/tally-export" && method === "GET") {
+    return { handler: handleTallyExport, args: [] };
+  }
+  if (path === "/finance/tally-ledger-map" && method === "GET") {
+    return { handler: handleGetTallyLedgerMap, args: [] };
+  }
+  if (path === "/finance/tally-ledger-map" && method === "PUT") {
+    return { handler: handleUpsertTallyLedgerMap, args: [] };
   }
   if (path === "/finance/settings" && method === "GET") {
     return { handler: handleGetSettings, args: [] };

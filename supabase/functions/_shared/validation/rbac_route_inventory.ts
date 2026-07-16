@@ -279,6 +279,10 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "POST", path: "/finance/payments/qr/:id/confirm", permission: "manageFinance", scope: "school", module: "finance" },
   { method: "GET", path: "/finance/defaulters", permission: "viewFinance", scope: "school", module: "finance" },
   { method: "GET", path: "/finance/reports", permission: "viewFinance", scope: "school", module: "finance" },
+  // Batch 7: Tally accounting export (read) + per-school ledger map (view/configure).
+  { method: "GET", path: "/finance/reports/tally-export", permission: "viewFinance", scope: "school", module: "finance" },
+  { method: "GET", path: "/finance/tally-ledger-map", permission: "viewFinance", scope: "school", module: "finance" },
+  { method: "PUT", path: "/finance/tally-ledger-map", permission: "manageFinance", scope: "school", module: "finance" },
   { method: "GET", path: "/finance/settings", permission: "viewFinance", scope: "school", module: "finance" },
   { method: "PUT", path: "/finance/settings", permission: "manageFinance", scope: "school", module: "finance" },
   { method: "POST", path: "/finance/scholarships", permission: "manageFinance", scope: "school", module: "finance" },
