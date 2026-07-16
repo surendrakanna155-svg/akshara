@@ -11,6 +11,8 @@ import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { enforceStorageQuota } from "../storage/storage_quota_enforcement.ts";
 import { recordStorageUsage } from "../storage/storage_quota_repository.ts";
+import { enforceUploadScanGate, recordUploadScan } from "../storage/upload_scan_repository.ts";
+import { initialScanStatus } from "../storage/upload_scan_service.ts";
 import { emitMutationAudit, schoolMemoriesAudit } from "../audit/mutation_audit_catalog.ts";
 import {
   buildMemoryAnalytics,
@@ -344,6 +346,26 @@ export async function handleMemoryUploadConfirm(
     } catch (recErr) {
       console.error("storage usage record (memories) failed:", recErr);
     }
+    // PRC-A Batch 9 — record the malware-scan status for the durable object, in a
+    // SEPARATE best-effort transaction (same reasoning as the usage recording). With
+    // no AV configured the status is an HONEST 'skipped' (not scanned) — never a
+    // fabricated 'clean'. Must never fail a confirm → fail-open.
+    try {
+      const { status, engine } = initialScanStatus();
+      await withTenantContext(config, auth.claims, (db) =>
+        recordUploadScan(db, {
+          organizationId: orgId,
+          schoolId,
+          bucket: "school-memories",
+          objectKey: body.storagePath!,
+          module: "memories",
+          status,
+          engine,
+          requestedBy: auth.claims.sub,
+        }));
+    } catch (scanErr) {
+      console.error("upload scan record (memories) failed:", scanErr);
+    }
     const downloadUrl = await createMemoryDownloadUrl(config, body.storagePath!);
     return jsonResponse(envelope({
       id: media.id,
@@ -367,17 +389,20 @@ export async function handleMemoryMediaDownload(
   if (denied) return denied;
 
   try {
-    const url = await withTenantContext(config, auth.claims, async (db) => {
+    const path = await withTenantContext(config, auth.claims, async (db) => {
       const rows = await db.queryObject<{ storage_path: string }>(
         `SELECT storage_path FROM school_memory_media WHERE id = $1`,
         [mediaId],
       );
-      const path = rows[0]?.storage_path;
-      if (!path) throw new Error("Media not found");
+      const p = rows[0]?.storage_path;
+      if (!p) throw new Error("Media not found");
       await emitMutationAudit(db, auth.claims, schoolMemoriesAudit.mediaDownloaded(mediaId), req);
-      return await createMemoryDownloadUrl(config, path);
+      return p;
     });
-    return jsonResponse(envelope({ downloadUrl: url }));
+    // PRC-A Batch 9 — malware-scan serving gate (default OFF → null → no change).
+    const gate = await enforceUploadScanGate(config, auth.claims, path);
+    if (gate) return gate;
+    return jsonResponse(envelope({ downloadUrl: await createMemoryDownloadUrl(config, path) }));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
     return errorEnvelope("MEMORIES_ERROR", "Download URL failed", 500);
@@ -395,7 +420,7 @@ export async function handleMemoryShareLink(
   if (denied) return denied;
 
   try {
-    const result = await withTenantContext(config, auth.claims, async (db) => {
+    const resolved = await withTenantContext(config, auth.claims, async (db) => {
       const media = await getMediaByShareToken(db, shareToken);
       if (!media?.storage_path) throw new Error("Share link not found");
       await emitMutationAudit(
@@ -404,10 +429,13 @@ export async function handleMemoryShareLink(
         schoolMemoriesAudit.shareResolved(shareToken, media.id),
         req,
       );
-      const downloadUrl = await createMemoryDownloadUrl(config, media.storage_path);
-      return { mediaId: media.id, eventId: media.event_id, downloadUrl };
+      return { mediaId: media.id, eventId: media.event_id, storagePath: media.storage_path };
     });
-    return jsonResponse(envelope(result));
+    // PRC-A Batch 9 — malware-scan serving gate (default OFF → null → no change).
+    const gate = await enforceUploadScanGate(config, auth.claims, resolved.storagePath);
+    if (gate) return gate;
+    const downloadUrl = await createMemoryDownloadUrl(config, resolved.storagePath);
+    return jsonResponse(envelope({ mediaId: resolved.mediaId, eventId: resolved.eventId, downloadUrl }));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
     return errorEnvelope("MEMORIES_ERROR", "Share link failed", 500);
