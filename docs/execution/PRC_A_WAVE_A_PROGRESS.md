@@ -320,7 +320,76 @@ Reproducible: [`live_cert_batch3_ai_wallet.sql`](../../scripts/qa/live_cert_batc
 
 ⇒ **Batch 3 (backend/data-plane) = LIVE CERTIFIED.** No open P0. Ships DARK (enforcement OFF) — flipping `AI_WALLET_ENFORCEMENT=true` needs only an edge restart, once real balances are granted.
 
-> **⚠ INFRA BLOCKER (2026-07-16, AFTER Batch 3 cert):** the VPS SSH control-master (`~/.ssh/akshara-cm.sock`) died right after this certification and cannot be re-opened locally (no authorized key in this environment). **Batch 3 is unaffected — fully deployed + certified before the outage.** But the **deploy + live-cert of Batch 4 (storage-quota) and Batch 5 are BLOCKED until the owner re-establishes the tunnel.** Implementation can continue locally; certification cannot. Deploy recipe unchanged (see `DEPLOY_CHECKPOINT_20260716_PRC_A.md`).
+> **⚠ INFRA BLOCKER (2026-07-16, AFTER Batch 3 cert) — RESOLVED same day:** the VPS SSH control-master briefly died after Batch 3's certification; the owner re-established the tunnel and Batch 4 was then deployed + certified (below). Batch 3 was unaffected (certified before the outage).
+
+---
+
+# 🔨 PRC-A BATCH 4 — STORAGE QUOTA (caps 31–36)
+
+The audit found uploads are validated PER FILE but there is NO cumulative tracking,
+NO storage_quota table, NO plan storage column — an org can accumulate unlimited
+storage one acceptable file at a time. Batch 4 adds the cumulative half, mirroring
+the live-certified Batch 3 wallet.
+
+**Commits:** `2c745d5d` (backend) · this doc/cert · (Flutter Control Center panel — separate).
+
+## Design (honours "no second limit system")
+Usage is a PROJECTION over an append-only signed ledger (`storage_usage_entries`:
+upload +bytes, delete −bytes, usage = SUM) — never a mutable counter. The limit
+lives in the EXISTING plan-limit system (`subscription_plans.max_storage_bytes`,
+threaded through `resolveSubscription` alongside the student/school slabs).
+Enforcement is SOFT check-then-act, identical to `enforceStudentLimit` (money needs
+the wallet's atomic admit; bytes do not — a small transient over-quota is accepted
+by design), fail-OPEN on error. Ships DARK behind `STORAGE_QUOTA_ENFORCEMENT`
+(default off) **and** all plan limits NULL — two independent brakes.
+
+## Wiring
+`GET /storage/quota` (viewStorageQuota) → usage/limit/available/health/enforced.
+Enforcement at the memories presign (the dominant media consumer); recording on
+confirm in a SEPARATE best-effort txn (a failed INSERT aborts a Postgres txn — it
+must never roll back the media row). Admissions/complaints adopt the same two
+functions (`enforceStorageQuota`/`recordStorageUsage`) as a documented fast-follow.
+Backend 3394 / 0 / 3 ign (was 3375).
+
+## ✅ DEPLOYED — 2026-07-16 (prod `20260888` → `20260889`)
+Backup → migrate (`supabase_admin`, `--single-transaction` with ledger INSERT) →
+rsync edge → restart → health. Verified live: `storage_usage_entries` **rls=t
+forced=t**, 2 policies, `erp_tenant` grant **INSERT,SELECT only**,
+`subscription_plans.max_storage_bytes` present (all 4 plans **NULL = unlimited**),
+`viewStorageQuota` → management/organizationAdmin/organizationOwner/superAdmin.
+Route contract on `127.0.0.1:3000`: `/storage/quota` **401**, `/storage/nope`
+**404**, `/health` **200**, `STORAGE_QUOTA_ENFORCEMENT` **unset (dark)**, level-50 **0**.
+
+## ✅ LIVE CERTIFIED — 2026-07-16. 6/6 probes PASS on real Postgres.
+Reproducible: [`live_cert_batch4_storage_quota.sql`](../../scripts/qa/live_cert_batch4_storage_quota.sql) (real `erp_tenant` via `app.set_request_context`, ROLLBACK, zero residue).
+
+| # | Probe | Verdict | Evidence |
+|---|---|---|---|
+| 1 | **Usage projection (signed SUM)** | **PASS** | Two uploads (+1, +2 MiB) and a delete (−0.5 MiB) → `used_bytes = 2621440` (2.5 MiB). The delete is correctly subtracted — the fake DB cannot evaluate this SUM. |
+| 2 | **RLS org-isolation** | **PASS** | org B reading org A's usage rows → **0**. Control: org A → **3**. |
+| 3 | **delta<>0 CHECK** | **PASS** | a zero-delta ledger row rejected by `storage_usage_entries_delta_nonzero` (1/1). |
+| 4 | **Append-only immutability** | **PASS** | as `erp_tenant`, UPDATE and DELETE both `permission denied` (2/2). |
+| 5 | **Plan storage-limit round-trip** | **PASS** | `max_storage_bytes` set to 5 GiB reads back through the plan query (the value `resolveSubscription` feeds the soft check). |
+| 6 | **Zero residue** | **PASS** | `storage_usage_entries=0`, no plan carries a limit after ROLLBACK. Prod untouched. |
+
+**NOT claimed:** atomic concurrency. Enforcement is SOFT check-then-act (matches the
+student/school slabs by design); there is no atomic guarantee to certify, so none is
+asserted. The soft decision (`withinStorageQuota`, incl. grace) is unit-tested; its
+DB inputs (projection + plan limit) are now live-proven.
+
+⇒ **Batch 4 (backend/data-plane) = LIVE CERTIFIED.** No open P0. Ships DARK — flipping
+`STORAGE_QUOTA_ENFORCEMENT=true` + setting per-plan `max_storage_bytes` (an edge
+restart) activates it, once usage has been metering for real.
+
+## State distinction (certification discipline)
+- **IMPLEMENTED + DEPLOYED + LIVE CERTIFIED:** ledger, projection, RLS, immutability,
+  delta constraint, plan-limit, GET API, dark enforcement + memories wiring.
+- **IMPLEMENTED (client), not certified-live:** the Flutter Control Center storage
+  panel + the memories-confirm `sizeBytes` echo (client — verified by analyze/tests).
+- **Honest residue / fast-follow:** admissions/complaints upload metering (same two
+  functions, not yet wired); a server-authoritative object stat (usage currently
+  trusts the client-declared size, consistent with the existing per-file cap);
+  low-storage ALERT dispatch (health is exposed via the API, no notification yet).
 
 ## State distinction (certification discipline)
 - **IMPLEMENTED + DEPLOYED + LIVE CERTIFIED:** wallet core, admit-clause double-spend safety, HTTP APIs, RBAC, audit, RLS, constraints, immutability — all proven on prod Postgres.
