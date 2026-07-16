@@ -271,3 +271,56 @@ Prod is at `20260881`; local is at `20260887`. Pending: **6 migrations** (`20260
 - **Parent cannot self-cancel** a request they raised (cert-desk + gate-pass): parent RLS is SELECT+INSERT only, so only staff can cancel. Matters most for gate-pass, where an approved pass carries a live 4h credential the requester cannot revoke. Fix = a narrow parent UPDATE policy (`USING` own-child ∧ `raised_by`=self ∧ status∈(pending,approved), `WITH CHECK status='cancelled'`) + relaxing the handler's school-scope gate.
 - **Complaints**: no reassignment endpoint once assigned; vendor-attach folds into a `commented` event (no `vendor_attached` enum value); photo upload declares `photo_path` optimistically before the client PUT completes (pre-existing pattern, inherited from admissions-documents).
 - **Storage quota still absent** (caps 31–36) — complaint photos are validated per-file but not counted against any cumulative quota.
+
+---
+
+# 🔨 PRC-A BATCH 3 — AI CREDIT WALLET (caps 37–43, owner decision #3)
+
+Owner law: "BUILD, but reconcile into ONE coherent model with the existing spend-cap
+governance / entitlements / quotas / AI call logging / reservations. No second competing
+quota system. Product usage units, NOT currency semantics. Reservation/commit/release
+correctness; no double-consumption, negative-balance races, or retry duplication."
+
+**Commits:** `5df4282e` (wallet CORE — projection over the existing ledger + admit clause) · `0294f10f` (Wallet HTTP APIs) · this doc/cert.
+
+## Design (honours owner #3 — no second system)
+The wallet owns NO counter. Balance is a PROJECTION over rows that already exist:
+`available = SUM(ai_credit_entries.units) − SUM(ai_call_log.credits_debited) − SUM(pending ai_call_reservations.credits_reserved)`.
+Enforcement is a FOURTH AND-term inside the SAME atomic INSERT..SELECT admit clause in
+`ai_call_reservations_repository.ts`, under the existing `pg_advisory_xact_lock` — not a
+new gate. Entitlements deliberately NOT used (headcount-slab axis ≠ consumable AI axis).
+Ships DARK (`AI_WALLET_ENFORCEMENT` default OFF) so deploying can't 0-balance-deny every org.
+
+## APIs (`0294f10f`)
+- `GET /ai-wallet` — balance + health + ledger (**viewAiWallet**, org-level).
+- `POST /ai-wallet/grant` — top_up | adjustment | expiry (**manageAiCredits**, superAdmin ONLY — a tenant topping up its own wallet = no wallet). Audited via `moduleEntityAudit("aiWallet.credit_granted")` in the same tenant txn as the insert. No UPDATE path (reversal = compensating row).
+- Backend **3375 passed / 0 failed / 3 ignored** (was 3364). `deno check` + `deno lint` clean.
+
+## ✅ DEPLOYED — 2026-07-16 (prod `20260887` → `20260888`)
+Backup → migrate (as `supabase_admin`, `--single-transaction` with the ledger INSERT) →
+`rsync --delete --exclude='*_test.ts'` edge → `docker restart akshara-edge` → health.
+Schema verified live: `ai_credit_entries` **rls=t forced=t**, 2 policies, `erp_tenant`
+grant = **INSERT,SELECT only** (no UPDATE/DELETE), `credits_debited`/`credits_reserved`
+columns present, `outcome` CHECK widened with `fallback_wallet_empty`, `manageAiCredits`
+→ **superAdmin only**, `viewAiWallet` → management/organizationAdmin/organizationOwner/superAdmin.
+Route contract on `127.0.0.1:3000`: `/ai-wallet` **401**, `/ai-wallet/grant` **401**,
+`/ai-wallet/nope` **404**, `/health` **200** (not shadowed), level-50 errors **0**.
+
+## ✅ LIVE CERTIFIED — 2026-07-16. All 6 probes PASS on real Postgres.
+Reproducible: [`live_cert_batch3_ai_wallet.sql`](../../scripts/qa/live_cert_batch3_ai_wallet.sql) · [`live_cert_batch3_double_spend.sh`](../../scripts/qa/live_cert_batch3_double_spend.sh). Both as the REAL `erp_tenant` role via `app.set_request_context` (identical to `withTenantContext`); ROLLBACK / tagged-delete so prod is untouched.
+
+| # | Probe | Verdict | Evidence |
+|---|---|---|---|
+| 1 | **Double-spend prevention** (the core claim) | **PASS** | Two CONCURRENT admits (verbatim production INSERT..SELECT + the same `pg_advisory_xact_lock(hashtextextended(org||':'||coalesce(school,'org'),42))`) against a wallet of 5 credits, each wanting 3. Session A → 1 reservation id; Session B → **0 rows** (A's committed hold made balance 5−3=2 < 3). **Exactly 1** pending hold survived; available = **2**. The fake DB cannot evaluate this. |
+| 2 | **Balance projection** | **PASS** | `granted=85 debited=30 reserved=20 available=35` on the EXACT `readWalletBalance` SQL. A **consumed** reservation of 50 was correctly NOT counted (only `status='pending'` is in-flight). |
+| 3 | **RLS org-isolation** | **PASS** | org B context reading org A's credit rows → **0**. Control: org A → **3** (probe not vacuous). |
+| 4 | **DB sign CHECK** | **PASS** | `top_up<0`, `expiry>0`, `adjustment=0` all rejected by `ai_credit_entries_units_sign_check` (3/3). |
+| 5 | **Append-only immutability** | **PASS** | As `erp_tenant`: UPDATE and DELETE on `ai_credit_entries` both `permission denied` (2/2). A ledger you can silently rewrite is not a ledger. |
+| 6 | **Zero residue** | **PASS** | After every probe: `ai_credit_entries=0`, tagged rows=0, org wallet balance back to **0**. Prod untouched. |
+
+⇒ **Batch 3 (backend/data-plane) = LIVE CERTIFIED.** No open P0. Ships DARK (enforcement OFF) — flipping `AI_WALLET_ENFORCEMENT=true` needs only an edge restart, once real balances are granted.
+
+## State distinction (certification discipline)
+- **IMPLEMENTED + DEPLOYED + LIVE CERTIFIED:** wallet core, admit-clause double-spend safety, HTTP APIs, RBAC, audit, RLS, constraints, immutability — all proven on prod Postgres.
+- **IMPLEMENTED, not yet certified-live:** the Flutter Control Center wallet panel (client UI — ships in a release build, not the edge; verified by `flutter analyze`/widget tests, not a Postgres probe).
+- **Honest residue:** cross-org top-up (a platform superAdmin crediting an ARBITRARY other org) needs an act-as-org tenant context this codebase lacks — deliberately out of scope, not faked; low-balance ALERT dispatch (cap 40) computes `walletHealth` but is not yet wired to a notification channel; storage-quota (31–36) still absent.
