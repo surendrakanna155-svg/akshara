@@ -174,3 +174,51 @@ Health-data privacy/RBAC model · VAULT_ENC_KEY provisioning + secret re-encrypt
 
 ## Next in the fix phase
 Vault platform-DB path (makes 45 + 44–49 real) → bulk fee assignment (66/69, in progress) → class/section binding (67) + configurable proration (73, owner #5) → School-Completion hub nav + syllabus capture (58–65) → grace/suspension enforcement (57) → then the missing modules (cert-desk → gate-pass → complaints → health) → AI wallet + storage quota → marketing/poster/social → WhatsApp/webhook-HMAC/Tally → transport expense domain + cost intelligence → PRC-A exit (EOS) → PRC-B.
+
+---
+
+# 🔨 PRC-A BATCH 2 — BUILD COMPLETE (2026-07-16) · EOS: CONDITIONAL PASS · **NOT CERTIFIED**
+
+**Commits:** `675998aa` (backend) · `c17fb326` (audit + RBAC inventory) · `ace06ea0` (Flutter clients) · `69fd2e6c` (routes + nav + health handler/router tests).
+**Gates:** backend **3343 passed / 0 failed / 3 ignored** (baseline 2990) · `deno check` clean · Flutter **+4068 / ~1** (baseline +4007) · `flutter analyze` **0**.
+
+| Caps | Module | Was | Now |
+|---|---|---|---|
+| 136–148 | Certificate request desk | PARTIAL | request→approve layer in front of the **existing certified** issuance engine (new `sis_certificate_requests` + F2 `certificateRequest`); new **"fee"** cert type on a real finance pull |
+| 109–118 | Gate pass / early pickup | MISSING | `gate_passes` + F2 `gatePass`; single-use OTP/QR (`crypto.getRandomValues`, **hashes only**, constant-time compare, TTL `scheduled_at+4h`); OTP dispatched to the guardian, never in a response or the persisted approval effect |
+| 101–108 | Complaint / internal issue | MISSING | `complaints` + append-only `complaint_events`; deterministic `(category,severity)` SLA table; enforced legal-transition table |
+| 119–127 | Health / infirmary | MISSING | owner decision #1 as strict need-to-know; new `healthStaff` role; immutable administration + access logs |
+
+## Health RBAC as built (owner decision #1) — teachers get NO clinical surface
+`manageStudentHealth` → `healthStaff` ONLY · `administerStudentMedication` → `healthStaff` ONLY (a separate gate from manage, proven by test) · `viewStudentHealthRecord` → `healthStaff` + `principal` + `vicePrincipal` ONLY (**not** teacher/classTeacher/coordinator/officeStaff/schoolAdmin/management/superAdmin/org admins) · `viewStudentCareAlert` → teaching roles, carrying **no clinical detail**, narrowed server-side to students the caller actually teaches (roster §section-FK ∪ roster §text-labels ∪ timetable incl. substitutes) and **failing CLOSED** when unresolvable. A teacher cannot reach `/student-health` at all.
+
+## 🔴 Two P0s found DURING the batch and fixed before shipping (neither ever deployed)
+1. **Phantom Transfer Certificate.** The cert-desk approval effect caught `NoDuesPendingError` / `InvalidStudentStatusTransitionError` to report a friendly `blocked_dues` (reasoning by analogy from `case "refund":`). But the TC engine throws BOTH from **after** it has burned a sequential serial and inserted the issue row (`sis_certificates_repository.ts:525` waiver-consume race, `:560` prior-status guard) — those throws **are** the rollback that prevents a duplicate legal document. Catching them committed a phantom TC: burned serial, issue row present, no clearance snapshot, student never flipped, request reporting `blocked_dues`. The two throw sites are indistinguishable by type, so type-based catching cannot be made safe → the one recoverable gate (real dues) is now **pre-checked** via the same waiver-aware `clearance_gate` the engine uses, and every engine throw propagates and fails closed. **The fake DB cannot model rollback, so no unit test could ever have caught this** — it passed 235 tests.
+2. **A permission gate that could never open.** Gate-pass wrapped its raise FAB / verify action / cancel in `AksharaManageAction` → `ManagePermissionGuard` → `hasManagePermission` == `isManagePermission(p) && hasPermission(p)`, and `isManagePermission` is literally `p.name.startsWith('manage')` (`mutation_permission_validator.dart:19`). `requestGatePass`/`verifyGatePass`/`approveGatePass` match neither `manage*` nor `approve*` ⇒ **failed closed for every caller**; three affordances were dead UI. Now plain `hasPermission`. ⚠ **The naming convention is load-bearing and invisible at the call site** — the cert-desk agent hit this independently and documented it; the gate-pass agent did not.
+
+## Also fixed
+- **gate-pass writes were unaudited** — caught by QA-R-008 when the routes were registered in `RBAC_ROUTE_INVENTORY`. "Who released this child at the gate" is the module's whole point. Now `moduleEntityAudit` on raise/verify/cancel, inside the same transaction as the guarded write.
+- **`requireSchoolOperationalScope` (~98 call sites, EVERY module)** hardcoded *"Admissions operational data requires school scope"* — a copy-paste artifact. A Student Health caller was told about Admissions, and that wrong domain was captured verbatim in the 403 body, request log and access-denied audit. Never a security bug; actively misleading in the trail for the most sensitive domain. Now domain-neutral + optional label; no test asserted the old string.
+- Migration numbering: `20260884` was "queued" for caps 62/63 in the handoff but referenced **nowhere** in the repo. Batch 2 takes `20260884`–`20260887` **contiguously**; caps 62/63 get a fresh higher number when built (a gap would make them sort behind already-applied migrations).
+
+## EOS GATE: **CONDITIONAL PASS** — Merge/QA only. **BLOCKED at Staging/Pilot/Production.**
+No Part 7B *Automatic Failure Condition* triggered; **no open P0**; no critical regression. But Part 7B — *Mandatory Certification Rules* is not satisfiable today:
+- **"Critical workflows are unverified"** — raise→approve→issue, gate verify, and the care-alert journey have never run against real Postgres.
+- **"Required permissions are unverified"** — code-level gates are proven (103 handler/router tests); **RLS is not**. The fake DB pattern-matches SQL and evaluates **neither JOINs nor RLS**, which is precisely how the fee-reductions engine once shipped "certified" with a broken join.
+
+⇒ **Batch 2 BUILD = complete. Batch 2 CERTIFICATION = NOT DONE.** Do not claim LIVE/CERTIFIED from these green tests.
+
+### 🔒 P1 tracked into the deploy/cert wave — the live-probe list (blocked: VPS SSH refusing publickey)
+1. RLS tenant isolation on all Batch 2 tables (org/school predicates actually block cross-tenant reads).
+2. Parent/guardian scoping via the `student_guardians` subquery — a parent sees only their own child's certificate requests / gate passes / complaints / health rows.
+3. `teacherTeachesStudent` — the live 3-way UNION over roster/section-labels/timetable, incl. the `sis_student_enrollments.section_id` NULL soft-FK edge.
+4. Immutability of `student_medication_administration_log` + `student_health_access_log` at the GRANT/RLS level (today proven only by source/migration text inspection).
+5. `healthStaff` role + its 3 grants resolving end-to-end through live `role_permissions` → JWT → `claims.permissions`.
+6. Partial-unique constraints (`uq_gate_passes_open_slot`, the cert-desk open-request guard) — the constraint-violation catch matches an error string never triggered against real Postgres.
+7. **The two money P0s from `4bc1046b`** (2nd-structure account resolution + cancel-invoice lockstep) — still uncertified for the same JOIN-blindness reason.
+
+### Honest residue (not fixed, deliberately not hidden)
+- **No parent-facing UI** for cert-requests / gate-pass / complaints. The API supports parent scope and RLS allows parent SELECT+INSERT, but no parent screen exists.
+- **Parent cannot self-cancel** a request they raised (cert-desk + gate-pass): parent RLS is SELECT+INSERT only, so only staff can cancel. Matters most for gate-pass, where an approved pass carries a live 4h credential the requester cannot revoke. Fix = a narrow parent UPDATE policy (`USING` own-child ∧ `raised_by`=self ∧ status∈(pending,approved), `WITH CHECK status='cancelled'`) + relaxing the handler's school-scope gate.
+- **Complaints**: no reassignment endpoint once assigned; vendor-attach folds into a `commented` event (no `vendor_attached` enum value); photo upload declares `photo_path` optimistically before the client PUT completes (pre-existing pattern, inherited from admissions-documents).
+- **Storage quota still absent** (caps 31–36) — complaint photos are validated per-file but not counted against any cumulative quota.
