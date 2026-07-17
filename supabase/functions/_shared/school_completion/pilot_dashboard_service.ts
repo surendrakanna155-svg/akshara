@@ -72,13 +72,30 @@ export async function buildPilotDashboard(
     [schoolId],
   );
 
-  const otp = await db.queryObject<{ sent: string; failed: string }>(
-    `SELECT count(*) FILTER (WHERE consumed_at IS NOT NULL)::text AS sent,
-            count(*) FILTER (WHERE consumed_at IS NULL AND expires_at < now())::text AS failed
-     FROM otp_requests
-     WHERE context_school_id = $1 AND created_at > now() - interval '7 days'`,
-    [schoolId],
-  );
+  // P5 (red-team Round 5): otp_requests is an auth-flow table (holds phone PII, no
+  // RLS) that the non-bypass erp_tenant role is deliberately NOT granted — reading
+  // it here threw `permission denied` and 500'd the WHOLE pilot dashboard on real
+  // Postgres (the fake-DB tests can't see grants, so this shipped broken). The OTP
+  // delivery metric now degrades gracefully: a SAVEPOINT isolates the probe so its
+  // failure can't abort the outer read transaction, and the metric falls back to
+  // "unavailable" (zeros) while the other four metrics render.
+  let otp: { sent: string; failed: string }[] = [];
+  try {
+    await db.queryObject("SAVEPOINT otp_probe");
+    otp = await db.queryObject<{ sent: string; failed: string }>(
+      `SELECT count(*) FILTER (WHERE consumed_at IS NOT NULL)::text AS sent,
+              count(*) FILTER (WHERE consumed_at IS NULL AND expires_at < now())::text AS failed
+       FROM otp_requests
+       WHERE context_school_id = $1 AND created_at > now() - interval '7 days'`,
+      [schoolId],
+    );
+    await db.queryObject("RELEASE SAVEPOINT otp_probe");
+  } catch (_e) {
+    try {
+      await db.queryObject("ROLLBACK TO SAVEPOINT otp_probe");
+    } catch { /* savepoint already gone — nothing to roll back */ }
+    otp = [];
+  }
 
   const teacherTotal = Number(teachers[0]?.total ?? 0);
   const teacherActive = Number(teachers[0]?.active ?? 0);
