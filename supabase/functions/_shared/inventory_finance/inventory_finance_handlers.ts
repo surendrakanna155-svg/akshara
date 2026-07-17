@@ -18,6 +18,7 @@ import {
   InvalidPurchaseOrderStateError,
   listGoodsReceipts,
   listPurchaseOrders,
+  listStockLevels,
   listStockValuations,
   listVendors,
   PurchaseOrderNotFoundError,
@@ -420,5 +421,42 @@ export async function handleStockValuation(req: Request, config: AppConfig): Pro
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
     return errorEnvelope("INTERNAL_ERROR", "Failed to load stock valuation", 500);
+  }
+}
+
+/**
+ * WEB-004 (ERP-WT-004) — GET /inventory/stock. The web Stock page's primary
+ * ledger: per-item on-hand + reorder level + valuation, with the below-reorder
+ * flag pre-computed. Optional ?itemType=asset|consumable. Read gate (viewInventory).
+ */
+export async function handleStockLevels(req: Request, config: AppConfig): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireInventoryRead(auth.claims);
+  if (denied) return denied;
+
+  const url = new URL(req.url);
+  const itemType = url.searchParams.get("itemType") ?? undefined;
+  if (itemType && itemType !== "asset" && itemType !== "consumable") {
+    return errorEnvelope("VALIDATION_ERROR", "itemType must be asset|consumable", 422);
+  }
+
+  try {
+    const items = await withTenantContext(config, auth.claims, async (db) =>
+      await listStockLevels(
+        db,
+        organizationIdFromClaims(auth.claims),
+        schoolIdFromClaims(auth.claims)!,
+        { itemType: itemType || undefined },
+      )
+    );
+    const totalValue = items.reduce((sum, item) => sum + item.inventoryValue, 0);
+    const belowReorderCount = items.filter((item) => item.belowReorder).length;
+    return jsonResponse(
+      envelope({ items, totalValue, belowReorderCount, count: items.length }),
+    );
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    return errorEnvelope("INTERNAL_ERROR", "Failed to load stock", 500);
   }
 }

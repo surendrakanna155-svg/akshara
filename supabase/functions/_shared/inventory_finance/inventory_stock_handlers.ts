@@ -27,6 +27,7 @@ import {
   issueStock,
   listLowStock,
   listPendingAdjustments,
+  listStockAdjustments,
   listStockItems,
   listStockRegister,
   recordStockCount,
@@ -392,6 +393,40 @@ export async function handleListPendingAdjustments(req: Request, config: AppConf
     const mapped = mapStockError(error);
     if (mapped) return mapped;
     return errorEnvelope("INTERNAL_ERROR", "Failed to list pending adjustments", 500);
+  }
+}
+
+/**
+ * WEB-004 (ERP-WT-004) — GET /inventory/stock/approvals. The full maker-checker
+ * value-reducing stock register (pending + decided, newest first), for the web
+ * Stock-Approvals page. Optional ?status=pending|approved|rejected. Read gate.
+ */
+export async function handleStockApprovals(req: Request, config: AppConfig): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireInventoryRead(auth.claims);
+  if (denied) return denied;
+
+  const url = new URL(req.url);
+  const status = url.searchParams.get("status") ?? undefined;
+  if (status && !["pending", "approved", "rejected"].includes(status)) {
+    return errorEnvelope("VALIDATION_ERROR", "status must be pending|approved|rejected", 422);
+  }
+
+  try {
+    const items = await withTenantContext(config, auth.claims, async (db) =>
+      await listStockAdjustments(
+        db,
+        organizationIdFromClaims(auth.claims),
+        schoolIdFromClaims(auth.claims)!,
+        { status: status || undefined },
+      )
+    );
+    return jsonResponse(envelope({ items, count: items.length }));
+  } catch (error) {
+    const mapped = mapStockError(error);
+    if (mapped) return mapped;
+    return errorEnvelope("INTERNAL_ERROR", "Failed to list stock approvals", 500);
   }
 }
 

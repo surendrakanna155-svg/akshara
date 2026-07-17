@@ -102,6 +102,67 @@ export function computeEconomics(
   };
 }
 
+/**
+ * WEB-006 (ERP-WT-006) — the AI trust / governance lens the web intelligence
+ * dashboard reads. It is a pure re-framing of the SAME economics aggregate (no
+ * new query, no new telemetry): the governance-facing view of ai_call_log —
+ * how many calls reached a provider vs were governed away (deterministic
+ * fallback), plus the specific guardrail/rate/spend-cap/no-key breakdown and
+ * cache reuse. Every number traces to a real ai_call_log outcome; nothing is
+ * fabricated (a tenant with no AI activity reports all zeros).
+ */
+export interface AiTrust {
+  monthStart: string;
+  /** provider calls + governed fallbacks (month-to-date). */
+  governedCalls: number;
+  /** calls that reached a model (ok + refused). */
+  providerCalls: number;
+  /** calls served deterministically / discarded by an output guard (no provider). */
+  governedFallbacks: number;
+  /** governedFallbacks / governedCalls (0 when idle). */
+  fallbackRatio: number;
+  /** output refusals (the model was asked and declined). */
+  refusedCount: number;
+  /** output guardrail trips (reply produced then discarded). */
+  guardrailTrips: number;
+  /** per-user + per-school rate-limit fallbacks. */
+  rateLimitedCount: number;
+  /** monthly spend-cap fallbacks. */
+  spendCapFallbacks: number;
+  /** no-provider-key fallbacks. */
+  noKeyFallbacks: number;
+  /** full outcome histogram (pass-through, honest). */
+  outcomes: Record<string, number>;
+  cacheHits: number;
+  cacheHitRatio: number;
+  tokensSaved: number;
+  atSpendWarn: boolean;
+  atSpendCap: boolean;
+}
+
+export function computeAiTrust(e: AiEconomics): AiTrust {
+  const oc = e.callsByOutcome ?? {};
+  const governedCalls = e.modelCalls + e.fallbacks;
+  return {
+    monthStart: e.monthStart,
+    governedCalls,
+    providerCalls: e.modelCalls,
+    governedFallbacks: e.fallbacks,
+    fallbackRatio: governedCalls > 0 ? e.fallbacks / governedCalls : 0,
+    refusedCount: oc["refused"] ?? 0,
+    guardrailTrips: oc["fallback_guard"] ?? 0,
+    rateLimitedCount: (oc["fallback_rate_user"] ?? 0) + (oc["fallback_rate_school"] ?? 0),
+    spendCapFallbacks: oc["fallback_spend_cap"] ?? 0,
+    noKeyFallbacks: oc["fallback_no_key"] ?? 0,
+    outcomes: oc,
+    cacheHits: e.cacheHits,
+    cacheHitRatio: e.cacheHitRatio,
+    tokensSaved: e.tokensSaved,
+    atSpendWarn: e.atSpendWarn,
+    atSpendCap: e.atSpendCap,
+  };
+}
+
 function monthStartIso(now: Date): string {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
 }

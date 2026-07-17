@@ -474,6 +474,60 @@ export async function listStockValuations(
   }));
 }
 
+/**
+ * WEB-004 (ERP-WT-004) — the stock ledger the web Stock page reads: on-hand,
+ * reorder level, and per-item valuation in one row (the existing
+ * `listStockValuations` omits reorder_level/item_name/item_type). Optional
+ * itemType filter ('asset' | 'consumable'). Same single table + RLS scope.
+ */
+export async function listStockLevels(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  opts: { itemType?: string } = {},
+): Promise<Array<{
+  sku: string;
+  itemName: string | null;
+  itemType: string;
+  quantityOnHand: number;
+  reorderLevel: number;
+  weightedAvgCost: number;
+  inventoryValue: number;
+  belowReorder: boolean;
+}>> {
+  const args: unknown[] = [organizationId, schoolId];
+  let filter = "";
+  if (opts.itemType) {
+    args.push(opts.itemType);
+    filter = ` AND item_type = $${args.length}`;
+  }
+  const rows = await db.queryObject<{
+    sku: string;
+    item_name: string | null;
+    item_type: string;
+    quantity_on_hand: number;
+    reorder_level: number;
+    weighted_avg_cost: number;
+  }>(
+    `SELECT sku, item_name, item_type, quantity_on_hand, reorder_level, weighted_avg_cost
+     FROM inventory_stock_valuations
+     WHERE organization_id = $1 AND school_id = $2${filter}
+     ORDER BY sku ASC
+     LIMIT 500`,
+    args,
+  );
+  return rows.map((row) => ({
+    sku: row.sku,
+    itemName: row.item_name,
+    itemType: row.item_type,
+    quantityOnHand: row.quantity_on_hand,
+    reorderLevel: row.reorder_level,
+    weightedAvgCost: row.weighted_avg_cost,
+    inventoryValue: row.quantity_on_hand * row.weighted_avg_cost,
+    belowReorder: row.quantity_on_hand <= row.reorder_level,
+  }));
+}
+
 export async function listPurchaseOrders(
   db: TenantQueryClient,
   organizationId: string,

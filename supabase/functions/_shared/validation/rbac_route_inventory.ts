@@ -368,6 +368,17 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "GET", path: "/student-health/students/:studentId/care-alert", permission: "viewStudentCareAlert", scope: "school", module: "student_health" },
   { method: "GET", path: "/student-health/students/:studentId/record", permission: "viewStudentHealthRecord", scope: "school", module: "student_health" },
   { method: "GET", path: "/student-health/access-log", permission: "viewStudentHealthRecord", scope: "school", module: "student_health" },
+  // Web-platform-discovered read endpoints (ERP-WT / WEB-001..010). OR-gated
+  // routes list their primary slug, matching the sibling convention (e.g.
+  // /intelligence/risk/students → viewStudentRisk).
+  { method: "GET", path: "/finance/student-accounts", permission: "viewFinance", scope: "school", module: "finance" },
+  { method: "GET", path: "/inventory/stock", permission: "viewInventory", scope: "school", module: "inventory" },
+  { method: "GET", path: "/inventory/stock/approvals", permission: "viewInventory", scope: "school", module: "inventory" },
+  { method: "GET", path: "/intelligence/ai-economics", permission: "viewAiCopilot", scope: "school", module: "intelligence" },
+  { method: "GET", path: "/intelligence/trust", permission: "viewAiCopilot", scope: "school", module: "intelligence" },
+  { method: "GET", path: "/communications/analytics/summary", permission: "viewCommunicationAnalytics", scope: "school", module: "communication" },
+  { method: "GET", path: "/communications/analytics/parent-adoption", permission: "viewCommunicationAnalytics", scope: "school", module: "communication" },
+  { method: "GET", path: "/dashboard/overview", permission: "viewAdminHub", scope: "school", module: "dashboard" },
 ];
 
 export const RBAC_MODULE_PERMISSIONS = [

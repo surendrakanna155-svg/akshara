@@ -45,6 +45,7 @@ import { routeAiWallet } from "../_shared/ai/ai_wallet_router.ts";
 import { routeStorageQuota } from "../_shared/storage/storage_quota_router.ts";
 import { routeSearch } from "../_shared/search/search_router.ts";
 import { routeAnalytics } from "../_shared/analytics/analytics_router.ts";
+import { routeDashboard } from "../_shared/dashboard/dashboard_router.ts";
 import { routeEducation } from "../_shared/education/education_router.ts";
 import { routeIntelligence } from "../_shared/intelligence/intelligence_router.ts";
 import { routeEmployee } from "../_shared/employee/employee_router.ts";
@@ -171,6 +172,8 @@ export async function routeModuleRequest(
     routeEntitlements,
     // --- end B2 entitlement layer ---
     routeAnalytics,
+    // WEB-001: school-admin dashboard overview (core, no entitlement).
+    routeDashboard,
     routeEducation,
     routeIntelligence,
     routeCopilot,

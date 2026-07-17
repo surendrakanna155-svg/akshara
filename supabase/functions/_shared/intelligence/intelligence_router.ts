@@ -1,6 +1,8 @@
 import type { AppConfig } from "../config.ts";
 import { errorEnvelope } from "../http.ts";
 import {
+  handleAiEconomicsDashboard,
+  handleAiTrustDashboard,
   handleComputeStudentRisks,
   handleGenerateCommunication,
   handleGenerateParentGuidance,
@@ -117,6 +119,13 @@ export function matchIntelligenceRoute(
   }
   if (path === "/intelligence/principal/center" && method === "GET") {
     return { handler: handlePrincipalIntelligenceCenter, args: [] };
+  }
+  // WEB-006: AI economics + governance/trust dashboards.
+  if (path === "/intelligence/ai-economics" && method === "GET") {
+    return { handler: handleAiEconomicsDashboard, args: [] };
+  }
+  if (path === "/intelligence/trust" && method === "GET") {
+    return { handler: handleAiTrustDashboard, args: [] };
   }
   if (path === "/intelligence/homework-intelligence/plan" && method === "GET") {
     return { handler: handleHomeworkIntelligencePlan, args: [] };
