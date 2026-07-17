@@ -674,7 +674,7 @@ export async function listMarksEntryProgress(
       WHERE es.organization_id = $1
         AND es.school_id = $2
         AND es.phase = 'marks_entry'
-      GROUP BY es.id, es.title, es.subject, es.grade, es.section_name, es.marks_entry_deadline
+      GROUP BY es.id, es.title, es.subject, es.grade, es.section_name, es.marks_entry_deadline, es.updated_at
       ORDER BY es.updated_at DESC`,
     [organizationId, schoolId],
   );
