@@ -4,7 +4,11 @@ import {
   requirePermission,
   requireSchoolOperationalScope,
 } from "../permission_middleware.ts";
-import { assignmentToApi, studentAccountToApi } from "./finance_mapper.ts";
+import {
+  assignmentToApi,
+  studentAccountListItemToApi,
+  studentAccountToApi,
+} from "./finance_mapper.ts";
 import {
   bulkAssignFeeStructure,
   DuplicateAssignmentError,
@@ -473,6 +477,54 @@ Deno.test("studentAccountToApi maps to client contract", async () => {
   assertEquals(api.totalDue, "50000");
   assertEquals(api.balance, "50000");
   assertEquals(api.status, "active");
+});
+
+Deno.test("studentAccountListItemToApi maps a list row (WEB-007)", () => {
+  const api = studentAccountListItemToApi({
+    id: "acc-1",
+    student_id: STUDENT,
+    fee_assignment_id: "fa-1",
+    academic_year: "2026-27",
+    total_fee: "50000",
+    amount_paid: "20000",
+    outstanding_amount: "30000",
+    status: "open",
+    student_name: "Asha Rao",
+    admission_number: "ADM-1001",
+    class_label: "Grade 5-A",
+    fee_structure_id: STRUCTURE,
+    fee_structure_name: "Standard Tuition",
+  });
+  assertEquals(api.studentName, "Asha Rao");
+  assertEquals(api.admissionNumber, "ADM-1001");
+  assertEquals(api.totalDue, "50000");
+  assertEquals(api.totalPaid, "20000");
+  assertEquals(api.balance, "30000");
+  assertEquals(api.status, "active");
+  assertEquals(api.feeAssignmentId, "fa-1");
+});
+
+Deno.test("studentAccountListItemToApi tolerates null enrichment", () => {
+  const api = studentAccountListItemToApi({
+    id: "acc-2",
+    student_id: STUDENT,
+    fee_assignment_id: "fa-2",
+    academic_year: "2026-27",
+    total_fee: "0",
+    amount_paid: "0",
+    outstanding_amount: "0",
+    status: "closed",
+    student_name: null,
+    admission_number: null,
+    class_label: null,
+    fee_structure_id: null,
+    fee_structure_name: null,
+  });
+  assertEquals(api.studentName, "");
+  assertEquals(api.admissionNumber, "");
+  assertEquals(api.classLabel, "");
+  assertEquals(api.feeStructureId, "");
+  assertEquals(api.status, "closed");
 });
 
 Deno.test("assignmentToApi maps assignment row", () => {

@@ -27,6 +27,7 @@ import {
   handleGetFeeAssignment,
   handleGetStudentAccount,
   handleListFeeAssignments,
+  handleListStudentAccounts,
 } from "./finance_assignments_handlers.ts";
 import {
   handleArchiveFeeStructure,
@@ -220,6 +221,12 @@ export function matchFinanceRoute(
   );
   if (studentLedgerMatch && method === "GET") {
     return { handler: handleStudentLedger, args: [studentLedgerMatch[1]!] };
+  }
+
+  // WEB-007: LIST is the bare collection path — registered BEFORE the /{id}
+  // regex so the single-segment matcher can't swallow it.
+  if (path === "/finance/student-accounts" && method === "GET") {
+    return { handler: handleListStudentAccounts, args: [] };
   }
 
   const studentAccountMatch = path.match(/^\/finance\/student-accounts\/([^/]+)$/);

@@ -1,6 +1,7 @@
 import type {
   AssignmentWithAccount,
   FinanceFeeAssignmentRow,
+  StudentAccountListRow,
 } from "./finance_assignments_repository.ts";
 import type {
   CollectionListRow,
@@ -264,6 +265,31 @@ export function studentAccountToApi(
     // consume for assign/bulk-assign, so the proration explanation travels
     // with the result instead of requiring a second GET-assignment call.
     proration: prorationToApi(assignment),
+  };
+}
+
+/**
+ * WEB-007 — maps one lightweight list row to the client contract. Same field
+ * names as `studentAccountToApi` for the fields the list actually shows, minus
+ * the per-account enrichment (invoice/proration/installment) the list omits.
+ */
+export function studentAccountListItemToApi(
+  row: StudentAccountListRow,
+): Record<string, unknown> {
+  return {
+    id: row.id,
+    studentId: row.student_id,
+    studentName: row.student_name ?? "",
+    admissionNumber: row.admission_number ?? "",
+    classLabel: row.class_label ?? "",
+    feeStructureName: row.fee_structure_name ?? "",
+    feeStructureId: row.fee_structure_id ?? "",
+    feeAssignmentId: row.fee_assignment_id,
+    academicYear: row.academic_year,
+    totalDue: formatAmount(row.total_fee),
+    totalPaid: formatAmount(row.amount_paid),
+    balance: formatAmount(row.outstanding_amount),
+    status: mapAccountStatus(row.status),
   };
 }
 

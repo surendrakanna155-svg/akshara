@@ -673,6 +673,101 @@ export async function getStudentAccount(
   return enrich;
 }
 
+/**
+ * WEB-007 (ERP-WT-007) — the lightweight row the finance student-accounts LIST
+ * page consumes. The single-`GET /finance/student-accounts/{id}` path enriches
+ * with invoice + proration per account; a list can't afford that N+1, so this
+ * is a flat projection built by ONE join query (name from students, admission/
+ * class from the latest fee handoff, structure name from the assignment).
+ */
+export interface StudentAccountListRow {
+  id: string;
+  student_id: string;
+  fee_assignment_id: string;
+  academic_year: string;
+  total_fee: string;
+  amount_paid: string;
+  outstanding_amount: string;
+  status: string;
+  student_name: string | null;
+  admission_number: string | null;
+  class_label: string | null;
+  fee_structure_id: string | null;
+  fee_structure_name: string | null;
+}
+
+/**
+ * WEB-007 — paginated list of a school's student fee accounts. Org+school
+ * scoped (RLS enforces it too); optional academic-year filter and a free-text
+ * query over student name / admission number. One COUNT + one page query, no
+ * per-row fan-out.
+ */
+export async function listStudentAccounts(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  pagination: PaginationParams,
+  filters: { academicYear?: string; query?: string } = {},
+): Promise<PaginationResult<StudentAccountListRow>> {
+  const limit = Math.min(Math.max(pagination.pageSize, 1), 100);
+  const offset = offsetFor(pagination.page, limit);
+
+  const where: string[] = ["a.organization_id = $1", "a.school_id = $2"];
+  const args: unknown[] = [organizationId, schoolId];
+  if (filters.academicYear) {
+    args.push(filters.academicYear);
+    where.push(`a.academic_year = $${args.length}`);
+  }
+  const trimmedQuery = filters.query?.trim();
+  if (trimmedQuery) {
+    args.push(`%${trimmedQuery}%`);
+    const p = `$${args.length}`;
+    where.push(`(s.display_name ILIKE ${p} OR h.admission_number ILIKE ${p})`);
+  }
+  const whereSql = where.join(" AND ");
+
+  const joinSql = `
+    FROM finance_student_accounts a
+    LEFT JOIN students s
+      ON s.id = a.student_id AND s.organization_id = a.organization_id AND s.school_id = a.school_id
+    LEFT JOIN finance_fee_assignments fa
+      ON fa.id = a.fee_assignment_id AND fa.organization_id = a.organization_id AND fa.school_id = a.school_id
+    LEFT JOIN finance_fee_structures fs
+      ON fs.id = fa.fee_structure_id AND fs.organization_id = a.organization_id AND fs.school_id = a.school_id
+    LEFT JOIN LATERAL (
+      SELECT admission_number, class_label, student_name
+      FROM admissions_fee_handoffs h2
+      WHERE h2.student_id = a.student_id AND h2.organization_id = a.organization_id AND h2.school_id = a.school_id
+      ORDER BY h2.created_at DESC LIMIT 1
+    ) h ON true`;
+
+  const total = await db.queryCount(
+    `SELECT count(*)::text AS count ${joinSql} WHERE ${whereSql}`,
+    args,
+  );
+
+  const items = await db.queryObject<StudentAccountListRow>(
+    `SELECT a.id, a.student_id, a.fee_assignment_id, a.academic_year,
+            a.total_fee, a.amount_paid, a.outstanding_amount, a.status,
+            COALESCE(h.student_name, s.display_name) AS student_name,
+            h.admission_number, h.class_label,
+            fa.fee_structure_id, fs.name AS fee_structure_name
+     ${joinSql}
+     WHERE ${whereSql}
+     ORDER BY COALESCE(h.student_name, s.display_name) ASC NULLS LAST, a.created_at DESC
+     LIMIT $${args.length + 1} OFFSET $${args.length + 2}`,
+    [...args, limit, offset],
+  );
+
+  return {
+    items,
+    total,
+    page: pagination.page,
+    pageSize: limit,
+    hasMore: offset + items.length < total,
+  };
+}
+
 async function enrichAssignmentWithAccount(
   db: TenantQueryClient,
   organizationId: string,

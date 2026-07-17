@@ -24,11 +24,13 @@ import {
   getAssignment,
   getStudentAccount,
   listAssignments,
+  listStudentAccounts,
   resolveStudentIdsForBoundStructure,
 } from "./finance_assignments_repository.ts";
 import {
   assignmentToApi,
   listEnvelope,
+  studentAccountListItemToApi,
   studentAccountToApi,
 } from "./finance_mapper.ts";
 
@@ -550,6 +552,59 @@ export async function handleCancelFeeAssignment(
       assignment: assignmentToApi(result.assignment),
       account: studentAccountToApi(result),
     }));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    throw error;
+  }
+}
+
+/**
+ * WEB-007 (ERP-WT-007) — GET /finance/student-accounts. The finance list page
+ * had only the single by-id + ledger reads to work with. Same gate as the by-id
+ * read (viewFinance + operational scope); paginated; optional academicYear +
+ * free-text `q` filters.
+ */
+export async function handleListStudentAccounts(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requirePermission(auth.claims, "viewFinance") ??
+    requireSchoolOperationalScope(auth.claims);
+  if (denied) return denied;
+
+  const url = new URL(req.url);
+  const pagination = parsePagination(url);
+  const academicYear = url.searchParams.get("academicYear") ??
+    url.searchParams.get("academic_year") ?? undefined;
+  const query = url.searchParams.get("q") ??
+    url.searchParams.get("query") ?? undefined;
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const result = await runTenant(config, auth.claims, (db) =>
+      listStudentAccounts(db, orgId, schoolId, pagination, {
+        academicYear: academicYear || undefined,
+        query: query || undefined,
+      }));
+    return jsonResponse(
+      envelope(
+        listEnvelope(
+          result.items.map(studentAccountListItemToApi),
+          {
+            page: result.page,
+            pageSize: result.pageSize,
+            total: result.total,
+            hasMore: result.hasMore,
+          },
+        ),
+      ),
+    );
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
       return tenantDbNotConfiguredResponse(error);
