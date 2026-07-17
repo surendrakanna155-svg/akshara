@@ -1,3 +1,21 @@
+/**
+ * Production security certification (final holistic review) — baseline defensive
+ * response headers applied to EVERY API response from the one central helper.
+ * This is a JSON API consumed by the Flutter client, so the browser-context headers
+ * are pure defense-in-depth (a strict `default-src 'none'` CSP + `frame-ancestors
+ * 'none'` are safe because the API serves no HTML/scripts to load or frame):
+ *   - nosniff: never MIME-sniff a JSON body into something executable.
+ *   - X-Frame-Options / frame-ancestors: the API can never be framed (clickjacking).
+ *   - Referrer-Policy: never leak the request URL (which can carry ids) as a referrer.
+ * TLS/HSTS is terminated + set at the gateway layer (not the app), by design.
+ */
+export const SECURITY_HEADERS: Record<string, string> = {
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
+  "Referrer-Policy": "no-referrer",
+  "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+};
+
 export function jsonResponse(
   body: unknown,
   init: ResponseInit = {},
@@ -6,6 +24,7 @@ export function jsonResponse(
     ...init,
     headers: {
       "Content-Type": "application/json",
+      ...SECURITY_HEADERS,
       ...init.headers ?? {},
     },
   });
