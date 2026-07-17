@@ -6,8 +6,12 @@ import {
   handleListAdmissionsConversion,
 } from "./sis_conversion_handlers.ts";
 import {
+  handleAcademicAssignment,
+  handleBulkPromotion,
   handleCreateEnrollment,
   handleListEnrollments,
+  handleReshuffle,
+  handleSectionBalance,
   handleUpdateEnrollment,
 } from "./sis_enrollment_handlers.ts";
 import {
@@ -68,6 +72,20 @@ export function matchSisRoute(
   }
   if (path === "/sis/enrollments" && method === "POST") {
     return { handler: handleCreateEnrollment, args: [] };
+  }
+
+  // WEB-005: registrar class-management workflows.
+  if (path === "/sis/academic-assignment" && method === "GET") {
+    return { handler: handleAcademicAssignment, args: [] };
+  }
+  if (path === "/sis/promotion" && method === "POST") {
+    return { handler: handleBulkPromotion, args: [] };
+  }
+  if (path === "/sis/reshuffle" && method === "POST") {
+    return { handler: handleReshuffle, args: [] };
+  }
+  if (path === "/sis/section-balance" && method === "POST") {
+    return { handler: handleSectionBalance, args: [] };
   }
 
   if (path === "/sis/admissions-conversion" && method === "GET") {

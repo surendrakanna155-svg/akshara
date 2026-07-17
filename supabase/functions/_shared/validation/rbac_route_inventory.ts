@@ -379,6 +379,10 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "GET", path: "/communications/analytics/summary", permission: "viewCommunicationAnalytics", scope: "school", module: "communication" },
   { method: "GET", path: "/communications/analytics/parent-adoption", permission: "viewCommunicationAnalytics", scope: "school", module: "communication" },
   { method: "GET", path: "/dashboard/overview", permission: "viewAdminHub", scope: "school", module: "dashboard" },
+  { method: "GET", path: "/sis/academic-assignment", permission: "viewSis", scope: "school", module: "sis" },
+  { method: "POST", path: "/sis/promotion", permission: "manageSis", scope: "school", module: "sis" },
+  { method: "POST", path: "/sis/reshuffle", permission: "manageSis", scope: "school", module: "sis" },
+  { method: "POST", path: "/sis/section-balance", permission: "manageSis", scope: "school", module: "sis" },
 ];
 
 export const RBAC_MODULE_PERMISSIONS = [
