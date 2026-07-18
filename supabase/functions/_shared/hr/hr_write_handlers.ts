@@ -12,9 +12,26 @@ import {
 import { createEntityWriteStore } from "../entity_write/entity_write_store.ts";
 import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
 import { MAX_BULK_ITEMS } from "../http.ts";
+import { createServiceClient } from "../db.ts";
+import { revokeUserAccess } from "../identity/identity_revocation.ts";
 
 const writeStore = createEntityWriteStore("hr_entities", "Hr");
 const { runWrite } = createModuleWriteHandlers("manageHr");
+
+/**
+ * PRA-P0-01 (S2): HR statuses that mean the employee has permanently left the
+ * school (offboarding). Reaching one of these triggers identity revocation of
+ * the linked login user. Deliberately excludes reversible states — 'active',
+ * 'probation', and 'on_leave' — which must NOT cut off access.
+ */
+const OFFBOARDING_STATUSES = new Set([
+  "inactive",
+  "terminated",
+  "relieved",
+  "resigned",
+  "separated",
+  "exited",
+]);
 
 function isoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -140,8 +157,98 @@ export async function handleSetEmployeeStatus(
       moduleEntityAudit("hr.employee.status_changed", "hr_employee", employeeId, { status }),
       request,
     );
+
+    // PRA-P0-01 (S2): offboarding an employee must actually cut off their login.
+    // When the new status is a permanent-exit state, revoke the linked login
+    // user's access to this school (flip membership → 'revoked' + sweep
+    // sessions/refresh tokens). Best-effort and non-fatal to the status change:
+    // an employee with no linked user is a safe no-op, and a revocation error is
+    // audited rather than rolling back a legitimate HR action (the revocation
+    // runs on a separate service client, so it cannot share this transaction).
+    if (OFFBOARDING_STATUSES.has(status.trim().toLowerCase())) {
+      const employeeCode = String(
+        (existing as Record<string, unknown>).employeeCode ??
+          (existing as Record<string, unknown>).employee_code ?? "",
+      );
+      await revokeAccessForOffboardedEmployee(
+        { config, db, claims, request, organizationId, schoolId, employeeId, employeeCode, status },
+      );
+    }
+
     return { payload: saved ?? next, status: 200 };
   });
+}
+
+/**
+ * PRA-P0-01 (S2): resolve an offboarded employee's linked login user and revoke
+ * their access to the school. The link lives in the canonical `employees`
+ * projection (`user_id`), keyed by the unique `(org, school, employee_code)`.
+ * Resolution + revocation run on the service-role client (the identity plane).
+ * Every failure path is audited and swallowed — never throws — so a login user
+ * that cannot be found, or a transient revoke error, does not fail the HR status
+ * change (which has already been recorded).
+ */
+async function revokeAccessForOffboardedEmployee(args: {
+  config: AppConfig;
+  // deno-lint-ignore no-explicit-any
+  db: any;
+  // deno-lint-ignore no-explicit-any
+  claims: any;
+  request: Request;
+  organizationId: string;
+  schoolId: string;
+  employeeId: string;
+  employeeCode: string;
+  status: string;
+}): Promise<void> {
+  const { config, db, claims, request, organizationId, schoolId, employeeId, employeeCode, status } =
+    args;
+  if (!employeeCode) return; // no canonical key → nothing to resolve.
+  try {
+    const service = createServiceClient(config);
+    const { data: emp, error } = await service
+      .from("employees")
+      .select("user_id")
+      .eq("organization_id", organizationId)
+      .eq("school_id", schoolId)
+      .eq("employee_code", employeeCode)
+      .not("user_id", "is", null)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+
+    const userId = (emp as { user_id: string | null } | null)?.user_id;
+    if (!userId) return; // employee has no login identity — nothing to revoke.
+
+    const result = await revokeUserAccess(service, {
+      organizationId,
+      schoolId,
+      userId,
+      reason: `HR offboarding: employee ${employeeCode} status → ${status}`,
+    });
+    await emitMutationAudit(
+      db,
+      claims,
+      moduleEntityAudit("hr.employee.access_revoked", "hr_employee", employeeId, {
+        status,
+        userId,
+        membershipsRevoked: result.membershipsRevoked,
+        sessionsRevoked: result.sessionsRevoked,
+        refreshTokensRevoked: result.refreshTokensRevoked,
+      }),
+      request,
+    );
+  } catch (err) {
+    // Do not fail the status change; surface the failure loudly for follow-up.
+    await emitMutationAudit(
+      db,
+      claims,
+      moduleEntityAudit("hr.employee.access_revocation_failed", "hr_employee", employeeId, {
+        status,
+        error: err instanceof Error ? err.message : String(err),
+      }),
+      request,
+    );
+  }
 }
 
 /** Default annual leave entitlement (days) used when a policy row is absent. */

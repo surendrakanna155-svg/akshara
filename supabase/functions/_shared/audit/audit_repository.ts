@@ -163,6 +163,123 @@ export async function ingestClientAuditBatch(
   return { acceptedCount, rejectedIds };
 }
 
+// PRA-P1-53 (S2): read side of the forensic trail. `audit_events` was
+// write-only (batch ingest + server-side mutation audit) with NO list/search
+// path, so a school's "who changed this mark / deleted this payment" question
+// was unanswerable. This adds a filtered, paginated, newest-first read that runs
+// UNDER the tenant client — RLS (`audit_events_tenant_read`) is the authoritative
+// org+school/organization scope guard; the `organization_id` predicate here is
+// defense-in-depth, never a substitute for RLS.
+export interface AuditEventFilters {
+  /** actor user id → user_id */
+  actor?: string;
+  entityType?: string;
+  entityId?: string;
+  /** action / eventType → event_type */
+  eventType?: string;
+  /** inclusive lower bound on created_at (ISO 8601) */
+  fromDate?: string;
+  /** inclusive upper bound on created_at (ISO 8601) */
+  toDate?: string;
+}
+
+export interface AuditEventRow {
+  id: string;
+  organization_id: string;
+  school_id: string | null;
+  user_id: string | null;
+  user_role: string | null;
+  correlation_id: string | null;
+  event_type: string;
+  category: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  metadata: Record<string, unknown>;
+  source: string;
+  ip_address: string | null;
+  user_agent: string | null;
+  client_timestamp: string | null;
+  ingested_at: string;
+  created_at: string;
+}
+
+export interface AuditEventPage {
+  items: AuditEventRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+}
+
+/** PRA-P1-53 (S2): list the tenant's audit events newest-first with optional
+ * actor / entity / event-type / date-range filters. Runs on the `erp_tenant`
+ * client so the tenant read RLS scopes rows automatically — no bypass. */
+export async function listAuditEvents(
+  db: TenantQueryClient,
+  claims: AccessTokenClaims,
+  filters: AuditEventFilters,
+  pagination: { page: number; pageSize: number },
+): Promise<AuditEventPage> {
+  const limit = Math.min(Math.max(pagination.pageSize, 1), 100);
+  const offset = (Math.max(pagination.page, 1) - 1) * limit;
+
+  const where: string[] = ["organization_id = $1"];
+  const args: unknown[] = [claims.tenant_id];
+
+  if (filters.actor) {
+    args.push(filters.actor);
+    where.push(`user_id = $${args.length}::uuid`);
+  }
+  if (filters.entityType) {
+    args.push(filters.entityType);
+    where.push(`entity_type = $${args.length}`);
+  }
+  if (filters.entityId) {
+    args.push(filters.entityId);
+    where.push(`entity_id = $${args.length}`);
+  }
+  if (filters.eventType) {
+    args.push(filters.eventType);
+    where.push(`event_type = $${args.length}`);
+  }
+  if (filters.fromDate) {
+    args.push(filters.fromDate);
+    where.push(`created_at >= $${args.length}::timestamptz`);
+  }
+  if (filters.toDate) {
+    args.push(filters.toDate);
+    where.push(`created_at <= $${args.length}::timestamptz`);
+  }
+
+  const whereSql = where.join("\n       AND ");
+
+  const total = await db.queryCount(
+    `SELECT count(*)::text AS count
+       FROM audit_events
+      WHERE ${whereSql}`,
+    args,
+  );
+
+  const items = await db.queryObject<AuditEventRow>(
+    `SELECT id, organization_id, school_id, user_id, user_role, correlation_id,
+            event_type, category, entity_type, entity_id, metadata, source,
+            ip_address, user_agent, client_timestamp, ingested_at, created_at
+       FROM audit_events
+      WHERE ${whereSql}
+      ORDER BY created_at DESC, id DESC
+      LIMIT $${args.length + 1} OFFSET $${args.length + 2}`,
+    [...args, limit, offset],
+  );
+
+  return {
+    items,
+    total,
+    page: Math.max(pagination.page, 1),
+    pageSize: limit,
+    hasMore: offset + items.length < total,
+  };
+}
+
 export async function recordServerAuditEvent(
   db: TenantQueryClient,
   claims: AccessTokenClaims,

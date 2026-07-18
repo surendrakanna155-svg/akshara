@@ -33,6 +33,11 @@ import {
   handleGetStudentTimeline,
 } from "./sis_student_360_handlers.ts";
 import { handleListStudentSiblings } from "./sis_sibling_handlers.ts";
+// PRA-P1-01 / PRA-P1-02 (S2) — guardian link management.
+import {
+  handleAddGuardian,
+  handleRemoveGuardian,
+} from "./sis_guardian_handlers.ts";
 
 const UUID_SEGMENT =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -128,6 +133,25 @@ export function matchSisRoute(
   const siblingsMatch = path.match(/^\/sis\/students\/([^/]+)\/siblings$/);
   if (siblingsMatch && method === "GET") {
     return { handler: handleListStudentSiblings, args: [siblingsMatch[1]!] };
+  }
+
+  // PRA-P1-02 (S2) — DELETE a specific guardian link (deactivate). The
+  // two-segment guardians path is more specific than the single-segment
+  // guardians collection and the generic student route, so it is matched first.
+  const guardianLinkMatch = path.match(
+    /^\/sis\/students\/([^/]+)\/guardians\/([^/]+)$/,
+  );
+  if (guardianLinkMatch && method === "DELETE") {
+    return {
+      handler: handleRemoveGuardian,
+      args: [guardianLinkMatch[1]!, guardianLinkMatch[2]!],
+    };
+  }
+
+  // PRA-P1-01 (S2) — add a guardian link to an existing student.
+  const guardiansMatch = path.match(/^\/sis\/students\/([^/]+)\/guardians$/);
+  if (guardiansMatch && method === "POST") {
+    return { handler: handleAddGuardian, args: [guardiansMatch[1]!] };
   }
 
   const profile360Match = path.match(/^\/sis\/students\/([^/]+)\/360$/);

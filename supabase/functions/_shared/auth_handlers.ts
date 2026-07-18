@@ -24,6 +24,7 @@ import { envelope, errorEnvelope, jsonResponse, readJson } from "./http.ts";
 import { buildInfo } from "./build_info.ts";
 import { isSmsConfigured, sendOtpSms, type SmsConfig } from "./sms_provider.ts";
 import { evaluateOtpRateLimit } from "./otp_rate_limit.ts";
+import { assertSessionValid } from "./session_validation.ts";
 
 interface LoginBody {
   identifier?: string;
@@ -59,8 +60,22 @@ function normalizePhone(identifier: string, type?: string): string {
   return trimmed;
 }
 
+// PRA-P1-06 (S2): an OTP is an authentication secret and must be
+// cryptographically random. `Math.random()` is a non-cryptographic, seedable
+// PRNG whose output can be predicted from prior samples — unacceptable for a
+// login code. Draw a uniform 6-digit code from `crypto.getRandomValues` using
+// rejection sampling so there is no modulo bias across [100000, 999999].
 function generateOtp(): string {
-  return `${Math.floor(100000 + Math.random() * 900000)}`;
+  const span = 900000; // 100000..999999 inclusive
+  // Largest multiple of `span` below 2^32; reject the biased tail above it.
+  const limit = Math.floor(0x1_0000_0000 / span) * span;
+  const buf = new Uint32Array(1);
+  let n: number;
+  do {
+    crypto.getRandomValues(buf);
+    n = buf[0];
+  } while (n >= limit);
+  return `${100000 + (n % span)}`;
 }
 
 /** Best-effort source IP from proxy headers (Nginx sets X-Forwarded-For). */
@@ -566,6 +581,16 @@ export async function handleContextSwitch(
 
   const currentClaims = await verifyAccessToken(config.jwtSecret, token);
   if (!currentClaims) return errorEnvelope("UNAUTHORIZED", "Invalid access token", 401);
+
+  // PRA-P1-07 (S2): verifying the JWT signature alone is not enough for a
+  // context switch. This route mints a BRAND-NEW session + refresh token from
+  // the presented token, so a still-unexpired access token belonging to a
+  // revoked/logged-out session (or a user whose membership was revoked) could
+  // otherwise re-establish full access — defeating revocation entirely. Route
+  // the switch through the same live-session/membership gate the normal request
+  // path uses (RT-16/RT-17) before issuing anything.
+  const sessionInvalid = await assertSessionValid(config, currentClaims);
+  if (sessionInvalid) return sessionInvalid;
 
   const body = await readJson<ContextSwitchBody>(req);
   if (!body?.scope) {
