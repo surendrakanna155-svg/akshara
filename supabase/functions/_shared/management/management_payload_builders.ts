@@ -24,7 +24,9 @@ export function buildDashboardPayload(agg: ManagementAggregate): Record<string, 
   const kpis = [
     {
       id: "revenue",
-      value: formatInr(finance.totalCollected),
+      // PRA-P0-23 (S4): "Revenue MTD" must be month-to-date collections, not the
+      // all-time total (formula was fine, the period was wrong).
+      value: formatInr(agg.collectedThisMonth),
       label: "Revenue MTD",
       accentName: "primary",
     },
@@ -68,7 +70,8 @@ export function buildDashboardPayload(agg: ManagementAggregate): Record<string, 
       recentConversions: [],
     },
     feeSnapshot: {
-      collectedMtd: formatInr(finance.totalCollected),
+      // PRA-P0-23 (S4): month-to-date, not all-time.
+      collectedMtd: formatInr(agg.collectedThisMonth),
       outstanding: formatInr(finance.totalOutstanding),
       collectionRate: formatPercent(finance.collectionRate),
       // NOTE: Flutter mapper reads `defaulters` (the old seed key
@@ -107,16 +110,22 @@ export function buildAnalyticsPayload(agg: ManagementAggregate): Record<string, 
     },
   ];
 
-  const attendanceByClass = academic.classPerformance.map((c) => ({
-    label: c.classLabel,
-    value: c.students,
-    percent: c.avgPercent,
+  // PRA-P2-22 (S4): the per-class attendance column must show EACH class's real
+  // attendance, not the school-wide scalar (and the "attendanceByClass" chart was
+  // wrongly built from exam performance, not attendance at all).
+  const attByClass = new Map(
+    academic.attendanceByClass.map((a) => [a.classLabel, a.attendancePercent]),
+  );
+  const attendanceByClass = academic.attendanceByClass.map((a) => ({
+    label: a.classLabel,
+    value: a.attendancePercent,
+    percent: a.attendancePercent,
   }));
 
   const classSummary = academic.classPerformance.map((c) => ({
     classLabel: c.classLabel,
     students: c.students,
-    attendancePercent: formatPercent(academic.avgAttendancePercent),
+    attendancePercent: formatPercent(attByClass.get(c.classLabel) ?? 0),
     avgMarks: formatPercent(c.avgPercent),
     feeCollectionPercent: formatPercent(finance.collectionRate),
     teachers: 0,
