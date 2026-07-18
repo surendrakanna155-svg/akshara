@@ -57,24 +57,21 @@ Deno.test("listTeacherAttendanceClasses returns empty when teacher teaches nothi
 
 Deno.test("listTeacherAttendanceClasses ids match roster keys + flags pending", async () => {
   const result = await listTeacherAttendanceClasses(
+    // PRA-P0-07 / P1-31 (S3): classes come from the canonical binding, then a
+    // per-class unnest computes marked/count (one row per class, not per period).
     mockDb([
       {
-        match: "FROM timetable_slots ts",
+        match: "FROM teacher_subject_assignments tsa",
         rows: [
-          {
-            class_label: "8-A",
-            subject_label: "Mathematics",
-            period_number: 1,
-            marked: true,
-            student_count: 30,
-          },
-          {
-            class_label: "8-B",
-            subject_label: "Mathematics",
-            period_number: 2,
-            marked: false,
-            student_count: 28,
-          },
+          { class_name: "8", section_name: "A" },
+          { class_name: "8", section_name: "B" },
+        ],
+      },
+      {
+        match: "unnest($3::text[])",
+        rows: [
+          { class_label: "8-A", marked: true, student_count: 30 },
+          { class_label: "8-B", marked: false, student_count: 28 },
         ],
       },
     ]),
@@ -113,7 +110,8 @@ Deno.test("overlayTeacherAttendanceStudents returns empty roster when teacher ha
 Deno.test("overlayTeacherAttendanceStudents builds studentsByClass with real marks", async () => {
   const result = await overlayTeacherAttendanceStudents(
     mockDb([
-      { match: "SELECT DISTINCT class_label", rows: [{ class_label: "8-A" }] },
+      // PRA-P0-07 (S3): teacher classes now come from the canonical binding.
+      { match: "FROM teacher_subject_assignments tsa", rows: [{ class_name: "8", section_name: "A" }] },
       {
         match: "FROM students s",
         rows: [
@@ -166,7 +164,8 @@ Deno.test("listTeacherUpcomingExams returns empty when teacher has no classes", 
 Deno.test("listTeacherUpcomingExams maps real exam_sessions to client shape", async () => {
   const result = await listTeacherUpcomingExams(
     mockDb([
-      { match: "SELECT DISTINCT class_label", rows: [{ class_label: "8-A" }] },
+      // PRA-P0-07 (S3): teacher classes now come from the canonical binding.
+      { match: "FROM teacher_subject_assignments tsa", rows: [{ class_name: "8", section_name: "A" }] },
       {
         match: "FROM exam_sessions",
         rows: [
@@ -217,7 +216,8 @@ Deno.test("listTeacherExamMarks returns empty when teacher has no classes", asyn
 Deno.test("listTeacherExamMarks maps real mark entries (null when not entered)", async () => {
   const result = await listTeacherExamMarks(
     mockDb([
-      { match: "SELECT DISTINCT class_label", rows: [{ class_label: "8-A" }] },
+      // PRA-P0-07 (S3): teacher classes now come from the canonical binding.
+      { match: "FROM teacher_subject_assignments tsa", rows: [{ class_name: "8", section_name: "A" }] },
       {
         match: "FROM exam_mark_entries me",
         rows: [

@@ -21,6 +21,8 @@ import {
   listTeacherHomeworkHistory,
   listTeacherUpcomingExams,
 } from "../../pilot/pilot_operations_repository.ts";
+// PRA-P1-16 (S3): canonical (class, subject) authority for exam subject-scoping.
+import { listCanonicalTeacherClassSubjects } from "../../school_completion/subject_assignments_repository.ts";
 import { dueInDaysFrom } from "./feed_dates.ts";
 import type { Persona, RawPriorityItem } from "./priority_types.ts";
 
@@ -246,16 +248,17 @@ export async function loadTeacherFeedSources(
     pageSize: 8,
   });
 
-  // The attendance read is grouped by (class, subject) in the teacher's own
-  // timetable — reuse it as the "which subjects do I teach in this class"
-  // authority for subject-scoping exams (audit P2), instead of a new raw query.
+  // PRA-P1-16 (S3): "which subjects do I teach in this class" now comes from the
+  // CANONICAL binding (teacher_subject_assignments), not free-text timetable
+  // subject labels — so exam subject-scoping no longer mis-fires on label drift
+  // ("Maths" vs "Mathematics"). The attendance read no longer carries a subject.
+  const classSubjects = await listCanonicalTeacherClassSubjects(db, orgId, schoolId, teacherUserId);
   const subjectsByClass = new Map<string, Set<string>>();
-  for (const item of attendance.items) {
-    const input = toAttendanceInput(item);
-    if (input.subject.trim() === "") continue;
-    const set = subjectsByClass.get(input.classLabel) ?? new Set<string>();
-    set.add(subjectKey(input.subject));
-    subjectsByClass.set(input.classLabel, set);
+  for (const cs of classSubjects) {
+    if (!cs.subject_name || cs.subject_name.trim() === "") continue;
+    const set = subjectsByClass.get(cs.class_label) ?? new Set<string>();
+    set.add(subjectKey(cs.subject_name));
+    subjectsByClass.set(cs.class_label, set);
   }
 
   const inputs: TeacherSourceInputs = {

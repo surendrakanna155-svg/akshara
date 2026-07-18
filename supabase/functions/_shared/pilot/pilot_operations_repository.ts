@@ -1,5 +1,13 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
 import { attendancePercentFromCounts } from "../attendance/attendance_percentage.ts";
+// PRA-P0-07 / P0-08 / P0-11 (S3): the canonical teacher↔class binding
+// (`teacher_subject_assignments`), replacing the unwritten `timetable_slots`.
+import {
+  buildClassLabel,
+  listCanonicalTeacherClasses,
+  teacherOwnsClass,
+  teacherOwnsClassSubject,
+} from "../school_completion/subject_assignments_repository.ts";
 
 export const ATTENDANCE_SESSION_PROBE_SQL = `
   SELECT count(*)::text AS count FROM attendance_sessions WHERE id = $1::uuid
@@ -2025,6 +2033,121 @@ export function parseClassLabel(
   return { className: trimmed, sectionName: null };
 }
 
+// ─── PRA-P0-11 (S3): per-class ownership guards for the pilot write lane ─────────
+//
+// The pilot teacher writes (attendance, homework) checked PERMISSION but never
+// CLASS OWNERSHIP — any teacher with `markAttendance`/`manageHomework` could
+// write to ANY class. These guards close that hole using the canonical binding.
+//
+// Scope mirrors the certified exam engine's `isSubjectTeacherScoped`: only a
+// PLAIN teacher (one WITHOUT `verifyExamResults`) is ownership-scoped; oversight
+// roles (superAdmin / schoolAdmin / principal / vicePrincipal / management, who
+// hold `verifyExamResults`) may write to any class. Fail-closed for scoped
+// teachers — identical to the behaviour already shipping on /academics/exams/*.
+
+/** Raised when an ownership-scoped teacher writes to a class they are not bound to. */
+export class ClassOwnershipError extends Error {
+  readonly classLabel: string;
+  constructor(classLabel: string) {
+    super(`You are not assigned to class ${classLabel}`);
+    this.name = "ClassOwnershipError";
+    this.classLabel = classLabel;
+  }
+}
+
+/** True when the caller must be ownership-scoped (a plain teacher). */
+function isOwnershipScoped(permissions: readonly string[]): boolean {
+  return !permissions.includes("verifyExamResults");
+}
+
+/**
+ * PRA-P0-11 — a plain teacher may only mark attendance for a class they own
+ * (teach any subject in, or are the class teacher of). Oversight roles bypass.
+ */
+export async function assertTeacherOwnsClass(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  teacherUserId: string,
+  permissions: readonly string[],
+  classLabel: string,
+): Promise<void> {
+  if (!isOwnershipScoped(permissions)) return;
+  const { className, sectionName } = parseClassLabel(classLabel);
+  const owns = await teacherOwnsClass(
+    db,
+    organizationId,
+    schoolId,
+    teacherUserId,
+    className,
+    sectionName,
+  );
+  if (!owns) throw new ClassOwnershipError(classLabel);
+}
+
+/**
+ * PRA-P0-11 — a plain teacher may only assign homework for a (class, subject)
+ * they are assigned to teach. Oversight roles bypass.
+ */
+export async function assertTeacherOwnsClassSubject(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  teacherUserId: string,
+  permissions: readonly string[],
+  classLabel: string,
+  subject: string,
+): Promise<void> {
+  if (!isOwnershipScoped(permissions)) return;
+  const { className, sectionName } = parseClassLabel(classLabel);
+  const owns = await teacherOwnsClassSubject(
+    db,
+    organizationId,
+    schoolId,
+    teacherUserId,
+    className,
+    sectionName,
+    subject,
+  );
+  if (!owns) throw new ClassOwnershipError(classLabel);
+}
+
+/**
+ * PRA-P0-11 — a plain teacher may only review/grade/notify on a homework they
+ * OWN (created). `teacher_entities` records the assignment with the owning
+ * `teacher_id`; the id may arrive as a homework_submissions.id or the homework_id
+ * itself, so we resolve either to the homework_id first. Oversight roles bypass.
+ */
+export async function assertTeacherOwnsHomework(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  teacherUserId: string,
+  permissions: readonly string[],
+  submissionOrHomeworkId: string,
+): Promise<void> {
+  if (!isOwnershipScoped(permissions)) return;
+  const rows = await db.queryObject<{ owns: boolean }>(
+    `SELECT EXISTS (
+        SELECT 1
+        FROM teacher_entities te
+        WHERE te.organization_id = $1 AND te.school_id = $2
+          AND te.entity_type = 'homework_assignment'
+          AND te.teacher_id = $3
+          AND (
+            te.id = $4
+            OR te.id IN (
+              SELECT hs.homework_id FROM homework_submissions hs
+              WHERE hs.organization_id = $1 AND hs.school_id = $2
+                AND (hs.id::text = $4 OR hs.homework_id = $4)
+            )
+          )
+     ) AS owns`,
+    [organizationId, schoolId, teacherUserId, submissionOrHomeworkId],
+  );
+  if (rows[0]?.owns !== true) throw new ClassOwnershipError(submissionOrHomeworkId);
+}
+
 // --- HWK-1 real due date helpers (pilot homework path) ---
 //
 // The pilot homework assignment previously carried only a free-text `dueLabel`
@@ -2588,24 +2711,19 @@ export async function listTeacherHomeworkHistory(
 // RLS context. A fresh school with no data returns honest zeros/empty arrays.
 // ===========================================================================
 
-// The teacher's own classes (class labels) come from the timetable: any slot
-// where the teacher is the assigned or substitute teacher. Distinct, ordered.
+// PRA-P0-07 (S3): a teacher's own classes come from the CANONICAL binding
+// (`teacher_subject_assignments` + class-teacher `teacher_assignments`), NOT the
+// unwritten `timetable_slots` (which is empty for every real tenant, so this used
+// to return seed fiction or nothing). This is the seed of the whole teacher lane
+// (roster, upcoming exams, exam marks), so repointing it repairs those readers.
 async function listTeacherClassLabels(
   db: TenantQueryClient,
   orgId: string,
   schoolId: string,
   teacherUserId: string,
 ): Promise<string[]> {
-  const rows = await db.queryObject<{ class_label: string }>(
-    `SELECT DISTINCT class_label
-       FROM timetable_slots
-      WHERE organization_id = $1 AND school_id = $2
-        AND (teacher_user_id = $3::uuid OR substitute_teacher_user_id = $3::uuid)
-        AND class_label IS NOT NULL AND class_label <> ''
-      ORDER BY class_label`,
-    [orgId, schoolId, teacherUserId],
-  );
-  return rows.map((r) => r.class_label);
+  const classes = await listCanonicalTeacherClasses(db, orgId, schoolId, teacherUserId);
+  return classes.map((c) => buildClassLabel(c.class_name, c.section_name));
 }
 
 // Map a stored attendance mark to the client-facing status string. Wire values
@@ -2638,46 +2756,55 @@ export async function listTeacherAttendanceClasses(
   total: number;
   hasMore: boolean;
 }> {
-  // One slot row per (class, subject, period) the teacher teaches; the picker
-  // shows the class with its subject + earliest period label.
+  // PRA-P0-07 / P1-31 (S3): the class list comes from the CANONICAL binding —
+  // one row per class the teacher is bound to, NOT one per weekly timetable slot.
+  // This repairs the picker for real tenants (timetable_slots is unwritten) AND
+  // fixes P1-31: the old query exploded the teacher's whole weekly timetable, so
+  // every class/period showed as "pending today"; now each class appears once and
+  // `isPending` is the real "no submitted session today" signal.
+  const canonical = await listCanonicalTeacherClasses(db, orgId, schoolId, teacherUserId);
+  const labels = canonical.map((c) => buildClassLabel(c.class_name, c.section_name));
+  if (labels.length === 0) {
+    return {
+      items: [],
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      total: 0,
+      hasMore: false,
+    };
+  }
+
   const rows = await db.queryObject<{
     class_label: string;
-    subject_label: string;
-    period_number: number;
     marked: boolean;
     student_count: number;
   }>(
-    `SELECT ts.class_label,
-            ts.subject_label,
-            min(ts.period_number) AS period_number,
-            bool_or(ses.id IS NOT NULL) AS marked,
+    `SELECT cl.class_label,
+            EXISTS (
+              SELECT 1 FROM attendance_sessions ses
+               WHERE ses.organization_id = $1 AND ses.school_id = $2
+                 AND ses.class_label = cl.class_label
+                 AND ses.session_date = CURRENT_DATE
+                 AND ses.status = 'submitted'
+            ) AS marked,
             (
               SELECT count(*)::int FROM sis_student_enrollments e2
-               WHERE e2.organization_id = $1
-                 AND e2.school_id = $2
+               WHERE e2.organization_id = $1 AND e2.school_id = $2
                  AND e2.is_current = true
-                 AND (e2.class_name || '-' || e2.section_name) = ts.class_label
+                 AND (e2.class_name || '-' || e2.section_name) = cl.class_label
             ) AS student_count
-       FROM timetable_slots ts
-       LEFT JOIN attendance_sessions ses
-         ON ses.organization_id = ts.organization_id
-        AND ses.school_id = ts.school_id
-        AND ses.class_label = ts.class_label
-        AND ses.session_date = CURRENT_DATE
-        AND ses.status = 'submitted'
-      WHERE ts.organization_id = $1 AND ts.school_id = $2
-        AND (ts.teacher_user_id = $3::uuid OR ts.substitute_teacher_user_id = $3::uuid)
-        AND ts.class_label IS NOT NULL AND ts.class_label <> ''
-      GROUP BY ts.class_label, ts.subject_label
-      ORDER BY ts.class_label, ts.subject_label`,
-    [orgId, schoolId, teacherUserId],
+       FROM unnest($3::text[]) AS cl(class_label)
+      ORDER BY cl.class_label`,
+    [orgId, schoolId, labels],
   );
 
   const all = rows.map((r) => ({
     id: `class_${r.class_label}`,
-    label: `${r.class_label} ${r.subject_label}`,
-    subject: r.subject_label,
-    periodLabel: `Period ${r.period_number}`,
+    label: r.class_label,
+    // subject/periodLabel are not part of the daily-class-attendance model; kept
+    // in the shape (empty) so existing clients ignore them without breaking.
+    subject: "",
+    periodLabel: "",
     studentCount: r.student_count,
     isPending: !r.marked,
   }));

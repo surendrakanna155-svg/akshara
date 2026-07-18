@@ -1539,6 +1539,26 @@ export async function listExamRemarks(
   );
 }
 
+/**
+ * PRA-P0-10 (S3): resolve the author's display name SERVER-SIDE from the
+ * authenticated user record. NEVER trust a client-supplied name. Keyed on the
+ * author id (= claims.sub of the writer). `users.display_name` is
+ * `TEXT NOT NULL DEFAULT ''`, so treat empty/whitespace as "unset" and fall back
+ * to a safe default (the author id, else "Staff").
+ */
+async function resolveAuthorDisplayName(
+  db: TenantQueryClient,
+  authorId: string,
+): Promise<string> {
+  const rows = await db.queryObject<{ display_name: string | null }>(
+    `SELECT display_name FROM users WHERE id = $1`,
+    [authorId],
+  );
+  const name = rows[0]?.display_name?.trim();
+  if (name && name.length > 0) return name;
+  return authorId && authorId.length > 0 ? authorId : "Staff";
+}
+
 /** Creates or edits a (student, exam session) remark, appending to the audit trail. */
 export async function upsertExamRemark(
   db: TenantQueryClient,
@@ -1549,11 +1569,14 @@ export async function upsertExamRemark(
     studentId: string;
     text: string;
     authorId: string;
-    authorName: string;
+    // PRA-P0-10 (S3): author display name is NO LONGER accepted from the caller.
+    // It is resolved server-side from users.display_name below.
     authorRole?: string;
   },
 ): Promise<ExamRemarkRow> {
   const authorRole = input.authorRole ?? "classTeacher";
+  // PRA-P0-10 (S3): trusted author name from the user record, not the request.
+  const authorName = await resolveAuthorDisplayName(db, input.authorId);
   // Two independent remark slots per (exam, student): the class-teacher remark
   // and the leadership (principal/VP) remark. The id carries the slot so the two
   // never collide / overwrite each other (matches the app's store keying).
@@ -1562,7 +1585,7 @@ export async function upsertExamRemark(
   const revision = JSON.stringify({
     text: input.text,
     authorId: input.authorId,
-    authorName: input.authorName,
+    authorName, // PRA-P0-10 (S3): server-resolved trusted name into the audit trail
     authorRole,
   });
   const rows = await db.queryObject<ExamRemarkRow>(
@@ -1591,7 +1614,7 @@ export async function upsertExamRemark(
       input.studentId,
       input.text,
       input.authorId,
-      input.authorName,
+      authorName, // PRA-P0-10 (S3): server-resolved trusted name into the column
       authorRole,
       revision,
     ],

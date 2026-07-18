@@ -982,12 +982,15 @@ export async function handleUpsertExamRemark(
           );
         }
       }
+      // PRA-P0-10 (S3): the author DISPLAY NAME is NO LONGER read from the
+      // request body (it was spoofable). upsertExamRemark resolves the trusted
+      // name server-side from users.display_name keyed on the authenticated
+      // author (claims.sub). body.authorName / body.author_name are ignored.
       const row = await upsertExamRemark(db, organizationId, schoolId, {
         examId,
         studentId,
         text,
         authorId: claims.sub,
-        authorName: String(body.authorName ?? body.author_name ?? claims.sub),
         authorRole,
       });
       return examRemarkToApi(row);

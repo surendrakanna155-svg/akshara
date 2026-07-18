@@ -281,3 +281,167 @@ export function workloadToApi(entry: SubjectWorkloadEntry) {
     isOverloaded: entry.isOverloaded,
   };
 }
+
+// ─── PRA-P0-07 / P0-08 / P0-11 (S3): canonical teacher↔class ownership ───────────
+//
+// One place answers "is teacher T (by JWT sub) bound to class C / subject S?"
+// against the CANONICAL binding `teacher_subject_assignments` (the exam engine's
+// oracle; `timetable_slots` has zero writers and must not be used). The pilot
+// mobile-write lane (attendance/homework) and the pilot teacher reads both
+// consume these, replacing the three rival, unwritten bindings.
+//
+// Two ownership questions, deliberately distinct:
+//   • class-level  (attendance): the teacher teaches ANY subject in the class OR
+//     is its class teacher — a form teacher who teaches no subject in their own
+//     class must still be able to mark its attendance;
+//   • subject-level (homework): the teacher teaches THAT subject in the class.
+//
+// NULL section on an assignment means "all sections of the class". Class/subject
+// are matched by name (the pilot lane is text-keyed), the same bridge the exam
+// oracle uses.
+
+export interface CanonicalClassLabel {
+  class_name: string;
+  section_name: string | null;
+}
+
+/** Build the pilot `classLabel` ("10-A", or "10" when sectionless) from parts. */
+export function buildClassLabel(className: string, sectionName: string | null): string {
+  return sectionName ? `${className}-${sectionName}` : className;
+}
+
+/**
+ * Class-level ownership (attendance). True when the teacher has an active
+ * subject assignment for the class (any subject) OR is its class teacher.
+ */
+export async function teacherOwnsClass(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  teacherUserId: string,
+  className: string,
+  sectionName: string | null,
+): Promise<boolean> {
+  const rows = await db.queryObject<{ owns: boolean }>(
+    `SELECT (
+        EXISTS (
+          SELECT 1
+          FROM teacher_subject_assignments tsa
+          JOIN classes c ON c.id = tsa.class_id
+          LEFT JOIN sections sec ON sec.id = tsa.section_id
+          WHERE tsa.organization_id = $1 AND tsa.school_id = $2
+            AND tsa.teacher_user_id = $3 AND tsa.status = 'active'
+            AND c.class_name = $4
+            AND ($5::text IS NULL OR sec.section_name IS NULL OR sec.section_name = $5)
+        )
+        OR EXISTS (
+          SELECT 1
+          FROM teacher_assignments ta
+          JOIN sections sec ON sec.id = ta.section_id
+          JOIN classes c ON c.id = sec.class_id
+          WHERE ta.organization_id = $1 AND ta.school_id = $2
+            AND ta.teacher_id = $3 AND ta.role = 'class_teacher'
+            AND c.class_name = $4
+            AND ($5::text IS NULL OR sec.section_name = $5)
+        )
+     ) AS owns`,
+    [organizationId, schoolId, teacherUserId, className, sectionName],
+  );
+  return rows[0]?.owns === true;
+}
+
+/**
+ * Subject-level ownership (homework). True when the teacher has an active
+ * subject assignment for that subject in the class. Subject is matched
+ * case-insensitively to tolerate client label casing on the free-text pilot
+ * subject (the P1-16 precision work removes the remaining name drift).
+ */
+export async function teacherOwnsClassSubject(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  teacherUserId: string,
+  className: string,
+  sectionName: string | null,
+  subjectName: string,
+): Promise<boolean> {
+  const rows = await db.queryObject<{ owns: boolean }>(
+    `SELECT EXISTS (
+        SELECT 1
+        FROM teacher_subject_assignments tsa
+        JOIN academic_subjects subj ON subj.id = tsa.subject_id
+        JOIN classes c ON c.id = tsa.class_id
+        LEFT JOIN sections sec ON sec.id = tsa.section_id
+        WHERE tsa.organization_id = $1 AND tsa.school_id = $2
+          AND tsa.teacher_user_id = $3 AND tsa.status = 'active'
+          AND lower(btrim(subj.subject_name)) = lower(btrim($4))
+          AND c.class_name = $5
+          AND ($6::text IS NULL OR sec.section_name IS NULL OR sec.section_name = $6)
+     ) AS owns`,
+    [organizationId, schoolId, teacherUserId, subjectName, className, sectionName],
+  );
+  return rows[0]?.owns === true;
+}
+
+/**
+ * The teacher's canonical class set (class teacher + subject assignments),
+ * distinct, ordered — the replacement source for the pilot teacher readers that
+ * used the unwritten `timetable_slots`.
+ */
+export async function listCanonicalTeacherClasses(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  teacherUserId: string,
+): Promise<CanonicalClassLabel[]> {
+  return await db.queryObject<CanonicalClassLabel>(
+    `SELECT DISTINCT c.class_name AS class_name, sec.section_name AS section_name
+       FROM teacher_subject_assignments tsa
+       JOIN classes c ON c.id = tsa.class_id
+       LEFT JOIN sections sec ON sec.id = tsa.section_id
+      WHERE tsa.organization_id = $1 AND tsa.school_id = $2
+        AND tsa.teacher_user_id = $3 AND tsa.status = 'active'
+      UNION
+     SELECT DISTINCT c.class_name AS class_name, sec.section_name AS section_name
+       FROM teacher_assignments ta
+       JOIN sections sec ON sec.id = ta.section_id
+       JOIN classes c ON c.id = sec.class_id
+      WHERE ta.organization_id = $1 AND ta.school_id = $2
+        AND ta.teacher_id = $3 AND ta.role = 'class_teacher'
+      ORDER BY class_name, section_name`,
+    [organizationId, schoolId, teacherUserId],
+  );
+}
+
+export interface CanonicalClassSubject {
+  class_label: string;
+  subject_name: string;
+}
+
+/**
+ * PRA-P1-16 (S3): the teacher's (class, subject) pairs from the CANONICAL
+ * binding — the authority for "which subjects do I teach in this class",
+ * replacing the free-text `timetable_slots.subject_label` matching that silently
+ * mis-scoped on label drift ("Maths" vs "Mathematics"). `class_label` is built
+ * to match the pilot convention ("10-A").
+ */
+export async function listCanonicalTeacherClassSubjects(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  teacherUserId: string,
+): Promise<CanonicalClassSubject[]> {
+  return await db.queryObject<CanonicalClassSubject>(
+    `SELECT DISTINCT
+            (c.class_name || CASE WHEN sec.section_name IS NOT NULL
+                                  THEN '-' || sec.section_name ELSE '' END) AS class_label,
+            subj.subject_name AS subject_name
+       FROM teacher_subject_assignments tsa
+       JOIN academic_subjects subj ON subj.id = tsa.subject_id
+       JOIN classes c ON c.id = tsa.class_id
+       LEFT JOIN sections sec ON sec.id = tsa.section_id
+      WHERE tsa.organization_id = $1 AND tsa.school_id = $2
+        AND tsa.teacher_user_id = $3 AND tsa.status = 'active'`,
+    [organizationId, schoolId, teacherUserId],
+  );
+}

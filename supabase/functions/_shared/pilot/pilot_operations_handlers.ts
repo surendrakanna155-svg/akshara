@@ -26,6 +26,11 @@ import {
   validateDueDate,
   dueDateToLabel,
   isDueDateInPast,
+  // PRA-P0-11 (S3): per-class ownership guards for the pilot write lane.
+  assertTeacherOwnsClass,
+  assertTeacherOwnsClassSubject,
+  assertTeacherOwnsHomework,
+  ClassOwnershipError,
   AttendanceLockedError,
   AttendanceClosedDayError,
   AttendanceRosterMismatchError,
@@ -111,6 +116,10 @@ async function auditMobileWrite(
 
 /** Map attendance integrity failures to precise HTTP responses (gates #1/#5/#6/#7/#8). */
 function mapAttendanceError(error: unknown): Response | null {
+  // PRA-P0-11 (S3): a scoped teacher writing to a class they don't own → 403.
+  if (error instanceof ClassOwnershipError) {
+    return errorEnvelope("CLASS_NOT_ASSIGNED", error.message, 403);
+  }
   if (error instanceof AttendanceLockedError) {
     return errorEnvelope("ATTENDANCE_LOCKED", error.message, 409);
   }
@@ -142,6 +151,17 @@ export async function handleTeacherAttendanceDraft(
 
   try {
     const result = await withTenantContext(config, auth.claims, async (db) => {
+      // PRA-P0-11 (S3): a plain teacher may only mark attendance for a class they
+      // own (attendance feeds the reporting trunk, so this is the highest-value
+      // ownership guard). Oversight roles bypass; scoped teachers fail closed.
+      await assertTeacherOwnsClass(
+        db,
+        auth.claims.tenant_id,
+        auth.claims.school_id!,
+        auth.claims.sub,
+        auth.claims.permissions,
+        snakeStr(body, "class_id"),
+      );
       const entries = parseAttendanceEntries(body);
       const saved = await upsertAttendanceSession(db, {
         organizationId: auth.claims.tenant_id,
@@ -191,6 +211,15 @@ export async function handleTeacherAttendanceSubmit(
 
   try {
     const result = await withTenantContext(config, auth.claims, async (db) => {
+      // PRA-P0-11 (S3): ownership guard before a submit fires guardian alerts.
+      await assertTeacherOwnsClass(
+        db,
+        auth.claims.tenant_id,
+        auth.claims.school_id!,
+        auth.claims.sub,
+        auth.claims.permissions,
+        snakeStr(body, "class_id"),
+      );
       const entries = parseAttendanceEntries(body);
       const saved = await upsertAttendanceSession(db, {
         organizationId: auth.claims.tenant_id,
@@ -530,6 +559,16 @@ export async function handleTeacherHomeworkReview(
 
   try {
     const result = await withTenantContext(config, auth.claims, async (db) => {
+      // PRA-P0-11 (S3): a plain teacher may only grade a homework they own —
+      // manageHomework alone let any teacher grade another teacher's class.
+      await assertTeacherOwnsHomework(
+        db,
+        auth.claims.tenant_id,
+        auth.claims.school_id!,
+        auth.claims.sub,
+        auth.claims.permissions,
+        submissionId,
+      );
       const row = await reviewHomework(
         db,
         auth.claims.tenant_id,
@@ -549,6 +588,9 @@ export async function handleTeacherHomeworkReview(
     return jsonResponse(envelope(result));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    if (error instanceof ClassOwnershipError) {
+      return errorEnvelope("HOMEWORK_NOT_OWNED", error.message, 403);
+    }
     return errorEnvelope("INTERNAL_ERROR", "Failed to review homework", 500);
   }
 }
@@ -619,6 +661,18 @@ export async function handleTeacherHomeworkCreate(
       > = [];
       // One assignment delivery per targeted class (each with its own id).
       for (const classLabel of classLabels) {
+        // PRA-P0-11 (S3): a plain teacher may only assign homework for a
+        // (class, subject) they are assigned to teach. Oversight roles bypass;
+        // scoped teachers fail closed (checked per targeted class).
+        await assertTeacherOwnsClassSubject(
+          db,
+          auth.claims.tenant_id,
+          auth.claims.school_id!,
+          auth.claims.sub,
+          auth.claims.permissions,
+          classLabel,
+          subject,
+        );
         const homeworkId = `hw_${crypto.randomUUID()}`;
         const one = await insertHomeworkAssignment(db, {
           organizationId: auth.claims.tenant_id,
@@ -676,6 +730,10 @@ export async function handleTeacherHomeworkCreate(
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
       return tenantDbNotConfiguredResponse(error);
+    }
+    // PRA-P0-11 (S3): assigning homework to a class the teacher doesn't teach → 403.
+    if (error instanceof ClassOwnershipError) {
+      return errorEnvelope("CLASS_NOT_ASSIGNED", error.message, 403);
     }
     return errorEnvelope("INTERNAL_ERROR", "Failed to create homework", 500);
   }
@@ -832,6 +890,15 @@ export async function handleTeacherHomeworkBulkReview(
 
   try {
     const result = await withTenantContext(config, auth.claims, async (db) => {
+      // PRA-P0-11 (S3): a plain teacher may only bulk-grade a homework they own.
+      await assertTeacherOwnsHomework(
+        db,
+        auth.claims.tenant_id,
+        auth.claims.school_id!,
+        auth.claims.sub,
+        auth.claims.permissions,
+        homeworkId || submissionIds[0]!,
+      );
       const summary = await bulkReviewHomework(
         db,
         auth.claims.tenant_id,
@@ -860,6 +927,9 @@ export async function handleTeacherHomeworkBulkReview(
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
       return tenantDbNotConfiguredResponse(error);
+    }
+    if (error instanceof ClassOwnershipError) {
+      return errorEnvelope("HOMEWORK_NOT_OWNED", error.message, 403);
     }
     return errorEnvelope("INTERNAL_ERROR", "Failed to bulk-review homework", 500);
   }
@@ -892,6 +962,16 @@ export async function handleTeacherHomeworkNotifyNonSubmitters(
 
   try {
     const result = await withTenantContext(config, auth.claims, async (db) => {
+      // PRA-P0-11 (S3): only nudge parents for a homework you own (a scoped
+      // teacher must not message another class's guardians).
+      await assertTeacherOwnsHomework(
+        db,
+        auth.claims.tenant_id,
+        auth.claims.school_id!,
+        auth.claims.sub,
+        auth.claims.permissions,
+        homeworkId,
+      );
       const summary = await notifyHomeworkNonSubmitters(
         db,
         auth.claims.tenant_id,
@@ -929,6 +1009,9 @@ export async function handleTeacherHomeworkNotifyNonSubmitters(
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
       return tenantDbNotConfiguredResponse(error);
+    }
+    if (error instanceof ClassOwnershipError) {
+      return errorEnvelope("HOMEWORK_NOT_OWNED", error.message, 403);
     }
     return errorEnvelope(
       "INTERNAL_ERROR",
