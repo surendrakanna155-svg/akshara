@@ -56,18 +56,35 @@ export function buildDashboardPayload(agg: ManagementAggregate): Record<string, 
       `${admissions.totalLeads} admission leads, ${admissions.joined} joined.`
     : "No revenue, fee, or admissions activity recorded yet.";
 
+  // PRA-P1-48 (S4): recent admissions conversions from the real pipeline.
+  const CONVERTED_STAGES = new Set(["joined", "confirmed", "admission_confirmed"]);
+  const recentConversions = admissions.pipelineLeads
+    .filter((l) => CONVERTED_STAGES.has(l.stage))
+    .slice(0, 10)
+    .map((l) => ({
+      id: l.id,
+      studentName: l.studentName,
+      classLabel: l.classLabel,
+      stage: l.stage,
+      source: l.source,
+    }));
+
   return {
     aiInsight,
     kpis,
+    // PRA-P1-48 (S4): no monthly revenue-series or expense-ledger table exists
+    // yet, so these stay HONESTLY empty (not a fabricated trend) — wire them when
+    // those sources land. The approval queue and recent conversions DO have real
+    // sources and are now populated.
     revenueTrend: [],
     expenseBreakdown: [],
-    approvalQueue: [],
+    approvalQueue: agg.pendingApprovals,
     admissionsSnapshot: {
       leadsMtd: admissions.totalLeads,
       confirmed: admissions.confirmed,
       joined: admissions.joined,
       conversionRate: formatPercent(admissions.conversionRate),
-      recentConversions: [],
+      recentConversions,
     },
     feeSnapshot: {
       // PRA-P0-23 (S4): month-to-date, not all-time.

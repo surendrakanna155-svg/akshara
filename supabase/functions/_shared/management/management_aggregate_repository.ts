@@ -10,6 +10,9 @@ import {
 // PRA-P1-47 (S4): the ONE canonical "days overdue" expression Finance's
 // defaulters list is built from — a defaulter is OVERDUE, not merely outstanding.
 import { overdueDaysSql } from "../finance/finance_aging.ts";
+// PRA-P1-48 (S4): the real pending-approval queue for the executive dashboard
+// (was a hardcoded empty array).
+import { listPendingApprovals } from "../approval/approval_repository.ts";
 
 // MJ-C8 (PRINC-1): the Principal/Management executive dashboards used to serve
 // a never-refreshed `management_entities` seed snapshot, so every school saw the
@@ -268,6 +271,15 @@ export interface ManagementAggregate {
   defaulterCount: number;
   /** PRA-P0-23: collections this calendar month (month-to-date) — the real "Revenue MTD". */
   collectedThisMonth: number;
+  /** PRA-P1-48: real pending-approval queue (was hardcoded []). */
+  pendingApprovals: Array<{
+    id: string;
+    type: string;
+    title: string;
+    summary: string;
+    requesterName: string;
+    createdAt: string;
+  }>;
 }
 
 export async function getManagementAggregate(
@@ -278,6 +290,8 @@ export async function getManagementAggregate(
   const finance = await getFinanceDashboard(db, organizationId, schoolId);
   const admissions = await getAdmissionsDashboard(db, organizationId, schoolId);
   const academic = await getAcademicAggregate(db, organizationId, schoolId);
+  // PRA-P1-48: the real pending-approval queue (was a hardcoded empty array).
+  const approvals = await listPendingApprovals(db, organizationId, schoolId);
 
   const studentRows = await db.queryObject<
     { active: string; defaulters: string; collected_mtd: string }
@@ -306,5 +320,13 @@ export async function getManagementAggregate(
     activeStudents: Number(studentRows[0]?.active ?? "0"),
     defaulterCount: Number(studentRows[0]?.defaulters ?? "0"),
     collectedThisMonth: Number(studentRows[0]?.collected_mtd ?? "0"),
+    pendingApprovals: approvals.map((a) => ({
+      id: a.id,
+      type: a.type,
+      title: a.title,
+      summary: a.summary,
+      requesterName: a.requester_name,
+      createdAt: a.created_at,
+    })),
   };
 }

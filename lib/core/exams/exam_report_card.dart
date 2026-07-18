@@ -1,5 +1,6 @@
 import '../repositories/mock/mock_canonical_student_registry.dart';
 import 'exam_administration_store.dart';
+import 'exam_grading.dart';
 import 'exam_remark.dart';
 
 /// One subject line on a report card.
@@ -102,8 +103,88 @@ class ExamReportCard {
       totalMax == 0 ? 0 : ((totalScore / totalMax) * 100).round();
 }
 
+/// PRA-P0-06 / PRA-P1-32 (S4) — one PUBLISHED subject result as delivered by the
+/// server-backed exams feed (`getExams`). Feeds
+/// [ExamReportCardBuilder.fromPublishedResults] so the parent & student report
+/// cards can be built from the same server-backed published-results source the
+/// exams screen already uses, instead of a local in-memory store.
+class PublishedResultLine {
+  const PublishedResultLine({
+    required this.subject,
+    required this.examTitle,
+    required this.termLabel,
+    required this.score,
+    required this.maxScore,
+    required this.grade,
+  });
+
+  final String subject;
+  final String examTitle;
+  final String termLabel;
+  final int score;
+  final int maxScore;
+  final String grade;
+}
+
 /// Builds [ExamReportCard]s from the published results in the store.
 abstract final class ExamReportCardBuilder {
+  /// PRA-P0-06 / PRA-P1-32 (S4) — builds a report card straight from a student's
+  /// PUBLISHED exam results as returned by the SERVER-BACKED exams feed
+  /// (`getExams`), so the parent & student report-card providers read the SAME
+  /// published-results source the exams screen uses instead of a local
+  /// in-memory [ExamAdministrationStore] scoped to a hardcoded student id.
+  ///
+  /// The exams feed carries per-subject marks + grade only; it does NOT carry the
+  /// school grading scale, class rank, or teacher/leadership remarks, so those are
+  /// omitted here (rank hidden, no remarks) and the OVERALL grade is derived from
+  /// the server-supplied percentage using the standard scale. Returns null when
+  /// there are no published results (report card not yet available), preserving
+  /// the prior "null until published" contract. Results are scoped to the most
+  /// recently published [termLabel] (mirrors [build]).
+  static ExamReportCard? fromPublishedResults({
+    required String studentName,
+    required String classLabel,
+    required List<PublishedResultLine> results,
+    String sisStudentId = '',
+    int? attendancePercent,
+  }) {
+    if (results.isEmpty) return null;
+    final term = results.last.termLabel;
+    final mine = results.where((r) => r.termLabel == term).toList();
+    if (mine.isEmpty) return null;
+
+    final subjects = [
+      for (final r in mine)
+        ReportCardSubjectLine(
+          subject: r.subject,
+          examTitle: r.examTitle,
+          score: r.score,
+          maxScore: r.maxScore,
+          grade: r.grade,
+        ),
+    ];
+    final totalScore = mine.fold<int>(0, (sum, r) => sum + r.score);
+    final totalMax = mine.fold<int>(0, (sum, r) => sum + r.maxScore);
+    final overallPercent = totalMax == 0 ? 0.0 : (totalScore / totalMax) * 100.0;
+
+    return ExamReportCard(
+      sisStudentId: sisStudentId,
+      studentName: studentName,
+      classLabel: classLabel,
+      termLabel: term,
+      subjects: subjects,
+      totalScore: totalScore,
+      totalMax: totalMax,
+      overallGrade:
+          totalMax == 0 ? '' : ExamGradingScale.standard.gradeFor(overallPercent),
+      // Rank and remarks are not carried by the exams feed — hidden, not faked.
+      rank: 0,
+      classSize: 0,
+      rankShown: false,
+      attendancePercent: attendancePercent,
+    );
+  }
+
   /// Returns the report card for [sisStudentId] in [termLabel], or null when the
   /// student has no published results for that term.
   static ExamReportCard? build(

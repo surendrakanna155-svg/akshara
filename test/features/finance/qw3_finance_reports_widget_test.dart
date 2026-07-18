@@ -12,21 +12,30 @@ import '../../test_helpers.dart';
 
 /// QW3 · QA-F-035 — Finance reports export: tapping Export PDF invokes the PDF
 /// build + preview path and surfaces feedback; Export Excel invokes the CSV
-/// build + share path and surfaces feedback. The export service is faked so the
-/// platform `printing` plugin (layoutPdf / sharePdf) is not driven in the test.
+/// share path and surfaces feedback. The export service is faked so the platform
+/// `printing` plugin (layoutPdf / sharePdf) is not driven in the test.
+///
+/// PRA-P1-49 (S4): the screen now exports the report's real trend DATA through
+/// the shared XCT-1 GRID primitives (buildGridReportPdf / shareGridCsv), exactly
+/// as HR/Attendance do — so the fake overrides those, not the key/value tabular
+/// builders it used to (mis)use for 3 metadata rows.
 class _FakeReportExportService extends AksharaReportExportService {
   const _FakeReportExportService(this.calls);
 
   final List<String> calls;
 
   @override
-  Future<Uint8List> buildTabularReportPdf({
+  Future<Uint8List> buildGridReportPdf({
     required String reportTitle,
     required String moduleLabel,
-    required List<MapEntry<String, String>> rows,
+    required List<String> headers,
+    required List<List<String>> rows,
     String? generatedAtLabel,
+    int? rightAlignFrom,
   }) async {
-    calls.add('buildPdf:$reportTitle');
+    // Record the real data-row count so the test proves it is NOT the old
+    // 3-metadata-row stub.
+    calls.add('buildGridPdf:$reportTitle:${rows.length}');
     return Uint8List(0);
   }
 
@@ -39,22 +48,12 @@ class _FakeReportExportService extends AksharaReportExportService {
   }
 
   @override
-  String buildTabularReportCsv({
-    required String reportTitle,
-    required List<MapEntry<String, String>> rows,
-  }) {
-    calls.add('buildCsv:$reportTitle');
-    // Two data rows so the screen's "(N rows)" feedback is deterministic.
-    return 'Report,$reportTitle\nField,Value\nA,1\nB,2';
-  }
-
-  @override
-  Future<void> shareTabularCsv({
+  Future<void> shareGridCsv({
     required String filename,
-    required String reportTitle,
-    required List<MapEntry<String, String>> rows,
+    required List<String> headers,
+    required List<List<String>> rows,
   }) async {
-    calls.add('shareCsv:$filename');
+    calls.add('shareGridCsv:$filename:${rows.length}');
   }
 }
 
@@ -113,13 +112,18 @@ void main() {
       await tester.tap(pdfButton);
       await tester.pumpAndSettle();
 
-      expect(calls.any((c) => c.startsWith('buildPdf:')), isTrue);
+      // PRA-P1-49 (S4): rides the shared GRID PDF builder and carries the real
+      // trend series (6 monthly points), not the old 3-metadata-row stub.
+      final gridPdfCall =
+          calls.firstWhere((c) => c.startsWith('buildGridPdf:'), orElse: () => '');
+      expect(gridPdfCall, isNotEmpty);
+      expect(gridPdfCall.endsWith(':6'), isTrue);
       expect(calls.any((c) => c.startsWith('previewPdf:')), isTrue);
       expect(
         find.byKey(QaTestKeys.financeReportExportSuccessSnackbar),
         findsOneWidget,
       );
-      expect(find.textContaining('PDF ready'), findsOneWidget);
+      expect(find.textContaining('PDF ready (6 rows)'), findsOneWidget);
     });
 
     testWidgets('Export Excel invokes the CSV build + share and shows feedback',
@@ -133,13 +137,17 @@ void main() {
       await tester.tap(excelButton);
       await tester.pumpAndSettle();
 
-      expect(calls.any((c) => c.startsWith('buildCsv:')), isTrue);
-      expect(calls.any((c) => c.startsWith('shareCsv:')), isTrue);
+      // PRA-P1-49 (S4): shares the real trend grid CSV (6 rows), not metadata.
+      final gridCsvCall = calls.firstWhere(
+          (c) => c.startsWith('shareGridCsv:'),
+          orElse: () => '');
+      expect(gridCsvCall, isNotEmpty);
+      expect(gridCsvCall.endsWith(':6'), isTrue);
       expect(
         find.byKey(QaTestKeys.financeReportExportSuccessSnackbar),
         findsOneWidget,
       );
-      expect(find.textContaining('Excel CSV ready'), findsOneWidget);
+      expect(find.textContaining('Excel CSV ready (6 rows)'), findsOneWidget);
     });
   });
 }

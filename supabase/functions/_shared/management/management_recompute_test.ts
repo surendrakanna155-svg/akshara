@@ -200,6 +200,7 @@ function emptyAggregate(): ManagementAggregate {
     activeStudents: 0,
     defaulterCount: 0,
     collectedThisMonth: 0,
+    pendingApprovals: [],
   };
 }
 
@@ -220,6 +221,10 @@ function seededAggregate(): ManagementAggregate {
     conversionRate: 31.67,
     stageCounts: { new_enquiry: 50, confirmed: 45, joined: 38 },
     sourceCounts: { referral: 70, walk_in: 50 },
+    pipelineLeads: [
+      { stage: "joined", id: "l1", studentName: "Asha", classLabel: "1-A", score: "hot", source: "referral", daysInStage: 2 },
+      { stage: "new_enquiry", id: "l2", studentName: "Ravi", classLabel: "1-A", score: "warm", source: "walk_in", daysInStage: 5 },
+    ],
   };
   agg.academic = {
     avgAttendancePercent: 94,
@@ -242,6 +247,16 @@ function seededAggregate(): ManagementAggregate {
   // PRA-P0-23: month-to-date collections are DISTINCT from all-time totalCollected
   // (₹2.4Cr) — proves the "Revenue MTD" KPI uses the MTD figure, not the total.
   agg.collectedThisMonth = 4500000; // ₹45L
+  agg.pendingApprovals = [
+    {
+      id: "ap1",
+      type: "fee_concession",
+      title: "Fee concession",
+      summary: "10% for Asha",
+      requesterName: "Clerk",
+      createdAt: "2026-07-01T00:00:00Z",
+    },
+  ];
   return agg;
 }
 
@@ -273,6 +288,13 @@ Deno.test("dashboard payload: seeded school => computed values", () => {
   const kpis = p.kpis as Array<Record<string, unknown>>;
   assertEquals(kpis[0].id, "revenue");
   assertEquals(kpis[0].value, "₹45L");
+  // PRA-P1-48: the approval queue + recent conversions are now REAL (not []).
+  const queue = p.approvalQueue as Array<Record<string, unknown>>;
+  assertEquals(queue.length, 1);
+  assertEquals(queue[0].title, "Fee concession");
+  const conversions = adm.recentConversions as Array<Record<string, unknown>>;
+  assertEquals(conversions.length, 1); // only the 'joined' lead, not new_enquiry
+  assertEquals(conversions[0].studentName, "Asha");
 });
 
 Deno.test("financial-health payload: honest empty expenses, computed revenue", () => {
