@@ -1,10 +1,17 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
+// PRA-P1-09 (S1): the register now posts a collection on successful
+// reconciliation (Option 1) — it is the single cheque/DD/PDC entry path.
+import { createCollection } from "./finance_collections_repository.ts";
 
-// FIN-R7: 'pdc' = post-dated cheque (a cheque dated in the future; instrument_date
-// carries that date). 'bounced' = terminal tracking status for a returned/
-// dishonoured instrument — it posts NO money (this ledger never touches
-// finance_collections), so a bounce reverses nothing; it only records that the
-// instrument failed. Finance stays the sole payment engine.
+// FIN-R7 (amended PRA-P1-09, S1 — owner-approved Option 1): this register is the
+// SINGLE entry path for cheque/DD/PDC (post-dated cheque) — direct instrument
+// entry through createCollection is rejected. An instrument is recorded here as
+// 'pending_reconciliation' with NO money movement; the money is posted to
+// finance_collections ONLY on successful reconciliation (clearance), at which
+// point revenue is recognised. Because a bounce can only happen from the
+// pending (pre-clearance) state, a bounce reverses nothing — nothing was posted.
+// Finance remains the sole payment engine: the posted collection is a normal
+// finance_collections row created via the standard collection path.
 export type OfflinePaymentMethod = "cash" | "cheque" | "dd" | "pdc";
 export type OfflinePaymentStatus =
   | "pending_reconciliation"
@@ -82,6 +89,20 @@ export class OfflinePaymentBouncedError extends Error {
   constructor(id: string) {
     super(`Offline payment already bounced, cannot reconcile: ${id}`);
     this.name = "OfflinePaymentBouncedError";
+  }
+}
+
+/**
+ * PRA-P1-09 (S1): raised when an instrument with no linked invoice is reconciled.
+ * Reconciliation posts a real collection against the invoice, so an instrument
+ * recorded without an invoice cannot be cleared into the ledger. Maps to 422.
+ */
+export class OfflinePaymentNotInvoicedError extends Error {
+  constructor(id: string) {
+    super(
+      `Offline instrument ${id} has no linked invoice; it cannot be reconciled into a collection.`,
+    );
+    this.name = "OfflinePaymentNotInvoicedError";
   }
 }
 
@@ -215,6 +236,38 @@ export async function reconcileOfflinePayment(
   if (existing.status === "bounced") {
     throw new OfflinePaymentBouncedError(id);
   }
+  // Idempotent: an already-reconciled instrument has already posted its
+  // collection; re-reconciling is a no-op that must not post a second one.
+  if (existing.status === "reconciled") {
+    return existing;
+  }
+
+  // PRA-P1-09 (S1, Option 1): a cleared instrument posts its collection NOW. This
+  // is the SINGLE point where a cheque/DD/PDC becomes booked revenue — money is
+  // recognised only on clearance, so a pre-clearance bounce reverses nothing
+  // (nothing was posted). `allowInstrument` lets this bypass the direct-entry
+  // block in createCollection. Requires an invoice to post against.
+  let collectionId = existing.collection_id;
+  if (!collectionId) {
+    if (!existing.invoice_id) {
+      throw new OfflinePaymentNotInvoicedError(id);
+    }
+    const collectionDate = input.reconciledAt
+      ? String(input.reconciledAt).slice(0, 10)
+      : undefined;
+    const posted = await createCollection(db, organizationId, schoolId, {
+      invoiceId: existing.invoice_id,
+      amountCollected: Number(existing.amount),
+      paymentMethod: existing.payment_method,
+      referenceNumber: existing.reference_number ?? undefined,
+      notes:
+        `Cleared ${existing.payment_method} reconciled from the Offline Instrument Register`,
+      collectedBy: input.reconciledBy,
+      collectionDate,
+      allowInstrument: true,
+    });
+    collectionId = posted.collection.id;
+  }
 
   const rows = await db.queryObject<FinanceOfflinePaymentRow>(
     `UPDATE finance_offline_payments
@@ -222,6 +275,7 @@ export async function reconcileOfflinePayment(
          reconciled_at = COALESCE($4::timestamptz, timezone('utc', now())),
          reconciled_by = $5,
          notes = COALESCE($6, notes),
+         collection_id = COALESCE($7, collection_id),
          updated_at = timezone('utc', now())
      WHERE id = $1 AND organization_id = $2 AND school_id = $3
        AND status <> 'bounced'
@@ -233,17 +287,19 @@ export async function reconcileOfflinePayment(
       input.reconciledAt ?? null,
       input.reconciledBy,
       input.notes ?? null,
+      collectionId,
     ],
   );
   return rows[0]!;
 }
 
 /**
- * FIN-R7: mark a pending instrument (cheque / DD / PDC) as bounced/dishonoured.
- * Terminal, match-once, money-safe: this ledger never posts to
- * finance_collections, so a bounce reverses NO money — it only records the
- * failure. Only reachable from 'pending_reconciliation'; a reconciled (cleared)
- * instrument cannot be bounced; bouncing an already-bounced row is an idempotent
+ * FIN-R7 (amended PRA-P1-09, S1): mark a pending instrument (cheque / DD / PDC)
+ * as bounced/dishonoured. Terminal, match-once, money-safe: a bounce is only
+ * reachable from 'pending_reconciliation' — BEFORE the money is posted (a
+ * collection is posted only on reconciliation) — so a bounce reverses NO money;
+ * it just records the failure. A reconciled (cleared) instrument cannot be
+ * bounced; bouncing an already-bounced row is an idempotent
  * no-op. Any refund of money already collected against the instrument stays a
  * separate manual Finance action (Finance = sole payment engine).
  */

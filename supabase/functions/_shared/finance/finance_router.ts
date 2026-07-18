@@ -63,6 +63,7 @@ import {
   handleRejectRefund,
 } from "./finance_refunds_handlers.ts";
 import {
+  handleApplyDiscountRule,
   handleCreateDiscountRule,
   handleDiscountsDashboard,
   handleUpdateDiscountRule,
@@ -96,6 +97,7 @@ import {
   handleUpdateSettings,
 } from "./finance_settings_handlers.ts";
 import {
+  handleAwardScholarship,
   handleCreateScholarship,
   handleUpdateScholarship,
 } from "./finance_scholarships_handlers.ts";
@@ -311,6 +313,13 @@ export function matchFinanceRoute(
     return { handler: handleCreateDiscountRule, args: [] };
   }
 
+  // PRA-P1-10 (S1): apply an approved rule to a student's invoice → emits a
+  // guarded (maker-checker) fee-reduction; approval is what reduces the payable.
+  const applyDiscountMatch = path.match(/^\/finance\/discounts\/([^/]+)\/apply$/);
+  if (applyDiscountMatch && method === "POST") {
+    return { handler: handleApplyDiscountRule, args: [applyDiscountMatch[1]!] };
+  }
+
   const discountMatch = path.match(/^\/finance\/discounts\/([^/]+)$/);
   if (discountMatch && method === "PUT") {
     return { handler: handleUpdateDiscountRule, args: [discountMatch[1]!] };
@@ -420,6 +429,13 @@ export function matchFinanceRoute(
   if (path === "/finance/scholarships" && method === "POST") {
     return { handler: handleCreateScholarship, args: [] };
   }
+  // PRA-P1-10 (S1): award an active scholarship to a student's invoice → emits a
+  // guarded (maker-checker) fee-reduction; approval is what reduces the payable.
+  const awardScholarshipMatch = path.match(/^\/finance\/scholarships\/([^/]+)\/award$/);
+  if (awardScholarshipMatch && method === "POST") {
+    return { handler: handleAwardScholarship, args: [awardScholarshipMatch[1]!] };
+  }
+
   const scholarshipMatch = path.match(/^\/finance\/scholarships\/([^/]+)$/);
   if (scholarshipMatch && method === "PUT") {
     return { handler: handleUpdateScholarship, args: [scholarshipMatch[1]!] };

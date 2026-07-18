@@ -9,15 +9,25 @@ import {
 } from "../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
-import { emitMutationAudit, financeAudit } from "../audit/mutation_audit_catalog.ts";
 import {
+  emitMutationAudit,
+  financeAudit,
+  moduleEntityAudit,
+} from "../audit/mutation_audit_catalog.ts";
+import {
+  awardScholarshipToInvoice,
   createScholarship,
   isScholarshipType,
   type ScholarshipType,
+  ScholarshipNotApplicableError,
   ScholarshipNotFoundError,
   scholarshipToApi,
   updateScholarship,
 } from "./finance_scholarships_repository.ts";
+import {
+  FeeReductionValidationError,
+  feeReductionToApi,
+} from "./finance_fee_reductions_repository.ts";
 
 function requireFinanceWrite(claims: Parameters<typeof requirePermission>[0]): Response | null {
   return requirePermission(claims, "manageFinance") ??
@@ -137,6 +147,82 @@ export async function handleUpdateScholarship(
     }
     if (error instanceof ScholarshipNotFoundError) {
       return errorEnvelope("NOT_FOUND", error.message, 404);
+    }
+    throw error;
+  }
+}
+
+// PRA-P1-10 (S1): POST /finance/scholarships/:id/award — award an active
+// scholarship to a student's INVOICE. This is the MAKER step: it emits a PENDING
+// fee-reduction (money-neutral) through the certified maker-checker path, with
+// the amount derived from the scholarship's own max_discount (never the client).
+// A DIFFERENT user then approves it via /finance/fee-reductions/:id/approve to
+// actually reduce the payable (self-approval blocked). Closes the "a scholarship
+// never reduces a payable" gap without forking the money mechanism.
+export async function handleAwardScholarship(
+  req: Request,
+  config: AppConfig,
+  scholarshipId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requireFinanceWrite(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) {
+    return errorEnvelope("VALIDATION_ERROR", "Request body is required", 422);
+  }
+
+  const invoiceId = optionalStr(body, "invoice_id", "invoiceId");
+  const reason = optionalStr(body, "reason", "reason");
+  if (!invoiceId) {
+    return errorEnvelope("VALIDATION_ERROR", "invoiceId is required", 422);
+  }
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const reduction = await withTenantContext(config, auth.claims, async (db) => {
+      const row = await awardScholarshipToInvoice(db, orgId, schoolId, {
+        scholarshipId,
+        invoiceId,
+        reason,
+        createdBy: auth.claims.sub,
+      });
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        moduleEntityAudit(
+          "finance.feeReduction.proposed",
+          "finance_fee_reduction",
+          row.id,
+          {
+            sourceKind: "scholarship",
+            sourceId: scholarshipId,
+            invoiceId,
+            reductionKind: row.reduction_kind,
+          },
+        ),
+        req,
+      );
+      return row;
+    });
+    return jsonResponse(envelope(feeReductionToApi(reduction)), { status: 201 });
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse();
+    }
+    if (error instanceof ScholarshipNotFoundError) {
+      return errorEnvelope("NOT_FOUND", error.message, 404);
+    }
+    if (
+      error instanceof ScholarshipNotApplicableError ||
+      error instanceof FeeReductionValidationError
+    ) {
+      return errorEnvelope("VALIDATION_ERROR", error.message, 422);
     }
     throw error;
   }

@@ -1,5 +1,9 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
 import { upsertPaymentRequest } from "../payment/payment_repository.ts";
+// PRA-P1-37 (S1): reuse the store-stock module's typed insufficient-stock error
+// so a student distribution refuses (never floors) an over-issue, exactly like
+// the typed stock issue path (inventory_stock_repository.issueStock).
+import { InsufficientStockError } from "../inventory_finance/inventory_stock_repository.ts";
 
 export interface CatalogItemRow {
   id: string;
@@ -153,8 +157,41 @@ export async function createDistribution(
     /// Set when this distribution is the physical item reissued to fulfil a
     /// replacement request — links back to the original row.
     replacementOfId?: string | null;
+    /// Who the first-time issuance charge (PRA-P1-38) is raised against. Defaults
+    /// to `createdBy` (the staff who issued) when the caller supplies no distinct
+    /// payer; only used for a priced, non-replacement issue.
+    payerUserId?: string | null;
   },
 ): Promise<DistributionRow> {
+  // PRA-P1-37 (S1): lock the catalog row and hard-block a negative-stock issue.
+  // Under READ COMMITTED two concurrent issues could each read the same
+  // stock_on_hand and both slip past a naive check; the FOR UPDATE serializes
+  // them on the row (mirrors the stock module's lockStockRow discipline). The
+  // old `greatest(0, stock_on_hand - qty)` clamp SILENTLY masked an over-issue by
+  // flooring at 0 — it is removed: stock is validated here and decremented
+  // WITHOUT a clamp, so it can never go negative and an over-issue is refused
+  // (InsufficientStockError) instead of hidden.
+  const catalog = await client.queryObject<{
+    sku_code: string | null;
+    unit_price: number;
+    stock_on_hand: number;
+  }>(
+    `SELECT sku_code, unit_price, stock_on_hand
+       FROM inv_catalog_items
+      WHERE id = $1
+      FOR UPDATE`,
+    [input.catalogItemId],
+  );
+  const item = catalog[0];
+  if (!item) throw new Error("Catalog item not found");
+  if (input.quantity > item.stock_on_hand) {
+    throw new InsufficientStockError(
+      item.sku_code ?? input.catalogItemId,
+      input.quantity,
+      item.stock_on_hand,
+    );
+  }
+
   const rows = await client.queryObject<DistributionRow>(
     `INSERT INTO inv_student_distributions (
        organization_id, school_id, student_id, catalog_item_id,
@@ -171,13 +208,49 @@ export async function createDistribution(
       input.replacementOfId ?? null,
     ],
   );
+  const distribution = rows[0]!;
+
+  // PRA-P1-37 (S1): decrement WITHOUT the greatest() clamp — the FOR UPDATE read
+  // above already proved quantity <= stock_on_hand, and the DB CHECK backstops.
   await client.queryObject(
     `UPDATE inv_catalog_items
-     SET stock_on_hand = greatest(0, stock_on_hand - $1)
-     WHERE id = $2`,
+        SET stock_on_hand = stock_on_hand - $1
+      WHERE id = $2`,
     [input.quantity, input.catalogItemId],
   );
-  return rows[0]!;
+
+  // PRA-P1-38 (S1): bill a first-time issuance of a PRICED item — previously
+  // issuance was never billed (only requestReplacement charged). Single-charge
+  // reconciliation: a REPLACEMENT re-issue (replacement_of_id set) is NOT billed
+  // here because the replacement is already charged once at REQUEST time in
+  // requestReplacement (sourceType 'inventory_replacement'); billing on fulfil
+  // too would double-charge the same event. So the one charge point per event is
+  //   first issue        -> here            (sourceType 'inventory_issue')
+  //   replacement request -> requestReplacement ('inventory_replacement')
+  // Mirrors requestReplacement's billing (upsertPaymentRequest, amount = price*qty).
+  const payerUserId = input.payerUserId ?? input.createdBy;
+  if (input.replacementOfId == null && item.unit_price > 0 && payerUserId) {
+    const request = await upsertPaymentRequest(client, {
+      organizationId,
+      schoolId,
+      studentId: input.studentId,
+      payerUserId,
+      sourceType: "inventory_issue",
+      sourceId: distribution.id,
+      invoiceId: null,
+      amount: item.unit_price * input.quantity,
+      idempotencyKey: `inv-issue-${distribution.id}`,
+    });
+    await client.queryObject(
+      `UPDATE inv_student_distributions
+          SET payment_request_id = $1
+        WHERE id = $2`,
+      [request.id, distribution.id],
+    );
+    distribution.payment_request_id = request.id;
+  }
+
+  return distribution;
 }
 
 export async function transitionDistributionStatus(
@@ -284,8 +357,17 @@ async function loadReplacementRequest(
   client: TenantQueryClient,
   requestId: string,
 ): Promise<DistributionRow> {
+  // PRA-M-1 (S1): lock the row FOR UPDATE so concurrent approve/reject/fulfill
+  // calls on the same request serialize on it (mirrors finance_fee_reductions'
+  // getReductionForUpdate + the stock module's getPendingAdjustment). Combined
+  // with the pre-state predicate added to each terminal UPDATE below, a lost
+  // race can only ever match 0 rows → requireUpdatedRow throws (rolling the txn
+  // back) instead of double-applying: double-issuing stock on a second fulfil or
+  // re-billing on a second request/approve.
   const rows = await client.queryObject<DistributionRow>(
-    `SELECT * FROM inv_student_distributions WHERE id = $1 AND replacement_status IS NOT NULL`,
+    `SELECT * FROM inv_student_distributions
+      WHERE id = $1 AND replacement_status IS NOT NULL
+      FOR UPDATE`,
     [requestId],
   );
   const row = rows[0];
@@ -302,10 +384,14 @@ export async function approveReplacementRequest(
     throw new ReplacementRequestInvalidStateError(requestId, current.replacement_status);
   }
   const rows = await client.queryObject<DistributionRow & { itemName: string; category: string }>(
+    // PRA-M-1 (S1): guard the pre-state in the terminal write. If a concurrent
+    // call already moved it off 'pending', this matches 0 rows and
+    // requireUpdatedRow throws instead of a lost-update double-approve.
     `UPDATE inv_student_distributions d
      SET replacement_status = 'approved'
      FROM inv_catalog_items c
      WHERE d.id = $1 AND c.id = d.catalog_item_id
+       AND d.replacement_status = 'pending'
      RETURNING d.*, c.name AS "itemName", c.category`,
     [requestId],
   );
@@ -322,12 +408,16 @@ export async function rejectReplacementRequest(
     throw new ReplacementRequestInvalidStateError(requestId, current.replacement_status);
   }
   const rows = await client.queryObject<DistributionRow & { itemName: string; category: string }>(
+    // PRA-M-1 (S1): guard the pre-state — reject is valid only from
+    // 'pending'/'approved'. A concurrent transition off those states matches 0
+    // rows so requireUpdatedRow throws rather than clobbering a resolved request.
     `UPDATE inv_student_distributions d
      SET replacement_status = 'rejected',
          replacement_resolved_at = timezone('utc', now()),
          replacement_rejection_reason = $2
      FROM inv_catalog_items c
      WHERE d.id = $1 AND c.id = d.catalog_item_id
+       AND d.replacement_status IN ('pending', 'approved')
      RETURNING d.*, c.name AS "itemName", c.category`,
     [requestId, reason ?? null],
   );
@@ -364,12 +454,18 @@ export async function fulfillReplacementRequest(
   });
 
   const rows = await client.queryObject<DistributionRow & { itemName: string; category: string }>(
+    // PRA-M-1 (S1): guard the pre-state 'approved'. This is the write that
+    // matters most — createDistribution above already issued (and decremented
+    // stock for) the replacement item. If a second concurrent fulfil reaches
+    // here after the first flipped the row off 'approved', it matches 0 rows and
+    // requireUpdatedRow throws, rolling back its duplicate stock issue.
     `UPDATE inv_student_distributions d
      SET replacement_status = 'fulfilled',
          replacement_resolved_at = timezone('utc', now()),
          status = 'reissued'
      FROM inv_catalog_items c
      WHERE d.id = $1 AND c.id = d.catalog_item_id
+       AND d.replacement_status = 'approved'
      RETURNING d.*, c.name AS "itemName", c.category`,
     [requestId],
   );

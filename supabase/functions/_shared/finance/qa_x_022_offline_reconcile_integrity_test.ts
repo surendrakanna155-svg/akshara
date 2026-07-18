@@ -78,7 +78,8 @@ class MockOfflinePaymentsDb {
       return row ? [structuredClone(row) as T] : [];
     }
 
-    // reconcileOfflinePayment UPDATE — single-row, scoped, sets status reconciled.
+    // reconcileOfflinePayment UPDATE — single-row, scoped, sets status reconciled
+    // and (PRA-P1-09) links the posted collection_id ($7).
     if (s.startsWith("UPDATE finance_offline_payments SET status = 'reconciled'")) {
       const row = this.payments.find((p) =>
         p.id === args[0] && p.organization_id === args[1] && p.school_id === args[2]
@@ -88,11 +89,45 @@ class MockOfflinePaymentsDb {
       row.reconciled_at = (args[3] as string | null) ?? "2026-06-30T12:00:00.000Z";
       row.reconciled_by = (args[4] as string | null) ?? null;
       if (args[5] != null) row.notes = String(args[5]);
+      if (args[6] != null) row.collection_id = String(args[6]);
       row.updated_at = "2026-06-30T12:00:00.000Z";
       return [structuredClone(row) as T];
     }
 
-    throw new Error(`Unhandled SQL in MockOfflinePaymentsDb: ${s.slice(0, 80)}`);
+    // PRA-P1-09 (S1): reconcile now posts a collection via createCollection.
+    // Model just enough of that path: the invoice+account load and the
+    // collection/receipt inserts. Everything else (day-lock, settings, invoice/
+    // account updates, head allocations) safely defaults to [] below.
+    if (s.includes("FROM finance_invoices fi") && s.includes("JOIN finance_student_accounts")) {
+      return [{
+        id: String(args[0]),
+        organization_id: ORG,
+        school_id: SCHOOL,
+        student_id: "stu-1",
+        student_account_id: "acct-1",
+        fee_assignment_id: "fa-1",
+        total_amount: "100000",
+        outstanding_amount: "100000",
+        invoice_status: "issued",
+      } as T];
+    }
+    if (s.startsWith("INSERT INTO finance_collections")) {
+      this.seq++;
+      return [{
+        id: `coll-${this.seq}`,
+        organization_id: ORG,
+        school_id: SCHOOL,
+        receipt_number: String(args[5]),
+        amount_collected: String(args[9]),
+        collection_status: "completed",
+      } as T];
+    }
+    if (s.startsWith("INSERT INTO finance_receipts")) {
+      return [{ id: `rcpt-${this.seq}`, receipt_number: String(args[3]) } as T];
+    }
+
+    // Unhandled reads/writes from the createCollection post-path are inert here.
+    return [] as T[];
   }
 
   get client(): TenantQueryClient {
@@ -110,6 +145,8 @@ async function seedPayment(
     method: "cash",
     referenceNumber: "RCPT-OFF-1",
     recordedBy: STAFF,
+    // PRA-P1-09 (S1): reconciliation posts a collection against this invoice.
+    invoiceId: "inv-1",
   });
 }
 

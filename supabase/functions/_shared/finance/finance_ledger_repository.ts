@@ -22,10 +22,26 @@ export interface StudentLedgerAccount {
   status: string;
 }
 
+// PRA-P1-11 (S1): a processed refund the statement ledger must debit. Only the
+// fields the ledger needs — the (possibly partial) refunded amount, the date it
+// was processed (for chronological placement), and the original receipt for
+// context in the printed row.
+export interface StudentLedgerRefund {
+  id: string;
+  refund_amount: string;
+  refund_status: string;
+  refund_date: string;
+  receipt_number: string | null;
+}
+
 export interface StudentLedger {
   account: StudentLedgerAccount;
   invoices: FinanceInvoiceRow[];
   collections: FinanceCollectionRow[];
+  // PRA-P1-11 (S1): processed refunds, debited in the ledger so the running
+  // balance reconciles to account.outstanding_amount. Optional so existing
+  // in-memory constructions of StudentLedger remain valid.
+  refunds?: StudentLedgerRefund[];
 }
 
 /** Load the student account (with student/admission/class labels) by its id. */
@@ -85,6 +101,37 @@ async function listInvoicesForAccount(
   );
 }
 
+// PRA-P1-11 (S1): all PROCESSED refunds for the account. `processed` is the
+// terminal refund state (see applyProcessedRefund), and it is the only state
+// that actually moved money — it added the refunded amount back to
+// account.outstanding_amount and subtracted it from amount_paid. The statement
+// ledger must therefore debit exactly these rows to reconcile to the summary.
+// Each row carries only its own (possibly partial) refund_amount, so summing
+// per-row does NOT double-count a partially-refunded collection. The collection
+// join is LEFT (receipt context only) so a refund is never dropped for it.
+async function listProcessedRefundsForAccount(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  studentAccountId: string,
+): Promise<StudentLedgerRefund[]> {
+  return await db.queryObject<StudentLedgerRefund>(
+    `SELECT fr.id,
+       fr.refund_amount::text AS refund_amount,
+       fr.refund_status,
+       COALESCE(fr.approved_at, fr.updated_at)::date::text AS refund_date,
+       fc.receipt_number
+     FROM finance_refunds fr
+     LEFT JOIN finance_collections fc ON fc.id = fr.collection_id
+     WHERE fr.student_account_id = $1
+       AND fr.organization_id = $2
+       AND fr.school_id = $3
+       AND fr.refund_status = 'processed'
+     ORDER BY fr.approved_at ASC, fr.created_at ASC`,
+    [studentAccountId, organizationId, schoolId],
+  );
+}
+
 /** Build the full ledger for a student account, or null when it doesn't exist. */
 export async function getStudentLedger(
   db: TenantQueryClient,
@@ -108,6 +155,13 @@ export async function getStudentLedger(
     schoolId,
     studentAccountId,
   );
+  // PRA-P1-11 (S1): also load processed refunds so the mapper can debit them.
+  const refunds = await listProcessedRefundsForAccount(
+    db,
+    organizationId,
+    schoolId,
+    studentAccountId,
+  );
 
-  return { account, invoices, collections };
+  return { account, invoices, collections, refunds };
 }

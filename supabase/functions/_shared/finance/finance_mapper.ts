@@ -517,7 +517,9 @@ export function dashboardToApi(data: FinanceDashboardSnapshot): Record<string, u
 // invoices (debits) and completed collections (credits) into a running-balance
 // ledger, plus the raw invoice/payment lists and an account summary.
 export function studentLedgerToApi(ledger: StudentLedger): Record<string, unknown> {
-  const { account, invoices, collections } = ledger;
+  // PRA-P1-11 (S1): `refunds` is optional on StudentLedger; default to none so
+  // legacy callers keep working.
+  const { account, invoices, collections, refunds = [] } = ledger;
 
   const invoiceRows = invoices.map((inv) => ({
     id: inv.id,
@@ -540,11 +542,13 @@ export function studentLedgerToApi(ledger: StudentLedger): Record<string, unknow
   }));
 
   // Build a running-balance ledger: an invoice debits (raises balance owed), a
-  // completed collection credits (reduces it). Cancelled collections do not move
-  // the balance. Sorted by date then a stable debit-before-credit tiebreak.
+  // completed collection credits (reduces it), and a processed refund debits it
+  // back. Cancelled collections do not move the balance. Sorted by date then a
+  // stable tiebreak (invoice → payment → refund) so on a single day the money
+  // is paid before it is refunded.
   interface LedgerEntry {
     date: string;
-    kind: "invoice" | "payment";
+    kind: "invoice" | "payment" | "refund";
     reference: string;
     description: string;
     debit: number;
@@ -573,6 +577,27 @@ export function studentLedgerToApi(ledger: StudentLedger): Record<string, unknow
       debit: 0,
       credit: parseFloat(c.amount_collected) || 0,
       order: 1,
+    });
+  }
+  // PRA-P1-11 (S1): debit each processed refund. A refunded collection keeps
+  // status 'refunded'/'partially_refunded' (NOT 'cancelled'), so it survives the
+  // filter above and still credits its full original amount — while the summary
+  // reads account.outstanding_amount, which applyProcessedRefund already raised
+  // by the refunded amount. Without this debit the ledger's running balance ends
+  // below the summary and the printed statement contradicts itself. We debit
+  // each refund row's own refund_amount (the partial portion, for a
+  // partially_refunded collection), so partial refunds are never double-counted.
+  for (const r of refunds) {
+    entries.push({
+      date: r.refund_date,
+      kind: "refund",
+      reference: r.receipt_number ?? r.id,
+      description: r.receipt_number
+        ? `Refund against ${r.receipt_number}`
+        : "Refund",
+      debit: parseFloat(r.refund_amount) || 0,
+      credit: 0,
+      order: 2,
     });
   }
   entries.sort((a, b) => {

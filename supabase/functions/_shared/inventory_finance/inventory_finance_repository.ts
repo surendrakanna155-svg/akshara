@@ -318,9 +318,16 @@ export async function receiveGoods(
       quantity_received: number;
       unit_cost: number;
     }>(
+      // PRA-P2-10 (S1): lock the PO line FOR UPDATE. Without it, two concurrent
+      // GRNs both read the same quantity_received, both pass the over-receipt
+      // check below, and both increment — over-receiving past the ordered
+      // quantity (a TOCTOU race under READ COMMITTED). The lock serializes them
+      // on the row so the second sees the first's committed increment and is
+      // correctly rejected. Mirrors upsertStockValuation's FOR UPDATE discipline.
       `SELECT sku, quantity, quantity_received, unit_cost
        FROM purchase_order_lines
-       WHERE id = $1 AND purchase_order_id = $2`,
+       WHERE id = $1 AND purchase_order_id = $2
+       FOR UPDATE`,
       [line.purchaseOrderLineId, purchaseOrderId],
     );
     const poLine = poLineRows[0];
