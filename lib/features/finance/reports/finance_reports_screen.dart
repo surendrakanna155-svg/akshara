@@ -5,7 +5,6 @@ import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../core/reports/finance_audit_register_service.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/operational_action_feedback.dart';
 import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -208,14 +207,11 @@ class FinanceReportsScreen extends ConsumerWidget {
                 icon: const Icon(Icons.fact_check_outlined),
                 label: const Text('Audit register'),
               ),
-              OutlinedButton.icon(
-                onPressed: () => showAksharaOperationalPreviewSnackBar(
-                  context,
-                  action: 'Email report',
-                ),
-                icon: const Icon(Icons.email_outlined),
-                label: const Text('Email report'),
-              ),
+              // PRA-P1-50 (S0/T7): the "Email report" button was removed. It only
+              // showed a "recorded in preview mode (no server write yet)" snackbar
+              // — no report was ever scheduled or emailed. It sat next to working
+              // PDF/Excel export buttons, advertising a capability that does not
+              // exist. A real scheduled/emailed-report pipeline is future work.
             ],
           ),
         ),

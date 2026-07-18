@@ -14,7 +14,6 @@ import { signAccessToken } from "../jwt.ts";
 import {
   handleTeacherAttendanceDraft,
   handleTeacherAttendanceSubmit,
-  handleTeacherExamMarkUpdate,
   handleTeacherHomeworkCreate,
   handleTeacherHomeworkReview,
 } from "./pilot_operations_handlers.ts";
@@ -134,21 +133,11 @@ Deno.test("homework create passes the gate WITH manageHomework", async () => {
   assertEquals(res.status, 503);
 });
 
-// ── Exam mark update gates on manageExamMarks (TEACH-4 / MJ-M10) ──────────────
-
-Deno.test("exam mark update is denied without manageExamMarks", async () => {
-  const token = await tokenWith(["viewAdminHub"]);
-  const res = await handleTeacherExamMarkUpdate(
-    new Request("https://x/teacher/exams/marks/m-1", {
-      method: "PUT",
-      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-      body: JSON.stringify({ marks_obtained: 10 }),
-    }),
-    config,
-    "m-1",
-  );
-  assertEquals(res.status, 403);
-});
+// PRA-P0-12 (S0/T1a): the pilot `handleTeacherExamMarkUpdate` gate test was
+// removed with the shadowing handler. `PUT /teacher/exams/marks/:id` now routes
+// to the governed exam engine (subject-teacher scoped); its RBAC/scope tests live
+// in the exam_administration suite. `dispatch_uniqueness_test.ts` guards the route
+// against a re-introduced duplicate.
 
 // ── Parent correction route requires parent scope (ATTEN-2 / MJ-M11) ──────────
 

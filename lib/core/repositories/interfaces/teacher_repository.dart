@@ -89,6 +89,13 @@ abstract class TeacherRepository {
     required TeacherTeachingContext teachingContext,
   });
 
+  /// PRA-P0-17: live teacher→parent communication timeline for a student
+  /// (newest first), replacing the never-populated in-memory store.
+  Future<List<ParentCommunicationRecord>> listParentCommunications({
+    required RepositoryQuery query,
+    required String sisStudentId,
+  });
+
   Future<SubjectTeacherConcern> dismissSubjectConcern({
     required RepositoryQuery query,
     required String concernId,

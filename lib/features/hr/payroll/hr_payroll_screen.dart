@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../core/security/permissions.dart';
@@ -111,14 +110,13 @@ class HrPayrollScreen extends ConsumerWidget {
           points: data.salaryTrend,
           height: chartHeight,
         ),
-        const SizedBox(height: AksharaSpacing.s6),
-        AksharaInsightCard(
-          message: data.financeIntegrationNote,
-          actionLabel: 'Open Finance',
-          icon: Icons.account_balance_outlined,
-          semanticLabelPrefix: 'Finance payroll integration',
-          onAction: () => context.go(data.financeRoute),
-        ),
+        // PRA-P0-24 (S0/T7, B5 Option C): the "Payroll posts to Finance / Open
+        // Finance" insight card was removed. It claimed a Finance ledger
+        // integration that does not exist and linked to `/finance/payroll`, a
+        // route that is not registered (a dead link). The real payroll→Finance
+        // ledger posting is scheduled for Stage S7; until it ships, this screen
+        // makes no integration claim. `financeIntegrationNote`/`financeRoute`
+        // remain on the data model (server-sourced) but are no longer surfaced.
       ],
     );
   }

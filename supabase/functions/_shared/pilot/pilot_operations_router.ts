@@ -7,7 +7,6 @@ import {
   handleStudentHomeworkSubmit,
   handleTeacherAttendanceDraft,
   handleTeacherAttendanceSubmit,
-  handleTeacherExamMarkUpdate,
   handleTeacherHomeworkBulkReview,
   handleTeacherHomeworkCreate,
   handleTeacherHomeworkHistory,
@@ -100,13 +99,12 @@ function matchPilotRoute(
     };
   }
 
-  const markMatch = path.match(/^\/teacher\/exams\/marks\/([^/]+)$/);
-  if (method === "PUT" && markMatch) {
-    const markEntryId = decodeURIComponent(markMatch[1]!);
-    return {
-      handler: (req, config) => handleTeacherExamMarkUpdate(req, config, markEntryId),
-    };
-  }
+  // PRA-P0-12 (S0/T1a): the duplicate `PUT /teacher/exams/marks/:id` was removed
+  // here. It shadowed the identical route in `teacher_router` (which app.ts
+  // dispatches later) and reached an UNSCOPED handler — bypassing the certified
+  // `isSubjectTeacherScoped`/`teacherTeachesExamSession` check. With this gone,
+  // dispatch falls through to teacher_router → the governed `applyMarkUpdate`.
+  // See `dispatch_uniqueness_test.ts` (S0/T1b) which now guards against reintroduction.
 
   return null;
 }

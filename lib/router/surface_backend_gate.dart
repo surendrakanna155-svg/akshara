@@ -37,6 +37,10 @@ final List<_SurfaceGate> _backendLessSurfaces = <_SurfaceGate>[
     prefixes: const ['/white-label', '/control-center/white-label'],
     flag: whiteLabelPlatformApiEnabledProvider,
   ),
+  // PRA-N-7 / N-8 (S0/T2-D): backend-less mock surfaces — hidden in live builds.
+  (prefixes: const ['/branches'], flag: branchApiEnabledProvider),
+  (prefixes: const ['/franchise'], flag: franchiseApiEnabledProvider),
+  (prefixes: const ['/resource-optimization'], flag: resourceOptimizationApiEnabledProvider),
 ];
 
 /// True when [location] belongs to a backend-less surface that must be hidden in

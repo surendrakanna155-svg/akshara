@@ -206,6 +206,18 @@ class ApiTeacherRepository implements TeacherRepository {
   }
 
   @override
+  Future<List<ParentCommunicationRecord>> listParentCommunications({
+    required RepositoryQuery query,
+    required String sisStudentId,
+  }) async {
+    final items = await _remote.listParentCommunications(
+      query: query,
+      sisStudentId: sisStudentId,
+    );
+    return _mapper.toParentCommunicationTimeline(items);
+  }
+
+  @override
   Future<SubjectTeacherConcern> dismissSubjectConcern({
     required RepositoryQuery query,
     required String concernId,

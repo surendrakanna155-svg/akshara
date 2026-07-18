@@ -297,6 +297,26 @@ class TeacherRemoteDataSource {
     return _requireData(response);
   }
 
+  // PRA-P0-17 (S0/T2-F): live teacher→parent communication timeline for a student.
+  Future<List<Map<String, dynamic>>> listParentCommunications({
+    required RepositoryQuery query,
+    required String sisStudentId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      TeacherApiPaths.parentCommunication,
+      queryParameters: {
+        ..._queryParams(query),
+        'sisStudentId': sisStudentId,
+      },
+    );
+    final data = _requireData(response);
+    final items = data['items'] as List<dynamic>? ?? const [];
+    return [
+      for (final item in items)
+        if (item is Map<String, dynamic>) item,
+    ];
+  }
+
   Future<List<Map<String, dynamic>>> listPendingConcerns({
     required RepositoryQuery query,
     required TeacherTeachingContext teachingContext,

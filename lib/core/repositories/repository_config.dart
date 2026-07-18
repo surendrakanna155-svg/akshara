@@ -336,6 +336,33 @@ final salonApiEnabledProvider = Provider<bool>((ref) {
   );
 });
 
+// PRA-N-7 / N-8 (S0/T2-D): branch, franchise and resource-optimization surfaces
+// have no live backend — their repositories are unconditional Mock* returns
+// (`repository_providers.dart`). These flags are absent from `live_release.json`
+// (default false), so `surface_backend_gate.dart` hides the surfaces in a live
+// build (they would otherwise show fabricated dashboards) while local/mock dev
+// builds keep them visible.
+final branchApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment('BRANCH_API_ENABLED', defaultValue: false);
+});
+
+final franchiseApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'FRANCHISE_API_ENABLED',
+    defaultValue: false,
+  );
+});
+
+final resourceOptimizationApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'RESOURCE_OPTIMIZATION_API_ENABLED',
+    defaultValue: false,
+  );
+});
+
 final restaurantApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
   return const bool.fromEnvironment(

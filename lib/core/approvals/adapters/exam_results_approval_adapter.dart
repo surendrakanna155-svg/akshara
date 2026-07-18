@@ -112,25 +112,26 @@ class ExamResultsApprovalAdapter implements ApprovalTypeAdapter {
   @override
   Map<String, String> enrichDetail(ApprovalRequest request) {
     if (request.type != ApprovalRequestType.examResults) return const {};
-    final exam = _store.examById(request.entityId);
-    if (exam == null) {
-      return const {'Status': 'Exam session not found in store'};
-    }
-
-    final marks = _store.marksForExam(exam.id);
-    final entered = marks.where((m) => m.marksObtained != null).length;
-    final total = marks.length;
-    final completion =
-        total == 0 ? '0%' : '${((entered / total) * 100).round()}%';
+    // PRA-N-9 (S0/T2-C): read the approval request's own payload (populated by
+    // `buildSubmitPayload` at submit time) rather than the in-memory
+    // `ExamAdministrationStore`, which is never populated in API mode — so this
+    // previously rendered "Exam session not found in store" for every real exam.
+    // Mirrors the finance/inventory/leave adapters, which read `request.payload`.
+    final p = request.payload;
+    final entered = p['marksEntered'];
+    final total = p['marksTotal'];
+    final completion = (entered is int && total is int && total > 0)
+        ? '${((entered / total) * 100).round()}%'
+        : '0%';
 
     return {
-      'Class': exam.classLabel,
-      'Subject': exam.subject,
-      'Exam': exam.title,
-      'Term': exam.termLabel,
-      'Marks completion': '$entered/$total ($completion)',
-      'Phase': exam.phase.name,
-      'Coordinator verified': _store.isCoordinatorVerified(exam.id) ? 'Yes' : 'No',
+      'Class': '${p['classLabel'] ?? '—'}',
+      'Subject': '${p['subject'] ?? '—'}',
+      'Exam': '${p['examTitle'] ?? '—'}',
+      'Term': '${p['termLabel'] ?? '—'}',
+      'Marks completion': '${entered ?? 0}/${total ?? 0} ($completion)',
+      'Phase': '${p['phase'] ?? '—'}',
+      'Coordinator verified': p['coordinatorVerified'] == true ? 'Yes' : 'No',
     };
   }
 

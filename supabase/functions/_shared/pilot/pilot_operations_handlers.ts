@@ -21,7 +21,6 @@ import {
   listHomeworkNonSubmitters,
   notifyHomeworkNonSubmitters,
   listTeacherHomeworkHistory,
-  updateExamMark,
   listGuardianUserIdsForStudent,
   upsertAttendanceSession,
   validateDueDate,
@@ -939,65 +938,12 @@ export async function handleTeacherHomeworkNotifyNonSubmitters(
   }
 }
 
-export async function handleTeacherExamMarkUpdate(
-  req: Request,
-  config: AppConfig,
-  markEntryId: string,
-): Promise<Response> {
-  const auth = await authenticateRequest(req, config);
-  if (!auth.ok) return auth.response;
-  if (auth.claims.scope !== "school" || !auth.claims.school_id) {
-    return errorEnvelope("FORBIDDEN", "Teacher scope required", 403);
-  }
-  // MJ-M10/TEACH-4: editing exam marks requires the manageExamMarks permission
-  // (the existing exam-governance permission, reused for the mobile teacher path).
-  const denied = requirePermission(auth.claims, "manageExamMarks");
-  if (denied) return denied;
-  const body = await readJson<Record<string, unknown>>(req);
-  if (!body) return errorEnvelope("VALIDATION_ERROR", "Invalid JSON", 422);
-
-  // RT-08: server-side marks bound. `marks_obtained` is an INTEGER column with a
-  // DB CHECK (0 <= marks <= max_marks). Reject a negative / non-integer fast
-  // here; the upper bound is enforced by the DB CHECK and mapped to 422 below
-  // (rather than leaking as a 500). Without this, a client could persist
-  // negative or >max marks and corrupt grades / percentages.
-  const marksObtained = Number(body.marks_obtained ?? body.marksObtained ?? 0);
-  if (!Number.isFinite(marksObtained) || !Number.isInteger(marksObtained) || marksObtained < 0) {
-    return errorEnvelope("VALIDATION_ERROR", "marks_obtained must be a non-negative integer", 422);
-  }
-
-  try {
-    const result = await withTenantContext(config, auth.claims, async (db) => {
-      const row = await updateExamMark(
-        db,
-        auth.claims.tenant_id,
-        auth.claims.school_id!,
-        markEntryId,
-        marksObtained,
-        auth.claims.sub,
-      );
-      await auditMobileWrite(db, auth.claims, req, "examMarkUpdated", "exam_mark_entry", markEntryId, row);
-      return row;
-    });
-    return jsonResponse(envelope(result));
-  } catch (error) {
-    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
-    // Published marks are immutable on the mobile/pilot path too — corrections
-    // only (matches the academics exam path).
-    if (error instanceof Error && error.message.includes("published and immutable")) {
-      return errorEnvelope("EXAM_MARK_PUBLISHED", error.message, 409);
-    }
-    if (error instanceof Error && error.message.includes("not found")) {
-      return errorEnvelope("NOT_FOUND", error.message, 404);
-    }
-    // RT-08: the DB CHECK rejected marks > max_marks (or < 0) — a client input
-    // error, not a server fault.
-    if (error instanceof Error && error.message.includes("exam_mark_entries_marks_bounds")) {
-      return errorEnvelope("VALIDATION_ERROR", "marks_obtained must be between 0 and max_marks", 422);
-    }
-    return errorEnvelope("INTERNAL_ERROR", "Failed to update exam mark", 500);
-  }
-}
+// PRA-P0-12 (S0/T1a): `handleTeacherExamMarkUpdate` (and its repository helper
+// `updateExamMark`) were removed. This pilot handler shadowed the governed
+// `PUT /teacher/exams/marks/:id` in `teacher_router` and applied only a flat
+// `manageExamMarks` permission check — it never verified the caller actually
+// teaches the exam's subject/class. Dispatch now falls through to the certified
+// `applyMarkUpdate`, which enforces `isSubjectTeacherScoped`/`teacherTeachesExamSession`.
 
 // NOTE: handleTeacherTimetable / handleParentTimetable were removed here (gap sweep
 // 2026-07-09): pre-refactor duplicates referenced by no router or test. The live

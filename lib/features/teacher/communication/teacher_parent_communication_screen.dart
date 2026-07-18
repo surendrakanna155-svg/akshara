@@ -240,7 +240,11 @@ class TeacherParentCommunicationScreen extends ConsumerWidget {
   }
 
   List<Widget> _timelineTiles(WidgetRef ref, String selectedId) {
-    final timeline = ref.watch(studentCommunicationTimelineProvider(selectedId));
+    // PRA-P0-17 (S0/T2-F): provider is now async (live endpoint); an empty list
+    // while loading/on error preserves the existing empty-state behaviour.
+    final timeline =
+        ref.watch(studentCommunicationTimelineProvider(selectedId)).valueOrNull ??
+            const [];
     if (timeline.isEmpty) {
       return [
         const Text('No messages sent to this parent yet.'),

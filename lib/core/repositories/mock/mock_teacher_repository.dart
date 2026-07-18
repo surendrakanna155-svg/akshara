@@ -417,6 +417,15 @@ class MockTeacherRepository implements TeacherRepository {
   }
 
   @override
+  Future<List<ParentCommunicationRecord>> listParentCommunications({
+    required RepositoryQuery query,
+    required String sisStudentId,
+  }) async {
+    // Local/mock dev keeps reading the in-memory store (populated by mock sends).
+    return ParentCommunicationStore.instance.timelineForStudent(sisStudentId);
+  }
+
+  @override
   Future<SubjectTeacherConcern> dismissSubjectConcern({
     required RepositoryQuery query,
     required String concernId,

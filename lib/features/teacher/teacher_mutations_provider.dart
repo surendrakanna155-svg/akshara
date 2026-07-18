@@ -402,7 +402,11 @@ class SubmitTeacherExamResultsForApprovalNotifier
       final requesterId = claims?.userId ?? 'teacher_demo';
       final requesterName = auth.displayName ?? 'Teacher';
 
-      final adapter = ExamResultsApprovalAdapter();
+      // PRA-P0-05 (S0/T2-C): inject the live exam repository so the teacher
+      // publish-for-approval path resolves real exams instead of the mock store.
+      final adapter = ExamResultsApprovalAdapter(
+        repository: ref.read(examAdministrationRepositoryProvider),
+      );
       final approval = await adapter.submitForApproval(
         service: ref.read(approvalCenterServiceProvider),
         query: ref.read(repositoryQueryProvider),

@@ -51,7 +51,10 @@ class TeacherStudentRiskScreen extends ConsumerWidget {
     WidgetRef ref,
     TeacherStudentRiskSnapshot snapshot,
   ) {
-    final timeline = ref.watch(studentCommunicationTimelineProvider(sisStudentId));
+    // PRA-P0-17 (S0/T2-F): provider is now async (live endpoint).
+    final timeline =
+        ref.watch(studentCommunicationTimelineProvider(sisStudentId)).valueOrNull ??
+            const [];
     final concerns = ref.watch(
       pendingSubjectConcernsProvider,
     ).valueOrNull?.where((c) => c.sisStudentId == sisStudentId).toList() ??
