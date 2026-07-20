@@ -19,6 +19,16 @@
 --     EXECUTE granted only to erp_tenant.
 -- Additive/dormant. LIVE activation additionally needs PLATFORM_ORG + support
 -- principals seeded — owner/deploy-gated (see ASIP_DESIGN §6.1).
+--
+-- DEFINER-OWNER REQUIREMENT (load-bearing): the three SECURITY DEFINER bridges
+-- write RLS-FORCEd tables from a session whose GUC does NOT match the row scope
+-- (school→mirror, support→school). They therefore rely on the function OWNER
+-- bypassing RLS. This migration MUST be applied by a superuser / BYPASSRLS role
+-- (the pilot applies migrations as `supabase_admin`, a superuser — the same role
+-- that owns the existing `app.set_request_context` definer). The live cert
+-- (`mirror:incident-written`) is the tripwire: if the owner cannot bypass RLS the
+-- mirror stays empty and the cert fails. The tenant edge role `erp_tenant`
+-- (NOBYPASSRLS) is never the owner, so support READS stay fully RLS-enforced.
 
 -- Fixed platform-support organization id (constant, not a school tenant). Kept
 -- as a helper so the id lives in exactly one place.
