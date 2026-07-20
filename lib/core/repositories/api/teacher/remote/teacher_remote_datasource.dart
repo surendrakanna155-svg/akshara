@@ -386,6 +386,50 @@ class TeacherRemoteDataSource {
     return MessageThreadDto.fromJson(_requireData(response));
   }
 
+  /// PRA-P1-30 — presign a real worksheet attachment upload, returning the signed
+  /// URL and the storage path to confirm with on create.
+  Future<({String signedUrl, String storagePath})> presignHomeworkAttachment({
+    required RepositoryQuery query,
+    required String fileName,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      TeacherApiPaths.homeworkAttachmentPresign,
+      queryParameters: _queryParams(query),
+      data: {'file_name': fileName},
+    );
+    final data = _requireData(response);
+    return (
+      signedUrl: data['signedUrl'] as String? ?? '',
+      storagePath: data['storagePath'] as String? ?? '',
+    );
+  }
+
+  /// PUT file bytes to the Supabase signed upload URL (separate host from API).
+  Future<void> putSignedUpload({
+    required String signedUrl,
+    required List<int> bytes,
+    required String contentType,
+  }) async {
+    final uploadClient = Dio(
+      BaseOptions(
+        headers: {'Content-Type': contentType},
+        validateStatus: (status) => status != null && status < 500,
+      ),
+    );
+    final response = await uploadClient.put<List<int>>(
+      signedUrl,
+      data: bytes,
+      options: Options(responseType: ResponseType.bytes),
+    );
+    if (response.statusCode == null || response.statusCode! >= 400) {
+      throw DioException(
+        requestOptions: response.requestOptions,
+        response: response,
+        message: 'Upload failed (${response.statusCode})',
+      );
+    }
+  }
+
   Future<TeacherHomeworkAssignment> createHomework({
     required RepositoryQuery query,
     required TeacherHomeworkCreateRequest request,

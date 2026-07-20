@@ -8,6 +8,9 @@ export interface StudentDocumentRow {
   document_type: string;
   status: string;
   file_uri: string | null;
+  // PRA-P1-19 — tenant-prefixed path of the real stored object (null for legacy
+  // metadata-only rows). `hasFile` in the API mapper is derived from this.
+  storage_path: string | null;
   uploaded_by: string | null;
   uploaded_at: string;
   verified_by: string | null;
@@ -20,6 +23,7 @@ export interface CreateStudentDocumentInput {
   documentType: string;
   status?: string;
   fileUri?: string | null;
+  storagePath?: string | null;
   uploadedBy: string;
 }
 
@@ -60,8 +64,8 @@ export async function createStudentDocument(
   const rows = await db.queryObject<StudentDocumentRow>(
     `INSERT INTO student_documents (
        organization_id, school_id, student_id,
-       document_type, status, file_uri, uploaded_by
-     ) VALUES ($1, $2, $3::uuid, $4, $5, $6, $7::uuid)
+       document_type, status, file_uri, storage_path, uploaded_by
+     ) VALUES ($1, $2, $3::uuid, $4, $5, $6, $7, $8::uuid)
      RETURNING *`,
     [
       organizationId,
@@ -70,10 +74,30 @@ export async function createStudentDocument(
       input.documentType,
       input.status ?? "pending",
       input.fileUri ?? null,
+      input.storagePath ?? null,
       input.uploadedBy,
     ],
   );
   return rows[0]!;
+}
+
+/**
+ * PRA-P1-19 — the tenant-prefixed storage path of a document's stored object, or
+ * null when the row is a legacy metadata-only record (no file). Scoped to
+ * org+school so a caller can never resolve another school's object.
+ */
+export async function getStudentDocumentStoragePath(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  docId: string,
+): Promise<string | null> {
+  const rows = await db.queryObject<{ storage_path: string | null }>(
+    `SELECT storage_path FROM student_documents
+      WHERE id = $1::uuid AND organization_id = $2 AND school_id = $3`,
+    [docId, organizationId, schoolId],
+  );
+  return rows[0]?.storage_path ?? null;
 }
 
 /**
@@ -116,6 +140,8 @@ export function documentToApi(row: StudentDocumentRow): Record<string, unknown> 
     documentType: row.document_type,
     status: row.status,
     fileUri: row.file_uri,
+    // PRA-P1-19 — a stored object means the document is retrievable (download).
+    hasFile: (row.storage_path ?? "").length > 0,
     uploadedAt: row.uploaded_at,
     verifiedAt: row.verified_at,
     verifiedBy: row.verified_by,

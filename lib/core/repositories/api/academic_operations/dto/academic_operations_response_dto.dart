@@ -16,10 +16,13 @@ class AcademicTransitionJobResponseDto {
       targetYearId: json['targetYearId'] as String? ?? '',
       status: json['status'] as String? ?? 'pending',
       createdAtIso: json['createdAt'] as String? ?? '',
-      mappingRules: _list(json['mappingRules'])
+      // PRA-P0-14: backend stores the mapping under `classMapping` and the
+      // affected students under `previewReport.rows` (see academic_transition_
+      // handlers.ts / repository.ts). Fall back to the legacy flat keys.
+      mappingRules: _list(json['classMapping'] ?? json['mappingRules'])
           .map(ClassMappingRuleResponseDto.fromJson)
           .toList(growable: false),
-      previewRows: _list(json['previewRows'])
+      previewRows: _transitionPreviewRows(json)
           .map(TransitionPreviewRowResponseDto.fromJson)
           .toList(growable: false),
     );
@@ -44,12 +47,21 @@ class ClassMappingRuleResponseDto {
   });
 
   factory ClassMappingRuleResponseDto.fromJson(Map<String, dynamic> json) {
+    // PRA-P0-14: backend emits `sourceClassName / targetClassName / keepSection /
+    // action`; suggestions are class-level (no section strings). Map onto the
+    // existing domain-shaped fields, deriving `includeStudents` from `action`
+    // (skip => excluded). Legacy flat keys kept as a fallback.
+    final action = json['action'] as String?;
     return ClassMappingRuleResponseDto(
-      sourceClassLabel: json['sourceClassLabel'] as String? ?? '',
+      sourceClassLabel:
+          (json['sourceClassName'] ?? json['sourceClassLabel']) as String? ?? '',
       sourceSection: json['sourceSection'] as String? ?? '',
-      targetClassLabel: json['targetClassLabel'] as String? ?? '',
+      targetClassLabel:
+          (json['targetClassName'] ?? json['targetClassLabel']) as String? ?? '',
       targetSection: json['targetSection'] as String? ?? '',
-      includeStudents: json['includeStudents'] as bool? ?? true,
+      includeStudents: action != null
+          ? action != 'skip'
+          : (json['includeStudents'] as bool? ?? true),
     );
   }
 
@@ -73,15 +85,27 @@ class TransitionPreviewRowResponseDto {
   });
 
   factory TransitionPreviewRowResponseDto.fromJson(Map<String, dynamic> json) {
+    // PRA-P0-14: transition preview rows use `sourceClassName / targetClassName
+    // / sourceSectionName / targetSectionName / status / errors`. Fall back to
+    // the flat `from*/to*/reason` keys still used by the (deferred, mock-only)
+    // reshuffle/section-balance operation plans that share this DTO.
+    final errors = (json['errors'] as List?) ?? const [];
     return TransitionPreviewRowResponseDto(
       studentId: json['studentId'] as String? ?? '',
       studentName: json['studentName'] as String? ?? '',
       admissionNumber: json['admissionNumber'] as String? ?? '',
-      fromClassLabel: json['fromClassLabel'] as String? ?? '',
-      fromSection: json['fromSection'] as String? ?? '',
-      toClassLabel: json['toClassLabel'] as String? ?? '',
-      toSection: json['toSection'] as String? ?? '',
-      reason: json['reason'] as String? ?? '',
+      fromClassLabel:
+          (json['sourceClassName'] ?? json['fromClassLabel']) as String? ?? '',
+      fromSection:
+          (json['sourceSectionName'] ?? json['fromSection']) as String? ?? '',
+      toClassLabel:
+          (json['targetClassName'] ?? json['toClassLabel']) as String? ?? '',
+      toSection:
+          (json['targetSectionName'] ?? json['toSection']) as String? ?? '',
+      reason: (json['reason'] as String?) ??
+          (errors.isNotEmpty
+              ? errors.join('; ')
+              : (json['status'] as String? ?? '')),
     );
   }
 
@@ -138,9 +162,13 @@ class ExecutionReportResponseDto {
   });
 
   factory ExecutionReportResponseDto.fromJson(Map<String, dynamic> json) {
+    // PRA-P0-14: the executed transition job reports moved students as
+    // `promotedCount` (legacy flat mock used `executedCount`).
     return ExecutionReportResponseDto(
       id: json['id'] as String? ?? '',
-      executedCount: (json['executedCount'] as num?)?.toInt() ?? 0,
+      executedCount:
+          ((json['promotedCount'] ?? json['executedCount']) as num?)?.toInt() ??
+              0,
       skippedCount: (json['skippedCount'] as num?)?.toInt() ?? 0,
       executedAtIso: json['executedAt'] as String? ?? '',
     );
@@ -158,4 +186,14 @@ List<Map<String, dynamic>> _list(Object? value) {
       .whereType<Map>()
       .map((row) => row.cast<String, dynamic>())
       .toList(growable: false);
+}
+
+/// PRA-P0-14: affected students live under `previewReport.rows` for both the
+/// preview and get-job responses. Fall back to a flat `previewRows` list.
+List<Map<String, dynamic>> _transitionPreviewRows(Map<String, dynamic> json) {
+  final report = json['previewReport'];
+  if (report is Map && report['rows'] is List) {
+    return _list(report['rows']);
+  }
+  return _list(json['previewRows']);
 }

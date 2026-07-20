@@ -19,7 +19,9 @@ import {
   handleUpdateStudentStatus,
 } from "./sis_handlers.ts";
 import {
+  handleDownloadStudentDocument,
   handleListStudentDocuments,
+  handlePresignStudentDocumentUpload,
   handleUploadStudentDocument,
   handleVerifyStudentDocument,
 } from "./sis_document_handlers.ts";
@@ -92,6 +94,29 @@ export function matchSisRoute(
     return {
       handler: handleVerifyStudentDocument,
       args: [documentVerifyMatch[1]!, documentVerifyMatch[2]!],
+    };
+  }
+
+  // PRA-P1-19 — presign a real document upload (static "presign" segment; more
+  // specific than the /documents/:docId/download route below).
+  const documentPresignMatch = path.match(
+    /^\/sis\/students\/([^/]+)\/documents\/presign$/,
+  );
+  if (documentPresignMatch && method === "POST") {
+    return {
+      handler: handlePresignStudentDocumentUpload,
+      args: [documentPresignMatch[1]!],
+    };
+  }
+
+  // PRA-P1-19 — short-lived signed download URL for a stored document.
+  const documentDownloadMatch = path.match(
+    /^\/sis\/students\/([^/]+)\/documents\/([^/]+)\/download$/,
+  );
+  if (documentDownloadMatch && method === "GET") {
+    return {
+      handler: handleDownloadStudentDocument,
+      args: [documentDownloadMatch[1]!, documentDownloadMatch[2]!],
     };
   }
 

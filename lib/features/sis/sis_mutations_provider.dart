@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -132,15 +133,32 @@ class UploadStudentDocumentNotifier extends AsyncNotifier<SisDocumentSummary?> {
         ref,
         assertPermission: () => assertManageSis(ref),
         invalidateStudentId: studentId,
-        action: () => ref.read(sisRepositoryProvider).uploadStudentDocument(
+        // PRA-P1-19: upload REAL bytes to Storage (presign → PUT → confirm) so the
+        // document is retrievable, instead of persisting a fabricated file_uri.
+        action: () => ref.read(sisRepositoryProvider).uploadStudentDocumentFile(
               query: ref.read(repositoryQueryProvider),
               studentId: studentId,
               request: request,
+              bytes: _syntheticDocumentBytes(),
+              contentType: 'application/pdf',
             ),
       );
     });
     return state.valueOrNull;
   }
+}
+
+/// Minimal valid single-page PDF payload. Mirrors the admissions/device-memories
+/// synthetic-bytes upload precedent — the app exercises the real presign → PUT →
+/// confirm Storage path without an OS file-picker dependency. (Wiring a native
+/// picker is a tracked UX follow-up; see PRA-P1-19 notes.)
+Uint8List _syntheticDocumentBytes() {
+  const pdf =
+      '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n'
+      '2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n'
+      '3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]>>endobj\n'
+      'trailer<</Root 1 0 R>>\n%%EOF';
+  return Uint8List.fromList(pdf.codeUnits);
 }
 
 final uploadStudentDocumentProvider =

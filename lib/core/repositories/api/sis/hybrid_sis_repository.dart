@@ -72,6 +72,34 @@ class HybridSisRepository implements SisRepository {
       );
 
   @override
+  Future<SisDocumentSummary> uploadStudentDocumentFile({
+    required RepositoryQuery query,
+    required String studentId,
+    required UploadStudentDocumentRequest request,
+    required List<int> bytes,
+    required String contentType,
+  }) =>
+      _api.uploadStudentDocumentFile(
+        query: query,
+        studentId: studentId,
+        request: request,
+        bytes: bytes,
+        contentType: contentType,
+      );
+
+  @override
+  Future<String> getStudentDocumentDownloadUrl({
+    required RepositoryQuery query,
+    required String studentId,
+    required String documentId,
+  }) =>
+      _api.getStudentDocumentDownloadUrl(
+        query: query,
+        studentId: studentId,
+        documentId: documentId,
+      );
+
+  @override
   Future<SisDocumentSummary> verifyStudentDocument({
     required RepositoryQuery query,
     required String studentId,

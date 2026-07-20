@@ -3,7 +3,10 @@ import type { AppConfig } from "../config.ts";
 
 const BUCKET = "school-memories";
 const ADMISSIONS_BUCKET = "admissions-documents";
-const UPLOAD_TTL_SECONDS = 3600;
+// PRA-P1-19 — real file storage for SIS student documents.
+const STUDENT_DOCUMENTS_BUCKET = "student-documents";
+// PRA-P1-30 — real file storage for homework attachments (teacher + student).
+const HOMEWORK_ATTACHMENTS_BUCKET = "homework-attachments";
 const DOWNLOAD_TTL_SECONDS = 900;
 
 export function createStorageAdmin(config: AppConfig) {
@@ -39,6 +42,34 @@ export const MEMORY_UPLOAD_CONSTRAINTS: UploadConstraints = {
 
 export const ADMISSIONS_UPLOAD_CONSTRAINTS: UploadConstraints = {
   maxBytes: 26214400, // 25 MiB — matches the admissions-documents bucket
+  allowedMimeTypes: [
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/heic",
+  ],
+  allowedExtensions: ["pdf", "jpg", "jpeg", "png", "webp", "heic"],
+};
+
+// PRA-P1-19 — SIS student documents (birth certificate, TC, etc.). Same shape as
+// admissions verification docs: PDF + scanned images, 25 MiB.
+export const STUDENT_DOCUMENT_UPLOAD_CONSTRAINTS: UploadConstraints = {
+  maxBytes: 26214400, // 25 MiB — matches the student-documents bucket
+  allowedMimeTypes: [
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/heic",
+  ],
+  allowedExtensions: ["pdf", "jpg", "jpeg", "png", "webp", "heic"],
+};
+
+// PRA-P1-30 — homework attachments (teacher worksheet / student submission).
+// Allows PDFs + images like the document surfaces, 25 MiB.
+export const HOMEWORK_UPLOAD_CONSTRAINTS: UploadConstraints = {
+  maxBytes: 26214400, // 25 MiB — matches the homework-attachments bucket
   allowedMimeTypes: [
     "application/pdf",
     "image/jpeg",
@@ -200,6 +231,114 @@ export async function createAdmissionsDocumentDownloadUrl(
 ): Promise<string> {
   const client = createStorageAdmin(config);
   const { data, error } = await client.storage.from(ADMISSIONS_BUCKET)
+    .createSignedUrl(storagePath, DOWNLOAD_TTL_SECONDS);
+  if (error || !data?.signedUrl) {
+    throw new Error(error?.message ?? "Failed to create download URL");
+  }
+  return toPublicStorageUrl(config, data.signedUrl);
+}
+
+// ─── SIS student documents (PRA-P1-19) ─────────────────────────────────────────
+// Mirrors the admissions presign → PUT bytes → confirm pattern against a
+// dedicated `student-documents` bucket. Object paths are tenant-prefixed
+// ({organization_id}/{school_id}/…) so storage RLS isolates each tenant.
+
+export function buildStudentDocumentStoragePath(
+  organizationId: string,
+  schoolId: string,
+  studentId: string,
+  filename: string,
+): string {
+  const safe = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+  // A random prefix keeps repeated uploads of the same file name distinct and
+  // lets us upsert: false (never silently overwrite a sibling document).
+  return `${organizationId}/${schoolId}/${studentId}/${crypto.randomUUID()}_${safe}`;
+}
+
+export async function createStudentDocumentUploadUrl(
+  config: AppConfig,
+  storagePath: string,
+): Promise<{ signedUrl: string; token: string; path: string }> {
+  const client = createStorageAdmin(config);
+  const { data, error } = await client.storage.from(STUDENT_DOCUMENTS_BUCKET)
+    .createSignedUploadUrl(storagePath, { upsert: false });
+  if (error || !data) {
+    throw new Error(error?.message ?? "Failed to create upload URL");
+  }
+  return {
+    signedUrl: toPublicStorageUrl(config, data.signedUrl),
+    token: data.token,
+    path: storagePath,
+  };
+}
+
+export async function createStudentDocumentDownloadUrl(
+  config: AppConfig,
+  storagePath: string,
+): Promise<string> {
+  const client = createStorageAdmin(config);
+  const { data, error } = await client.storage.from(STUDENT_DOCUMENTS_BUCKET)
+    .createSignedUrl(storagePath, DOWNLOAD_TTL_SECONDS);
+  if (error || !data?.signedUrl) {
+    throw new Error(error?.message ?? "Failed to create download URL");
+  }
+  return toPublicStorageUrl(config, data.signedUrl);
+}
+
+// ─── Homework attachments (PRA-P1-30) ──────────────────────────────────────────
+// Real file storage for the HWK-4 teacher attachment and the HWK-7 student
+// submission attachment. Same presign → PUT → confirm pattern against a dedicated
+// `homework-attachments` bucket, tenant-prefixed for storage RLS isolation.
+//
+// The teacher attach happens BEFORE the homework id exists (it is minted inside
+// insertHomeworkAssignment), so the teacher path keys on the teacher id; the
+// student submission path keys on the student id + homework id.
+
+export function buildHomeworkTeacherAttachmentStoragePath(
+  organizationId: string,
+  schoolId: string,
+  teacherId: string,
+  filename: string,
+): string {
+  const safe = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+  return `${organizationId}/${schoolId}/${teacherId}/${crypto.randomUUID()}_${safe}`;
+}
+
+export function buildHomeworkSubmissionStoragePath(
+  organizationId: string,
+  schoolId: string,
+  studentId: string,
+  homeworkId: string,
+  filename: string,
+): string {
+  const safe = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const safeHw = homeworkId.replace(/[^a-zA-Z0-9._-]/g, "_");
+  return `${organizationId}/${schoolId}/${studentId}/${safeHw}/${crypto.randomUUID()}_${safe}`;
+}
+
+export async function createHomeworkAttachmentUploadUrl(
+  config: AppConfig,
+  storagePath: string,
+): Promise<{ signedUrl: string; token: string; path: string }> {
+  const client = createStorageAdmin(config);
+  const { data, error } = await client.storage.from(HOMEWORK_ATTACHMENTS_BUCKET)
+    .createSignedUploadUrl(storagePath, { upsert: false });
+  if (error || !data) {
+    throw new Error(error?.message ?? "Failed to create upload URL");
+  }
+  return {
+    signedUrl: toPublicStorageUrl(config, data.signedUrl),
+    token: data.token,
+    path: storagePath,
+  };
+}
+
+export async function createHomeworkAttachmentDownloadUrl(
+  config: AppConfig,
+  storagePath: string,
+): Promise<string> {
+  const client = createStorageAdmin(config);
+  const { data, error } = await client.storage.from(HOMEWORK_ATTACHMENTS_BUCKET)
     .createSignedUrl(storagePath, DOWNLOAD_TTL_SECONDS);
   if (error || !data?.signedUrl) {
     throw new Error(error?.message ?? "Failed to create download URL");

@@ -732,6 +732,10 @@ export async function submitHomework(
     homeworkId: string;
     notes: string;
     attachmentLabel?: string | null;
+    // PRA-P1-30 — tenant-prefixed path of the REAL uploaded submission file (null
+    // when the student submits without an attachment). attachment_label stays as
+    // the human file-name label.
+    attachmentStoragePath?: string | null;
   },
 ): Promise<Record<string, unknown>> {
   // Cross-class scope: the assignment must have been delivered to THIS student.
@@ -755,8 +759,9 @@ export async function submitHomework(
   try {
     await db.queryObject<{ id: string }>(
       `INSERT INTO homework_submissions (
-         organization_id, school_id, student_id, homework_id, notes, attachment_label
-       ) VALUES ($1,$2,$3,$4,$5,$6)
+         organization_id, school_id, student_id, homework_id, notes,
+         attachment_label, attachment_storage_path
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7)
        RETURNING id`,
       [
         input.organizationId,
@@ -765,6 +770,7 @@ export async function submitHomework(
         input.homeworkId,
         input.notes,
         input.attachmentLabel ?? null,
+        input.attachmentStoragePath ?? null,
       ],
     );
   } catch (error) {
@@ -1100,7 +1106,7 @@ export async function overlayTimetableSnapshotFromSlots(
 
   const days: Record<string, unknown>[] = [];
   let totalPeriods = 0;
-  let completedToday = 0;
+  const completedToday = 0;
   let upcomingToday = 0;
 
   for (const meta of TIMETABLE_DAY_META) {
@@ -1890,9 +1896,11 @@ export async function overlayStudentHomeworkFromSubmissions(
     grade: string | null;
     comment: string | null;
     submitted_label: string | null;
+    attachment_storage_path: string | null;
   }>(
     `SELECT homework_id, status, grade, comment,
-            to_char(submitted_at, 'DD Mon YYYY') AS submitted_label
+            to_char(submitted_at, 'DD Mon YYYY') AS submitted_label,
+            attachment_storage_path
      FROM homework_submissions
      WHERE organization_id = $1 AND school_id = $2 AND student_id = $3::uuid
        AND homework_id = ANY($4::text[])`,
@@ -1924,6 +1932,11 @@ export async function overlayStudentHomeworkFromSubmissions(
     if (sub.status === "reviewed") {
       overlay.reviewGrade = sub.grade ?? null;
       overlay.reviewComment = sub.comment ?? null;
+    }
+    // PRA-P1-30 — surface the real stored submission object so the client can
+    // request a signed download URL for it.
+    if (sub.attachment_storage_path != null) {
+      overlay.submissionAttachmentStoragePath = sub.attachment_storage_path;
     }
     return overlay;
   });
@@ -2282,19 +2295,28 @@ export async function overlayParentHomeworkFromRealState(
     id: string;
     attachment_name: string | null;
     attachment_ref: string | null;
+    attachment_storage_path: string | null;
   }>(
     `SELECT id,
             payload->>'attachmentName' AS attachment_name,
-            payload->>'attachmentRef' AS attachment_ref
+            payload->>'attachmentRef' AS attachment_ref,
+            payload->>'attachmentStoragePath' AS attachment_storage_path
        FROM student_entities
       WHERE organization_id = $1 AND school_id = $2 AND student_id = $3::uuid
         AND entity_type = 'homework_item'
         AND id = ANY($4::text[])`,
     [orgId, schoolId, studentId, homeworkIds],
   );
-  const attachmentByHw = new Map<string, { name: string | null; ref: string | null }>();
+  const attachmentByHw = new Map<
+    string,
+    { name: string | null; ref: string | null; storagePath: string | null }
+  >();
   for (const r of itemRows) {
-    attachmentByHw.set(r.id, { name: r.attachment_name, ref: r.attachment_ref });
+    attachmentByHw.set(r.id, {
+      name: r.attachment_name,
+      ref: r.attachment_ref,
+      storagePath: r.attachment_storage_path,
+    });
   }
 
   // The child's own submission (note + attachment + status/grade/comment).
@@ -2305,9 +2327,11 @@ export async function overlayParentHomeworkFromRealState(
     comment: string | null;
     notes: string | null;
     attachment_label: string | null;
+    attachment_storage_path: string | null;
     submitted_label: string | null;
   }>(
     `SELECT homework_id, status, grade, comment, notes, attachment_label,
+            attachment_storage_path,
             to_char(submitted_at, 'DD Mon YYYY') AS submitted_label
        FROM homework_submissions
       WHERE organization_id = $1 AND school_id = $2 AND student_id = $3::uuid
@@ -2325,6 +2349,10 @@ export async function overlayParentHomeworkFromRealState(
     if (attachment) {
       if (attachment.name) item.attachmentName = attachment.name;
       if (attachment.ref) item.attachmentRef = attachment.ref;
+      // PRA-P1-30 — the teacher worksheet's real stored object.
+      if (attachment.storagePath) {
+        item.attachmentStoragePath = attachment.storagePath;
+      }
     }
     const sub = subByHw.get(id);
     if (sub) {
@@ -2334,6 +2362,10 @@ export async function overlayParentHomeworkFromRealState(
       if (sub.notes != null && sub.notes.length > 0) item.submissionNote = sub.notes;
       if (sub.attachment_label != null) {
         item.submissionAttachmentLabel = sub.attachment_label;
+      }
+      // PRA-P1-30 — the child's submitted file's real stored object.
+      if (sub.attachment_storage_path != null) {
+        item.submissionAttachmentStoragePath = sub.attachment_storage_path;
       }
       if (sub.submitted_label != null) item.submittedLabel = sub.submitted_label;
     }
@@ -2380,10 +2412,15 @@ export async function insertHomeworkAssignment(
     // homework detail can surface it. Null keeps a plain assignment.
     attachmentName?: string | null;
     attachmentRef?: string | null;
+    // PRA-P1-30 — tenant-prefixed path of the REAL uploaded teacher worksheet
+    // (null when the teacher attaches no file). Rides the assignment + delivered
+    // item JSONB payload alongside the display name.
+    attachmentStoragePath?: string | null;
   },
 ): Promise<{ id: string; deliveredCount: number }> {
   const attachmentName = input.attachmentName?.trim() || null;
   const attachmentRef = input.attachmentRef?.trim() || null;
+  const attachmentStoragePath = input.attachmentStoragePath?.trim() || null;
   // teacher_entities is teacher-scoped (PK + RLS include teacher_id =
   // app_current_user_id()), so the assignment is owned by the creating teacher.
   // dueDate is stored as a top-level payload key; when null it degrades to a
@@ -2396,6 +2433,7 @@ export async function insertHomeworkAssignment(
          'id', $1::text, 'title', $4::text, 'classLabel', $5::text,
          'subject', $6::text, 'dueLabel', $7::text, 'dueDate', $8::text,
          'attachmentName', $10::text, 'attachmentRef', $11::text,
+         'attachmentStoragePath', $12::text,
          'pendingReviews', 0))
      ON CONFLICT (organization_id, school_id, teacher_id, entity_type, id)
        DO UPDATE SET payload = EXCLUDED.payload`,
@@ -2411,6 +2449,7 @@ export async function insertHomeworkAssignment(
       input.teacherId,
       attachmentName,
       attachmentRef,
+      attachmentStoragePath,
     ],
   );
 
@@ -2465,6 +2504,7 @@ export async function insertHomeworkAssignment(
            'id', $1::text, 'subject', $5::text, 'title', $6::text,
            'dueLabel', $7::text, 'dueDate', $8::text,
            'attachmentName', $9::text, 'attachmentRef', $10::text,
+           'attachmentStoragePath', $11::text,
            'status', 'pending'))
        ON CONFLICT (organization_id, school_id, student_id, entity_type, id)
          DO UPDATE SET payload = EXCLUDED.payload`,
@@ -2479,6 +2519,7 @@ export async function insertHomeworkAssignment(
         input.dueDate,
         attachmentName,
         attachmentRef,
+        attachmentStoragePath,
       ],
     );
   }

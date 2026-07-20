@@ -118,6 +118,18 @@ abstract class TeacherRepository {
     required TeacherHomeworkCreateRequest request,
   });
 
+  /// PRA-P1-30 — create homework with a REAL worksheet attachment: presign → PUT
+  /// [bytes] → create with the resulting storage_path. Replaces the old label-only
+  /// attachment (which stored no file). The API impl performs the upload; the mock
+  /// persists metadata.
+  Future<TeacherHomeworkAssignment> createHomeworkFile({
+    required RepositoryQuery query,
+    required TeacherHomeworkCreateRequest request,
+    required String fileName,
+    required List<int> bytes,
+    required String contentType,
+  });
+
   /// HWK-2 — students the assignment was delivered to who have NOT submitted.
   Future<List<HomeworkNonSubmitter>> getHomeworkNonSubmitters({
     required RepositoryQuery query,

@@ -2,7 +2,6 @@ import type { AppConfig } from "../config.ts";
 import { envelope, errorEnvelope, jsonResponse, MAX_BULK_ITEMS, readJson } from "../http.ts";
 import {
   authenticateRequest,
-  organizationIdFromClaims,
   requirePermission,
 } from "../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
@@ -10,6 +9,14 @@ import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { correlationIdFromRequest, recordMutationAudit } from "../audit/audit_repository.ts";
 import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
 import { enqueueNotificationRequested } from "../communication/notification_service.ts";
+import {
+  buildHomeworkSubmissionStoragePath,
+  buildHomeworkTeacherAttachmentStoragePath,
+  createHomeworkAttachmentDownloadUrl,
+  createHomeworkAttachmentUploadUrl,
+  HOMEWORK_UPLOAD_CONSTRAINTS,
+  validateUpload,
+} from "../storage/storage_service.ts";
 import {
   createLeaveRequest,
   cancelParentLeaveRequest,
@@ -150,7 +157,7 @@ export async function handleTeacherAttendanceDraft(
   if (!body) return errorEnvelope("VALIDATION_ERROR", "Invalid JSON", 422);
 
   try {
-    const result = await withTenantContext(config, auth.claims, async (db) => {
+    await withTenantContext(config, auth.claims, async (db) => {
       // PRA-P0-11 (S3): a plain teacher may only mark attendance for a class they
       // own (attendance feeds the reporting trunk, so this is the highest-value
       // ownership guard). Oversight roles bypass; scoped teachers fail closed.
@@ -512,6 +519,24 @@ export async function handleStudentHomeworkSubmit(
   const body = await readJson<Record<string, unknown>>(req);
   if (!body) return errorEnvelope("VALIDATION_ERROR", "Invalid JSON", 422);
 
+  // PRA-P1-30 — when the student attaches a file it must be a REAL stored object
+  // (presigned + PUT first), tenant-scoped. A blank attachment stays optional.
+  const attachmentStoragePath = body.attachment_storage_path
+    ? String(body.attachment_storage_path)
+    : null;
+  if (
+    attachmentStoragePath &&
+    !attachmentStoragePath.startsWith(
+      `${auth.claims.tenant_id}/${auth.claims.school_id}/`,
+    )
+  ) {
+    return errorEnvelope(
+      "VALIDATION_ERROR",
+      "attachment_storage_path is not scoped to this tenant",
+      422,
+    );
+  }
+
   try {
     const result = await withTenantContext(config, auth.claims, async (db) => {
       const row = await submitHomework(db, {
@@ -521,6 +546,7 @@ export async function handleStudentHomeworkSubmit(
         homeworkId: snakeStr(body, "homework_id"),
         notes: snakeStr(body, "notes"),
         attachmentLabel: body.attachment_label ? String(body.attachment_label) : null,
+        attachmentStoragePath,
       });
       await auditMobileWrite(db, auth.claims, req, "homeworkSubmitted", "homework_submission", snakeStr(body, "homework_id"), row);
       return row;
@@ -646,13 +672,29 @@ export async function handleTeacherHomeworkCreate(
   const dueDateInPast = isDueDateInPast(dueDate);
   const studentNameRaw = String(body.student_name ?? body.studentName ?? "").trim();
   const studentName = studentNameRaw.length > 0 ? studentNameRaw : null;
-  // HWK-4 — optional teacher attachment (reference/label, not a real file
-  // upload; no homework bucket exists yet). Both keys are optional and degrade
-  // to null when absent.
+  // HWK-4 — optional teacher attachment. `attachment_name` is the display label;
+  // PRA-P1-30 adds `attachment_storage_path`, the REAL stored worksheet object
+  // (presigned + PUT first). `attachment_ref` remains a legacy free-text link.
   const attachmentName =
     String(body.attachment_name ?? body.attachmentName ?? "").trim() || null;
   const attachmentRef =
     String(body.attachment_ref ?? body.attachmentRef ?? "").trim() || null;
+  const attachmentStoragePath =
+    String(body.attachment_storage_path ?? body.attachmentStoragePath ?? "")
+      .trim() || null;
+  // PRA-P1-30 — a supplied stored object must live under this tenant's prefix.
+  if (
+    attachmentStoragePath &&
+    !attachmentStoragePath.startsWith(
+      `${auth.claims.tenant_id}/${auth.claims.school_id}/`,
+    )
+  ) {
+    return errorEnvelope(
+      "VALIDATION_ERROR",
+      "attachment_storage_path is not scoped to this tenant",
+      422,
+    );
+  }
 
   try {
     const created = await withTenantContext(config, auth.claims, async (db) => {
@@ -687,6 +729,7 @@ export async function handleTeacherHomeworkCreate(
           studentName,
           attachmentName,
           attachmentRef,
+          attachmentStoragePath,
         });
         await auditMobileWrite(
           db,
@@ -722,6 +765,7 @@ export async function handleTeacherHomeworkCreate(
         dueDateInPast,
         attachmentName,
         attachmentRef,
+        attachmentStoragePath,
         deliveredCount: first.deliveredCount,
         classes: created,
         totalDeliveredCount: totalDelivered,
@@ -736,6 +780,161 @@ export async function handleTeacherHomeworkCreate(
       return errorEnvelope("CLASS_NOT_ASSIGNED", error.message, 403);
     }
     return errorEnvelope("INTERNAL_ERROR", "Failed to create homework", 500);
+  }
+}
+
+// ─── PRA-P1-30 — homework attachment real file storage ───────────────────────
+// Presign → PUT bytes → confirm (submit/create with the storage_path), mirroring
+// the admissions/SIS document flow against the `homework-attachments` bucket.
+
+function homeworkUploadError(body: Record<string, unknown>): string | null {
+  const fileName = String(body.file_name ?? body.fileName ?? "").trim();
+  if (!fileName) return "file_name is required";
+  return validateUpload(
+    fileName,
+    {
+      contentType: body.content_type == null && body.contentType == null
+        ? null
+        : String(body.content_type ?? body.contentType),
+      sizeBytes: body.size_bytes == null && body.sizeBytes == null
+        ? null
+        : Number(body.size_bytes ?? body.sizeBytes),
+    },
+    HOMEWORK_UPLOAD_CONSTRAINTS,
+  );
+}
+
+/**
+ * PRA-P1-30 — presign a teacher worksheet upload. The teacher PUTs the bytes,
+ * then includes the returned storage_path when creating the homework. manageHomework
+ * + school scope; type/size enforced before a URL is minted.
+ */
+export async function handleTeacherHomeworkAttachmentPresign(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  if (auth.claims.scope !== "school" || !auth.claims.school_id) {
+    return errorEnvelope("FORBIDDEN", "Teacher scope required", 403);
+  }
+  const denied = requirePermission(auth.claims, "manageHomework");
+  if (denied) return denied;
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) return errorEnvelope("VALIDATION_ERROR", "Invalid JSON", 422);
+
+  const uploadError = homeworkUploadError(body);
+  if (uploadError) return errorEnvelope("VALIDATION_ERROR", uploadError, 422);
+
+  const fileName = String(body.file_name ?? body.fileName ?? "").trim();
+  const storagePath = buildHomeworkTeacherAttachmentStoragePath(
+    auth.claims.tenant_id,
+    auth.claims.school_id,
+    auth.claims.sub,
+    fileName,
+  );
+  try {
+    const upload = await createHomeworkAttachmentUploadUrl(config, storagePath);
+    return jsonResponse(envelope({
+      signedUrl: upload.signedUrl,
+      token: upload.token,
+      storagePath: upload.path,
+    }));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Presign failed";
+    return errorEnvelope("HOMEWORK_UPLOAD_ERROR", message, 500);
+  }
+}
+
+/**
+ * PRA-P1-30 — presign a student submission upload. Student scope; the student PUTs
+ * the bytes, then submits homework with the returned storage_path.
+ */
+export async function handleStudentHomeworkAttachmentPresign(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  if (
+    auth.claims.scope !== "student" || !auth.claims.school_id ||
+    !auth.claims.student_id
+  ) {
+    return errorEnvelope("FORBIDDEN", "Student scope required", 403);
+  }
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) return errorEnvelope("VALIDATION_ERROR", "Invalid JSON", 422);
+
+  const homeworkId = String(body.homework_id ?? body.homeworkId ?? "").trim();
+  if (!homeworkId) {
+    return errorEnvelope("VALIDATION_ERROR", "homework_id is required", 422);
+  }
+  const uploadError = homeworkUploadError(body);
+  if (uploadError) return errorEnvelope("VALIDATION_ERROR", uploadError, 422);
+
+  const fileName = String(body.file_name ?? body.fileName ?? "").trim();
+  const storagePath = buildHomeworkSubmissionStoragePath(
+    auth.claims.tenant_id,
+    auth.claims.school_id,
+    auth.claims.student_id,
+    homeworkId,
+    fileName,
+  );
+  try {
+    const upload = await createHomeworkAttachmentUploadUrl(config, storagePath);
+    return jsonResponse(envelope({
+      signedUrl: upload.signedUrl,
+      token: upload.token,
+      storagePath: upload.path,
+    }));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Presign failed";
+    return errorEnvelope("HOMEWORK_UPLOAD_ERROR", message, 500);
+  }
+}
+
+/**
+ * PRA-P1-30 — return a short-lived signed URL for a stored homework attachment.
+ * The client passes the storage_path it received on the homework read payload
+ * (teacher worksheet or a submission file). Any homework scope may open it; the
+ * path must be tenant-scoped (storage RLS is the backstop).
+ */
+export async function handleHomeworkAttachmentDownload(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  if (
+    (auth.claims.scope !== "school" && auth.claims.scope !== "student" &&
+      auth.claims.scope !== "parent") || !auth.claims.school_id
+  ) {
+    return errorEnvelope("FORBIDDEN", "School, student or parent scope required", 403);
+  }
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) return errorEnvelope("VALIDATION_ERROR", "Invalid JSON", 422);
+
+  const storagePath = String(body.storage_path ?? body.storagePath ?? "").trim();
+  if (!storagePath) {
+    return errorEnvelope("VALIDATION_ERROR", "storage_path is required", 422);
+  }
+  if (
+    !storagePath.startsWith(
+      `${auth.claims.tenant_id}/${auth.claims.school_id}/`,
+    )
+  ) {
+    return errorEnvelope(
+      "VALIDATION_ERROR",
+      "storage_path is not scoped to this tenant",
+      422,
+    );
+  }
+  try {
+    const downloadUrl = await createHomeworkAttachmentDownloadUrl(config, storagePath);
+    return jsonResponse(envelope({ downloadUrl }));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Download URL failed";
+    return errorEnvelope("HOMEWORK_ERROR", message, 500);
   }
 }
 

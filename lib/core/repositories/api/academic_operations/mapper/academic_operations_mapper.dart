@@ -107,9 +107,10 @@ class AcademicOperationsMapper {
   }
 
   AcademicTransitionJobStatus _status(String value) {
+    // PRA-P0-14: backend uses `completed` for a successfully executed job.
     return switch (value) {
       'previewed' => AcademicTransitionJobStatus.previewed,
-      'executed' => AcademicTransitionJobStatus.executed,
+      'completed' || 'executed' => AcademicTransitionJobStatus.executed,
       'failed' => AcademicTransitionJobStatus.failed,
       _ => AcademicTransitionJobStatus.pending,
     };

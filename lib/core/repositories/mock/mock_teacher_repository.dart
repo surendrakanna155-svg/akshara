@@ -559,6 +559,19 @@ class MockTeacherRepository implements TeacherRepository {
   }
 
   @override
+  Future<TeacherHomeworkAssignment> createHomeworkFile({
+    required RepositoryQuery query,
+    required TeacherHomeworkCreateRequest request,
+    required String fileName,
+    required List<int> bytes,
+    required String contentType,
+  }) async {
+    // PRA-P1-30: the mock has no real Storage; the file bytes are exercised only
+    // on the API path. Persist the assignment metadata as usual.
+    return createHomework(query: query, request: request);
+  }
+
+  @override
   Future<List<HomeworkNonSubmitter>> getHomeworkNonSubmitters({
     required RepositoryQuery query,
     required String homeworkId,

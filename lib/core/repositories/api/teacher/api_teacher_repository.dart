@@ -260,6 +260,41 @@ class ApiTeacherRepository implements TeacherRepository {
   }
 
   @override
+  Future<TeacherHomeworkAssignment> createHomeworkFile({
+    required RepositoryQuery query,
+    required TeacherHomeworkCreateRequest request,
+    required String fileName,
+    required List<int> bytes,
+    required String contentType,
+  }) async {
+    // PRA-P1-30: presign → PUT bytes → create with the real storage_path.
+    final presign = await _remote.presignHomeworkAttachment(
+      query: query,
+      fileName: fileName,
+    );
+    await _remote.putSignedUpload(
+      signedUrl: presign.signedUrl,
+      bytes: bytes,
+      contentType: contentType,
+    );
+    return _remote.createHomework(
+      query: query,
+      request: TeacherHomeworkCreateRequest(
+        classLabel: request.classLabel,
+        subject: request.subject,
+        title: request.title,
+        dueDate: request.dueDate,
+        dueLabel: request.dueLabel,
+        studentName: request.studentName,
+        classLabels: request.classLabels,
+        attachmentName: request.attachmentName,
+        attachmentRef: request.attachmentRef,
+        attachmentStoragePath: presign.storagePath,
+      ),
+    );
+  }
+
+  @override
   Future<List<HomeworkNonSubmitter>> getHomeworkNonSubmitters({
     required RepositoryQuery query,
     required String homeworkId,

@@ -643,6 +643,32 @@ class MockSisRepository implements SisRepository {
   }
 
   @override
+  Future<SisDocumentSummary> uploadStudentDocumentFile({
+    required RepositoryQuery query,
+    required String studentId,
+    required UploadStudentDocumentRequest request,
+    required List<int> bytes,
+    required String contentType,
+  }) async {
+    // PRA-P1-19: the mock has no real Storage; the file bytes are exercised only
+    // in the API path. Persist the metadata record so the profile reflects it.
+    return uploadStudentDocument(
+      query: query,
+      studentId: studentId,
+      request: request,
+    );
+  }
+
+  @override
+  Future<String> getStudentDocumentDownloadUrl({
+    required RepositoryQuery query,
+    required String studentId,
+    required String documentId,
+  }) async {
+    return 'https://mock.storage.local/student-documents/$studentId/$documentId';
+  }
+
+  @override
   Future<SisDocumentSummary> verifyStudentDocument({
     required RepositoryQuery query,
     required String studentId,

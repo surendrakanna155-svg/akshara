@@ -74,6 +74,21 @@ void main() {
     expect(r, isFalse);
   });
 
+  testWidgets(
+      'PRA-P0-14: promotion flag surfaces /sis/promotion but NOT the deferred '
+      'reshuffle/section-balance surfaces', (tester) async {
+    final overrides = [
+      enableApiModeProvider.overrideWithValue(true),
+      academicOperationsApiEnabledProvider.overrideWithValue(true),
+    ];
+    // The real, now-fixed promotion surface is revealed by the flag.
+    expect(await _hidden(tester, overrides, '/sis/promotion'), isFalse);
+    // The backend-less siblings stay hidden even with the academic-ops flag on —
+    // they are decoupled onto an always-false provider.
+    expect(await _hidden(tester, overrides, '/sis/reshuffle'), isTrue);
+    expect(await _hidden(tester, overrides, '/sis/section-balance'), isTrue);
+  });
+
   testWidgets('a normal (backed) route is never hidden', (tester) async {
     final r = await _hidden(
       tester,

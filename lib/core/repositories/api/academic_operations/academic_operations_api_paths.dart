@@ -2,7 +2,9 @@ abstract final class AcademicOperationsApiPaths {
   static const String transitionsBase = '/academic/transitions';
   static const String operationsBase = '/academic/operations';
 
-  static const String suggestMappings = '$transitionsBase/suggest-mappings';
+  // PRA-P0-14: backend route is `/academic/transitions/mapping-suggestions`
+  // (see supabase academic_router.ts). The old `/suggest-mappings` segment 404'd.
+  static const String suggestMappings = '$transitionsBase/mapping-suggestions';
   static const String previewTransition = '$transitionsBase/preview';
 
   static String executeTransition(String jobId) =>

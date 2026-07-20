@@ -4,8 +4,11 @@ import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
 import 'academic_operations_models.dart';
 
-final promotionSourceYearProvider = StateProvider<String>((ref) => '2026–27');
-final promotionTargetYearProvider = StateProvider<String>((ref) => '2027–28');
+// PRA-P0-14: these hold `academic_years.id` UUIDs (the backend year columns are
+// UUIDs, not labels). Seed empty; the promotion wizard's Year step populates them
+// from the real academic-years catalog. Sending label strings previously 500'd.
+final promotionSourceYearProvider = StateProvider<String>((ref) => '');
+final promotionTargetYearProvider = StateProvider<String>((ref) => '');
 final promotionJobIdProvider = StateProvider<String?>((ref) => null);
 final reshuffleClassProvider = StateProvider<String>((ref) => '7');
 final reshuffleYearProvider = StateProvider<String>((ref) => '2026–27');

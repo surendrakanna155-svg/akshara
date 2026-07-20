@@ -25,6 +25,11 @@ Future<void> showSisProfileEditSheet(
   );
 }
 
+/// PRA-P1-19: collects the document type + file name, then uploads a REAL file
+/// to Storage (presign → PUT bytes → confirm) so the document is retrievable
+/// during verification — no more fabricated `storage://documents/<name>` rows.
+/// (A native OS file-picker is a tracked UX follow-up; the app currently sends a
+/// synthetic PDF payload through the real Storage path, mirroring admissions.)
 Future<void> showSisDocumentUploadDialog(
   BuildContext context,
   WidgetRef ref, {

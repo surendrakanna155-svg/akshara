@@ -60,6 +60,17 @@ final academicOperationsApiEnabledProvider = Provider<bool>((ref) {
     defaultValue: false,
   );
 });
+/// PRA-P0-14: `/sis/reshuffle` and `/sis/section-balance` have NO backend
+/// anywhere in `supabase/` (recon-confirmed pure client-side mock) — only the
+/// year-transition/promotion path is real. They are DEFERRED: this provider has
+/// no `--dart-define` and always returns false, so the unbuilt surfaces stay
+/// honestly hidden in every live build (never surfaced-and-broken), while the
+/// now-fixed `/sis/promotion` surface stays behind
+/// [academicOperationsApiEnabledProvider] so enabling that flag reveals it.
+/// Kept decoupled so the two never share a flag again. (Local/mock dev builds
+/// still show them — `surface_backend_gate.dart` only hides in API-mode builds.)
+final advancedAcademicOperationsEnabledProvider = Provider<bool>((ref) => false);
+
 final continuityApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
   return const bool.fromEnvironment(

@@ -8,8 +8,10 @@ import {
   handleExamToppers,
   handleGenerateSeating,
   handleGetExam,
+  handleGetGradeScale,
   handleGetSeating,
   handleGraceMark,
+  handlePutGradeScale,
   handleHallTickets,
   handleListAdjustments,
   handleListExamMarks,
@@ -54,6 +56,14 @@ export function matchExamAdministrationRoute(
   // before the generic /academics/exams/marks/{id} PATCH matcher (different verb).
   if (path === "/academics/exams/marks/remind" && method === "POST") {
     return { handler: handleRemindPendingMarks, args: [] };
+  }
+
+  // PRA-P1-13 — per-school grade scale (read + save). Literal path matched BEFORE
+  // the generic /academics/exams/{examId} GET so "grade-scale" is never mistaken
+  // for an exam id.
+  if (path === "/academics/exams/grade-scale") {
+    if (method === "GET") return { handler: handleGetGradeScale, args: [] };
+    if (method === "PUT") return { handler: handlePutGradeScale, args: [] };
   }
 
   // EXM-3/4b/7 — class + term scoped read reports. Matched BEFORE the generic

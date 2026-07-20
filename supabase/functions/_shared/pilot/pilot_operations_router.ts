@@ -1,12 +1,14 @@
 import type { AppConfig } from "../config.ts";
-import { errorEnvelope } from "../http.ts";
 import {
+  handleHomeworkAttachmentDownload,
   handleParentLeaveAttachment,
   handleParentLeaveCancel,
   handleParentLeaveSubmit,
+  handleStudentHomeworkAttachmentPresign,
   handleStudentHomeworkSubmit,
   handleTeacherAttendanceDraft,
   handleTeacherAttendanceSubmit,
+  handleTeacherHomeworkAttachmentPresign,
   handleTeacherHomeworkBulkReview,
   handleTeacherHomeworkCreate,
   handleTeacherHomeworkHistory,
@@ -48,6 +50,17 @@ function matchPilotRoute(
     return {
       handler: (req, config) => handleParentLeaveAttachment(req, config, leaveId),
     };
+  }
+  // PRA-P1-30 — homework attachment presign/download (static paths, matched
+  // BEFORE the generic homework routes so "attachment" is never a homework id).
+  if (method === "POST" && path === "/student/homework/attachment/presign") {
+    return { handler: handleStudentHomeworkAttachmentPresign };
+  }
+  if (method === "POST" && path === "/teacher/homework/attachment/presign") {
+    return { handler: handleTeacherHomeworkAttachmentPresign };
+  }
+  if (method === "POST" && path === "/homework/attachment/download") {
+    return { handler: handleHomeworkAttachmentDownload };
   }
   if (method === "POST" && path === "/student/homework/submit") {
     return { handler: handleStudentHomeworkSubmit };

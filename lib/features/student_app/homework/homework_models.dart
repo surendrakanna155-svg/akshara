@@ -58,9 +58,10 @@ class StudentHomeworkItem {
 
   final StudentHomeworkStatus status;
 
-  /// HWK-4 — the TEACHER's attachment on the assignment (a reference/label, not
-  /// a real uploaded file — no homework storage bucket yet). [attachmentLabel]
-  /// is the display name; [attachmentRef] is an optional URL/reference.
+  /// HWK-4 — the TEACHER's attachment on the assignment. [attachmentLabel] is the
+  /// display name; [attachmentRef] is an optional legacy URL/reference.
+  /// PRA-P1-30: the real worksheet object is stored in the `homework-attachments`
+  /// bucket and surfaced separately as `attachmentStoragePath` on the read payload.
   final String? attachmentLabel;
   final String? attachmentRef;
   final String? submittedLabel;

@@ -267,6 +267,11 @@ class _MarksEntryBodyState extends ConsumerState<_MarksEntryBody>
   /// and POST them as one batch, then show "N saved, M failed" and refresh.
   Future<void> _saveAll() async {
     final entries = <BulkExamMarkEntry>[];
+    // PRA-P1-14: out-of-range rows must NOT be silently dropped. Count them so
+    // they are reported as failures and the recovery draft is preserved for
+    // correction — previously line "if (parsed < 0 || parsed > max) continue"
+    // discarded them, reported "0 failed", and then deleted the only copy.
+    var invalidCount = 0;
     for (final mark in marks) {
       if (mark.published || !mark.status.isPresent) continue;
       final controller = _controllers[mark.id];
@@ -276,7 +281,10 @@ class _MarksEntryBodyState extends ConsumerState<_MarksEntryBody>
       final persisted = mark.marksObtained;
       if (parsed == null) continue; // blank / non-numeric: nothing to save
       if (parsed == persisted) continue; // unchanged
-      if (parsed < 0 || parsed > exam.maxMarks) continue; // guarded by backend too
+      if (parsed < 0 || parsed > exam.maxMarks) {
+        invalidCount++; // out of range — a FAILURE, not a silent skip
+        continue;
+      }
       entries.add(
         BulkExamMarkEntry(
           markEntryId: mark.id,
@@ -286,10 +294,19 @@ class _MarksEntryBodyState extends ConsumerState<_MarksEntryBody>
       );
     }
     if (entries.isEmpty) {
+      // Nothing valid to send. If the ONLY reason is out-of-range rows, say so
+      // (and keep the draft) rather than a misleading "no changes".
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No changed marks to save.')),
+        SnackBar(
+          content: Text(
+            invalidCount > 0
+                ? '$invalidCount mark${invalidCount == 1 ? '' : 's'} out of range '
+                    '(0–${exam.maxMarks}). Fix ${invalidCount == 1 ? 'it' : 'them'} before saving.'
+                : 'No changed marks to save.',
+          ),
+        ),
       );
-      return;
+      return; // draft NOT discarded — the invalid values are the only copy.
     }
     setState(() => _savingAll = true);
     try {
@@ -298,15 +315,23 @@ class _MarksEntryBodyState extends ConsumerState<_MarksEntryBody>
           .bulkSaveMarks(examId: exam.id, entries: entries);
       // REL-3 — the typed marks are now persisted (or safely queued): drop the
       // local draft + its resumed shadow so a completed grid is never re-offered.
-      _resumedDraftValues.clear();
-      unawaited(discardDraftOnSubmit(_draftKey));
+      // PRA-P1-14: but ONLY when there are no unsaved out-of-range rows — else the
+      // draft is the sole surviving copy of the value the user still must fix.
+      if (invalidCount == 0) {
+        _resumedDraftValues.clear();
+        unawaited(discardDraftOnSubmit(_draftKey));
+      }
       if (!mounted) return;
       // Success beat on a completed marks save-all (P2-UX-2 §2.2).
       AksharaHaptics.success();
+      final totalFailed = result.failedCount + invalidCount;
+      final rangeHint = invalidCount > 0
+          ? ' ($invalidCount out of range 0–${exam.maxMarks} — not saved)'
+          : '';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '${result.savedCount} saved, ${result.failedCount} failed',
+            '${result.savedCount} saved, $totalFailed failed$rangeHint',
           ),
         ),
       );
