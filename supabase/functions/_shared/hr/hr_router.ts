@@ -1,5 +1,6 @@
 import type { AppConfig } from "../config.ts";
 import { errorEnvelope } from "../http.ts";
+import { routeStaffDuty } from "../staff_duty/staff_duty_router.ts";
 import {
   handleAttendance,
   handleDashboard,
@@ -211,6 +212,13 @@ export async function routeHr(
   path: string,
 ): Promise<Response | null> {
   if (!path.startsWith("/hr")) return null;
+
+  // W4 staff-duty sub-module (owner #6): /hr/staff-duties/* (substitute classes,
+  // exam invigilation, non-teaching duties) is served by the dedicated staff_duty
+  // module router — a separate concern from attendance, kept off this router's own
+  // match table. Returns null for every other /hr path, so those fall through.
+  const staffDuty = await routeStaffDuty(req, config, method, path);
+  if (staffDuty) return staffDuty;
 
   const match = matchHrRoute(method, path);
   if (!match) {
