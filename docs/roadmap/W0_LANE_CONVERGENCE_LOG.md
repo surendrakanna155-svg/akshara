@@ -1,9 +1,9 @@
 # W0 — Lane Convergence & Repository Integrity — EXECUTION LOG
 
 **Wave:** W0 (Constitution-Aligned Master Roadmap §5) · 🔴 CRITICAL — gates every later wave.
-**Branch:** `feature/qp-content-readiness` (the roadmap-defined "full ERP + QIE + web" line).
-**Started:** 2026-07-20 · Autonomous Execution Mode.
-**Governing rule:** current source code is the authority; extend before replace; nothing lost; EOS gate per commit.
+**Convergence branch:** `integration/w0-trunk` (worktree `/Users/surendrakanna/Documents/Akshara_ERP-trunk`).
+**Base:** `feature/qp-content-readiness` ("full ERP + QIE + web") — owner-approved convergence direction.
+**Started:** 2026-07-20 · Autonomous Execution Mode. **Owner Decision Batch #1 answered 2026-07-20.**
 
 ---
 
@@ -11,75 +11,90 @@
 
 | Sub-wave | Scope | State |
 |---|---|---|
-| **W0.1 — QIE/continuity preservation** | Commit uncommitted code; fix `.gitignore` code-vs-data bug; back up frozen foundation off-repo | ✅ **code-preservation DONE** · ⏳ off-repo backup **owner-gated** |
-| **W0.2 — Trunk reconciliation** | Merge PRA + DRP/red-team/security + QIE into ONE trunk; reconcile migration series | 👤 **owner-gated** (deployed-head confirm + merge authorization) — analysis done |
-| **W0.3 — Baseline + prune** | Re-point `main`/`production`; triage `worktree-agent-*` | 👤 **owner-gated** (prune decisions) — analysis done |
+| **W0.1 — continuity preservation** | Commit uncommitted code; fix `.gitignore`; back up frozen foundation off-repo | ✅ **COMPLETE** (code preserved + off-repo backup delivered) |
+| **W0.2a — merge erp-pra-remediation** | Integrate 117 PRA fixes (S0–S7) | ✅ **COMPLETE** (0 conflicts; 598 backend tests green) |
+| **W0.2b — reconcile data-reliability-platform** | Merge the diverged live-pilot red-team/security line | 🔶 **analyzed; 16 conflicts mapped** — final merge HOLDS for owner-provided **deployed head** |
+| **W0.3 — triage + prune** | Salvage/prune stale branches; re-baseline main/production | 🔶 branch triage ✅ **DONE**; re-baseline 👤 owner-gated (post-canonical) |
+
+**Owner Decision Batch #1 (answered):** ① backup = **hand-off checksummed archive** ✅ done · ② deployed head = **owner will provide** ⏳ · ③ convergence = **base current trunk**, run in isolation ✅ in progress · ④ branches = **triage/salvage/prune** ✅ done.
 
 ---
 
-## W0.1 — CONTINUITY PRESERVATION ✅ (code) — COMPLETE
+## W0.1 — CONTINUITY PRESERVATION ✅ COMPLETE
 
-**Problem (worse than the roadmap documented).** A repository-integrity audit of the working tree found that a *large* body of genuine, non-regenerable work existed **only on local disk** — untracked or silently git-ignored — and would have been **irreversibly destroyed by a single `git clean`** in this shared worktree:
+**Preserved (7 commits `c5be286d`..`3cbf9e79`, 294 files, +50,194) — code/schemas/tests/docs only, zero derived data:** the QIE Decision-C code (silently git-ignored), the **entire web ERP lane** (190 files, 0 prior commits on any ref), the **Product Constitution** + **this Roadmap** (both were untracked), curriculum acquisition engine code, and 15 further authoritative docs. Fixed the `.gitignore` code-vs-data bug (`knowledge/`→`/knowledge/`; ignore `node_modules/`,`*.db`,`*.tsbuildinfo`).
+**Evidence:** QIE **696 tests OK** · zero code untracked · secret scan clean · KIE v1.4 untouched.
 
-| At-risk work | Before | Root cause |
-|---|---|---|
-| QIE Decision-C code (`kie/qie/knowledge/`, 13 files) | silently git-ignored | unanchored `knowledge/` rule matched the ENGINE dir |
-| QIE Decision-C code (`kie/qie/factory/`, 12 files) + tests | untracked | never committed |
-| **Entire web ERP lane** (`web/`, 190 files) | **untracked on _every_ ref, 0 commits in history** | never committed anywhere |
-| **The Product Constitution** (`docs/owner/…CONSTITUTION_v2.0.md`) | untracked | never committed |
-| **The Constitution-Aligned Roadmap** itself | untracked | never committed |
-| Curriculum acquisition/discovery/reports ENGINE code (44 files) | untracked | never committed |
-| 15 further authoritative docs (PRA/PRC/SOP/audits/QIE) | untracked | never committed |
-
-**Fix — 6 surgical commits (`c5be286d`..`733a892a`), 294 files, +50,194 lines.** Code / schemas / tests / docs only; **zero derived data**, honoring the LOCKED curriculum local-storage decision (*Git = engine/tests/code; derived data + databases = LOCAL ONLY*).
-
-| Commit | Content |
-|---|---|
-| `c5be286d` | `.gitignore` hardening: anchor `knowledge/`→`/knowledge/` (data dir only); ignore `node_modules/`, `*.db`, `*.tsbuildinfo` |
-| `b80adf67` | QIE Decision-C code (`knowledge/`+`factory/`+SQL schemas), 30 files, +6,052 |
-| `7e689ef2` | Web ERP lane (React+Vite+TS source), 190 files, +19,149 — first commit to history |
-| `f51ce554` | Curriculum acquisition/discovery/reports/staging engine code, 44 files, +10,022 |
-| `689ac68c` | Authoritative docs incl. **Constitution + this Roadmap**, 26 files, +14,798 |
-| `733a892a` | Last QIE test |
-
-**Evidence:**
-- ✅ **Zero genuine code untracked** after preservation (`git status` shows only local-only derived data: `curriculum/discovery/*.json`, `curriculum/reports/*.json`, acquisition checkpoints, `*.db` — all correctly local).
-- ✅ **QIE suite green on the committed state: 696 tests OK** (`python -m unittest discover -s kie/tests`, 47s; only benign sqlite ResourceWarnings).
-- ✅ Decision-C code compiles clean (`py_compile`); its direct tests pass (44).
-- ✅ **Security:** no `.env`/keys/PEM/hardcoded secrets committed (only `web/.env.example`, a placeholder template).
-- ✅ **Foundation untouched:** KIE v1.4 (2,023 concepts, `e3a146f3…`) not mutated; `kie.db`/`qie.db` stay LOCAL.
-
-**Remaining W0.1 item (owner-gated):** back up the frozen `kie.db` + v1.4 freeze package to an **owner-approved off-repo location** (3-2-1). Until then the frozen foundation is *not reproducible from git alone* — the databases are deliberately local, so a git commit does NOT protect them. **This is the only open continuity risk.**
+**Off-repo foundation backup ✅ DELIVERED (owner hand-off):**
+- `/Users/surendrakanna/Documents/Akshara_foundation_backup_v1.4_20260720/` (274M, 136 files, `SHA256SUMS` verified) + tarball `…_20260720.tar.gz` (68M) + `.sha256` (`54c840f1…`).
+- **Validation:** 2,023 certified concepts; `PRAGMA integrity_check` = ok; **v1.4 fingerprint independently RECOMPUTED from the backup → exact match `e3a146f3…`.** A genuinely restorable v1.4.
+- ⚠️ Owner action: move the tarball to a durable owner-managed location (3-2-1).
 
 ---
 
-## W0.2 / W0.3 — CONVERGENCE ANALYSIS (read-only; awaiting owner authorization)
+## W0.2a — MERGE erp-pra-remediation ✅ COMPLETE
 
-Divergence measured from current code (not memory), 2026-07-20:
+Merge commit `f20777d2` on `integration/w0-trunk` (`--no-ff`). **0 conflicts** (merge-tree pre-verified). The +14 PRA commits (S0–S7: money/stock integrity, identity lifecycle & revocation, pilot governance, reporting integrity, communication delivery, academic-ops, operational blockers — all 24 P0s) touch backend/lib, disjoint from the W0.1 curriculum/web/docs preservation.
 
-| Branch | vs current trunk | Role | Migration head |
+**Regression (on the merged trunk):**
+- Targeted PRA-fix tests: **24 passed / 0 failed** (enrollment idempotency + P0-13 approval gate, receipt series + instrument block, audit-read RBAC).
+- Broad backend (finance+academics+admissions+audit+communication): **574 passed / 0 failed**.
+- Migration series **monotonic**: qp `…876` → PRA `…900000015–019` (no renumber needed).
+
+---
+
+## W0.3 — BRANCH TRIAGE ✅ DONE (re-baseline still owner-gated)
+
+Recorded disposition for all 8 stale branches:
+
+| Branch | Unique vs trunk | Decision | Recovery |
 |---|---|---|---|
-| `feature/qp-content-readiness` *(current)* | — (base) | full ERP + QIE + web | `…20260876` (AI) |
-| `feature/erp-pra-remediation` | +14 (disjoint areas → **clean merge**) | 117 PRA fixes (all 24 P0s) | `…20260900000015–019` |
-| `feature/data-reliability-platform` | **+136 / diverged** (overlapping backend) | red-team R1–7 + P5 security + auth-RLS lockdown — **DEPLOYED TO LIVE PILOT** | `…20260877–897` |
-| `main` | **+738 behind** | stale | — |
-| `production` | **+830 behind** | stale | — |
-| `worktree-agent-*` ×4 | +1 each | UX-refactor / education-CI single commits | — |
+| `codex-wave5` | 0 (fully merged) | **PRUNED** | in trunk history + `origin/codex-wave5` |
+| `feature/m15-theme` | 0 | **PRUNED** | in trunk + remote |
+| `feature/scope-trim-school-build` | 0 (Legal & Compliance layer already in trunk) | **PRUNED** | in trunk + remote |
+| `wip/b7-onboarding` | 0 (B7 cert already in trunk) | **PRUNED** | in trunk + remote |
+| `worktree-agent-a049…` | +1 UX AsyncValue→ErpAsyncBody (26 files) | **SALVAGE-TAGGED** → W8/P2-UX | tag `salvage/w8-ux-asyncbody-a049` |
+| `worktree-agent-ac08…` | +1 UX (32 files, dup of a049) | **SALVAGE-TAGGED** → W8 (pick one) | tag `salvage/w8-ux-asyncbody-ac08` |
+| `worktree-agent-a781…` | +1 education CI-C4 schema (dormant, mig `…857`) | **SALVAGE-TAGGED** → EIP | tag `salvage/eip-edu-ci-c4-a781` |
+| `worktree-agent-ad1e…` | +1 education CI-C8 rotation (dormant, mig `…856`) | **SALVAGE-TAGGED** → EIP | tag `salvage/eip-edu-ci-c8-ad1e` |
 
-**Findings that shape the merge:**
-1. Migration ranges **do not numerically collide** (`≤876` < `877–897` < `900000015–019`) → orderable into one monotonic head, but DRP and PRA both touch backend files → **content conflicts expected**.
-2. The **deployed branch is `data-reliability-platform`, not the current trunk** → the direction of convergence (which line becomes canonical base) is a genuine architectural choice, not a mechanical one.
-3. A bad DRP reconciliation could **resurrect a fixed P0 or drop a security fix** (roadmap risk) → must merge under worktree isolation + full regression + per-P0 re-verification, and requires the **owner-confirmed live deployed head** to reconcile safely.
-
-**Recommended convergence approach (for owner approval):** reconcile in an **isolated worktree**; (a) merge `erp-pra-remediation` (clean); (b) reconcile-merge `data-reliability-platform` resolving backend/migration conflicts with a per-P0 + per-security-fix verification table; (c) run full regression (deno + flutter + goldens + this QIE suite) before declaring canonical; (d) only then re-point `main`/`production` (or cut a fresh `release/*`).
+No work lost: the 4 merged branches' commits live in trunk history; the 4 unique commits are permanent under `salvage/*` tags. (`feature/qie-question-planning-layer` appeared concurrently — active QIE lane, left untouched.)
+**Owner-gated remainder:** re-point `main` (+738) / `production` (+830) to the converged trunk — done only **after** the DRP merge + full regression + owner canonical sign-off.
 
 ---
 
-## OWNER DECISION BATCH #1 (roadmap §7 — "highest priority; unblocks everything")
+## W0.2b — RECONCILE data-reliability-platform 🔶 ANALYZED — FINAL MERGE HELD
 
-1. **Off-repo backup location** for `kie.db` + v1.4 freeze package (closes the last W0.1 continuity risk).
-2. **Confirm the live deployed VPS head** (which commit is actually serving the pilot) — required before any DRP reconciliation.
-3. **Authorize the W0.2 reconciliation merge** and its **direction** (base = current trunk, or the deployed DRP line?) — high-blast-radius; to run under worktree isolation with full regression.
-4. **W0.3 prune decisions:** keep/cherry-pick vs. prune the 4 `worktree-agent-*` branches and the stale `codex-wave5`/`m15-theme`/`scope-trim`/`wip-b7` lines — each needs a recorded decision.
+`data-reliability-platform` = the **live-pilot** line: +136 vs trunk (trunk +118 vs it), merge-base `b43a2db9`. Carries red-team Rounds 1–7, P5 money/doc-integrity race fixes, auth/platform-table RLS lockdown (`…896/897`), and web-gap/PRC-A APIs.
 
-*Until #2–#4 are decided, W0.2/W0.3 do not proceed. W0.1 code-preservation is complete and needs no further owner input; #1 closes its off-repo tail.*
+**Conflict map (merge-tree): 16 files. Migrations DO NOT collide** (`…877–897` vs PRA `…900000015–019`) → concatenate cleanly.
+
+| Risk | Files | Reconciliation |
+|---|---|---|
+| 🟢 Low (docs) | EXECUTION_DASHBOARD, IMPLEMENTATION_PROGRESS, FINAL_EXECUTION_MASTER_ROADMAP, NEXT_ACTIVE_WAVE, PRODUCT_REALITY_CORRECTNESS_PROGRAM_TRACKER | Take union / latest; these are tracking docs |
+| 🟡 Med (Flutter/backend) | staff_check_in_card.dart, surface_backend_gate.dart, hr_read_repository.ts, library_aggregations.ts, phase10_handlers.ts, sis_router.ts | Union both sides' additions |
+| 🔴 High (security/money) | **finance_refunds_repository.ts**, **rbac_route_inventory.ts**, **sis_certificates_repository.ts** (+test), **qa_r_008_audit_completeness_test.ts** | **Union — preserve BOTH fixes; drop nothing** |
+
+**Key finding — conflicts are parallel *additive* hardening, not conflicting logic:**
+- `finance_refunds_repository.ts` — PRA S1 added money-race guards **and** DRP P5 (RT-1) closed 3 money/doc-integrity races → **union both guard sets**.
+- `rbac_route_inventory.ts` — PRA S2 added revocation routes **and** DRP added WEB-004/005/006 + PRC-A routes → **union all route registrations** (a dropped route = ungated/broken).
+- `sis_certificates_repository.ts` — PRA S6 academic-ops **and** DRP cert-desk + P5 doc-race + SCE-1 waiver-race → **union**.
+- `qa_r_008_audit_completeness_test.ts` — PRA revocation-audit **and** DRP AI-wallet + gate-pass audit coverage → **union assertions**.
+
+**Reconciliation plan (executes once owner provides the deployed head):**
+1. Confirm the **deployed head**; verify the resolved trunk matches or supersedes it (drop no live fix).
+2. Resolve the 16 conflicts by **union**, preserving every race-guard, route, and audit assertion; dedup identical.
+3. Concatenate the two migration series (already monotonic).
+4. Full regression: `deno test` (all `_shared`), `flutter analyze` + tests, goldens, **+ per-P0 and per-security-fix re-verification table**.
+5. Only then declare `integration/w0-trunk` canonical (W0 certification) → re-baseline `main`/`production` (W0.3, owner sign-off).
+
+**Why held:** DRP is live; reconciling it wrong could resurrect a fixed P0 or drop a security fix. The owner elected to provide the deployed head — the merge waits on it. Everything else in W0 is complete.
+
+---
+
+## REMAINING TO CLOSE W0
+
+1. ⏳ **Owner:** provide the live deployed head (unblocks W0.2b).
+2. Then (autonomous): execute the DRP union-reconciliation + full regression + per-P0/security re-verification.
+3. Then **owner canonical sign-off** → re-baseline `main`/`production`; W0 certification (EOS RELEASE-scope) → unblocks **W1**.
+4. ⏳ **Owner:** move the foundation backup tarball to a durable off-repo location.
