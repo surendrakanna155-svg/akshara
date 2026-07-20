@@ -83,6 +83,20 @@ export const ERP_NAV: NavSection[] = [
   },
 ];
 
+/**
+ * ASIP Platform Support Console nav (scoped unfreeze, ASIP_DESIGN.md §6.1).
+ * Deliberately a SEPARATE section — NOT part of ERP_NAV / PORTAL_NAV — so the
+ * router's scaffold generator (which walks only those) never routes it, and it
+ * only ever appears for a session holding the `platformSupport` permission
+ * (appended by AppShell). `moduleKey` is a sentinel; RBAC is the permission gate.
+ */
+export const SUPPORT_CONSOLE_NAV: NavSection = {
+  label: 'Platform Support',
+  items: [
+    { key: 'support-console', label: 'Support Console', icon: 'support_agent', path: '/support-console', moduleKey: 'supportConsole' },
+  ],
+};
+
 /** Portal navs — parent / teacher / student (mobile-first screens on web). */
 export const PORTAL_NAV: Record<'teacher' | 'parent' | 'student', NavItem[]> = {
   teacher: [
