@@ -76,10 +76,12 @@ These are non-negotiable inputs; no wave may violate them without a recorded own
 
 The waves are organized around the Constitution's own architecture (Identity → School Operating Platform → Student360/QIE/Assessment → Dynamic Platform → Search → Intelligence → Enterprise → Design/UX → Engineering → Quality), sequenced by dependency and risk. Legend for status: ✅ done · 🔶 built, hardening · 🟩 production-certified (final wave only) · ⚪ pending · 👤 owner-gated · ⏸ deferred · 🔮 future.
 
-| Wave | Title | Constitution anchor | Gate |
-|---|---|---|---|
-| **W0** | Lane Convergence & Repository Integrity | Part 14/16 (one platform, single source of truth, backward-compat) | RELEASE/DOCS |
-| **W1** | Re-baseline Reality Audit on the Converged Trunk | Part 15 (earned confidence; void prior certs) | EOS DOCS |
+> **🟢 LIVE EXECUTION STATUS (2026-07-20):** **W0 ✅ COMPLETE** — one converged trunk `integration/w0-trunk` = `main` = `release/w0-converged` @ `5003934b` (pushed to origin; `production` untouched); deployed head verified from VPS; regression-green (backend 3650/0 · flutter 4110/0). See [`W0_CONVERGENCE_CERTIFICATE.md`](W0_CONVERGENCE_CERTIFICATE.md). **W1 ✅ COMPLETE** — one deduped, evidence-graded status ledger: [`W1_CANONICAL_EVIDENCE_LEDGER.md`](W1_CANONICAL_EVIDENCE_LEDGER.md) (PRA 65/5/47/0 · PRC ~450 satisfied / ~33 open / ~19 owner-gated · cert-validity reconciled). **Next: W2.** Prior per-branch/per-cert status is superseded by the W1 ledger.
+
+| Wave | Title | Constitution anchor | Gate | Status |
+|---|---|---|---|---|
+| **W0** | Lane Convergence & Repository Integrity | Part 14/16 (one platform, single source of truth, backward-compat) | RELEASE/DOCS | ✅ done (EOS COND-PASS; canonical re-baseline done) |
+| **W1** | Re-baseline Reality Audit on the Converged Trunk | Part 15 (earned confidence; void prior certs) | EOS DOCS | ✅ done (canonical ledger) |
 | **W2** | Identity, Lifecycle & Governance | Part 2/3 | SECURITY+MIGRATION |
 | **W3** | Money & Data Integrity | Part 15 (data integrity) | RELIABILITY |
 | **W4** | Core School-Operations Completeness | Part 5 (can a real school operate entirely inside Akshara?) | FEATURE+EOS |
