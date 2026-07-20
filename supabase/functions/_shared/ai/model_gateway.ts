@@ -738,6 +738,15 @@ export async function runGovernedEmbedding(
         userId: ctx.userId,
         surface: ctx.surface,
         estimatedCostMicros: estimateEmbeddingCostMicros(text),
+        // Embeddings meter the RATE + SPEND budget (via estimatedCostMicros) but
+        // hold ZERO product credits — they are an internal semantic-cache/RAG infra
+        // cost, not a user-facing credit-consuming AI call (unlike runGateway's
+        // model path, which holds `creditsForThisCall`). This restores the
+        // pre-convergence embedding behavior: the AI-wallet `creditsRequired` field
+        // (DRP AI-credit-wallet) and the embeddings-through-gateway path (PRA-P1-46)
+        // were authored in separate lanes and combined in W0 — the caller was never
+        // updated for the new required field. (W0 convergence typecheck fix.)
+        creditsRequired: 0,
         limits: deps.limits,
         now,
       });
