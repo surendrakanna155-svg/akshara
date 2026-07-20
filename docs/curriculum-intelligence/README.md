@@ -29,6 +29,7 @@ The Curriculum Intelligence Pipeline: build a verified official-curriculum repos
 - [`proposals/AMENDMENT_A2_PER_STUDENT_PRACTICE_GENERATION.md`](proposals/AMENDMENT_A2_PER_STUDENT_PRACTICE_GENERATION.md) — **Amendment A2** (🟡 Pending Owner Ratification; direction + D-7 + I9 + §12 owner-approved 2026-07-08): deterministic per-student practice & DPP generation engine (family-level certification, zero runtime AI). Integrates onto CI-C10/C1/C3/C8 + v3.0 §13; **no sequencing change until ratified.**
 
 ### Integration & handoff (2026-07-07 — read these first)
+- [`RESOURCE_STORAGE_POLICY.md`](RESOURCE_STORAGE_POLICY.md) — **🔒 LOCKED (2026-07-09):** all downloaded resources are local-only; never commit copyrighted PDFs/binaries.
 - [`INTEGRATION_AND_READINESS_REVIEW.md`](INTEGRATION_AND_READINESS_REVIEW.md) — repository-verified deliverable audit, consistency review, **roadmap integration (CI-DATA parallel track + P1-CI-0 pre-red-team wave + v3.0 Phase-1 mapping)**, Red-Team position, readiness assessment.
 - [`OPUS_IMPLEMENTATION_HANDOFF.md`](OPUS_IMPLEMENTATION_HANDOFF.md) — the complete implementation handoff package (governing law, status, order, standards, recommendations).
 

@@ -11,8 +11,8 @@
 
 | Field | Value |
 |---|---|
-| **Derived progress** | **54.8%** (45.5 / 83 wave units — roadmap §0b) |
-| **Current Phase** | **Twin hardening programs (post-RECON-1):** **P3-AI-3** W2 Hardening & Closure 🔶 ∥ **K-2** QP Engine Hardening 🔶 — plus **P1-PROD-22 Face ID** (Must-Before-GA, open now) and **P0-LIVE-1** (owner-provisioned live checklist). Then CFC-1 → FREEZE-1 → P4. |
+| **Derived progress** | **53.5%** (45.5 / 85 wave units — roadmap §0b; denominator grew by 2 at the PRC integration, 2026-07-11) |
+| **Current Phase** | **Twin hardening programs (post-RECON-1):** **P3-AI-3** W2 Hardening & Closure 🔶 ∥ **K-2** QP Engine Hardening 🔶 — plus **P1-PROD-22 Face ID** (Must-Before-GA, open now) and **P0-LIVE-1** (owner-provisioned live checklist). Then **PRC-A → PRC-B (Product Reality & Correctness Certification — auto-begins at P3 exit + EOS)** → CFC-1 → FREEZE-1 → P4. |
 | **Completed** | RECON-1 ✅ · P0 W1+W2 (14/19 tasks; live legs ⑪⑫⑬ verified 2026-07-09) · P1 non-gated lane ✅ (CODE-1/2/3/5 · PROD-0 · C1–C21 · CI-0 · **GS-1..3 gap-sweeps**) · **P2 ✅ (UX-1..5)** · **P3-AI-1 ✅ CERTIFIED** (cert v2, 2026-07-10) · **K-1 KIE ✅ (local: Phases 1–7 + 360-corpus cert + Intake Center)** · acquisition engine ✅ (Coverage Matrix = SSOT, 14.1%) |
 | **🔶 Hardening (NOT complete, NOT production-ready)** | **P3-AI-2 (W2):** engines/gates/search/quotas/client/persona-feeds built; audit loop OPEN (P0-1/P1-1/P1-2 fixed; more rounds required; W2.1/2.7/2.8/2.9 open; migrations `20260867`+ **not deployed**). **K-2 (QP engine):** Q1–Q8 + R1–R9 + prod-readiness GO (scoped); template/blueprint/OCR/validation program continues; exit = 2 consecutive clean audits. |
 | **🟩 Production-certified (interim, task-scope)** | live RLS isolation (233/233 zero-leak) · nightly backup (restorable) · `finance_fee_reductions` live cert. *Phase-wide 🟩 is granted only by P7.* |
@@ -30,12 +30,13 @@
 | P2 (UX-1..5) | 5 | 5 | 0 | 5.0 |
 | P3 (W1.1–1.5 ✅ · W2.0/GATE/S + W2.2–2.6 🔶 · W2.1/2.7/2.8/2.9 + AI-3 ⚪) | 18 | 5 | 8 | 9.0 |
 | K (K-1 ✅ · K-2 🔶 · K-3 👤 · K-4 ⚪) | 4 | 1 | 1 | 1.5 |
+| PRC (PRC-A · PRC-B — Product Reality & Correctness, added 2026-07-11) | 2 | 0 | 0 | 0 |
 | P4 (RT-0 · RT-1) | 2 | 0 | 0 | 0 |
 | P5 (FIX-1, variable) | 1 | 0 | 0 | 0 |
 | P6 (VAL-1 · PILOT-1 · BETA-1) | 3 | 0 | 0 | 0 |
 | P7 (CERT-1) | 1 | 0 | 0 | 0 |
 | P8 (GA-1..5) | 5 | 0 | 0 | 0 |
-| **Total** | **83** | **41** | **9** | **45.5 → 54.8%** |
+| **Total** | **85** | **41** | **9** | **45.5 → 53.5%** |
 
 ## 3. Current Blockers
 
@@ -59,7 +60,7 @@
 | PAR3-UPLOAD (real file bytes vs reference-only) · PRI-4/5 scheduled-send · HWK-1/C6 basis re-check | tracked residuals |
 | Appendix A ~26 items · Consolidation DOC-8 · `APP_ENV=staging` (LV-5) · shared-box (LV-4/OPS-4) · A2 ratification | respective waves |
 
-## 5. Next 10 waves (execution order; ∥ = parallel-eligible under disjoint file ownership)
+## 5. Next waves (execution order; ∥ = parallel-eligible under disjoint file ownership)
 
 | # | Wave | Scope | Hard dependency |
 |---|---|---|---|
@@ -68,16 +69,20 @@
 | 3 | **P1-PROD-22** ∥ | Staff Face ID attendance (GA-1/2/3 per frozen design) | must precede P6-PILOT-1 Stage 12 |
 | 4 | **P0-LIVE-1** ∥ | 13-item live checklist; ① AI migrations FIRST; ⑩ starts the 7-day clock | 👤 provisioning |
 | 5 | **P1 owner-gated tail** | CODE-4/6/7/8 as decisions land; SEC-1; TEST-1/2 | 👤 |
-| 6 | **CFC-1** | 10-item Code Freeze Checklist (evidence per item) | P3-AI-3 + K-2 exits (or carve-out) + LIVE-1 ① |
-| 7 | **FREEZE-1** | Feature Freeze declared — bug/regression/perf/security/quality/stability only | CFC-1 PASS |
-| 8 | **P4-RT-0 → P4-RT-1** | seeds refreshed for post-W2 AI surface; 12 domains; per-subsystem audit→fix→regression→re-audit | FREEZE-1 |
-| 9 | **P5-FIX-1** | close every finding; live re-verify; **round law: repeat until audits stop finding meaningful issues** | P4 verdict |
-| 10 | **P6-VAL-1 → P6-PILOT-1 → P6-BETA-1** | full E2E validation (rounds) → internal pilot stages 0–16 → 5–10 real beta schools | P5 exit; then P7 → P8 |
+| 6 | **PRC-A** (Wave A — Real School Operations Capability & Cross-Module Gap Audit) | 148 capabilities / 15 domains; 13-step method; classify → fix verified gaps → regression → prove journeys; dependency rule | **auto-begins at P3 exit + EOS** (tracker: `PRODUCT_REALITY_CORRECTNESS_PROGRAM_TRACKER.md`) |
+| 7 | **PRC-B** (Wave B — Product Correctness, Invariant & Edge-Case Certification) | derive exhaustive inventory from codebase; 12 invariant categories; fix verified defects; regression | PRC-A exit (regression + EOS) — **never merged with Wave A** |
+| 8 | **CFC-1** | 10-item Code Freeze Checklist (evidence per item) | P3-AI-3 + K-2 exits (or carve-out) + **PRC complete** + LIVE-1 ① |
+| 9 | **FREEZE-1** | Feature Freeze declared — bug/regression/perf/security/quality/stability only | CFC-1 PASS |
+| 10 | **P4-RT-0 → P4-RT-1** | seeds refreshed for post-W2 AI surface; 12 domains; per-subsystem audit→fix→regression→re-audit | FREEZE-1 |
+| 11 | **P5-FIX-1** | close every finding; live re-verify; **round law: repeat until audits stop finding meaningful issues** | P4 verdict |
+| 12 | **P6-VAL-1 → P6-PILOT-1 → P6-BETA-1** | full E2E validation (rounds) → internal pilot stages 0–16 → 5–10 real beta schools | P5 exit; then P7 → P8 |
 
 ## 6. Estimated Completion Order (macro)
 
 ```
 (P3-AI-3 ∥ K-2 ∥ P1-PROD-22 ∥ P0-LIVE-1 ∥ owner-gated P1 tail)
+  → PRC-A (Wave A: real-school ops capability & cross-module gap audit — 148 capabilities, auto-begin at P3 exit + EOS)
+   → PRC-B (Wave B: correctness, invariant & edge-case certification — 12 categories from the live codebase)
   → CFC-1 (Code Freeze Checklist: TODO/mocks/stubs/debug/flags/bypasses/migrations/clean-tree/no-P0P1)
     → FREEZE-1 (feature freeze — no new features beyond this point)
       → P4 (Red Team: seeds refreshed → 12-domain assault; per-subsystem audit cycles)
@@ -88,7 +93,7 @@
                 → P7 (Production Certification: gates T/S/O/U/A/P/B/D + QA-R-012 + 7-day cron green) → 🟩
                   → P8 (go/no-go → launch [VPS/migrations/smoke/monitoring/cron/backup/security/perf/cost/AI-quota/rollback] → GA DECLARED)
 ```
-Hard gates: P0-LIVE-1 gates P7's clock · P3-AI-1 ✅ feeds P6 · CFC-1 → FREEZE-1 → P4 · P4→P5→P6-VAL→PILOT→BETA→P7→P8 strictly sequential · PROD-22 before Pilot Stage 12 · K-lane never blocks ERP (K-3 owner-timed, not GA-gating).
+Hard gates: P0-LIVE-1 gates P7's clock · P3-AI-1 ✅ feeds P6 · **P3 exit (+EOS) auto-starts PRC-A → PRC-B (sequential, never merged; complete before FREEZE-1)** · CFC-1 → FREEZE-1 → P4 · P4→P5→P6-VAL→PILOT→BETA→P7→P8 strictly sequential · PROD-22 before Pilot Stage 12 · K-lane never blocks ERP (K-3 owner-timed, not GA-gating).
 
 ## 7. Progress Tracking Table (mirror of journal §2 — the two must agree)
 
@@ -100,12 +105,13 @@ Hard gates: P0-LIVE-1 gates P7's clock · P3-AI-1 ✅ feeds P6 · CFC-1 → FREE
 | P2 — UI/UX | 5 | 5 | 0 | 0 | ✅ |
 | P3 — Adaptive AI | 18 | 5 | 8 | 5 | EOS AI per sub-wave |
 | K — Knowledge Lane | 4 | 1 | 1 | 2 | K gates |
+| PRC — Product Reality & Correctness | 2 | 0 | 0 | 2 | EOS per wave |
 | P4 — Red Team | 2 | 0 | 0 | 2 | verdict |
 | P5 — Fixes | 1 | 0 | 0 | 1 | per fix |
 | P6 — VAL·Pilot·Beta | 3 | 0 | 0 | 3 | VAL/QA-R/BETA |
 | P7 — Production Cert | 1 | 0 | 0 | 1 | QA-R-012 → 🟩 |
 | P8 — GA | 5 | 0 | 0 | 5 | RELEASE |
-| **Total** | **83** | **41** | **9** | **33** | **45.5 → 54.8%** |
+| **Total** | **85** | **41** | **9** | **35** | **45.5 → 53.5%** |
 
 ## 8. EOS Status
 

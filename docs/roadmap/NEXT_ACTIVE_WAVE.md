@@ -26,7 +26,7 @@
 3. **P1-PROD-22 — Staff Face ID attendance** (Must-Before-GA; largest un-started build; must land before P6-PILOT-1 Stage 12). **Open now** per the frozen `docs/ATTENDANCE_AUTH_DESIGN_DECISION.md` (GPS geofence + anti-mock + live-camera face; NEVER OS biometric).
 4. **P0-LIVE-1 — Consolidated live checklist** (owner-provisioned): ① **AI migrations `20260867`+/`20260873` deploy — MUST precede the W2 release flag reaching any live build** · ② outbox drain · ③ COM-4 cron token · ④ reminder crons · ⑤ live `ai_*` probes · ⑥ off-site R2 creds · ⑦ alert delivery · ⑧⑨ CI + isolation-in-CI · ⑩ **7-day cron clock (calendar-critical — gates P7)**. Items ⑪⑫⑬ ✅ 2026-07-09.
 
-**Then (strict order):** CFC-1 Code Freeze Checklist (10 items, evidence per item) → FREEZE-1 Feature Freeze → P4 → P5 → P6-VAL-1 → P6-PILOT-1 → P6-BETA-1 (5–10 real schools) → P7 → P8.
+**Then (strict order):** **PRC-A → PRC-B** (Product Reality & Correctness Certification — **auto-begins when P3 exits + EOS passes**, if no higher-priority blocking production gate; two sequential waves, never merged; 502 tracked requirements in [`PRODUCT_REALITY_CORRECTNESS_PROGRAM_TRACKER.md`](PRODUCT_REALITY_CORRECTNESS_PROGRAM_TRACKER.md); **scheduled, NOT started** — integrated 2026-07-11) → CFC-1 Code Freeze Checklist (10 items, evidence per item) → FREEZE-1 Feature Freeze (entry now also requires PRC complete) → P4 → P5 → P6-VAL-1 → P6-PILOT-1 → P6-BETA-1 (5–10 real schools) → P7 → P8.
 
 ### 👤 Owner-decision batch (surface now; none pauses the active lanes)
 - **P0-LIVE-1 provisioning:** R2 creds · `INTERNAL_CRON_TOKEN` · CI runner (starts the 7-day clock).
