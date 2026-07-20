@@ -2,11 +2,11 @@ import type { AccessTokenClaims } from "../jwt.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 import { correlationIdFromRequest, recordMutationAudit } from "../audit/audit_repository.ts";
 import { createCollection } from "../finance/finance_collections_repository.ts";
-import { loadRazorpayConfig } from "./razorpay_config.ts";
 import {
-  createRazorpayOrder,
-  verifyRazorpayPaymentSignature,
-} from "./razorpay_client.ts";
+  DEFAULT_PROVIDER_ID,
+  getPaymentProvider,
+  resolvePaymentProvider,
+} from "./payment_provider_registry.ts";
 import {
   createPaymentIntent,
   findIntentByIdempotencyKey,
@@ -99,10 +99,15 @@ export async function initiatePayment(
     throw new PaymentIntentStateError("installment_id and positive amount are required");
   }
 
-  const razorpay = loadRazorpayConfig();
   const orgId = claims.tenant_id;
   const schoolId = claims.school_id;
   const studentId = requireParentChild(claims);
+
+  // W3: resolve the school's configured provider (default 'razorpay'). All
+  // gateway calls below go through this seam, never a hard-coded gateway. A
+  // missing config → razorpay; an unknown/disabled configured provider throws
+  // (fail-closed) rather than silently capturing money.
+  const provider = await resolvePaymentProvider(db, orgId, schoolId);
 
   if (input.idempotencyKey) {
     const existing = await findIntentByIdempotencyKey(db, orgId, input.idempotencyKey);
@@ -114,7 +119,7 @@ export async function initiatePayment(
         status: existing.status,
         expiresAtLabel: existing.expires_at ? expiresLabel(new Date(existing.expires_at)) : "Expires soon",
         razorpayOrderId: existing.gateway_order_id ?? "",
-        razorpayKeyId: razorpay.keyId,
+        razorpayKeyId: provider.publicClientKey(),
       };
     }
   }
@@ -150,7 +155,7 @@ export async function initiatePayment(
     idempotencyKey: input.idempotencyKey,
   });
 
-  const order = await createRazorpayOrder(razorpay, {
+  const order = await provider.createOrder({
     amount: input.amount,
     receipt: request.id,
     notes: {
@@ -171,6 +176,9 @@ export async function initiatePayment(
     gatewayOrderId: order.id,
     idempotencyKey: input.idempotencyKey,
     expiresAt,
+    // Persist WHICH provider opened this intent so confirm/webhook resolve the
+    // same one.
+    gateway: provider.id,
   });
 
   await recordMutationAudit(
@@ -204,7 +212,7 @@ export async function initiatePayment(
     status: "initiated",
     expiresAtLabel: expiresLabel(expiresAt),
     razorpayOrderId: order.id,
-    razorpayKeyId: razorpay.keyId,
+    razorpayKeyId: provider.publicClientKey(),
   };
 }
 
@@ -218,7 +226,6 @@ export async function confirmPayment(
     throw new PaymentIntentStateError("Payment confirmation requires parent scope");
   }
 
-  const razorpay = loadRazorpayConfig();
   const orgId = claims.tenant_id;
   const schoolId = claims.school_id;
 
@@ -242,23 +249,30 @@ export async function confirmPayment(
     throw new PaymentIntentStateError(`Payment intent is not confirmable: ${intent.status}`);
   }
 
-  // FAIL-CLOSED: when running against a live Razorpay gateway (not stub mode),
-  // gateway verification is MANDATORY before any capture. Previously this whole
-  // block was skipped if the client omitted razorpayPaymentId/signature (the
-  // Flutter app sends only transactionRef), which meant flipping
-  // RAZORPAY_STUB_MODE=false without integrating the SDK would capture + issue a
-  // finance receipt with ZERO proof of payment. Now a live confirm with missing
-  // or invalid proof throws BEFORE any collection/receipt/capture is created.
-  // Stub mode (the current default with no RAZORPAY_* env) is unchanged: it
-  // never touches real money, so capture proceeds without a gateway signature.
-  if (!razorpay.stubMode) {
+  // W3: confirm through the SAME provider that opened the intent (intent.gateway),
+  // via the registry — never a hard-coded gateway. An unknown persisted gateway
+  // throws (fail-closed) rather than defaulting.
+  const provider = getPaymentProvider(intent.gateway || DEFAULT_PROVIDER_ID);
+
+  // FAIL-CLOSED: when the provider requires a gateway signature (a LIVE Razorpay
+  // gateway, or any provider whose payments cannot be self-confirmed by the payer
+  // — e.g. the offline/manual provider), verification is MANDATORY before any
+  // capture. Previously this block was Razorpay-`stubMode`-gated and skipped when
+  // the client omitted razorpayPaymentId/signature (the Flutter app sends only
+  // transactionRef), which meant flipping RAZORPAY_STUB_MODE=false without
+  // integrating the SDK would capture + issue a finance receipt with ZERO proof
+  // of payment. Now a confirm with missing or invalid proof throws BEFORE any
+  // collection/receipt/capture is created. A stub gateway (the current default
+  // with no RAZORPAY_* env) reports requiresGatewaySignature()=false: it never
+  // touches real money, so capture proceeds without a gateway signature — the
+  // exact prior stub behaviour, preserved.
+  if (provider.requiresGatewaySignature()) {
     if (!input.razorpayPaymentId || !input.razorpaySignature || !intent.gateway_order_id) {
       throw new PaymentIntentStateError(
         "Live payment requires a verified Razorpay payment id and signature",
       );
     }
-    const valid = await verifyRazorpayPaymentSignature(
-      razorpay,
+    const valid = await provider.verifyPaymentSignature(
       intent.gateway_order_id,
       input.razorpayPaymentId,
       input.razorpaySignature,
