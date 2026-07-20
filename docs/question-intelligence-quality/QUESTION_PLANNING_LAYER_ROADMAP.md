@@ -293,6 +293,15 @@ All four locked. These now govern the build.
   curate certified distributions for all three before Phase 3; the Phase 5 control suite + certification must
   green all three exams together before candidate generation begins.
 
+- **Decision 5 — QDI design-pattern MINING & certification → PENDING (raised Phase 4, 2026-07-20).** The deterministic
+  QDI infrastructure is built (scope-linking, attachment, anti-copying/structural/scope controls) and the owned PYQ
+  corpus exists (327 sources / 20,216 chunks). But certifying a design pattern is **model-audited**, not
+  deterministically verifiable, and mining 20k chunks spends real model budget. Options: **(a)** run a bounded,
+  governed analyst→independent-auditor mining pass now (produces the first model-certified design DNA; blueprints
+  gain `expected_solving_path` + `misconceptions`); **(b)** ship QPL v1 with honest-null design DNA and defer QDI
+  mining to a follow-on. *Recommendation:* proceed to certify the deterministic QPL (Phase 5) now — it is complete
+  and honest without QDI — and treat QDI mining as an owner-scheduled enrichment (it does not block the planner).
+
 ---
 
 ## 10. Key file map (for the next session)
@@ -390,3 +399,22 @@ certify (EOS) → commit → doc.
 - Tests: +14 (`tests/test_qpl_phase3_planner.py` — determinism, apportionment, blueprint contract, distribution
   match, persistence round-trip, read-only foundation). **723 tests green** (was 709).
 - **The core determinism law now holds:** same (frozen index, Exam DNA, exam, N) → identical blueprint set.
+
+### Phase 4 — QDI design layer (deterministic infra) + difficulty resolution — ✅ INFRA COMPLETE · ⏸ mining owner-gated · EOS: PASS
+- **Difficulty resolved** (Phase 3): the bounded driver model is the sole planning difficulty model, recomputable
+  and verifiable (retires the `qp_bridge._difficulty` depth-collapse for planning). G7 closed.
+- **`knowledge/qdi_link.py`** — scope-linking (`pattern → exam_profile × min_class`, the `qdi_scope_link` seam) +
+  DETERMINISTIC certified-pattern attachment (`expected_solving_path`, `misconceptions_to_evaluate`, `pattern_id`),
+  picked by (subject, archetype, difficulty) with a stable pattern_id tie-break. No match → HONEST NULLS.
+- **`knowledge/qdi_controls.py`** — the deterministic certification floor, adversarially controlled: anti-copying
+  (5-gram shingle overlap — structure is transferable, wording is not), structural validity, scope-link legality.
+- **`plan_blueprints` attaches certified design DNA** when present; with **0 certified patterns today every
+  blueprint carries honest-null design DNA** (never fabricated).
+- Verified against real data: owned PYQ chunks exist (327 sources / 20,216 chunks); the 12 existing proposed
+  patterns pass the deterministic anti-copying floor (none echo their source).
+- Tests: +8 (`tests/test_qpl_phase4_qdi.py`). **731 tests green** (was 723).
+- ⏸ **REMAINING — owner-gated (see §9 Decision 5):** QDI pattern CERTIFICATION is **model-audited** — design
+  patterns are not sympy-verifiable, so certification rests on an INDEPENDENT auditor model (the same governance
+  as the foundation build). Running the governed analyst→independent-auditor mining pass produces model-certified
+  knowledge and spends model budget → a genuine owner decision. The QPL is complete and certifiable as a
+  DETERMINISTIC PLANNER without it; certified design DNA is additive enrichment layered on later.

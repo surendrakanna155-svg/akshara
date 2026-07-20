@@ -22,6 +22,7 @@ from kie.qie.knowledge import examdna as ED
 from kie.qie.knowledge import plan_specs as PS
 from kie.qie.knowledge import planner as P
 from kie.qie.knowledge import qdi as QDI
+from kie.qie.knowledge import qdi_link as QL
 
 INDEX_DB_PATH = config.KIE_HOME / "knowledge_index.db"
 EXAM_CLASSES = (11, 12)
@@ -85,6 +86,7 @@ def plan_blueprints(exam: str, total: int, index_path=None, examdna_path=None) -
         concepts_by_chapter: dict = {}
         chapter_weights: dict = {}
         universe_all = []
+        cert_patterns = []
         for subject in ED.EXAM_SUBJECTS[exam]:
             uni = P.certified_universe(conn, subject, list(EXAM_CLASSES))
             uni, _ = P.dedupe_universe(uni)
@@ -92,6 +94,7 @@ def plan_blueprints(exam: str, total: int, index_path=None, examdna_path=None) -
             for c in uni:
                 concepts_by_chapter.setdefault(c["chapter_id"], []).append(c)
             chapter_weights[subject] = ED.chapter_weight_map(edb, exam, subject)
+            cert_patterns.extend(QDI.certified_patterns(conn, subject))  # 0 today; QDI mining = owner-gated
         for cid in concepts_by_chapter:
             concepts_by_chapter[cid].sort(key=lambda c: c["concept_id"])
         diff_dist = ED.distribution(edb, exam, "difficulty")
@@ -102,12 +105,14 @@ def plan_blueprints(exam: str, total: int, index_path=None, examdna_path=None) -
         conn.close()
         edb.close()
 
+    pat_idx = QL.index_by_key(cert_patterns)
     by_id = {c["concept_id"]: c for c in universe_all}
     issued, refused, seen_fp = [], [], set()
     for s in slots:
         n_in_chapter = len(concepts_by_chapter.get(s["chapter_id"]) or []) or 1
         cw = chapter_weights[s["subject"]].get(s["chapter_id"], 0.0)
         bp = BP.build_blueprint(s, f"plan_{exam}", cw, 1.0 / n_in_chapter, fver, ever)
+        bp = QL.attach_pattern(bp, pat_idx)   # enrich with certified design DNA when available (honest null otherwise)
         v = P.check_plan(bp, by_id)
         if v:
             refused.append({"blueprint_id": bp["blueprint_id"], "violations": v})
