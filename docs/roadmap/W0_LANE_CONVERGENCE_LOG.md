@@ -13,8 +13,10 @@
 |---|---|---|
 | **W0.1 — continuity preservation** | Commit uncommitted code; fix `.gitignore`; back up frozen foundation off-repo | ✅ **COMPLETE** (code preserved + off-repo backup delivered) |
 | **W0.2a — merge erp-pra-remediation** | Integrate 117 PRA fixes (S0–S7) | ✅ **COMPLETE** (0 conflicts; 598 backend tests green) |
-| **W0.2b — reconcile data-reliability-platform** | Merge the diverged live-pilot red-team/security line | 🔶 **analyzed; 16 conflicts mapped** — final merge HOLDS for owner-provided **deployed head** |
-| **W0.3 — triage + prune** | Salvage/prune stale branches; re-baseline main/production | 🔶 branch triage ✅ **DONE**; re-baseline 👤 owner-gated (post-canonical) |
+| **W0.2b — reconcile data-reliability-platform** | Merge the diverged live-pilot red-team/security line | ✅ **DONE** — deployed head VERIFIED from VPS (source==DRP `606c79a5`, 508/508); merged `101ee3f1`; 16 conflicts unioned; **full regression green** (backend 3650/0, flutter 4110/0). See `W0_CONVERGENCE_CERTIFICATE.md`. |
+| **W0.3 — triage + prune** | Salvage/prune stale branches; re-baseline main/production | 🔶 branch triage ✅ **DONE**; re-baseline 👤 owner-gated (**the only remaining W0 step**) |
+
+> **W0 STATUS (2026-07-20): implementation-complete + fully regression-green on `integration/w0-trunk` @ `b418db55`. Awaiting OWNER CANONICAL SIGN-OFF to re-baseline `main`/`production` — see `W0_CONVERGENCE_CERTIFICATE.md`.**
 
 **Owner Decision Batch #1 (answered):** ① backup = **hand-off checksummed archive** ✅ done · ② deployed head = **owner will provide** ⏳ · ③ convergence = **base current trunk**, run in isolation ✅ in progress · ④ branches = **triage/salvage/prune** ✅ done.
 
