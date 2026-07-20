@@ -23,8 +23,8 @@
 | **S3** | Pilot-lane governance / canonical teacher↔class | ✅ committed | `972836b7` |
 | **S4** | Reporting & metric integrity | ✅ **COMPLETE** | `005695d5` (metric core) + `64e086da` (report card / export / queues) |
 | **S5** | Communication & delivery | ✅ **COMPLETE** | `fbbb7634` |
-| **S6** | Academic-operations blockers | ✅ **COMPLETE** (CONDITIONAL PASS; P1-17 + UX residuals tracked) | `355637e0` (backend) + `f5bc4558` (Flutter/storage) |
-| **S7** | Operational-module blockers | 🔨 **IN PROGRESS** (6 disjoint agents; P0s + mechanical P1s) | — |
+| **S6** | Academic-operations blockers | ✅ **COMPLETE** (all 11 items; P1-17 landed with S7) | `355637e0` + `f5bc4558` (+ P1-17 in `808504d1`) |
+| **S7** | Operational-module blockers | ✅ **COMPLETE** (CONDITIONAL PASS; large/owner P1s tracked) | `808504d1` |
 
 ---
 
@@ -238,8 +238,9 @@ promotion 14, grading 101, storage 151).
   confirm; fabricated `storage://` string gone).
 - **P1-30** homework attachments store real bytes (`homework-attachments` bucket).
 
-**Remaining S6 item:** **P1-17** school-calendar UI (backend complete; UI being built by a
-concurrent agent — lands with S7).
+**P1-17** school-calendar UI — ✅ **DONE** (landed in the S7 commit `808504d1`): full client
+slice (screen/repo/datasource/mock/providers) wired to the complete-but-UI-less backend +
+gated Management nav entry. S6 is now 11/11 items.
 
 **Tracked S6 residuals (CONDITIONAL — P1/UX follow-ups, non-blocking):**
 - Grade-scale client provider not yet synced to the new GET/PUT endpoint (backend is
@@ -250,44 +251,70 @@ concurrent agent — lands with S7).
 - P0-14 deploy note: both `ACADEMIC_API_ENABLED` + `ACADEMIC_OPERATIONS_API_ENABLED` must be
   enabled together for real year UUIDs to reach the promotion backend.
 
-## S7 — Operational-module blockers  ⬜ NOT STARTED
-Scope (§12.1): **P0-15** staff GPS/face (= master-roadmap P1-PROD-22 Must-Before-GA),
-**P0-19** vehicle→route + capacity guard, **P0-20** transport fee demand, **P0-24 payroll→
-Finance ledger posting** (B5 Option C — the S0 honesty-delete is done; the real posting
-lands here and only then is P0-24 closed), **P0-02 client SDK** (payment gateway — backend
-already fail-closed in S1); P1-33 HR settings, P1-34 leave accrual/carry-forward, P1-35
-payroll statutory, P1-36 LOP automation, P1-39 inventory asset CRUD, P1-41 library
-accession, P1-42 library lost-book, P1-43 transport attendance roster, P1-46 AI
-gateway-bypass hardening; P2-12 per-role borrow limit. EOS: FEATURE+SEC PASS.
+## S7 — Operational-module blockers  ✅ COMPLETE  `808504d1`
 
-### ⚠ Likely owner-decision / pause points inside S7 (per execution rules)
-- **P0-02 client SDK** — which payment gateway (Razorpay/…?) + live credentials is an
-  **owner decision + external dependency**. The Flutter client can be made to fail-closed /
-  drop the fabricated `APS-…` receipt without the SDK, but the real gateway SDK integration
-  needs owner input → **PAUSE for owner decision** before that sub-item.
-- **P0-15 staff GPS/face** — device-capability + threshold; existing Staff Face ID work
-  (P1-PROD-22, slices 1–4) is the base. Confirm scope before a large build.
-- **P1-54 + P2-30 (vault/base64)** — Tier-2, conditional on schools bringing own keys;
-  ship the pair together (§9) only if pulled forward.
+**EOS: CONDITIONAL PASS.** All in-scope P0 blockers closed + the mechanical P1 tail; larger
+statutory/owner-data-model P1s tracked. Migration `20260900000019` (payroll_finance_postings).
+**Next free = `20260900000020`.** Integrated verification (all 6 workstreams together):
+api-graph `deno check` clean; `deno lint` clean; **399 backend tests** (transport/hr/
+inventory/library/ai) + full `dart analyze lib/` clean + **209 Flutter tests** (transport/hr/
+staff/library/payment/calendar/contracts).
+
+**Delivered:**
+- **P0-15** staff attendance recordable via the audited MANUAL-REQUEST fallback (client
+  screen + approver queue on the built-and-tested `/staff-attendance/manual-request` +
+  `/decide`; the check-in card's device path throws today). No hardware deps.
+- **P0-19** vehicle→route assignment (`PUT /transport/routes/{id}/vehicle`) — the dormant
+  seat-capacity guard now fires (over-fill / too-small-bus → 409).
+- **P0-20** allocation raises the fee demand — `POST /transport/demands/bulk` (idempotent,
+  demand-only) + derived per-allocation `demandRaised` + client bulk action.
+- **P0-24** real payroll→Finance posting (`payroll_finance_postings`, idempotent, atomic in
+  `handleProcessPayrollRun`) — B5 Option C closed (expense-record; Finance has no GL yet).
+- **P0-02** CLIENT fail-closed (dropped fabricated `txn_`/`APS-` receipt; new
+  `pendingGatewayVerification` phase; contract-ready gateway-proof fields). Backend was
+  already fail-closed since S1. **Real gateway SDK = OWNER decision — PAUSED (stop-cond #7).**
+- P1-33 HR settings writable · P1-36 LOP automation · P1-39 inventory writes · P2-12 per-type
+  borrow caps · P1-42 lost-book workflow · P1-43 live transport roster · **P1-46** embeddings
+  routed through the governed gateway path (security; dormant-safe).
+
+### Tracked (NOT done — deliberately deferred, with rationale)
+- **P1-34** leave accrual / carry-forward — medium build; the HR settings are now writable so
+  a `paid:false` leave-type model can drive it (owner nuance on leave-type vocabulary).
+- **P1-35** payroll statutory PF/ESI/PT/TDS — **LARGE compliance build** (per-state PT slabs,
+  PF/ESI ceilings, TDS slabs, employer/employee splits); needs a statutory-config source.
+- **P1-41** library accession / per-copy identity — **owner data-model decision** (numbering
+  scheme + back-fill of existing pooled titles). `LibraryBookStatus.lost` enum is in place.
+- **P0-02 real gateway SDK** (Razorpay/…) + credentials — stop-condition #7.
+- **P0-15 real GPS+face device adapters** — geolocator/camera/ML deps + iOS/Android platform
+  config (a hardware-dependent build; the audited fallback is the sanctioned interim closure).
+- Client-wiring residuals: typed-repository callers for the new transport assign-vehicle +
+  roster endpoints; a `GET /staff-attendance/manual-request` list route + the exact
+  `approveStaffAttendance` client Permission-enum slug for a live approver queue.
+- All PRA migrations `…015`–`…019` apply on deploy (no DB in this lane).
 
 ---
 
-## CHECKPOINT — 2026-07-20 (S5 complete)
+## CHECKPOINT — 2026-07-20 (S0–S7 COMPLETE — Tier-1 remediation done)
 
-**Committed & verified:** S0 `1b893f6d` · S1 `e4807308` · S2 `8e75616b` · S3 `972836b7` ·
-S4 `005695d5` + `64e086da` · **S5 `fbbb7634`** (this commit). All isolated,
-regression-tested, on `feature/erp-pra-remediation`, **NOT pushed**.
+**Committed & verified (branch `feature/erp-pra-remediation`, NOT pushed):**
+S0 `1b893f6d` · S1 `e4807308` · S2 `8e75616b` · S3 `972836b7` · S4 `005695d5`+`64e086da` ·
+S5 `fbbb7634` · **S6 `355637e0`+`f5bc4558`** · **S7 `808504d1`**.
 
-**In-flight:** none — the working tree is clean at the S5 commit.
+**Status:** all **24 P0s** across S0–S7 are addressed; the P1 tail is done except the
+large-build / owner-data-model / hardware / gateway-SDK items listed above (each tracked with
+rationale). Working tree clean at `808504d1`. Migrations `…015`–`…019` unapplied (deploy step).
 
-**Resume point:** proceed to **S6 (Academic-operations blockers)**. Scope below: P0-13
-admission approval gate, P0-21 parent-insights AI RLS scope, P0-14 promotion engine
-contract; + the P1 tail. Reuse the per-school settings-persistence pattern. Then **S7
-(Operational-module blockers)** — **PAUSE at P0-02** (payment gateway/SDK = owner decision +
-external credential dependency) and confirm P0-15 staff GPS/face scope before the large build.
+**Resume / next actions (for a future session or the owner):**
+1. **Owner decisions** to unblock the remaining P0/P1 tail: payment gateway choice + creds
+   (P0-02 SDK); library accession numbering scheme (P1-41); staff real-device build scope
+   (P0-15). 2. **Large builds** when scheduled: P1-35 statutory payroll, P1-34 leave accrual.
+3. **Deploy:** apply migrations `…015`–`…019`; enable `ACADEMIC_API_ENABLED` +
+   `ACADEMIC_OPERATIONS_API_ENABLED` together for promotion; register DLT SMS templates (S5).
+4. **Small follow-ups:** grade-scale client↔endpoint sync; native file picker + download
+   buttons; transport client wiring; staff approver-queue GET route + Permission slug.
 
-**Per-stage rule (unchanged):** full affected-area regression green + EOS gate before the
-next stage; isolated commit per stage; do NOT push.
+**Per-stage rule (held throughout):** full affected-area regression green + EOS gate before
+each commit; isolated commits; **not pushed**.
 
 **Clean resume boundaries:** every committed stage. The student→guardian resolution helper
 now exists (`communication/guardian_recipients.ts`) — reuse it anywhere else a
