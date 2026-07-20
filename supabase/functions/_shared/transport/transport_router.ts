@@ -44,6 +44,10 @@ import {
   handleRecordExpense,
   handleVoidExpense,
 } from "./transport_expenses_handlers.ts";
+import {
+  handleAllocationHistory,
+  handleStudentAllocationHistory,
+} from "./transport_allocation_history_handlers.ts";
 
 type RouteHandler = (req: Request, config: AppConfig) => Promise<Response>;
 
@@ -69,6 +73,14 @@ function matchTransportRoute(method: string, path: string): { handler: RouteHand
     // TRN-3: stop-wise roster read.
     if (/^\/transport\/routes\/[^/]+\/roster$/.test(path)) {
       return { handler: handleRouteRoster };
+    }
+    // W4: effective-dated assignment history (timeline, or ?asOf=<date> for the
+    // period open on that date) — per allocation and per student.
+    if (/^\/transport\/allocations\/[^/]+\/history$/.test(path)) {
+      return { handler: handleAllocationHistory };
+    }
+    if (/^\/transport\/students\/[^/]+\/allocation-history$/.test(path)) {
+      return { handler: handleStudentAllocationHistory };
     }
     return null;
   }
