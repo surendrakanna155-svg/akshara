@@ -14,6 +14,9 @@ import {
   buildFinancialHealthPayload,
   buildSchoolPerformancePayload,
 } from "./management_payload_builders.ts";
+// W4: the dashboard's expenseBreakdown is now live off the canonical Expense Ledger.
+import { buildExpenseBreakdown } from "../expense_ledger/expense_ledger_breakdown.ts";
+import { currentMonthPeriod } from "./management_handlers.ts";
 
 // MJ-C8 (PRINC-1) recompute tests. We verify (a) the academic aggregate SQL
 // mapping (empty => zeros, seeded rows => computed), and (b) the payload
@@ -295,6 +298,44 @@ Deno.test("dashboard payload: seeded school => computed values", () => {
   const conversions = adm.recentConversions as Array<Record<string, unknown>>;
   assertEquals(conversions.length, 1); // only the 'joined' lead, not new_enquiry
   assertEquals(conversions[0].studentName, "Asha");
+});
+
+// ---------------------------------------------------------------------------
+// W4: dashboard expenseBreakdown is LIVE off the canonical Expense Ledger.
+// ---------------------------------------------------------------------------
+
+Deno.test("dashboard payload: expenseBreakdown defaults to [] — honest empty, never fabricated", () => {
+  // revenueTrend stays honestly empty (no source); expenseBreakdown is empty ONLY
+  // because the caller passed no ledger entries — it is not a fabricated series.
+  const p = buildDashboardPayload(seededAggregate());
+  assertEquals(p.revenueTrend, []);
+  assertEquals(p.expenseBreakdown, []);
+});
+
+Deno.test("dashboard payload: expenseBreakdown reflects the REAL by-category ledger mix", () => {
+  // The exact rows listExpenseEntries returns (NUMERIC-as-string amounts).
+  const breakdown = buildExpenseBreakdown([
+    { category: "salary", amount: "500000.00" },
+    { category: "procurement", amount: "25000.00" },
+    { category: "fuel", amount: "2000.00" },
+  ]);
+  const p = buildDashboardPayload(seededAggregate(), breakdown);
+  const eb = p.expenseBreakdown as Array<Record<string, unknown>>;
+  assertEquals(eb.map((e) => e.label), ["salary", "procurement", "fuel"]);
+  assertEquals(eb[0], { label: "salary", value: 500000, percent: 94.88, category: "salary", amount: 500000 });
+  // The chart contract keys the Flutter reader consumes are all present.
+  assertEquals(Object.keys(eb[0]).sort(), ["amount", "category", "label", "percent", "value"]);
+});
+
+Deno.test("currentMonthPeriod: first→last day of the month (matches the Revenue MTD window)", () => {
+  const { from, to } = currentMonthPeriod(new Date(Date.UTC(2026, 6, 20))); // 2026-07-20
+  assertEquals(from, "2026-07-01");
+  assertEquals(to, "2026-07-31");
+  // February of a non-leap year ends on the 28th.
+  const feb = currentMonthPeriod(new Date(Date.UTC(2026, 1, 15)));
+  assertEquals(feb, { from: "2026-02-01", to: "2026-02-28" });
+  // Always a valid, non-empty range.
+  assertEquals(from <= to, true);
 });
 
 Deno.test("financial-health payload: honest empty expenses, computed revenue", () => {

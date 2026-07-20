@@ -19,6 +19,10 @@ import {
   postPayrollRunToFinance,
   selectRunEntries,
 } from "./hr_finance_posting_repository.ts";
+// W4: project a posted payroll run into the canonical Expense Ledger (gross salary
+// cost). Additive, idempotent (per run id) and savepoint-fenced, so a failed
+// projection can never roll back the finance posting or the processed run.
+import { wirePayrollExpenseToLedger } from "../expense_ledger/expense_ledger_wiring.ts";
 import {
   computeStatutoryDeductions,
   deriveStatutoryLiabilities,
@@ -1164,6 +1168,13 @@ export async function handleProcessPayrollRun(req: Request, config: AppConfig): 
         request,
       );
     }
+
+    // W4: additively project the run's GROSS payroll cost into the canonical Expense
+    // Ledger (category 'salary'), incurred on the disbursement date. Runs on the same
+    // tenant transaction but savepoint-fenced — a projection failure rolls back only
+    // itself, never the finance posting or the processed run above. Idempotent per run
+    // id, so this is safe even when the run was already posted (a self-healing backfill).
+    await wirePayrollExpenseToLedger(db, organizationId, schoolId, posting, processedOn);
 
     // PRA-P1-35 — post the run's per-component statutory LIABILITIES (PF/ESI/PT/TDS)
     // derived from the SAME entries the run disbursed. Σ employee withholding + Σ
