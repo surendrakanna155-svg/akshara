@@ -42,3 +42,26 @@
 | Syllabus daily-capture UI (58–63), parent-facing cert-desk/gate-pass/complaints UIs, storage/AI-wallet/channel/Tally/transport-expense Flutter panels | 🖥 FLUTTER + product | Client-side builds (large), several with product/UX decisions. |
 
 **Verdict:** the two clean backend caps are built + certified. The rest of W4 is gated on **owner product/config decisions** (stop-condition #1) and **architectural direction** (stop-condition #3: expense-ledger model, effective-date architecture, the three staff-duty data models) — building any of them unilaterally would impose architecture without owner direction or ship a speculative/partial implementation (both forbidden). These are surfaced in the owner-decision batch (W1 ledger §5 + additions here). EOS: the built caps PASS; the wave is CONDITIONAL (owner-gated remainder).
+
+---
+
+## OWNER DECISION PACK — PARALLEL BUILD (2026-07-20)
+
+After the 15-decision owner pack, executed the unblocked work via multi-agent parallel builds in **isolated worktrees**, each a disjoint module with a distinct migration, merged into the trunk with per-module + full regression. **BATCH-1 (7/7 merged, `main` @ `67948ddc`):**
+
+| Decision | Module (migration) | Result |
+|---|---|---|
+| #13 Secrets vault | `_shared/vault/` (023) | AES-256-GCM already live (DRP); added tamper/fail-closed tests + doc migration. **19/0** |
+| #6 Staff-duty models | `_shared/staff_duty/` (020) | 3 append-only tables (substitute/exam-invig/non-teaching); **no attendance coupling (test-enforced)**; rollup → caps 131/132/133; wired under `/hr/staff-duties/*`. **44/0** |
+| #4 Expense ledger | `_shared/expense_ledger/` (026) | Append-only, idempotent, multi-source (transport/payroll/inventory adapters); `buildExpenseBreakdown` matches Flutter shape. **18/0**. *Follow-up: source call-site wiring + management swap.* |
+| #1 SaaS limits | `_shared/entitlements/` (022) | Student cap config-driven (test-pinned); **staff/admin uncapped** (regression-pinned); per-plan SMS quota (deploy-dark, counts `notification_deliveries`). **67/0** |
+| #10 Leave accrual | `_shared/hr/` (024) | Config-driven policies (free-form leave-type); append-only ledger (balance=SUM); pure accrual (proration/cap/lapse); idempotent (period_key). **hr 132/0** |
+| #11 Library accession | `_shared/library/` (025) | Gapless per-copy accession (reuses `school_tc_counters` pattern); guarded lost/withdrawn. **88/0** |
+| #5 Transport history | `_shared/transport/` (021) | Dedicated append-only `transport_allocation_history` (valid-from/to); partial-UNIQUE one-open guard; close-then-insert (never overwrite); as-of + timeline reads. **76/0** |
+
+**Also fixed a W0 convergence defect surfaced by the full typecheck:** `model_gateway.ts` embedding `reserve()` was missing `ReserveArgs.creditsRequired` (the AI-wallet field DRP added post-dated the embeddings-through-gateway path PRA-P1-46; W0 combined them). Embeddings hold ZERO product credits (infra) → `creditsRequired: 0`. Full `_shared` `deno check` now CLEAN, AI **175/0**.
+
+**Batch-1 integrated regression:** backend `deno test _shared/` **3785 passed / 0 failed / 3 ignored** · full backend typecheck **clean** · `flutter analyze` **No issues**. Pushed to `main`.
+
+**BATCH-2 (in flight):** transport hybrid-fee + own-transport (#2/#3, mig 027) · payment provider-abstraction (#7, 028) · device/asset lifecycle (#12, 029) · statutory payroll PF/ESI/PT/TDS (#9, 030) · EIP-6 learning-evidence spine (031, W5 prereq).
+**Held for careful/sequential handling:** PLAT-0 multi-school identity (#14, security-critical), W5 Smart OMR/Assessment (#8/#15, after EIP-6), W8 web write layer, W7 AI hardening, expense-ledger source wiring.
