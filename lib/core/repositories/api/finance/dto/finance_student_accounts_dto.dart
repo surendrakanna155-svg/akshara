@@ -31,3 +31,15 @@ class StudentFeeAccountsResponseDto {
   final List<StudentFeeAccountDto> items;
   final PaginationDto? pagination;
 }
+
+/// PRC-A gap fix — response body for `POST /finance/fee-assignments/bulk`:
+/// `{ assigned: StudentFeeAccountDto[], skipped: [{studentId, reason}], total }`.
+class BulkFeeAssignmentResultDto {
+  const BulkFeeAssignmentResultDto({required this.raw});
+
+  factory BulkFeeAssignmentResultDto.fromJson(Map<String, dynamic> json) {
+    return BulkFeeAssignmentResultDto(raw: json);
+  }
+
+  final Map<String, dynamic> raw;
+}

@@ -99,7 +99,7 @@ Future<bool> _initFirebase() async {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
     return true;
   } catch (error) {
-    debugPrint('Firebase initialization skipped: $error');
+    if (!kReleaseMode) debugPrint('Firebase initialization skipped: $error');
     return false;
   }
 }

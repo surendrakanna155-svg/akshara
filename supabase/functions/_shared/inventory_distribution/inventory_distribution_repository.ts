@@ -453,6 +453,11 @@ export async function fulfillReplacementRequest(
     replacementOfId: current.id,
   });
 
+  // RT round-3 S2: guard the terminal transition on the pre-state. loadReplacementRequest
+  // above is an UNLOCKED read, so two concurrent fulfills both pass the app check and
+  // each issue a free item + decrement stock via createDistribution. The unconditional
+  // `AND d.replacement_status = 'approved'` predicate makes the loser match 0 rows →
+  // requireUpdatedRow throws → the enclosing txn rolls back its distribution + stock.
   const rows = await client.queryObject<DistributionRow & { itemName: string; category: string }>(
     // PRA-M-1 (S1): guard the pre-state 'approved'. This is the write that
     // matters most — createDistribution above already issued (and decremented

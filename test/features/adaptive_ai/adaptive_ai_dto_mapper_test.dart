@@ -105,7 +105,7 @@ void main() {
       expect(actions.last.requiresEntity, 'student');
     });
 
-    test('parses grouped universal search results', () {
+    test('parses grouped universal search results, including the page offset', () {
       final env = {
         'data': {
           'query': 'ram',
@@ -113,7 +113,8 @@ void main() {
             {
               'category': 'students',
               'label': 'Students',
-              'total': 2,
+              'total': 5,
+              'offset': 2,
               'results': [
                 {'category': 'students', 'id': 's1', 'title': 'Ramesh Kumar', 'subtitle': 'Class 6-B', 'deepLink': '/students/s1'},
                 {'category': 'students', 'id': 's2', 'title': 'Ramesh Iyer', 'subtitle': 'Class 8-A', 'deepLink': '/students/s2'},
@@ -128,6 +129,29 @@ void main() {
       expect(result.groups.single.category, 'students');
       expect(result.groups.single.results, hasLength(2));
       expect(result.groups.single.results.first.deepLink, '/students/s1');
+      expect(result.groups.single.total, 5);
+      expect(result.groups.single.offset, 2);
+    });
+
+    test('a group with no offset in the envelope defaults to 0 (first page)', () {
+      final env = {
+        'data': {
+          'query': 'ram',
+          'groups': [
+            {
+              'category': 'students',
+              'label': 'Students',
+              'total': 2,
+              'results': [
+                {'category': 'students', 'id': 's1', 'title': 'Ramesh Kumar', 'subtitle': 'Class 6-B', 'deepLink': '/students/s1'},
+              ],
+            },
+          ],
+        },
+      };
+      final result =
+          mapper.toSearchResultSet(UniversalSearchResultDto.fromEnvelopeData(parseAdaptiveEnvelope(env)));
+      expect(result.groups.single.offset, 0);
     });
 
     test('malformed / empty envelope degrades to an empty feed, not a crash', () {
@@ -174,6 +198,25 @@ void main() {
       final repo = MockAdaptiveAiRepository();
       expect((await repo.universalSearch(query: query, term: 'r')).isEmpty, isTrue);
       expect((await repo.universalSearch(query: query, term: 'ram')).isEmpty, isFalse);
+    });
+
+    test('search respects offset by slicing the seeded results', () async {
+      final repo = MockAdaptiveAiRepository();
+      final first = await repo.universalSearch(query: query, term: 'ram', limit: 1);
+      expect(first.groups.single.results, hasLength(1));
+      expect(first.groups.single.offset, 0);
+      expect(first.groups.single.total, 2);
+
+      final second = await repo.universalSearch(query: query, term: 'ram', limit: 1, offset: 1);
+      expect(second.groups.single.results, hasLength(1));
+      expect(second.groups.single.offset, 1);
+      // Distinct from the first page — offset actually advanced the window.
+      expect(second.groups.single.results.single.id, isNot(first.groups.single.results.single.id));
+
+      // Past the end of the seeded set — the category drops out entirely,
+      // mirroring the live handler (no empty groups).
+      final exhausted = await repo.universalSearch(query: query, term: 'ram', offset: 2);
+      expect(exhausted.isEmpty, isTrue);
     });
   });
 }

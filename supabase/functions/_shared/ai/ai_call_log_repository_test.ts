@@ -28,7 +28,7 @@ function fakeDb(rows: unknown[]): { db: TenantQueryClient; calls: Captured[] } {
 
 const SCOPE = { organizationId: "org-1", schoolId: "sch-1" };
 
-Deno.test("recordAiCall inserts one row with 13 params and truncated integers", async () => {
+Deno.test("recordAiCall inserts one row with 14 params and truncated integers", async () => {
   const { db, calls } = fakeDb([]);
   const entry: AiCallLogEntry = {
     organizationId: "org-1",
@@ -48,11 +48,47 @@ Deno.test("recordAiCall inserts one row with 13 params and truncated integers", 
   await recordAiCall(db, entry);
   assertEquals(calls.length, 1);
   assert(calls[0].sql.includes("INSERT INTO ai_call_log"));
-  assertEquals(calls[0].params?.length, 13);
+  // 14 since PRC-A Batch 3: credits_debited rides this same INSERT so the wallet
+  // debit and the call it pays for are atomically inseparable.
+  assertEquals(calls[0].params?.length, 14);
   assertEquals(calls[0].params?.[7], 100); // input_tokens truncated
   assertEquals(calls[0].params?.[8], 50); // output_tokens truncated
   assertEquals(calls[0].params?.[9], 1234); // cost truncated
   assertEquals(calls[0].params?.[10], 42); // latency truncated
+  // `entry` above deliberately omits creditsDebited — the overwhelmingly common
+  // case, since the wallet ships disabled. It MUST default to 0, never NULL or
+  // NaN: a null would violate the NOT NULL column, and a NaN would poison every
+  // balance projection for that org forever.
+  assertEquals(calls[0].params?.[13], 0);
+});
+
+Deno.test("recordAiCall debits the wallet when credits are supplied, truncated + floored at 0", async () => {
+  const base: AiCallLogEntry = {
+    organizationId: "org-1",
+    schoolId: "sch-1",
+    userId: "u-1",
+    surface: "copilot",
+    provider: "anthropic",
+    model: "claude-opus-4-8",
+    outcome: "ok",
+    inputTokens: 10,
+    outputTokens: 5,
+    estimatedCostMicros: 100,
+    latencyMs: 10,
+    cacheWritten: false,
+    fallbackUsed: false,
+  };
+
+  const a = fakeDb([]);
+  await recordAiCall(a.db, { ...base, creditsDebited: 15.9 });
+  assertEquals(a.calls[0].params?.[13], 15); // truncated, never rounded up
+
+  // A negative debit would CREATE credit out of nothing — the balance projection
+  // subtracts this column, so a negative value would silently top the org up.
+  // Floored at 0 rather than trusted.
+  const b = fakeDb([]);
+  await recordAiCall(b.db, { ...base, creditsDebited: -50 });
+  assertEquals(b.calls[0].params?.[13], 0);
 });
 
 Deno.test("recordAiCall coalesces a missing userId to null", async () => {

@@ -46,4 +46,22 @@ abstract class ControlCenterRepository {
     required RepositoryQuery query,
     required CreateCrmLeadRequest request,
   });
+
+  /// PRC-A Batch 3 — AI credit wallet balance + recent ledger (`viewAiWallet`).
+  Future<AiWalletData> getAiWallet({required RepositoryQuery query});
+
+  /// Grants a signed credit-ledger entry ('top_up' | 'adjustment' | 'expiry')
+  /// and returns the resulting balance (`manageAiCredits`, superAdmin only).
+  Future<AiWalletData> grantAiCredits({
+    required RepositoryQuery query,
+    required String entryType,
+    required int units,
+    required String reason,
+    String? externalRef,
+  });
+
+  /// PRC-A Batch 4 — the org's cumulative storage usage + plan limit
+  /// (`viewStorageQuota`). Read-only: usage is written internally by the
+  /// upload/delete paths, not through a client mutation.
+  Future<StorageQuotaData> getStorageQuota({required RepositoryQuery query});
 }

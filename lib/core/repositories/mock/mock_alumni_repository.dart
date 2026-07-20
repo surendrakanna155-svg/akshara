@@ -587,8 +587,8 @@ class MockAlumniRepository implements AlumniRepository {
             AlumniSettingItem(
               id: 'donation_posting',
               label: 'Donation ledger posting',
-              value: 'Linked to FN-05 collections',
-              description: 'AL-05 donations post to Finance receipt ledger',
+              value: 'Manual (FN-05 head)',
+              description: 'AL-05 donations tracked in Alumni — not posted to Finance',
               editable: false,
             ),
             AlumniSettingItem(

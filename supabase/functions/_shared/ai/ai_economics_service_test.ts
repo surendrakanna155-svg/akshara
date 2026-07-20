@@ -1,6 +1,55 @@
 import { assert, assertEquals } from "jsr:@std/assert@1";
 import type { TenantQueryClient } from "../tenant_db.ts";
-import { computeEconomics, getAiEconomics } from "./ai_economics_service.ts";
+import {
+  computeAiTrust,
+  computeEconomics,
+  getAiEconomics,
+} from "./ai_economics_service.ts";
+
+Deno.test("computeAiTrust re-frames economics as the governance lens (WEB-006)", () => {
+  const econ = computeEconomics(
+    "2026-07-01T00:00:00.000Z",
+    [
+      { outcome: "ok", n: 3, cost: 300 },
+      { outcome: "refused", n: 1, cost: 50 },
+      { outcome: "fallback_no_key", n: 2, cost: 0 },
+      { outcome: "fallback_guard", n: 1, cost: 0 },
+      { outcome: "fallback_rate_user", n: 1, cost: 0 },
+      { outcome: "fallback_spend_cap", n: 1, cost: 0 },
+    ],
+    [{ surface: "copilot", n: 9 }],
+    { entries: 2, hits: 6, tokensSaved: 120 },
+    /*spendCapMicros*/ 0,
+    /*lifetimeModelCalls*/ 4,
+  );
+  const trust = computeAiTrust(econ);
+  assertEquals(trust.providerCalls, 4); // ok + refused
+  assertEquals(trust.governedFallbacks, 5); // no_key + guard + rate_user + spend_cap ... = 2+1+1+1
+  assertEquals(trust.governedCalls, 9);
+  assertEquals(trust.refusedCount, 1);
+  assertEquals(trust.guardrailTrips, 1);
+  assertEquals(trust.rateLimitedCount, 1);
+  assertEquals(trust.spendCapFallbacks, 1);
+  assertEquals(trust.noKeyFallbacks, 2);
+  assertEquals(trust.cacheHits, 6);
+  assert(Math.abs(trust.fallbackRatio - 5 / 9) < 1e-9);
+});
+
+Deno.test("computeAiTrust reports honest zeros for an idle tenant", () => {
+  const econ = computeEconomics(
+    "2026-07-01T00:00:00.000Z",
+    [],
+    [],
+    { entries: 0, hits: 0, tokensSaved: 0 },
+    0,
+    0,
+  );
+  const trust = computeAiTrust(econ);
+  assertEquals(trust.governedCalls, 0);
+  assertEquals(trust.fallbackRatio, 0);
+  assertEquals(trust.cacheHitRatio, 0);
+  assertEquals(trust.refusedCount, 0);
+});
 
 Deno.test("computeEconomics aggregates spend, model calls, fallbacks and hit ratio", () => {
   const econ = computeEconomics(

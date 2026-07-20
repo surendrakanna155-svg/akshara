@@ -21,11 +21,13 @@ import {
 import { handleStudentLedger } from "./finance_ledger_handlers.ts";
 import {
   handleAssignFeePlan,
+  handleBulkAssignFeeStructures,
   handleCancelFeeAssignment,
   handleCreateFeeAssignment,
   handleGetFeeAssignment,
   handleGetStudentAccount,
   handleListFeeAssignments,
+  handleListStudentAccounts,
 } from "./finance_assignments_handlers.ts";
 import {
   handleArchiveFeeStructure,
@@ -92,6 +94,11 @@ import {
   handleUpsertRecoveryTarget,
 } from "./finance_recovery_handlers.ts";
 import { handleFinanceReports } from "./finance_reports_handlers.ts";
+import {
+  handleGetTallyLedgerMap,
+  handleTallyExport,
+  handleUpsertTallyLedgerMap,
+} from "./finance_tally_handlers.ts";
 import {
   handleGetSettings,
   handleUpdateSettings,
@@ -189,6 +196,12 @@ export function matchFinanceRoute(
   if (path === "/finance/fee-assignments" && method === "POST") {
     return { handler: handleCreateFeeAssignment, args: [] };
   }
+
+  // PRC-A gap fix: bulk/class-wide assignment — a literal path checked BEFORE
+  // the /fee-assignments/:id regexes below so "bulk" is never treated as an id.
+  if (path === "/finance/fee-assignments/bulk" && method === "POST") {
+    return { handler: handleBulkAssignFeeStructures, args: [] };
+  }
   if (path === "/finance/fee-assignment/assign" && method === "POST") {
     return { handler: handleAssignFeePlan, args: [] };
   }
@@ -210,6 +223,12 @@ export function matchFinanceRoute(
   );
   if (studentLedgerMatch && method === "GET") {
     return { handler: handleStudentLedger, args: [studentLedgerMatch[1]!] };
+  }
+
+  // WEB-007: LIST is the bare collection path — registered BEFORE the /{id}
+  // regex so the single-segment matcher can't swallow it.
+  if (path === "/finance/student-accounts" && method === "GET") {
+    return { handler: handleListStudentAccounts, args: [] };
   }
 
   const studentAccountMatch = path.match(/^\/finance\/student-accounts\/([^/]+)$/);
@@ -417,6 +436,16 @@ export function matchFinanceRoute(
   }
   if (path === "/finance/reports" && method === "GET") {
     return { handler: handleFinanceReports, args: [] };
+  }
+  // Batch 7: Tally accounting export (owner-idea 11).
+  if (path === "/finance/reports/tally-export" && method === "GET") {
+    return { handler: handleTallyExport, args: [] };
+  }
+  if (path === "/finance/tally-ledger-map" && method === "GET") {
+    return { handler: handleGetTallyLedgerMap, args: [] };
+  }
+  if (path === "/finance/tally-ledger-map" && method === "PUT") {
+    return { handler: handleUpsertTallyLedgerMap, args: [] };
   }
   if (path === "/finance/settings" && method === "GET") {
     return { handler: handleGetSettings, args: [] };

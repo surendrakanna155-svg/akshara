@@ -23,6 +23,18 @@ class UpdateFeeStructureRequestDto {
         AcademicCatalogPlacement(academicYearId: request.academicYearId),
       ),
     );
+    // Cap 67 — class/section (re)binding. unbindClass is mutually exclusive
+    // with (and takes priority over) the four binding fields.
+    if (request.unbindClass) {
+      raw['unbind_class'] = true;
+    } else {
+      if (request.classId != null) raw['class_id'] = request.classId;
+      if (request.className != null) raw['class_name'] = request.className;
+      if (request.sectionId != null) raw['section_id'] = request.sectionId;
+      if (request.sectionName != null) {
+        raw['section_name'] = request.sectionName;
+      }
+    }
     if (request.categories != null) {
       raw['categories'] = [
         for (final line in request.categories!)

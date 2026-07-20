@@ -46,12 +46,21 @@ void main() {
       '/sis/promotion',
       '/sis/continuity',
       '/control-center/intelligence',
+      // CFC-1 item-2 regression: the Trust Intelligence Hub shares the
+      // platform-intelligence flag and was deep-link-reachable (rendering mock
+      // trust data as real) until it was added to the gate. Must be hidden live.
+      '/organization/intelligence',
       '/platform-operations/alerts',
       '/multi-school/portfolio',
       '/healthcare',
       '/salon/dashboard',
       '/white-label/branding',
       '/control-center/white-label',
+      // RT round-3 RT-5-3 regression: Branch & Franchise are mock-only (no live
+      // backend) and were reachable by a chain-org schoolAdmin, rendering a
+      // fabricated revenue dashboard as real until added to the gate.
+      '/branches',
+      '/franchise',
     ]) {
       final r = await _hidden(
         tester,

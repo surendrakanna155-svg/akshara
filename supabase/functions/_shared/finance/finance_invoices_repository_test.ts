@@ -27,6 +27,15 @@ type Row = Record<string, unknown>;
 
 class MockInvoicesDb {
   invoices: Row[] = [];
+  /** finance_student_accounts — the STORED aggregate cancelInvoice must keep in lockstep. */
+  accounts: Row[] = [];
+  /**
+   * Models the TOCTOU window: when set, the pre-check SELECT returns this stale
+   * status while the stored row has already moved on (a concurrent winner). Lets
+   * the loser reach the status-guarded UPDATE, which is the only path that proves
+   * the guard — the pre-check alone would mask it.
+   */
+  staleReadStatus: string | null = null;
 
   async queryCount(sql: string, args: unknown[] = []): Promise<number> {
     if (sql.includes("FROM finance_invoices")) {
@@ -73,7 +82,11 @@ class MockInvoicesDb {
       const found = this.invoices.find((i) =>
         i.id === args[0] && i.organization_id === args[1] && i.school_id === args[2]
       );
-      return (found ? [found] : []) as T[];
+      if (!found) return [] as T[];
+      if (this.staleReadStatus !== null) {
+        return [{ ...found, invoice_status: this.staleReadStatus }] as T[];
+      }
+      return [found] as T[];
     }
     if (sql.includes("SELECT * FROM finance_invoices") && sql.includes("ORDER BY invoice_date")) {
       const filtered = this.invoices.filter((i) =>
@@ -90,8 +103,28 @@ class MockInvoicesDb {
     if (sql.includes("UPDATE finance_invoices") && sql.includes("invoice_status = 'cancelled'")) {
       const row = this.invoices.find((i) => i.id === args[0]);
       if (!row) return [] as T[];
+      // Model the status guard: `AND invoice_status NOT IN ('paid','cancelled')`.
+      // A terminal row matches 0 rows, so the caller must throw rather than
+      // release the account delta a second time.
+      if (row.invoice_status === "paid" || row.invoice_status === "cancelled") {
+        return [] as T[];
+      }
       row.invoice_status = "cancelled";
       return [row as T];
+    }
+    if (sql.includes("UPDATE finance_student_accounts")) {
+      // args: [released, student_id, academic_year, organization_id, school_id]
+      const released = parseFloat(String(args[0]));
+      const account = this.accounts.find((a) =>
+        a.student_id === args[1] && a.academic_year === args[2] &&
+        a.organization_id === args[3] && a.school_id === args[4]
+      );
+      if (!account) return [] as T[];
+      const drop = (value: unknown) =>
+        Math.max(0, parseFloat(String(value)) - released).toFixed(2);
+      account.total_fee = drop(account.total_fee);
+      account.outstanding_amount = drop(account.outstanding_amount);
+      return [account as T];
     }
     return [] as T[];
   }
@@ -216,6 +249,78 @@ Deno.test("cancelInvoice rejects paid invoice", async () => {
     () => cancelInvoice(asDb(db), ORG, SCHOOL_A, "inv-4"),
     InvalidInvoiceTransitionError,
   );
+});
+
+Deno.test("PRC-A: cancelInvoice releases the unpaid remainder from the student account (lockstep)", async () => {
+  const db = new MockInvoicesDb();
+  // 50,000 billed, 30,000 already collected → 20,000 still owed.
+  db.invoices.push({
+    id: "inv-lockstep",
+    organization_id: ORG,
+    school_id: SCHOOL_A,
+    student_id: STUDENT,
+    academic_year: "2026-27",
+    total_amount: "50000",
+    outstanding_amount: "20000",
+    invoice_status: "partially_paid",
+  });
+  db.accounts.push({
+    id: "acct-lockstep",
+    organization_id: ORG,
+    school_id: SCHOOL_A,
+    student_id: STUDENT,
+    academic_year: "2026-27",
+    total_fee: "50000",
+    amount_paid: "30000",
+    outstanding_amount: "20000",
+  });
+
+  await cancelInvoice(asDb(db), ORG, SCHOOL_A, "inv-lockstep");
+
+  const account = db.accounts[0]!;
+  // Only the STILL-UNPAID 20,000 is released. Before this fix the account kept
+  // owing it: a false defaulter, and a blocked no-dues/TC gate.
+  assertEquals(account.outstanding_amount, "0.00");
+  assertEquals(account.total_fee, "30000.00");
+  // The real 30,000 payment is untouched, so outstanding == total_fee - amount_paid.
+  assertEquals(account.amount_paid, "30000");
+});
+
+Deno.test("PRC-A: the loser of a concurrent double-cancel throws and never releases the account twice", async () => {
+  const db = new MockInvoicesDb();
+  // A concurrent winner already cancelled the invoice and released the account.
+  db.invoices.push({
+    id: "inv-race",
+    organization_id: ORG,
+    school_id: SCHOOL_A,
+    student_id: STUDENT,
+    academic_year: "2026-27",
+    total_amount: "10000",
+    outstanding_amount: "10000",
+    invoice_status: "cancelled",
+  });
+  db.accounts.push({
+    id: "acct-race",
+    organization_id: ORG,
+    school_id: SCHOOL_A,
+    student_id: STUDENT,
+    academic_year: "2026-27",
+    total_fee: "0.00",
+    amount_paid: "0",
+    outstanding_amount: "0.00",
+  });
+  // ...but this transaction's pre-check read still sees the stale pre-cancel status,
+  // so it proceeds to the guarded terminal write.
+  db.staleReadStatus = "issued";
+
+  await assertRejects(
+    () => cancelInvoice(asDb(db), ORG, SCHOOL_A, "inv-race"),
+    InvalidInvoiceTransitionError,
+  );
+
+  // The guard matched 0 rows → the release below it never ran a second time.
+  assertEquals(db.accounts[0]!.outstanding_amount, "0.00");
+  assertEquals(db.accounts[0]!.total_fee, "0.00");
 });
 
 Deno.test("getInvoice returns null when missing", async () => {

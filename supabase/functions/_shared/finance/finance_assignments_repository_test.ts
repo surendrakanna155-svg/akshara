@@ -4,14 +4,22 @@ import {
   requirePermission,
   requireSchoolOperationalScope,
 } from "../permission_middleware.ts";
-import { assignmentToApi, studentAccountToApi } from "./finance_mapper.ts";
 import {
+  assignmentToApi,
+  studentAccountListItemToApi,
+  studentAccountToApi,
+} from "./finance_mapper.ts";
+import {
+  bulkAssignFeeStructure,
   DuplicateAssignmentError,
+  FeeProrationOverrideReasonRequiredError,
+  FeeStructureNotBoundError,
   HandoffNotReadyError,
   assignFeeStructure,
   assignFromHandoff,
   cancelAssignment,
   getStudentAccount,
+  resolveStudentIdsForBoundStructure,
 } from "./finance_assignments_repository.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 
@@ -19,13 +27,33 @@ const ORG = "a1000000-0000-4000-8000-000000000001";
 const SCHOOL_A = "a2000000-0000-4000-8000-000000000001";
 const STAFF = "a3000000-0000-4000-8000-000000000001";
 const STUDENT = "a4000000-0000-4000-8000-000000000001";
+const STUDENT_2 = "a4000000-0000-4000-8000-000000000002";
+const STUDENT_3 = "a4000000-0000-4000-8000-000000000003";
 const STRUCTURE = "b7000000-0000-4000-8000-000000000001";
 const HANDOFF = "b6000000-0000-4000-8000-000000000001";
+// Cap 73 — an April-start academic year (matches the real academic_foundation
+// fixture convention used elsewhere in this codebase).
+const ACADEMIC_YEAR_ID = "ce100000-0000-4000-8000-000000000001";
+const AY_START = "2026-04-01";
+const AY_END = "2027-03-31";
+// Cap 67 — class/section binding fixtures.
+const CLASS_A = "cf100000-0000-4000-8000-000000000001";
+const SECTION_A = "d0100000-0000-4000-8000-000000000001";
 
 type Row = Record<string, unknown>;
 
+const PRORATION_SETTING_KEY = "payments.midyear_admission_proration_policy";
+
 class MockAssignmentsDb {
-  structures = [{ id: STRUCTURE, name: "Probe Structure A", academic_year: "2026-27", status: "active" }];
+  structures = [{
+    id: STRUCTURE,
+    name: "Probe Structure A",
+    academic_year: "2026-27",
+    academic_year_id: ACADEMIC_YEAR_ID as string | null,
+    class_id: null as string | null,
+    section_id: null as string | null,
+    status: "active",
+  }];
   items = [{ fee_structure_id: STRUCTURE, amount: "50000", organization_id: ORG, school_id: SCHOOL_A }];
   assignments: Row[] = [];
   accounts: Row[] = [];
@@ -43,7 +71,25 @@ class MockAssignmentsDb {
     admission_number: "ADM-PROBE-A",
     class_label: "5",
   }];
-  students = [{ id: STUDENT, display_name: "Probe Student A" }];
+  students = [
+    { id: STUDENT, display_name: "Probe Student A", status: "active" },
+    { id: STUDENT_2, display_name: "Probe Student B", status: "active" },
+    { id: STUDENT_3, display_name: "Probe Student C", status: "active" },
+  ];
+  // Cap 73 — academic year calendar bounds (for proration).
+  academicYears: Row[] = [{
+    id: ACADEMIC_YEAR_ID,
+    organization_id: ORG,
+    school_id: SCHOOL_A,
+    start_date: AY_START,
+    end_date: AY_END,
+    status: "active",
+  }];
+  // Cap 73 — finance_settings row; null = unconfigured (falls back to the
+  // TEMPLATE default, exactly like the real repository).
+  financeSettings: Row | null = null;
+  // Cap 67 — enrollments backing the bulk-assign auto-resolve-from-class path.
+  enrollments: Row[] = [];
 
   async queryCount(): Promise<number> {
     return this.assignments.length;
@@ -52,7 +98,46 @@ class MockAssignmentsDb {
   async queryObject<T>(sql: string, args: unknown[] = []): Promise<T[]> {
     if (sql.includes("FROM finance_fee_structures") && sql.includes("status = 'active'")) {
       const found = this.structures.find((s) => s.id === args[0]);
-      return (found ? [{ name: found.name, academic_year: found.academic_year }] : []) as T[];
+      return (found
+        ? [{
+          name: found.name,
+          academic_year: found.academic_year,
+          academic_year_id: found.academic_year_id,
+          class_id: found.class_id,
+          section_id: found.section_id,
+        }]
+        : []) as T[];
+    }
+    // Cap 67 — resolveStudentIdsForBoundStructure's own structure lookup
+    // (deliberately narrower than ensureFeeStructureExists's — no status filter).
+    if (sql.includes("SELECT class_id, section_id FROM finance_fee_structures")) {
+      const found = this.structures.find((s) => s.id === args[0]);
+      return (found ? [{ class_id: found.class_id, section_id: found.section_id }] : []) as T[];
+    }
+    // Cap 73 — academic year calendar bounds (getAcademicYear).
+    if (sql.includes("FROM academic_years")) {
+      const found = this.academicYears.find((y) =>
+        y.id === args[0] && y.organization_id === args[1] && y.school_id === args[2]
+      );
+      return (found ? [found] : []) as T[];
+    }
+    // Cap 73 — configured proration policy (getSettingsRow).
+    if (sql.includes("FROM finance_settings")) {
+      return (this.financeSettings ? [this.financeSettings] : []) as T[];
+    }
+    // Cap 67 — bulk-assign auto-resolve-from-class (resolveStudentIdsForBoundStructure).
+    if (sql.includes("FROM sis_student_enrollments")) {
+      const activeStudentIds = new Set(
+        this.students.filter((s) => s.status === "active").map((s) => s.id),
+      );
+      const rows = this.enrollments.filter((e) =>
+        e.class_id === args[2] &&
+        (args[3] == null || e.section_id === args[3]) &&
+        e.is_current === true &&
+        activeStudentIds.has(e.student_id as string)
+      );
+      const distinctStudentIds = [...new Set(rows.map((r) => r.student_id))];
+      return distinctStudentIds.map((id) => ({ student_id: id })) as T[];
     }
     if (sql.includes("SUM(amount)")) {
       // Sum this structure's own items (args[0] = fee_structure_id) so a second,
@@ -83,6 +168,18 @@ class MockAssignmentsDb {
         assigned_at: "2026-06-12T00:00:00.000Z",
         created_at: "2026-06-12T00:00:00.000Z",
         updated_at: "2026-06-12T00:00:00.000Z",
+        // Cap 73 — mid-year admission proration, recorded per-assignment.
+        proration_policy: args[6],
+        proration_basis: args[7],
+        proration_total_months: args[8],
+        proration_months_charged: args[9],
+        proration_reference_date: args[10],
+        proration_annual_amount: args[11] != null ? String(args[11]) : null,
+        proration_charged_amount: args[12] != null ? String(args[12]) : null,
+        proration_fallback_reason: args[13],
+        proration_is_override: args[14],
+        proration_override_reason: args[15],
+        proration_overridden_by: args[16],
       };
       this.assignments.push(row);
       return [row as T];
@@ -269,6 +366,9 @@ Deno.test("TRN-9: assigning a DIFFERENT structure reuses the student's existing 
     id: TRANSPORT_STRUCTURE,
     name: "Transport Fee",
     academic_year: "2026-27",
+    academic_year_id: ACADEMIC_YEAR_ID,
+    class_id: null,
+    section_id: null,
     status: "active",
   });
   db.items.push({
@@ -379,6 +479,54 @@ Deno.test("studentAccountToApi maps to client contract", async () => {
   assertEquals(api.status, "active");
 });
 
+Deno.test("studentAccountListItemToApi maps a list row (WEB-007)", () => {
+  const api = studentAccountListItemToApi({
+    id: "acc-1",
+    student_id: STUDENT,
+    fee_assignment_id: "fa-1",
+    academic_year: "2026-27",
+    total_fee: "50000",
+    amount_paid: "20000",
+    outstanding_amount: "30000",
+    status: "open",
+    student_name: "Asha Rao",
+    admission_number: "ADM-1001",
+    class_label: "Grade 5-A",
+    fee_structure_id: STRUCTURE,
+    fee_structure_name: "Standard Tuition",
+  });
+  assertEquals(api.studentName, "Asha Rao");
+  assertEquals(api.admissionNumber, "ADM-1001");
+  assertEquals(api.totalDue, "50000");
+  assertEquals(api.totalPaid, "20000");
+  assertEquals(api.balance, "30000");
+  assertEquals(api.status, "active");
+  assertEquals(api.feeAssignmentId, "fa-1");
+});
+
+Deno.test("studentAccountListItemToApi tolerates null enrichment", () => {
+  const api = studentAccountListItemToApi({
+    id: "acc-2",
+    student_id: STUDENT,
+    fee_assignment_id: "fa-2",
+    academic_year: "2026-27",
+    total_fee: "0",
+    amount_paid: "0",
+    outstanding_amount: "0",
+    status: "closed",
+    student_name: null,
+    admission_number: null,
+    class_label: null,
+    fee_structure_id: null,
+    fee_structure_name: null,
+  });
+  assertEquals(api.studentName, "");
+  assertEquals(api.admissionNumber, "");
+  assertEquals(api.classLabel, "");
+  assertEquals(api.feeStructureId, "");
+  assertEquals(api.status, "closed");
+});
+
 Deno.test("assignmentToApi maps assignment row", () => {
   const api = assignmentToApi({
     id: "a1",
@@ -392,8 +540,22 @@ Deno.test("assignmentToApi maps assignment row", () => {
     assigned_at: "2026-06-12T00:00:00.000Z",
     created_at: "2026-06-12T00:00:00.000Z",
     updated_at: "2026-06-12T00:00:00.000Z",
+    proration_policy: "full_annual",
+    proration_basis: "month",
+    proration_total_months: 12,
+    proration_months_charged: 12,
+    proration_reference_date: "2026-04-01",
+    proration_annual_amount: "50000",
+    proration_charged_amount: "50000",
+    proration_fallback_reason: null,
+    proration_is_override: false,
+    proration_override_reason: null,
+    proration_overridden_by: null,
   });
   assertEquals(api.feeStructureId, STRUCTURE);
+  const proration = api.proration as Record<string, unknown>;
+  assertEquals(proration.policy, "full_annual");
+  assertEquals(proration.monthsCharged, 12);
 });
 
 Deno.test("manageFinance required for assignment writes", () => {
@@ -430,4 +592,380 @@ Deno.test("assignFeeStructure propagates invoice insert failure", async () => {
     "simulated invoice insert failure",
   );
   assertEquals(db.invoices.length, 0);
+});
+
+// ─── PRC-A gap fix: bulk/class-wide assignment ─────────────────────────────
+
+Deno.test("bulkAssignFeeStructure assigns every student in the batch, reusing assignFeeStructure", async () => {
+  const db = new MockAssignmentsDb();
+  const result = await bulkAssignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    feeStructureId: STRUCTURE,
+    academicYear: "2026-27",
+    studentIds: [STUDENT, STUDENT_2, STUDENT_3],
+    assignedBy: STAFF,
+  });
+
+  assertEquals(result.total, 3);
+  assertEquals(result.assigned.length, 3);
+  assertEquals(result.skipped.length, 0);
+  // Same invoice/account math as the single-student path — not reimplemented.
+  assertEquals(db.assignments.length, 3);
+  assertEquals(db.accounts.length, 3);
+  assertEquals(db.invoices.length, 3);
+  for (const item of result.assigned) {
+    assertEquals(item.account.total_fee, "50000");
+    assertEquals(item.invoice.invoice_status, "issued");
+  }
+});
+
+Deno.test("bulkAssignFeeStructure skips an already-assigned duplicate and reports it — the batch is not poisoned, remaining students still assign", async () => {
+  const db = new MockAssignmentsDb();
+  // STUDENT already has THIS structure for THIS year — a bulk call over a
+  // class routinely includes students like this one.
+  await assignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    studentId: STUDENT,
+    feeStructureId: STRUCTURE,
+    academicYear: "2026-27",
+    assignedBy: STAFF,
+  });
+  assertEquals(db.assignments.length, 1);
+
+  const result = await bulkAssignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    feeStructureId: STRUCTURE,
+    academicYear: "2026-27",
+    studentIds: [STUDENT, STUDENT_2, STUDENT_3],
+    assignedBy: STAFF,
+  });
+
+  assertEquals(result.total, 3);
+  // The duplicate is SKIPPED — not a fatal error for the batch.
+  assertEquals(result.skipped.length, 1);
+  assertEquals(result.skipped[0]?.studentId, STUDENT);
+  assertEquals(result.skipped[0]?.reason, "already_assigned");
+  // The remaining two students — after the duplicate — still assigned.
+  assertEquals(result.assigned.length, 2);
+  assertEquals(
+    result.assigned.map((a) => a.assignment.student_id).sort(),
+    [STUDENT_2, STUDENT_3].sort(),
+  );
+  // 1 pre-existing + 2 new = 3 total; the duplicate did not create a 2nd row
+  // for STUDENT, and did not stop STUDENT_2/STUDENT_3 from being written.
+  assertEquals(db.assignments.length, 3);
+  assertEquals(db.accounts.length, 3);
+  assertEquals(db.invoices.length, 3);
+});
+
+Deno.test("bulkAssignFeeStructure propagates a genuine unexpected error instead of silently skipping it", async () => {
+  const db = new MockAssignmentsDb();
+  db.failOnInvoiceInsert = true;
+  await assertRejects(
+    () =>
+      bulkAssignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+        feeStructureId: STRUCTURE,
+        academicYear: "2026-27",
+        studentIds: [STUDENT, STUDENT_2],
+        assignedBy: STAFF,
+      }),
+    Error,
+    "simulated invoice insert failure",
+  );
+});
+
+// ─── Cap 73 (owner decision #5) — mid-year admission fee proration ─────────
+
+Deno.test("REGRESSION GUARD: with no finance_settings configured, assignFeeStructure charges the FULL annual amount (today's behaviour, unchanged)", async () => {
+  const db = new MockAssignmentsDb();
+  // db.financeSettings is null by default — an unconfigured school.
+  const result = await assignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    studentId: STUDENT,
+    feeStructureId: STRUCTURE,
+    academicYear: "2026-27",
+    assignedBy: STAFF,
+    admissionDate: "2026-09-15", // mid-year — would matter if prorated, but must NOT here
+  });
+  assertEquals(result.account.total_fee, "50000");
+  assertEquals(result.invoice.total_amount, "50000");
+  assertEquals(result.assignment.proration_policy, "full_annual");
+  assertEquals(result.assignment.proration_is_override, false);
+});
+
+Deno.test("prorate_from_admission_month: a mid-year admission charges LESS than the full annual amount, account/invoice reflect the CHARGED (not annual) total", async () => {
+  const db = new MockAssignmentsDb();
+  db.financeSettings = {
+    organization_id: ORG,
+    school_id: SCHOOL_A,
+    settings: { [PRORATION_SETTING_KEY]: "prorate_from_admission_month" },
+  };
+  const result = await assignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    studentId: STUDENT,
+    feeStructureId: STRUCTURE,
+    academicYear: "2026-27",
+    assignedBy: STAFF,
+    admissionDate: "2026-10-01", // 7th of 12 months (April=1 .. October=7)
+  });
+  assertEquals(result.assignment.proration_policy, "prorate_from_admission_month");
+  assertEquals(result.assignment.proration_total_months, 12);
+  assertEquals(result.assignment.proration_months_charged, 6); // Oct..Mar inclusive = 6
+  const charged = Number(result.account.total_fee);
+  assertEquals(charged < 50000, true);
+  assertEquals(charged > 0, true);
+  // Invoice + account both carry the CHARGED total, never the raw annual one.
+  assertEquals(result.invoice.total_amount, result.account.total_fee);
+  assertEquals(result.invoice.outstanding_amount, result.account.total_fee);
+  // The assignment row records BOTH the annual reference and the charged
+  // amount so a user can see how the charge was derived.
+  assertEquals(result.assignment.proration_annual_amount, "50000");
+  assertEquals(result.assignment.proration_charged_amount, result.account.total_fee);
+});
+
+Deno.test("prorate_from_admission_month: admission in the FIRST month charges the full annual amount", async () => {
+  const db = new MockAssignmentsDb();
+  db.financeSettings = {
+    settings: { [PRORATION_SETTING_KEY]: "prorate_from_admission_month" },
+  };
+  const result = await assignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    studentId: STUDENT,
+    feeStructureId: STRUCTURE,
+    academicYear: "2026-27",
+    assignedBy: STAFF,
+    admissionDate: "2026-04-05",
+  });
+  assertEquals(result.assignment.proration_months_charged, 12);
+  assertEquals(result.account.total_fee, "50000");
+});
+
+Deno.test("prorate_from_admission_month: admission in the LAST month charges roughly one month's share", async () => {
+  const db = new MockAssignmentsDb();
+  db.financeSettings = {
+    settings: { [PRORATION_SETTING_KEY]: "prorate_from_admission_month" },
+  };
+  const result = await assignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    studentId: STUDENT,
+    feeStructureId: STRUCTURE,
+    academicYear: "2026-27",
+    assignedBy: STAFF,
+    admissionDate: "2027-03-20",
+  });
+  assertEquals(result.assignment.proration_months_charged, 1);
+  const charged = Number(result.account.total_fee);
+  assertEquals(charged > 0 && charged < 50000 / 11, true);
+});
+
+Deno.test("prorate_from_admission_month: admission BEFORE the academic year start still charges the full year", async () => {
+  const db = new MockAssignmentsDb();
+  db.financeSettings = {
+    settings: { [PRORATION_SETTING_KEY]: "prorate_from_admission_month" },
+  };
+  const result = await assignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    studentId: STUDENT,
+    feeStructureId: STRUCTURE,
+    academicYear: "2026-27",
+    assignedBy: STAFF,
+    admissionDate: "2026-01-01",
+  });
+  assertEquals(result.assignment.proration_months_charged, 12);
+  assertEquals(result.account.total_fee, "50000");
+});
+
+Deno.test("prorate_from_admission_month: admission AFTER the academic year end still charges a minimum of one month", async () => {
+  const db = new MockAssignmentsDb();
+  db.financeSettings = {
+    settings: { [PRORATION_SETTING_KEY]: "prorate_from_admission_month" },
+  };
+  const result = await assignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    studentId: STUDENT,
+    feeStructureId: STRUCTURE,
+    academicYear: "2026-27",
+    assignedBy: STAFF,
+    admissionDate: "2027-08-01",
+  });
+  assertEquals(result.assignment.proration_months_charged, 1);
+  assertEquals(Number(result.account.total_fee) > 0, true);
+});
+
+Deno.test("prorate configured but the fee structure has NO resolvable academic year: falls back to full_annual, not a guess", async () => {
+  const db = new MockAssignmentsDb();
+  db.financeSettings = {
+    settings: { [PRORATION_SETTING_KEY]: "prorate_from_admission_month" },
+  };
+  // Legacy/unbound structure with no academic_year_id (pre-cap-73 data shape).
+  db.structures.push({
+    id: "b7000000-0000-4000-8000-000000000077",
+    name: "Legacy Structure",
+    academic_year: "2026-27",
+    academic_year_id: null,
+    class_id: null,
+    section_id: null,
+    status: "active",
+  });
+  db.items.push({
+    fee_structure_id: "b7000000-0000-4000-8000-000000000077",
+    amount: "30000",
+    organization_id: ORG,
+    school_id: SCHOOL_A,
+  });
+  const result = await assignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    studentId: STUDENT,
+    feeStructureId: "b7000000-0000-4000-8000-000000000077",
+    academicYear: "2026-27",
+    assignedBy: STAFF,
+    admissionDate: "2026-10-01",
+  });
+  assertEquals(result.assignment.proration_policy, "full_annual");
+  assertEquals(result.assignment.proration_fallback_reason, "academic_year_bounds_unavailable");
+  assertEquals(result.account.total_fee, "30000");
+});
+
+Deno.test("proration override: a policy override WITHOUT a reason is rejected", async () => {
+  const db = new MockAssignmentsDb();
+  await assertRejects(
+    () =>
+      assignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+        studentId: STUDENT,
+        feeStructureId: STRUCTURE,
+        academicYear: "2026-27",
+        assignedBy: STAFF,
+        prorationPolicyOverride: "prorate_from_admission_month",
+      }),
+    FeeProrationOverrideReasonRequiredError,
+  );
+  assertEquals(db.assignments.length, 0);
+});
+
+Deno.test("proration override: WITH a reason, overrides the school's configured policy and records actor/reason for audit", async () => {
+  const db = new MockAssignmentsDb();
+  // School is configured full_annual...
+  db.financeSettings = { settings: { [PRORATION_SETTING_KEY]: "full_annual" } };
+  // ...but an authorized user overrides to prorate for THIS one assignment.
+  const result = await assignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    studentId: STUDENT,
+    feeStructureId: STRUCTURE,
+    academicYear: "2026-27",
+    assignedBy: STAFF,
+    admissionDate: "2027-03-15",
+    prorationPolicyOverride: "prorate_from_admission_month",
+    prorationOverrideReason: "Owner-approved exception, ticket FIN-9001",
+  });
+  assertEquals(result.assignment.proration_policy, "prorate_from_admission_month");
+  assertEquals(result.assignment.proration_is_override, true);
+  assertEquals(result.assignment.proration_override_reason, "Owner-approved exception, ticket FIN-9001");
+  // Actor (who performed/authorized the override) + when (assigned_at) are
+  // already on the row.
+  assertEquals(result.assignment.proration_overridden_by, STAFF);
+  assertEquals(result.assignment.assigned_by, STAFF);
+  assertEquals(result.assignment.assigned_at, "2026-06-12T00:00:00.000Z");
+});
+
+Deno.test("proration override: choosing the SAME policy the school already has configured is NOT flagged as an override", async () => {
+  const db = new MockAssignmentsDb();
+  db.financeSettings = { settings: { [PRORATION_SETTING_KEY]: "full_annual" } };
+  const result = await assignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    studentId: STUDENT,
+    feeStructureId: STRUCTURE,
+    academicYear: "2026-27",
+    assignedBy: STAFF,
+    prorationPolicyOverride: "full_annual",
+    prorationOverrideReason: "not actually a change",
+  });
+  assertEquals(result.assignment.proration_is_override, false);
+  assertEquals(result.assignment.proration_overridden_by, null);
+});
+
+Deno.test("idempotency: a duplicate assignment is STILL rejected with proration wiring in place", async () => {
+  const db = new MockAssignmentsDb();
+  db.financeSettings = { settings: { [PRORATION_SETTING_KEY]: "prorate_from_admission_month" } };
+  const input = {
+    studentId: STUDENT,
+    feeStructureId: STRUCTURE,
+    academicYear: "2026-27",
+    assignedBy: STAFF,
+    admissionDate: "2026-10-01",
+  };
+  await assignFeeStructure(asDb(db), ORG, SCHOOL_A, input);
+  await assertRejects(
+    () => assignFeeStructure(asDb(db), ORG, SCHOOL_A, input),
+    DuplicateAssignmentError,
+  );
+  assertEquals(db.assignments.length, 1);
+});
+
+Deno.test("bulkAssignFeeStructure applies the SAME proration uniformly across the whole batch", async () => {
+  const db = new MockAssignmentsDb();
+  db.financeSettings = { settings: { [PRORATION_SETTING_KEY]: "prorate_from_admission_month" } };
+  const result = await bulkAssignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    feeStructureId: STRUCTURE,
+    academicYear: "2026-27",
+    studentIds: [STUDENT, STUDENT_2, STUDENT_3],
+    assignedBy: STAFF,
+    admissionDate: "2027-03-20", // last month => ~1 month charged
+  });
+  assertEquals(result.assigned.length, 3);
+  const chargedAmounts = result.assigned.map((a) => a.account.total_fee);
+  // Every student in the batch gets the IDENTICAL prorated charge.
+  assertEquals(new Set(chargedAmounts).size, 1);
+  for (const assigned of result.assigned) {
+    assertEquals(assigned.assignment.proration_months_charged, 1);
+    assertEquals(Number(assigned.account.total_fee) < 50000, true);
+  }
+});
+
+// ─── Cap 67 — bulk-assign resolves students FROM a bound class/section ─────
+
+Deno.test("resolveStudentIdsForBoundStructure returns current, active students of the bound class/section", async () => {
+  const db = new MockAssignmentsDb();
+  db.structures[0]!.class_id = CLASS_A;
+  db.structures[0]!.section_id = SECTION_A;
+  db.enrollments = [
+    { student_id: STUDENT, class_id: CLASS_A, section_id: SECTION_A, is_current: true },
+    { student_id: STUDENT_2, class_id: CLASS_A, section_id: SECTION_A, is_current: true },
+    // Different section — excluded.
+    { student_id: STUDENT_3, class_id: CLASS_A, section_id: "other-section", is_current: true },
+  ];
+  const ids = await resolveStudentIdsForBoundStructure(asDb(db), ORG, SCHOOL_A, STRUCTURE);
+  assertEquals(ids.sort(), [STUDENT, STUDENT_2].sort());
+});
+
+Deno.test("resolveStudentIdsForBoundStructure excludes stale (non-current) enrollments and inactive students", async () => {
+  const db = new MockAssignmentsDb();
+  db.structures[0]!.class_id = CLASS_A;
+  db.students.push({ id: "a4000000-0000-4000-8000-000000000009", display_name: "Transferred Out", status: "transferred" });
+  db.enrollments = [
+    { student_id: STUDENT, class_id: CLASS_A, section_id: null, is_current: true },
+    // Stale enrollment (student moved sections/classes since).
+    { student_id: STUDENT_2, class_id: CLASS_A, section_id: null, is_current: false },
+    // Enrolled in the class but the student record itself isn't active.
+    { student_id: "a4000000-0000-4000-8000-000000000009", class_id: CLASS_A, section_id: null, is_current: true },
+  ];
+  const ids = await resolveStudentIdsForBoundStructure(asDb(db), ORG, SCHOOL_A, STRUCTURE);
+  assertEquals(ids, [STUDENT]);
+});
+
+Deno.test("resolveStudentIdsForBoundStructure throws FeeStructureNotBoundError for an unbound structure", async () => {
+  const db = new MockAssignmentsDb();
+  await assertRejects(
+    () => resolveStudentIdsForBoundStructure(asDb(db), ORG, SCHOOL_A, STRUCTURE),
+    FeeStructureNotBoundError,
+  );
+});
+
+Deno.test("resolveStudentIdsForBoundStructure still throws not-found for a missing structure id", async () => {
+  const db = new MockAssignmentsDb();
+  await assertRejects(
+    () => resolveStudentIdsForBoundStructure(asDb(db), ORG, SCHOOL_A, "missing-structure"),
+    Error,
+    "Fee structure not found",
+  );
+});
+
+Deno.test("bulkAssignFeeStructure over auto-resolved ids still works exactly like an explicit list (unbound structure path unaffected)", async () => {
+  // An UNBOUND structure's bulk assignment is entirely unaffected by cap 67 —
+  // this is the pre-existing explicit-studentIds[] contract, unchanged.
+  const db = new MockAssignmentsDb();
+  const result = await bulkAssignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    feeStructureId: STRUCTURE,
+    academicYear: "2026-27",
+    studentIds: [STUDENT, STUDENT_2],
+    assignedBy: STAFF,
+  });
+  assertEquals(result.assigned.length, 2);
 });

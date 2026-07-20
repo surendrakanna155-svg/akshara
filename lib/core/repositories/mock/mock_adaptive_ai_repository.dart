@@ -121,36 +121,51 @@ class MockAdaptiveAiRepository implements AdaptiveAiRepository {
     }
   }
 
+  /// The seeded "students" match set for `q=ram`-style dev terms. Mirrors the
+  /// live searcher shape: [universalSearch] slices this by offset/limit so
+  /// "Show more" has something real to page through in dev/mock mode.
+  static const _seededStudents = [
+    SearchResultItem(
+      category: 'students',
+      id: 'stu-1',
+      title: 'Ramesh Kumar',
+      subtitle: 'Class 6-B · Roll 12 · Adm# 2024-101',
+      deepLink: '/students/stu-1',
+    ),
+    SearchResultItem(
+      category: 'students',
+      id: 'stu-2',
+      title: 'Ramesh Iyer',
+      subtitle: 'Class 8-A · Roll 4 · Adm# 2022-058',
+      deepLink: '/students/stu-2',
+    ),
+  ];
+
   @override
   Future<UniversalSearchResult> universalSearch({
     required RepositoryQuery query,
     required String term,
     int? limit,
+    int? offset,
   }) async {
     if (term.trim().length < 2) return UniversalSearchResult.empty(term);
+    final start = (offset ?? 0).clamp(0, _seededStudents.length);
+    final end = limit == null
+        ? _seededStudents.length
+        : (start + limit).clamp(start, _seededStudents.length);
+    final page = _seededStudents.sublist(start, end);
+    // Mirror the live handler: a category with no results at this offset is
+    // omitted from `groups` entirely, not returned as an empty group.
+    if (page.isEmpty) return UniversalSearchResult(query: term, groups: const []);
     return UniversalSearchResult(
       query: term,
-      groups: const [
+      groups: [
         SearchGroup(
           category: 'students',
           label: 'Students',
-          total: 2,
-          results: [
-            SearchResultItem(
-              category: 'students',
-              id: 'stu-1',
-              title: 'Ramesh Kumar',
-              subtitle: 'Class 6-B · Roll 12 · Adm# 2024-101',
-              deepLink: '/students/stu-1',
-            ),
-            SearchResultItem(
-              category: 'students',
-              id: 'stu-2',
-              title: 'Ramesh Iyer',
-              subtitle: 'Class 8-A · Roll 4 · Adm# 2022-058',
-              deepLink: '/students/stu-2',
-            ),
-          ],
+          total: _seededStudents.length,
+          offset: start,
+          results: page,
         ),
       ],
     );

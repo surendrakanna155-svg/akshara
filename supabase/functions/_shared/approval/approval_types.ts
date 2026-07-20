@@ -45,6 +45,11 @@ export const F2_APPROVAL_TYPES = [
   "feeStructure",
   "refund",
   "inventoryPo",
+  // PRC-A Batch 2 — the request→approval layer in front of two existing engines.
+  // `certificateRequest` approval issues through the certified SIS issuance
+  // engine; `gatePass` approval mints the single-use pickup credential.
+  "certificateRequest",
+  "gatePass",
 ] as const;
 
 export type F2ApprovalType = (typeof F2_APPROVAL_TYPES)[number];

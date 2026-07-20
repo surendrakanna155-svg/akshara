@@ -103,7 +103,8 @@ class AlumniDonationsScreen extends ConsumerWidget {
         const SizedBox(height: AksharaSpacing.s6),
         AksharaInsightCard(
           message:
-              'Donations post to Finance FN-05 collections. Receipt IDs link to finance collection detail.',
+              'Donations are tracked in the Alumni module and are NOT posted to the Finance ledger. '
+              'Record receipts against the FN-05 head in Finance manually if needed.',
           actionLabel: 'View collections',
           icon: Icons.receipt_long_outlined,
           semanticLabelPrefix: 'Finance donations integration',

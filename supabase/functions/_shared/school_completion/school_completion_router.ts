@@ -41,6 +41,7 @@ import {
   handleListRooms,
   handleListSubjectTemplates,
   handleListSyllabusChapters,
+  handleListSyllabusTopics,
 } from "./phase10_handlers.ts";
 import {
   handleGetAnalyticsDelivery,
@@ -188,6 +189,9 @@ export async function routeSchoolCompletion(
   }
   if (path === "/school/syllabus/chapters" && method === "GET") {
     return handleListSyllabusChapters(req, config);
+  }
+  if (path === "/school/syllabus/topics" && method === "GET") {
+    return handleListSyllabusTopics(req, config);
   }
   if (path === "/school/academic/complete-topic" && method === "POST") {
     return handleCompleteTopic(req, config);

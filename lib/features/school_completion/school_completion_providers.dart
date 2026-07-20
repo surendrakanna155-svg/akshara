@@ -151,6 +151,18 @@ final syllabusChaptersProvider =
       );
 });
 
+/// Real syllabus topics filtered by class/subject — backs the daily-capture
+/// topic picker so a teacher marks the actual `syllabus_topics` row complete
+/// instead of a fabricated id.
+final syllabusTopicsProvider = FutureProvider.family<List<SyllabusTopic>,
+    ({String? className, String? subjectId})>((ref, params) async {
+  return ref.read(schoolCompletionRepositoryProvider).listSyllabusTopics(
+        query: ref.watch(schoolCompletionQueryProvider),
+        className: params.className,
+        subjectId: params.subjectId,
+      );
+});
+
 final teacherProgressProvider =
     FutureProvider<TeacherProgressDashboard>((ref) async {
   return ref.read(schoolCompletionRepositoryProvider).getTeacherProgress(

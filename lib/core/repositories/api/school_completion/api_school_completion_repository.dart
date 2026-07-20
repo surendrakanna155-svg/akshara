@@ -446,6 +446,22 @@ class ApiSchoolCompletionRepository implements SchoolCompletionRepository {
   }
 
   @override
+  Future<List<SyllabusTopic>> listSyllabusTopics({
+    required RepositoryQuery query,
+    String? className,
+    String? subjectId,
+    String? chapterId,
+  }) async {
+    final items = await _remote.listSyllabusTopics(
+      query: query,
+      className: className,
+      subjectId: subjectId,
+      chapterId: chapterId,
+    );
+    return items.map(_phase10Mapper.toTopic).toList();
+  }
+
+  @override
   Future<void> completeTopic({
     required RepositoryQuery query,
     required String topicId,

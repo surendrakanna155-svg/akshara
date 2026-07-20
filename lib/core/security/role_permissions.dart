@@ -98,6 +98,8 @@ class RolePermissionMatrix {
       Permission.approveAttendanceCorrection,
       Permission.approveStudentLeave,
       Permission.approveStaffLeave,
+      Permission.approveStaffAttendance,
+      Permission.approveClearanceWaiver,
       Permission.approveFeeConcession,
       Permission.approveFeeStructure,
       Permission.approvePurchaseOrder,
@@ -176,6 +178,14 @@ class RolePermissionMatrix {
       Permission.manageAccommodation,
       // SA-1 (MJ-L5): white-label-platform permissions removed — unseeded
       // server-side; client grant only surfaced the mock-backed branding UI.
+      // PRC-A Batch 3 (20260888): AI credit wallet. manageAiCredits is
+      // superAdmin ONLY — a tenant topping up its own wallet at will is the
+      // same as having no wallet.
+      Permission.viewAiWallet,
+      Permission.manageAiCredits,
+      // PRC-A Batch 4 (20260889): storage quota. superAdmin is named alongside
+      // organizationOwner/organizationAdmin/management in the seeding.
+      Permission.viewStorageQuota,
     },
     ErpRole.schoolAdmin: {
       Permission.viewAdminHub,
@@ -253,6 +263,8 @@ class RolePermissionMatrix {
       Permission.approveAttendanceCorrection,
       Permission.approveStudentLeave,
       Permission.approveStaffLeave,
+      Permission.approveStaffAttendance,
+      Permission.approveClearanceWaiver,
       Permission.approveFeeConcession,
       Permission.approveFeeStructure,
       Permission.approvePurchaseOrder,
@@ -301,6 +313,12 @@ class RolePermissionMatrix {
       Permission.manageAcademicProgress,
       Permission.manageAcademicRooms,
       Permission.viewParentAcademicSummary,
+      // PRC-A Batch 3 (20260888): schoolAdmin is the client stand-in for the
+      // server's organizationOwner + organizationAdmin roles (see
+      // viewOrganizationBuilder / viewDirectorPortal above for precedent).
+      Permission.viewAiWallet,
+      // PRC-A Batch 4 (20260889): storage quota — same schoolAdmin stand-in.
+      Permission.viewStorageQuota,
     },
     ErpRole.principal: {
       Permission.viewAdminHub,
@@ -361,6 +379,8 @@ class RolePermissionMatrix {
       Permission.approveAttendanceCorrection,
       Permission.approveStudentLeave,
       Permission.approveStaffLeave,
+      Permission.approveStaffAttendance,
+      Permission.approveClearanceWaiver,
       Permission.approveFeeConcession,
       Permission.approveFeeStructure,
       Permission.approvePurchaseOrder,
@@ -467,6 +487,8 @@ class RolePermissionMatrix {
       Permission.approveAttendanceCorrection,
       Permission.approveStudentLeave,
       Permission.approveStaffLeave,
+      Permission.approveStaffAttendance,
+      Permission.approveClearanceWaiver,
       Permission.approveFeeConcession,
       Permission.approveFeeStructure,
       Permission.approvePurchaseOrder,
@@ -556,6 +578,8 @@ class RolePermissionMatrix {
       Permission.approveAttendanceCorrection,
       Permission.approveStudentLeave,
       Permission.approveStaffLeave,
+      Permission.approveStaffAttendance,
+      Permission.approveClearanceWaiver,
       Permission.approveFeeConcession,
       Permission.approveFeeStructure,
       Permission.approvePurchaseOrder,
@@ -573,6 +597,11 @@ class RolePermissionMatrix {
       // — least privilege; a school role never administers Salon/Restaurant/
       // Healthcare/Accommodation/Industry/WhiteLabel/PlatformOps). superAdmin
       // remains the platform/multi-industry owner.
+      // PRC-A Batch 3 (20260888): management is explicitly named alongside
+      // superAdmin/organizationOwner/organizationAdmin in the seeding.
+      Permission.viewAiWallet,
+      // PRC-A Batch 4 (20260889): storage quota — same seeding precedent.
+      Permission.viewStorageQuota,
     },
     ErpRole.financeAdmin: {
       Permission.viewAdminHub,

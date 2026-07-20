@@ -496,6 +496,36 @@ export async function listPendingAdjustments(
   );
 }
 
+/**
+ * WEB-004 (ERP-WT-004) — the maker-checker value-reducing stock queue the web
+ * Stock-Approvals page reads. Unlike `listPendingAdjustments` (pending-only,
+ * ASC for a work queue) this returns the full register — pending AND decided —
+ * newest first, with an optional status filter. Same immutable table + RLS.
+ */
+export async function listStockAdjustments(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  opts: { status?: string } = {},
+): Promise<StockAdjustmentRow[]> {
+  const args: unknown[] = [orgId, schoolId];
+  let filter = "";
+  if (opts.status) {
+    args.push(opts.status);
+    filter = ` AND status = $${args.length}`;
+  }
+  return await db.queryObject<StockAdjustmentRow>(
+    `SELECT id, sku, qty, movement_type, reason, status, reference_type, reference_id,
+            maker_id::text AS maker_id, checker_id::text AS checker_id,
+            decision_comment, decided_at::text AS decided_at, created_at::text AS created_at
+       FROM stock_adjustments
+      WHERE organization_id = $1 AND school_id = $2${filter}
+      ORDER BY created_at DESC
+      LIMIT 200`,
+    args,
+  );
+}
+
 // ── INV-6: physical stock count ──
 
 export interface CountLineInput {

@@ -13,7 +13,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../helpers/provider_test_overrides.dart';
 import '../../test_helpers.dart';
 
 Future<ProviderContainer> _pump(

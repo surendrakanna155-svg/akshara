@@ -9,6 +9,15 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <!-- Staff Face ID / fingerprint self check-in (O5, local_auth). -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
+    <!-- Attendance auth device layer (Slice 3, docs/ATTENDANCE_AUTH_DESIGN_DECISION.md):
+         a fresh, high-accuracy GPS geofence fix (ACCESS_FINE_LOCATION, with
+         ACCESS_COARSE_LOCATION as the platform-required companion permission)
+         and a live front-camera face capture (CAMERA). Neither is the
+         attendance PROOF by itself — both feed the GPS+face verification
+         chain; there is no device-biometric fallback for attendance. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <application
         android:label="Akshara ERP"
         android:name="${applicationName}"

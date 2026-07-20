@@ -65,8 +65,9 @@ class ApiAdaptiveAiRepository implements AdaptiveAiRepository {
     required RepositoryQuery query,
     required String term,
     int? limit,
+    int? offset,
   }) async {
-    final dto = await _remote.search(query: query, term: term, limit: limit);
+    final dto = await _remote.search(query: query, term: term, limit: limit, offset: offset);
     return _mapper.toSearchResultSet(dto);
   }
 }

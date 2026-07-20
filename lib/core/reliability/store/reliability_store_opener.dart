@@ -32,9 +32,11 @@ Future<ReliabilityStoreOpenResult> openReliabilityStore() async {
   try {
     return ReliabilityStoreOpenResult(await SqfliteReliabilityStore.open());
   } catch (error, stack) {
-    debugPrint('Reliability store: encrypted SQLite open failed, '
-        'falling back to in-memory ($error)');
-    debugPrintStack(stackTrace: stack, maxFrames: 4);
+    if (!kReleaseMode) {
+      debugPrint('Reliability store: encrypted SQLite open failed, '
+          'falling back to in-memory ($error)');
+      debugPrintStack(stackTrace: stack, maxFrames: 4);
+    }
     return ReliabilityStoreOpenResult(
       InMemoryReliabilityStore(),
       degraded: true,

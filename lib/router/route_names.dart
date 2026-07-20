@@ -86,6 +86,11 @@ abstract final class RouteNames {
   static const String aiAssistantSettings = '/settings/ai-assistant';
   static const String appearanceSettings = '/settings/appearance';
   static const String syncCenter = '/sync-center';
+  // Attendance auth device layer (Slice 3) — full-screen flows pushed via
+  // GoRouter from non-widget code (MlkitFaceCaptureSource), mirroring the
+  // goRouterProvider.push(...) pattern used for syncCenter above.
+  static const String staffFaceCapture = '/staff-attendance/face-capture';
+  static const String staffFaceEnrollment = '/staff-attendance/face-enrollment';
   static const String education = '/education';
   static const String intelligence = '/intelligence';
   static const String aiPredictions = '/intelligence/predictions';
@@ -113,6 +118,20 @@ abstract final class RouteNames {
   static const String dynamicWidgets = '/dynamic-widgets';
   static const String dynamicWidgetLayout = '/dynamic-widgets/layout';
   static const String dynamicWidgetRuntime = '/dynamic-widgets/runtime';
+  // PRC-A Batch 2 — request desk / gate pass / complaints / health.
+  // Staff-facing desks under the admin hub. Only the four LIST screens are
+  // routed: the complaint detail and the student health record are pushed as
+  // dialogs/routes from inside their own screens, so they need no route entry.
+  // Parent-facing raise surfaces are NOT built yet (the API supports parent
+  // scope; the parent UI is tracked residue) — no parent route constants until
+  // there is a screen behind them.
+  static const String certificateRequests = '/certificate-requests';
+  static const String gatePasses = '/gate-passes';
+  static const String complaints = '/complaints';
+  // `/student-health`, mirroring the API prefix — NOT `/health`, which is a
+  // system endpoint namespace.
+  static const String studentHealth = '/student-health';
+
   static const String teacherAssistant = '/teacher-assistant';
   static const String parentInsights = '/parent/insights';
   static const String principalCommand = '/principal-command';

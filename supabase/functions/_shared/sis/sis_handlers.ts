@@ -44,6 +44,7 @@ import {
   loadStudentDocumentsByIdOrCode,
 } from "./sis_student_lookup.ts";
 import { resolveStudentId } from "./sis_student_resolver.ts";
+import { ClearanceDuesBlockedError } from "../clearance/clearance_gate.ts";
 
 function parsePagination(url: URL): { page: number; pageSize: number } {
   const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
@@ -187,6 +188,11 @@ function mapWriteError(error: unknown): Response | null {
   }
   if (error instanceof InvalidStudentStatusTransitionError) {
     return errorEnvelope("VALIDATION_ERROR", error.message, 422);
+  }
+  if (error instanceof ClearanceDuesBlockedError) {
+    // Same 409 DUES_PENDING contract as the TC engine's NoDuesPendingError —
+    // the raw status endpoint no longer bypasses the no-dues law (SCE-1).
+    return errorEnvelope("DUES_PENDING", error.message, 409);
   }
   return null;
 }

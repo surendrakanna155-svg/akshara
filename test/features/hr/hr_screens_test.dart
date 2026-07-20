@@ -32,6 +32,11 @@ Future<void> pumpHrScreen(
   List<Override> overrides = const [],
 }) async {
   useViewport(tester, viewport);
+  // SCE/Face-ID: the attendance screen now renders network-backed widgets
+  // (the manual-request approver queue) at build, which reach dioProvider →
+  // SharedPreferences. Initialize the test prefs so providerTestOverrides stubs
+  // that stack (mirrors pumpAksharaRouter) instead of throwing "uninitialized".
+  await initProviderTestPrefs();
   await tester.pumpWidget(
     ProviderScope(
       overrides: erpWidgetTestOverrides(overrides),

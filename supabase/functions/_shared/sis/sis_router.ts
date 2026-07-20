@@ -6,8 +6,12 @@ import {
   handleListAdmissionsConversion,
 } from "./sis_conversion_handlers.ts";
 import {
+  handleAcademicAssignment,
+  handleBulkPromotion,
   handleCreateEnrollment,
   handleListEnrollments,
+  handleReshuffle,
+  handleSectionBalance,
   handleUpdateEnrollment,
 } from "./sis_enrollment_handlers.ts";
 import {
@@ -40,6 +44,14 @@ import {
   handleAddGuardian,
   handleRemoveGuardian,
 } from "./sis_guardian_handlers.ts";
+// SCE-1 — student clearance / no-dues + dues-waiver handlers (cross-module).
+import { handleStudentClearance } from "../clearance/clearance_handlers.ts";
+import {
+  handleCreateClearanceWaiver,
+  handleDecideClearanceWaiver,
+  handleListPendingClearanceWaivers,
+  handleRevokeClearanceWaiver,
+} from "../clearance/clearance_waiver_handlers.ts";
 
 const UUID_SEGMENT =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -70,11 +82,40 @@ export function matchSisRoute(
     return { handler: handleCreateEnrollment, args: [] };
   }
 
+  // WEB-005: registrar class-management workflows.
+  if (path === "/sis/academic-assignment" && method === "GET") {
+    return { handler: handleAcademicAssignment, args: [] };
+  }
+  if (path === "/sis/promotion" && method === "POST") {
+    return { handler: handleBulkPromotion, args: [] };
+  }
+  if (path === "/sis/reshuffle" && method === "POST") {
+    return { handler: handleReshuffle, args: [] };
+  }
+  if (path === "/sis/section-balance" && method === "POST") {
+    return { handler: handleSectionBalance, args: [] };
+  }
+
   if (path === "/sis/admissions-conversion" && method === "GET") {
     return { handler: handleListAdmissionsConversion, args: [] };
   }
   if (path === "/sis/admissions-conversion" && method === "POST") {
     return { handler: handleAdmissionsConversion, args: [] };
+  }
+
+  // SCE-1 slice 3 — clearance dues-waivers (maker-checker). The approver queue
+  // + decide are school-wide (not student-scoped); the raise is student-scoped
+  // (matched below with the other /sis/students/:id/* routes).
+  if (path === "/sis/clearance/waivers" && method === "GET") {
+    return { handler: handleListPendingClearanceWaivers, args: [] };
+  }
+  const waiverDecideMatch = path.match(/^\/sis\/clearance\/waivers\/([^/]+)\/decide$/);
+  if (waiverDecideMatch && method === "POST") {
+    return { handler: handleDecideClearanceWaiver, args: [waiverDecideMatch[1]!] };
+  }
+  const waiverRevokeMatch = path.match(/^\/sis\/clearance\/waivers\/([^/]+)\/revoke$/);
+  if (waiverRevokeMatch && method === "POST") {
+    return { handler: handleRevokeClearanceWaiver, args: [waiverRevokeMatch[1]!] };
   }
 
   const enrollmentMatch = path.match(/^\/sis\/enrollments\/([^/]+)$/);
@@ -128,6 +169,19 @@ export function matchSisRoute(
     if (method === "POST") {
       return { handler: handleUploadStudentDocument, args: [documentsMatch[1]!] };
     }
+  }
+
+  // SCE-1 — Student Clearance / No-Dues report (read-only, cross-module).
+  // Matched before the generic /certificates route so the specific path wins.
+  const clearanceMatch = path.match(/^\/sis\/students\/([^/]+)\/clearance$/);
+  if (clearanceMatch && method === "GET") {
+    return { handler: handleStudentClearance, args: [clearanceMatch[1]!] };
+  }
+  // SCE-1 slice 3 — a maker raises a dues-waiver for the student (more specific
+  // than /clearance, so match first).
+  const waiverCreateMatch = path.match(/^\/sis\/students\/([^/]+)\/clearance\/waivers$/);
+  if (waiverCreateMatch && method === "POST") {
+    return { handler: handleCreateClearanceWaiver, args: [waiverCreateMatch[1]!] };
   }
 
   // SIS-D1 — transfer certificate (TC) engine. Matched BEFORE the generic

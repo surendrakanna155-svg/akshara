@@ -201,6 +201,34 @@ class ControlCenterRemoteDataSource {
     return _writeData(response);
   }
 
+  Future<AiWalletResponseDto> fetchAiWallet({required RepositoryQuery query}) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ControlCenterApiPaths.aiWallet,
+      queryParameters: _queryParams(query),
+    );
+    return AiWalletResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<AiWalletGrantResponseDto> grantAiCredits({
+    required RepositoryQuery query,
+    required Map<String, dynamic> body,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      ControlCenterApiPaths.aiWalletGrant,
+      queryParameters: _queryParams(query),
+      data: body,
+    );
+    return AiWalletGrantResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<StorageQuotaResponseDto> fetchStorageQuota({required RepositoryQuery query}) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ControlCenterApiPaths.storageQuota,
+      queryParameters: _queryParams(query),
+    );
+    return StorageQuotaResponseDto.fromJson(_responseMap(response));
+  }
+
   Map<String, dynamic> _queryParams(RepositoryQuery query) {
     return {
       'tenantId': query.tenantId,

@@ -29,7 +29,7 @@ const _swatchNames = [
 // code migrates onto tokens; they are a one-way ratchet.
 const _hexColorBaseline = 0; // already token-pure — locked at zero.
 const _swatchBaseline = 60;
-const _rawTextStyleBaseline = 159;
+const _rawTextStyleBaseline = 155; // ratcheted down 159→155 (CFC-1 post-PRC, 2026-07-16): Control Center providers panel migrated onto textTheme tokens.
 
 final _hexColor = RegExp(r'Color\(0x');
 final _swatch = RegExp('Colors\\.(${_swatchNames.join('|')})\\b');

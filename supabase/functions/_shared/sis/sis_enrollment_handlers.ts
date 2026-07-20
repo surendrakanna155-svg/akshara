@@ -1,5 +1,5 @@
 import type { AppConfig } from "../config.ts";
-import { envelope, errorEnvelope, jsonResponse, readJson } from "../http.ts";
+import { envelope, errorEnvelope, jsonResponse, MAX_BULK_ITEMS, readJson } from "../http.ts";
 import {
   authenticateRequest,
   organizationIdFromClaims,
@@ -11,13 +11,18 @@ import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { emitMutationAudit, sisAudit } from "../audit/mutation_audit_catalog.ts";
 import {
+  applySectionMovesBulk,
   createEnrollment,
   DuplicateEnrollmentError,
   EnrollmentNotFoundError,
   listEnrollments,
+  promoteStudentsBulk,
   updateEnrollment,
   ValidationError,
+  type BulkOutcome,
   type EnrollmentListFilters,
+  type PromotionTarget,
+  type SectionMove,
 } from "./sis_enrollments_repository.ts";
 import {
   CatalogMismatchError,
@@ -289,5 +294,221 @@ export async function handleUpdateEnrollment(
     if (mapped) return mapped;
     console.error("handleUpdateEnrollment error:", error);
     return errorEnvelope("INTERNAL_ERROR", "Failed to update enrollment", 500);
+  }
+}
+
+// ─── WEB-005 (ERP-WT-005): registrar class-management workflows ──────────────
+
+function summarize(outcomes: BulkOutcome[]): Record<string, number> {
+  const summary: Record<string, number> = {};
+  for (const o of outcomes) summary[o.status] = (summary[o.status] ?? 0) + 1;
+  return summary;
+}
+
+/**
+ * POST /sis/promotion — bulk year-end promotion. Body: { students: [{ studentId,
+ * academicYear|academicYearId, className|classId, sectionName?, sectionId?,
+ * rollNumber? }] }. Each student's next-year enrollment is created (the old
+ * current one is auto-cleared); already-promoted students are skipped, not
+ * errored. Whole run is one transaction; per-student savepoint isolation.
+ */
+export async function handleBulkPromotion(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireSisWrite(auth.claims);
+  if (denied) return denied;
+
+  let body: Record<string, unknown> = {};
+  try {
+    body = (await readJson<Record<string, unknown>>(req)) ?? {};
+  } catch {
+    return errorEnvelope("VALIDATION_ERROR", "Invalid JSON body", 422);
+  }
+
+  const raw = body["students"] ?? body["promotions"];
+  if (!Array.isArray(raw) || raw.length === 0) {
+    return errorEnvelope("VALIDATION_ERROR", "students[] is required and non-empty", 422);
+  }
+  if (raw.length > MAX_BULK_ITEMS) {
+    return errorEnvelope("VALIDATION_ERROR", `students[] exceeds ${MAX_BULK_ITEMS}`, 422);
+  }
+
+  const targets: PromotionTarget[] = [];
+  for (const el of raw) {
+    if (typeof el !== "object" || el === null) {
+      return errorEnvelope("VALIDATION_ERROR", "each student must be an object", 422);
+    }
+    const item = el as Record<string, unknown>;
+    const studentId = optionalBodyStr(item, "studentId", "student_id");
+    const academicYear = optionalBodyStr(item, "academicYear", "academic_year");
+    const academicYearId = optionalNullableStr(item, "academicYearId", "academic_year_id");
+    const className = optionalBodyStr(item, "className", "class_name");
+    const classId = optionalNullableStr(item, "classId", "class_id");
+    if (!studentId || (!academicYear && !academicYearId) || (!className && !classId)) {
+      return errorEnvelope(
+        "VALIDATION_ERROR",
+        "each student needs studentId + (academicYear|academicYearId) + (className|classId)",
+        422,
+      );
+    }
+    targets.push({
+      studentId,
+      academicYear: academicYear ?? "",
+      academicYearId,
+      className: className ?? "",
+      classId,
+      sectionName: optionalNullableStr(item, "sectionName", "section_name"),
+      sectionId: optionalNullableStr(item, "sectionId", "section_id"),
+      rollNumber: optionalNullableStr(item, "rollNumber", "roll_number"),
+    });
+  }
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const outcomes = await runTenant(config, auth.claims, async (db) => {
+      const res = await promoteStudentsBulk(db, orgId, schoolId, targets, auth.claims.sub);
+      for (const o of res) {
+        if (o.status === "promoted" && o.enrollmentId) {
+          await emitMutationAudit(db, auth.claims, sisAudit.enrollmentCreated(o.enrollmentId), req);
+        }
+      }
+      return res;
+    });
+    return jsonResponse(envelope({ outcomes, summary: summarize(outcomes) }));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    console.error("handleBulkPromotion error:", error);
+    return errorEnvelope("INTERNAL_ERROR", "Failed to promote students", 500);
+  }
+}
+
+/** Shared executor for reshuffle + section-balance (both apply explicit
+ * {studentId → sectionName} moves supplied by the roster UI). */
+async function runSectionMoves(
+  req: Request,
+  config: AppConfig,
+  failMessage: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireSisWrite(auth.claims);
+  if (denied) return denied;
+
+  let body: Record<string, unknown> = {};
+  try {
+    body = (await readJson<Record<string, unknown>>(req)) ?? {};
+  } catch {
+    return errorEnvelope("VALIDATION_ERROR", "Invalid JSON body", 422);
+  }
+
+  const raw = body["moves"] ?? body["students"] ?? body["assignments"];
+  if (!Array.isArray(raw) || raw.length === 0) {
+    return errorEnvelope("VALIDATION_ERROR", "moves[] is required and non-empty", 422);
+  }
+  if (raw.length > MAX_BULK_ITEMS) {
+    return errorEnvelope("VALIDATION_ERROR", `moves[] exceeds ${MAX_BULK_ITEMS}`, 422);
+  }
+
+  const moves: SectionMove[] = [];
+  for (const el of raw) {
+    if (typeof el !== "object" || el === null) {
+      return errorEnvelope("VALIDATION_ERROR", "each move must be an object", 422);
+    }
+    const item = el as Record<string, unknown>;
+    const studentId = optionalBodyStr(item, "studentId", "student_id");
+    const sectionName = optionalBodyStr(item, "sectionName", "section_name", "toSection");
+    if (!studentId || !sectionName) {
+      return errorEnvelope("VALIDATION_ERROR", "each move needs studentId + sectionName", 422);
+    }
+    moves.push({
+      studentId,
+      sectionName,
+      rollNumber: optionalNullableStr(item, "rollNumber", "roll_number"),
+    });
+  }
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const outcomes = await runTenant(config, auth.claims, async (db) => {
+      const res = await applySectionMovesBulk(db, orgId, schoolId, moves);
+      for (const o of res) {
+        if (o.status === "moved" && o.enrollmentId) {
+          await emitMutationAudit(db, auth.claims, sisAudit.enrollmentUpdated(o.enrollmentId), req);
+        }
+      }
+      return res;
+    });
+    return jsonResponse(envelope({ outcomes, summary: summarize(outcomes) }));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    console.error(`${failMessage}:`, error);
+    return errorEnvelope("INTERNAL_ERROR", failMessage, 500);
+  }
+}
+
+/** POST /sis/reshuffle — move students between sections (same year). */
+export async function handleReshuffle(req: Request, config: AppConfig): Promise<Response> {
+  return await runSectionMoves(req, config, "Failed to reshuffle sections");
+}
+
+/** POST /sis/section-balance — apply the roster UI's computed section rebalance. */
+export async function handleSectionBalance(req: Request, config: AppConfig): Promise<Response> {
+  return await runSectionMoves(req, config, "Failed to balance sections");
+}
+
+/**
+ * GET /sis/academic-assignment — the current class/section assignment roster
+ * (paginated). Defaults to is_current=true; supports the same class/section/year
+ * filters as the enrollment list.
+ */
+export async function handleAcademicAssignment(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireSisRead(auth.claims);
+  if (denied) return denied;
+
+  const url = new URL(req.url);
+  const filters = parseEnrollmentFilters(url);
+  if (filters.isCurrent === undefined) filters.isCurrent = true;
+  const pagination = parsePagination(url);
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const result = await runTenant(config, auth.claims, (db) =>
+      listEnrollments(db, orgId, schoolId, filters, pagination));
+    return jsonResponse(
+      envelope(
+        listEnvelope(
+          result.items.map(enrollmentListItemToApi),
+          {
+            page: result.page,
+            pageSize: result.pageSize,
+            total: result.total,
+            hasMore: result.hasMore,
+          },
+        ),
+      ),
+    );
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    console.error("handleAcademicAssignment error:", error);
+    return errorEnvelope("INTERNAL_ERROR", "Failed to load academic assignment", 500);
   }
 }

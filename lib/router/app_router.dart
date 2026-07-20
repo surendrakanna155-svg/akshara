@@ -1,5 +1,11 @@
 import 'dart:async';
 
+// PRC-A Batch 2 — request desk / gate pass / complaints / student health.
+import '../features/certificate_desk/certificate_requests_screen.dart';
+import '../features/complaints/complaints_screen.dart';
+import '../features/gate_pass/gate_passes_screen.dart';
+import '../features/student_health/infirmary/student_health_infirmary_screen.dart';
+
 import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -86,6 +92,9 @@ import 'admissions_navigation.dart';
 import 'finance_navigation.dart';
 import '../features/settings/appearance_settings_screen.dart';
 import '../core/reliability/sync_center/sync_center_screen.dart';
+import '../features/staff_attendance/device/face_embedder.dart';
+import '../features/staff_attendance/device/mlkit_face_capture.dart';
+import '../features/staff_attendance/face_enrollment_screen.dart';
 import 'copilot_navigation.dart';
 import 'education_navigation.dart';
 import 'intelligence_navigation.dart';
@@ -241,6 +250,25 @@ GoRouter createAppRouter({
         path: RouteNames.syncCenter,
         name: 'syncCenter',
         builder: (context, state) => const SyncCenterScreen(),
+      ),
+      // Attendance auth device layer (Slice 3). Pushed both from non-widget
+      // code (MlkitFaceCaptureSource, via goRouterProvider.push — see
+      // lib/app/app.dart's SyncBanner for the same pattern) and directly from
+      // FaceEnrollmentScreen's own onPressed via context.push.
+      GoRoute(
+        path: RouteNames.staffFaceCapture,
+        name: 'staffFaceCapture',
+        builder: (context, state) {
+          final extra = state.extra;
+          return FaceCaptureScreen(
+            embedder: extra is FaceEmbedder ? extra : null,
+          );
+        },
+      ),
+      GoRoute(
+        path: RouteNames.staffFaceEnrollment,
+        name: 'staffFaceEnrollment',
+        builder: (context, state) => const FaceEnrollmentScreen(),
       ),
       GoRoute(
         path: RouteNames.aiAssistant,
@@ -1825,6 +1853,41 @@ GoRouter createAppRouter({
               ),
             ],
           ),
+          // ─── PRC-A Batch 2 ────────────────────────────────────────────────
+          // Single-screen desks — no sub-routes: the complaint detail and the
+          // student health record are pushed from inside their own screens.
+          // Route-level RBAC is centralized in kErpRouteViewPermissions
+          // (route_guards.dart), which the admin shell's ErpRouteGuard applies —
+          // NOT per-GoRoute.
+          GoRoute(
+            path: RouteNames.certificateRequests,
+            name: 'certificateRequests',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: CertificateRequestsScreen(),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.gatePasses,
+            name: 'gatePasses',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: GatePassesScreen(),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.complaints,
+            name: 'complaints',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: ComplaintsScreen(),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.studentHealth,
+            name: 'studentHealth',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: StudentHealthInfirmaryScreen(),
+            ),
+          ),
+          // ─── end PRC-A Batch 2 ────────────────────────────────────────────
           GoRoute(
             path: RouteNames.hostel,
             name: 'hostel',
@@ -2472,18 +2535,33 @@ bool _isSharedSettingsRoute(String location) {
   return location == RouteNames.appearanceSettings;
 }
 
+/// The standalone staff Face ID capture/enrolment routes (audit R3): they are
+/// pushed from the HR attendance screen (admin ERP shell) but registered as
+/// top-level routes, so they must carry the same wall themselves — otherwise a
+/// parent/student could deep-link into staff-only camera UI by URL. Server
+/// RBAC already denies the writes; this closes the client-side exposure.
+bool _isStaffAttendanceDeviceRoute(String location) {
+  return location == RouteNames.staffFaceCapture ||
+      location == RouteNames.staffFaceEnrollment;
+}
+
 bool _isProtectedRoute(String location) {
   return location.startsWith('/parent') ||
       location.startsWith('/teacher') ||
       location.startsWith('/student') ||
       _isAiAssistantRoute(location) ||
       _isSharedSettingsRoute(location) ||
+      _isStaffAttendanceDeviceRoute(location) ||
       isAdminErpRoute(location);
 }
 
 bool _canAccessRoute(AuthState auth, String location) {
   if (_isAiAssistantRoute(location) || _isSharedSettingsRoute(location)) {
     return auth.isAuthenticated;
+  }
+  // Same wall as the HR attendance screen these are pushed from.
+  if (_isStaffAttendanceDeviceRoute(location)) {
+    return canAccessAdminErpShell(auth);
   }
 
   if (isAdminErpRoute(location)) {

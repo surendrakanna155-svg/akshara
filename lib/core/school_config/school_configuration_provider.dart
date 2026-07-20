@@ -103,10 +103,12 @@ class SchoolConfigurationNotifier extends Notifier<SchoolConfiguration> {
         // Local cache already reflects the optimistic intent, but the durable
         // backend row did NOT persist — surface this so the caller can warn the
         // user instead of silently diverging. Re-thrown after logging.
-        debugPrint(
-          'SchoolConfigurationNotifier: backend save failed — local config may '
-          'diverge from the server until the next successful apply: $error',
-        );
+        if (!kReleaseMode) {
+          debugPrint(
+            'SchoolConfigurationNotifier: backend save failed — local config may '
+            'diverge from the server until the next successful apply: $error',
+          );
+        }
         rethrow;
       }
     }

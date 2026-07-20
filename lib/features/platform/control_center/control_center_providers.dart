@@ -328,3 +328,17 @@ final controlCenterProvidersDataProvider = FutureProvider<ControlCenterProviders
         query: ref.watch(repositoryQueryProvider),
       );
 });
+
+// PRC-A Batch 3 — AI Credit Wallet (viewAiWallet / manageAiCredits).
+final controlCenterAiWalletFutureProvider = FutureProvider<AiWalletData>((ref) async {
+  return ref.read(controlCenterRepositoryProvider).getAiWallet(
+        query: ref.watch(repositoryQueryProvider),
+      );
+});
+
+// PRC-A Batch 4 — Storage Quota (viewStorageQuota).
+final controlCenterStorageQuotaFutureProvider = FutureProvider<StorageQuotaData>((ref) async {
+  return ref.read(controlCenterRepositoryProvider).getStorageQuota(
+        query: ref.watch(repositoryQueryProvider),
+      );
+});

@@ -32,6 +32,23 @@ dependencies:
   # Device biometric (Face ID / fingerprint) for staff self check-in attendance
   # (O5, Must-Before-GA). Device OS gate only — NO computer-vision face matching.
   local_auth: ^2.3.0
+  # Attendance auth device layer (Slice 3, docs/ATTENDANCE_AUTH_DESIGN_DECISION.md):
+  # fresh high-accuracy GPS + anti-mock (geolocator), live front-camera preview
+  # (camera), on-device face detection/liveness classification (google_mlkit_*),
+  # and the bundled MobileFaceNet embedder (tflite_flutter). `image` crops/converts
+  # the captured still to the embedder's RGB tensor input.
+  geolocator: ^14.0.2
+  camera: ^0.12.0+1
+  google_mlkit_face_detection: ^0.14.0
+  google_mlkit_commons: ^0.12.0
+  tflite_flutter: ^0.12.1
+  # Exact-pinned to what this repo already had resolved before Slice 3:
+  # image >=4.9.0 requires xml ^7.0.1, which conflicts with pdf's (<7.0.0)
+  # constraint and forces an unrelated pdf/xml upgrade — and with it a wave of
+  # new `prefer_const_constructors` lints — across every PDF-export service in
+  # the app. A caret range isn't enough here since pub still prefers the
+  # newest in-range version (4.9.1); this must be an exact pin.
+  image: 4.8.0
 
 dev_dependencies:
   flutter_test:
@@ -61,6 +78,11 @@ flutter_launcher_icons:
 
 flutter:
   uses-material-design: true
+  assets:
+    # Attendance auth device layer (Slice 3): the bundled MobileFaceNet
+    # embedder model. NOT checked in yet — see assets/models/README.md.
+    # MobileFaceNetEmbedder fails loud (FACE_MODEL_MISSING) until it lands.
+    - assets/models/
 
 patrol:
   app_name: Akshara ERP

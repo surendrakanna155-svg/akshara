@@ -44,6 +44,14 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   // PRA-P1-01 / PRA-P1-02 (S2): guardian link management (registrar-level).
   { method: "POST", path: "/sis/students/:id/guardians", permission: "manageSis", scope: "school", module: "sis" },
   { method: "DELETE", path: "/sis/students/:id/guardians/:guardianUserId", permission: "manageSis", scope: "school", module: "sis" },
+  // SCE-1 — Student Clearance / No-Dues report (read-only, cross-module).
+  { method: "GET", path: "/sis/students/:id/clearance", permission: "viewSis", scope: "school", module: "sis" },
+  // SCE-1 slice 3 — clearance dues-waivers (maker-checker). Raise = manageSis
+  // (maker); approve/reject + the pending queue = approveClearanceWaiver (checker).
+  { method: "POST", path: "/sis/students/:id/clearance/waivers", permission: "manageSis", scope: "school", module: "sis" },
+  { method: "GET", path: "/sis/clearance/waivers", permission: "approveClearanceWaiver", scope: "school", module: "sis" },
+  { method: "POST", path: "/sis/clearance/waivers/:id/decide", permission: "approveClearanceWaiver", scope: "school", module: "sis" },
+  { method: "POST", path: "/sis/clearance/waivers/:id/revoke", permission: "approveClearanceWaiver", scope: "school", module: "sis" },
   { method: "GET", path: "/academic/years", permission: "viewSis", scope: "school", module: "academic" },
   { method: "POST", path: "/academic/transitions/preview", permission: "manageSis", scope: "school", module: "academic" },
   { method: "POST", path: "/academic/transitions/:id/execute", permission: "manageSis", scope: "school", module: "academic" },
@@ -68,6 +76,11 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "GET", path: "/transport/settings", permission: "viewTransport", scope: "school", module: "transport" },
   { method: "GET", path: "/transport/occupancy-metrics", permission: "viewTransport", scope: "school", module: "transport" },
   { method: "GET", path: "/transport/routes/:id/roster", permission: "viewTransport", scope: "school", module: "transport" },
+  // Batch 8: transport expense domain (reads=viewTransport, writes=manageTransport).
+  { method: "GET", path: "/transport/expenses", permission: "viewTransport", scope: "school", module: "transport" },
+  { method: "GET", path: "/transport/cost-summary", permission: "viewTransport", scope: "school", module: "transport" },
+  { method: "POST", path: "/transport/expenses", permission: "manageTransport", scope: "school", module: "transport" },
+  { method: "POST", path: "/transport/expenses/:id/void", permission: "manageTransport", scope: "school", module: "transport" },
   { method: "POST", path: "/transport/routes", permission: "manageTransport", scope: "school", module: "transport" },
   { method: "POST", path: "/transport/routes/:id/activate", permission: "manageTransport", scope: "school", module: "transport" },
   { method: "POST", path: "/transport/routes/:id/stops", permission: "manageTransport", scope: "school", module: "transport" },
@@ -159,6 +172,10 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "GET", path: "/communications/audience-segments", permission: "viewCommunications", scope: "school", module: "communication" },
   { method: "POST", path: "/communications/audience-segments", permission: "sendBroadcast", scope: "school", module: "communication" },
   { method: "DELETE", path: "/communications/audience-segments/:id", permission: "sendBroadcast", scope: "school", module: "communication" },
+  // Batch 6: per-school channel escalation policy (WhatsApp orchestrator). Same
+  // admin gate as the delivery-queue processor + template management.
+  { method: "GET", path: "/communications/channel-policy", permission: "manageCommunications", scope: "school", module: "communication" },
+  { method: "PUT", path: "/communications/channel-policy", permission: "manageCommunications", scope: "school", module: "communication" },
   // COM-D1: acknowledge a delivery (signed receipt). Recipient-owned, like
   // mark-read — no permission slug; the recipient RLS policy enforces ownership.
   { method: "POST", path: "/communications/notifications/:id/acknowledge", permission: null, scope: "parent", module: "communication" },
@@ -248,6 +265,10 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "POST", path: "/promotions/:id/approve", permission: "approveAchievementPromotion", scope: "school", module: "promotion" },
   { method: "POST", path: "/promotions/:id/publish", permission: "approveAchievementPromotion", scope: "school", module: "promotion" },
   { method: "POST", path: "/promotions/:id/track", permission: "manageAchievementPromotion", scope: "school", module: "promotion" },
+  // Batch 10 — marketing internal (owner #4): brand profile + poster preview.
+  { method: "GET", path: "/promotions/brand-profile", permission: "viewAchievementPromotion", scope: "school", module: "promotion" },
+  { method: "PUT", path: "/promotions/brand-profile", permission: "manageAchievementPromotion", scope: "school", module: "promotion" },
+  { method: "POST", path: "/promotions/poster/preview", permission: "manageAchievementPromotion", scope: "school", module: "promotion" },
   { method: "GET", path: "/school-calendar", permission: "viewSchoolCalendar", scope: "school", module: "school_calendar" },
   { method: "POST", path: "/school-calendar", permission: "manageSchoolCalendar", scope: "school", module: "school_calendar" },
   { method: "DELETE", path: "/school-calendar/:id", permission: "manageSchoolCalendar", scope: "school", module: "school_calendar" },
@@ -275,6 +296,10 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "POST", path: "/finance/payments/qr/:id/confirm", permission: "manageFinance", scope: "school", module: "finance" },
   { method: "GET", path: "/finance/defaulters", permission: "viewFinance", scope: "school", module: "finance" },
   { method: "GET", path: "/finance/reports", permission: "viewFinance", scope: "school", module: "finance" },
+  // Batch 7: Tally accounting export (read) + per-school ledger map (view/configure).
+  { method: "GET", path: "/finance/reports/tally-export", permission: "viewFinance", scope: "school", module: "finance" },
+  { method: "GET", path: "/finance/tally-ledger-map", permission: "viewFinance", scope: "school", module: "finance" },
+  { method: "PUT", path: "/finance/tally-ledger-map", permission: "manageFinance", scope: "school", module: "finance" },
   { method: "GET", path: "/finance/settings", permission: "viewFinance", scope: "school", module: "finance" },
   { method: "PUT", path: "/finance/settings", permission: "manageFinance", scope: "school", module: "finance" },
   { method: "POST", path: "/finance/scholarships", permission: "manageFinance", scope: "school", module: "finance" },
@@ -304,12 +329,74 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   // JWT/permission — listed here for inventory completeness (permission: null).
   { method: "POST", path: "/communications/delivery/webhook", permission: null, scope: "school", module: "webhook" },
   { method: "POST", path: "/webhooks/razorpay", permission: null, scope: "school", module: "webhook" },
+  // ─── PRC-A Batch 2 ────────────────────────────────────────────────────────
+  // Certificate Request Desk (caps 136–148). Raise/list are also reachable in
+  // `parent` scope for a guardian's own children; the staff rule is listed here
+  // because the inventory keys one rule per (method, path).
+  { method: "POST", path: "/certificate-requests", permission: "requestStudentCertificate", scope: "school", module: "certificate_desk" },
+  { method: "GET", path: "/certificate-requests", permission: "requestStudentCertificate", scope: "school", module: "certificate_desk" },
+  { method: "GET", path: "/certificate-requests/:id", permission: "requestStudentCertificate", scope: "school", module: "certificate_desk" },
+  { method: "POST", path: "/certificate-requests/:id/cancel", permission: "approveCertificateRequest", scope: "school", module: "certificate_desk" },
+  // Gate Pass / early pickup (caps 109–118). Approve/reject go through the
+  // shared F2 /approvals endpoints (type `gatePass`), not a bespoke route.
+  { method: "POST", path: "/gate-passes", permission: "requestGatePass", scope: "school", module: "gate_pass" },
+  { method: "GET", path: "/gate-passes", permission: "requestGatePass", scope: "school", module: "gate_pass" },
+  { method: "GET", path: "/gate-passes/:id", permission: "requestGatePass", scope: "school", module: "gate_pass" },
+  { method: "POST", path: "/gate-passes/:id/verify", permission: "verifyGatePass", scope: "school", module: "gate_pass" },
+  { method: "POST", path: "/gate-passes/:id/cancel", permission: "requestGatePass", scope: "school", module: "gate_pass" },
+  // Complaints / internal issues (caps 101–108).
+  // PRC-A Batch 3 (caps 37–43) — AI credit wallet. Org-scoped: credits are an
+  // organization fact (org-scoped AI surfaces call with school_id NULL). Read is
+  // org-level; grant is platform-only (manageAiCredits → superAdmin).
+  { method: "GET", path: "/ai-wallet", permission: "viewAiWallet", scope: "organization", module: "aiWallet" },
+  { method: "POST", path: "/ai-wallet/grant", permission: "manageAiCredits", scope: "organization", module: "aiWallet" },
+  // PRC-A Batch 4 (caps 31–36) — storage quota. Read-only; usage is written
+  // internally by the upload/delete paths, so there is no mutating route here.
+  { method: "GET", path: "/storage/quota", permission: "viewStorageQuota", scope: "organization", module: "storageQuota" },
+  { method: "POST", path: "/complaints", permission: "raiseComplaint", scope: "school", module: "complaints" },
+  { method: "GET", path: "/complaints", permission: "raiseComplaint", scope: "school", module: "complaints" },
+  { method: "GET", path: "/complaints/:id", permission: "raiseComplaint", scope: "school", module: "complaints" },
+  { method: "POST", path: "/complaints/:id/assign", permission: "manageComplaints", scope: "school", module: "complaints" },
+  { method: "POST", path: "/complaints/:id/status", permission: "manageComplaints", scope: "school", module: "complaints" },
+  { method: "POST", path: "/complaints/:id/comment", permission: "raiseComplaint", scope: "school", module: "complaints" },
+  { method: "POST", path: "/complaints/:id/vendor", permission: "manageComplaints", scope: "school", module: "complaints" },
+  // Student Health / Infirmary (caps 119–127) — owner decision #1 need-to-know.
+  // NOTE the asymmetry, it is deliberate: the clinical routes require
+  // `viewStudentHealthRecord`/`manageStudentHealth` (granted to health staff and
+  // explicitly authorised leadership ONLY), while the teacher-facing care-alert
+  // route requires only `viewStudentCareAlert` AND is additionally narrowed in
+  // the handler to students that caller actually teaches.
+  { method: "POST", path: "/student-health/incidents", permission: "manageStudentHealth", scope: "school", module: "student_health" },
+  { method: "GET", path: "/student-health/incidents", permission: "viewStudentHealthRecord", scope: "school", module: "student_health" },
+  { method: "POST", path: "/student-health/care-alerts", permission: "manageStudentHealth", scope: "school", module: "student_health" },
+  { method: "PATCH", path: "/student-health/care-alerts/:id", permission: "manageStudentHealth", scope: "school", module: "student_health" },
+  { method: "POST", path: "/student-health/authorizations", permission: "manageStudentHealth", scope: "school", module: "student_health" },
+  { method: "POST", path: "/student-health/authorizations/:id/revoke", permission: "manageStudentHealth", scope: "school", module: "student_health" },
+  { method: "POST", path: "/student-health/authorizations/:id/administer", permission: "administerStudentMedication", scope: "school", module: "student_health" },
+  { method: "GET", path: "/student-health/students/:studentId/care-alert", permission: "viewStudentCareAlert", scope: "school", module: "student_health" },
+  { method: "GET", path: "/student-health/students/:studentId/record", permission: "viewStudentHealthRecord", scope: "school", module: "student_health" },
+  { method: "GET", path: "/student-health/access-log", permission: "viewStudentHealthRecord", scope: "school", module: "student_health" },
+  // Web-platform-discovered read endpoints (ERP-WT / WEB-001..010). OR-gated
+  // routes list their primary slug, matching the sibling convention (e.g.
+  // /intelligence/risk/students → viewStudentRisk).
+  { method: "GET", path: "/finance/student-accounts", permission: "viewFinance", scope: "school", module: "finance" },
+  { method: "GET", path: "/inventory/stock", permission: "viewInventory", scope: "school", module: "inventory" },
+  { method: "GET", path: "/inventory/stock/approvals", permission: "viewInventory", scope: "school", module: "inventory" },
+  { method: "GET", path: "/intelligence/ai-economics", permission: "viewAiCopilot", scope: "school", module: "intelligence" },
+  { method: "GET", path: "/intelligence/trust", permission: "viewAiCopilot", scope: "school", module: "intelligence" },
+  { method: "GET", path: "/communications/analytics/summary", permission: "viewCommunicationAnalytics", scope: "school", module: "communication" },
+  { method: "GET", path: "/communications/analytics/parent-adoption", permission: "viewCommunicationAnalytics", scope: "school", module: "communication" },
+  { method: "GET", path: "/dashboard/overview", permission: "viewAdminHub", scope: "school", module: "dashboard" },
+  { method: "GET", path: "/sis/academic-assignment", permission: "viewSis", scope: "school", module: "sis" },
+  { method: "POST", path: "/sis/promotion", permission: "manageSis", scope: "school", module: "sis" },
+  { method: "POST", path: "/sis/reshuffle", permission: "manageSis", scope: "school", module: "sis" },
+  { method: "POST", path: "/sis/section-balance", permission: "manageSis", scope: "school", module: "sis" },
 ];
 
 export const RBAC_MODULE_PERMISSIONS = [
   "viewAdmissions", "manageAdmissions", "approveAdmissions",
   "viewFinance", "manageFinance", "approveRefunds",
-  "viewSis", "manageSis",
+  "viewSis", "manageSis", "approveClearanceWaiver",
   "viewTransport", "viewHr", "viewHostel", "viewLibrary", "viewInventory", "viewAlumni", "manageAlumni",
   "viewManagement", "viewControlCenter", "viewAdminHub", "viewPayments",
   "viewCommunications", "manageCommunications", "sendBroadcast",
@@ -328,4 +415,14 @@ export const RBAC_MODULE_PERMISSIONS = [
   "viewDirectorPortal", "manageDirectorPortal",
   "viewOrganizationBuilder", "manageOrganizationBuilder",
   "viewDynamicWidgets", "manageDynamicWidgets",
+  // PRC-A Batch 2.
+  "requestStudentCertificate", "approveCertificateRequest",
+  "requestGatePass", "approveGatePass", "verifyGatePass",
+  "raiseComplaint", "manageComplaints", "viewComplaintsPrincipal",
+  "manageStudentHealth", "viewStudentHealthRecord", "viewStudentCareAlert",
+  "administerStudentMedication",
+  // PRC-A Batch 3 — AI credit wallet.
+  "viewAiWallet", "manageAiCredits",
+  // PRC-A Batch 4 — storage quota.
+  "viewStorageQuota",
 ] as const;

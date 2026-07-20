@@ -286,6 +286,53 @@ export async function listSyllabusChapters(
   );
 }
 
+/**
+ * Real syllabus topics for a class/subject (and optionally a single chapter),
+ * used by the teacher's daily-capture UI to pick the ACTUAL topic being
+ * completed instead of a client-fabricated id (P1 fix — the client previously
+ * sent `topic_${lessonLogId}`, which is not a real `syllabus_topics.id` and
+ * fails the `syllabus_topic_completions.topic_id` FK).
+ */
+export async function listSyllabusTopics(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  filters: { className?: string; subjectId?: string; chapterId?: string } = {},
+): Promise<SyllabusTopicRow[]> {
+  const conditions = ["organization_id = $1", "school_id = $2"];
+  const params: unknown[] = [orgId, schoolId];
+  if (filters.className) {
+    params.push(filters.className);
+    conditions.push(`class_name = $${params.length}`);
+  }
+  if (filters.subjectId) {
+    params.push(filters.subjectId);
+    conditions.push(`subject_id = $${params.length}`);
+  }
+  if (filters.chapterId) {
+    params.push(filters.chapterId);
+    conditions.push(`chapter_id = $${params.length}`);
+  }
+  return await db.queryObject<SyllabusTopicRow>(
+    `SELECT id, subject_id, class_name, chapter_id, topic_name, sequence_order, status
+     FROM syllabus_topics WHERE ${conditions.join(" AND ")}
+     ORDER BY class_name, sequence_order`,
+    params,
+  );
+}
+
+export function topicToApi(t: SyllabusTopicRow) {
+  return {
+    id: t.id,
+    subjectId: t.subject_id,
+    className: t.class_name,
+    chapterId: t.chapter_id,
+    topicName: t.topic_name,
+    sequenceOrder: t.sequence_order,
+    status: t.status,
+  };
+}
+
 export function templateToApi(t: SubjectTemplateRow) {
   return {
     id: t.id,

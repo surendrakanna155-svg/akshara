@@ -106,6 +106,32 @@ class FinanceEnumCodec {
         _ => RefundStatus.pending,
       };
 
+  // STEP-5 — fee reductions (scholarship awards + discount applications).
+  static FeeReductionSourceKind parseFeeReductionSourceKind(String? raw) =>
+      switch (raw) {
+        'discount' => FeeReductionSourceKind.discount,
+        _ => FeeReductionSourceKind.scholarship,
+      };
+
+  static String feeReductionSourceKindToApi(FeeReductionSourceKind kind) =>
+      switch (kind) {
+        FeeReductionSourceKind.scholarship => 'scholarship',
+        FeeReductionSourceKind.discount => 'discount',
+      };
+
+  static FeeReductionKind parseFeeReductionKind(String? raw) => switch (raw) {
+        'fixed' => FeeReductionKind.fixed,
+        _ => FeeReductionKind.percent,
+      };
+
+  static FeeReductionStatus parseFeeReductionStatus(String? raw) =>
+      switch (raw) {
+        'approved' => FeeReductionStatus.approved,
+        'rejected' => FeeReductionStatus.rejected,
+        'reversed' => FeeReductionStatus.reversed,
+        _ => FeeReductionStatus.pending,
+      };
+
   static InvoiceStatus parseInvoiceStatus(String? raw) => switch (raw) {
         'draft' => InvoiceStatus.draft,
         'issued' => InvoiceStatus.issued,

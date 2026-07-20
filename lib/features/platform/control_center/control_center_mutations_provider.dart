@@ -25,6 +25,22 @@ void assertManageControlCenter(Ref ref) {
   }
 }
 
+/// PRC-A Batch 3 — `manageAiCredits` is its own permission (superAdmin only,
+/// deliberately narrower than `manageControlCenter`): granting AI credit is a
+/// platform-billing act, not general control-center administration.
+void assertManageAiCredits(Ref ref) {
+  final perms = ref.read(userPermissionsProvider);
+  if (perms == null || !perms.has(Permission.manageAiCredits)) {
+    throw ApiFailureException(
+      const ApiFailure(
+        type: ApiFailureType.forbidden,
+        message: 'You do not have permission to grant AI credits.',
+        code: 'RBAC_MANAGE_AI_CREDITS',
+      ),
+    );
+  }
+}
+
 class CreateSchoolNotifier extends AsyncNotifier<PlatformSchool?> {
   @override
   FutureOr<PlatformSchool?> build() => null;
@@ -85,4 +101,43 @@ class CreateCrmLeadNotifier extends AsyncNotifier<CrmDeal?> {
 final createCrmLeadProvider =
     AsyncNotifierProvider<CreateCrmLeadNotifier, CrmDeal?>(
   CreateCrmLeadNotifier.new,
+);
+
+class GrantAiCreditsNotifier extends AsyncNotifier<AiWalletData?> {
+  @override
+  FutureOr<AiWalletData?> build() => null;
+
+  Future<AiWalletData?> execute({
+    required String entryType,
+    required int units,
+    required String reason,
+    String? externalRef,
+  }) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageAiCredits(ref);
+      try {
+        final result = await ref.read(controlCenterRepositoryProvider).grantAiCredits(
+              query: ref.read(repositoryQueryProvider),
+              entryType: entryType,
+              units: units,
+              reason: reason,
+              externalRef: externalRef,
+            );
+        // The grant response only echoes the single new entry, not the full
+        // ledger — invalidate so the panel re-fetches balance + entries.
+        ref.invalidate(controlCenterAiWalletFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final grantAiCreditsProvider =
+    AsyncNotifierProvider<GrantAiCreditsNotifier, AiWalletData?>(
+  GrantAiCreditsNotifier.new,
 );

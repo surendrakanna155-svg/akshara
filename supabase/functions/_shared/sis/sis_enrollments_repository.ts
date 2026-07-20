@@ -451,6 +451,152 @@ export async function updateEnrollment(
   return row;
 }
 
+// ─── WEB-005 (ERP-WT-005): registrar class-management bulk workflows ─────────
+//
+// These are pure EXECUTORS of UI-supplied targets (the roster UI makes every
+// who/where decision) — no promotion-policy engine, so no owner policy call is
+// needed. They compose the certified single-row primitives (createEnrollment /
+// updateEnrollment, which already do student-exists + placement resolution +
+// duplicate-guard + auto-clearing the prior current enrollment). Each row runs
+// inside its own SAVEPOINT so one bad row can't abort the batch; the whole run
+// is still one transaction (withTenantContext), so successful rows commit
+// together and a failed row leaves NO partial residue. Returns a per-student
+// outcome so the caller can report + re-run safely (idempotent: an already-
+// promoted student is 'skipped_exists', not a hard error).
+
+export interface PromotionTarget {
+  studentId: string;
+  academicYear: string;
+  academicYearId?: string | null;
+  className: string;
+  classId?: string | null;
+  sectionName?: string | null;
+  sectionId?: string | null;
+  rollNumber?: string | null;
+}
+
+export interface SectionMove {
+  studentId: string;
+  sectionName: string;
+  rollNumber?: string | null;
+}
+
+export interface BulkOutcome {
+  studentId: string;
+  status: string;
+  enrollmentId?: string;
+  message?: string;
+}
+
+/** The current (is_current) enrollment id for a student, or null. */
+export async function getCurrentEnrollmentId(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  studentId: string,
+): Promise<string | null> {
+  const rows = await db.queryObject<{ id: string }>(
+    `SELECT id FROM sis_student_enrollments
+     WHERE organization_id = $1 AND school_id = $2 AND student_id = $3 AND is_current = true
+     ORDER BY created_at DESC LIMIT 1`,
+    [organizationId, schoolId, studentId],
+  );
+  return rows[0]?.id ?? null;
+}
+
+/**
+ * Bulk year-end promotion: for each target, create the next-year enrollment
+ * (auto-clearing the old current one). Per-student savepoint isolation.
+ */
+export async function promoteStudentsBulk(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  targets: PromotionTarget[],
+  createdBy: string,
+): Promise<BulkOutcome[]> {
+  const outcomes: BulkOutcome[] = [];
+  let i = 0;
+  for (const t of targets) {
+    const sp = `promo_${i++}`;
+    await db.queryObject(`SAVEPOINT ${sp}`);
+    try {
+      const created = await createEnrollment(db, organizationId, schoolId, {
+        studentId: t.studentId,
+        academicYear: t.academicYear,
+        academicYearId: t.academicYearId ?? null,
+        className: t.className,
+        classId: t.classId ?? null,
+        sectionName: t.sectionName ?? null,
+        sectionId: t.sectionId ?? null,
+        rollNumber: t.rollNumber ?? null,
+        isCurrent: true,
+        createdBy,
+      });
+      await db.queryObject(`RELEASE SAVEPOINT ${sp}`);
+      outcomes.push({ studentId: t.studentId, status: "promoted", enrollmentId: created.enrollment_id });
+    } catch (error) {
+      await db.queryObject(`ROLLBACK TO SAVEPOINT ${sp}`);
+      await db.queryObject(`RELEASE SAVEPOINT ${sp}`);
+      if (error instanceof DuplicateEnrollmentError) {
+        outcomes.push({ studentId: t.studentId, status: "skipped_exists", message: error.message });
+      } else if (error instanceof StudentNotFoundError) {
+        outcomes.push({ studentId: t.studentId, status: "not_found", message: error.message });
+      } else {
+        outcomes.push({
+          studentId: t.studentId,
+          status: "error",
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  }
+  return outcomes;
+}
+
+/**
+ * Bulk section move (reshuffle / section-balance): re-section each student's
+ * CURRENT enrollment via the placement-resolving updateEnrollment primitive
+ * (so section_id stays consistent with the new label). Per-student savepoint.
+ */
+export async function applySectionMovesBulk(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  moves: SectionMove[],
+): Promise<BulkOutcome[]> {
+  const outcomes: BulkOutcome[] = [];
+  let i = 0;
+  for (const m of moves) {
+    const sp = `reshuffle_${i++}`;
+    await db.queryObject(`SAVEPOINT ${sp}`);
+    try {
+      const currentId = await getCurrentEnrollmentId(db, organizationId, schoolId, m.studentId);
+      if (!currentId) {
+        await db.queryObject(`ROLLBACK TO SAVEPOINT ${sp}`);
+        await db.queryObject(`RELEASE SAVEPOINT ${sp}`);
+        outcomes.push({ studentId: m.studentId, status: "no_current_enrollment" });
+        continue;
+      }
+      const updated = await updateEnrollment(db, organizationId, schoolId, currentId, {
+        sectionName: m.sectionName,
+        rollNumber: m.rollNumber ?? undefined,
+      });
+      await db.queryObject(`RELEASE SAVEPOINT ${sp}`);
+      outcomes.push({ studentId: m.studentId, status: "moved", enrollmentId: updated.enrollment_id });
+    } catch (error) {
+      await db.queryObject(`ROLLBACK TO SAVEPOINT ${sp}`);
+      await db.queryObject(`RELEASE SAVEPOINT ${sp}`);
+      outcomes.push({
+        studentId: m.studentId,
+        status: "error",
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+  return outcomes;
+}
+
 /** Normalize year label for duplicate checks (matches Flutter). */
 export { normalizeAcademicYearLabel };
 

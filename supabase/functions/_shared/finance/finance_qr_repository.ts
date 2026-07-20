@@ -32,6 +32,17 @@ export class QrSessionNotFoundError extends Error {
   }
 }
 
+/** P5 (red-team Round 2): thrown when a confirm targets a session that is no
+ * longer 'pending' (already confirmed / expired / cancelled) — the status guard
+ * lost the race, so exactly one confirm wins and a concurrent/repeat confirm is
+ * rejected instead of silently re-confirming. */
+export class QrSessionNotConfirmableError extends Error {
+  constructor(id: string) {
+    super(`QR payment session is not pending (already confirmed or expired): ${id}`);
+    this.name = "QrSessionNotConfirmableError";
+  }
+}
+
 function formatAmount(value: number | string): string {
   const num = typeof value === "string" ? parseFloat(value) : value;
   if (!Number.isFinite(num)) return "0";
@@ -117,6 +128,11 @@ export async function confirmQrSession(
     throw new QrSessionNotFoundError(id);
   }
 
+  // P5 (red-team Round 2): the terminal 'confirmed' write is guarded on the
+  // 'pending' pre-state (mirroring the sibling expireQrSession) so a concurrent
+  // or repeated confirm of the same fee-payment session can double-apply neither
+  // the confirm nor its downstream effect — exactly one caller wins; the loser
+  // gets 0 rows → a clean not-confirmable error, never a second 200.
   const rows = await db.queryObject<FinanceQrSessionRow>(
     `UPDATE finance_qr_sessions
      SET status = 'confirmed',
@@ -124,6 +140,7 @@ export async function confirmQrSession(
          receipt_number = COALESCE($4, receipt_number, $5),
          updated_at = timezone('utc', now())
      WHERE id = $1 AND organization_id = $2 AND school_id = $3
+       AND status = 'pending'
      RETURNING *`,
     [
       id,
@@ -133,5 +150,8 @@ export async function confirmQrSession(
       `QR-${id.slice(0, 8).toUpperCase()}`,
     ],
   );
+  if (rows.length === 0) {
+    throw new QrSessionNotConfirmableError(id);
+  }
   return rows[0]!;
 }

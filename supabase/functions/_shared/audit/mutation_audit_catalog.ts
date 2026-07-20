@@ -378,6 +378,54 @@ export const financeAudit = {
       idempotencyKey: `finance.fee_assignment.cancelled:${assignmentId}`,
     },
   }),
+  // PRC-A gap fix — a bulk/class-wide fee-structure assignment ran (summary of
+  // how many assigned vs skipped-as-duplicate). Mirrors lateFeesAccrued's batch
+  // shape: there is no single entity id for "assigned N students", so
+  // schoolId + feeStructureId + a call-scoped nonce keys idempotency instead.
+  feeAssignmentBulkAssigned: (
+    schoolId: string,
+    feeStructureId: string,
+    assignedCount: number,
+    skippedCount: number,
+    nonce: string,
+  ): MutationAuditSpec => ({
+    ...workflow("financeFeeAssignmentBulkAssigned", "finance_school", schoolId, {
+      schoolId,
+      feeStructureId,
+      assignedCount,
+      skippedCount,
+    }),
+    domain: {
+      eventType: "finance.fee_assignment.bulk_assigned",
+      payload: { schoolId, feeStructureId, assignedCount, skippedCount },
+      sourceModule: "finance",
+      idempotencyKey:
+        `finance.fee_assignment.bulk_assigned:${schoolId}:${feeStructureId}:${nonce}`,
+    },
+  }),
+  // Cap 73 (owner decision #5) — an authorized user overrode the school's
+  // configured mid-year admission proration policy for ONE assignment.
+  // `emitMutationAudit`'s underlying audit row already stamps actor
+  // (claims.sub) + timestamp; `policy` + `reason` travel in the metadata/
+  // payload so the override is independently queryable (distinct eventType)
+  // rather than folded into the generic "assignment created" event.
+  feeProrationOverridden: (
+    assignmentId: string,
+    policy: string,
+    reason: string,
+  ): MutationAuditSpec => ({
+    ...workflow("feeProrationOverridden", "fee_assignment", assignmentId, {
+      assignmentId,
+      policy,
+      reason,
+    }),
+    domain: {
+      eventType: "finance.fee_assignment.proration_overridden",
+      payload: { assignmentId, policy, reason },
+      sourceModule: "finance",
+      idempotencyKey: `finance.fee_assignment.proration_overridden:${assignmentId}`,
+    },
+  }),
   // FIN-D3: cancellation now carries the mandatory reason for the register/trail.
   collectionCancelled: (collectionId: string, reason = ""): MutationAuditSpec => ({
     ...workflow("collectionCancelled", "finance_collection", collectionId, {
@@ -727,6 +775,47 @@ export const sisAudit = {
       payload: { issueId, studentId, serial },
       sourceModule: "sis",
       idempotencyKey: `sis.transfer_certificate.issued:${serial}`,
+    },
+  }),
+};
+
+// ─── SCE-1 clearance dues-waivers (maker-checker) ────────────────────────────
+
+export const clearanceWaiverAudit = {
+  requested: (
+    waiverId: string,
+    studentId: string,
+    lifecycle: string,
+    amount: number,
+  ): MutationAuditSpec => ({
+    ...workflow("clearanceWaiverRequested", "student_clearance_waiver", waiverId, {
+      waiverId,
+      studentId,
+      lifecycle,
+      amount,
+    }),
+    domain: {
+      eventType: "clearance.waiver.requested",
+      payload: { waiverId, studentId, lifecycle, amount },
+      sourceModule: "sis",
+      idempotencyKey: `clearance.waiver.requested:${waiverId}`,
+    },
+  }),
+  decided: (
+    waiverId: string,
+    checkerId: string,
+    status: string,
+  ): MutationAuditSpec => ({
+    ...workflow("clearanceWaiverDecided", "student_clearance_waiver", waiverId, {
+      waiverId,
+      checkerId,
+      status,
+    }),
+    domain: {
+      eventType: "clearance.waiver.decided",
+      payload: { waiverId, checkerId, status },
+      sourceModule: "sis",
+      idempotencyKey: `clearance.waiver.decided:${waiverId}`,
     },
   }),
 };
@@ -1897,6 +1986,50 @@ export const staffAttendanceAudit = {
       payload: { requestId, approverId, status },
       sourceModule: "staff_attendance",
       idempotencyKey: `staff_attendance.manual_request.decided:${requestId}:${status}`,
+    },
+  }),
+};
+
+// ─── P1-PROD-22 SLICE 1 — Staff Face ID enrollment backend ───────────────────
+//
+// Distinct from staffAttendanceAudit.faceEnrolled (the original self-only B4
+// enrol-face path): this backs the governed /attendance-auth/face/* routes,
+// which additionally allow an HR-managed enrollment/revocation of ANOTHER
+// user's reference face — so every event carries both the enrollment's OWNER
+// (userId) and the ACTING user (actorUserId), which are the same value on a
+// self-service call and differ only on a manageHr-gated call.
+
+export const attendanceAuthAudit = {
+  faceEnrolled: (
+    enrollmentId: string,
+    userId: string,
+    actorUserId: string,
+  ): MutationAuditSpec => ({
+    ...workflow("attendanceAuthFaceEnrolled", "staff_face_enrollment", enrollmentId, {
+      userId,
+      actorUserId,
+    }),
+    domain: {
+      eventType: "attendance_auth.face.enrolled",
+      payload: { enrollmentId, userId, actorUserId },
+      sourceModule: "attendance_auth",
+      idempotencyKey: `attendance_auth.face.enrolled:${enrollmentId}`,
+    },
+  }),
+  faceRevoked: (
+    enrollmentId: string,
+    userId: string,
+    actorUserId: string,
+  ): MutationAuditSpec => ({
+    ...workflow("attendanceAuthFaceRevoked", "staff_face_enrollment", enrollmentId, {
+      userId,
+      actorUserId,
+    }),
+    domain: {
+      eventType: "attendance_auth.face.revoked",
+      payload: { enrollmentId, userId, actorUserId },
+      sourceModule: "attendance_auth",
+      idempotencyKey: `attendance_auth.face.revoked:${enrollmentId}`,
     },
   }),
 };

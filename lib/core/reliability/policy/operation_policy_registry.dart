@@ -50,12 +50,14 @@ class OperationPolicyRegistry {
         kind: OperationKind.queueable,
         conflictCategory: ConflictCategory.lowRisk,
       ),
-      // Staff biometric check-in/out (O5): single-owner, append-only — queue +
-      // last-write-wins so a check-in made on poor connectivity is never lost.
-      OperationTypes.markStaffAttendance: const OperationPolicy(
-        kind: OperationKind.queueable,
-        conflictCategory: ConflictCategory.lowRisk,
-      ),
+      // Staff GPS+face check-in/out (attendance-auth, audit R1): ALWAYS online.
+      // The server enforces a per-event location-freshness window, so a queued
+      // check-in drained later is GUARANTEED-stale — an offline optimistic
+      // "recorded" would be a lie. Per the FINAL design
+      // (docs/ATTENDANCE_AUTH_DESIGN_DECISION.md §4): a fresh fix per event;
+      // the only offline path is the audited manual attendance request.
+      OperationTypes.markStaffAttendance:
+          const OperationPolicy(kind: OperationKind.onlineOnly),
       // High-risk record-of-truth — queue but require explicit conflict
       // resolution and never finalise (e.g. a receipt) until confirmed (R1/R2).
       OperationTypes.collectFee: const OperationPolicy(

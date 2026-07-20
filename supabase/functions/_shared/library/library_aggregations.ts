@@ -342,7 +342,8 @@ export function computeFines(
     // be waived or left outstanding today. The previous copy told the librarian a
     // Finance sync existed. A real cash-collection/posting path is future work.
     financeIntegrationNote:
-      "Library fines are tracked here only. Finance posting is not yet enabled — a fine can be waived or left outstanding.",
+      "Library fines are tracked in the Library module and are NOT posted to the Finance ledger. " +
+      "Where a fine is matched to a registered student, collect it manually via the FN-02 library_fine fee head.",
     financeRoute: "/finance/fee-structures",
     totalPending: rupees(totalPending),
   };

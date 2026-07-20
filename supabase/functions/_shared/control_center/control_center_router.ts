@@ -23,6 +23,7 @@ import {
   handleSetFeatureEnablement,
   handleUpsertPlatformProvider,
 } from "./platform_providers_handlers.ts";
+import { handleReencryptVaultSecrets } from "../vault/vault_reencrypt.ts";
 import {
   handleCreateLead,
   handleCreateSchool,
@@ -55,6 +56,9 @@ function matchControlCenterRoute(
     "/control-center/providers": handleUpsertPlatformProvider,
     "/control-center/features": handleSetFeatureEnablement,
     "/control-center/vault/rotate": handleRotateVaultSecret,
+    // One-shot backfill: re-encrypts legacy Base64 (key_version=1) secrets under
+    // AES-256-GCM. Idempotent — safe to re-run; already-v2 rows are skipped.
+    "/control-center/vault/reencrypt": handleReencryptVaultSecrets,
     "/control-center/schools": handleCreateSchool,
     "/control-center/crm-pipeline": handleCreateLead,
   };

@@ -11,6 +11,8 @@ abstract final class FinanceApiPaths {
   static const String feeAssignments = '$base/fee-assignments';
   static const String studentAccounts = '$base/student-accounts';
   static const String feeAssignmentAssign = '$base/fee-assignment/assign';
+  // PRC-A gap fix — bulk/class-wide fee-structure assignment.
+  static const String feeAssignmentsBulk = '$feeAssignments/bulk';
   static const String receipts = '$base/receipts';
   static const String defaulters = '$base/defaulters';
   static const String refunds = '$base/refunds';
@@ -85,4 +87,18 @@ abstract final class FinanceApiPaths {
       '$recoveryContacts/$studentId';
   static String recoveryPromiseResolve(String promiseId) =>
       '$recoveryPromises/$promiseId/resolve';
+
+  // STEP-5 — fee reductions (scholarship awards + discount applications that
+  // actually reduce a student's payable, invoice-scoped, maker-checker gated).
+  static const String feeReductions = '$base/fee-reductions';
+  static const String feeReductionScholarshipAwards =
+      '$feeReductions/scholarship-awards';
+  static const String feeReductionDiscountApplications =
+      '$feeReductions/discount-applications';
+  static String feeReduction(String id) => '$feeReductions/$id';
+  static String feeReductionApprove(String id) =>
+      '${feeReduction(id)}/approve';
+  static String feeReductionReject(String id) => '${feeReduction(id)}/reject';
+  static String feeReductionReverse(String id) =>
+      '${feeReduction(id)}/reverse';
 }

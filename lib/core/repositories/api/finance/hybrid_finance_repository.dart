@@ -216,6 +216,80 @@ class HybridFinanceRepository implements FinanceRepository {
   }) =>
       _api.getDiscountsDashboard(query: query);
 
+  // ── STEP-5: fee reductions (scholarship awards + discount applications) ───
+  @override
+  Future<List<FeeReduction>> listFeeReductions({
+    required RepositoryQuery query,
+    FeeReductionStatus? status,
+    String? invoiceId,
+    String? studentId,
+    FeeReductionSourceKind? sourceKind,
+  }) =>
+      _api.listFeeReductions(
+        query: query,
+        status: status,
+        invoiceId: invoiceId,
+        studentId: studentId,
+        sourceKind: sourceKind,
+      );
+
+  @override
+  Future<FeeReduction> proposeScholarshipAward({
+    required RepositoryQuery query,
+    required String scholarshipId,
+    required String invoiceId,
+    required String reason,
+    double? percent,
+    double? amount,
+  }) =>
+      _api.proposeScholarshipAward(
+        query: query,
+        scholarshipId: scholarshipId,
+        invoiceId: invoiceId,
+        reason: reason,
+        percent: percent,
+        amount: amount,
+      );
+
+  @override
+  Future<FeeReduction> proposeDiscountApplication({
+    required RepositoryQuery query,
+    required String discountRuleId,
+    required String invoiceId,
+    required String reason,
+    double? percent,
+    double? amount,
+  }) =>
+      _api.proposeDiscountApplication(
+        query: query,
+        discountRuleId: discountRuleId,
+        invoiceId: invoiceId,
+        reason: reason,
+        percent: percent,
+        amount: amount,
+      );
+
+  @override
+  Future<FeeReduction> approveFeeReduction({
+    required RepositoryQuery query,
+    required String reductionId,
+  }) =>
+      _api.approveFeeReduction(query: query, reductionId: reductionId);
+
+  @override
+  Future<FeeReduction> rejectFeeReduction({
+    required RepositoryQuery query,
+    required String reductionId,
+  }) =>
+      _api.rejectFeeReduction(query: query, reductionId: reductionId);
+
+  @override
+  Future<FeeReduction> reverseFeeReduction({
+    required RepositoryQuery query,
+    required String reductionId,
+  }) =>
+      _api.reverseFeeReduction(query: query, reductionId: reductionId);
+
   @override
   Future<FinanceReportsData> getReportsData({
     required RepositoryQuery query,
@@ -279,6 +353,13 @@ class HybridFinanceRepository implements FinanceRepository {
     required AssignFeePlanRequest request,
   }) =>
       _api.assignFeePlan(query: query, request: request);
+
+  @override
+  Future<BulkFeeAssignmentResult> bulkAssignFeeStructure({
+    required RepositoryQuery query,
+    required BulkAssignFeePlanRequest request,
+  }) =>
+      _api.bulkAssignFeeStructure(query: query, request: request);
 
   @override
   Future<StudentFeeAccount> cancelFeeAssignment({

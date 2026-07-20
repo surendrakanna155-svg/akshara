@@ -103,6 +103,14 @@ const GENERIC_FACTORY_MODULES = new Set<string>([
   // PRA-P1-05 (S2): identity permission-override endpoints emit
   // moduleEntityAudit("identity.permission_override.*").
   "identity",
+  // PRC-A Batch 2 — all three emit via moduleEntityAudit()/emitMutationAudit
+  // inside the same transaction as the write they record.
+  "certificate_desk",
+  "gate_pass",
+  "complaints",
+  // PRC-A Batch 3 — the /ai-wallet/grant mutation audits via moduleEntityAudit
+  // ("aiWallet.credit_granted") inside the same tenant transaction as the insert.
+  "aiWallet",
 ]);
 
 /**
@@ -138,6 +146,14 @@ const AUDIT_EXEMPT_MODULES: Record<string, string> = {
   // dedicated `approval_audit_entries` ledger via `insertAuditEntry` — one row per
   // decision — rather than the mutation catalog. That ledger is the audit path.
   approvals: "dedicated approval_audit_entries ledger (insertAuditEntry per decision)",
+  // PRC-A Batch 2 / owner decision #1. Health deliberately does NOT use the
+  // mutation catalog: it has a dedicated immutable `student_health_access_log`
+  // (SELECT/INSERT grant only) written in the SAME transaction as the event it
+  // records. That is strictly STRONGER than the mutation catalog here, because
+  // the owner requirement is to audit sensitive READS too ("who looked at this
+  // child's health data") — which a mutation-only catalog cannot express.
+  student_health:
+    "dedicated immutable student_health_access_log (audits sensitive READS as well as writes)",
 };
 
 /** Named catalog groups, asserted non-empty so the import set cannot rot. */

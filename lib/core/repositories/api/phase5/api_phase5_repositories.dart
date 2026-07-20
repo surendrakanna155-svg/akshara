@@ -167,6 +167,7 @@ class ApiSchoolMemoriesRepository implements SchoolMemoriesRepository {
     String? albumId,
     String? albumTitle,
     String? mediaType,
+    int? sizeBytes,
   }) async {
     return _mapper.mapMemoryUploadPresign(
       await _remote.presignMemoryUpload(
@@ -177,6 +178,10 @@ class ApiSchoolMemoriesRepository implements SchoolMemoriesRepository {
           if (albumId != null) 'albumId': albumId,
           if (albumTitle != null) 'albumTitle': albumTitle,
           if (mediaType != null) 'mediaType': mediaType,
+          // PRC-A Batch 4 — declare the size at PRESIGN so the server storage-quota
+          // gate can reject an over-quota upload BEFORE the bytes are stored
+          // (blocking at confirm is too late). Same value used for confirm recording.
+          if (sizeBytes != null) 'sizeBytes': sizeBytes,
         },
       ),
     );
@@ -190,6 +195,7 @@ class ApiSchoolMemoriesRepository implements SchoolMemoriesRepository {
     required String storagePath,
     required String title,
     String? mediaType,
+    int? sizeBytes,
   }) async {
     return _mapper.mapMemoryUploadConfirm(
       await _remote.confirmMemoryUpload(
@@ -200,6 +206,7 @@ class ApiSchoolMemoriesRepository implements SchoolMemoriesRepository {
           'storagePath': storagePath,
           'title': title,
           if (mediaType != null) 'mediaType': mediaType,
+          if (sizeBytes != null) 'sizeBytes': sizeBytes,
         },
       ),
     );
@@ -243,6 +250,7 @@ class ApiSchoolMemoriesRepository implements SchoolMemoriesRepository {
       albumId: albumId,
       albumTitle: albumTitle,
       mediaType: mediaType,
+      sizeBytes: bytes.length,
     );
     final contentType = (mediaType ?? presign.mediaType) == 'video'
         ? 'video/mp4'
@@ -259,6 +267,7 @@ class ApiSchoolMemoriesRepository implements SchoolMemoriesRepository {
       storagePath: presign.path,
       title: title,
       mediaType: mediaType ?? presign.mediaType,
+      sizeBytes: bytes.length,
     );
   }
 }

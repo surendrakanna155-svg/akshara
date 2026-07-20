@@ -17,6 +17,10 @@ function structure(overrides: Partial<FinanceFeeStructureRow> = {}): FinanceFeeS
     name: "Standard CBSE",
     academic_year: "2026-27",
     academic_year_id: null,
+    // Cap 67 — real class/section binding on finance_fee_structures; null =
+    // unbound (this admissions-side fixture doesn't exercise binding).
+    class_id: null,
+    section_id: null,
     description: "Classes 1-5",
     status: "active",
     created_by: STAFF,

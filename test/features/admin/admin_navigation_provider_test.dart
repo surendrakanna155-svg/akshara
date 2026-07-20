@@ -41,6 +41,9 @@ void main() {
           RouteNames.financeDashboard,
           RouteNames.sisDashboard,
           RouteNames.examAdministration, // A5 — flagship Exams top-level entry
+          // P1 fix (PRC-A caps 58-65) — School Completion hub un-buried;
+          // previously reachable only by typing the URL.
+          RouteNames.schoolCompletionHub,
           RouteNames.hrDashboard,
           RouteNames.employees, // Employee Platform (Journey Wave 4 — MJ-H23)
           RouteNames.managementDashboard,
@@ -48,7 +51,7 @@ void main() {
           RouteNames.hostelDashboard,
           RouteNames.libraryDashboard,
           RouteNames.inventoryDashboard,
-          RouteNames.alumniDashboard,
+          // Alumni DEFERRED for pilot (CODE-8, 2026-07-13) — dropped from nav.
           RouteNames.controlCenterDashboard,
           RouteNames.directorDashboard,
         ],
@@ -61,6 +64,7 @@ void main() {
       expect(routes, isNot(contains(RouteNames.whiteLabel)));
       expect(routes, isNot(contains(RouteNames.organizationBuilder)));
       expect(routes, isNot(contains(RouteNames.dynamicWidgets)));
+      expect(routes, isNot(contains(RouteNames.alumniDashboard))); // CODE-8
     });
 
     test('financeAdmin sees finance and admin hub only', () {

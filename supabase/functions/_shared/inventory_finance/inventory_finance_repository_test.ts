@@ -7,6 +7,68 @@ import {
   receiveGoods,
 } from "./inventory_finance_repository.ts";
 
+// RT round-3 S1 — receiveGoods concurrent double-receipt guard. Minimal fake that
+// reaches the guarded terminal poLine UPDATE and forces it to match 0 rows (the
+// over-receipt / concurrent-winner case). The real predicate is
+// `AND quantity_received + $2 <= quantity`; here we simulate its 0-row result and
+// assert receiveGoods fails closed (throws) instead of stacking a second delta.
+class FakeReceiveDb {
+  poLineUpdateReturnsEmpty = true;
+  async queryObject<T>(sql: string, _args: unknown[] = []): Promise<T[]> {
+    if (sql.includes("FROM purchase_orders")) {
+      return [{
+        id: "po-1",
+        po_number: "PO-1",
+        vendor_id: "v-1",
+        status: "approved",
+        total_amount: 100,
+        currency: "INR",
+        created_at: "2026-07-08T00:00:00Z",
+        requested_by: "buyer-1",
+      }] as unknown as T[];
+    }
+    // getPurchaseOrder's lines SELECT (has description/line_total columns).
+    if (sql.includes("FROM purchase_order_lines") && sql.includes("line_total")) {
+      return [{
+        id: "pol-1",
+        sku: "SKU-1",
+        description: "Item",
+        quantity: 10,
+        unit_cost: 5,
+        line_total: 50,
+        quantity_received: 0,
+      }] as unknown as T[];
+    }
+    if (sql.includes("INSERT INTO goods_receipts")) {
+      return [{ id: "grn-1" }] as unknown as T[];
+    }
+    // receiveGoods' per-line SELECT (sku, quantity, quantity_received, unit_cost).
+    if (sql.includes("FROM purchase_order_lines") && sql.includes("quantity_received")) {
+      return [{ sku: "SKU-1", quantity: 10, quantity_received: 0, unit_cost: 5 }] as unknown as T[];
+    }
+    if (sql.includes("INSERT INTO goods_receipt_lines")) {
+      return [] as unknown as T[];
+    }
+    if (sql.includes("UPDATE purchase_order_lines")) {
+      // The guarded terminal write: 0 rows when the atomic over-receipt predicate fails.
+      return (this.poLineUpdateReturnsEmpty ? [] : [{ id: "pol-1" }]) as unknown as T[];
+    }
+    return [] as unknown as T[];
+  }
+}
+
+Deno.test("RT round-3 S1: receiveGoods fails closed when the atomic over-receipt guard matches 0 rows (no double-receipt)", async () => {
+  const fake = new FakeReceiveDb();
+  await assertRejects(
+    () =>
+      receiveGoods(fake as unknown as TenantQueryClient, "org-1", "school-1", "po-1", "receiver-1", [
+        { purchaseOrderLineId: "pol-1", quantityReceived: 10 },
+      ]),
+    Error,
+    "Over-receipt",
+  );
+});
+
 Deno.test("weighted average cost formula", () => {
   const oldQty = 10;
   const oldCost = 100;

@@ -22,7 +22,9 @@ class HybridAdaptiveAiRepository implements AdaptiveAiRepository {
   // real outage is distinguishable from "this persona has no items" in dev/CI/
   // profile logs (matches the sibling Hybrid repos' debugPrint convention).
   void _logFailure(String op, Object error, StackTrace stack) {
-    debugPrint('AdaptiveAI hybrid: $op failed, degrading soft: $error');
+    if (!kReleaseMode) {
+      debugPrint('AdaptiveAI hybrid: $op failed, degrading soft: $error');
+    }
     assert(() {
       debugPrintStack(stackTrace: stack, label: 'AdaptiveAI.$op');
       return true;
@@ -95,9 +97,10 @@ class HybridAdaptiveAiRepository implements AdaptiveAiRepository {
     required RepositoryQuery query,
     required String term,
     int? limit,
+    int? offset,
   }) async {
     try {
-      return await _api.universalSearch(query: query, term: term, limit: limit);
+      return await _api.universalSearch(query: query, term: term, limit: limit, offset: offset);
     } catch (error, stack) {
       _logFailure('universalSearch', error, stack);
       return UniversalSearchResult.empty(term);

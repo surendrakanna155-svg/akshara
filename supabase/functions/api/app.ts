@@ -20,6 +20,7 @@ import { routeSis } from "../_shared/sis/sis_router.ts";
 import { routeExamAdministration } from "../_shared/academics/exam_administration/exam_administration_router.ts";
 import { routeAttendance } from "../_shared/attendance/attendance_router.ts";
 import { routeStaffAttendance } from "../_shared/staff_attendance/staff_attendance_router.ts";
+import { routeAttendanceAuth } from "../_shared/attendance_auth/attendance_auth_router.ts";
 import { routeAcademic } from "../_shared/academic/academic_router.ts";
 import { routeTimetable } from "../_shared/timetable/timetable_router.ts";
 import { routeTransport } from "../_shared/transport/transport_router.ts";
@@ -41,8 +42,11 @@ import { routeCommunication } from "../_shared/communication/communication_route
 import { routePilotOperations } from "../_shared/pilot/pilot_operations_router.ts";
 import { routeOnboarding } from "../_shared/onboarding/onboarding_router.ts";
 import { routeCopilot } from "../_shared/copilot/copilot_router.ts";
+import { routeAiWallet } from "../_shared/ai/ai_wallet_router.ts";
+import { routeStorageQuota } from "../_shared/storage/storage_quota_router.ts";
 import { routeSearch } from "../_shared/search/search_router.ts";
 import { routeAnalytics } from "../_shared/analytics/analytics_router.ts";
+import { routeDashboard } from "../_shared/dashboard/dashboard_router.ts";
 import { routeEducation } from "../_shared/education/education_router.ts";
 import { routeIntelligence } from "../_shared/intelligence/intelligence_router.ts";
 import { routeEmployee } from "../_shared/employee/employee_router.ts";
@@ -64,6 +68,12 @@ import { routeDirector } from "../_shared/director/director_router.ts";
 import { routePredictions } from "../_shared/predictions/predictions_router.ts";
 import { routeOrganizationBuilder } from "../_shared/organization_builder/organization_builder_router.ts";
 import { routeLegal } from "../_shared/legal/legal_router.ts";
+// --- PRC-A Batch 2: request-desk / gate-pass / complaints / health ---
+import { routeCertificateDesk } from "../_shared/certificate_desk/certificate_desk_router.ts";
+import { routeGatePass } from "../_shared/gate_pass/gate_pass_router.ts";
+import { routeComplaints } from "../_shared/complaints/complaints_router.ts";
+import { routeStudentHealth } from "../_shared/student_health/student_health_router.ts";
+// --- end PRC-A Batch 2 ---
 // --- B1 school-config (AgentE) ---
 import { routeSchoolConfig } from "../_shared/school_config/school_config_router.ts";
 // --- end B1 school-config (AgentE) ---
@@ -97,9 +107,23 @@ export async function routeModuleRequest(
     routeAdmissions,
     routeFinance,
     routeSis,
+    // --- PRC-A Batch 2 (caps 101–127, 136–148) ---
+    // Deliberately NOT wrapped in withEntitlement: these are core school
+    // operations (issuing a certificate, releasing a child at the gate,
+    // recording an infirmary visit, raising a complaint), not upsell modules.
+    // Gating them behind a plan would make a safety/records capability
+    // purchasable, which is not a decision to make implicitly here.
+    routeCertificateDesk,
+    routeGatePass,
+    routeComplaints,
+    // `/student-health`, not `/health` — the system health/readiness endpoints
+    // are matched earlier in handleRequest and must never be shadowed.
+    routeStudentHealth,
+    // --- end PRC-A Batch 2 ---
     routeExamAdministration,
     routeAttendance,
     routeStaffAttendance,
+    routeAttendanceAuth,
     routeAcademic,
     routeTimetable,
     // --- B2: optional modules gated by plan entitlement (402 PLAN_UPGRADE_REQUIRED) ---
@@ -149,9 +173,20 @@ export async function routeModuleRequest(
     routeEntitlements,
     // --- end B2 entitlement layer ---
     routeAnalytics,
+    // WEB-001: school-admin dashboard overview (core, no entitlement).
+    routeDashboard,
     routeEducation,
     routeIntelligence,
     routeCopilot,
+    // PRC-A Batch 3 (caps 37–43) — AI credit wallet. NOT withEntitlement-wrapped:
+    // the wallet IS the commercial metering for AI usage, so gating it behind a
+    // plan entitlement would be circular. Read (viewAiWallet) is org-level; grant
+    // (manageAiCredits) is platform-only — both enforced in the handlers.
+    routeAiWallet,
+    // PRC-A Batch 4 (caps 31-36) - storage quota (read-only usage + plan limit).
+    // Not withEntitlement-wrapped: knowing your storage usage is not itself a plan
+    // feature. Enforcement lives at the upload presign points, dark by default.
+    routeStorageQuota,
     // W2.S — Universal School Search (deterministic, RBAC-scoped entity resolver).
     routeSearch,
     routeCommunication,

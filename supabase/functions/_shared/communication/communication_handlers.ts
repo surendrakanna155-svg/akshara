@@ -20,6 +20,7 @@ import {
   createNotificationTemplate,
   deleteAudienceSegmentEntry,
   getBroadcastReport,
+  getChannelPolicyForSchool,
   listAudienceSegmentEntries,
   listBroadcastHistoryEntries,
   listNotificationTemplates,
@@ -32,6 +33,7 @@ import {
   sendBroadcastMessage,
   sendDirectMessage,
   updateNotificationTemplate,
+  upsertChannelPolicyForSchool,
 } from "./communication_service.ts";
 import {
   BroadcastNotFoundError,
@@ -807,6 +809,81 @@ export async function handleProcessNotificationQueue(
       return tenantDbNotConfiguredResponse(error);
     }
     return errorEnvelope("INTERNAL_ERROR", "Failed to process queue", 500);
+  }
+}
+
+/**
+ * Batch 6: GET /communications/channel-policy — read the caller's school channel
+ * escalation policy (falls back to a not-configured shape). Gated by
+ * `manageCommunications` (same admin gate as template management + the queue
+ * processor).
+ */
+export async function handleGetChannelPolicy(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requirePermission(auth.claims, "manageCommunications");
+  if (denied) return denied;
+
+  try {
+    const policy = await withTenantContext(config, auth.claims, async (db) =>
+      await getChannelPolicyForSchool(db, auth.claims)
+    );
+    return jsonResponse(envelope(policy));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    if (error instanceof CommunicationValidationError) {
+      return errorEnvelope("VALIDATION_ERROR", error.message, 422);
+    }
+    return errorEnvelope("INTERNAL_ERROR", "Failed to load channel policy", 500);
+  }
+}
+
+/**
+ * Batch 6: PUT /communications/channel-policy — create/replace the caller's
+ * school channel escalation policy. Gated by `manageCommunications`. An invalid
+ * chain (unknown/duplicate channel, empty) → 422.
+ */
+export async function handleUpsertChannelPolicy(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requirePermission(auth.claims, "manageCommunications");
+  if (denied) return denied;
+
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) {
+    return errorEnvelope("VALIDATION_ERROR", "Invalid JSON body", 422);
+  }
+  const isActiveRaw = body["is_active"] ?? body["isActive"];
+
+  try {
+    const policy = await withTenantContext(config, auth.claims, async (db) =>
+      await upsertChannelPolicyForSchool(
+        db,
+        auth.claims,
+        {
+          escalationChain: body["escalation_chain"] ?? body["escalationChain"],
+          isActive: typeof isActiveRaw === "boolean" ? isActiveRaw : undefined,
+        },
+        req,
+      )
+    );
+    return jsonResponse(envelope(policy));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    if (error instanceof CommunicationValidationError) {
+      return errorEnvelope("VALIDATION_ERROR", error.message, 422);
+    }
+    return errorEnvelope("INTERNAL_ERROR", "Failed to save channel policy", 500);
   }
 }
 

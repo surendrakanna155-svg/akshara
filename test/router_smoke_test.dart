@@ -81,6 +81,47 @@ void main() {
       expect(find.byType(LoginScreen), findsOneWidget);
     });
 
+    testWidgets(
+        'audit R3: staff Face ID capture/enrolment routes are guarded — a '
+        'parent deep-linking by URL is bounced to their dashboard, an '
+        'unauthenticated user to login', (tester) async {
+      // Parent: authenticated but not staff — same wall as the HR attendance
+      // screen these routes are pushed from (canAccessAdminErpShell).
+      final parentRouter = createAppRouter(readAuth: () => _parentAuth);
+      await pumpAksharaRouter(
+        tester,
+        router: parentRouter,
+        authOverride: _parentAuth,
+      );
+      for (final route in [
+        RouteNames.staffFaceEnrollment,
+        RouteNames.staffFaceCapture,
+      ]) {
+        parentRouter.go(route);
+        await tester.pumpAndSettle();
+        expect(
+          parentRouter.routeInformationProvider.value.uri.path,
+          RouteNames.parentDashboard,
+          reason: '$route must not render staff-only capture UI for a parent',
+        );
+      }
+    });
+
+    testWidgets(
+        'audit R3: unauthenticated users cannot reach the staff Face ID routes',
+        (tester) async {
+      final router = createAppRouter(
+        readAuth: () => const AuthState(status: AuthStatus.unauthenticated),
+      );
+      await pumpAksharaRouter(tester, router: router);
+      router.go(RouteNames.staffFaceEnrollment);
+      await tester.pumpAndSettle();
+      expect(
+        router.routeInformationProvider.value.uri.path,
+        RouteNames.login,
+      );
+    });
+
     testWidgets('allows authenticated teacher to reach teacher module routes', (
       tester,
     ) async {
@@ -246,9 +287,9 @@ void main() {
         (RouteNames.hostelStudents, 'Hostel residents'),
         (RouteNames.hostelRooms, 'Room catalog'),
         (RouteNames.hostelAttendance, 'Hostel attendance roster'),
-        (RouteNames.hostelLeave, 'Leave requests'),
+        // hostelLeave + hostelVisitors are CODE-7 residence-lite deferrals
+        // (SchoolBuildScope-hidden) — reachable-smoke set omits them.
         (RouteNames.hostelMess, 'Weekly menu'),
-        (RouteNames.hostelVisitors, 'Active visitors'),
         (RouteNames.hostelReports, 'Report catalog'),
         (RouteNames.libraryDashboard, 'Total Books'),
         (RouteNames.libraryCatalog, 'Book catalog'),
@@ -266,15 +307,8 @@ void main() {
         (RouteNames.inventoryProcurement, 'Purchase orders'),
         (RouteNames.inventoryVendors, 'Vendor directory'),
         (RouteNames.inventoryReports, 'Report catalog'),
-        (RouteNames.alumniDashboard, 'Total Alumni'),
-        (RouteNames.alumniRegistry, 'Alumni registry'),
-        (RouteNames.alumniProfileDetail('ALM-001'), 'Arjun Patel'),
-        (RouteNames.alumniEvents, 'Event calendar'),
-        (RouteNames.alumniDonations, 'Donation ledger'),
-        (RouteNames.alumniCampaigns, 'Fundraising campaigns'),
-        (RouteNames.alumniMentorship, 'Mentorship pairs'),
-        (RouteNames.alumniReports, 'Report catalog'),
-        (RouteNames.alumniSettings, 'Alumni settings'),
+        // Alumni is a CODE-8 pilot deferral (whole /alumni/* surface
+        // SchoolBuildScope-hidden) — omitted from the reachable-smoke set.
         (RouteNames.controlCenterDashboard, 'Total Schools'),
         (RouteNames.controlCenterSchools, 'Schools registry'),
         (RouteNames.controlCenterSubscriptions, 'Subscription plans'),

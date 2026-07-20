@@ -20,15 +20,33 @@ import '../staff_attendance_models.dart';
 /// manual-attendance fallback — a "Request manual attendance" action for every
 /// staff member, plus an "Approve manual requests" entry gated on the approver
 /// permission ([canApproveManualAttendanceProvider]).
+///
+/// [onOpenEnrollment] (Slice 3), when provided, surfaces a settings-style entry
+/// point to `FaceEnrollmentScreen` at all times, PLUS a prominent "Enrol my
+/// face" call-to-action when the last outcome was specifically a
+/// `FACE_NOT_ENROLLED` rejection ([StaffCheckOutcome.isNotEnrolled]).
+///
+/// [onManualRequest] (Slice 4), when provided, surfaces the design-sanctioned
+/// fallback — "Request manual attendance" — whenever the chain could NOT
+/// complete (location-blocked / face-blocked / failed). Never on a recorded
+/// success. The host opens the submission flow with the attempted event.
+///
+/// W0.2b union: the widget is a ConsumerStatefulWidget (the state reads Riverpod
+/// providers), carrying BOTH the PRA-P0-15 manual-fallback/approver-queue
+/// callbacks and the DRP face-enrollment/manual-request callbacks.
 class StaffCheckInCard extends ConsumerStatefulWidget {
   const StaffCheckInCard({
     super.key,
     required this.onRecord,
     this.onRequestManual,
     this.onOpenApproverQueue,
+    this.onOpenEnrollment,
+    this.onManualRequest,
   });
 
   final Future<StaffCheckOutcome> Function(StaffCheckEvent event) onRecord;
+  final VoidCallback? onOpenEnrollment;
+  final void Function(StaffCheckEvent? attempted)? onManualRequest;
 
   /// Overrides navigation to the manual-request screen (used in tests). When
   /// null the card pushes [RouteNames.hrStaffManualRequest].
@@ -94,7 +112,19 @@ class _StaffCheckInCardState extends ConsumerState<StaffCheckInCard> {
               children: [
                 const Icon(Icons.location_on),
                 const SizedBox(width: 8),
-                Text('My attendance', style: theme.textTheme.titleMedium),
+                Expanded(
+                  child: Text('My attendance', style: theme.textTheme.titleMedium),
+                ),
+                // Slice 3 — always-available settings-style entry point to
+                // manage the enrolled reference face (separate from the
+                // FACE_NOT_ENROLLED call-to-action below).
+                if (widget.onOpenEnrollment != null)
+                  IconButton(
+                    key: const Key('staff-attendance-manage-face-button'),
+                    tooltip: 'Manage face enrollment',
+                    icon: const Icon(Icons.settings_outlined),
+                    onPressed: widget.onOpenEnrollment,
+                  ),
               ],
             ),
             const SizedBox(height: 4),
@@ -140,6 +170,36 @@ class _StaffCheckInCardState extends ConsumerState<StaffCheckInCard> {
             if (_last != null) ...[
               const SizedBox(height: 12),
               _StatusBanner(outcome: _last!, event: _lastEvent),
+              // Slice 3 — the server rejected check-in specifically because
+              // this staff member has no enrolled reference face yet. Offer
+              // the fix inline rather than leaving them stuck on a banner.
+              if (_last!.isNotEnrolled && widget.onOpenEnrollment != null) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FilledButton.tonalIcon(
+                    key: const Key('staff-check-in-enrol-now-button'),
+                    onPressed: widget.onOpenEnrollment,
+                    icon: const Icon(Icons.face_retouching_natural),
+                    label: const Text('Enrol my face'),
+                  ),
+                ),
+              ],
+              // Slice 4 — the chain could not complete: offer the audited
+              // manual-request fallback (design §3's ONLY sanctioned bypass).
+              if (_last!.status != StaffCheckStatus.recorded &&
+                  widget.onManualRequest != null) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    key: const Key('manual-request-cta'),
+                    onPressed: () => widget.onManualRequest!(_lastEvent),
+                    icon: const Icon(Icons.edit_calendar_outlined),
+                    label: const Text('Request manual attendance'),
+                  ),
+                ),
+              ],
             ],
             const Divider(height: 24),
             // PRA-P0-15 — audited fallback when device capture is unavailable.
@@ -183,9 +243,9 @@ class _StatusBanner extends StatelessWidget {
           scheme.secondaryContainer,
           scheme.onSecondaryContainer,
           Icons.check_circle,
-          outcome.record?.pendingSync == true
-              ? '${event?.label ?? 'Attendance'} queued — will sync when online.'
-              : '${event?.label ?? 'Attendance'} recorded.',
+          // Check-in is online-only (audit R1) — a recorded outcome is always
+          // a confirmed server write; there is no queued/pending state.
+          '${event?.label ?? 'Attendance'} recorded.',
         ),
       StaffCheckStatus.locationBlocked => (
           scheme.tertiaryContainer,

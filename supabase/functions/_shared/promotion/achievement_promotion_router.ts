@@ -8,6 +8,11 @@ import {
   handlePublishPromotion,
   handleTrackPromotion,
 } from "./achievement_promotion_handlers.ts";
+import {
+  handleGetBrandProfile,
+  handlePosterPreview,
+  handleUpsertBrandProfile,
+} from "./brand_profile_handlers.ts";
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -25,6 +30,18 @@ export async function routePromotion(
   }
   if (path === "/promotions" && method === "POST") {
     return await handleCreatePromotion(req, config);
+  }
+
+  // Batch 10 — marketing internal (owner #4): brand profile + poster preview.
+  // Registered BEFORE the UUID :id match so these named segments aren't shadowed.
+  if (path === "/promotions/brand-profile" && method === "GET") {
+    return await handleGetBrandProfile(req, config);
+  }
+  if (path === "/promotions/brand-profile" && method === "PUT") {
+    return await handleUpsertBrandProfile(req, config);
+  }
+  if (path === "/promotions/poster/preview" && method === "POST") {
+    return await handlePosterPreview(req, config);
   }
 
   const match = path.match(/^\/promotions\/([^/]+)(?:\/(generate|approve|publish|track))?$/);

@@ -394,8 +394,14 @@ async function applyProcessedRefund(
     [newCollectionStatus, collection.id, organizationId, schoolId],
   );
 
-  // The refund row was already transitioned pending→processed at the top of this
-  // function (PRA-P0-03 claim-first), so no second status write is needed here.
+  // The refund row was already claimed (pending→processed) at the TOP of this
+  // function with an `AND refund_status='pending'` guard + throw-on-0-rows
+  // (PRA-P0-03 claim-first), so the money-moves-exactly-once property is already
+  // enforced there and no second terminal status write is needed. (W0.2b: the DRP
+  // P5/RT-1 variant guarded at the terminal write instead; both achieve the same
+  // invariant — we keep the claim-first structure that the merged top-of-function
+  // uses, since a second guarded UPDATE here would see the already-'processed' row,
+  // match 0 rows, and throw erroneously.)
   return (await getRefund(db, organizationId, schoolId, refund.id))!;
 }
 
@@ -479,13 +485,22 @@ export async function rejectRefund(
     );
   }
 
-  await db.queryObject(
+  const rejectedRows = await db.queryObject<FinanceRefundRow>(
     `UPDATE finance_refunds SET
       refund_status = 'rejected',
       updated_at = timezone('utc', now())
-     WHERE id = $1 AND organization_id = $2 AND school_id = $3`,
+     WHERE id = $1 AND organization_id = $2 AND school_id = $3
+       AND refund_status = 'pending'
+     RETURNING id`,
     [refundId, organizationId, schoolId],
   );
+  if (rejectedRows.length === 0) {
+    // A concurrent approval/rejection already moved this refund out of pending;
+    // never reject an already-processed refund (its money was moved) — fail closed.
+    throw new InvalidRefundTransitionError(
+      `Cannot reject refund in status: ${refund.refund_status} (concurrent transition)`,
+    );
+  }
 
   return (await getRefund(db, organizationId, schoolId, refundId))!;
 }

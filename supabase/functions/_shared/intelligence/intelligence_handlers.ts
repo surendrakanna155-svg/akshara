@@ -33,6 +33,10 @@ import {
 import { buildTeacherSuccessCenter } from "./teacher_success_service.ts";
 import { buildPrincipalIntelligenceCenter } from "./principal_intelligence_service.ts";
 import { executePrincipalQuery } from "./principal_query_service.ts";
+// WEB-006 (ERP-WT-006): second-mount the EXISTING AI economics service (also at
+// /copilot/economics) under /intelligence, plus a governance/trust lens derived
+// purely from the same aggregate — no new query, no new telemetry.
+import { computeAiTrust, getAiEconomics } from "../ai/ai_economics_service.ts";
 import type {
   CommunicationScenario,
   GuidanceMode,
@@ -46,6 +50,13 @@ function requireRiskRead(claims: Parameters<typeof requirePermission>[0]): Respo
 
 function requireIntelligenceWrite(claims: Parameters<typeof requirePermission>[0]): Response | null {
   return requirePermission(claims, "generateIntelligence") ??
+    requireSchoolOperationalScope(claims);
+}
+
+// WEB-006: the AI economics/trust dashboards read behind either the copilot-view
+// slug (matching the existing /copilot/economics gate) or the analytics slug.
+function requireAiInsightRead(claims: Parameters<typeof requirePermission>[0]): Response | null {
+  return requireAnyPermission(claims, ["viewAiCopilot", "viewAnalytics"]) ??
     requireSchoolOperationalScope(claims);
 }
 
@@ -432,6 +443,59 @@ export async function handlePrincipalIntelligenceCenter(
       buildPrincipalIntelligenceCenter(db, orgId, schoolId, period)
     );
     return jsonResponse(envelope(principalCenterToApi(center)));
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+// ─── WEB-006: AI economics + trust dashboards ────────────────────────────────
+
+/**
+ * GET /intelligence/ai-economics — month-to-date AI spend / tokens / cache
+ * economics. Second mount of the same certified service behind /copilot/economics.
+ */
+export async function handleAiEconomicsDashboard(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireAiInsightRead(auth.claims);
+  if (denied) return denied;
+
+  try {
+    const economics = await runTenant(config, auth.claims, (db) =>
+      getAiEconomics(db, {
+        organizationId: organizationIdFromClaims(auth.claims),
+        schoolId: schoolIdFromClaims(auth.claims)!,
+      }));
+    return jsonResponse(envelope(economics));
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+/**
+ * GET /intelligence/trust — AI governance / trust lens (deterministic-first
+ * ratio, guardrail/rate/spend-cap/no-key fallbacks, cache reuse) derived purely
+ * from the same economics aggregate. Honest zeros when there's no AI activity.
+ */
+export async function handleAiTrustDashboard(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireAiInsightRead(auth.claims);
+  if (denied) return denied;
+
+  try {
+    const trust = await runTenant(config, auth.claims, async (db) =>
+      computeAiTrust(await getAiEconomics(db, {
+        organizationId: organizationIdFromClaims(auth.claims),
+        schoolId: schoolIdFromClaims(auth.claims)!,
+      })));
+    return jsonResponse(envelope(trust));
   } catch (error) {
     return handleError(error);
   }

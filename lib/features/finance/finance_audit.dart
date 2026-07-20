@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/audit/audit_event.dart';
 import '../../core/audit/audit_provider.dart';
 import '../../core/errors/api_failure.dart';
+import '../../core/security/permissions.dart';
 import '../../core/security/rbac_service.dart';
 import '../../core/tenant/tenant_provider.dart';
 import '../../features/auth/auth_provider.dart';
@@ -50,6 +51,23 @@ void assertApproveRefunds(Ref ref) {
         type: ApiFailureType.forbidden,
         message: 'You do not have permission to approve refunds.',
         code: 'RBAC_APPROVE_REFUNDS',
+      ),
+    );
+  }
+}
+
+/// STEP-5 — the checker permission for fee reductions (scholarship awards /
+/// discount applications). Reuses [Permission.approveFeeConcession] — the
+/// SAME approval permission the Approval Center uses for the sibling
+/// fee-concession type — and mirrors the backend's `requireReductionApproval`
+/// (finance_fee_reductions_handlers.ts).
+void assertApproveFeeConcession(Ref ref) {
+  if (!ref.read(rbacServiceProvider).hasPermission(Permission.approveFeeConcession)) {
+    throw ApiFailureException(
+      const ApiFailure(
+        type: ApiFailureType.forbidden,
+        message: 'You do not have permission to approve fee reductions.',
+        code: 'RBAC_APPROVE_FEE_CONCESSION',
       ),
     );
   }

@@ -6,6 +6,7 @@ import '../dto/finance_dashboard_dto.dart';
 import '../dto/finance_defaulters_dto.dart';
 import '../dto/finance_discounts_dto.dart';
 import '../dto/finance_enum_codec.dart';
+import '../dto/finance_fee_reductions_dto.dart';
 import '../dto/finance_fee_structures_dto.dart';
 import '../dto/finance_invoices_dto.dart';
 import '../dto/offline_payment_dto.dart';
@@ -329,6 +330,36 @@ class FinanceMapper {
       categories: _mapFeeCategories(
         raw['categories'] as List<dynamic>? ?? const [],
       ),
+      // Cap 67 — real class/section binding; null = unbound.
+      classId: raw['classId'] as String? ?? raw['class_id'] as String?,
+      className: raw['className'] as String? ?? raw['class_name'] as String?,
+      sectionId: raw['sectionId'] as String? ?? raw['section_id'] as String?,
+      sectionName:
+          raw['sectionName'] as String? ?? raw['section_name'] as String?,
+    );
+  }
+
+  /// Cap 73 — parses the nested `proration` object every assignment response
+  /// now carries (see finance_mapper.ts `prorationToApi`). Returns null when
+  /// the field is absent entirely (older/unrelated payload shapes), never on
+  /// a merely-incomplete one — a freshly-created assignment always has this.
+  FeeProrationInfo? _mapProration(Map<String, dynamic> raw) {
+    final prorationRaw = raw['proration'];
+    if (prorationRaw is! Map<String, dynamic>) return null;
+    return FeeProrationInfo(
+      policy: FeeProrationPolicy.fromApiValue(
+        prorationRaw['policy'] as String?,
+      ),
+      basis: prorationRaw['basis'] as String? ?? 'month',
+      totalMonths: prorationRaw['totalMonths'] as int?,
+      monthsCharged: prorationRaw['monthsCharged'] as int?,
+      referenceDate: prorationRaw['referenceDate'] as String?,
+      annualAmount: prorationRaw['annualAmount'] as String?,
+      chargedAmount: prorationRaw['chargedAmount'] as String?,
+      isOverride: prorationRaw['isOverride'] as bool? ?? false,
+      fallbackReason: prorationRaw['fallbackReason'] as String?,
+      overrideReason: prorationRaw['overrideReason'] as String?,
+      overriddenBy: prorationRaw['overriddenBy'] as String?,
     );
   }
 
@@ -360,6 +391,40 @@ class FinanceMapper {
       // which operates on the assignment id, not the account id.
       feeAssignmentId: raw['feeAssignmentId'] as String? ??
           raw['fee_assignment_id'] as String?,
+      // Cap 73 — which mid-year admission proration policy applied.
+      proration: _mapProration(raw),
+    );
+  }
+
+  /// PRC-A gap fix — maps the `POST /finance/fee-assignments/bulk` report.
+  /// Each `assigned` entry is the exact same [StudentFeeAccountDto] shape the
+  /// single-assign flow returns (real name/admission/class come straight from
+  /// the server — no client-side correlation needed); `skipped` carries the
+  /// raw studentId + reason (a "why" only, not a resolvable display record).
+  BulkFeeAssignmentResult toBulkFeeAssignmentResult(
+    BulkFeeAssignmentResultDto dto,
+  ) {
+    final raw = dto.raw;
+    final assignedRaw = raw['assigned'] as List<dynamic>? ?? const [];
+    final skippedRaw = raw['skipped'] as List<dynamic>? ?? const [];
+    final assigned = [
+      for (final item in assignedRaw)
+        toStudentAccount(
+          StudentFeeAccountDto.fromJson(item as Map<String, dynamic>),
+        ),
+    ];
+    final skipped = [
+      for (final item in skippedRaw)
+        BulkFeeAssignmentSkip(
+          studentId:
+              (item as Map<String, dynamic>)['studentId'] as String? ?? '',
+          reason: item['reason'] as String? ?? '',
+        ),
+    ];
+    return BulkFeeAssignmentResult(
+      assigned: assigned,
+      skipped: skipped,
+      total: raw['total'] as int? ?? assigned.length + skipped.length,
     );
   }
 
@@ -504,6 +569,43 @@ class FinanceMapper {
       originalReceipt: raw['originalReceipt'] as String? ?? '',
       collectionId: raw['collectionId'] as String? ?? '',
       invoiceId: raw['invoiceId'] as String? ?? '',
+    );
+  }
+
+  // STEP-5 — fee reductions (scholarship awards + discount applications).
+  List<FeeReduction> toFeeReductions(FeeReductionsResponseDto dto) {
+    return [for (final item in dto.items) toFeeReduction(item)];
+  }
+
+  FeeReduction toFeeReduction(FeeReductionDto dto) {
+    final raw = dto.raw;
+    return FeeReduction(
+      id: raw['id'] as String? ?? '',
+      sourceKind: FinanceEnumCodec.parseFeeReductionSourceKind(
+        raw['sourceKind'] as String?,
+      ),
+      scholarshipId: raw['scholarshipId'] as String? ?? '',
+      discountRuleId: raw['discountRuleId'] as String? ?? '',
+      studentId: raw['studentId'] as String? ?? '',
+      invoiceId: raw['invoiceId'] as String? ?? '',
+      studentAccountId: raw['studentAccountId'] as String? ?? '',
+      reductionKind: FinanceEnumCodec.parseFeeReductionKind(
+        raw['reductionKind'] as String?,
+      ),
+      percent: raw['percent']?.toString() ?? '',
+      fixedAmount: raw['fixedAmount']?.toString() ?? '',
+      appliedAmount: raw['appliedAmount']?.toString() ?? '0',
+      status: FinanceEnumCodec.parseFeeReductionStatus(
+        raw['status'] as String?,
+      ),
+      reason: raw['reason'] as String? ?? '',
+      createdBy: raw['createdBy'] as String? ?? '',
+      approvedBy: raw['approvedBy'] as String? ?? '',
+      reversedBy: raw['reversedBy'] as String? ?? '',
+      appliedAt: raw['appliedAt'] as String? ?? '',
+      reversedAt: raw['reversedAt'] as String? ?? '',
+      createdAt: raw['createdAt'] as String? ?? '',
+      updatedAt: raw['updatedAt'] as String? ?? '',
     );
   }
 

@@ -5,9 +5,9 @@ import '../core/repositories/repository_config.dart';
 
 /// P0-CODE-2 (ENG-3 / MOD-4): hide backend-less surfaces in a LIVE build.
 ///
-/// Eight shipped surfaces have no live backend and, in the live release, no
+/// These shipped surfaces have no live backend and, in the live release, no
 /// enabled API flag — so their mock repositories would fabricate reads a real
-/// user can reach. Per the owner decision (2026-07-04, "hide all 8 for pilot"),
+/// user can reach. Per the owner decision (2026-07-04, "hide all for pilot"),
 /// a surface whose API flag is OFF while `enableApiMode` is ON is **hidden**:
 /// its route is blocked (via [ErpRouteGuard]) and its nav entries are dropped
 /// (via the sub-nav filters) rather than served as mock. In a local/mock build
@@ -35,7 +35,17 @@ final List<_SurfaceGate> _backendLessSurfaces = <_SurfaceGate>[
     flag: advancedAcademicOperationsEnabledProvider,
   ),
   (prefixes: const ['/sis/continuity'], flag: continuityApiEnabledProvider),
-  (prefixes: const ['/control-center/intelligence'], flag: platformIntelligenceApiEnabledProvider),
+  // Both platform-intelligence surfaces share the flag: the Control-Center
+  // dashboard AND the Trust Intelligence Hub (`/organization/intelligence`,
+  // TrustIntelligenceHubScreen). The trust hub was reachable by deep-link for
+  // everyday roles (schoolAdmin/principal via viewOrganizationIntelligence) and
+  // rendered MockPlatformIntelligenceRepository's fabricated cross-school trust
+  // dashboard as if real — CFC-1 item-2 fix (2026-07-13). No backend exists, so
+  // the flag stays OFF in live_release.json; the surface is hidden instead.
+  (
+    prefixes: const ['/control-center/intelligence', '/organization/intelligence'],
+    flag: platformIntelligenceApiEnabledProvider,
+  ),
   (prefixes: const ['/platform-operations'], flag: platformOperationsApiEnabledProvider),
   (prefixes: const ['/multi-school'], flag: multiSchoolOperationsApiEnabledProvider),
   (prefixes: const ['/healthcare'], flag: healthcareApiEnabledProvider),
@@ -47,9 +57,20 @@ final List<_SurfaceGate> _backendLessSurfaces = <_SurfaceGate>[
     flag: whiteLabelPlatformApiEnabledProvider,
   ),
   // PRA-N-7 / N-8 (S0/T2-D): backend-less mock surfaces — hidden in live builds.
+  // W0.2b union: keep BOTH the PRA (…ApiEnabled) and DRP RT-5-3 (…OperationsApiEnabled)
+  // gates — /branches and /franchise are hidden if EITHER flag is off (both stay OFF:
+  // no live backend), so neither remediation is dropped; /resource-optimization is the
+  // PRA-only third mock surface.
   (prefixes: const ['/branches'], flag: branchApiEnabledProvider),
   (prefixes: const ['/franchise'], flag: franchiseApiEnabledProvider),
   (prefixes: const ['/resource-optimization'], flag: resourceOptimizationApiEnabledProvider),
+  // RT round-3 RT-5-3: Branch & Franchise operations have no live backend
+  // (mock-only repositories) yet were reachable by a chain-org schoolAdmin,
+  // rendering a fabricated multi-branch revenue dashboard as real. Same class
+  // as the CFC-1 item-2 Trust-Hub fix; the flags stay OFF (no backend), so the
+  // routes are hidden and the nav entries dropped in a live build.
+  (prefixes: const ['/branches'], flag: branchOperationsApiEnabledProvider),
+  (prefixes: const ['/franchise'], flag: franchiseOperationsApiEnabledProvider),
 ];
 
 /// True when [location] belongs to a backend-less surface that must be hidden in

@@ -142,6 +142,10 @@ class MockCollectionsDb {
     }
     if (sql.includes("UPDATE finance_collections SET") && sql.includes("cancelled")) {
       const row = this.collections.find((c) => c.id === args[0]);
+      // F2: honor the unconditional `AND collection_status <> 'cancelled'` guard —
+      // a concurrent winner that already cancelled yields 0 rows even when
+      // expectedVersion is omitted (the null-version double-reverse race).
+      if (row && row.collection_status === "cancelled") return [] as T[];
       // ENG-1: honor the atomic `AND ($6::int IS NULL OR row_version = $6)`
       // predicate — a version mismatch yields 0 rows; a match bumps the version
       // (mirrors the bump_row_version trigger).
@@ -437,6 +441,39 @@ Deno.test("ENG-1: cancelCollection without expectedVersion stays backward-compat
     cancelledBy: STAFF,
   });
   assertEquals(cancelled.collection.collection_status, "cancelled");
+});
+
+Deno.test("F2: a concurrent cancel WITHOUT expectedVersion fails closed — no double reversal", async () => {
+  const db = new MockCollectionsDb();
+  const created = await createCollection(asDb(db), ORG, SCHOOL_A, {
+    invoiceId: INVOICE,
+    amountCollected: 15000,
+    paymentMethod: "cash",
+    collectedBy: STAFF,
+  });
+  // Both requests omit expectedVersion. The concurrent winner already cancelled;
+  // our terminal `UPDATE ... AND collection_status <> 'cancelled'` matches 0 rows
+  // even with the version guard disabled ($6 IS NULL). The repo must throw so the
+  // enclosing txn rolls back the account/invoice reversal (no double-reverse).
+  const raced = {
+    // deno-lint-ignore require-await
+    async queryObject<T>(sql: string, args: unknown[] = []): Promise<T[]> {
+      if (sql.includes("UPDATE finance_collections SET") && sql.includes("cancelled")) {
+        return [] as T[]; // the winner already cancelled this collection
+      }
+      return db.queryObject<T>(sql, args);
+    },
+    queryCount: () => db.queryCount(),
+  } as unknown as TenantQueryClient;
+
+  await assertRejects(
+    () =>
+      cancelCollection(raced, ORG, SCHOOL_A, created.collection.id, {
+        reason: "double cancel",
+        cancelledBy: STAFF,
+      }),
+    CollectionConflictError,
+  );
 });
 
 Deno.test("getReceipt returns receipt and collection", async () => {

@@ -28,14 +28,17 @@ import {
   StudentNotFoundError,
   type StudentDetailData,
 } from "./sis_students_repository.ts";
+import { resolveClearanceDecision } from "../clearance/clearance_gate.ts";
+import { consumeWaiver } from "../clearance/clearance_waiver_repository.ts";
 
-export type CertificateType = "bonafide" | "study" | "conduct" | "transfer";
+export type CertificateType = "bonafide" | "study" | "conduct" | "transfer" | "fee";
 
 /** The non-transfer, self-service certificate types (a plain recorded issuance). */
 export const SIMPLE_CERTIFICATE_TYPES: readonly CertificateType[] = [
   "bonafide",
   "study",
   "conduct",
+  "fee",
 ] as const;
 
 const TC_SEQ_PAD = 4;
@@ -43,7 +46,7 @@ const TC_SEQ_PAD = 4;
 export class InvalidCertificateTypeError extends Error {
   constructor(type: string) {
     super(
-      `Invalid certificate type: ${type}. Expected one of bonafide, study, conduct, transfer.`,
+      `Invalid certificate type: ${type}. Expected one of bonafide, study, conduct, transfer, fee.`,
     );
     this.name = "InvalidCertificateTypeError";
   }
@@ -79,12 +82,29 @@ export class NoDuesPendingError extends Error {
   }
 }
 
+/**
+ * Real finance pull backing the "fee" certificate — total paid / outstanding
+ * for the student's CURRENT academic year, sourced live from
+ * finance_student_accounts (the same table + columns outstandingForStudent
+ * reads). Never fabricated: absent when the student has no account row at all
+ * (e.g. never assigned a fee structure).
+ */
+export interface FeeCertificateSummary {
+  academicYear: string;
+  totalFee: number;
+  amountPaid: number;
+  outstanding: number;
+  accountStatus: string;
+}
+
 export interface CertificateData {
   issueId: string;
   certificateType: CertificateType;
   serialNo: string | null;
   reason: string | null;
   issuedAt: string;
+  /** Only populated for certificateType 'fee'; null for every other type. */
+  fee: FeeCertificateSummary | null;
   /** The certificate payload the client PDF renders from. */
   student: {
     studentId: string;
@@ -121,7 +141,7 @@ interface SchoolRow {
 function assertCertificateType(type: string): CertificateType {
   if (
     type === "bonafide" || type === "study" || type === "conduct" ||
-    type === "transfer"
+    type === "transfer" || type === "fee"
   ) {
     return type;
   }
@@ -174,6 +194,72 @@ export async function outstandingForStudent(
     [organizationId, schoolId, studentId],
   );
   return Number(rows[0]?.outstanding ?? 0);
+}
+
+interface FeeAccountRow {
+  academic_year: string;
+  total_fee: string;
+  amount_paid: string;
+  outstanding_amount: string;
+  status: string;
+}
+
+/**
+ * Real finance pull backing the "fee" certificate. Reads the SAME
+ * finance_student_accounts columns outstandingForStudent sums, but for a
+ * SINGLE academic year (total_fee/amount_paid/outstanding_amount/status —
+ * never fabricated). Prefers the student's current-enrollment academic year;
+ * falls back to the most recent account row when there is no current
+ * enrollment (or no account for that year), so a certificate can still be
+ * produced for a student between enrollments. Returns null only when the
+ * student has NO finance_student_accounts row at all (never assigned a fee).
+ */
+async function loadFeeSummary(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  studentId: string,
+  preferredAcademicYear: string | null,
+): Promise<FeeCertificateSummary | null> {
+  if (preferredAcademicYear) {
+    const rows = await db.queryObject<FeeAccountRow>(
+      `SELECT academic_year, total_fee::text AS total_fee,
+              amount_paid::text AS amount_paid,
+              outstanding_amount::text AS outstanding_amount, status
+         FROM finance_student_accounts
+        WHERE organization_id = $1
+          AND school_id = $2
+          AND student_id = $3::uuid
+          AND academic_year = $4`,
+      [organizationId, schoolId, studentId, preferredAcademicYear],
+    );
+    if (rows[0]) return toFeeCertificateSummary(rows[0]);
+  }
+
+  const fallback = await db.queryObject<FeeAccountRow>(
+    `SELECT academic_year, total_fee::text AS total_fee,
+            amount_paid::text AS amount_paid,
+            outstanding_amount::text AS outstanding_amount, status
+       FROM finance_student_accounts
+      WHERE organization_id = $1
+        AND school_id = $2
+        AND student_id = $3::uuid
+      ORDER BY academic_year DESC
+      LIMIT 1`,
+    [organizationId, schoolId, studentId],
+  );
+  const row = fallback[0];
+  return row ? toFeeCertificateSummary(row) : null;
+}
+
+function toFeeCertificateSummary(row: FeeAccountRow): FeeCertificateSummary {
+  return {
+    academicYear: row.academic_year,
+    totalFee: Number(row.total_fee),
+    amountPaid: Number(row.amount_paid),
+    outstanding: Number(row.outstanding_amount),
+    accountStatus: row.status,
+  };
 }
 
 /**
@@ -259,6 +345,7 @@ function buildCertificateData(
   issued: IssueRow,
   detail: StudentDetailData,
   school: SchoolRow,
+  fee: FeeCertificateSummary | null = null,
 ): CertificateData {
   const guardianName = detail.guardians.find((g) => g.is_primary)?.display_name ??
     detail.guardians[0]?.display_name ?? null;
@@ -268,6 +355,7 @@ function buildCertificateData(
     serialNo: issued.serial_no,
     reason: issued.reason,
     issuedAt: issued.issued_at,
+    fee,
     student: {
       studentId: detail.student.id,
       displayName: detail.student.display_name,
@@ -361,7 +449,19 @@ export async function issueCertificate(
     input.issuedBy,
   );
 
-  return buildCertificateData(type, issued, detail, school);
+  // "fee" is the only type that pulls a real finance summary onto the
+  // certificate — the totals are always live-read, never fabricated.
+  const fee = type === "fee"
+    ? await loadFeeSummary(
+      db,
+      organizationId,
+      schoolIdArg,
+      input.studentId,
+      detail.currentEnrollment?.academic_year ?? null,
+    )
+    : null;
+
+  return buildCertificateData(type, issued, detail, school, fee);
 }
 
 export interface IssueTransferCertificateInput {
@@ -402,14 +502,20 @@ export async function issueTransferCertificate(
   const detail = await getStudent(db, organizationId, schoolIdArg, input.studentId);
   if (!detail) throw new StudentNotFoundError(input.studentId);
 
-  // 1. NO-DUES GATE — blocks before any write. PRA-P1-20: fees AND library dues
-  // (un-waived fines + unreturned books) must all be clear, so the TC's "All
-  // dues have been cleared" is truthful by construction.
-  const outstanding = await outstandingForStudent(
+  // 1. NO-DUES GATE — blocks before any write. UNION of two remediations that
+  // BOTH must hold (W0.2b lane convergence — neither fix is dropped):
+  //   • SCE-1 (DRP): the cross-module clearance engine in GATE mode — fails CLOSED
+  //     on an unreadable blocking source, WITH an approved dues-waiver applied. Its
+  //     finance contributor reports the authoritative net, byte-identical to
+  //     outstandingForStudent, so a student with no dues (and no waiver) behaves
+  //     EXACTLY as the prior finance-only gate; an APPROVED waiver clears the block.
+  //   • PRA-P1-20: the LIBRARY-dues gate — un-waived fines + unreturned books.
+  // Every one must be clear so the TC's "All dues have been cleared" is truthful.
+  const decision = await resolveClearanceDecision(
     db,
-    organizationId,
-    schoolIdArg,
+    { organizationId, schoolId: schoolIdArg },
     input.studentId,
+    "transfer_certificate",
   );
   const library = await libraryDuesForStudent(
     db,
@@ -417,8 +523,12 @@ export async function issueTransferCertificate(
     schoolIdArg,
     detail.student.student_code,
   );
-  if (outstanding > 0 || library.fineAmount > 0 || library.unreturnedBooks > 0) {
-    throw new NoDuesPendingError(outstanding, library.fineAmount, library.unreturnedBooks);
+  if (decision.blocked || library.fineAmount > 0 || library.unreturnedBooks > 0) {
+    throw new NoDuesPendingError(
+      decision.blockingAmount,
+      library.fineAmount,
+      library.unreturnedBooks,
+    );
   }
 
   // 2. Status-transition guard — reject an already-terminal student BEFORE we
@@ -464,14 +574,64 @@ export async function issueTransferCertificate(
     input.issuedBy,
   );
 
-  // 5. Auto status -> transferred (guard already asserted the transition above).
+  // 4b. SCE-1 — CONSUME the covering waiver (single-use) and SNAPSHOT the
+  // clearance decision onto the issue row: the dues that were present at issue
+  // and the waiver (if any) that cleared them. Immutable audit of the exit; the
+  // snapshot lives inside this same transaction, so a later rollback discards it.
+  if (decision.waiver) {
+    const consumed = await consumeWaiver(
+      db,
+      { organizationId, schoolId: schoolIdArg },
+      input.studentId,
+      "transfer_certificate",
+      issued.id,
+    );
+    // Single-use, race-safe (audit slice-3 P2): if the covering waiver was
+    // ALREADY consumed (a concurrent TC issuance beat us to it), it can no
+    // longer clear THIS exit — fail closed. The throw rolls back the just-
+    // inserted issue row + the allocated serial, so no un-gated second TC and
+    // no dishonest snapshot pointing at a waiver another issue already spent.
+    if (!consumed) {
+      throw new NoDuesPendingError(decision.duesAtGate);
+    }
+  }
   await db.queryObject(
+    `UPDATE sis_certificate_issues
+        SET clearance_snapshot_amount = $1, clearance_waiver_id = $2
+      WHERE id = $3::uuid AND organization_id = $4 AND school_id = $5`,
+    [
+      decision.duesAtGate,
+      decision.waiver?.id ?? null,
+      issued.id,
+      organizationId,
+      schoolIdArg,
+    ],
+  );
+
+  // 5. Auto status -> transferred (guard already asserted the transition above).
+  // Concurrency guard: pin the write to the status we read+validated in step 2.
+  // Two concurrent zero-dues (no-waiver) TC requests would otherwise both burn a
+  // serial and both insert a `sis_certificate_issues` row — a duplicate legal
+  // document, since the waiver-branch's single-use consume guard doesn't run when
+  // there is no waiver. Guarding on the prior status makes the loser match 0 rows
+  // (the winner already flipped it) → throw → the enclosing transaction rolls back
+  // the issue row + allocated serial. Mirrors the codebase's `WHERE status='...'`
+  // atomic-transition pattern (clearance waiver consume, staff-attendance decide).
+  const statusUpdated = await db.queryObject<{ id: string }>(
     `UPDATE students SET
         status = $1,
         updated_at = timezone('utc', now())
-      WHERE id = $2::uuid AND organization_id = $3 AND school_id = $4`,
-    [statusToDb("transferred"), input.studentId, organizationId, schoolIdArg],
+      WHERE id = $2::uuid AND organization_id = $3 AND school_id = $4
+        AND status = $5
+      RETURNING id`,
+    [statusToDb("transferred"), input.studentId, organizationId, schoolIdArg, detail.student.status],
   );
+  if (statusUpdated.length === 0) {
+    throw new InvalidStudentStatusTransitionError(
+      "Cannot issue a Transfer Certificate: the student status changed concurrently " +
+        "(a Transfer Certificate was issued by another request).",
+    );
+  }
 
   const updatedDetail: StudentDetailData = {
     ...detail,
@@ -533,6 +693,15 @@ export function certificateDataToApi(
     serialNo: data.serialNo ?? "",
     reason: data.reason ?? "",
     issuedAt: data.issuedAt,
+    fee: data.fee
+      ? {
+        academicYear: data.fee.academicYear,
+        totalFee: data.fee.totalFee,
+        amountPaid: data.fee.amountPaid,
+        outstanding: data.fee.outstanding,
+        accountStatus: data.fee.accountStatus,
+      }
+      : null,
     student: {
       studentId: data.student.studentId,
       displayName: data.student.displayName,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/security/app_lock/app_lock_providers.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../shared/widgets/akshara_section_header.dart';
 import '../../theme/radius.dart';
@@ -63,7 +64,65 @@ class AppearanceSettingsScreen extends ConsumerWidget {
               ),
             ),
           ),
+          const SizedBox(height: AksharaSpacing.s6),
+          const AksharaSectionHeader(title: 'Security'),
+          const _AppLockTile(),
         ],
+      ),
+    );
+  }
+}
+
+/// P1-SEC-1 — the App Lock toggle. Enabling requires a successful biometric
+/// prompt first (so a user with no enrolled biometric can't lock themselves
+/// out); the controller enforces that and this tile surfaces the outcome.
+class _AppLockTile extends ConsumerStatefulWidget {
+  const _AppLockTile();
+
+  @override
+  ConsumerState<_AppLockTile> createState() => _AppLockTileState();
+}
+
+class _AppLockTileState extends ConsumerState<_AppLockTile> {
+  bool _busy = false;
+
+  Future<void> _toggle(bool value) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    final ok = await ref.read(appLockControllerProvider.notifier).setEnabled(value);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (value && !ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Couldn't turn on App Lock — enrol a biometric (Face ID / fingerprint) "
+            'on your device and verify it.',
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = ref.watch(appLockControllerProvider.select((s) => s.enabled));
+    final text = context.aksharaText;
+    final colors = context.colors;
+    return Material(
+      color: colors.surface,
+      borderRadius: AksharaRadius.card,
+      child: SwitchListTile(
+        key: const Key('app-lock-toggle'),
+        value: enabled,
+        onChanged: _busy ? null : _toggle,
+        secondary: Icon(Icons.lock_outline, color: colors.onSurfaceVariant),
+        title: Text('App Lock', style: text.bodyLarge.copyWith(fontWeight: FontWeight.w600)),
+        subtitle: Text(
+          'Require your device biometric to open Akshara after it has been in the '
+          'background. No PIN fallback.',
+          style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
+        ),
       ),
     );
   }

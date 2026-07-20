@@ -6,6 +6,10 @@
 	<true/>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Akshara uses Face ID / Touch ID to confirm it's you when you check in or out for staff attendance.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Akshara uses the front camera to verify your live face when you check in or out for staff attendance.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Akshara checks that you are on school grounds before recording your staff attendance.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

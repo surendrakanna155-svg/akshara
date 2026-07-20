@@ -13,6 +13,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'helpers/auth_test_overrides.dart';
 import 'helpers/provider_test_overrides.dart';
 
+// Re-export so ERP widget tests that render network-backed widgets (which reach
+// dioProvider → SharedPreferences) can initialize the test prefs stack via
+// pumpHrScreen-style helpers without importing the helpers path directly.
+export 'helpers/provider_test_overrides.dart' show initProviderTestPrefs;
+
 /// Default mobile viewport matching ST-01 / TA-01 design width.
 const Size kMobileTestViewport = Size(428, 926);
 

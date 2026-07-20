@@ -122,6 +122,52 @@ abstract class FinanceRepository {
   });
   Future<DiscountsDashboardData> getDiscountsDashboard(
       {required RepositoryQuery query});
+
+  // ── STEP-5: fee reductions (scholarship awards + discount applications) ───
+  // Invoice-scoped maker-checker that ACTUALLY reduces a student's payable —
+  // propose (MAKER) moves no money; approve (CHECKER, someone other than the
+  // proposer) applies it. Replaces the fabricated-id / feeConcession-approval
+  // path in AssignFeeConcessionNotifier (P0 money-honesty fix, PRC-A cap 71).
+  Future<List<FeeReduction>> listFeeReductions({
+    required RepositoryQuery query,
+    FeeReductionStatus? status,
+    String? invoiceId,
+    String? studentId,
+    FeeReductionSourceKind? sourceKind,
+  });
+
+  Future<FeeReduction> proposeScholarshipAward({
+    required RepositoryQuery query,
+    required String scholarshipId,
+    required String invoiceId,
+    required String reason,
+    double? percent,
+    double? amount,
+  });
+
+  Future<FeeReduction> proposeDiscountApplication({
+    required RepositoryQuery query,
+    required String discountRuleId,
+    required String invoiceId,
+    required String reason,
+    double? percent,
+    double? amount,
+  });
+
+  Future<FeeReduction> approveFeeReduction({
+    required RepositoryQuery query,
+    required String reductionId,
+  });
+
+  Future<FeeReduction> rejectFeeReduction({
+    required RepositoryQuery query,
+    required String reductionId,
+  });
+
+  Future<FeeReduction> reverseFeeReduction({
+    required RepositoryQuery query,
+    required String reductionId,
+  });
   Future<FinanceReportsData> getReportsData({required RepositoryQuery query});
   Future<FinanceSettingsData> getSettings({required RepositoryQuery query});
 
@@ -158,6 +204,16 @@ abstract class FinanceRepository {
   Future<StudentFeeAccount> assignFeePlan({
     required RepositoryQuery query,
     required AssignFeePlanRequest request,
+  });
+
+  /// PRC-A gap fix — bulk/class-wide fee-structure assignment (every
+  /// assignment used to be one student at a time via the admissions-handoff
+  /// queue). Reuses the same per-student assignment math as [assignFeePlan];
+  /// a student who already has this exact structure for this academic year is
+  /// reported in the result's `skipped` list, not treated as an error.
+  Future<BulkFeeAssignmentResult> bulkAssignFeeStructure({
+    required RepositoryQuery query,
+    required BulkAssignFeePlanRequest request,
   });
 
   /// #6 — PATCH .../fee-assignments/:id/cancel. Cancels an active fee

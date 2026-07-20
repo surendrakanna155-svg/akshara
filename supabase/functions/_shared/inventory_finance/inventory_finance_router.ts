@@ -9,6 +9,7 @@ import {
   handleListDbVendors,
   handleListGrns,
   handleReceiveGoods,
+  handleStockLevels,
   handleStockValuation,
 } from "./inventory_finance_handlers.ts";
 import {
@@ -20,6 +21,7 @@ import {
   handleLowStock,
   handleRecordStockCount,
   handleRejectStockAdjustment,
+  handleStockApprovals,
   handleStockRegister,
   handleUpsertStockItem,
 } from "./inventory_stock_handlers.ts";
@@ -62,6 +64,16 @@ export function matchInventoryFinanceRoute(
 
   if (path === "/inventory/stock/valuation" && method === "GET") {
     return { handler: handleStockValuation, args: [] };
+  }
+
+  // WEB-004: the value-reducing approval register — exact path, before the bare
+  // /inventory/stock list so it isn't misread as a stock query.
+  if (path === "/inventory/stock/approvals" && method === "GET") {
+    return { handler: handleStockApprovals, args: [] };
+  }
+  // WEB-004: the primary stock ledger (on-hand + reorder + valuation).
+  if (path === "/inventory/stock" && method === "GET") {
+    return { handler: handleStockLevels, args: [] };
   }
 
   // ── INV-1..7: Store stock module ──

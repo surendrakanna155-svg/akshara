@@ -15,6 +15,7 @@ import {
   createQrSession,
   getQrSession,
   qrSessionToApi,
+  QrSessionNotConfirmableError,
   QrSessionNotFoundError,
 } from "./finance_qr_repository.ts";
 
@@ -185,6 +186,11 @@ export async function handleConfirmQrPaymentSession(
     }
     if (error instanceof QrSessionNotFoundError) {
       return errorEnvelope("NOT_FOUND", error.message, 404);
+    }
+    // P5 (red-team Round 2): a concurrent/repeat confirm that lost the status-guard
+    // race → 409 CONFLICT, never a second success the client could double-act on.
+    if (error instanceof QrSessionNotConfirmableError) {
+      return errorEnvelope("CONFLICT", error.message, 409);
     }
     throw error;
   }

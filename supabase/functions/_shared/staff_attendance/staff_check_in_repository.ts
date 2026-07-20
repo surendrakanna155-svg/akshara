@@ -94,51 +94,13 @@ export async function upsertGeofenceConfig(
 }
 
 // ── Face enrollment ──────────────────────────────────────────────────────────
-export async function getActiveEnrollment(
-  db: TenantQueryClient,
-  userId: string,
-): Promise<number[] | null> {
-  const rows = await db.queryObject<{ embedding: number[] }>(
-    `SELECT embedding
-       FROM staff_face_enrollments
-      WHERE organization_id = app_current_tenant_id()
-        AND school_id = app_current_school_id()
-        AND user_id = $1
-        AND active = TRUE
-      LIMIT 1`,
-    [userId],
-  );
-  const r = rows[0];
-  if (!r) return null;
-  // embedding is stored as JSONB (array of numbers); the driver returns it parsed.
-  return Array.isArray(r.embedding) ? r.embedding.map(Number) : null;
-}
-
-export async function enrollFace(
-  db: TenantQueryClient,
-  organizationId: string,
-  schoolId: string,
-  userId: string,
-  embedding: number[],
-): Promise<{ id: string; embeddingDim: number; enrolledAt: string }> {
-  // Replace: deactivate any prior active enrollment, then insert the new one.
-  await db.queryObject(
-    `UPDATE staff_face_enrollments SET active = FALSE
-      WHERE organization_id = app_current_tenant_id()
-        AND school_id = app_current_school_id()
-        AND user_id = $1 AND active = TRUE`,
-    [userId],
-  );
-  const id = `face_enr_${crypto.randomUUID()}`;
-  const rows = await db.queryObject<{ enrolled_at: string }>(
-    `INSERT INTO staff_face_enrollments (
-       id, organization_id, school_id, user_id, embedding, embedding_dim, active
-     ) VALUES ($1,$2,$3,$4,$5::jsonb,$6, TRUE)
-     RETURNING enrolled_at`,
-    [id, organizationId, schoolId, userId, JSON.stringify(embedding), embedding.length],
-  );
-  return { id, embeddingDim: embedding.length, enrolledAt: rows[0]!.enrolled_at };
-}
+// staff_face_enrollments is the SHARED P1-PROD-22 table owned EXCLUSIVELY by
+// _shared/attendance_auth/face_enrollment_repository.ts (migration 20260877
+// evolved it from this module's original self-only shape). This module's
+// former getActiveEnrollment/enrollFace duplicates were REMOVED in SLICE 2 —
+// staff_attendance_handlers.ts now calls the attendance_auth repository
+// directly, so there is exactly one write path (revoke-then-insert) and one
+// validation bound (64..1024 dims, matching the DB CHECK).
 
 // ── Check-in ledger ──────────────────────────────────────────────────────────
 export interface RecordStaffCheckInput {
@@ -247,6 +209,60 @@ export async function createAttendanceRequest(
   return rows[0]!;
 }
 
+/** SLICE 4 — the caller's OWN recent requests (staff self-service; the
+ * userId is ALWAYS the JWT subject at the handler, never a request param). */
+export interface MyAttendanceRequestRow {
+  id: string;
+  event_type: string;
+  reason: string;
+  status: string;
+  created_at: string;
+  decided_at: string | null;
+}
+
+export async function listMyAttendanceRequests(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  userId: string,
+): Promise<MyAttendanceRequestRow[]> {
+  return await db.queryObject<MyAttendanceRequestRow>(
+    `SELECT id, event_type, reason, status, created_at, decided_at
+       FROM staff_attendance_requests
+      WHERE organization_id = $1 AND school_id = $2 AND user_id = $3
+      ORDER BY created_at DESC
+      LIMIT 20`,
+    [organizationId, schoolId, userId],
+  );
+}
+
+/** SLICE 4 — the school's PENDING queue for approvers (uses
+ * idx_attendance_requests_school_status; limit clamped at the handler). */
+export interface PendingAttendanceRequestRow {
+  id: string;
+  user_id: string;
+  staff_name: string;
+  event_type: string;
+  reason: string;
+  created_at: string;
+}
+
+export async function listPendingAttendanceRequests(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  limit: number,
+): Promise<PendingAttendanceRequestRow[]> {
+  return await db.queryObject<PendingAttendanceRequestRow>(
+    `SELECT id, user_id, staff_name, event_type, reason, created_at
+       FROM staff_attendance_requests
+      WHERE organization_id = $1 AND school_id = $2 AND status = 'pending'
+      ORDER BY created_at DESC
+      LIMIT $3`,
+    [organizationId, schoolId, limit],
+  );
+}
+
 export async function decideAttendanceRequest(
   db: TenantQueryClient,
   organizationId: string,
@@ -267,9 +283,41 @@ export async function decideAttendanceRequest(
   if (!reqRow) {
     throw new StaffAttendanceValidationError("REQUEST_NOT_FOUND", "No pending request with that id");
   }
+  // SoD (audit R4, mirroring HR-3 leave / owner decision 2026-07-06): the
+  // requester can never decide their own request — a supervisory user holds
+  // markStaffAttendance too, and self-approval would let them certify their
+  // own attendance with zero independent verification, defeating the whole
+  // geofence+face chain. Same auth `sub` identity space; no mapping needed.
+  if (approverId !== "" && reqRow.user_id === approverId) {
+    throw new StaffAttendanceValidationError(
+      "SELF_APPROVE_DENIED",
+      "You cannot approve or reject your own attendance request",
+    );
+  }
+
+  // Claim the decision FIRST, guarded on status='pending' (audit R4 race fix):
+  // two approvers deciding concurrently both pass the SELECT above, but only
+  // the first one's UPDATE matches — the loser gets zero rows back and a typed
+  // conflict, and crucially never reaches the check-in INSERT (no duplicate
+  // ledger rows). Mirrors LEAVE_ALREADY_DECIDED.
+  const claimed = await db.queryObject<AttendanceRequestRow>(
+    `UPDATE staff_attendance_requests
+        SET status = $2, decided_by = $3, decided_at = timezone('utc', now())
+      WHERE organization_id = app_current_tenant_id()
+        AND school_id = app_current_school_id()
+        AND id = $1 AND status = 'pending'
+      RETURNING *`,
+    [requestId, approve ? "approved" : "rejected", approverId],
+  );
+  let decided = claimed[0];
+  if (!decided) {
+    throw new StaffAttendanceValidationError(
+      "REQUEST_ALREADY_DECIDED",
+      "This request was already decided by another approver",
+    );
+  }
 
   let checkIn: StaffCheckInRow | null = null;
-  let resultingId: string | null = null;
   if (approve) {
     checkIn = await recordStaffCheckIn(db, organizationId, schoolId, {
       userId: reqRow.user_id,
@@ -289,18 +337,17 @@ export async function decideAttendanceRequest(
       faceMatched: false,
       captureRef: null,
     });
-    resultingId = checkIn.id;
+    const linked = await db.queryObject<AttendanceRequestRow>(
+      `UPDATE staff_attendance_requests
+          SET resulting_check_in_id = $2
+        WHERE organization_id = app_current_tenant_id()
+          AND school_id = app_current_school_id()
+          AND id = $1
+        RETURNING *`,
+      [requestId, checkIn.id],
+    );
+    decided = linked[0] ?? decided;
   }
 
-  const updated = await db.queryObject<AttendanceRequestRow>(
-    `UPDATE staff_attendance_requests
-        SET status = $2, decided_by = $3, decided_at = timezone('utc', now()),
-            resulting_check_in_id = $4
-      WHERE organization_id = app_current_tenant_id()
-        AND school_id = app_current_school_id()
-        AND id = $1
-      RETURNING *`,
-    [requestId, approve ? "approved" : "rejected", approverId, resultingId],
-  );
-  return { request: updated[0]!, checkIn };
+  return { request: decided, checkIn };
 }

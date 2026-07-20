@@ -9,6 +9,8 @@ const APPROVAL_PERMISSION_BY_TYPE: Record<F2ApprovalType, string> = {
   feeStructure: "approveFeeStructure",
   refund: "approveRefunds",
   inventoryPo: "approvePurchaseOrder",
+  certificateRequest: "approveCertificateRequest",
+  gatePass: "approveGatePass",
 };
 
 /** RBAC permission slug required to approve/reject a given approval type. */

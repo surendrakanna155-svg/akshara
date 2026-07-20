@@ -35,6 +35,7 @@ import {
   isStrictIsoDate,
   regKey,
   runDocumentExpiryReminder,
+  stopStudentTransport,
   TRANSPORT_DOC_EXPIRY_AUDIENCE,
 } from "./transport_write_handlers.ts";
 import { buildRoster } from "./transport_handlers.ts";
@@ -100,6 +101,176 @@ class MockTransportWriteDb {
     return Promise.resolve([] as T[]);
   }
 }
+
+/**
+ * PRC-A caps 4/9 — stopping transport must also REVOKE the fee, so this fixture
+ * speaks the finance SQL cancelInvoice issues (invoice read, the status-guarded
+ * cancel, and the student-account lockstep release) on top of transport_entities.
+ */
+class MockStopTransportDb extends MockTransportWriteDb {
+  invoices: Record<string, unknown>[] = [];
+  accounts: Record<string, unknown>[] = [];
+
+  // deno-lint-ignore no-explicit-any
+  override queryObject<T>(sql: string, args: any[] = []): Promise<T[]> {
+    if (sql.includes("SELECT * FROM finance_invoices") && sql.includes("WHERE id = $1")) {
+      const found = this.invoices.find((i) =>
+        i.id === args[0] && i.organization_id === args[1] && i.school_id === args[2]
+      );
+      return Promise.resolve((found ? [found] : []) as T[]);
+    }
+    if (sql.includes("UPDATE finance_invoices") && sql.includes("invoice_status = 'cancelled'")) {
+      const row = this.invoices.find((i) => i.id === args[0]);
+      if (!row) return Promise.resolve([] as T[]);
+      // The status guard: a paid/cancelled invoice matches 0 rows.
+      if (row.invoice_status === "paid" || row.invoice_status === "cancelled") {
+        return Promise.resolve([] as T[]);
+      }
+      row.invoice_status = "cancelled";
+      return Promise.resolve([row] as T[]);
+    }
+    if (sql.includes("UPDATE finance_student_accounts")) {
+      const released = parseFloat(String(args[0]));
+      const account = this.accounts.find((a) =>
+        a.student_id === args[1] && a.academic_year === args[2] &&
+        a.organization_id === args[3] && a.school_id === args[4]
+      );
+      if (!account) return Promise.resolve([] as T[]);
+      const drop = (v: unknown) => Math.max(0, parseFloat(String(v)) - released).toFixed(2);
+      account.total_fee = drop(account.total_fee);
+      account.outstanding_amount = drop(account.outstanding_amount);
+      return Promise.resolve([account] as T[]);
+    }
+    return super.queryObject<T>(sql, args);
+  }
+}
+
+const STUDENT_U = "a4000000-0000-4000-8000-000000000001";
+
+/** Seeds one transport allocation + its raised demand/invoice/account. */
+async function seedStoppableTransport(
+  db: MockStopTransportDb,
+  invoiceStatus = "issued",
+): Promise<void> {
+  await writeStore.insert(db as unknown as TenantQueryClient, ORG, SCHOOL_A, "allocation", "alloc-1", {
+    id: "alloc-1",
+    sisStudentId: "ADM-1",
+    routeId: "route-1",
+    routeName: "Route 1",
+    busNumber: "AP01AB1234",
+    transportEnrolled: true,
+  });
+  await writeStore.insert(db as unknown as TenantQueryClient, ORG, SCHOOL_A, "demand", "demand-1", {
+    id: "demand-1",
+    dedupeKey: "ADM-1::route-1::2026-27::annual",
+    allocationId: "alloc-1",
+    sisStudentId: "ADM-1",
+    studentUuid: STUDENT_U,
+    routeId: "route-1",
+    academicYear: "2026-27",
+    term: "annual",
+    invoiceId: "inv-t1",
+  });
+  db.invoices.push({
+    id: "inv-t1",
+    organization_id: ORG,
+    school_id: SCHOOL_A,
+    student_id: STUDENT_U,
+    academic_year: "2026-27",
+    total_amount: "12000",
+    outstanding_amount: "12000",
+    invoice_status: invoiceStatus,
+  });
+  db.accounts.push({
+    id: "acct-t1",
+    organization_id: ORG,
+    school_id: SCHOOL_A,
+    student_id: STUDENT_U,
+    academic_year: "2026-27",
+    total_fee: "12000",
+    amount_paid: "0",
+    outstanding_amount: "12000",
+  });
+}
+
+Deno.test("PRC-A caps 4/9: stopping transport SOFT-stops the allocation (row + history preserved, never deleted)", async () => {
+  const db = new MockStopTransportDb();
+  await seedStoppableTransport(db);
+
+  await stopStudentTransport(db as unknown as TenantQueryClient, ORG, SCHOOL_A, "alloc-1", {
+    effectiveDate: "2026-08-01",
+    actorId: "staff",
+  });
+
+  // The row still exists — the old code hard-deleted it, destroying the history.
+  const alloc = await writeStore.find(
+    db as unknown as TenantQueryClient, ORG, SCHOOL_A, "allocation", "alloc-1",
+  );
+  assertEquals(alloc?.transportEnrolled, false);
+  assertEquals(alloc?.stoppedAt, "2026-08-01");
+  assertEquals(alloc?.stoppedBy, "staff");
+  assertEquals(alloc?.sisStudentId, "ADM-1");
+});
+
+Deno.test("PRC-A caps 4/9: stopping transport REVOKES the fee — invoice cancelled and the account released", async () => {
+  const db = new MockStopTransportDb();
+  await seedStoppableTransport(db);
+
+  const result = await stopStudentTransport(
+    db as unknown as TenantQueryClient, ORG, SCHOOL_A, "alloc-1",
+    { effectiveDate: "2026-08-01", actorId: "staff" },
+  );
+
+  assertEquals(result.cancelledInvoices, ["inv-t1"]);
+  assertEquals(db.invoices[0]!.invoice_status, "cancelled");
+  // The over-billing is actually gone at ACCOUNT level, not just on the invoice.
+  assertEquals(db.accounts[0]!.outstanding_amount, "0.00");
+  assertEquals(db.accounts[0]!.total_fee, "0.00");
+});
+
+Deno.test("PRC-A caps 4/9: stopping releases the demand dedupe key so a later re-enrolment raises a NEW fee", async () => {
+  const db = new MockStopTransportDb();
+  await seedStoppableTransport(db);
+
+  await stopStudentTransport(db as unknown as TenantQueryClient, ORG, SCHOOL_A, "alloc-1", {
+    effectiveDate: "2026-08-01",
+    actorId: "staff",
+  });
+
+  const demand = await writeStore.find(
+    db as unknown as TenantQueryClient, ORG, SCHOOL_A, "demand", "demand-1",
+  );
+  // dedupeKey must be GONE: the raise path dedupes on it and the partial unique
+  // index covers `payload ? 'dedupeKey'`, so leaving it would make a re-enrolment
+  // return this old demand as "idempotent" and raise no fee — a free ride.
+  assertEquals(demand?.dedupeKey, undefined);
+  assertEquals(demand?.revokedDedupeKey, "ADM-1::route-1::2026-27::annual");
+  // ...while the history itself is preserved.
+  assertEquals(demand?.invoiceId, "inv-t1");
+  assertEquals(demand?.cancelledEffectiveDate, "2026-08-01");
+});
+
+Deno.test("PRC-A caps 4/9: a PAID transport invoice is NOT cancelled — it is reported as skipped (refund is Finance's call)", async () => {
+  const db = new MockStopTransportDb();
+  await seedStoppableTransport(db, "paid");
+
+  const result = await stopStudentTransport(
+    db as unknown as TenantQueryClient, ORG, SCHOOL_A, "alloc-1",
+    { effectiveDate: "2026-08-01", actorId: "staff" },
+  );
+
+  assertEquals(result.cancelledInvoices, []);
+  assertEquals(result.skippedInvoices.length, 1);
+  assertEquals(result.skippedInvoices[0]!.invoiceId, "inv-t1");
+  assertEquals(db.invoices[0]!.invoice_status, "paid");
+  // Real money already collected is untouched — no silent account rewrite.
+  assertEquals(db.accounts[0]!.outstanding_amount, "12000");
+  // The allocation still stops, and the demand key is still released.
+  const alloc = await writeStore.find(
+    db as unknown as TenantQueryClient, ORG, SCHOOL_A, "allocation", "alloc-1",
+  );
+  assertEquals(alloc?.transportEnrolled, false);
+});
 
 function schoolClaims(): AccessTokenClaims {
   return {

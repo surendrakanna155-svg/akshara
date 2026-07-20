@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/config/finance_approval_config.dart';
 import '../../core/errors/api_failure.dart';
 import '../../core/errors/api_failure_mapper.dart';
+import '../../core/repositories/academic/academic_catalog_provider.dart';
 import '../../core/reliability/drafts/draft_autosave.dart';
 import '../../core/reliability/drafts/draft_model.dart';
 import '../../core/reliability/drafts/draft_providers.dart';
@@ -20,12 +21,14 @@ import '../../shared/widgets/akshara_motion.dart';
 import '../../shared/widgets/akshara_queued_view.dart';
 import '../../shared/widgets/akshara_success_view.dart';
 import 'finance_journey_context_provider.dart';
+import 'discounts/finance_discounts_provider.dart';
 import 'fee_assignment/finance_fee_assignment_provider.dart';
 import 'invoices/finance_invoices_provider.dart';
 import 'finance_models.dart';
 import 'finance_mutations_provider.dart';
 import 'finance_requests.dart';
 import 'integration/finance_admissions_handoff_provider.dart';
+import 'student_accounts/finance_student_accounts_provider.dart';
 
 void _showMutationError(BuildContext context, Object error) {
   final failure = error is ApiFailureException
@@ -56,6 +59,135 @@ List<Widget> _dialogActions(
   ];
 }
 
+/// Cap 67 — "Unbound" sentinel for the class/section picker below (never a
+/// real class/section name, since [classOptionsProvider]/[sectionOptionsProvider]
+/// never return an empty string).
+const _unboundOption = 'Unbound';
+
+List<String> _sortedUniqueLabels(Iterable<String> values) {
+  final unique = values.where((v) => v.isNotEmpty).toSet().toList();
+  unique.sort();
+  return unique;
+}
+
+typedef _ClassSectionChanged = void Function({
+  String? className,
+  String? sectionName,
+});
+
+/// Cap 67 — OPTIONAL class/section binding picker shared by the create/edit
+/// fee-structure dialogs. Reuses the same academic catalog providers as the
+/// bulk-assign dialog's class filter; the section list is scoped to whichever
+/// class is currently selected (a section belongs to exactly one class).
+class _ClassSectionBindingFields extends ConsumerStatefulWidget {
+  const _ClassSectionBindingFields({
+    required this.onChanged,
+    this.initialClassName,
+    this.initialSectionName,
+  });
+
+  final _ClassSectionChanged onChanged;
+  final String? initialClassName;
+  final String? initialSectionName;
+
+  @override
+  ConsumerState<_ClassSectionBindingFields> createState() =>
+      _ClassSectionBindingFieldsState();
+}
+
+class _ClassSectionBindingFieldsState
+    extends ConsumerState<_ClassSectionBindingFields> {
+  late String _className;
+  late String _sectionName;
+
+  @override
+  void initState() {
+    super.initState();
+    _className = (widget.initialClassName?.isNotEmpty ?? false)
+        ? widget.initialClassName!
+        : _unboundOption;
+    _sectionName = (widget.initialSectionName?.isNotEmpty ?? false)
+        ? widget.initialSectionName!
+        : _unboundOption;
+  }
+
+  void _notify() {
+    widget.onChanged(
+      className: _className == _unboundOption ? null : _className,
+      sectionName: _sectionName == _unboundOption ? null : _sectionName,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final classes = ref.watch(classOptionsProvider);
+    final catalog = ref.watch(academicCatalogProvider);
+    final sectionsForClass = (catalog == null || _className == _unboundOption)
+        ? const <String>[]
+        : _sortedUniqueLabels(
+            catalog.sections
+                .where((s) => s.className == _className)
+                .map((s) => s.sectionName),
+          );
+    if (_sectionName != _unboundOption &&
+        !sectionsForClass.contains(_sectionName)) {
+      // The class changed (or its sections loaded) since _sectionName was
+      // picked — it no longer belongs to the selected class.
+      _sectionName = _unboundOption;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Material(
+          child: DropdownMenu<String>(
+            key: QaTestKeys.financeFeeStructureClassField,
+            initialSelection: _className,
+            label: const Text('Bind to class (optional)'),
+            expandedInsets: EdgeInsets.zero,
+            dropdownMenuEntries: [
+              const DropdownMenuEntry(value: _unboundOption, label: _unboundOption),
+              for (final c in classes)
+                DropdownMenuEntry(value: c, label: 'Class $c'),
+            ],
+            onSelected: (value) {
+              if (value == null) return;
+              setState(() {
+                _className = value;
+                _sectionName = _unboundOption;
+              });
+              _notify();
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
+        Material(
+          child: DropdownMenu<String>(
+            key: ValueKey('section-for-$_className'),
+            initialSelection: _sectionName,
+            label: const Text('Section (optional)'),
+            expandedInsets: EdgeInsets.zero,
+            enabled: _className != _unboundOption,
+            dropdownMenuEntries: [
+              const DropdownMenuEntry(value: _unboundOption, label: _unboundOption),
+              for (final s in sectionsForClass)
+                DropdownMenuEntry(value: s, label: 'Section $s'),
+            ],
+            onSelected: _className == _unboundOption
+                ? null
+                : (value) {
+                    if (value == null) return;
+                    setState(() => _sectionName = value);
+                    _notify();
+                  },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 Future<void> showCreateFeeStructureDialog(
   BuildContext context,
   WidgetRef ref, {
@@ -64,6 +196,8 @@ Future<void> showCreateFeeStructureDialog(
   final nameController = TextEditingController(text: 'New fee structure');
   final totalController = TextEditingController(text: '₹1,85,000');
   final classRangeController = TextEditingController(text: 'Nursery – 12');
+  String? selectedClassName;
+  String? selectedSectionName;
 
   final confirmed = await showAksharaDialog<bool>(
     context: context,
@@ -85,6 +219,13 @@ Future<void> showCreateFeeStructureDialog(
             label: 'Class range',
             controller: classRangeController,
           ),
+          const SizedBox(height: 8),
+          _ClassSectionBindingFields(
+            onChanged: ({className, sectionName}) {
+              selectedClassName = className;
+              selectedSectionName = sectionName;
+            },
+          ),
         ],
       ),
       actions: _dialogActions(
@@ -105,6 +246,10 @@ Future<void> showCreateFeeStructureDialog(
             academicYear: academicYear,
             totalAnnual: totalController.text.trim(),
             classRange: classRangeController.text.trim(),
+            // Cap 67 — real class/section binding (label-based; resolved
+            // server-side against `academicYear`). Both null = unbound.
+            className: selectedClassName,
+            sectionName: selectedSectionName,
             categories: const [
               FeeCategoryLine(
                 category: FeeStructureCategory.tuition,
@@ -140,12 +285,16 @@ Future<void> showEditFeeStructureDialog(
 }) async {
   final nameController = TextEditingController(text: structure.name);
   final totalController = TextEditingController(text: structure.totalAnnual);
+  final wasClassBound = structure.isClassBound;
+  String? selectedClassName = structure.className;
+  String? selectedSectionName = structure.sectionName;
 
   final confirmed = await showAksharaDialog<bool>(
     context: context,
     builder: (context) => AksharaAlertDialog(
       title: 'Edit fee structure',
       icon: Icons.edit_outlined,
+      scrollable: true,
       content: AksharaDialogFormBody(
         children: [
           AksharaFormField(
@@ -155,6 +304,15 @@ Future<void> showEditFeeStructureDialog(
           AksharaFormField(
             label: 'Annual total',
             controller: totalController,
+          ),
+          const SizedBox(height: 8),
+          _ClassSectionBindingFields(
+            initialClassName: structure.className,
+            initialSectionName: structure.sectionName,
+            onChanged: ({className, sectionName}) {
+              selectedClassName = className;
+              selectedSectionName = sectionName;
+            },
           ),
         ],
       ),
@@ -169,11 +327,18 @@ Future<void> showEditFeeStructureDialog(
   if (confirmed != true || !context.mounted) return;
 
   try {
+    // Cap 67 — the picker went back to "Unbound" for a structure that WAS
+    // bound: that's an explicit unbind, not "leave unchanged" (which is what
+    // both fields being null would otherwise mean to the request contract).
+    final unbindClass = wasClassBound && selectedClassName == null;
     await ref.read(updateFeeStructureProvider.notifier).execute(
           feeStructureId: structure.id,
           request: UpdateFeeStructureRequest(
             name: nameController.text.trim(),
             totalAnnual: totalController.text.trim(),
+            unbindClass: unbindClass,
+            className: unbindClass ? null : selectedClassName,
+            sectionName: unbindClass ? null : selectedSectionName,
           ),
         );
     if (!context.mounted) return;
@@ -332,80 +497,465 @@ Future<void> showCreateRefundDialog(
   }
 }
 
+/// STEP-5 — P0 money-honesty fix (PRC-A cap 71). This used to fabricate a
+/// `concession_<timestamp>` id and either submit a `feeConcession` approval
+/// (the backend hardcodes `payableApplied: false` for that type — a row is
+/// recorded but NO money ever moves) or apply an in-memory
+/// `FinanceApprovalGovernanceStore` concession — neither ever reached the
+/// student's real payable. It now performs the real MAKER step of the
+/// certified, invoice-scoped fee-reduction maker-checker
+/// (finance_fee_reductions_{repository,handlers}.ts): propose a scholarship
+/// award or discount application against one of a specific student's OPEN
+/// invoices. This moves NO money — a second, different, authorised person
+/// (`Permission.approveFeeConcession`) must approve it from the "Pending
+/// awards" section on the discounts screen before the payable actually drops.
 Future<void> showAssignFeeConcessionDialog(
   BuildContext context,
   WidgetRef ref,
 ) async {
-  final studentNameController = TextEditingController();
-  final feeAccountController = TextEditingController();
-  final amountController = TextEditingController();
+  final discounts = ref.read(financeDiscountsProvider);
+  final scholarships =
+      discounts?.scholarships ?? const <ScholarshipCatalogItem>[];
+  final rules = discounts?.rules ?? const <DiscountRule>[];
+
+  // The discounts screen doesn't otherwise fetch student accounts / invoices
+  // — await them here so the student → open-invoice pickers below always see
+  // real data (never a transient empty list from an unloaded FutureProvider).
+  await ref.read(financeStudentAccountsFutureProvider.future);
+  await ref.read(financeInvoicesFutureProvider.future);
+  if (!context.mounted) return;
+  final studentAccounts = ref.read(financeStudentAccountsProvider);
+  final invoices = ref.read(financeInvoicesProvider);
+
+  if (scholarships.isEmpty && rules.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Add a scholarship or discount rule before awarding one.',
+        ),
+      ),
+    );
+    return;
+  }
+
+  var selectedSourceKind = FeeReductionSourceKind.scholarship;
+  var selectedSourceId = '';
+  var selectedInvoiceId = '';
+  var selectedReductionKind = FeeReductionKind.percent;
+  var enteredValueText = '';
+  var enteredReason = '';
+
   final reasonController = TextEditingController();
 
   final confirmed = await showAksharaDialog<bool>(
     context: context,
     builder: (context) => AksharaAlertDialog(
-      title: 'Assign fee concession',
+      title: 'Award a scholarship or discount',
       icon: Icons.school_outlined,
       scrollable: true,
-      content: AksharaDialogFormBody(
-        children: [
-          AksharaFormField(
-            label: 'Student name',
-            controller: studentNameController,
-            required: true,
-            hint: 'Student receiving the concession',
-          ),
-          AksharaFormField(
-            label: 'Fee account ID',
-            controller: feeAccountController,
-            hint: 'e.g. acct_1024',
-          ),
-          AksharaFormField(
-            label: 'Concession amount',
-            controller: amountController,
-            required: true,
-            hint: 'Concession / scholarship amount',
-          ),
-          AksharaFormField(
-            label: 'Reason',
-            controller: reasonController,
-            required: true,
-          ),
-        ],
+      content: _AwardFeeReductionForm(
+        scholarships: scholarships,
+        rules: rules,
+        studentAccounts: studentAccounts,
+        invoices: invoices,
+        reasonController: reasonController,
+        onChanged: ({
+          required FeeReductionSourceKind sourceKind,
+          required String sourceId,
+          required String invoiceId,
+          required FeeReductionKind reductionKind,
+          required String valueText,
+        }) {
+          selectedSourceKind = sourceKind;
+          selectedSourceId = sourceId;
+          selectedInvoiceId = invoiceId;
+          selectedReductionKind = reductionKind;
+          enteredValueText = valueText;
+        },
       ),
       actions: _dialogActions(
         context,
-        confirmLabel: 'Submit for approval',
+        confirmLabel: 'Propose award',
         confirmKey: QaTestKeys.financeAssignConcessionSubmitButton,
-        onConfirm: () => Navigator.of(context).pop(true),
+        onConfirm: () {
+          enteredReason = reasonController.text.trim();
+          if (selectedInvoiceId.isEmpty) return;
+          if (enteredReason.isEmpty) return;
+          final value = double.tryParse(enteredValueText.trim());
+          if (value == null || value <= 0) return;
+          if (selectedReductionKind == FeeReductionKind.percent &&
+              value > 100) {
+            return;
+          }
+          Navigator.of(context).pop(true);
+        },
       ),
     ),
   );
 
   if (confirmed != true || !context.mounted) return;
 
+  final value = double.tryParse(enteredValueText.trim()) ?? 0;
+  final percent =
+      selectedReductionKind == FeeReductionKind.percent ? value : null;
+  final amount =
+      selectedReductionKind == FeeReductionKind.fixed ? value : null;
+
   try {
-    final concessionId =
-        await ref.read(assignFeeConcessionProvider.notifier).execute(
-              studentName: studentNameController.text.trim(),
-              feeAccountId: feeAccountController.text.trim(),
-              amount: amountController.text.trim(),
-              reason: reasonController.text.trim(),
-            );
+    final FeeReduction? created;
+    if (selectedSourceKind == FeeReductionSourceKind.scholarship) {
+      created = await ref.read(proposeScholarshipAwardProvider.notifier).execute(
+            scholarshipId: selectedSourceId,
+            invoiceId: selectedInvoiceId,
+            reason: enteredReason,
+            percent: percent,
+            amount: amount,
+          );
+    } else {
+      created =
+          await ref.read(proposeDiscountApplicationProvider.notifier).execute(
+                discountRuleId: selectedSourceId,
+                invoiceId: selectedInvoiceId,
+                reason: enteredReason,
+                percent: percent,
+                amount: amount,
+              );
+    }
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         key: QaTestKeys.financeAssignConcessionSuccessSnackbar,
         content: Text(
-          concessionId == null
-              ? 'Concession could not be submitted'
-              : 'Concession submitted for principal approval ($concessionId)',
+          created == null
+              ? 'Award could not be proposed'
+              : 'Award proposed — the fee drops only after a second, '
+                  'different person approves it.',
         ),
       ),
     );
   } catch (error) {
     if (!context.mounted) return;
     _showMutationError(context, error);
+  }
+}
+
+/// Reports the maker dialog's current picker/value selections back to the
+/// enclosing [showAssignFeeConcessionDialog] on every change (mirrors the
+/// `onChanged`-reporting pattern [_RecordCollectionForm] uses below). The
+/// reason field is owned by the caller's [TextEditingController] directly
+/// (read at confirm time) since it needs no dependent-picker reactions.
+typedef _AwardFormChanged = void Function({
+  required FeeReductionSourceKind sourceKind,
+  required String sourceId,
+  required String invoiceId,
+  required FeeReductionKind reductionKind,
+  required String valueText,
+});
+
+/// True for an invoice a fee reduction can actually target — mirrors the
+/// backend's "not cancelled" gate plus "there is something to reduce" (an
+/// issued or partially-paid invoice actually has an outstanding balance).
+bool _isOpenInvoice(FinanceInvoice invoice) =>
+    invoice.invoiceStatus == InvoiceStatus.issued ||
+    invoice.invoiceStatus == InvoiceStatus.partiallyPaid;
+
+/// Best-effort prefill: parses a scholarship/discount-rule display value like
+/// `"25%"`, `"Up to 40%"`, or `"₹5,000"` into a reduction kind + plain number.
+/// Returns null when the string doesn't cleanly parse (the maker types the
+/// value manually instead — never a fabricated guess).
+({FeeReductionKind kind, String value})? _parseSourceValueHint(String raw) {
+  final trimmed = raw.trim();
+  final percentMatch =
+      RegExp(r'^(?:up to\s*)?(\d+(?:\.\d+)?)\s*%$', caseSensitive: false)
+          .firstMatch(trimmed);
+  if (percentMatch != null) {
+    return (kind: FeeReductionKind.percent, value: percentMatch.group(1)!);
+  }
+  final fixedMatch =
+      RegExp(r'^[₹Rr][Ss]?\.?\s*([\d,]+(?:\.\d+)?)$').firstMatch(trimmed);
+  if (fixedMatch != null) {
+    return (
+      kind: FeeReductionKind.fixed,
+      value: fixedMatch.group(1)!.replaceAll(',', ''),
+    );
+  }
+  return null;
+}
+
+class _AwardFeeReductionForm extends StatefulWidget {
+  const _AwardFeeReductionForm({
+    required this.scholarships,
+    required this.rules,
+    required this.studentAccounts,
+    required this.invoices,
+    required this.reasonController,
+    required this.onChanged,
+  });
+
+  final List<ScholarshipCatalogItem> scholarships;
+  final List<DiscountRule> rules;
+  final List<StudentFeeAccount> studentAccounts;
+  final List<FinanceInvoice> invoices;
+  final TextEditingController reasonController;
+  final _AwardFormChanged onChanged;
+
+  @override
+  State<_AwardFeeReductionForm> createState() =>
+      _AwardFeeReductionFormState();
+}
+
+class _AwardFeeReductionFormState extends State<_AwardFeeReductionForm> {
+  late FeeReductionSourceKind _sourceKind;
+  late String _sourceId;
+  String? _studentAccountId;
+  String? _invoiceId;
+  FeeReductionKind _reductionKind = FeeReductionKind.percent;
+  final _valueController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _sourceKind = widget.scholarships.isNotEmpty
+        ? FeeReductionSourceKind.scholarship
+        : FeeReductionSourceKind.discount;
+    _sourceId = _firstSourceId(_sourceKind);
+    _studentAccountId = widget.studentAccounts.isNotEmpty
+        ? widget.studentAccounts.first.id
+        : null;
+    _applySourcePrefill();
+    _invoiceId = _openInvoicesForStudent.isNotEmpty
+        ? _openInvoicesForStudent.first.id
+        : null;
+    // Report the initial selection so a confirm-without-touching-anything
+    // still carries the defaulted values.
+    _notify();
+  }
+
+  @override
+  void dispose() {
+    _valueController.dispose();
+    super.dispose();
+  }
+
+  String _firstSourceId(FeeReductionSourceKind kind) {
+    if (kind == FeeReductionSourceKind.scholarship) {
+      return widget.scholarships.isNotEmpty ? widget.scholarships.first.id : '';
+    }
+    return widget.rules.isNotEmpty ? widget.rules.first.id : '';
+  }
+
+  List<FinanceInvoice> get _openInvoicesForStudent {
+    final account = widget.studentAccounts.cast<StudentFeeAccount?>().firstWhere(
+          (a) => a?.id == _studentAccountId,
+          orElse: () => null,
+        );
+    final feeAssignmentId = account?.feeAssignmentId;
+    if (feeAssignmentId == null || feeAssignmentId.isEmpty) return const [];
+    return widget.invoices
+        .where(
+          (inv) => inv.feeAssignmentId == feeAssignmentId && _isOpenInvoice(inv),
+        )
+        .toList(growable: false);
+  }
+
+  void _applySourcePrefill() {
+    final rawValue = _sourceKind == FeeReductionSourceKind.scholarship
+        ? widget.scholarships.cast<ScholarshipCatalogItem?>().firstWhere(
+              (s) => s?.id == _sourceId,
+              orElse: () => null,
+            )?.maxDiscount
+        : widget.rules.cast<DiscountRule?>().firstWhere(
+              (r) => r?.id == _sourceId,
+              orElse: () => null,
+            )?.discountPercent;
+    if (rawValue == null) return;
+    final hint = _parseSourceValueHint(rawValue);
+    if (hint == null) return;
+    _reductionKind = hint.kind;
+    _valueController.text = hint.value;
+  }
+
+  void _notify() {
+    widget.onChanged(
+      sourceKind: _sourceKind,
+      sourceId: _sourceId,
+      invoiceId: _invoiceId ?? '',
+      reductionKind: _reductionKind,
+      valueText: _valueController.text,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sourceOptions = _sourceKind == FeeReductionSourceKind.scholarship
+        ? <String, String>{
+            for (final s in widget.scholarships)
+              s.id: '${s.name} (up to ${s.maxDiscount})',
+          }
+        : <String, String>{
+            for (final r in widget.rules) r.id: '${r.name} (${r.discountPercent})',
+          };
+    final sourceIdByLabel = {
+      for (final e in sourceOptions.entries) e.value: e.key,
+    };
+
+    final studentOptions = <String, String>{
+      for (final a in widget.studentAccounts)
+        a.id: '${a.studentName} (${a.admissionNumber})',
+    };
+    final studentIdByLabel = {
+      for (final e in studentOptions.entries) e.value: e.key,
+    };
+
+    final openInvoices = _openInvoicesForStudent;
+    final invoiceOptions = <String, String>{
+      for (final inv in openInvoices)
+        inv.id: '${inv.invoiceNumber} · ${inv.termLabel} · '
+            '${inv.outstandingAmount} due',
+    };
+    final invoiceIdByLabel = {
+      for (final e in invoiceOptions.entries) e.value: e.key,
+    };
+
+    return AksharaDialogFormBody(
+      children: [
+        DropdownMenu<FeeReductionSourceKind>(
+          key: QaTestKeys.financeAwardSourceKindField,
+          initialSelection: _sourceKind,
+          label: const Text('Award type'),
+          expandedInsets: EdgeInsets.zero,
+          dropdownMenuEntries: const [
+            DropdownMenuEntry(
+              value: FeeReductionSourceKind.scholarship,
+              label: 'Scholarship',
+            ),
+            DropdownMenuEntry(
+              value: FeeReductionSourceKind.discount,
+              label: 'Discount rule',
+            ),
+          ],
+          onSelected: (kind) {
+            if (kind == null) return;
+            setState(() {
+              _sourceKind = kind;
+              _sourceId = _firstSourceId(kind);
+              _applySourcePrefill();
+            });
+            _notify();
+          },
+        ),
+        if (sourceOptions.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              _sourceKind == FeeReductionSourceKind.scholarship
+                  ? 'No scholarships in the catalog yet.'
+                  : 'No discount rules yet.',
+            ),
+          )
+        else
+          AksharaSearchableDropdown(
+            key: QaTestKeys.financeAwardSourceField,
+            label: _sourceKind == FeeReductionSourceKind.scholarship
+                ? 'Scholarship'
+                : 'Discount rule',
+            value: sourceOptions[_sourceId] ?? sourceOptions.values.first,
+            options: sourceOptions.values.toList(),
+            onChanged: (label) {
+              final id = sourceIdByLabel[label];
+              if (id == null) return;
+              setState(() {
+                _sourceId = id;
+                _applySourcePrefill();
+              });
+              _notify();
+            },
+          ),
+        if (studentOptions.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text('No student fee accounts loaded yet.'),
+          )
+        else
+          AksharaSearchableDropdown(
+            key: QaTestKeys.financeAwardStudentField,
+            label: 'Student',
+            value:
+                studentOptions[_studentAccountId] ?? studentOptions.values.first,
+            options: studentOptions.values.toList(),
+            onChanged: (label) {
+              final id = studentIdByLabel[label];
+              if (id == null) return;
+              setState(() {
+                _studentAccountId = id;
+                _invoiceId = _openInvoicesForStudent.isNotEmpty
+                    ? _openInvoicesForStudent.first.id
+                    : null;
+              });
+              _notify();
+            },
+          ),
+        if (invoiceOptions.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'This student has no open invoices — an award needs one to '
+              'target.',
+            ),
+          )
+        else
+          AksharaSearchableDropdown(
+            key: QaTestKeys.financeAwardInvoiceField,
+            label: 'Invoice',
+            required: true,
+            value: invoiceOptions[_invoiceId] ?? invoiceOptions.values.first,
+            options: invoiceOptions.values.toList(),
+            onChanged: (label) {
+              final id = invoiceIdByLabel[label];
+              if (id == null) return;
+              setState(() => _invoiceId = id);
+              _notify();
+            },
+          ),
+        DropdownMenu<FeeReductionKind>(
+          key: QaTestKeys.financeAwardReductionKindField,
+          initialSelection: _reductionKind,
+          label: const Text('Reduction type'),
+          expandedInsets: EdgeInsets.zero,
+          dropdownMenuEntries: const [
+            DropdownMenuEntry(
+              value: FeeReductionKind.percent,
+              label: 'Percent of fee',
+            ),
+            DropdownMenuEntry(
+              value: FeeReductionKind.fixed,
+              label: 'Fixed amount',
+            ),
+          ],
+          onSelected: (kind) {
+            if (kind == null) return;
+            setState(() => _reductionKind = kind);
+            _notify();
+          },
+        ),
+        AksharaFormField(
+          key: QaTestKeys.financeAwardValueField,
+          label: _reductionKind == FeeReductionKind.percent
+              ? 'Percent off (%)'
+              : 'Fixed amount (₹)',
+          controller: _valueController,
+          required: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          onChanged: (_) => _notify(),
+        ),
+        AksharaFormField(
+          key: QaTestKeys.financeAwardReasonField,
+          label: 'Reason',
+          controller: widget.reasonController,
+          required: true,
+        ),
+      ],
+    );
   }
 }
 
