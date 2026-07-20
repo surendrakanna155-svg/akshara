@@ -100,6 +100,7 @@ class EndToEndCertification(unittest.TestCase):
     def setUpClass(cls):
         cls.tmp = tempfile.mkdtemp()
         cls.edb = os.path.join(cls.tmp, "examdna.db")
+        cls.qdi_none = os.path.join(cls.tmp, "none.db")  # nonexistent -> honest-null design DNA, isolated
         idx, out = ED.open_frozen_index(), ED.open_examdna(cls.edb)
         try:
             ED.build(idx, out)
@@ -154,9 +155,9 @@ class EndToEndCertification(unittest.TestCase):
                                   "calculation_load"})
 
     def test_no_fabricated_design_dna(self):
-        # 0 certified QDI patterns -> design DNA must be honest-null everywhere, never invented
+        # with NO certified QDI store, design DNA must be honest-null everywhere, never invented
         for exam in _EXAMS:
-            out = R.plan_blueprints(exam, 120, examdna_path=self.edb)
+            out = R.plan_blueprints(exam, 120, examdna_path=self.edb, qdi_path=self.qdi_none)
             for b in out["issued"]:
                 self.assertIsNone(b["pattern_id"])
                 self.assertIsNone(b["expected_solving_path"])

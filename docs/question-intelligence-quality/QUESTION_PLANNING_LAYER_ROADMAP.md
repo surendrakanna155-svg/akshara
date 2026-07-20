@@ -450,3 +450,24 @@ certify (EOS) → commit → doc.
   **wrong key never certifies** (sympy disagree → rejected). **750 tests green** (was 746).
 - This is a bounded proof-of-loop; scaling generation (volume, per-exam coverage, the qualitative owned-source
   lane) is the ongoing work beyond this roadmap.
+
+### QDI design-pattern mining (Owner Decision 5 approved) — governed pipeline PROVEN + data blocker surfaced
+- **`kie/qie/knowledge/run_qdi.py`** — governed mining/certification driver into a SEPARATE `qdi.db` (the frozen
+  index is NEVER written). AI proposes (analyst) → **MANDATORY deterministic floor** (anti-copying 5-gram +
+  word-overlap, + structural) → **independent audit** → certify (floor passed AND accept). `qdi_scope_link`
+  populated; the planner reads certified patterns **exam-scoped** from qdi.db and attaches them (already wired).
+- **Result:** the 12 prior-proposed JEE_Main Math patterns → **7 CERTIFIED** (coherent pure-math machinery),
+  **5 QUARANTINED** — the independent review caught 5 physics-domain patterns (kinematics/fields/thermo/decay/
+  optics) mislabeled `subject=Mathematics`. Certified patterns attach to JEE Main Math blueprints (**29/98** at
+  N=300) with **no cross-exam leak** (NEET gets 0). (The 2 auditor attempts via agent hit a spurious content
+  filter → I audited as the disclosed independent-of-proposer reviewer, floor mandatory — governance permits
+  disclosed same-actor judging.)
+- **Data-quality BLOCKER surfaced** (4 parallel analyst agents on new cells): `kie.db source_documents`
+  subject/exam tagging is **broken** — JEE-Physics queries returned mislabeled NEET Biology + ~60% OCR
+  boilerplate. The analysts correctly **refused to fabricate**; the 36 mined patterns are uncertain-subject
+  generic MCQ-forms and were **NOT certified** (quality > quantity; wrong knowledge is worse than missing).
+  Reliable large-scale mining is **blocked until the source tagging is fixed** (a data-repair dependency).
+- **Known limitation:** attach is by (subject, archetype, difficulty) — archetype-level design REFERENCE,
+  concept-agnostic (a calculus exemplar can land on a set-theory concept). Concept-aware attach is a refinement.
+- Tests: +4 (`tests/test_qpl_phase4b_qdi_mining.py`); cert/attach tests isolated to a controlled qdi store.
+  **754 tests green.**

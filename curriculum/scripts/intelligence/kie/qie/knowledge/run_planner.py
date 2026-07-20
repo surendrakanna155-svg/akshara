@@ -21,7 +21,7 @@ from kie.qie.knowledge import blueprint as BP
 from kie.qie.knowledge import examdna as ED
 from kie.qie.knowledge import plan_specs as PS
 from kie.qie.knowledge import planner as P
-from kie.qie.knowledge import qdi as QDI
+from kie.qie.knowledge import qdi as QDI  # noqa: F401  (used by plan()'s certified-pattern reader)
 from kie.qie.knowledge import qdi_link as QL
 
 INDEX_DB_PATH = config.KIE_HOME / "knowledge_index.db"
@@ -68,7 +68,28 @@ def _foundation_version(conn) -> str:
         return "unknown"
 
 
-def plan_blueprints(exam: str, total: int, index_path=None, examdna_path=None) -> dict:
+def _load_certified_patterns(exam: str, qdi_path=None) -> list:
+    """Certified QDI design patterns for this exam profile, from the SEPARATE qdi.db. Empty (honest null)
+    if qdi.db has not been built or has no certified patterns for this exam yet."""
+    from kie.qie.knowledge import run_qdi as RQ
+    p = str(qdi_path or RQ.QDI_DB_PATH)
+    out: list = []
+    try:
+        qdb = sqlite3.connect(f"file:{p}?mode=ro", uri=True)
+    except sqlite3.OperationalError:
+        return out
+    qdb.row_factory = sqlite3.Row
+    try:
+        for subject in ED.EXAM_SUBJECTS[exam]:
+            out.extend(RQ.certified_patterns_for_exam(qdb, exam, subject))
+    except sqlite3.OperationalError:
+        pass
+    finally:
+        qdb.close()
+    return out
+
+
+def plan_blueprints(exam: str, total: int, index_path=None, examdna_path=None, qdi_path=None) -> dict:
     """Deterministically plan `total` QuestionBlueprints for one exam from frozen v1.4 + Exam DNA.
 
     NO RNG, NO clock: the same (frozen index, Exam DNA, exam, total) always yields the identical set of
@@ -86,7 +107,6 @@ def plan_blueprints(exam: str, total: int, index_path=None, examdna_path=None) -
         concepts_by_chapter: dict = {}
         chapter_weights: dict = {}
         universe_all = []
-        cert_patterns = []
         for subject in ED.EXAM_SUBJECTS[exam]:
             uni = P.certified_universe(conn, subject, list(EXAM_CLASSES))
             uni, _ = P.dedupe_universe(uni)
@@ -94,7 +114,6 @@ def plan_blueprints(exam: str, total: int, index_path=None, examdna_path=None) -
             for c in uni:
                 concepts_by_chapter.setdefault(c["chapter_id"], []).append(c)
             chapter_weights[subject] = ED.chapter_weight_map(edb, exam, subject)
-            cert_patterns.extend(QDI.certified_patterns(conn, subject))  # 0 today; QDI mining = owner-gated
         for cid in concepts_by_chapter:
             concepts_by_chapter[cid].sort(key=lambda c: c["concept_id"])
         diff_dist = ED.distribution(edb, exam, "difficulty")
@@ -105,6 +124,9 @@ def plan_blueprints(exam: str, total: int, index_path=None, examdna_path=None) -
         conn.close()
         edb.close()
 
+    # certified design patterns from the SEPARATE qdi.db (honest-null until QDI mining certifies some),
+    # scoped to THIS exam's profile so a JEE pattern never enriches a NEET blueprint.
+    cert_patterns = _load_certified_patterns(exam, qdi_path)
     pat_idx = QL.index_by_key(cert_patterns)
     by_id = {c["concept_id"]: c for c in universe_all}
     issued, refused, seen_fp = [], [], set()

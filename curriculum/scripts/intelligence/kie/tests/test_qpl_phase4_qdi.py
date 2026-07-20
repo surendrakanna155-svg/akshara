@@ -78,9 +78,12 @@ class PatternAttachment(unittest.TestCase):
 
 @unittest.skipUnless(_IDX.exists(), "frozen knowledge_index.db not present (gitignored / local only)")
 class AttachmentThroughPlanner(unittest.TestCase):
-    def test_blueprints_carry_honest_null_design_dna_until_qdi_certified(self):
-        # 0 certified QDI patterns today -> every blueprint carries null design DNA, never fabricated
-        out = R.plan_blueprints("JEE_MAIN", 60)
+    def test_blueprints_carry_honest_null_when_no_certified_qdi_store(self):
+        # with NO certified QDI store, every blueprint carries honest-null design DNA, never fabricated
+        import os
+        import tempfile
+        none = os.path.join(tempfile.mkdtemp(), "none.db")  # nonexistent -> empty -> honest null
+        out = R.plan_blueprints("JEE_MAIN", 60, qdi_path=none)
         self.assertTrue(out["issued"])
         for b in out["issued"]:
             self.assertIsNone(b["pattern_id"])
