@@ -52,6 +52,7 @@ import {
   type ClientContext,
   type ConfirmAttachmentRequest,
   type CreateIncidentRequest,
+  type EventRow,
   type EvidenceRow,
   type IncidentRow,
   type PostMessageRequest,
@@ -71,6 +72,34 @@ function hasSupportManage(claims: AccessTokenClaims): boolean {
 }
 function isReporter(claims: AccessTokenClaims, incident: IncidentRow): boolean {
   return incident.reporter_user_id === claims.sub;
+}
+
+// A reporter's timeline must not leak support-internal activity (AI analysis,
+// evidence collection) or the EXISTENCE of internal notes. Filter to a
+// reporter-safe event set and strip metadata.
+const REPORTER_VISIBLE_EVENTS = new Set([
+  "created",
+  "status_changed",
+  "severity_changed",
+  "resolved",
+  "reopened",
+  "message_posted",
+  "attachment_added",
+]);
+
+export function reporterSafeEvents(events: EventRow[]): Array<Record<string, unknown>> {
+  return events
+    .filter((e) => REPORTER_VISIBLE_EVENTS.has(e.event_type))
+    .filter((e) =>
+      !(e.event_type === "message_posted" &&
+        (e.metadata as Record<string, unknown>)?.visibility === "internal_note")
+    )
+    .map((e) => ({
+      event_type: e.event_type,
+      from_value: e.from_value,
+      to_value: e.to_value,
+      created_at: e.created_at,
+    }));
 }
 
 // Valid status transitions. new/awaiting → in_progress etc.; resolved/closed can
@@ -227,7 +256,7 @@ export async function handleGetIncident(
     const attachments = await listAttachments(db, claims, incidentId);
     const evidence = support ? await listLatestEvidence(db, claims, incidentId) : [];
     const analysis = support ? await getLatestAnalysis(db, claims, incidentId) : null;
-    return { incident, events, messages, attachments, evidence, analysis };
+    return { incident, events, messages, attachments, evidence, analysis, isSupport: support };
   });
 
   if ("notFound" in loaded) return errorEnvelope("NOT_FOUND", "Incident not found", 404);
@@ -249,7 +278,7 @@ export async function handleGetIncident(
 
   return jsonResponse(envelope({
     incident: loaded.incident,
-    events: loaded.events,
+    events: loaded.isSupport ? loaded.events : reporterSafeEvents(loaded.events),
     messages: loaded.messages,
     attachments: attachmentsWithUrls,
     evidence: loaded.evidence,
