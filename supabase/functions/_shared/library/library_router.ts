@@ -26,6 +26,13 @@ import {
   handleUpdateSettings,
   handleWaiveFine,
 } from "./library_write_handlers.ts";
+import {
+  handleListAccessions,
+  handleLookupAccession,
+  handleMarkAccessionLost,
+  handleRegisterAccession,
+  handleWithdrawAccession,
+} from "./library_accession_handlers.ts";
 
 type RouteHandler = (req: Request, config: AppConfig) => Promise<Response>;
 type ParamRouteHandler = (
@@ -50,9 +57,19 @@ function matchLibraryRoute(
       "/library/reports": handleReports,
       "/library/overdue": handleOverdue,
       "/library/settings": handleSettings,
+      // PRA-P1-41: the accession register (exact match before the :accessionNo
+      // param route below).
+      "/library/accessions": handleListAccessions,
     };
     const handler = routes[path] as RouteHandler | undefined;
-    return handler ? { handler, args: [] } : null;
+    if (handler) return { handler, args: [] };
+
+    // PRA-P1-41: look up a single copy by accession number.
+    const accessionMatch = path.match(/^\/library\/accessions\/([^/]+)$/);
+    if (accessionMatch) {
+      return { handler: handleLookupAccession, args: [accessionMatch[1]!] };
+    }
+    return null;
   }
 
   if (method === "POST") {
@@ -67,6 +84,16 @@ function matchLibraryRoute(
       return { handler: handleRenewLoan, args: [renewMatch[1]!] };
     }
 
+    // PRA-P1-41: accession status transitions (matched before the bare-path map).
+    const lostMatch = path.match(/^\/library\/accessions\/([^/]+)\/lost$/);
+    if (lostMatch) {
+      return { handler: handleMarkAccessionLost, args: [lostMatch[1]!] };
+    }
+    const withdrawMatch = path.match(/^\/library\/accessions\/([^/]+)\/withdraw$/);
+    if (withdrawMatch) {
+      return { handler: handleWithdrawAccession, args: [withdrawMatch[1]!] };
+    }
+
     const routes: Record<string, RouteHandler> = {
       "/library/catalog": handleAddBook,
       "/library/catalog/import": handleBulkImportBooks,
@@ -75,6 +102,8 @@ function matchLibraryRoute(
       "/library/members": handleEnrollMember,
       "/library/digital-resources": handleAddDigitalResource,
       "/library/reminders/overdue": handleSendOverdueReminders,
+      // PRA-P1-41: register (accession) a new physical copy.
+      "/library/accessions": handleRegisterAccession,
     };
     const handler = routes[path] as RouteHandler | undefined;
     return handler ? { handler, args: [] } : null;
