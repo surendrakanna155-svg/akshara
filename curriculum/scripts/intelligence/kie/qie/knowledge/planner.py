@@ -99,7 +99,11 @@ def _ngram_repetition(s: str) -> float:
 def is_ocr_garbage(name: str) -> bool:
     if _OCR_CHAR.search((name or "").replace(" ", "")):
         return True
-    return _ngram_repetition(name) >= 0.60
+    # syllable repetition is a garbage signal only WITHIN a single word ("Telateltelt", "answeranswer").
+    # A repeated WHOLE word ("Common Multiples", "Cell Membrane (Plasma Membrane)",
+    # "Gametogenesis (Spermatogenesis)") is legitimate curriculum, not OCR damage — so scan per word,
+    # never across the space-collapsed string (which false-refused 18 certified concepts).
+    return any(_ngram_repetition(w) >= 0.60 for w in re.findall(r"[A-Za-z]+", name or ""))
 
 
 class PlanRefused(Exception):
@@ -119,7 +123,10 @@ def certified_universe(iconn: sqlite3.Connection, subject: str,
         q += " AND c.taught_at_class IN (%s)" % ",".join("?" * len(classes))
         args += classes
     out = []
-    for r in iconn.execute(q + " ORDER BY c.taught_at_class, ch.chapter_no, c.canonical_name", args):
+    # final tie-break on concept_id makes the scan order total (deterministic under ANY re-import,
+    # not merely for the current physical row order of the frozen DB).
+    for r in iconn.execute(q + " ORDER BY c.taught_at_class, ch.chapter_no, c.canonical_name, c.concept_id",
+                           args):
         d = dict(r)
         d["sub_concepts"] = json.loads(d["sub_concepts"] or "[]")
         d["prerequisites"] = json.loads(d["prerequisites"] or "[]")
@@ -155,12 +162,20 @@ def check_plan(spec: dict, universe_by_id: Dict[str, dict]) -> List[str]:
     if spec.get("subject") != kc["subject"]:
         v.append(f"subject_mismatch: spec says {spec.get('subject')!r}, certified index says {kc['subject']!r}")
 
+    # 3b. name must match the certified canonical name — a resolving id carrying a MISLABELLED (non-junk)
+    #     name is a defect a subject/junk check alone cannot see.
+    if name and name != kc["canonical_name"]:
+        v.append(f"name_mismatch: spec name {name!r} != certified {kc['canonical_name']!r}")
+
     # 4. class/chapter boundary mismatch — taught_at_class is authoritative, never the doc label
     if int(spec.get("class_level") or 0) != int(kc["taught_at_class"]):
         v.append(f"class_mismatch: spec says class {spec.get('class_level')}, "
                  f"certified taught_at_class is {kc['taught_at_class']}")
-    if spec.get("chapter_id") and spec["chapter_id"] != kc["chapter_id"]:
-        v.append(f"chapter_mismatch: {spec['chapter_id']!r} vs certified {kc['chapter_id']!r}")
+    ch = spec.get("chapter_id")
+    if not ch:
+        v.append("chapter_missing: a spec must name the concept's certified chapter (no fail-open on a blank id)")
+    elif ch != kc["chapter_id"]:
+        v.append(f"chapter_mismatch: {ch!r} vs certified {kc['chapter_id']!r}")
 
     # 5. archetype validity + archetype x depth coherence
     arch = spec.get("archetype")
@@ -172,12 +187,19 @@ def check_plan(spec: dict, universe_by_id: Dict[str, dict]) -> List[str]:
         if not (lo <= depth <= hi):
             v.append(f"archetype_depth_incoherent: {arch!r} supports depth {lo}-{hi}, spec asks {depth}")
 
-    # 6. composition must be SUPPORTED by the index, not asserted by the planner.
+    # 6. composition must be a KNOWN kind and SUPPORTED by the index, not asserted by the planner.
     #    The trial's planner paired "Newton's law" with "Aufbau's principle"; the generator refused.
+    #    An unknown composition token must NOT fail open — partners are validated on every non-single kind
+    #    so a bogus kind ("dual", "sequential_chain") cannot smuggle a cross-subject/above-class partner past.
     comp = spec.get("composition")
     partners = spec.get("compose_with") or []
-    if comp == "multi":
-        if not partners:
+    if comp not in ("single", "multi"):
+        v.append(f"unsupported_composition: unknown composition kind {comp!r}")
+    if comp == "single":
+        if partners:
+            v.append("unsupported_composition: single composition must not declare partners")
+    else:
+        if comp == "multi" and not partners:
             v.append("unsupported_composition: multi requested with no partner concept")
         for pid in partners:
             p = universe_by_id.get(pid)
@@ -190,8 +212,6 @@ def check_plan(spec: dict, universe_by_id: Dict[str, dict]) -> List[str]:
             if p["taught_at_class"] > kc["taught_at_class"]:
                 v.append(f"unsupported_composition: partner {p['canonical_name']!r} is taught at class "
                          f"{p['taught_at_class']} > {kc['taught_at_class']}")
-    elif comp == "single" and partners:
-        v.append("unsupported_composition: single composition must not declare partners")
 
     return v
 
@@ -229,7 +249,7 @@ def forbidden_terms(universe: List[dict], subject: str, class_level: int, limit:
             if w in below:
                 continue
             above[w] = above.get(w, 0) + (c["taught_at_class"] - class_level)
-    ranked = [w for w, _ in sorted(above.items(), key=lambda kv: -kv[1])][:limit]
+    ranked = [w for w, _ in sorted(above.items(), key=lambda kv: (-kv[1], kv[0]))][:limit]
     # evidenced out-of-scope for THIS class beats any synthesized list
     oos: List[str] = []
     for c in universe:

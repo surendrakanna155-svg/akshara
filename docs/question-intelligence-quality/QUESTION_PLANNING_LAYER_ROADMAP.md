@@ -418,3 +418,21 @@ certify (EOS) → commit → doc.
   as the foundation build). Running the governed analyst→independent-auditor mining pass produces model-certified
   knowledge and spends model budget → a genuine owner decision. The QPL is complete and certifiable as a
   DETERMINISTIC PLANNER without it; certified design DNA is additive enrichment layered on later.
+
+### Phase 5 — Verify & certify the whole QPL — ✅ COMPLETE (2026-07-20) · EOS: PASS · **QPL CERTIFIED**
+- **Deterministic certification suite** `tests/test_qpl_certification.py`: all control floors hold; byte-for-byte
+  determinism (all 3 exams); every blueprint gate-passes with a complete provenanced contract; distributions
+  match or report an honest shortfall; frozen foundation read-only; no fabricated design DNA; no degenerate dups.
+- **Multi-agent adversarial verification** (3 independent read-only agents, user-enabled): Determinism → SOUND;
+  Honesty → HONEST; Gates → sound-in-practice with fail-open holes. Every finding fed a deterministic fix:
+  - Determinism hardening: total `ORDER BY` tie-breaks (`certified_universe`, Exam-DNA readers, `forbidden_terms`),
+    read-only Exam DNA open in the planner.
+  - Gate hardening: closed composition fail-open (HOLE A), name↔id check (HOLE B), blank-chapter fail-open
+    (HOLE C); fixed the OCR filter that falsely refused 18 certified concepts; strengthened anti-copying vs heavy
+    paraphrase (word-overlap floor); dedup degenerate duplicates into an honest reported shortfall.
+  - Honesty: tightened one loose "mirrors" comment. All fixes **regression-locked** (`GateHardening.*`).
+- **EOS gate: PASS** — no P0 / Constitution automatic-failure; one P1 tracked (QDI mining, Decision 5).
+- Certification package: `docs/question-intelligence-quality/QPL_CERTIFICATION.md`.
+- Tests: +15 certification/regression. **746 tests green** (baseline was 681).
+- **VERDICT: the deterministic Question Planning Layer is COMPLETE and CERTIFIED.** Candidate generation may
+  begin against the certified blueprints; QDI design-DNA enrichment (Decision 5) is the one owner-gated follow-on.

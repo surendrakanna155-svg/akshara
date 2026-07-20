@@ -39,7 +39,8 @@ EXAM_SUBJECTS: Dict[str, tuple] = {
     "JEE_ADVANCED": ("Physics", "Chemistry", "Mathematics"),
 }
 
-# published exam structure (subject weightage) — mirrors qpgen/blueprints.py AUTHENTIC_BLUEPRINTS
+# published exam structure (subject weightage). NEET matches qpgen/blueprints.py exactly (25/25/50); JEE uses
+# exact thirds — faithful to the real equal-25-questions-per-subject structure (blueprints.py rounds to 33/33/34).
 EXAM_SUBJECT_WEIGHT: Dict[str, Dict[str, float]] = {
     "NEET": {"Physics": 0.25, "Chemistry": 0.25, "Biology": 0.50},
     "JEE_MAIN": {"Physics": 1 / 3, "Chemistry": 1 / 3, "Mathematics": 1 / 3},
@@ -148,6 +149,15 @@ def open_frozen_index(path=None) -> sqlite3.Connection:
     return conn
 
 
+def open_examdna_ro(path=None) -> sqlite3.Connection:
+    """READ-ONLY open for consumers (e.g. the planner). Fails loudly if Exam DNA has not been built —
+    which is the honest outcome: the planner must not silently plan against an absent Exam DNA."""
+    p = str(path or EXAMDNA_DB_PATH)
+    conn = sqlite3.connect(f"file:{p}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
 def build(index_conn: sqlite3.Connection, out_conn: sqlite3.Connection, version: str = VERSION) -> Dict[str, int]:
     """Materialize curated Exam DNA v1 for all three exams. Validates every distribution before writing."""
     now = _now()
@@ -198,21 +208,24 @@ def build(index_conn: sqlite3.Connection, out_conn: sqlite3.Connection, version:
 
 
 # ── readers (consumed by the Phase 3 deterministic allocator) ─────────────────────────────────────────
+# Readers carry an explicit ORDER BY so the dict insertion order (hence any downstream summation order) is a
+# total, physical-row-order-independent function of the data — determinism holds under any re-import.
 def subject_weights(conn: sqlite3.Connection, exam: str) -> Dict[str, float]:
     return {r["subject"]: r["weight"] for r in conn.execute(
-        "SELECT subject, weight FROM exam_weight WHERE exam=? AND scope_type='subject'", (exam,))}
+        "SELECT subject, weight FROM exam_weight WHERE exam=? AND scope_type='subject' ORDER BY subject",
+        (exam,))}
 
 
 def chapter_weight_map(conn: sqlite3.Connection, exam: str, subject: str) -> Dict[str, float]:
     return {r["scope_id"]: r["weight"] for r in conn.execute(
-        "SELECT scope_id, weight FROM exam_weight WHERE exam=? AND subject=? AND scope_type='chapter'",
-        (exam, subject))}
+        "SELECT scope_id, weight FROM exam_weight WHERE exam=? AND subject=? AND scope_type='chapter' "
+        "ORDER BY scope_id", (exam, subject))}
 
 
 def distribution(conn: sqlite3.Connection, exam: str, dimension: str, subject: str = "") -> Dict[str, float]:
     return {r["bucket"]: r["probability"] for r in conn.execute(
-        "SELECT bucket, probability FROM exam_distribution WHERE exam=? AND subject=? AND dimension=?",
-        (exam, subject, dimension))}
+        "SELECT bucket, probability FROM exam_distribution WHERE exam=? AND subject=? AND dimension=? "
+        "ORDER BY bucket", (exam, subject, dimension))}
 
 
 def _main() -> int:

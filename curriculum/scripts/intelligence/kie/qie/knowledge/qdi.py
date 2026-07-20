@@ -69,6 +69,26 @@ def copying_score(candidate_text: str, source_text: str, n: int = 5) -> float:
     return len(c & s) / len(c)
 
 
+# content-word (unigram) reuse catches a heavy PARAPHRASE that displaces a token every few words so no
+# 5-gram survives, yet reuses most of the source's actual vocabulary. The deterministic floor catches
+# verbatim + gross paraphrase; subtler semantic copying is the INDEPENDENT MODEL AUDITOR's job.
+_STOP = {"the", "a", "an", "of", "to", "in", "on", "at", "is", "are", "be", "and", "or", "for", "with",
+         "by", "that", "this", "it", "as", "from", "which", "into", "its", "their", "than", "then", "so",
+         "not", "no", "if", "but", "each", "any", "all", "one", "two", "when", "where", "how"}
+
+
+def _content_words(text: str) -> Set[str]:
+    return {w for w in _WORD.findall((text or "").lower()) if w not in _STOP and len(w) > 2}
+
+
+def word_overlap(candidate_text: str, source_text: str) -> float:
+    """Fraction of the candidate's distinct content words that also appear in the source."""
+    c = _content_words(candidate_text)
+    if not c:
+        return 0.0
+    return len(c & _content_words(source_text)) / len(c)
+
+
 def assert_no_copying(pattern: dict, source_text: str, threshold: float = 0.12) -> Optional[str]:
     """-> reason if the pattern echoes source wording, else None.
 
@@ -86,6 +106,10 @@ def assert_no_copying(pattern: dict, source_text: str, threshold: float = 0.12) 
     score = copying_score(joined, source_text)
     if score >= threshold:
         return f"copies_source_wording: {score:.0%} of pattern shingles appear verbatim in the source chunk"
+    # heavy paraphrase: few 5-grams survive but most content words are reused from THIS source chunk
+    wo = word_overlap(joined, source_text)
+    if wo >= 0.65:
+        return f"copies_source_wording: {wo:.0%} of the pattern's content words are reused from the source (paraphrase)"
     # a stem-shaped sentence is a tell even when shingles miss (light paraphrase)
     for f in fields:
         if re.search(r"\b(find|calculate|evaluate|determine)\b.{0,80}\?$", f.strip(), re.I) and len(f) > 60:

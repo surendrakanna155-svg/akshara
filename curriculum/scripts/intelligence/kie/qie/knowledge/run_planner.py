@@ -78,7 +78,7 @@ def plan_blueprints(exam: str, total: int, index_path=None, examdna_path=None) -
     if exam not in ED.EXAMS:
         raise ValueError(f"unknown exam {exam!r} (expected one of {ED.EXAMS})")
     conn = open_frozen_index(index_path)
-    edb = ED.open_examdna(examdna_path)
+    edb = ED.open_examdna_ro(examdna_path)   # planner consumes Exam DNA READ-ONLY (never mutates it)
     try:
         fver = _foundation_version(conn)
         ever = (edb.execute("SELECT value FROM examdna_meta WHERE key='version'").fetchone() or ["v1"])[0]
@@ -108,6 +108,7 @@ def plan_blueprints(exam: str, total: int, index_path=None, examdna_path=None) -
     pat_idx = QL.index_by_key(cert_patterns)
     by_id = {c["concept_id"]: c for c in universe_all}
     issued, refused, seen_fp = [], [], set()
+    duplicate_dropped = 0
     for s in slots:
         n_in_chapter = len(concepts_by_chapter.get(s["chapter_id"]) or []) or 1
         cw = chapter_weights[s["subject"]].get(s["chapter_id"], 0.0)
@@ -116,16 +117,22 @@ def plan_blueprints(exam: str, total: int, index_path=None, examdna_path=None) -
         v = P.check_plan(bp, by_id)
         if v:
             refused.append({"blueprint_id": bp["blueprint_id"], "violations": v})
-        else:
-            issued.append(bp)
-            seen_fp.add(bp["blueprint_fingerprint"])
+            continue
+        # a degenerate recycle (same concept x archetype x difficulty x depth) is not a distinct plan — drop
+        # it and report it as an honest coverage shortfall rather than passing it off via an occurrence salt.
+        if bp["blueprint_fingerprint"] in seen_fp:
+            duplicate_dropped += 1
+            continue
+        seen_fp.add(bp["blueprint_fingerprint"])
+        issued.append(bp)
     realized = {}
     for b in issued:
         realized[b["difficulty"]] = realized.get(b["difficulty"], 0) + 1
     shortfall = sum(1 for b in issued if b["difficulty"] != b["target_difficulty"])
     return {"exam": exam, "planned": len(slots), "issued": issued, "refused": refused,
-            "distinct_fingerprints": len(seen_fp), "realized_difficulty": realized,
-            "difficulty_shortfall": shortfall, "foundation_version": fver, "examdna_version": ever}
+            "distinct_fingerprints": len(seen_fp), "duplicate_dropped": duplicate_dropped,
+            "realized_difficulty": realized, "difficulty_shortfall": shortfall,
+            "foundation_version": fver, "examdna_version": ever}
 
 
 def _main() -> int:
