@@ -30,6 +30,7 @@ import {
   handleUpdateReportRemark,
 } from "./education_handlers.ts";
 import { matchLearningEvidenceRoute } from "./learning_evidence_router.ts";
+import { matchOmrRoute } from "./omr_router.ts";
 
 const UUID_SEGMENT =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -47,6 +48,13 @@ export function matchEducationRoute(
   // subtree; a miss falls through to the existing education routes below.
   const evidence = matchLearningEvidenceRoute(method, path);
   if (evidence) return evidence;
+
+  // W5 Smart OMR — the OMR capture→score + item-analysis surface owns
+  // `/education/omr/*`. Delegated here (same pattern as evidence) so it goes live
+  // through routeEducation with no api/app.ts change. OMR is an ADDITIONAL capture
+  // path; the frozen marks-grid is untouched.
+  const omr = matchOmrRoute(method, path);
+  if (omr) return omr;
 
   if (path === "/education/question-bank" && method === "GET") {
     return { handler: handleListQuestionBank, args: [] };
