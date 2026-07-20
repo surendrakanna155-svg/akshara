@@ -164,20 +164,27 @@ export async function createPaymentIntent(
     gatewayOrderId: string;
     idempotencyKey: string | null;
     expiresAt: Date;
+    /**
+     * The provider id that created this order. Persisted so confirm/webhook
+     * resolve the SAME provider that opened the intent. Defaults to 'razorpay'
+     * (the column default) to preserve prior behaviour.
+     */
+    gateway?: string;
   },
 ): Promise<PaymentIntentRow> {
   const rows = await db.queryObject<PaymentIntentRow>(
     `INSERT INTO payment_intents (
        organization_id, school_id, request_id, payer_user_id,
-       amount, payment_method, invoice_id, gateway_order_id,
+       gateway, amount, payment_method, invoice_id, gateway_order_id,
        status, idempotency_key, expires_at
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'initiated', $9, $10)
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'initiated', $10, $11)
      RETURNING *`,
     [
       input.organizationId,
       input.schoolId,
       input.requestId,
       input.payerUserId,
+      input.gateway ?? "razorpay",
       input.amount,
       input.paymentMethod,
       input.invoiceId,
