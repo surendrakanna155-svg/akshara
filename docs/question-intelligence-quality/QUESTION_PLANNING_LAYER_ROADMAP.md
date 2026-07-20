@@ -436,3 +436,17 @@ certify (EOS) → commit → doc.
 - Tests: +15 certification/regression. **746 tests green** (baseline was 681).
 - **VERDICT: the deterministic Question Planning Layer is COMPLETE and CERTIFIED.** Candidate generation may
   begin against the certified blueprints; QDI design-DNA enrichment (Decision 5) is the one owner-gated follow-on.
+
+### Post-QPL — Candidate Generation MVP (Decision C factory) — ✅ PROVEN (2026-07-20; owner: proceed to generation)
+- **`kie/qie/factory/run_generation.py`** wires the certified blueprints into the AI candidate factory:
+  certified blueprint → generator brief → [model proposes] → deterministic gates + **sympy independent solve** →
+  [model judges] → certify (gates ∧ sympy-agree ∧ judge-accept). Only STRUCTURED_NUMERIC certifies here.
+- **First end-to-end run** (8 JEE-Main structured-numeric Chemistry blueprints, generator + judge agents):
+  **8 generated → 4 CERTIFIED**, 3 quarantined (dimensional / ambiguous-root), 1 rejected. Honest **50% yield**
+  vs the original 1,000-candidate trial's **1.5%** — because the factory now plans off frozen v1.4 + Exam DNA
+  (Decision C validated: pointing the planner at the certified foundation dissolves the noise). The sympy verifier
+  correctly refused an ambiguous quadratic ([-2, 2]) and the dimensional gate quarantined 3 unit-inconsistent items.
+- Tests: +4 (`tests/test_qpl_generation.py`) — brief/loader wiring + a clean candidate certifies via sympy + a
+  **wrong key never certifies** (sympy disagree → rejected). **750 tests green** (was 746).
+- This is a bounded proof-of-loop; scaling generation (volume, per-exam coverage, the qualitative owned-source
+  lane) is the ongoing work beyond this roadmap.
