@@ -1,5 +1,6 @@
 import type { AppConfig } from "../config.ts";
 import { errorEnvelope } from "../http.ts";
+import { routeDeviceManagement } from "../device_management/device_management_router.ts";
 import {
   handleAllocations,
   handleAssets,
@@ -101,6 +102,13 @@ export async function routeInventory(
   path: string,
 ): Promise<Response | null> {
   if (!path.startsWith("/inventory")) return null;
+
+  // W4 device/asset management (owner #12): /inventory/devices/* — instance-level
+  // asset register + custody lifecycle. Delegated FIRST so the generic inventory
+  // register matching below never swallows a /inventory/devices path. Returns null
+  // outside the /inventory/devices sub-prefix.
+  const deviceResponse = await routeDeviceManagement(req, config, method, path);
+  if (deviceResponse) return deviceResponse;
 
   const writeResponse = await routeInventoryFinanceWrite(req, config, method, path);
   if (writeResponse) return writeResponse;

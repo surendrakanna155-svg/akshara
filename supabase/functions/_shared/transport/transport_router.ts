@@ -1,5 +1,6 @@
 import type { AppConfig } from "../config.ts";
 import { errorEnvelope } from "../http.ts";
+import { routeTransportFee } from "./transport_fee_router.ts";
 import {
   handleAllocations,
   handleAttendance,
@@ -201,6 +202,12 @@ export async function routeTransport(
   path: string,
 ): Promise<Response | null> {
   if (!path.startsWith("/transport")) return null;
+
+  // W4 transport hybrid-fee sub-module (owner #2/#3): /transport/fee-config,
+  // /transport/fee-preview, /transport/fee-rates/*, /transport/students/:id/transport.
+  // Returns null for every other /transport path, so those fall through.
+  const feeResponse = await routeTransportFee(req, config, method, path);
+  if (feeResponse) return feeResponse;
 
   const match = matchTransportRoute(method, path);
   if (!match) {
