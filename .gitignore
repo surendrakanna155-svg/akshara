@@ -68,6 +68,21 @@ supabase/.branches/
 *firebase-adminsdk*.json
 FCM_SERVICE_ACCOUNT*.json
 
+# Curriculum downloaded resources — LOCAL ONLY (see curriculum/.gitignore + policy)
+curriculum/resources/
+curriculum/downloads/
+curriculum/cache/
+curriculum/archives/
+curriculum/acquisition/*.log
+
+# Node dependency trees (any depth) — never commit
+node_modules/
+
+# Local SQLite knowledge/question databases (kie.db, qie.db, …) — LOCAL ONLY.
+# The frozen KIE foundation + QIE dbs are backed up off-repo (owner-approved
+# location); they are derived data, never committed. See curriculum local-storage lock.
+*.db
+
 # Local progress-dashboard dev tool — LOCAL ONLY on this implementation branch (owner
 # decision 2026-07-08: keep local, do NOT commit here; it gets its own dedicated branch
 # and merges later). A subagent committed it off-brief (6244b3e0/6949fe3d) + relaxed this

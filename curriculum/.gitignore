@@ -51,7 +51,11 @@ __pycache__/
 # code. PROVENANCE_MANIFEST.json (sha256 + source-URL provenance) is the ONE
 # committed manifest; the parsed blueprints, populated indexes/metadata/reports,
 # and acquisition state stay on local disk.
-knowledge/
+# NOTE: anchored to the DATA dir (curriculum/knowledge/) only. The unanchored
+# form "knowledge/" also swallowed the ENGINE code dir
+# curriculum/scripts/intelligence/kie/qie/knowledge/ — which per the rule above
+# ("commit only schemas / engine / … / code") MUST be committed. Keep this anchored.
+/knowledge/
 indexes/*.json
 metadata/resources/
 reports/*.md

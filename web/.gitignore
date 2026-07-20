@@ -1,0 +1,19 @@
+node_modules
+dist
+dist-ssr
+coverage
+*.tsbuildinfo
+*.local
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+.vite
+
+# font subset tooling
+.venv-fonts
+
+# UI/visual-regression certification artifacts (generated, ~150MB)
+visual-baselines
+scripts/live_validate_results.json
