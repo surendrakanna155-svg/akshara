@@ -12,7 +12,6 @@
 
 import type { AccessTokenClaims } from "../jwt.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
-import { listAuditEvents } from "../audit/audit_repository.ts";
 import type { Breadcrumb, ClientContext, RecentApiCall } from "./support_types.ts";
 
 const MAX_BREADCRUMBS = 40;
@@ -144,20 +143,42 @@ export function buildApiCallsEvidence(
   return { value: { count: items.length, errorCount: errors, items }, redacted: false };
 }
 
+interface AuditEvidenceRow {
+  event_type: string;
+  category: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  correlation_id: string | null;
+  created_at: string;
+}
+
 /** Server-side enrichment: the reporter's most recent tenant audit events,
- * minimized (metadata + entity_id dropped — keep only structural signals). */
+ * minimized (metadata + entity_id dropped — keep only structural signals).
+ *
+ * Self-contained (queries audit_events directly on the RLS-enforced erp_tenant
+ * client) and BEST-EFFORT: if the deployed base has no tenant-read grant/policy
+ * on audit_events, the read simply yields no evidence rather than failing the
+ * report. Keeps ASIP deployable on any base without depending on a read helper
+ * that may not exist there. */
 export async function collectAuditEvidence(
   db: TenantQueryClient,
   claims: AccessTokenClaims,
   reporterUserId: string,
 ): Promise<Redaction<Record<string, unknown>>> {
-  const page = await listAuditEvents(
-    db,
-    claims,
-    { actor: reporterUserId },
-    { page: 1, pageSize: 25 },
-  );
-  const items = page.items.map((e) => ({
+  let rows: AuditEvidenceRow[] = [];
+  try {
+    rows = await db.queryObject<AuditEvidenceRow>(
+      `SELECT event_type, category, entity_type, entity_id, correlation_id, created_at
+         FROM audit_events
+        WHERE organization_id = $1 AND user_id = $2::uuid
+        ORDER BY created_at DESC, id DESC
+        LIMIT 25`,
+      [claims.tenant_id, reporterUserId],
+    );
+  } catch (_err) {
+    rows = []; // audit read unavailable on this base → best-effort skip
+  }
+  const items = rows.map((e) => ({
     eventType: e.event_type,
     category: e.category,
     entityType: e.entity_type,
@@ -166,7 +187,7 @@ export async function collectAuditEvidence(
     createdAt: e.created_at,
   }));
   // redacted: we deliberately dropped metadata/entity_id to honor minimization.
-  return { value: { count: items.length, items }, redacted: page.items.length > 0 };
+  return { value: { count: items.length, items }, redacted: rows.length > 0 };
 }
 
 // ─── Deterministic diagnostics summary ────────────────────────────────────────
