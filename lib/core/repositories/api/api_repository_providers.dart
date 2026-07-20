@@ -35,6 +35,8 @@ import 'library/api_library_repository.dart';
 import 'library/remote/library_remote_datasource.dart';
 import 'control_center/api_control_center_repository.dart';
 import 'control_center/remote/control_center_remote_datasource.dart';
+import 'support/api_support_repository.dart';
+import 'support/remote/support_remote_datasource.dart';
 import 'platform_intelligence/api_platform_intelligence_repository.dart';
 import 'platform_intelligence/remote/platform_intelligence_remote_datasource.dart';
 import 'parent/api_parent_repository.dart';
@@ -302,6 +304,17 @@ final controlCenterRemoteDataSourceProvider =
 final apiControlCenterRepositoryProvider = Provider<ApiControlCenterRepository>(
   (ref) => ApiControlCenterRepository(
     remote: ref.watch(controlCenterRemoteDataSourceProvider),
+  ),
+);
+
+// ASIP Phase 1 — platform-support ("Report an issue") API wiring.
+final supportRemoteDataSourceProvider = Provider<SupportRemoteDataSource>(
+  (ref) => SupportRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final apiSupportRepositoryProvider = Provider<ApiSupportRepository>(
+  (ref) => ApiSupportRepository(
+    remote: ref.watch(supportRemoteDataSourceProvider),
   ),
 );
 

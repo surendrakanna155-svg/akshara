@@ -21,6 +21,7 @@ import 'interfaces/sis_repository.dart';
 import 'interfaces/continuity_repository.dart';
 import 'interfaces/alumni_repository.dart';
 import 'interfaces/control_center_repository.dart';
+import 'interfaces/support_repository.dart';
 import 'interfaces/platform_intelligence_repository.dart';
 import 'interfaces/director_repository.dart';
 import 'interfaces/predictions_repository.dart';
@@ -117,6 +118,7 @@ import 'mock/mock_library_repository.dart';
 import 'mock/mock_management_repository.dart';
 import 'mock/mock_sis_repository.dart';
 import 'mock/mock_control_center_repository.dart';
+import 'mock/mock_support_repository.dart';
 import 'mock/mock_platform_intelligence_repository.dart';
 import 'mock/mock_director_repository.dart';
 import 'mock/mock_predictions_repository.dart';
@@ -361,6 +363,15 @@ final controlCenterRepositoryProvider =
     return ref.read(apiControlCenterRepositoryProvider);
   }
   return MockControlCenterRepository();
+});
+
+/// ASIP Phase 1 — platform-support ("Report an issue") repository. API when
+/// `SUPPORT_API_ENABLED` is on; realistic in-memory mock otherwise.
+final supportRepositoryProvider = Provider<SupportRepository>((ref) {
+  if (isModuleApiEnabled(ref, supportApiEnabledProvider)) {
+    return ref.read(apiSupportRepositoryProvider);
+  }
+  return MockSupportRepository();
 });
 
 final platformIntelligenceRepositoryProvider =

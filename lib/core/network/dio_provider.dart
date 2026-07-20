@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../auth/auth_providers.dart';
 import '../config/environment_provider.dart';
 import '../network/interceptors/error_reporting_interceptor.dart';
+import '../observability/incident_api_call_interceptor.dart';
+import '../observability/incident_context_providers.dart';
 import '../reliability/reliability_providers.dart';
 import '../tenant/tenant_provider.dart';
 import '../../features/auth/auth_provider.dart';
@@ -32,6 +34,12 @@ final dioProvider = Provider<Dio>((ref) {
   );
 
   dio.interceptors.add(ErrorReportingInterceptor.fromRef(ref));
+  // ASIP: capture outbound API-call metadata (method/path/status/correlation-id)
+  // into the incident telemetry ring so a reported issue carries the recent
+  // request trail automatically. Tail of the stack → observes the final status.
+  dio.interceptors.add(
+    IncidentApiCallInterceptor(ref.read(incidentTelemetryBufferProvider)),
+  );
 
   return dio;
 });

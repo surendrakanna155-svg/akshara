@@ -226,6 +226,14 @@ final controlCenterApiEnabledProvider = Provider<bool>((ref) {
   return const bool.fromEnvironment('CONTROL_CENTER_API_ENABLED',
       defaultValue: false);
 });
+
+/// ASIP support intelligence (Phase 1) — school-facing "Report an issue" flow.
+/// Set `--dart-define=ENABLE_API_MODE=true` and
+/// `--dart-define=SUPPORT_API_ENABLED=true` to hit the live `/support` API.
+final supportApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment('SUPPORT_API_ENABLED', defaultValue: false);
+});
 final directorApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
   return const bool.fromEnvironment('DIRECTOR_API_ENABLED',
@@ -429,6 +437,7 @@ final useApiRepositoriesProvider = Provider<bool>((ref) {
       ref.watch(aiCopilotApiEnabledProvider) ||
       ref.watch(alumniApiEnabledProvider) ||
       ref.watch(controlCenterApiEnabledProvider) ||
+      ref.watch(supportApiEnabledProvider) ||
       ref.watch(directorApiEnabledProvider) ||
       ref.watch(predictionsApiEnabledProvider) ||
       ref.watch(platformIntelligenceApiEnabledProvider) ||

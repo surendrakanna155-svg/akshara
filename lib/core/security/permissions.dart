@@ -250,6 +250,13 @@ enum Permission {
   // FV-PLAT-11 — White Label Platform
   viewWhiteLabelPlatform,
   manageWhiteLabelPlatform,
+
+  // ASIP — platform support intelligence. Reporting an issue needs NO
+  // permission (any authenticated school user may report); these gate the
+  // Phase-2 Akshara support-staff view/manage surfaces and mirror the backend
+  // `viewSupport` / `manageSupport` permission slugs exactly.
+  viewSupport,
+  manageSupport,
 }
 
 /// Immutable set of [Permission] values for a session.
