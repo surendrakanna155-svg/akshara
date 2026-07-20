@@ -58,3 +58,41 @@ Deno.test("routeSupport requires auth: analyze with no bearer token => 401", asy
   const res = await routeSupport(req("POST", path), CFG, "POST", path);
   assertEquals(res?.status, 401);
 });
+
+// ── /support/platform/* (support console) ────────────────────────────────────
+
+Deno.test("platform queue requires auth => 401", async () => {
+  const p = "/support/platform/incidents";
+  const res = await routeSupport(req("GET", p), CFG, "GET", p);
+  assertEquals(res?.status, 401);
+});
+
+Deno.test("platform resolve requires auth => 401", async () => {
+  const p = `/support/platform/incidents/${UUID}/resolve`;
+  const res = await routeSupport(req("POST", p), CFG, "POST", p);
+  assertEquals(res?.status, 401);
+});
+
+Deno.test("platform clusters requires auth => 401", async () => {
+  const p = "/support/platform/clusters";
+  const res = await routeSupport(req("GET", p), CFG, "GET", p);
+  assertEquals(res?.status, 401);
+});
+
+Deno.test("platform incident with a bad uuid => 422 (before auth)", async () => {
+  const p = "/support/platform/incidents/not-a-uuid";
+  const res = await routeSupport(req("GET", p), CFG, "GET", p);
+  assertEquals(res?.status, 422);
+});
+
+Deno.test("platform unknown sub-resource => 404", async () => {
+  const p = "/support/platform/nope";
+  const res = await routeSupport(req("GET", p), CFG, "GET", p);
+  assertEquals(res?.status, 404);
+});
+
+Deno.test("platform queue wrong method => 405", async () => {
+  const p = "/support/platform/incidents";
+  const res = await routeSupport(req("DELETE", p), CFG, "DELETE", p);
+  assertEquals(res?.status, 405);
+});

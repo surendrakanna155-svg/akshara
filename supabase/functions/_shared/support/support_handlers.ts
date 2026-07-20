@@ -46,6 +46,10 @@ import {
   persistEvidence,
   runAnalysis,
 } from "./support_service.ts";
+import {
+  mirrorIncidentBestEffort,
+  mirrorIncidentHeaderBestEffort,
+} from "./support_mirror.ts";
 import { categorize } from "./incident_package.ts";
 import {
   ATTACHMENT_KINDS,
@@ -153,7 +157,7 @@ export async function handleCreateIncident(req: Request, config: AppConfig): Pro
   const context: ClientContext | undefined = body.context ?? undefined;
   const claims = auth.claims;
 
-  const incident = await withTenantContext(config, claims, async (db) => {
+  const created = await withTenantContext(config, claims, async (db) => {
     const parts = await buildEvidenceParts(db, claims, context, claims.sub);
     const { category } = categorize(
       {
@@ -203,10 +207,14 @@ export async function handleCreateIncident(req: Request, config: AppConfig): Pro
       metadata: { public_ref: row.public_ref, category, module: row.module_key },
       correlationId: correlationIdFromRequest(req),
     }, req);
-    return row;
+    return { row, parts };
   });
 
-  return jsonResponse(envelope(incident), { status: 201 });
+  // Mirror the PII-minimized package into the Akshara platform-support domain
+  // (Decision A1) — best-effort, own transaction, never blocks the report.
+  await mirrorIncidentBestEffort(config, claims, created.row, created.parts);
+
+  return jsonResponse(envelope(created.row), { status: 201 });
 }
 
 export async function handleListIncidents(req: Request, config: AppConfig): Promise<Response> {
@@ -658,6 +666,8 @@ export async function handleTransitionStatus(
   if ("conflict" in result) {
     return errorEnvelope("CONFLICT", "Status changed concurrently; retry", 409);
   }
+  // Keep the platform-support mirror's source_status in step (best-effort).
+  await mirrorIncidentHeaderBestEffort(config, claims, result.updated);
   return jsonResponse(envelope(result.updated));
 }
 

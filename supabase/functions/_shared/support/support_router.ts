@@ -17,6 +17,19 @@ import {
   handlePresignAttachment,
   handleTransitionStatus,
 } from "./support_handlers.ts";
+import {
+  handlePlatformAssign,
+  handlePlatformCluster,
+  handlePlatformClusters,
+  handlePlatformEscalate,
+  handlePlatformHandoff,
+  handlePlatformIncident,
+  handlePlatformInvestigate,
+  handlePlatformNote,
+  handlePlatformQueue,
+  handlePlatformResolve,
+  handlePlatformSupportStatus,
+} from "./support_platform_handlers.ts";
 
 const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
@@ -29,6 +42,11 @@ export async function routeSupport(
   if (!path.startsWith("/support")) return null;
 
   const segs = path.split("/").filter((s) => s.length > 0); // ["support", "incidents", …]
+
+  // /support/platform/* — the Akshara support-console (PLATFORM_ORG) surface.
+  if (segs[1] === "platform") {
+    return await routeSupportPlatform(req, config, method, path, segs);
+  }
 
   // /support/incidents
   if (segs.length === 2 && segs[1] === "incidents") {
@@ -72,6 +90,62 @@ export async function routeSupport(
       if (segs[3] === "analysis" && segs[4] === "approve") {
         return await handleApproveAnalysis(req, config, id);
       }
+    }
+  }
+
+  return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+}
+
+// /support/platform/… — segs = ["support","platform", …]
+async function routeSupportPlatform(
+  req: Request,
+  config: AppConfig,
+  method: string,
+  path: string,
+  segs: string[],
+): Promise<Response> {
+  // /support/platform/incidents…
+  if (segs[2] === "incidents") {
+    if (segs.length === 3) {
+      if (method === "GET") return await handlePlatformQueue(req, config);
+      return errorEnvelope("METHOD_NOT_ALLOWED", `Method not allowed: ${method} ${path}`, 405);
+    }
+    const id = segs[3];
+    if (!UUID_RE.test(id)) return errorEnvelope("VALIDATION", "invalid incident id", 422);
+
+    if (segs.length === 4) {
+      if (method === "GET") return await handlePlatformIncident(req, config, id);
+      return errorEnvelope("METHOD_NOT_ALLOWED", `Method not allowed: ${method} ${path}`, 405);
+    }
+    if (segs.length === 5) {
+      const action = segs[4];
+      if (method === "GET" && action === "handoff") return await handlePlatformHandoff(req, config, id);
+      if (method === "POST") {
+        switch (action) {
+          case "assign":
+            return await handlePlatformAssign(req, config, id);
+          case "support-status":
+            return await handlePlatformSupportStatus(req, config, id);
+          case "escalate":
+            return await handlePlatformEscalate(req, config, id);
+          case "notes":
+            return await handlePlatformNote(req, config, id);
+          case "investigate":
+            return await handlePlatformInvestigate(req, config, id);
+          case "resolve":
+            return await handlePlatformResolve(req, config, id);
+        }
+      }
+    }
+  }
+
+  // /support/platform/clusters…
+  if (segs[2] === "clusters") {
+    if (segs.length === 3 && method === "GET") return await handlePlatformClusters(req, config);
+    if (segs.length === 4) {
+      const id = segs[3];
+      if (!UUID_RE.test(id)) return errorEnvelope("VALIDATION", "invalid cluster id", 422);
+      if (method === "GET") return await handlePlatformCluster(req, config, id);
     }
   }
 
