@@ -30,6 +30,28 @@ export function withinSlab(
   return current + 1 <= ceiling;
 }
 
+/** The complete count-growing-create policy as a pure decision (no DB / no HTTP),
+ * so the whole gate — suspension AND slab — is unit-testable, not just the slab math.
+ *  - `status` from resolveSubscription ('trial'|'active'|'grace'|'suspended').
+ *  - PRC-A cap 57: a SUSPENDED subscription blocks regardless of slab.
+ *  - 'grace' rides `graceBufferPercent` (already widened in withinSlab).
+ *  - `limit == null` = unlimited plan. */
+export type CreateLimitDecision =
+  | { allow: true }
+  | { allow: false; reason: "suspended" }
+  | { allow: false; reason: "slab" };
+
+export function evaluateCreateLimit(
+  status: string,
+  current: number,
+  limit: number | null,
+  graceBufferPercent: number,
+): CreateLimitDecision {
+  if (status === "suspended") return { allow: false, reason: "suspended" };
+  if (withinSlab(current, limit, graceBufferPercent)) return { allow: true };
+  return { allow: false, reason: "slab" };
+}
+
 type LimitKind = "students" | "schools";
 
 async function enforceLimit(
@@ -47,14 +69,32 @@ async function enforceLimit(
         claims.school_id ?? null,
       );
       const limit = kind === "students" ? sub.limits.students : sub.limits.schools;
-      if (limit == null) return null; // unlimited plan
-      const current = await count(db, claims.tenant_id);
-      if (withinSlab(current, limit, sub.limits.graceBufferPercent)) return null;
-      return errorEnvelope(
-        "PLAN_LIMIT_EXCEEDED",
-        `Your ${sub.plan.name} plan allows up to ${limit} ${kind}. Upgrade to add more.`,
-        402,
+      // Only hit the DB for a live count when a finite slab could actually bind AND
+      // the subscription isn't already suspended (PRC-A cap 57: suspension blocks
+      // regardless of count, so we skip the query). 'grace' rides graceBufferPercent
+      // in evaluateCreateLimit and keeps operating through the grace window.
+      const suspended = sub.status === "suspended";
+      const current = (!suspended && limit != null)
+        ? await count(db, claims.tenant_id)
+        : 0;
+      const decision = evaluateCreateLimit(
+        sub.status,
+        current,
+        limit,
+        sub.limits.graceBufferPercent,
       );
+      if (decision.allow) return null;
+      return decision.reason === "suspended"
+        ? errorEnvelope(
+          "SUBSCRIPTION_SUSPENDED",
+          `Your ${sub.plan.name} subscription is suspended. Renew it to add more ${kind}.`,
+          402,
+        )
+        : errorEnvelope(
+          "PLAN_LIMIT_EXCEEDED",
+          `Your ${sub.plan.name} plan allows up to ${limit} ${kind}. Upgrade to add more.`,
+          402,
+        );
     });
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return null;
