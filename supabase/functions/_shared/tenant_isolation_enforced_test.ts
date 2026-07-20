@@ -38,5 +38,9 @@ Deno.test({
     assert(names.has("parent_denied_audit_probe"));
     assert(names.has("parent_a_sees_own_parent_probe"));
     assert(names.has("teacher_a_sees_own_teacher_probe"));
+    // PLAT-0 (W2): the multi-school switch must not leak across schools.
+    assert(names.has("multi_school_staff_at_a_cannot_see_school_b_student"));
+    assert(names.has("multi_school_staff_at_b_cannot_see_school_a_student"));
+    assert(names.has("multi_school_staff_at_a_cannot_see_school_b_membership_rows"));
   },
 });
