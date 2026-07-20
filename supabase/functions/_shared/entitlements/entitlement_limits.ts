@@ -128,3 +128,101 @@ export function enforceSchoolLimit(
       [orgId],
     ));
 }
+
+// ─── W4 · per-plan monthly SMS quota (owner decision #1) ─────────────────────
+//
+// SMS is billed per message, so its cap is a HARD monthly count — there is no
+// grace buffer (unlike the soft student/school slabs). The number is config-
+// driven: it lives in subscription_plans.max_sms_per_month → sub.limits.sms,
+// never hardcoded here. null = unlimited. Enforcement rides the SAME master
+// switch as the slab limits (entitlementEnforcementEnabled) so it ships dark and
+// flips on with them; a check failure fails OPEN (never blocks a live send).
+
+/** The complete monthly-SMS-quota decision as a pure function (no DB / no HTTP),
+ * mirroring {@link evaluateCreateLimit}:
+ *  - a SUSPENDED subscription blocks regardless of count (same as the slabs).
+ *  - `limit == null` = unlimited plan → always allowed.
+ *  - otherwise allow while the month's count is strictly BELOW the cap; the send
+ *    that would make `current == limit` is the last one allowed, the next is
+ *    blocked with reason 'quota'. */
+export type SmsQuotaDecision =
+  | { allow: true }
+  | { allow: false; reason: "suspended" }
+  | { allow: false; reason: "quota" };
+
+export function evaluateSmsQuota(
+  status: string,
+  currentCount: number,
+  limit: number | null,
+): SmsQuotaDecision {
+  if (status === "suspended") return { allow: false, reason: "suspended" };
+  if (limit == null) return { allow: true };
+  if (currentCount < limit) return { allow: true };
+  return { allow: false, reason: "quota" };
+}
+
+/** Count of SMS this org has SENT in the current calendar month, read from the
+ * authoritative delivery ledger (notification_deliveries, the only table that
+ * records SMS sends). status='sent' rows carry a sent_at; coalesce guards any
+ * legacy row. This is the usage the monthly cap meters. */
+function countSmsSentThisMonth(
+  db: TenantQueryClient,
+  organizationId: string,
+): Promise<number> {
+  return db.queryCount(
+    `SELECT count(*) AS count FROM notification_deliveries
+      WHERE organization_id = $1
+        AND channel = 'sms'
+        AND status = 'sent'
+        AND coalesce(sent_at, created_at) >= date_trunc('month', timezone('utc', now()))`,
+    [organizationId],
+  );
+}
+
+/**
+ * 402 when the org has hit its plan's monthly SMS cap; null otherwise / when
+ * enforcement is off / plan unlimited / on any error (fail-open). Never throws.
+ * Deploy-dark behind the same `ENTITLEMENT_ENFORCEMENT` switch as the slab
+ * limits, and structured exactly like {@link enforceStudentLimit}: resolve the
+ * plan, and only hit the DB for a live count when a finite cap could actually
+ * bind AND the subscription isn't already suspended.
+ */
+export async function enforceSmsQuota(
+  config: AppConfig,
+  claims: AccessTokenClaims,
+): Promise<Response | null> {
+  if (!entitlementEnforcementEnabled()) return null;
+  try {
+    return await withTenantContext(config, claims, async (db) => {
+      const sub = await resolveSubscription(
+        db,
+        claims.tenant_id,
+        claims.school_id ?? null,
+      );
+      const limit = sub.limits.sms;
+      const suspended = sub.status === "suspended";
+      const current = (!suspended && limit != null)
+        ? await countSmsSentThisMonth(db, claims.tenant_id)
+        : 0;
+      const decision = evaluateSmsQuota(sub.status, current, limit);
+      if (decision.allow) return null;
+      return decision.reason === "suspended"
+        ? errorEnvelope(
+          "SUBSCRIPTION_SUSPENDED",
+          `Your ${sub.plan.name} subscription is suspended. Renew it to send more SMS.`,
+          402,
+        )
+        : errorEnvelope(
+          "SMS_QUOTA_EXCEEDED",
+          `Your ${sub.plan.name} plan allows ${limit} SMS per month, and this month's quota is used up. Upgrade to send more.`,
+          402,
+        );
+    });
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) return null;
+    // Fail-open: a quota-check failure must never break a live send (matches the
+    // student/school slab limits and the storage quota).
+    console.error("SMS quota check failed:", error);
+    return null;
+  }
+}
