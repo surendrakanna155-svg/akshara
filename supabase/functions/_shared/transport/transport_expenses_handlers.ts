@@ -17,6 +17,10 @@ import {
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { correlationIdFromRequest, recordMutationAudit } from "../audit/audit_repository.ts";
+// W4: project a recorded transport expense into the canonical Expense Ledger. The
+// post is additive, idempotent (per row id) and savepoint-fenced, so a failed
+// projection can never roll back the recorded expense (the source of truth).
+import { wireTransportExpenseToLedger } from "../expense_ledger/expense_ledger_wiring.ts";
 import {
   getTransportExpenseByCategory,
   getTransportIncome,
@@ -110,6 +114,10 @@ export async function handleRecordExpense(req: Request, config: AppConfig): Prom
         },
         req,
       );
+      // W4: additively project the recorded expense into the canonical ledger. Runs
+      // on the same tenant transaction but fenced in a savepoint — a projection
+      // failure rolls back only itself, never the recorded expense above.
+      await wireTransportExpenseToLedger(db, created);
       return created;
     });
     return jsonResponse(envelope(expenseToApi(row)), { status: 201 });

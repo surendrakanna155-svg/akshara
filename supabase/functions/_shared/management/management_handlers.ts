@@ -22,6 +22,9 @@ import {
   buildFinancialHealthPayload,
   buildSchoolPerformancePayload,
 } from "./management_payload_builders.ts";
+// W4: the dashboard's expenseBreakdown is now LIVE off the canonical Expense Ledger.
+import { listExpenseEntries } from "../expense_ledger/expense_ledger_repository.ts";
+import { buildExpenseBreakdown } from "../expense_ledger/expense_ledger_breakdown.ts";
 
 const { handleSnapshot } = createManagementReadHandlers("viewManagement", managementStore);
 
@@ -70,8 +73,49 @@ async function handleComputed(
   }
 }
 
+/**
+ * W4: the executive dashboard's `expenseBreakdown` is the by-category expense mix for
+ * the dashboard's period — the current calendar month, matching the "Revenue MTD" KPI.
+ * The dashboard therefore builds it from the canonical Expense Ledger inside the same
+ * tenant read, so it can't reuse the generic `handleComputed`. Honest-empty (never
+ * fabricated) when no expenses are posted for the month.
+ */
+export function currentMonthPeriod(now: Date = new Date()): { from: string; to: string } {
+  const y = now.getUTCFullYear();
+  const m = now.getUTCMonth();
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  const from = new Date(Date.UTC(y, m, 1));
+  const to = new Date(Date.UTC(y, m + 1, 0)); // last day of the current month
+  return { from: iso(from), to: iso(to) };
+}
+
 export async function handleDashboard(req: Request, config: AppConfig): Promise<Response> {
-  return await handleComputed(req, config, buildDashboardPayload, "Failed to load management dashboard");
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requireManagementRead(auth.claims);
+  if (denied) return denied;
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const payload = await withTenantContext(config, auth.claims, async (db) => {
+      const aggregate = await getManagementAggregate(db, orgId, schoolId);
+      // Expense breakdown for the dashboard's period (current calendar month).
+      // buildExpenseBreakdown([]) === [] → honestly empty when nothing is posted.
+      const { from, to } = currentMonthPeriod();
+      const entries = await listExpenseEntries(db, orgId, schoolId, from, to);
+      return buildDashboardPayload(aggregate, buildExpenseBreakdown(entries));
+    });
+    return jsonResponse(envelope(payload));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    console.error("Failed to load management dashboard:", error);
+    return errorEnvelope("INTERNAL_ERROR", "Failed to load management dashboard", 500);
+  }
 }
 
 export async function handleAnalytics(req: Request, config: AppConfig): Promise<Response> {

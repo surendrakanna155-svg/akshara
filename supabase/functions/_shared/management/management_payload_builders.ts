@@ -1,5 +1,6 @@
 import type { ManagementAggregate } from "./management_aggregate_repository.ts";
 import { formatInr, formatPercent } from "./management_aggregate_repository.ts";
+import type { ExpenseBreakdownItem } from "../expense_ledger/expense_ledger_breakdown.ts";
 
 // MJ-C8 (PRINC-1): build each management read endpoint's payload from a live
 // aggregate. Field names and envelope shape are preserved EXACTLY as the old
@@ -16,7 +17,14 @@ function honest(insight: string, hasData: boolean, emptyInsight: string): string
 // /management/dashboard
 // ---------------------------------------------------------------------------
 
-export function buildDashboardPayload(agg: ManagementAggregate): Record<string, unknown> {
+export function buildDashboardPayload(
+  agg: ManagementAggregate,
+  // W4: the by-category expense breakdown for the dashboard's period, built from the
+  // canonical Expense Ledger (transport + payroll + inventory). Defaults to [] so the
+  // chart is HONESTLY empty (never fabricated) when no expenses are posted — the same
+  // honest-empty contract the field carried before the ledger was wired.
+  expenseBreakdown: ExpenseBreakdownItem[] = [],
+): Record<string, unknown> {
   const { finance, admissions } = agg;
   const hasFinance = finance.totalInvoiced > 0 || finance.totalCollected > 0;
   const hasAdmissions = admissions.totalLeads > 0;
@@ -72,12 +80,12 @@ export function buildDashboardPayload(agg: ManagementAggregate): Record<string, 
   return {
     aiInsight,
     kpis,
-    // PRA-P1-48 (S4): no monthly revenue-series or expense-ledger table exists
-    // yet, so these stay HONESTLY empty (not a fabricated trend) — wire them when
-    // those sources land. The approval queue and recent conversions DO have real
-    // sources and are now populated.
+    // revenueTrend stays HONESTLY empty — no monthly revenue-series source exists
+    // yet (not a fabricated trend). expenseBreakdown is now LIVE off the canonical
+    // Expense Ledger (W4): honest+complete for the sources that post (transport,
+    // payroll, inventory) and honestly empty — never fabricated — when none are.
     revenueTrend: [],
-    expenseBreakdown: [],
+    expenseBreakdown,
     approvalQueue: agg.pendingApprovals,
     admissionsSnapshot: {
       leadsMtd: admissions.totalLeads,

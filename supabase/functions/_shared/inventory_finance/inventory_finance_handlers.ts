@@ -25,6 +25,11 @@ import {
   PurchaseOrderSelfApproveDeniedError,
   receiveGoods,
 } from "./inventory_finance_repository.ts";
+// W4: project an approved purchase order into the canonical Expense Ledger
+// (category 'procurement') ADDITIVELY alongside the existing AP-commitment / finance
+// posting sink. Idempotent (per PO id) and savepoint-fenced, so a failed projection
+// can never roll back the approval.
+import { wireInventoryPurchaseToLedger } from "../expense_ledger/expense_ledger_wiring.ts";
 
 function requireInventoryWrite(claims: Parameters<typeof requirePermission>[0]): Response | null {
   return requirePermission(claims, "manageInventory") ??
@@ -284,6 +289,11 @@ export async function handleApprovePurchaseOrder(
         },
         idempotencyKey: `procurement.approved:${purchaseOrderId}`,
       }, req);
+      // W4: additively project the approved PO's committed cost into the canonical
+      // Expense Ledger (a reporting projection separate from the AP-commitment sink
+      // above — no double count). Same tenant transaction, savepoint-fenced, so a
+      // projection failure rolls back only itself, never the approval.
+      await wireInventoryPurchaseToLedger(db, orgId, schoolId, approved.purchaseOrder);
       return approved;
     });
     return jsonResponse(envelope({
