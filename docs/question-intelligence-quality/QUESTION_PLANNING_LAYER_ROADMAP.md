@@ -348,3 +348,22 @@ certify (EOS) → commit → doc.
 - Tests: +5 (`tests/test_qpl_phase1_planner.py` — enriched specs, driver on v1.4, reproducibility, kie.db-path
   retired guard). **701 tests green** (was 696).
 - Still seed-deterministic (RNG inside `build_specs`); the RNG → Exam-DNA-driven deterministic allocation is Phase 3.
+
+### Phase 2 — Build the Exam DNA layer (curate v1) — ✅ COMPLETE (2026-07-20) · EOS: PASS
+- **New store `examdna.db`** (separate from the frozen index; data stays local, code+constants committed) with
+  schema `knowledge/examdna_schema.sql`: `exam_weight` (subject + chapter) and `exam_distribution`
+  (difficulty / depth / archetype), each carrying an honest `provenance_class` + `status`.
+- **`knowledge/examdna.py`** — curated v1 constants + curator:
+  - subject weightage → `published` (mirrors `qpgen/blueprints.py`: NEET 25/25/50, JEE 33/33/33);
+  - chapter weightage → `evidence_proportional` (COMPUTED from the frozen index's certified-concept share
+    per chapter at classes 11–12; honest, reproducible, **explicitly NOT PYQ-measured**);
+  - difficulty & depth → `curated_prior` (authored from documented exam character; each row's basis says
+    "NOT measured"); archetype → `derived_from_profiles` (uniform over valid archetypes, 2× on core).
+  - Every distribution normalized + validated (sums to 1, non-negative) before write.
+- **Adversarial controls `knowledge/examdna_controls.py`**: bad sums / negative / empty distributions, unknown
+  exam, wrong-exam subject (e.g. Biology under JEE), and absent chapter are all REJECTED; the real curated set
+  passes. Run green against the frozen index.
+- **Honesty invariant (standing law):** no v1 row is `status='certified'` — measurement is reserved for the
+  mining phase (Decision 2 "then mine"). No estimate is ever relabelled as a measurement.
+- Materialized: 236 weight rows + 70 distribution rows across all 3 exams; every distribution sums to 1.0.
+- Tests: +8 (`tests/test_qpl_phase2_examdna.py`). **709 tests green** (was 701).
