@@ -22,6 +22,10 @@ import {
   handleSalaryRegister,
 } from "./hr_reports_handlers.ts";
 import {
+  handleLeaveAccrualBalances,
+  handleRunLeaveAccrual,
+} from "./leave_accrual_handlers.ts";
+import {
   handleApproveLeaveRequest,
   handleBatchDecideLeave,
   handleCreateEmployee,
@@ -69,6 +73,10 @@ function matchHrRoute(
     }
     if (path === "/hr/leave/balances") {
       return { handler: handleLeaveBalances, args: [] };
+    }
+    // PRA-P1-34 — derivable leave-accrual balances (from the append-only ledger).
+    if (path === "/hr/leave/accrual/balances") {
+      return { handler: handleLeaveAccrualBalances, args: [] };
     }
     if (path === "/hr/reports/headcount") {
       return { handler: handleHeadcount, args: [] };
@@ -121,6 +129,11 @@ function matchHrRoute(
     // HR-3 batch leave decide (registered before the id/approve|reject matches).
     if (path === "/hr/leave/batch-decide") {
       return { handler: handleBatchDecideLeave, args: [] };
+    }
+    // PRA-P1-34 — run automatic leave accrual for the school (idempotent per period).
+    // Literal path; registered before the /hr/leave/{id}/approve|reject regexes.
+    if (path === "/hr/leave/accrual/run") {
+      return { handler: handleRunLeaveAccrual, args: [] };
     }
     // HR-D2 probation confirm/extend.
     const probationMatch = path.match(/^\/hr\/employees\/([^/]+)\/probation$/);
