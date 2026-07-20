@@ -100,3 +100,9 @@ No work lost: the 4 merged branches' commits live in trunk history; the 4 unique
 2. Then (autonomous): execute the DRP union-reconciliation + full regression + per-P0/security re-verification.
 3. Then **owner canonical sign-off** → re-baseline `main`/`production`; W0 certification (EOS RELEASE-scope) → unblocks **W1**.
 4. ⏳ **Owner:** move the foundation backup tarball to a durable off-repo location.
+
+---
+
+## W0 — ✅ CONVERGED + VALIDATED (2026-07-20, owner-authorized)
+
+Single canonical trunk `integration/w0-canonical` @ `42aa7322` (pushed). `integration/w0-trunk` already contained the deployed **DRP** baseline (0 commits missing) + **PRA** + ERP/QIE/web base; W0 completed by merging the **PRODUCTION-CERTIFIED ASIP** lane in — the only remaining line. 10 files touched, 3 additive-union conflicts (permissions/pubspec), migrations monotonic (…900000031 → 20260920xxx). **Preservation verified:** DRP security (RT-16/17, red_team migs), PRA P0s (identity, ai_credit_wallet), ASIP (support module/mirror), audit history, tenant isolation, rollback. **Validation (all green):** deno check PASS · 45 deno + 6 flutter + 147 web tests · flutter analyze 0 · web build PASS · **ASIP live cert 18/18 post-convergence**. Full record: `docs/engineering/W0_CONVERGENCE_CERTIFICATION.md`. **Owner-gated tail:** re-point main/production + redeploy converged trunk (pilot bind-mount carries additive ASIP files — preserve) + branch prunes.
