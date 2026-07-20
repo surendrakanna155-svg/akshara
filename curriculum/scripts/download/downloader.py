@@ -46,6 +46,57 @@ def _order_key(entry: dict, board_seq: dict, class_order: list, cat_order: list)
     return (b, c, ci, entry.get("resource_id", ""))
 
 
+_GDRIVE_HOSTS = {"drive.google.com", "drive.usercontent.google.com", "docs.google.com"}
+
+
+def _fetch_gdrive(file_id: str, dest: Path, net: dict) -> tuple[bool, str]:
+    """Download a Google Drive file, handling the large-file confirm interstitial.
+
+    Returns (ok, note). Never raises — any error is a recoverable fetch failure.
+    """
+    import http.cookiejar  # noqa: E402
+    import re  # noqa: E402
+    import urllib.request  # noqa: E402
+
+    base = "https://drive.usercontent.google.com/download"
+    cj = http.cookiejar.CookieJar()
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+    headers = {"User-Agent": net["user_agent"]}
+
+    def _open(url):
+        return opener.open(urllib.request.Request(url, headers=headers),
+                           timeout=net["read_timeout_seconds"])
+
+    try:
+        url = f"{base}?id={file_id}&export=download"
+        resp = _open(url)
+        ctype = (resp.headers.get("Content-Type") or "").lower()
+        if "text/html" in ctype:
+            # confirm interstitial — extract hidden form fields and re-request
+            body = resp.read(200_000).decode("utf-8", "ignore")
+            fields = dict(re.findall(r'name="(confirm|uuid|id|export)"\s+value="([^"]*)"', body))
+            if not fields.get("confirm"):
+                m = re.search(r"confirm=([0-9A-Za-z_-]+)", body)
+                if m:
+                    fields["confirm"] = m.group(1)
+            if not fields.get("confirm"):
+                return False, "GDRIVE_NO_CONFIRM_TOKEN (not a downloadable file / access gated)"
+            q = f"{base}?id={file_id}&export=download&confirm={fields['confirm']}"
+            if fields.get("uuid"):
+                q += f"&uuid={fields['uuid']}"
+            resp = _open(q)
+            ctype = (resp.headers.get("Content-Type") or "").lower()
+            if "text/html" in ctype:
+                return False, "GDRIVE_STILL_HTML (interstitial not cleared)"
+        with dest.open("wb") as fh:
+            shutil.copyfileobj(resp, fh, length=net["chunk_bytes"])
+        return True, "downloaded via google-drive"
+    except Exception as exc:  # noqa: BLE001
+        if dest.exists():
+            dest.unlink(missing_ok=True)
+        return False, f"GDRIVE_ERROR: {type(exc).__name__}: {exc}"
+
+
 def _fetch(entry: dict, ws: Workspace, rules: dict, allow_network: bool) -> tuple[bool, Path | None, str]:
     """Return (ok, incoming_path, note). Never raises on an expected failure."""
     url = entry.get("source_url")
@@ -60,6 +111,24 @@ def _fetch(entry: dict, ws: Workspace, rules: dict, allow_network: bool) -> tupl
     if scheme not in rules["allowed_url_schemes"]:
         return False, None, f"SCHEME_NOT_ALLOWED: {scheme}"
 
+    # Google Drive (owner-authorised non-official TS source) — needs confirm-token flow
+    if scheme == "https" and urlparse(url).netloc in _GDRIVE_HOSTS:
+        if not allow_network:
+            return False, None, "NETWORK_DISABLED (allow_network=false — dry-run scaffolding)"
+        fid = entry.get("gdrive_file_id")
+        if not fid:
+            import re as _re
+            m = _re.search(r"[?&]id=([^&]+)", url)
+            fid = m.group(1) if m else None
+        if not fid:
+            return False, None, "GDRIVE_NO_FILE_ID"
+        import time as _time
+        ok, note = _fetch_gdrive(fid, dest, rules["networking"])
+        if ok:
+            _time.sleep(rules["networking"].get("polite_delay_seconds", 0))
+            return True, dest, note
+        return False, None, note
+
     if scheme == "file":
         src = Path(urlparse(url).path)
         if not src.is_file():
@@ -71,12 +140,22 @@ def _fetch(entry: dict, ws: Workspace, rules: dict, allow_network: bool) -> tupl
     if scheme == "https":
         if not allow_network:
             return False, None, "NETWORK_DISABLED (allow_network=false — dry-run scaffolding)"
-        # --- networked run would stream here (documented, guarded) -----------
+        # --- networked run streams here; fail-soft so one bad URL/timeout never
+        #     crashes an unattended continuous run (the recovery ladder decides
+        #     next move on the resulting verification/fetch failure) -----------
+        import time  # noqa: E402
         import urllib.request  # noqa: E402  (only imported on the live path)
         net = rules["networking"]
         req = urllib.request.Request(url, headers={"User-Agent": net["user_agent"]})
-        with urllib.request.urlopen(req, timeout=net["read_timeout_seconds"]) as resp, dest.open("wb") as fh:
-            shutil.copyfileobj(resp, fh, length=net["chunk_bytes"])
+        try:
+            with urllib.request.urlopen(req, timeout=net["read_timeout_seconds"]) as resp, dest.open("wb") as fh:
+                shutil.copyfileobj(resp, fh, length=net["chunk_bytes"])
+        except Exception as exc:  # noqa: BLE001 — any network error is an expected, recoverable fetch failure
+            if dest.exists():
+                dest.unlink(missing_ok=True)
+            return False, None, f"NETWORK_ERROR: {type(exc).__name__}: {exc}"
+        # politeness: honour the configured inter-request delay on the live path
+        time.sleep(net.get("polite_delay_seconds", 0))
         return True, dest, "downloaded via https"
     return False, None, f"UNSUPPORTED_SCHEME: {scheme}"
 

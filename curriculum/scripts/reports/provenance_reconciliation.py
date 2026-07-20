@@ -54,7 +54,7 @@ def _provenance_tier(slot: dict) -> str:
         return "C_THIRD_PARTY_QUARANTINED"
     if lic == "NCERT_OFFICIAL_CHAPTER_PATH_MIRROR" or code == "iewe1":
         return "B_PROVENANCE_QUALIFIED_MIRROR"
-    if "DIKSHA" in lic or lic.startswith("OFFICIAL_GOVERNMENT_DIKSHA"):
+    if "DIKSHA" in lic or lic.startswith("OFFICIAL_GOVERNMENT_DIKSHA") or lic == "OFFICIAL_GOVERNMENT_DIKSHA_MIRROR":
         return "A2_OFFICIAL_GOVERNMENT_MIRROR"
     if lic.startswith("OFFICIAL"):
         return "A1_OFFICIAL_DIRECT"

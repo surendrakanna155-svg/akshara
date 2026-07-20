@@ -1,0 +1,37 @@
+{
+  "_comment": "Controlled provenance expansion — assessment evidence ONLY. Official-first policy unchanged; these sources are used only when official/government/public paths are exhausted for a required assessment artifact. Never upgrade to official tier.",
+  "policy_version": "2026-07-13",
+  "provenance_tier": "TRUSTED_THIRD_PARTY",
+  "license_status": "TRUSTED_THIRD_PARTY_ASSESSMENT",
+  "storage_folder": "Trusted_Third_Party_Assessment",
+  "filename_prefix": "T3P",
+  "never_upgrade_to_official": true,
+  "assessment_only": true,
+  "allowed_assessment_subtypes": [
+    "unit_test", "fa1", "fa2", "fa3", "fa4", "sa1", "sa2", "sa3",
+    "quarterly", "half_yearly", "annual_final", "model_paper", "sample_paper",
+    "specimen_paper", "previous_paper", "blueprint", "marking_scheme",
+    "weightage", "assessment_guidelines", "formative_summative", "other_assessment"
+  ],
+  "allowed_domains": [
+    {
+      "domain": "schools.aglasem.com",
+      "cdn_domain": "docs.aglasem.com",
+      "publisher": "AglaSem Schools",
+      "established": "2014",
+      "quality_tier": "established_educational_portal",
+      "boards_served": ["APSCERT", "TSSCERT", "CBSE"],
+      "notes": "Long-established Indian educational portal; structured board question-paper indexes with docs.aglasem.com PDF CDN."
+    }
+  ],
+  "excluded_patterns": [
+    "user-upload", "uploaded-by", "pirate", "torrent", "telegram",
+    "whatsapp-share", "unknown-source", "scribd.com", "slideshare"
+  ],
+  "excluded_domains": [
+    "teachernews.in",
+    "studiestoday.com",
+    "learncbse.in"
+  ],
+  "license_note_template": "Trusted third-party assessment evidence from {publisher} ({source_page_url}). Provenance tier TRUSTED_THIRD_PARTY — never equivalent to official/government source. Local analysis + archive only; no republishing."
+}
