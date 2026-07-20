@@ -23,8 +23,8 @@
 | **S3** | Pilot-lane governance / canonical teacher↔class | ✅ committed | `972836b7` |
 | **S4** | Reporting & metric integrity | ✅ **COMPLETE** | `005695d5` (metric core) + `64e086da` (report card / export / queues) |
 | **S5** | Communication & delivery | ✅ **COMPLETE** | `fbbb7634` |
-| **S6** | Academic-operations blockers | ⬜ not started | — |
-| **S7** | Operational-module blockers | ⬜ not started | — |
+| **S6** | Academic-operations blockers | ✅ **COMPLETE** (CONDITIONAL PASS; P1-17 + UX residuals tracked) | `355637e0` (backend) + `f5bc4558` (Flutter/storage) |
+| **S7** | Operational-module blockers | 🔨 **IN PROGRESS** (6 disjoint agents; P0s + mechanical P1s) | — |
 
 ---
 
@@ -208,13 +208,47 @@ a P1-45 multi-channel test.
 
 ---
 
-## S6 — Academic-operations blockers  ⬜ NOT STARTED
-Scope (§12.1): **P0-13** admission approval gate, **P0-21** parent-insights AI RLS scope,
-**P0-14** promotion engine contract; P1-12 post-publish correction/supplementary, P1-13
-grading-scale persistence, P1-14 save-all mark loss, P1-17 school-calendar UI, P1-18
-syllabus beyond Grade 10, P1-19 SIS document storage, P1-20 TC no-dues incl. library, P1-30
-homework storage bucket. EOS: SECURITY+MIGRATION+FEATURE PASS. Reuses the per-school
-settings-persistence pattern (shared with S7 HR).
+## S6 — Academic-operations blockers  ✅ COMPLETE  `355637e0` + `f5bc4558`
+
+**EOS: CONDITIONAL PASS.** All 3 P0s + 7 of 8 P1s implemented, tested, committed.
+Migrations `20260900000015` (parent-insights parent-scope RLS), `…016`/`…017` (SIS-doc +
+homework buckets), `…018` (exam grade scales). **Next free = `20260900000019`.**
+Integrated verification: **699 backend tests green** + api-graph `deno check` clean +
+`deno lint` clean; full `dart analyze lib/` clean; Flutter suites green (exam-admin 46,
+promotion 14, grading 101, storage 151).
+
+**`355637e0` (part 1 — backend):**
+- **P0-21** parent-insights AI no longer fabricates a child's metrics (parent-scope RLS on
+  `intel_student_risk_snapshots` + handler `child_ids` gate + service raises no-data 404
+  instead of defaulting 85/80/70).
+- **P0-13** admissions approval gate — `submitEnrollment` refuses a non-'approved'
+  application; walk-in path requires `approveAdmissions`.
+- **P1-18** syllabus refuses to fabricate a stub for unseeded grade/board (422).
+- **P1-20** TC no-dues now includes library dues (fines + unreturned books).
+- **P1-12** exam tabulation/report-card dedupe per subject (no supplementary double-count) +
+  senior-gated `/unpublish` reopen for correction.
+
+**`f5bc4558` (part 2 — Flutter/storage):**
+- **P0-14** annual promotion usable — 4 client↔backend contract bugs fixed + real
+  academic-year UUIDs + surface-gate split (zero-backend reshuffle/section-balance deferred).
+- **P1-13** grading scale persists + authoritative at publish/report (`exam_grade_scales`
+  table + parameterized `gradeForPercent`; legacy default when no row).
+- **P1-14** save-all counts out-of-range marks as failures + preserves the recovery draft.
+- **P1-19** SIS document upload stores real bytes (`student-documents` bucket, presign→PUT→
+  confirm; fabricated `storage://` string gone).
+- **P1-30** homework attachments store real bytes (`homework-attachments` bucket).
+
+**Remaining S6 item:** **P1-17** school-calendar UI (backend complete; UI being built by a
+concurrent agent — lands with S7).
+
+**Tracked S6 residuals (CONDITIONAL — P1/UX follow-ups, non-blocking):**
+- Grade-scale client provider not yet synced to the new GET/PUT endpoint (backend is
+  authoritative; local scale survives restart via attachPersistence).
+- Native OS file picker + document/homework "download/open" buttons (real-storage vertical
+  done via synthetic payload, mirroring admissions — no native dep added).
+- Migrations `…015`–`…018` apply on deploy (no DB in this lane).
+- P0-14 deploy note: both `ACADEMIC_API_ENABLED` + `ACADEMIC_OPERATIONS_API_ENABLED` must be
+  enabled together for real year UUIDs to reach the promotion backend.
 
 ## S7 — Operational-module blockers  ⬜ NOT STARTED
 Scope (§12.1): **P0-15** staff GPS/face (= master-roadmap P1-PROD-22 Must-Before-GA),
