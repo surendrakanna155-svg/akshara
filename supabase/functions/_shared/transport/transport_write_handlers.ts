@@ -27,6 +27,8 @@ import {
   cancelInvoice,
   InvalidInvoiceTransitionError,
 } from "../finance/finance_invoices_repository.ts";
+import { resolveTransportFee } from "./transport_fee_config_repository.ts";
+import { parseDistanceKm } from "./transport_fee_model.ts";
 
 const writeStore = createEntityWriteStore("transport_entities", "Transport");
 const { runWrite } = createModuleWriteHandlers("manageTransport");
@@ -1726,7 +1728,7 @@ export async function handleRaiseTransportDemand(
 ): Promise<Response> {
   return await runWrite(req, config, async (ctx) => {
     const { db, organizationId, schoolId, body, claims, req: request } = ctx;
-    const { demand, created } = await raiseTransportDemandFor(
+    const { demand, created, billed } = await raiseTransportDemandFor(
       db,
       organizationId,
       schoolId,
@@ -1741,6 +1743,11 @@ export async function handleRaiseTransportDemand(
       },
       request,
     );
+    // W4: own_transport / parent_pickup (or an explicit ₹0 override) ride free —
+    // no Finance demand raised. 200 with an honest non-billed record.
+    if (!billed) {
+      return { payload: { ...demand, billed: false }, status: 200 };
+    }
     // Created → 201 with the fresh demand; not created (fast-path dedupe OR a
     // racing-loser idempotent recovery) → 200 with the idempotent flag.
     return created
@@ -1780,7 +1787,7 @@ export async function raiseTransportDemandFor(
   claims: AccessTokenClaims,
   input: TransportDemandInput,
   request?: Request,
-): Promise<{ demand: Record<string, unknown>; created: boolean }> {
+): Promise<{ demand: Record<string, unknown>; created: boolean; billed: boolean }> {
   const { sisStudentId, routeId, feeStructureId, academicYear, term, allocationId } = input;
 
   // Idempotency: dedupe on (sisStudentId, routeId, academicYear, term).
@@ -1788,8 +1795,50 @@ export async function raiseTransportDemandFor(
   const existingDemands = await writeStore.findAll(db, organizationId, schoolId, "demand");
   const priorDemand = existingDemands.find((d) => String(d.dedupeKey ?? "") === dedupeKey);
   if (priorDemand) {
-    // Re-raise is idempotent — return the existing demand, raise nothing new.
-    return { demand: priorDemand, created: false };
+    // Re-raise is idempotent — return the existing demand, raise nothing new
+    // (it was already billed; billed:true so the bulk caller keeps counting it).
+    return { demand: priorDemand, created: false, billed: true };
+  }
+
+  // ── W4 HYBRID FEE (owner decisions #2 + #3) ─────────────────────────────────
+  // Resolve the payable off the school's CHOSEN fee-model (distance/route/stop/
+  // flat), the per-student requirement (bus/own_transport/parent_pickup), and any
+  // per-student override. resolveTransportFee returns null when NOTHING hybrid
+  // applies (no fee-config, plain 'bus' student, no override) → the legacy
+  // demand-raise below runs UNCHANGED (fully backward-compatible). The route +
+  // allocation entities supply the distance/pickup-stop inputs the models need.
+  const routeEntity = routeId
+    ? await writeStore.find(db, organizationId, schoolId, "route", routeId)
+    : null;
+  const allocationEntity = allocationId
+    ? await writeStore.find(db, organizationId, schoolId, "allocation", allocationId)
+    : null;
+  const hybrid = await resolveTransportFee(db, organizationId, schoolId, {
+    sisStudentId,
+    routeId,
+    pickupStop: allocationEntity ? String(allocationEntity.pickupStop ?? "") : null,
+    routeDistanceKm: parseDistanceKm(routeEntity?.distanceKm),
+  });
+
+  // own_transport / parent_pickup (or an explicit ₹0 override) ride for FREE —
+  // raise NO Finance demand at all. Nothing is persisted, so a later switch to a
+  // billable requirement/override raises the demand cleanly (no stale ₹0 row).
+  if (hybrid && !hybrid.billable) {
+    return {
+      demand: {
+        allocationId,
+        sisStudentId,
+        routeId,
+        academicYear,
+        term,
+        requirement: hybrid.requirement,
+        feeModel: hybrid.model,
+        amount: 0,
+        billed: false,
+      },
+      created: false,
+      billed: false,
+    };
   }
 
   // Resolve the student UUID (transport stores a display code, not the PK).
@@ -1808,6 +1857,17 @@ export async function raiseTransportDemandFor(
   });
 
   const demandId = crypto.randomUUID();
+  // W4: when the hybrid model is active, record its computed amount + why on the
+  // demand entity as the AUTHORITATIVE transport charge for this allocation.
+  const feeFields = hybrid
+    ? {
+      amount: hybrid.amount,
+      feeModel: hybrid.model,
+      requirement: hybrid.requirement,
+      feeOverrideApplied: hybrid.overrideApplied,
+      hybridPricing: true,
+    }
+    : {};
   const demandPayload = {
     id: demandId,
     dedupeKey,
@@ -1822,6 +1882,7 @@ export async function raiseTransportDemandFor(
     assignmentId: result.assignment.id,
     accountId: result.account.id,
     raisedAt: new Date().toISOString(),
+    ...feeFields,
   };
   // Backstop for the TOCTOU window above: a racing concurrent request for the
   // SAME dedupeKey may have inserted between the read-check and here.
@@ -1838,7 +1899,7 @@ export async function raiseTransportDemandFor(
   );
   if (idempotent) {
     // The racing loser never audits a fresh raise (the winner's insert owns it).
-    return { demand: saved, created: false };
+    return { demand: saved, created: false, billed: true };
   }
   await emitMutationAudit(
     db,
@@ -1852,7 +1913,7 @@ export async function raiseTransportDemandFor(
     }),
     request,
   );
-  return { demand: saved, created: true };
+  return { demand: saved, created: true, billed: true };
 }
 
 /**
@@ -1902,6 +1963,9 @@ export async function handleBulkRaiseTransportDemand(
 
     const raised: string[] = [];
     const alreadyRaised: string[] = [];
+    // W4: own_transport / parent_pickup (or ₹0 override) allocations — intentionally
+    // NOT billed (distinct from "already raised" and from "skipped/error").
+    const notBilled: Array<{ allocationId: string; requirement: string }> = [];
     const skipped: Array<{ allocationId: string; reason: string }> = [];
     for (const a of targets) {
       const sisStudentId = String(a.sisStudentId ?? "");
@@ -1911,7 +1975,7 @@ export async function handleBulkRaiseTransportDemand(
         continue;
       }
       try {
-        const { created } = await raiseTransportDemandFor(
+        const { created, billed, demand } = await raiseTransportDemandFor(
           db,
           organizationId,
           schoolId,
@@ -1926,7 +1990,8 @@ export async function handleBulkRaiseTransportDemand(
           },
           request,
         );
-        if (created) raised.push(allocId);
+        if (!billed) notBilled.push({ allocationId: allocId, requirement: String(demand.requirement ?? "") });
+        else if (created) raised.push(allocId);
         else alreadyRaised.push(allocId);
       } catch (error) {
         // A single unresolvable student must not abort the whole batch — record
@@ -1945,6 +2010,7 @@ export async function handleBulkRaiseTransportDemand(
         raisedCount: raised.length,
         raised,
         alreadyRaised,
+        notBilled,
         skipped,
       },
       status: 200,
