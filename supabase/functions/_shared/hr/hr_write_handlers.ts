@@ -19,6 +19,18 @@ import {
   postPayrollRunToFinance,
   selectRunEntries,
 } from "./hr_finance_posting_repository.ts";
+import {
+  computeStatutoryDeductions,
+  deriveStatutoryLiabilities,
+  monthFromPeriod,
+  type PtSlab,
+  type StatutoryComponentConfig,
+} from "./statutory_payroll.ts";
+import {
+  listPtSlabs,
+  listStatutoryConfigs,
+  postStatutoryLiabilities,
+} from "./statutory_payroll_repository.ts";
 
 const writeStore = createEntityWriteStore("hr_entities", "Hr");
 const { runWrite } = createModuleWriteHandlers("manageHr");
@@ -1153,7 +1165,47 @@ export async function handleProcessPayrollRun(req: Request, config: AppConfig): 
       );
     }
 
-    return { payload: { ...processedRun!, financePosted: posted }, status: 201 };
+    // PRA-P1-35 — post the run's per-component statutory LIABILITIES (PF/ESI/PT/TDS)
+    // derived from the SAME entries the run disbursed. Σ employee withholding + Σ
+    // employer contribution = the remittance owed to each authority. Idempotent per
+    // (run, component, state) — a re-process posts nothing new. A run generated
+    // without statutory config carries no breakdown → no liabilities (deploy-safe).
+    const statLiabilities = deriveStatutoryLiabilities(runEntries);
+    let statutoryPosted = 0;
+    if (statLiabilities.length > 0) {
+      const { posted: liabPosted } = await postStatutoryLiabilities(
+        db,
+        organizationId,
+        schoolId,
+        runId,
+        posting.period,
+        statLiabilities,
+        claims.sub ?? "",
+      );
+      statutoryPosted = liabPosted;
+      if (liabPosted > 0) {
+        await emitMutationAudit(
+          db,
+          claims,
+          moduleEntityAudit("payroll.statutory.posted", "payroll_statutory_liability", runId, {
+            period: posting.period,
+            rowsPosted: liabPosted,
+            components: statLiabilities.map((l) => ({
+              component: l.component,
+              state: l.state,
+              employee: l.employeeAmount,
+              employer: l.employerAmount,
+            })),
+          }),
+          request,
+        );
+      }
+    }
+
+    return {
+      payload: { ...processedRun!, financePosted: posted, statutoryLiabilitiesPosted: statutoryPosted },
+      status: 201,
+    };
   });
 }
 
@@ -1351,11 +1403,25 @@ export function generatePayrollRun(
     leave?: Record<string, unknown>;
     /** Working days in the period (per-day basic = basicPay / payableDays). */
     payableDays?: number;
+    /**
+     * PRA-P1-35 — config-driven statutory deductions (PF/ESI/PT/TDS). When present
+     * (and non-empty), the EMPLOYEE statutory total is folded into each line's
+     * `deductions` (so netPay = basic + allowances − deductions still holds) and the
+     * per-component breakdown + employer contribution are recorded on the entry. All
+     * rates/ceilings/slabs are DATA (read from config); empty configs → no change.
+     */
+    statutory?: {
+      configs: StatutoryComponentConfig[];
+      ptSlabs?: PtSlab[];
+      state?: string;
+      month?: number | null;
+    };
   },
 ): { next: Record<string, unknown>; run: Record<string, unknown>; entries: Array<Record<string, unknown>> } {
   const { runId, period } = opts;
   const attendance = opts.attendance ?? {};
   const leave = opts.leave ?? {};
+  const statutoryConfigs = opts.statutory?.configs ?? [];
   const payableDays = opts.payableDays && opts.payableDays > 0
     ? opts.payableDays
     : DEFAULT_PAYABLE_DAYS;
@@ -1402,7 +1468,24 @@ export function generatePayrollRun(
     const rawLop = Math.round(lopDays * (basicPay / payableDays));
     const maxLop = Math.max(0, basicPay + allowances - structuralDeductions);
     const lopAmount = Math.min(Math.max(0, rawLop), maxLop);
-    const deductions = structuralDeductions + lopAmount;
+
+    // PRA-P1-35 — config-driven statutory deductions (PF/ESI/PT/TDS). The employee
+    // total is an ADDITIONAL deduction; the employer total is a liability that is
+    // NEVER netted against the employee. Empty config → zeros (backwards compatible).
+    const stat = computeStatutoryDeductions(
+      { basic: basicPay, allowances },
+      statutoryConfigs,
+      {
+        state: opts.statutory?.state,
+        ptSlabs: opts.statutory?.ptSlabs,
+        month: opts.statutory?.month ?? undefined,
+      },
+    );
+    // Money-safety floor of last resort: total deductions can never exceed gross
+    // (net floors at 0). For real salaries statutory is a small fraction of gross,
+    // so this clamp never fires — deductions === structural + LOP + statutory.
+    const rawDeductions = structuralDeductions + lopAmount + stat.employeeTotal;
+    const deductions = Math.min(rawDeductions, basicPay + allowances);
 
     return {
       runId,
@@ -1412,13 +1495,18 @@ export function generatePayrollRun(
       department: String(s.department ?? ""),
       basicPay,
       allowances,
-      // Itemised: the structural deductions and the LOP component are recorded
-      // separately; `deductions` carries their SUM so the money-safety invariant
-      // (netPay === basic + allowances − deductions) still holds and the salary
-      // register / payslip totals stay correct.
+      // Itemised: structural deductions, the LOP component, and the statutory
+      // components are recorded separately; `deductions` carries their SUM so the
+      // money-safety invariant (netPay === basic + allowances − deductions) still
+      // holds and the salary register / payslip totals stay correct.
       structuralDeductions,
       lopDays,
       lopAmount,
+      // Statutory: employee total is inside `deductions`; the employer total is a
+      // liability captured for the statutory-liability posting, not a deduction.
+      statutoryEmployee: stat.employeeTotal,
+      statutoryEmployer: stat.employerTotal,
+      statutory: stat.components,
       deductions,
       netPay: basicPay + allowances - deductions,
     };
@@ -1514,6 +1602,23 @@ export async function handleGeneratePayrollRun(req: Request, config: AppConfig):
       "snapshot_leave",
     );
 
+    // PRA-P1-35 — load the config-driven statutory rules for this run's jurisdiction
+    // (central PF/ESI/TDS + the state's PT). An unconfigured school reads an empty
+    // set, so statutory deductions are 0 (deploy-safe — no compliance number is ever
+    // guessed). The state comes from the request; PT slabs are only loaded when a PT
+    // rule is configured. The period's month drives special-month PT slab selection.
+    const state = str(body, "state", "jurisdiction") ?? "";
+    const statutoryConfigs = await listStatutoryConfigs(db, organizationId, schoolId, state);
+    const ptSlabs = statutoryConfigs.some((c) => c.component === "pt")
+      ? await listPtSlabs(db, organizationId, schoolId, state)
+      : [];
+    const statutory = {
+      configs: statutoryConfigs,
+      ptSlabs,
+      state,
+      month: monthFromPeriod(period),
+    };
+
     let generated: { run: Record<string, unknown>; entries: Array<Record<string, unknown>> } | null = null;
     let guardError: WriteValidationError | null = null;
     await writeStore.mutateSnapshot(
@@ -1530,6 +1635,7 @@ export async function handleGeneratePayrollRun(req: Request, config: AppConfig):
             attendance,
             leave,
             payableDays,
+            statutory,
           });
           generated = { run: result.run, entries: result.entries };
           return result.next;
