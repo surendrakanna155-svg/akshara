@@ -22,6 +22,7 @@ import {
   handleRemindPendingMarks,
   handleProcessExamResults,
   handlePublishExamResults,
+  handleUnpublishExamResults,
   handleReportCards,
   handleScheduleExam,
   handleTabulationRegister,
@@ -160,6 +161,8 @@ export function matchExamAdministrationRoute(
       handler: handleVerifyCoordinator,
     },
     { suffix: "/publish", method: "POST", handler: handlePublishExamResults },
+    // PRA-P1-12 — reopen a published exam for correction / re-evaluation.
+    { suffix: "/unpublish", method: "POST", handler: handleUnpublishExamResults },
   ];
 
   for (const { suffix, method: allowed, handler } of actionMatchers) {

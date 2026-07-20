@@ -56,12 +56,26 @@ export class InvalidCertificateTypeError extends Error {
  */
 export class NoDuesPendingError extends Error {
   readonly outstanding: number;
-  constructor(outstanding: number) {
+  readonly libraryFine: number;
+  readonly unreturnedBooks: number;
+  constructor(outstanding: number, libraryFine = 0, unreturnedBooks = 0) {
+    // PRA-P1-20: the message now names WHICH dues remain — fees, library fines,
+    // and/or unreturned books — so "All dues have been cleared" on the TC is only
+    // ever printed when every one of these is genuinely zero.
+    const parts: string[] = [];
+    if (outstanding > 0) parts.push(`${outstanding} outstanding in fees`);
+    if (libraryFine > 0) parts.push(`${libraryFine} in library fines`);
+    if (unreturnedBooks > 0) {
+      parts.push(`${unreturnedBooks} unreturned library book${unreturnedBooks === 1 ? "" : "s"}`);
+    }
+    const detail = parts.length > 0 ? parts.join(", ") : "outstanding dues";
     super(
-      `Cannot issue a Transfer Certificate: student has ${outstanding} outstanding in fees. Clear all dues first.`,
+      `Cannot issue a Transfer Certificate: student has ${detail}. Clear all dues first.`,
     );
     this.name = "NoDuesPendingError";
     this.outstanding = outstanding;
+    this.libraryFine = libraryFine;
+    this.unreturnedBooks = unreturnedBooks;
   }
 }
 
@@ -160,6 +174,52 @@ export async function outstandingForStudent(
     [organizationId, schoolId, studentId],
   );
   return Number(rows[0]?.outstanding ?? 0);
+}
+
+/**
+ * PRA-P1-20: the library keeps a disjoint fine/loan ledger (JSONB rows in
+ * `library_entities`, keyed by the SIS `sisStudentId`) that the finance-only
+ * no-dues sum never consulted — so a student with an unpaid library fine or an
+ * unreturned book could be issued a TC that legally asserts all dues are cleared.
+ * This returns that student's library obligations so the no-dues gate can block:
+ *   - `fineAmount`  — sum of un-waived `fine` entities (rupees).
+ *   - `unreturnedBooks` — count of `issue` rows not yet returned (the book itself
+ *     is a due: school property still out). An unreturned book blocks regardless
+ *     of any accruing fine, so no live day-count is needed here.
+ * Zero on both when the student has no library activity (or no sisStudentId).
+ */
+export async function libraryDuesForStudent(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  sisStudentId: string | null | undefined,
+): Promise<{ fineAmount: number; unreturnedBooks: number }> {
+  const code = (sisStudentId ?? "").trim();
+  if (!code) return { fineAmount: 0, unreturnedBooks: 0 };
+  const rows = await db.queryObject<{ fine: string | null; unreturned: string | null }>(
+    `SELECT
+       COALESCE((
+         SELECT SUM((payload->>'amount')::numeric)
+           FROM library_entities
+          WHERE organization_id = $1 AND school_id = $2
+            AND entity_type = 'fine'
+            AND payload->>'sisStudentId' = $3
+            AND COALESCE(payload->>'status', 'outstanding') <> 'waived'
+       ), 0)::text AS fine,
+       COALESCE((
+         SELECT COUNT(*)
+           FROM library_entities
+          WHERE organization_id = $1 AND school_id = $2
+            AND entity_type = 'issue'
+            AND payload->>'sisStudentId' = $3
+            AND COALESCE(payload->>'status', 'active') <> 'returned'
+       ), 0)::text AS unreturned`,
+    [organizationId, schoolId, code],
+  );
+  return {
+    fineAmount: Number(rows[0]?.fine ?? 0),
+    unreturnedBooks: Number(rows[0]?.unreturned ?? 0),
+  };
 }
 
 /**
@@ -342,15 +402,23 @@ export async function issueTransferCertificate(
   const detail = await getStudent(db, organizationId, schoolIdArg, input.studentId);
   if (!detail) throw new StudentNotFoundError(input.studentId);
 
-  // 1. NO-DUES GATE — blocks before any write.
+  // 1. NO-DUES GATE — blocks before any write. PRA-P1-20: fees AND library dues
+  // (un-waived fines + unreturned books) must all be clear, so the TC's "All
+  // dues have been cleared" is truthful by construction.
   const outstanding = await outstandingForStudent(
     db,
     organizationId,
     schoolIdArg,
     input.studentId,
   );
-  if (outstanding > 0) {
-    throw new NoDuesPendingError(outstanding);
+  const library = await libraryDuesForStudent(
+    db,
+    organizationId,
+    schoolIdArg,
+    detail.student.student_code,
+  );
+  if (outstanding > 0 || library.fineAmount > 0 || library.unreturnedBooks > 0) {
+    throw new NoDuesPendingError(outstanding, library.fineAmount, library.unreturnedBooks);
   }
 
   // 2. Status-transition guard — reject an already-terminal student BEFORE we

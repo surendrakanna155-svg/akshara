@@ -53,12 +53,17 @@ class CertMockDb {
   tcCounters = new Map<string, number>();
   issues: Row[] = [];
   statusUpdates: Array<{ id: string; status: string }> = [];
+  // PRA-P1-20: student_code -> library obligations (un-waived fines + unreturned books).
+  libraryDues = new Map<string, { fine: number; unreturned: number }>();
 
   seedStudent(seed: StudentSeed) {
     this.students.set(seed.id, seed);
   }
   seedOpenAccounts(studentId: string, amounts: number[]) {
     this.openAccounts.set(studentId, amounts);
+  }
+  seedLibraryDues(studentCode: string, dues: { fine: number; unreturned: number }) {
+    this.libraryDues.set(studentCode, dues);
   }
 
   // deno-lint-ignore require-await
@@ -140,6 +145,11 @@ class CertMockDb {
       const amounts = this.openAccounts.get(String(args[2])) ?? [];
       const sum = amounts.reduce((a, b) => a + b, 0);
       return [{ outstanding: String(sum) }] as T[];
+    }
+    // PRA-P1-20: library dues (fine total + unreturned-book count) keyed by code.
+    if (sql.includes("FROM library_entities") && sql.includes("entity_type = 'fine'")) {
+      const dues = this.libraryDues.get(String(args[2])) ?? { fine: 0, unreturned: 0 };
+      return [{ fine: String(dues.fine), unreturned: String(dues.unreturned) }] as T[];
     }
     // TC serial ON CONFLICT counter — mirrors allocatePublicStudentId arithmetic
     if (sql.includes("INSERT INTO school_tc_counters")) {
@@ -337,6 +347,67 @@ Deno.test("issueTransferCertificate: outstanding>0 -> 409 DUES_PENDING, NOTHING 
   assertEquals(mock.peekTcCounter(), undefined);
   assertEquals(mock.issues.length, 0);
   assertEquals(mock.statusUpdates.length, 0);
+});
+
+// ── PRA-P1-20: library dues also block the TC (no false "dues cleared") ────────
+
+Deno.test("PRA-P1-20: an unpaid LIBRARY FINE (fees clear) blocks the TC, nothing written", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({ id: STUDENT, status: "active", className: "Grade 8" });
+  mock.seedOpenAccounts(STUDENT, []); // fees clear
+  mock.seedLibraryDues("STU-2026-00001", { fine: 120, unreturned: 0 });
+  const client = mock as unknown as TenantQueryClient;
+
+  const error = await assertRejects(
+    () => issueTransferCertificate(client, ORG, SCHOOL, {
+      studentId: STUDENT,
+      reason: "relocation",
+      issuedBy: STAFF,
+    }),
+    NoDuesPendingError,
+  );
+  assertEquals(error.libraryFine, 120);
+  assertStringIncludes(error.message, "library fines");
+  // Gate blocks BEFORE any write — the TC would have lied "dues cleared".
+  assertEquals(mock.peekTcCounter(), undefined);
+  assertEquals(mock.issues.length, 0);
+  assertEquals(mock.statusUpdates.length, 0);
+});
+
+Deno.test("PRA-P1-20: an UNRETURNED BOOK (fees + fines clear) blocks the TC", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({ id: STUDENT, status: "active", className: "Grade 8" });
+  mock.seedOpenAccounts(STUDENT, []);
+  mock.seedLibraryDues("STU-2026-00001", { fine: 0, unreturned: 1 });
+  const client = mock as unknown as TenantQueryClient;
+
+  const error = await assertRejects(
+    () => issueTransferCertificate(client, ORG, SCHOOL, {
+      studentId: STUDENT,
+      reason: "relocation",
+      issuedBy: STAFF,
+    }),
+    NoDuesPendingError,
+  );
+  assertEquals(error.unreturnedBooks, 1);
+  assertStringIncludes(error.message, "unreturned library book");
+  assertEquals(mock.issues.length, 0);
+});
+
+Deno.test("PRA-P1-20: fees + library both clear -> TC issues normally (control)", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({ id: STUDENT, status: "active", className: "Grade 8", academicYear: "2026-2027" });
+  mock.seedOpenAccounts(STUDENT, []);
+  mock.seedLibraryDues("STU-2026-00001", { fine: 0, unreturned: 0 });
+  const client = mock as unknown as TenantQueryClient;
+
+  const result = await issueTransferCertificate(client, ORG, SCHOOL, {
+    studentId: STUDENT,
+    reason: "relocation",
+    issuedBy: STAFF,
+  });
+  assertEquals(mock.issues.length, 1);
+  assertEquals(result.certificate.student.status, "transferred");
 });
 
 Deno.test("issueTransferCertificate: already-transferred student -> status-codec rejection (no write)", async () => {

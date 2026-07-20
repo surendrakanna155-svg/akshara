@@ -923,6 +923,42 @@ export async function publishExamResults(
   return publishedCount;
 }
 
+/**
+ * PRA-P1-12: reopen a PUBLISHED exam so a wrong mark can be corrected (or a
+ * re-evaluation / supplementary applied) and then re-published. Previously
+ * publish was one-way — the `AND published = false` fence in {@link updateExamMark}
+ * made every mark immutable forever, so a single error found after publish was
+ * uncorrectable in-system. This clears the `published` flag and the BAKED
+ * grade/effective marks (the ORIGINAL `marks_obtained` is never touched — the
+ * grace ledger stays intact and re-bakes on the next publish) and moves the phase
+ * back to `processed`, at which point marks are editable again through the normal
+ * per-mark path. Returns the number of rows reopened. Senior-gated at the handler.
+ */
+export async function unpublishExamResults(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  examId: string,
+): Promise<number> {
+  const session = await getExamSession(db, organizationId, schoolId, examId);
+  if (!session) throw new ExamNotFoundError(examId);
+  if (session.phase !== "published") {
+    throw new ExamValidationError(
+      `Exam ${examId} is not published (phase: ${session.phase}); nothing to reopen.`,
+    );
+  }
+  const reopened = await db.queryObject<{ id: string }>(
+    `UPDATE exam_mark_entries
+       SET published = false, grade_letter = NULL, effective_marks = NULL,
+           updated_at = timezone('utc', now())
+     WHERE organization_id = $1 AND school_id = $2 AND exam_id = $3 AND published = true
+     RETURNING id`,
+    [organizationId, schoolId, examId],
+  );
+  await updateExamPhase(db, organizationId, schoolId, examId, "processed");
+  return reopened.length;
+}
+
 export async function listPublishedResultsForStudent(
   db: TenantQueryClient,
   organizationId: string,
@@ -1109,22 +1145,35 @@ export async function loadTabulationRegister(
 
     const status = isExamMarkStatus(r.status) ? r.status : "present";
     const present = status === "present" && r.marks_obtained != null;
+    // PRA-P1-12: last-write-wins PER SUBJECT. Rows arrive oldest→newest
+    // (ORDER BY es.updated_at ASC), so a later session (supplementary / re-exam)
+    // for the same subject REPLACES the earlier one here rather than being added
+    // alongside it. total/totalMax are computed from this deduped map below — the
+    // previous per-row `total +=` double-counted a subject that had two sessions,
+    // inflating total, percent and rank.
     student.perSubject[r.subject] = {
       subject: r.subject,
       marks: present ? r.marks_obtained : null,
       maxMarks: r.max_marks,
       statusCode: examStatusDisplayCode(status),
     };
-    // 🔴 EXCLUSION — only a present row contributes to total / max / percent.
-    if (present) {
-      student.total += r.marks_obtained!;
-      student.totalMax += r.max_marks;
-    }
   }
 
   const students = [...byStudent.values()];
   for (const s of students) {
-    s.percent = s.totalMax > 0 ? (s.total / s.totalMax) * 100 : 0;
+    // Sum ONCE per subject over the deduped map — only a present subject
+    // (non-null marks) contributes to total / max / percent.
+    let total = 0;
+    let totalMax = 0;
+    for (const cell of Object.values(s.perSubject)) {
+      if (cell.marks != null) {
+        total += cell.marks;
+        totalMax += cell.maxMarks;
+      }
+    }
+    s.total = total;
+    s.totalMax = totalMax;
+    s.percent = totalMax > 0 ? (total / totalMax) * 100 : 0;
   }
 
   // Rank by present-only percent. A student with NO present result this term
@@ -1927,6 +1976,13 @@ export async function loadReportCards(
   );
 
   const byStudent = new Map<string, ReportCardData>();
+  // PRA-P1-12: dedupe subject rows PER STUDENT so a subject with two published
+  // sessions (a supplementary / re-exam) contributes ONE row, not two. Rows come
+  // oldest→newest (ORDER BY es.updated_at ASC); an insertion-ordered Map keyed by
+  // subject keeps first-seen column order while replacing the value with the
+  // NEWEST session's cell. Previously each row was push()ed AND added to
+  // totalScore, double-counting the subject in the total, percent, grade and rank.
+  const subjectsByStudent = new Map<string, Map<string, ReportCardData["subjects"][number]>>();
   for (const r of rows) {
     let card = byStudent.get(r.student_id);
     if (!card) {
@@ -1944,13 +2000,14 @@ export async function loadReportCards(
         classSize: 0,
       };
       byStudent.set(r.student_id, card);
+      subjectsByStudent.set(r.student_id, new Map());
     }
     const status = isExamMarkStatus(r.status) ? r.status : "present";
     // Effective (grace-applied) score for a present student; null for AB/ML/DB.
     const score = status === "present"
       ? (r.effective_marks ?? r.marks_obtained)
       : null;
-    card.subjects.push({
+    subjectsByStudent.get(r.student_id)!.set(r.subject, {
       subject: r.subject,
       examTitle: r.exam_title,
       score,
@@ -1961,19 +2018,27 @@ export async function loadReportCards(
           : (examStatusDisplayCode(status) ?? "")),
       statusCode: examStatusDisplayCode(status),
     });
-    if (status === "present" && score != null) {
-      card.totalScore += score;
-      card.totalMax += r.max_marks;
-    }
   }
 
-  const cards = [...byStudent.values()];
-  for (const c of cards) {
+  for (const [studentId, c] of byStudent) {
+    // Materialize the deduped subjects and sum ONCE per subject.
+    c.subjects = [...subjectsByStudent.get(studentId)!.values()];
+    let totalScore = 0;
+    let totalMax = 0;
+    for (const cell of c.subjects) {
+      if (cell.score != null) {
+        totalScore += cell.score;
+        totalMax += cell.maxScore;
+      }
+    }
+    c.totalScore = totalScore;
+    c.totalMax = totalMax;
     c.overallPercent = c.totalMax > 0
       ? Math.round((c.totalScore / c.totalMax) * 10000) / 100
       : 0;
     c.overallGrade = c.totalMax > 0 ? gradeForPercent(c.overallPercent) : "";
   }
+  const cards = [...byStudent.values()];
 
   // Present-only rank across the class (a student with no present result is not
   // ranked and never shifts another's rank — frozen exclusion rule).

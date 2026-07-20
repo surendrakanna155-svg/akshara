@@ -61,6 +61,7 @@ import {
   processExamResults,
   publishExamResults,
   recordExamMarkAdjustment,
+  unpublishExamResults,
   reportCardToApi,
   scheduleExamSession,
   tabulationRegisterToApi,
@@ -916,6 +917,48 @@ export async function handlePublishExamResults(
     });
     await notifyParentsOfResults(config, claims, examId);
     return { examId, publishedCount };
+  });
+}
+
+/**
+ * PRA-P1-12: POST /academics/exams/{id}/unpublish — reopen a published exam so a
+ * wrong mark can be corrected / re-evaluated and re-published. Senior-gated on
+ * `publishExamResults` (the same authority that published it). Audited as a
+ * distinct, alertable event because it reverses a parent-visible result set.
+ */
+export async function handleUnpublishExamResults(
+  req: Request,
+  config: AppConfig,
+  examId: string,
+): Promise<Response> {
+  return await withAuth(req, config, "publishExamResults", async (claims) => {
+    const { organizationId, schoolId } = tenantIds(claims);
+    const reopenedCount = await withTenantContext(config, claims, async (db) => {
+      const count = await unpublishExamResults(db, organizationId, schoolId, examId);
+      await emitMutationAudit(
+        db,
+        claims,
+        {
+          audit: {
+            eventType: "examResultsUnpublished",
+            category: "workflow",
+            entityType: "exam_session",
+            entityId: examId,
+            metadata: { examId, reopenedCount: count },
+          },
+          domain: {
+            eventType: "exam.results.unpublished",
+            payload: { examId, reopenedCount: count },
+            sourceModule: "exam",
+            // Reopen is intentionally repeatable across correction cycles.
+            idempotencyKey: `exam.results.unpublished:${examId}:${crypto.randomUUID()}`,
+          },
+        },
+        req,
+      );
+      return count;
+    });
+    return { examId, reopenedCount };
   });
 }
 

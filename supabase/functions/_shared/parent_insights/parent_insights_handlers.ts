@@ -13,8 +13,29 @@ import { emitMutationAudit, parentInsightsAudit } from "../audit/mutation_audit_
 import {
   generateParentInsightSnapshot,
   type InsightPeriod,
+  ParentInsightsNoDataError,
 } from "./parent_insights_service.ts";
 import { enrichParentInsightWithClaude, normalizeInsightLanguage } from "./parent_insights_ai.ts";
+
+/**
+ * PRA-P0-21: a parent-scope caller may only touch insights for their OWN child.
+ * `studentId` is client-supplied and was never checked against `child_ids`, so a
+ * parent could name any student id. Returns a 403 Response when the caller is a
+ * parent and the studentId is not one of their linked children; null otherwise
+ * (school-scope staff are governed by RLS + their operational scope). This is
+ * defence-in-depth alongside the parent-scope RLS on the source snapshot table.
+ */
+function denyForeignChild(
+  claims: Parameters<typeof requirePermission>[0],
+  studentId: string,
+): Response | null {
+  if (claims.scope !== "parent") return null;
+  const childIds = claims.child_ids ?? [];
+  if (!childIds.includes(studentId)) {
+    return errorEnvelope("FORBIDDEN", "You can only view insights for your own child", 403);
+  }
+  return null;
+}
 
 export async function handleGenerateParentInsights(req: Request, config: AppConfig): Promise<Response> {
   const auth = await authenticateRequest(req, config);
@@ -31,6 +52,8 @@ export async function handleGenerateParentInsights(req: Request, config: AppConf
   if (!body?.studentId) {
     return errorEnvelope("VALIDATION_ERROR", "studentId is required", 422);
   }
+  const foreign = denyForeignChild(auth.claims, body.studentId);
+  if (foreign) return foreign;
 
   const period = body.period ?? "weekly";
   const orgId = organizationIdFromClaims(auth.claims);
@@ -94,6 +117,15 @@ export async function handleGenerateParentInsights(req: Request, config: AppConf
     return jsonResponse(envelope(result), { status: 201 });
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    // PRA-P0-21: no readable risk snapshot → honest "not available yet", never a
+    // fabricated snapshot. Nothing was persisted and the model was never called.
+    if (error instanceof ParentInsightsNoDataError) {
+      return errorEnvelope(
+        "PARENT_INSIGHTS_NO_DATA",
+        "No insights are available for this student yet.",
+        404,
+      );
+    }
     return errorEnvelope("PARENT_INSIGHTS_ERROR", String(error), 500);
   }
 }
@@ -108,9 +140,11 @@ export async function handleListParentInsights(
   const denied = requirePermission(auth.claims, "viewParentInsights") ??
     requireParentInsightsScope(auth.claims);
   if (denied) return denied;
+  const foreign = denyForeignChild(auth.claims, studentId);
+  if (foreign) return foreign;
 
   try {
-    const items = await withTenantContext(config, auth.claims, async (db) =>
+    const items = await withTenantContext(config, auth.claims, (db) =>
       db.queryObject<Record<string, unknown>>(
         `SELECT id, period, language, progress_summary AS "progressSummary",
                 strengths, weaknesses, attendance_insights AS "attendanceInsights",
