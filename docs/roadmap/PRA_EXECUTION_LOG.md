@@ -22,7 +22,7 @@
 | **S2** | Identity Lifecycle & Revocation (ILR · C1) | ✅ committed | `8e75616b` |
 | **S3** | Pilot-lane governance / canonical teacher↔class | ✅ committed | `972836b7` |
 | **S4** | Reporting & metric integrity | ✅ **COMPLETE** | `005695d5` (metric core) + `64e086da` (report card / export / queues) |
-| **S5** | Communication & delivery | ✅ **COMPLETE** | `<pending-commit>` |
+| **S5** | Communication & delivery | ✅ **COMPLETE** | `fbbb7634` |
 | **S6** | Academic-operations blockers | ⬜ not started | — |
 | **S7** | Operational-module blockers | ⬜ not started | — |
 
@@ -87,7 +87,7 @@ committed in `64e086da` *after* that log was written.
 
 ---
 
-## S5 — Communication & delivery  ✅ COMPLETE  `<pending-commit>`
+## S5 — Communication & delivery  ✅ COMPLETE  `fbbb7634`
 
 **Scope (PRA_FIX_STRATEGY §12.1):** P0-16, P0-18, P1-45; + N-11; P1-44 (route-scoped
 delay broadcast). **EOS gate: PASS.** Regression: **578 affected-area backend tests green**
@@ -241,7 +241,7 @@ gateway-bypass hardening; P2-12 per-role borrow limit. EOS: FEATURE+SEC PASS.
 ## CHECKPOINT — 2026-07-20 (S5 complete)
 
 **Committed & verified:** S0 `1b893f6d` · S1 `e4807308` · S2 `8e75616b` · S3 `972836b7` ·
-S4 `005695d5` + `64e086da` · **S5 `<pending-commit>`** (this commit). All isolated,
+S4 `005695d5` + `64e086da` · **S5 `fbbb7634`** (this commit). All isolated,
 regression-tested, on `feature/erp-pra-remediation`, **NOT pushed**.
 
 **In-flight:** none — the working tree is clean at the S5 commit.
