@@ -11,9 +11,11 @@
 // reliability stack needed) — mirrors staff_face_id_attendance_cert_test.dart's
 // card-UI group, minus the parts that are already covered there.
 
+import 'package:akshara_erp/features/staff_attendance/manual_attendance_request_providers.dart';
 import 'package:akshara_erp/features/staff_attendance/staff_attendance_models.dart';
 import 'package:akshara_erp/features/staff_attendance/widgets/staff_check_in_card.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Future<void> _pumpCard(
@@ -21,11 +23,16 @@ Future<void> _pumpCard(
   required Future<StaffCheckOutcome> Function(StaffCheckEvent) onRecord,
   VoidCallback? onOpenEnrollment,
 }) async {
-  await tester.pumpWidget(MaterialApp(
-    home: Scaffold(
-      body: StaffCheckInCard(
-        onRecord: onRecord,
-        onOpenEnrollment: onOpenEnrollment,
+  await tester.pumpWidget(ProviderScope(
+    overrides: [
+      canApproveManualAttendanceProvider.overrideWithValue(false),
+    ],
+    child: MaterialApp(
+      home: Scaffold(
+        body: StaffCheckInCard(
+          onRecord: onRecord,
+          onOpenEnrollment: onOpenEnrollment,
+        ),
       ),
     ),
   ));

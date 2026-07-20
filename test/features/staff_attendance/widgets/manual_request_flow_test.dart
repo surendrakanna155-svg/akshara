@@ -4,12 +4,14 @@
 //   2. Dialog: duplicate-pending guard, reason validation (server mirror),
 //      submit → pending-approval confirmation.
 
+import 'package:akshara_erp/features/staff_attendance/manual_attendance_request_providers.dart';
 import 'package:akshara_erp/features/staff_attendance/manual_request_datasource.dart';
 import 'package:akshara_erp/features/staff_attendance/staff_attendance_models.dart';
 import 'package:akshara_erp/features/staff_attendance/widgets/manual_request_dialog.dart';
 import 'package:akshara_erp/features/staff_attendance/widgets/staff_check_in_card.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Fake datasource — implements the concrete class; only the members the
@@ -57,11 +59,16 @@ Future<void> _pumpCard(
   void Function(StaffCheckEvent? attempted)? onManualRequest,
 }) async {
   await tester.pumpWidget(
-    MaterialApp(
-      home: Scaffold(
-        body: StaffCheckInCard(
-          onRecord: (_) async => outcome,
-          onManualRequest: onManualRequest ?? (_) {},
+    ProviderScope(
+      overrides: [
+        canApproveManualAttendanceProvider.overrideWithValue(false),
+      ],
+      child: MaterialApp(
+        home: Scaffold(
+          body: StaffCheckInCard(
+            onRecord: (_) async => outcome,
+            onManualRequest: onManualRequest ?? (_) {},
+          ),
         ),
       ),
     ),
@@ -137,10 +144,15 @@ void main() {
 
     testWidgets('no callback wired → no CTA even when blocked', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: StaffCheckInCard(
-              onRecord: (_) async => StaffCheckOutcome.locationBlocked('far'),
+        ProviderScope(
+          overrides: [
+            canApproveManualAttendanceProvider.overrideWithValue(false),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: StaffCheckInCard(
+                onRecord: (_) async => StaffCheckOutcome.locationBlocked('far'),
+              ),
             ),
           ),
         ),
