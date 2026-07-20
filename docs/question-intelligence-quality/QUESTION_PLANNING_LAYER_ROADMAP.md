@@ -367,3 +367,26 @@ certify (EOS) → commit → doc.
   mining phase (Decision 2 "then mine"). No estimate is ever relabelled as a measurement.
 - Materialized: 236 weight rows + 70 distribution rows across all 3 exams; every distribution sums to 1.0.
 - Tests: +8 (`tests/test_qpl_phase2_examdna.py`). **709 tests green** (was 701).
+
+### Phase 3 — Deterministic distributor + QuestionBlueprint + persistence — ✅ COMPLETE (2026-07-20) · EOS: PASS
+- **`knowledge/difficulty.py`** — the bounded difficulty driver model (Owner Decision 1): deterministic,
+  versioned `f(reasoning_depth, concept_count, misconception_pressure, calculation_load)` → band + score.
+  `drivers_for_target()` picks a driver vector that hits a target band inside the archetype's certified depth
+  range, or returns the CLOSEST achievable band honestly (never forces an impossible difficulty).
+- **`knowledge/allocate.py`** — the RNG→deterministic replacement: `hamilton()` largest-remainder apportionment
+  + `spread()` even interleave, allocating subject→chapter→concept by Exam-DNA weight with **no RNG, no clock**.
+  Difficulty is the primary dial (assigned first), and the archetype is conditioned on it (only archetypes that
+  can reach the target band are eligible); Biology stays qualitative-only.
+- **`knowledge/blueprint.py`** — `QuestionBlueprint` (all roadmap §6 fields), content-hash `blueprint_fingerprint`
+  over the selecting fields, deterministic `learning_objective`, gate-shaped for `planner.check_plan`.
+- **`knowledge/run_planner.plan_blueprints(exam, N)`** — the driver: frozen index + Exam DNA → allocate →
+  build → gate. Measured (N=180): **byte-for-byte deterministic**; subject weightage matches (NEET 89/45/45 ≈
+  50/25/25); difficulty match **JEE Main 20/50/30 exact, JEE Advanced 5/35/60 exact**, NEET 34/58/8 vs 30/55/15
+  with an **honest shortfall** (13 slots — hard-Biology is genuinely unreachable in v1 without QDI misconception
+  data → Phase 4; reported, never faked; recorded in `difficulty_basis`).
+- **`knowledge/blueprint_store.py`** — persistence by EVOLVING `factory_corpus.db generation_spec` in place
+  (Decision 3): idempotent ALTERs add the rich blueprint columns; the factory pipeline keeps reading its columns
+  unchanged. One corpus, one lifecycle.
+- Tests: +14 (`tests/test_qpl_phase3_planner.py` — determinism, apportionment, blueprint contract, distribution
+  match, persistence round-trip, read-only foundation). **723 tests green** (was 709).
+- **The core determinism law now holds:** same (frozen index, Exam DNA, exam, N) → identical blueprint set.

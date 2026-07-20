@@ -16,11 +16,15 @@ import sqlite3
 from typing import Dict, List, Optional
 
 from kie import config
+from kie.qie.knowledge import allocate as AL
+from kie.qie.knowledge import blueprint as BP
+from kie.qie.knowledge import examdna as ED
 from kie.qie.knowledge import plan_specs as PS
 from kie.qie.knowledge import planner as P
 from kie.qie.knowledge import qdi as QDI
 
 INDEX_DB_PATH = config.KIE_HOME / "knowledge_index.db"
+EXAM_CLASSES = (11, 12)
 
 # subjects exactly as they appear in the certified index's curriculum-source `subject` column
 CERTIFIED_SUBJECTS = ("Mathematics", "Science", "Physics", "Chemistry", "Biology")
@@ -53,6 +57,70 @@ def plan(subject: str, run_id: str, classes: Optional[List[int]] = None, n: int 
     finally:
         conn.close()
     return PS.build_specs(universe, patterns, run_id, n=n, seed=seed, subject=subject)
+
+
+def _foundation_version(conn) -> str:
+    try:
+        r = conn.execute("SELECT value FROM ki_meta WHERE key='frozen_version'").fetchone()
+        return r[0] if r else "unknown"
+    except sqlite3.OperationalError:
+        return "unknown"
+
+
+def plan_blueprints(exam: str, total: int, index_path=None, examdna_path=None) -> dict:
+    """Deterministically plan `total` QuestionBlueprints for one exam from frozen v1.4 + Exam DNA.
+
+    NO RNG, NO clock: the same (frozen index, Exam DNA, exam, total) always yields the identical set of
+    blueprints (by fingerprint). Every blueprint is gate-validated (`planner.check_plan`); a blueprint that
+    cannot be defended is refused, never fabricated.
+    """
+    if exam not in ED.EXAMS:
+        raise ValueError(f"unknown exam {exam!r} (expected one of {ED.EXAMS})")
+    conn = open_frozen_index(index_path)
+    edb = ED.open_examdna(examdna_path)
+    try:
+        fver = _foundation_version(conn)
+        ever = (edb.execute("SELECT value FROM examdna_meta WHERE key='version'").fetchone() or ["v1"])[0]
+        subj_w = ED.subject_weights(edb, exam)
+        concepts_by_chapter: dict = {}
+        chapter_weights: dict = {}
+        universe_all = []
+        for subject in ED.EXAM_SUBJECTS[exam]:
+            uni = P.certified_universe(conn, subject, list(EXAM_CLASSES))
+            uni, _ = P.dedupe_universe(uni)
+            universe_all.extend(uni)
+            for c in uni:
+                concepts_by_chapter.setdefault(c["chapter_id"], []).append(c)
+            chapter_weights[subject] = ED.chapter_weight_map(edb, exam, subject)
+        for cid in concepts_by_chapter:
+            concepts_by_chapter[cid].sort(key=lambda c: c["concept_id"])
+        diff_dist = ED.distribution(edb, exam, "difficulty")
+        arch_dist = ED.distribution(edb, exam, "archetype")
+        slots = AL.allocate_slots(exam, total, subj_w, chapter_weights, concepts_by_chapter,
+                                  diff_dist, arch_dist)
+    finally:
+        conn.close()
+        edb.close()
+
+    by_id = {c["concept_id"]: c for c in universe_all}
+    issued, refused, seen_fp = [], [], set()
+    for s in slots:
+        n_in_chapter = len(concepts_by_chapter.get(s["chapter_id"]) or []) or 1
+        cw = chapter_weights[s["subject"]].get(s["chapter_id"], 0.0)
+        bp = BP.build_blueprint(s, f"plan_{exam}", cw, 1.0 / n_in_chapter, fver, ever)
+        v = P.check_plan(bp, by_id)
+        if v:
+            refused.append({"blueprint_id": bp["blueprint_id"], "violations": v})
+        else:
+            issued.append(bp)
+            seen_fp.add(bp["blueprint_fingerprint"])
+    realized = {}
+    for b in issued:
+        realized[b["difficulty"]] = realized.get(b["difficulty"], 0) + 1
+    shortfall = sum(1 for b in issued if b["difficulty"] != b["target_difficulty"])
+    return {"exam": exam, "planned": len(slots), "issued": issued, "refused": refused,
+            "distinct_fingerprints": len(seen_fp), "realized_difficulty": realized,
+            "difficulty_shortfall": shortfall, "foundation_version": fver, "examdna_version": ever}
 
 
 def _main() -> int:
