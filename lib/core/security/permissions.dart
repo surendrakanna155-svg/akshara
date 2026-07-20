@@ -21,6 +21,12 @@ enum Permission {
   manageManagement,
   manageWorkflowAutomation,
 
+  // School Calendar (PRA-P1-17) — seeded server-side in
+  // 20260729000000_school_publisher.sql (superAdmin/schoolAdmin/principal/
+  // vicePrincipal: view+manage; teacher: view).
+  viewSchoolCalendar,
+  manageSchoolCalendar,
+
   // Transport
   viewTransport,
   manageTransport,

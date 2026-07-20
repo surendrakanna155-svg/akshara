@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../router/route_names.dart';
+import '../manual_attendance_request_providers.dart';
 import '../staff_attendance_models.dart';
 
 /// Self-service staff check-in/out card (B4). Attendance is proven by being inside
@@ -10,16 +14,35 @@ import '../staff_attendance_models.dart';
 /// Takes a deferred [onRecord] callback (rather than a pre-built controller) so
 /// the host resolves the heavy reliability/biometric stack lazily — only on tap,
 /// never at screen-build time.
-class StaffCheckInCard extends StatefulWidget {
-  const StaffCheckInCard({super.key, required this.onRecord});
+///
+/// PRA-P0-15: device capture currently always throws `DEVICE_ADAPTER_PENDING`
+/// (no geolocator/camera build), so the card also surfaces the AUDITED
+/// manual-attendance fallback — a "Request manual attendance" action for every
+/// staff member, plus an "Approve manual requests" entry gated on the approver
+/// permission ([canApproveManualAttendanceProvider]).
+class StaffCheckInCard extends ConsumerStatefulWidget {
+  const StaffCheckInCard({
+    super.key,
+    required this.onRecord,
+    this.onRequestManual,
+    this.onOpenApproverQueue,
+  });
 
   final Future<StaffCheckOutcome> Function(StaffCheckEvent event) onRecord;
 
+  /// Overrides navigation to the manual-request screen (used in tests). When
+  /// null the card pushes [RouteNames.hrStaffManualRequest].
+  final VoidCallback? onRequestManual;
+
+  /// Overrides navigation to the approver queue (used in tests). When null the
+  /// card pushes [RouteNames.hrStaffManualRequestQueue].
+  final VoidCallback? onOpenApproverQueue;
+
   @override
-  State<StaffCheckInCard> createState() => _StaffCheckInCardState();
+  ConsumerState<StaffCheckInCard> createState() => _StaffCheckInCardState();
 }
 
-class _StaffCheckInCardState extends State<StaffCheckInCard> {
+class _StaffCheckInCardState extends ConsumerState<StaffCheckInCard> {
   bool _busy = false;
   StaffCheckOutcome? _last;
   StaffCheckEvent? _lastEvent;
@@ -39,9 +62,28 @@ class _StaffCheckInCardState extends State<StaffCheckInCard> {
     });
   }
 
+  void _openRequestManual() {
+    final override = widget.onRequestManual;
+    if (override != null) {
+      override();
+      return;
+    }
+    context.push(RouteNames.hrStaffManualRequest);
+  }
+
+  void _openApproverQueue() {
+    final override = widget.onOpenApproverQueue;
+    if (override != null) {
+      override();
+      return;
+    }
+    context.push(RouteNames.hrStaffManualRequestQueue);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final canApprove = ref.watch(canApproveManualAttendanceProvider);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -99,6 +141,27 @@ class _StaffCheckInCardState extends State<StaffCheckInCard> {
               const SizedBox(height: 12),
               _StatusBanner(outcome: _last!, event: _lastEvent),
             ],
+            const Divider(height: 24),
+            // PRA-P0-15 — audited fallback when device capture is unavailable.
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: const Key('staff-request-manual-button'),
+                onPressed: _openRequestManual,
+                icon: const Icon(Icons.assignment_outlined, size: 18),
+                label: const Text("Can't check in? Request manual attendance"),
+              ),
+            ),
+            if (canApprove)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  key: const Key('staff-approve-manual-button'),
+                  onPressed: _openApproverQueue,
+                  icon: const Icon(Icons.rule, size: 18),
+                  label: const Text('Approve manual requests'),
+                ),
+              ),
           ],
         ),
       ),

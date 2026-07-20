@@ -100,8 +100,27 @@ PaymentSummary _fallbackSummary(String installmentId) {
   };
 }
 
-/// Initiates and confirms payment via repository mutation providers.
-Future<void> submitMockPayment(WidgetRef ref) async {
+/// Initiates a fee payment and — ONLY when handed VERIFIED gateway proof —
+/// confirms it via the repository mutation providers.
+///
+/// PRA-P0-02 (client half): this is the fail-closed replacement for the former
+/// `submitMockPayment`, which fabricated a transaction ref
+/// (`txn_<millis>`) and reported [PaymentFlowPhase.success] with a receipt for
+/// money that no real gateway ever took (the backend defaults to stub mode, so
+/// the fake confirm always "succeeded"). We now REFUSE to claim success unless
+/// [gatewayPayment] carries a verified gateway payment id + signature.
+///
+/// No payment-gateway SDK is wired yet — integrating one is an explicit OWNER
+/// decision and is OUT OF SCOPE here — so [gatewayPayment] is always null at the
+/// call site today. In that case the flow stops at
+/// [PaymentFlowPhase.pendingGatewayVerification] after creating the intent, and
+/// no receipt/success is ever shown. When an SDK is later added, its verified
+/// callback flows through unchanged to the backend's already-built verification
+/// path.
+Future<void> submitParentPayment(
+  WidgetRef ref, {
+  VerifiedGatewayPayment? gatewayPayment,
+}) async {
   ref.read(parentPaymentPhaseProvider.notifier).state =
       PaymentFlowPhase.processing;
 
@@ -131,12 +150,26 @@ Future<void> submitMockPayment(WidgetRef ref) async {
       return;
     }
 
+    // FAIL CLOSED: without a VERIFIED gateway payment we do NOT fabricate a
+    // transaction ref, do NOT call confirm, and do NOT claim success. The intent
+    // exists server-side but the parent is never shown a receipt for an
+    // uncollected charge. This is the current path (no SDK wired).
+    if (gatewayPayment == null) {
+      ref.read(parentPaymentPhaseProvider.notifier).state =
+          PaymentFlowPhase.pendingGatewayVerification;
+      return;
+    }
+
     final confirmation = await ref
         .read(confirmParentPaymentProvider.notifier)
         .execute(
           ParentPaymentConfirmRequest(
             paymentIntentId: initiation.paymentIntentId,
-            transactionRef: 'txn_${DateTime.now().millisecondsSinceEpoch}',
+            // Real gateway reference — the verified payment id, not a fabricated
+            // timestamp.
+            transactionRef: gatewayPayment.razorpayPaymentId,
+            razorpayPaymentId: gatewayPayment.razorpayPaymentId,
+            razorpaySignature: gatewayPayment.razorpaySignature,
           ),
         );
 

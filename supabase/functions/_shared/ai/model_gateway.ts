@@ -41,6 +41,7 @@ import {
   monthStartIso,
   releaseReservation,
   type ReserveArgs,
+  type ReserveDenyReason,
   type ReserveResult,
   reserveOutOfBand,
 } from "./ai_call_reservations_repository.ts";
@@ -380,6 +381,51 @@ export function gatewayDepsFor(
         const semanticEligible = () =>
           !!cacheCfg.semanticText && embeddingsConfigured();
 
+        // P1-46: every embedding of raw user text goes through the governed path
+        // (reserve → embed → ai_call_log record) instead of a raw provider fetch,
+        // so it is admission-controlled + audited like a model call. The
+        // embedding is a system sub-call of the request, so it is attributed to
+        // the school (userId null) and shares the school's rate + spend budget.
+        const governedEmbed = async (
+          scope: AiTenantScope,
+          text: string,
+        ): Promise<number[] | null> => {
+          if (!embeddingsConfigured() || text.trim().length === 0) return null;
+          let limits: GatewayLimits;
+          try {
+            const cfg = await resolveAiConfig(db, scope.organizationId);
+            limits = resolveLimits(cfg.rawConfig);
+          } catch (err) {
+            logAiDegradation("embed.resolve_config", err);
+            limits = resolveLimits(null);
+          }
+          return await runGovernedEmbedding(
+            {
+              scope,
+              userId: null,
+              surface: "semantic_cache_embed",
+              provider: "voyage",
+              model: Deno.env.get("AI_EMBEDDINGS_MODEL") ?? "voyage-3.5-lite",
+            },
+            text,
+            {
+              embed: (t) => embedText(t),
+              record: (entry) => withTelemetrySavepoint(db, () => recordAiCall(db, entry)),
+              reserve: reservationsConfigured ? (args) => reserveOutOfBand(args) : undefined,
+              finalizeReservation: reservationsConfigured
+                ? (reservationId, outcome) =>
+                  withTelemetrySavepoint(db, () =>
+                    outcome.consumed
+                      ? consumeReservation(db, reservationId, outcome.costMicros)
+                      : releaseReservation(db, reservationId))
+                : undefined,
+              limits,
+              now: () => new Date(),
+              hasKey: embeddingsConfigured(),
+            },
+          );
+        };
+
         const semanticLookup = async (
           scope: AiTenantScope,
         ): Promise<{ payload: string; model: string } | null> => {
@@ -390,7 +436,7 @@ export function gatewayDepsFor(
             semanticHash = await questionHash(cacheCfg.semanticText!);
             semanticVector = await findStoredEmbedding(db, scope, semanticHash);
             if (!semanticVector) {
-              const embedded = await embedText(cacheCfg.semanticText!);
+              const embedded = await governedEmbed(scope, cacheCfg.semanticText!);
               if (!embedded) return null;
               semanticVector = vectorLiteral(embedded);
             }
@@ -442,7 +488,7 @@ export function gatewayDepsFor(
                 if (!(await semanticCacheAvailable(db))) return;
                 semanticHash ??= await questionHash(cacheCfg.semanticText!);
                 if (!semanticVector) {
-                  const embedded = await embedText(cacheCfg.semanticText!);
+                  const embedded = await governedEmbed(scope, cacheCfg.semanticText!);
                   if (!embedded) return;
                   semanticVector = vectorLiteral(embedded);
                 }
@@ -482,8 +528,13 @@ function baseEntry(
   };
 }
 
-/** Telemetry must never fail the user's request. */
-async function safeRecord(deps: GatewayDeps, entry: AiCallLogEntry): Promise<void> {
+/** Telemetry must never fail the user's request. Typed on the minimal `record`
+ * slice so both the model path (GatewayDeps) and the embedding path
+ * (EmbeddingGovernanceDeps) share it. */
+async function safeRecord(
+  deps: { record: (entry: AiCallLogEntry) => Promise<void> },
+  entry: AiCallLogEntry,
+): Promise<void> {
   try {
     await deps.record(entry);
   } catch (err) {
@@ -500,7 +551,12 @@ async function safeRecord(deps: GatewayDeps, entry: AiCallLogEntry): Promise<voi
  * same transaction that records the call, released when nothing was billed.
  * The pending-TTL sweep is the backstop if this fails. */
 async function settleReservation(
-  deps: GatewayDeps,
+  deps: {
+    finalizeReservation?: (
+      reservationId: string,
+      outcome: { consumed: boolean; costMicros: number },
+    ) => Promise<void>;
+  },
   reservationId: string | null,
   consumed: boolean,
   costMicros: number,
@@ -511,6 +567,142 @@ async function settleReservation(
   } catch (err) {
     logAiDegradation("gateway.finalize_reservation", err);
   }
+}
+
+// ─── P1-46: governed embedding path ──────────────────────────────────────────
+//
+// The Stage-2 semantic cache embeds raw user text via a SEPARATE provider
+// (Voyage — Anthropic has no embeddings endpoint). Before this fix those embed
+// calls fired from INSIDE the cache lookup/write, i.e. BEFORE the gateway's
+// admission control and with NO ai_call_log row — so an embedding bypassed the
+// rate limit, the spend-cap reservation, and the audit entirely. This helper
+// routes an embedding through the SAME reserve→call→record path a model call
+// takes, so it is admission-controlled and logged like one. It is dormant-safe:
+// with no embeddings key (deps.hasKey === false) it is a pure no-op.
+
+/** Micro-USD per Voyage embedding input token. Voyage's lite tier is far under
+ * $1/1M tokens; we round UP to 1 micro-USD/token so the spend cap can never
+ * UNDER-count an embedding (a conservative accumulator, not the invoice). */
+const EMBEDDING_MICROS_PER_TOKEN = 1;
+
+/** Deterministic worst-case embedding cost estimate (prompt at 4 chars/token). */
+export function estimateEmbeddingCostMicros(text: string): number {
+  const tokens = Math.ceil(text.length / 4);
+  return Math.max(0, tokens) * EMBEDDING_MICROS_PER_TOKEN;
+}
+
+export interface EmbeddingContext {
+  scope: AiTenantScope;
+  /** Null when the embedding is a system sub-call with no attributable user. */
+  userId: string | null;
+  /** Telemetry surface, e.g. "semantic_cache_embed". */
+  surface: string;
+  /** Embeddings provider id for the ai_call_log row, e.g. "voyage". */
+  provider: string;
+  /** Embeddings model id, e.g. "voyage-3.5-lite". */
+  model: string;
+}
+
+/** Injectable seam so the embedding governance is testable without a DB or
+ * network — mirrors {@link GatewayDeps} for the model path. */
+export interface EmbeddingGovernanceDeps {
+  embed: (text: string) => Promise<number[] | null>;
+  record: (entry: AiCallLogEntry) => Promise<void>;
+  reserve?: (args: ReserveArgs) => Promise<ReserveResult>;
+  finalizeReservation?: (
+    reservationId: string,
+    outcome: { consumed: boolean; costMicros: number },
+  ) => Promise<void>;
+  limits: GatewayLimits;
+  now: () => Date;
+  /** False ⇒ no embeddings provider configured ⇒ pure no-op (dormant). */
+  hasKey: boolean;
+}
+
+/**
+ * Governed embedding. Reserves against the school's rate + spend budget BEFORE
+ * the provider call, then records exactly one `ai_call_log` row (provider set to
+ * the embeddings provider) and settles the reservation — consumed on success,
+ * released on failure. Returns the vector, or null on denial / failure / no key.
+ * Never throws into the caller's happy path (a failed embedding degrades to a
+ * Stage-2 cache miss, exactly as before).
+ */
+export async function runGovernedEmbedding(
+  ctx: EmbeddingContext,
+  text: string,
+  deps: EmbeddingGovernanceDeps,
+): Promise<number[] | null> {
+  // Dormant-safe: no key (or empty text) → reserve nothing, record nothing,
+  // fetch nothing. Identical to pre-P1-46 behavior with AI_EMBEDDINGS_API_KEY
+  // unset.
+  if (!deps.hasKey || text.trim().length === 0) return null;
+
+  const now = deps.now();
+  const base: Pick<
+    AiCallLogEntry,
+    "organizationId" | "schoolId" | "userId" | "surface" | "provider" | "model"
+  > = {
+    organizationId: ctx.scope.organizationId,
+    schoolId: ctx.scope.schoolId,
+    userId: ctx.userId,
+    surface: ctx.surface,
+    provider: ctx.provider,
+    model: ctx.model,
+  };
+
+  // Admission control BEFORE the provider call (mirrors runGateway's reserve).
+  let reservationId: string | null = null;
+  if (deps.reserve) {
+    let reserveDenied: ReserveDenyReason | null = null;
+    try {
+      const r = await deps.reserve({
+        scope: ctx.scope,
+        userId: ctx.userId,
+        surface: ctx.surface,
+        estimatedCostMicros: estimateEmbeddingCostMicros(text),
+        limits: deps.limits,
+        now,
+      });
+      if (r.allow) reservationId = r.reservationId;
+      else reserveDenied = r.reason;
+    } catch (err) {
+      // Reservation infra down → admit (availability over strictness), same
+      // posture as the model path; the call is still logged below.
+      logAiDegradation("embed.reserve", err, { surface: ctx.surface });
+    }
+    if (reserveDenied) {
+      await safeRecord(deps, {
+        ...base,
+        outcome: denyOutcome(reserveDenied),
+        inputTokens: 0,
+        outputTokens: 0,
+        estimatedCostMicros: 0,
+        latencyMs: 0,
+        cacheWritten: false,
+        fallbackUsed: true,
+      });
+      return null;
+    }
+  }
+
+  const started = now.getTime();
+  const embedding = await deps.embed(text);
+  const latencyMs = Math.max(0, deps.now().getTime() - started);
+  const ok = embedding !== null;
+  const costMicros = ok ? estimateEmbeddingCostMicros(text) : 0;
+  await safeRecord(deps, {
+    ...base,
+    outcome: ok ? "ok" : "fallback_error",
+    inputTokens: ok ? Math.ceil(text.length / 4) : 0,
+    outputTokens: 0,
+    estimatedCostMicros: costMicros,
+    latencyMs,
+    cacheWritten: false,
+    fallbackUsed: !ok,
+  });
+  // Consume on success (cost billed); release on failure (nothing billed).
+  await settleReservation(deps, reservationId, ok, costMicros);
+  return embedding;
 }
 
 /** The testable gateway core. Prefer {@link callModelGateway} in production. */

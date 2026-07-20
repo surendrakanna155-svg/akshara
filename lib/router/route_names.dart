@@ -323,6 +323,10 @@ abstract final class RouteNames {
   static const String hrReports = '/hr/reports';
   static const String hrSettings = '/hr/settings';
 
+  // PRA-P0-15 — audited manual-attendance fallback (staff request + approver queue).
+  static const String hrStaffManualRequest = '/hr/attendance/manual-request';
+  static const String hrStaffManualRequestQueue = '/hr/attendance/requests';
+
   static String hrEmployeeDetail(String employeeId) =>
       '$hrEmployees/$employeeId';
 
@@ -357,6 +361,9 @@ abstract final class RouteNames {
       '/management/workflow-automation';
   static const String managementSettings = '/management/settings';
 
+  /// PRA-P1-17 — holiday/event calendar (perm `viewSchoolCalendar`).
+  static const String managementSchoolCalendar = '/management/school-calendar';
+
   /// All management module routes (MG-01 → MG-08).
   static const List<String> managementRoutes = [
     managementDashboard,
@@ -373,6 +380,7 @@ abstract final class RouteNames {
     managementOfficeAttendance,
     managementWorkflowAutomation,
     managementSettings,
+    managementSchoolCalendar,
   ];
   static const String transport = '/transport';
   static const String transportDashboard = '/transport/dashboard';

@@ -416,4 +416,125 @@ void main() {
       expect(container.read(notifyRouteDelayProvider).hasError, isTrue);
     });
   });
+
+  group('PRA-P0-19 vehicle → route assignment', () {
+    const query = RepositoryQuery.demo;
+
+    test('assignRouteVehicle sets the route assignedBus', () async {
+      final repo = MockTransportRepository();
+      // route_15 is a draft with no assigned bus ('—').
+      final updated = await repo.assignRouteVehicle(
+        query: query,
+        routeId: 'route_15',
+        registration: 'TS 09 GH 7744', // BUS-11
+      );
+      expect(updated.assignedBus, 'BUS-11');
+
+      final routes = await repo.getRoutes(query: query);
+      expect(
+        routes.items.firstWhere((r) => r.id == 'route_15').assignedBus,
+        'BUS-11',
+      );
+    });
+
+    test('assignRouteVehicle rejects a too-small vehicle (409)', () async {
+      final repo = MockTransportRepository();
+      // route_12 already has 2 allocated students; a capacity-1 bus cannot hold
+      // them, so the assignment is rejected with CAPACITY_EXCEEDED.
+      await repo.createVehicle(
+        query: query,
+        request: const CreateTransportVehicleRequest(
+          registration: 'TS 99 ZZ 0001',
+          capacity: 1,
+        ),
+      );
+      await expectLater(
+        () => repo.assignRouteVehicle(
+          query: query,
+          routeId: 'route_12',
+          registration: 'TS 99 ZZ 0001',
+        ),
+        throwsA(isA<ApiFailureException>().having(
+          (e) => e.failure.code,
+          'code',
+          'CAPACITY_EXCEEDED',
+        )),
+      );
+    });
+  });
+
+  group('PRA-P0-20 per-allocation billed status', () {
+    const query = RepositoryQuery.demo;
+
+    test('getAllocations flips demandRaised after a demand is raised', () async {
+      final repo = MockTransportRepository();
+      final before = await repo.getAllocations(query: query);
+      expect(before.items.every((a) => !a.demandRaised), isTrue);
+
+      // Raise a demand for the SIS-STU-10430 allocation on route_12.
+      await repo.raiseTransportDemand(
+        query: query,
+        request: const RaiseTransportDemandRequest(
+          sisStudentId: 'SIS-STU-10430',
+          routeId: 'route_12',
+          feeStructureId: 'fee_transport',
+          academicYear: '2026-27',
+        ),
+      );
+
+      final after = await repo.getAllocations(query: query);
+      final billed = after.items.firstWhere((a) => a.id == 'alloc_1');
+      expect(billed.demandRaised, isTrue);
+      // Other allocations remain unbilled.
+      expect(
+        after.items.where((a) => a.id != 'alloc_1').every((a) => !a.demandRaised),
+        isTrue,
+      );
+    });
+  });
+
+  group('PRA-P1-43 attendance roster generation', () {
+    const query = RepositoryQuery.demo;
+
+    test('generateAttendanceRoster derives rows from allocations', () async {
+      final repo = MockTransportRepository();
+      final before = await repo.getAttendanceRecords(query: query);
+
+      final added = await repo.generateAttendanceRoster(
+        query: query,
+        routeId: 'route_12',
+        shift: 'am',
+        date: '2026-07-20',
+      );
+      // route_12 has two allocated students (both shift), both ride the am roster.
+      expect(added, 2);
+
+      final after = await repo.getAttendanceRecords(query: query);
+      expect(after.items.length, before.items.length + 2);
+      final generated = after.items.firstWhere(
+        (r) => r.id == 'route_12:SIS-STU-10430:am:2026-07-20',
+      );
+      expect(generated.status, TransportAttendanceStatus.waiting);
+      expect(generated.parentNotified, isFalse);
+      expect(generated.scheduledTime, '7:05 AM'); // resolved from the stop
+    });
+
+    test('generateAttendanceRoster is idempotent on re-run', () async {
+      final repo = MockTransportRepository();
+      final first = await repo.generateAttendanceRoster(
+        query: query,
+        routeId: 'route_12',
+        shift: 'am',
+        date: '2026-07-20',
+      );
+      expect(first, 2);
+      final second = await repo.generateAttendanceRoster(
+        query: query,
+        routeId: 'route_12',
+        shift: 'am',
+        date: '2026-07-20',
+      );
+      expect(second, 0); // same stable ids → nothing new
+    });
+  });
 }

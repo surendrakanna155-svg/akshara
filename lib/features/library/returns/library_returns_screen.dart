@@ -216,6 +216,7 @@ class _ConditionChip extends StatelessWidget {
       LibraryReturnCondition.good => ('Good', KpiAccent.success),
       LibraryReturnCondition.fair => ('Fair', KpiAccent.primary),
       LibraryReturnCondition.damaged => ('Damaged', KpiAccent.error),
+      LibraryReturnCondition.lost => ('Lost', KpiAccent.error),
     };
 
     return AksharaStatusChip(

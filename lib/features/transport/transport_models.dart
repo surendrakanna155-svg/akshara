@@ -236,6 +236,7 @@ class StudentTransportAllocation {
     required this.busNumber,
     required this.shift,
     required this.sisStudentId,
+    this.demandRaised = false,
   });
 
   final String id;
@@ -252,7 +253,30 @@ class StudentTransportAllocation {
   final TransportShift shift;
   final String sisStudentId;
 
+  /// PRA-P0-20 — true when a Finance transport-fee demand has been raised for
+  /// this allocation. Derived server-side (GET /transport/allocations) by
+  /// matching `demand` entities; drives the per-row billed status and the
+  /// "raise demand for the unbilled" bulk action.
+  final bool demandRaised;
+
   bool get isAssigned => routeId.isNotEmpty;
+
+  StudentTransportAllocation copyWith({bool? demandRaised}) {
+    return StudentTransportAllocation(
+      id: id,
+      studentName: studentName,
+      admissionNumber: admissionNumber,
+      classLabel: classLabel,
+      pickupStop: pickupStop,
+      dropStop: dropStop,
+      routeId: routeId,
+      routeName: routeName,
+      busNumber: busNumber,
+      shift: shift,
+      sisStudentId: sisStudentId,
+      demandRaised: demandRaised ?? this.demandRaised,
+    );
+  }
 }
 
 @immutable

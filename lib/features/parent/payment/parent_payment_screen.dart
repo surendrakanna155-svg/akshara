@@ -97,6 +97,20 @@ class _ParentPaymentScreenState extends ConsumerState<ParentPaymentScreen> {
       PaymentFlowPhase.processing => const AksharaLoadingState(
           semanticLabel: 'Processing payment',
         ),
+      // PRA-P0-02 (client half): fail-closed terminal state. The intent was
+      // created but there is no verified gateway payment to confirm it — no
+      // gateway SDK is enabled — so we show an honest "not charged" notice
+      // instead of a fabricated receipt.
+      PaymentFlowPhase.pendingGatewayVerification => AksharaEmptyState(
+          title: 'Online payment not enabled yet',
+          message:
+              'This school has not enabled an online payment gateway, so the '
+              'fee could not be charged. You have NOT been charged. Please pay '
+              'at the school office or try again later.',
+          icon: Icons.lock_clock_outlined,
+          actionLabel: 'Back to fees',
+          onAction: () => resetPaymentFlow(ref),
+        ),
       PaymentFlowPhase.success => _PaymentSuccessView(
           onViewReceipt: widget.onViewReceipt,
           onBackToFees: widget.onBackToFees,
@@ -112,7 +126,7 @@ class _ParentPaymentScreenState extends ConsumerState<ParentPaymentScreen> {
             )
           : _PaymentSummaryView(
               summary: summary,
-              onPay: () => submitMockPayment(ref),
+              onPay: () => submitParentPayment(ref),
             ),
     };
   }

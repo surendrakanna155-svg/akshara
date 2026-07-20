@@ -1,7 +1,7 @@
 // QW4 · QA-B-022 — HR module ROUTE + RBAC + entitlement contract (DB-free).
 //
 // Proven without a live Postgres:
-//   1. PATH-MATCH: every registered HR route (9 GET + 7 POST + 3 PUT + 1 PATCH)
+//   1. PATH-MATCH: every registered HR route (9 GET + 7 POST + 4 PUT + 1 PATCH)
 //      resolves to a handler (status !== 404); unregistered under /hr 404s; a path
 //      outside the prefix returns null.
 //   2. POST /hr/payroll/run requires manageHr → 403 for a non-holder, 503 for a
@@ -88,6 +88,8 @@ const REGISTERED: Array<[string, string]> = [
   ["PUT", "/hr/employees/emp-1"],
   ["PUT", "/hr/performance/pr-1"],
   ["PUT", "/hr/recruitment/rc-1"],
+  // PRA-P1-33 — HR settings write.
+  ["PUT", "/hr/settings"],
   ["PATCH", "/hr/employees/emp-1/status"],
 ];
 
@@ -185,6 +187,15 @@ Deno.test("HR-3: batch-decide is not swallowed by the /hr/leave/{id}/approve mat
     decision: "reject",
   });
   assertEquals(res?.status, 503);
+});
+
+Deno.test("PRA-P1-33: PUT /hr/settings requires manageHr (403 non-holder, 503 holder)", async () => {
+  const body = { leavePolicy: [{ leaveType: "casual", entitlement: 12 }] };
+  const denied = await call(routeHr, "PUT", "/hr/settings", ["viewHr"], body);
+  assertEquals(denied?.status, 403);
+  assertEquals((await denied!.json()).error.code, "FORBIDDEN");
+  const allowed = await call(routeHr, "PUT", "/hr/settings", ["manageHr"], body);
+  assertEquals(allowed?.status, 503);
 });
 
 Deno.test("HR-D2: POST /hr/employees/{id}/probation requires manageHr (403 non-holder, 503 holder)", async () => {

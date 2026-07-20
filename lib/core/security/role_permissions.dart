@@ -44,6 +44,9 @@ class RolePermissionMatrix {
       Permission.manageSis,
       Permission.viewManagement,
       Permission.manageManagement,
+      // PRA-P1-17 school calendar (seeded server-side).
+      Permission.viewSchoolCalendar,
+      Permission.manageSchoolCalendar,
       Permission.manageWorkflowAutomation,
       Permission.viewTransport,
       Permission.manageTransport,
@@ -188,6 +191,9 @@ class RolePermissionMatrix {
       Permission.manageSis,
       Permission.viewManagement,
       Permission.manageManagement,
+      // PRA-P1-17 school calendar (seeded server-side).
+      Permission.viewSchoolCalendar,
+      Permission.manageSchoolCalendar,
       Permission.viewDirectorPortal,
       Permission.manageDirectorPortal,
       Permission.manageWorkflowAutomation,
@@ -309,6 +315,9 @@ class RolePermissionMatrix {
       Permission.manageSis,
       Permission.viewManagement,
       Permission.manageManagement,
+      // PRA-P1-17 school calendar (seeded server-side).
+      Permission.viewSchoolCalendar,
+      Permission.manageSchoolCalendar,
       Permission.viewTransport,
       Permission.viewHostel,
       Permission.viewDirectorPortal,
@@ -412,6 +421,9 @@ class RolePermissionMatrix {
       Permission.manageSis,
       Permission.viewManagement,
       Permission.manageManagement,
+      // PRA-P1-17 school calendar (seeded server-side).
+      Permission.viewSchoolCalendar,
+      Permission.manageSchoolCalendar,
       Permission.viewTransport,
       Permission.viewHostel,
       Permission.viewDirectorPortal,
@@ -600,6 +612,8 @@ class RolePermissionMatrix {
       Permission.manageLibrary,
     },
     ErpRole.teacher: {
+      // PRA-P1-17 school calendar (seeded server-side).
+      Permission.viewSchoolCalendar,
       Permission.viewEducation,
       Permission.manageEducation,
       Permission.viewExams,
