@@ -5,6 +5,11 @@ import {
   resolveSchoolMembershipPermissions,
   type ResolvedPermissions,
 } from "./permission_resolver.ts";
+import {
+  listActiveSchoolMemberships,
+  resolveSchoolSelection,
+  type SchoolMembershipSummary,
+} from "./school_membership.ts";
 
 export interface ChildProfileSummary {
   id: string;
@@ -26,6 +31,15 @@ export interface AuthSessionContext {
   /// chain/trust). Drives Organization Builder visibility client-side, which
   /// otherwise had no server source and was permanently hidden.
   isChainOrganization: boolean;
+  /// PLAT-0 (W2) — the caller's OTHER active school memberships, surfaced only
+  /// when they belong to ≥2 schools so the client can render a REAL school
+  /// selector. The chosen school is committed via /auth/context/switch (which
+  /// re-asserts membership). Login/me payload only; never placed in the JWT.
+  availableSchools?: SchoolMembershipSummary[];
+  /// PLAT-0 (W2) — true when the user holds ≥2 memberships and named no school,
+  /// i.e. a deterministic default was landed but an explicit selection is
+  /// expected. A single-membership (or explicitly-chosen) context is false.
+  requiresSchoolSelection?: boolean;
   resolved: ResolvedPermissions;
 }
 
@@ -109,52 +123,45 @@ async function resolveSchoolContext(
   userId: string,
   schoolId?: string,
 ): Promise<AuthSessionContext | null> {
-  let query = client
-    .from("school_memberships")
-    .select(
-      "id,user_id,school_id,role,permissions_version,schools(id,organization_id,name,code),school_membership_roles(role_slug,is_primary,status)",
-    )
-    .eq("user_id", userId)
-    .eq("status", "active");
+  // PLAT-0 (W2): resolve the user's ACTIVE school memberships EXPLICITLY instead
+  // of the old silent `.limit(1)` default-school pick. `listActiveSchoolMemberships`
+  // orders deterministically (oldest first, school_id tiebreak — the same order
+  // the old pick relied on, preserving PRA-P1-04's stable default). Then:
+  //   - a named school resolves ONLY if it is one of THIS user's memberships
+  //     (a non-member school → `forbidden` → no context → 403/MEMBERSHIP_NOT_FOUND);
+  //   - one membership resolves to it;
+  //   - ≥2 memberships with no named school land the deterministic DEFAULT AND
+  //     carry the full list (`availableSchools`) so the client shows a REAL
+  //     selector, committing the choice through /auth/context/switch.
+  // The selector never widens access: every option is an active membership of
+  // this user, and isolation stays per-school (RLS fences by school_id).
+  const memberships = await listActiveSchoolMemberships(client, userId);
+  const selection = resolveSchoolSelection(memberships, schoolId);
 
-  if (schoolId) query = query.eq("school_id", schoolId);
+  if (selection.kind === "none" || selection.kind === "forbidden") return null;
 
-  // PRA-P1-04 (S2): a user with memberships in more than one school must resolve
-  // to a STABLE school across logins — `.limit(1)` with no ORDER BY let Postgres
-  // pick any row, so the same staff-parent could land in a different school (and
-  // permission set) request to request. Order deterministically (oldest
-  // membership first, school_id as the tiebreak).
-  const { data, error } = await query
-    .order("created_at", { ascending: true })
-    .order("school_id", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  if (error || !data) return null;
-
-  const membership = data as unknown as {
-    id: string;
-    school_id: string;
-    role: string;
-    permissions_version: number;
-    schools: { organization_id: string };
-  };
+  const chosen = selection.kind === "resolved"
+    ? selection.membership
+    : selection.options[0]; // deterministic default; selector offered separately
 
   const resolved = await resolveSchoolMembershipPermissions(
     client,
-    membership.id,
-    membership.role,
-    membership.permissions_version,
+    chosen.membershipId,
+    chosen.role,
+    chosen.permissionsVersion,
   );
 
   return {
     scope: "school",
-    tenantId: membership.schools.organization_id,
-    organizationId: membership.schools.organization_id,
-    schoolId: membership.school_id,
+    tenantId: chosen.organizationId,
+    organizationId: chosen.organizationId,
+    schoolId: chosen.schoolId,
     schoolGroupId: null,
     studentId: null,
     childIds: [],
-    isChainOrganization: await resolveChainStatus(client, membership.schools.organization_id),
+    isChainOrganization: await resolveChainStatus(client, chosen.organizationId),
+    availableSchools: memberships.length > 1 ? memberships : undefined,
+    requiresSchoolSelection: selection.kind === "selection_required",
     resolved,
   };
 }

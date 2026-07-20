@@ -16,6 +16,12 @@ import {
   resolveAuthSessionContextFromSession,
   type ScopeLoginRequest,
 } from "./auth_context.ts";
+import {
+  assertActiveSchoolMembership,
+  listActiveSchoolMemberships,
+  resolveSchoolSelection,
+  schoolSelectionDenial,
+} from "./school_membership.ts";
 import { permissionsPayloadFromList } from "./permission_resolver.ts";
 import { setRequestContext } from "./request_context.ts";
 import { createServiceClient, type UserRow } from "./db.ts";
@@ -123,6 +129,11 @@ function buildUserPayload(
     children: ctx.childProfiles ?? [],
     // G4: multi-school (chain/trust) marker — drives Organization Builder visibility.
     isChainOrganization: ctx.isChainOrganization,
+    // PLAT-0 (W2): the caller's other active school memberships (present only for
+    // a multi-school user) + whether an explicit selection is pending, so the
+    // client can render the school selector and commit via /auth/context/switch.
+    availableSchools: ctx.availableSchools ?? [],
+    requiresSchoolSelection: ctx.requiresSchoolSelection ?? false,
     email: user.email,
     mobile: user.phone,
   };
@@ -604,9 +615,48 @@ export async function handleContextSwitch(
     return errorEnvelope("USER_NOT_FOUND", "User not found", 404);
   }
 
+  // PLAT-0 (W2) — the school-switch AUTHORIZATION chokepoint. A multi-school user
+  // may switch INTO a school ONLY when they provably hold an ACTIVE membership in
+  // it. Resolve the membership set explicitly and assert authorization BEFORE any
+  // new context is minted:
+  //   - no membership named + ≥2 memberships → 409 SCHOOL_SELECTION_REQUIRED
+  //     (the client must present a REAL selector; no silent `.limit(1)` pick);
+  //   - a school named that the user is NOT a member of → 403 CONTEXT_FORBIDDEN;
+  //   - zero memberships → 403 CONTEXT_FORBIDDEN.
+  // This is defense-in-depth over resolveSchoolContext (which also filters by
+  // membership) so the 403 boundary survives any future resolver refactor.
+  // Isolation is preserved: the new session/JWT carry ONLY the chosen school_id,
+  // and every downstream read/write stays fenced by app_current_school_id() under
+  // the unchanged RLS policies. No RLS policy is widened here.
+  let switchSchoolId = body.schoolId;
+  if (body.scope === "school") {
+    const memberships = await listActiveSchoolMemberships(client, user.id);
+    const selection = resolveSchoolSelection(memberships, body.schoolId);
+    const denial = schoolSelectionDenial(selection);
+    if (denial) {
+      return jsonResponse(
+        {
+          data: null,
+          error: denial.options
+            ? { code: denial.code, message: denial.message, options: denial.options }
+            : { code: denial.code, message: denial.message },
+        },
+        { status: denial.status },
+      );
+    }
+    // selection resolved — re-assert membership explicitly (the named security
+    // check) right before we bind the context to this school.
+    const target = (selection as { kind: "resolved"; membership: { schoolId: string } })
+      .membership.schoolId;
+    if (!assertActiveSchoolMembership(memberships, target)) {
+      return errorEnvelope("CONTEXT_FORBIDDEN", "You are not a member of the requested school", 403);
+    }
+    switchSchoolId = target;
+  }
+
   const ctx = await resolveAuthSessionContext(client, user.id, {
     scope: body.scope,
-    schoolId: body.schoolId,
+    schoolId: switchSchoolId,
     organizationId: body.organizationId ?? currentClaims.tenant_id,
     studentId: body.studentId,
   });
@@ -721,6 +771,14 @@ export async function handleMe(req: Request, config: AppConfig): Promise<Respons
     ? await loadChildProfiles(client, claims.child_ids)
     : [];
 
+  // PLAT-0 (W2): on a restored school session, re-surface the caller's active
+  // school memberships so the school selector is available without a re-login.
+  // Best-effort + additive; a multi-school user (≥2) drives the selector, and the
+  // current school is read live from the JWT `school_id` (the RLS boundary).
+  const availableSchools = claims.scope === "school"
+    ? await listActiveSchoolMemberships(client, claims.sub)
+    : [];
+
   return jsonResponse(envelope({
     id: claims.sub,
     displayName: user?.display_name ?? "User",
@@ -733,6 +791,8 @@ export async function handleMe(req: Request, config: AppConfig): Promise<Respons
     childIds: claims.child_ids,
     children,
     isChainOrganization: claims.is_chain_organization ?? false,
+    availableSchools: availableSchools.length > 1 ? availableSchools : [],
+    requiresSchoolSelection: false,
     email: user?.email,
     mobile: user?.phone,
   }));

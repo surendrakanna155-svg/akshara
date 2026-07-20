@@ -228,6 +228,11 @@ const STAFF_A = "a3000000-0000-4000-8000-000000000001";
 // A second teacher in the SAME school — used to prove teacher_entities is now
 // scoped per-teacher (not just per-school).
 const STAFF_A2_SAME_SCHOOL = "a3000000-0000-4000-8000-000000000005";
+// PLAT-0 (W2) — a staff user who is an ACTIVE member of BOTH School A and School
+// B (seeded in migration 20260900000032). Used to prove that switching this ONE
+// multi-school identity between its two schools leaks NO cross-school data in
+// either direction (the negative-isolation proof for the multi-school selector).
+const MULTI_SCHOOL_STAFF = "a3000000-0000-4000-8000-000000000006";
 const PARENT = "a3000000-0000-4000-8000-000000000003";
 const STUDENT_USER = "a3000000-0000-4000-8000-000000000004";
 const STUDENT_A = "a4000000-0000-4000-8000-000000000001";
@@ -367,6 +372,14 @@ function teacherClaims(schoolId: string, userId: string = STAFF_A): AccessTokenC
     child_ids: [],
     session_id: "probe",
   };
+}
+
+// PLAT-0 (W2) — the multi-school identity acting IN a chosen school. This is the
+// exact context minted by /auth/context/switch after the membership check: the
+// same user, but the session carries ONLY `schoolId`. RLS then fences every read
+// by `app_current_school_id()`, so these claims model "after the switch".
+function multiSchoolClaims(schoolId: string): AccessTokenClaims {
+  return teacherClaims(schoolId, MULTI_SCHOOL_STAFF);
 }
 
 async function count(db: TenantQueryClient, sql: string, args: unknown[] = []): Promise<number> {
@@ -2377,6 +2390,39 @@ export async function runEnforcedIsolationProbes(
       pass: !accepted,
       detail: `cross_school_write_accepted=${accepted}`,
     };
+  }));
+
+  // ── PLAT-0 (W2): multi-school identity — no cross-school leak after a switch ──
+  // ONE user is an active member of BOTH School A and School B. We run as that
+  // user first in the School A context, then in the School B context (exactly
+  // what /auth/context/switch mints), and assert each context sees ONLY its own
+  // school's rows. This is the NEGATIVE isolation proof for the selector: a
+  // legitimate switch never becomes a cross-school read.
+  tasks.push(() => runWithClaims(multiSchoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, "SELECT count(*)::text AS count FROM students WHERE id = $1", [STUDENT_A]);
+    return { name: "multi_school_staff_at_a_sees_school_a_student", pass: n === 1, detail: `visible_students=${n}` };
+  }));
+  tasks.push(() => runWithClaims(multiSchoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, "SELECT count(*)::text AS count FROM students WHERE id = $1", [STUDENT_B]);
+    return { name: "multi_school_staff_at_a_cannot_see_school_b_student", pass: n === 0, detail: `visible_cross_school_students=${n}` };
+  }));
+  tasks.push(() => runWithClaims(multiSchoolClaims(SCHOOL_B), async (db) => {
+    const n = await count(db, "SELECT count(*)::text AS count FROM students WHERE id = $1", [STUDENT_B]);
+    return { name: "multi_school_staff_at_b_sees_school_b_student", pass: n === 1, detail: `visible_students=${n}` };
+  }));
+  tasks.push(() => runWithClaims(multiSchoolClaims(SCHOOL_B), async (db) => {
+    const n = await count(db, "SELECT count(*)::text AS count FROM students WHERE id = $1", [STUDENT_A]);
+    return { name: "multi_school_staff_at_b_cannot_see_school_a_student", pass: n === 0, detail: `visible_cross_school_students=${n}` };
+  }));
+  // Even this user's OWN School B membership row must not leak into the School A
+  // context — school_memberships RLS is fenced to the CURRENT school.
+  tasks.push(() => runWithClaims(multiSchoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM school_memberships WHERE school_id = $1",
+      [SCHOOL_B],
+    );
+    return { name: "multi_school_staff_at_a_cannot_see_school_b_membership_rows", pass: n === 0, detail: `visible_cross_school_memberships=${n}` };
   }));
 
   const tests = await runProbeTasks(tasks);
