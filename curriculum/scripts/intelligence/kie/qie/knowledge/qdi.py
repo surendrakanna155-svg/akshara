@@ -120,17 +120,25 @@ def assert_no_copying(pattern: dict, source_text: str, threshold: float = 0.12) 
 # ── source selection ────────────────────────────────────────────────────────────────────────────────
 def exam_sources(kconn: sqlite3.Connection, subject: Optional[str] = None,
                  exams: Tuple[str, ...] = ("JEE_Main", "JEE_Advanced", "NEET", "AIIMS")) -> List[dict]:
-    """Owned, already-chunked real exam papers. Never re-downloaded, never re-OCR'd."""
-    out = []
+    """Owned, already-chunked real exam papers OF THE REQUESTED EXAM(S).
+
+    EXAM is a reliable DOCUMENT property (the `category`/`exam` column) and is matched here. SUBJECT is NOT
+    filtered at the document level: NEET/JEE papers are COMBINED multi-subject papers (Physics+Chemistry+
+    Biology/Maths in one PDF), so a per-document subject tag is an artifact of a whole-document frequency
+    classifier and is unreliable. Subject is a SECTION property, resolved per chunk downstream
+    (`resolve_chunk_subjects` / `candidate_chunks(subject=...)`).
+
+    ROOT-CAUSE FIX: the previous query OR'd the exam restriction with `rel_path LIKE '%Previous_Papers%'`,
+    which silently BYPASSED the exam filter and returned NEET papers for a JEE request — the proven origin of
+    the JEE-Physics -> NEET-Biology leak. Here a doc qualifies only if its own exam identity is one requested.
+    The `subject` argument is accepted for call compatibility but intentionally NOT used to filter documents.
+    """
+    ph = ",".join("?" * len(exams))
     q = ("SELECT doc_id, rel_path, category, exam, subject, year, "
          "(SELECT COUNT(*) FROM chunks c WHERE c.doc_id=sd.doc_id) AS n "
-         "FROM source_documents sd WHERE (category IN (%s) OR rel_path LIKE '%%Question_Bank%%' "
-         "OR rel_path LIKE '%%Previous_Papers%%')" % ",".join("?" * len(exams)))
-    args: List = list(exams)
-    if subject:
-        q += " AND (subject = ? OR rel_path LIKE ?)"
-        args += [subject, f"%{subject.lower()}%"]
-    for r in kconn.execute(q, args):
+         f"FROM source_documents sd WHERE (category IN ({ph}) OR exam IN ({ph}))")
+    out = []
+    for r in kconn.execute(q, list(exams) + list(exams)):
         if r["n"]:
             out.append({"doc_id": r["doc_id"], "rel_path": r["rel_path"], "exam": r["exam"] or r["category"],
                         "subject": r["subject"], "year": r["year"], "chunks": r["n"]})
@@ -221,17 +229,64 @@ def write_analyst_worksheet(kconn: sqlite3.Connection, chunk_rows: List[sqlite3.
     return len(chunk_rows)
 
 
-def candidate_chunks(kconn: sqlite3.Connection, doc_ids: List[str], limit: int = 60) -> List[sqlite3.Row]:
-    """Chunks that plausibly carry a real question + its answer. Deterministic pre-filter — the analyst
-    should spend its tokens on interpretation, not on sifting page furniture."""
+# A combined exam paper carries its subject structure in explicit section headers ("Section - A (Physics)",
+# "PART C — Botany", ...). Subject is resolved from THESE, not from the whole-document frequency tag.
+_SECTION_SUBJECT = re.compile(
+    r"(?:section|part)\b[^()\n]{0,14}\(?\s*(physics|chemistry|botany|zoology|biology|mathematics|maths)\s*\)?",
+    re.I)
+_SUBJECT_CANON = {"physics": "Physics", "chemistry": "Chemistry", "botany": "Biology", "zoology": "Biology",
+                  "biology": "Biology", "mathematics": "Mathematics", "maths": "Mathematics"}
+
+
+def resolve_chunk_subjects(kconn: sqlite3.Connection, doc_id: str) -> Dict[str, Optional[str]]:
+    """{chunk_id: true subject} for a (possibly combined) paper. Walks chunks in `ordinal` order and
+    propagates the most-recent in-paper section-subject marker to each chunk. Chunks before the first marker
+    stay None (unclassified — never guessed). This is where SUBJECT correctly lives for combined papers."""
+    rows = kconn.execute("SELECT chunk_id, text FROM chunks WHERE doc_id=? ORDER BY ordinal", (doc_id,)).fetchall()
+    out: Dict[str, Optional[str]] = {}
+    current: Optional[str] = None
+    for r in rows:
+        last = None
+        for m in _SECTION_SUBJECT.finditer(r["text"] or ""):
+            last = m  # a chunk may span a boundary; the last marker in it governs what follows
+        if last:
+            current = _SUBJECT_CANON.get(last.group(1).lower())
+        out[r["chunk_id"]] = current
+    return out
+
+
+# page furniture that carries no question: exam instructions, and OCR mojibake (bilingual Devanagari sludge).
+_BOILERPLATE = re.compile(r"read carefully|do not open|test booklet|instructions to|rough work|"
+                          r"in case of any ambiguity|attempt (?:all|any)|answer sheet|omr", re.I)
+
+
+def _usable_chunk(text: str) -> bool:
+    """Reject exam-instruction boilerplate and OCR mojibake — keep chunks with legible English question text."""
+    t = text or ""
+    if len(t) < 200 or _BOILERPLATE.search(t):
+        return False
+    ascii_alnum = sum(1 for ch in t if ch.isascii() and ch.isalnum())
+    return ascii_alnum >= 0.30 * len(t)  # too few Latin alphanumerics => Devanagari mojibake, skip
+
+
+def candidate_chunks(kconn: sqlite3.Connection, doc_ids: List[str], subject: Optional[str] = None,
+                     limit: int = 60) -> List[sqlite3.Row]:
+    """Chunks that plausibly carry a real question + answer. When `subject` is given, keep ONLY chunks whose
+    RESOLVED section-subject matches it (combined papers no longer leak other subjects to the analyst).
+    Instruction boilerplate and OCR mojibake are dropped so the analyst spends tokens on real questions."""
     if not doc_ids:
         return []
-    q = ("SELECT c.chunk_id, c.text, sd.exam, sd.subject, sd.year FROM chunks c "
+    q = ("SELECT c.chunk_id, c.doc_id, c.text, sd.exam, sd.subject, sd.year FROM chunks c "
          "JOIN source_documents sd ON sd.doc_id = c.doc_id "
          "WHERE c.doc_id IN (%s) AND length(c.text) > 200 "
          "AND (c.text LIKE '%%Ans%%' OR c.text LIKE '%%(1)%%' OR c.text LIKE '%%(A)%%' OR c.text LIKE '%%Sol%%') "
-         "ORDER BY length(c.text) DESC LIMIT ?" % ",".join("?" * len(doc_ids)))
-    return kconn.execute(q, (*doc_ids, limit)).fetchall()
+         "ORDER BY length(c.text) DESC" % ",".join("?" * len(doc_ids)))
+    rows = [r for r in kconn.execute(q, tuple(doc_ids)).fetchall() if _usable_chunk(r["text"])]
+    if not subject:
+        return rows[:limit]
+    resolved = {d: resolve_chunk_subjects(kconn, d) for d in set(doc_ids)}
+    kept = [r for r in rows if resolved.get(r["doc_id"], {}).get(r["chunk_id"]) == subject]
+    return kept[:limit]
 
 
 # ── ingest (analyst proposes) ───────────────────────────────────────────────────────────────────────

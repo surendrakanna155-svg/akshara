@@ -112,10 +112,12 @@ def deterministic_floor(qconn: sqlite3.Connection, kconn: sqlite3.Connection) ->
 
 # ── mining (analyst) ──────────────────────────────────────────────────────────────────────────────
 def analyst_worksheet(kconn: sqlite3.Connection, exam: str, subject: str, path: str,
-                      n_docs: int = 6, n_chunks: int = 40) -> int:
-    srcs = QDI.exam_sources(kconn, subject=subject, exams=(exam,))
+                      n_docs: int = 16, n_chunks: int = 40) -> int:
+    # exam_sources returns ALL exam docs (subject is a section property); candidate_chunks(subject=...) keeps
+    # only the requested subject's chunks -> pull from a wider doc pool to find enough real subject chunks.
+    srcs = QDI.exam_sources(kconn, exams=(exam,))
     doc_ids = [s["doc_id"] for s in srcs][:n_docs]
-    chunks = QDI.candidate_chunks(kconn, doc_ids, limit=n_chunks)
+    chunks = QDI.candidate_chunks(kconn, doc_ids, subject=subject, limit=n_chunks)
     return QDI.write_analyst_worksheet(kconn, chunks, path, ARCHETYPES)
 
 
