@@ -91,8 +91,13 @@ def build_specs(universe: List[dict], patterns: List[dict], run_id: str, n: int 
                 "concept_id": kc["concept_id"],
                 "concept_name": kc["canonical_name"],
                 "chapter_id": kc["chapter_id"],
+                "chapter_title": kc.get("chapter_title"),
                 "subject": kc["subject"],
                 "class_level": kc["taught_at_class"],
+                # rich curriculum context, consumed straight from the CERTIFIED index (never synthesized)
+                "sub_concepts": kc.get("sub_concepts", []),
+                "prerequisites": kc.get("prerequisites", []),
+                "curriculum_boundary": kc.get("boundary", {}),
                 "lane": "STRUCTURED_NUMERIC" if structured else "QUALITATIVE",
                 "archetype": archetype,
                 "question_type": "MCQ",
@@ -102,6 +107,7 @@ def build_specs(universe: List[dict], patterns: List[dict], run_id: str, n: int 
                 "compose_with": partners,
                 "pattern_id": (pat or {}).get("pattern_id"),
                 "visual_required": False,
+                # evidenced negative boundary: above-class vocabulary + this concept's own out_of_scope
                 "forbidden_terms": P.forbidden_terms(universe, subject, cls),
             }
             specs.append(spec)

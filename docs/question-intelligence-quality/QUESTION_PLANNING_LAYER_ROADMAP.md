@@ -319,3 +319,32 @@ DOCS:
   docs/question-intelligence-quality/QUESTION_PLANNING_LAYER_ROADMAP.md   # this file
   …/QIE_SCALE_STRATEGY_TRIAL.md · CERTIFIED_KNOWLEDGE_INDEX_AND_QDI.md · QP_INTEGRATION.md
 ```
+
+---
+
+## 11. Execution log
+
+Autonomous build on branch `feature/qie-question-planning-layer`. Each phase: implement → test → verify →
+certify (EOS) → commit → doc.
+
+### Phase 0 — Preservation & De-risk — ✅ COMPLETE (2026-07-20) · EOS: PASS
+- Anchored `curriculum/.gitignore` `knowledge/` → `/knowledge/` (data stays local; engine code committable).
+- Committed the previously-uncommitted Track-2 substrate (`factory/` 13 + `knowledge/` 15) — preserved via the
+  concurrent W0 lane-convergence wave; QPL branch cut from that tip.
+- Added characterization suites `tests/test_qpl_char_{planner,factory}.py` (15 tests) pinning the planner gate,
+  `plan_controls` (12 controls), `plan_specs` seed-determinism, sympy `independent_solve`, the notation
+  comparator, the full gate battery, and the certify promotion matrix. **696 tests green** (was 681).
+
+### Phase 1 — Repoint & unify the planner onto frozen v1.4 — ✅ COMPLETE (2026-07-20) · EOS: PASS
+- **Retired the kie.db planning path:** deleted `factory/manifest.py` + `factory/trust.py` (undriven, superseded,
+  forbidden source). No importers; no tests referenced them (verified repo-wide).
+- **Enriched the certified spec** (`plan_specs.build_specs`) with `sub_concepts`, `prerequisites`,
+  `curriculum_boundary`, `chapter_title` — consumed straight from the certified `ki_concept` record.
+- **Added the single certified-only driver** `knowledge/run_planner.py`: opens frozen v1.4 **READ-ONLY**, wires the
+  certified design-pattern reader (0 today), gate-validates every spec. Measured: Physics 11–12 → 40/40 issued /
+  0 refused; all 5 subjects healthy (Biology honestly refuses 1/30).
+- **Unified duplicated helpers** onto the knowledge stack (`_sid`, evidenced `forbidden_terms`, archetype pools)
+  by removing the manifest copies.
+- Tests: +5 (`tests/test_qpl_phase1_planner.py` — enriched specs, driver on v1.4, reproducibility, kie.db-path
+  retired guard). **701 tests green** (was 696).
+- Still seed-deterministic (RNG inside `build_specs`); the RNG → Exam-DNA-driven deterministic allocation is Phase 3.
