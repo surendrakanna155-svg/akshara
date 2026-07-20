@@ -53,6 +53,19 @@ function fakeDb(rows: any[] = []): PlatformQueryClient {
   } as any as PlatformQueryClient;
 }
 
+function b64ToBytes(b64: string): Uint8Array {
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+function bytesToB64(bytes: Uint8Array): string {
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+
 Deno.test("AES-256-GCM round-trip: encrypt then decrypt recovers the exact plaintext", async () => {
   Deno.env.set("VAULT_ENC_KEY", KEY_A);
   try {
@@ -76,6 +89,56 @@ Deno.test("AES-256-GCM: two encryptions of the same plaintext never reuse an IV 
     assertEquals(first === second, false);
     assertEquals(await decryptCredential(first), secret);
     assertEquals(await decryptCredential(second), secret);
+  } finally {
+    clearVaultKey();
+  }
+});
+
+Deno.test("AES-256-GCM ciphertext is not plaintext and not reversible Base64 (real encryption, not encoding)", async () => {
+  Deno.env.set("VAULT_ENC_KEY", KEY_A);
+  try {
+    const secret = "sk-ant-not-base64-please";
+    const encrypted = await encryptCredential(secret);
+    // Not the plaintext, and doesn't merely contain it.
+    assertEquals(encrypted.includes(secret), false);
+    // Crucially, NOT reversible Base64 of the plaintext (the old P2-30 fake):
+    // neither the whole stored string nor its v2 body decodes back to the secret.
+    const plainB64 = encryptLegacyBase64(secret);
+    assertEquals(encrypted === plainB64, false);
+    assertEquals(encrypted === VAULT_V2_PREFIX + plainB64, false);
+    assertEquals(encrypted.includes(plainB64), false);
+    // The v2 body base64-decodes to raw AES bytes, NOT to the UTF-8 secret.
+    const body = encrypted.slice(VAULT_V2_PREFIX.length);
+    assertEquals(new TextDecoder().decode(b64ToBytes(body)) === secret, false);
+    // Only AES-GCM decryption recovers it.
+    assertEquals(await decryptCredential(encrypted), secret);
+  } finally {
+    clearVaultKey();
+  }
+});
+
+Deno.test("tamper detection: flipping a single ciphertext byte makes decrypt throw (GCM auth-tag check fails closed)", async () => {
+  Deno.env.set("VAULT_ENC_KEY", KEY_A);
+  try {
+    const secret = "sk-ant-integrity-protected-secret";
+    const encrypted = await encryptCredential(secret);
+    // Unpack "v2:" || base64( iv(12) || ciphertext || tag(16) ), flip one byte
+    // of the CIPHERTEXT body (index 12, just past the IV), and re-pack.
+    const packed = b64ToBytes(encrypted.slice(VAULT_V2_PREFIX.length));
+    packed[12] ^= 0x01; // flip a single bit of the first ciphertext byte
+    const tampered = VAULT_V2_PREFIX + bytesToB64(packed);
+    assertEquals(tampered === encrypted, false);
+    // The SAME (correct) key must reject the tampered ciphertext — GCM's
+    // authentication tag no longer verifies, so it throws rather than
+    // returning corrupted plaintext.
+    await assertRejects(() => decryptCredential(tampered));
+    // And flipping a byte of the authentication TAG (last byte) is also caught.
+    const packed2 = b64ToBytes(encrypted.slice(VAULT_V2_PREFIX.length));
+    packed2[packed2.length - 1] ^= 0x80;
+    await assertRejects(() => decryptCredential(VAULT_V2_PREFIX + bytesToB64(packed2)));
+    // The untouched original still decrypts — proves the throw was the tamper,
+    // not a broken key.
+    assertEquals(await decryptCredential(encrypted), secret);
   } finally {
     clearVaultKey();
   }
