@@ -34,6 +34,8 @@ function extractProbeNames(source: string): string[] {
 // Count updated 220 → 233: the RLS repair wave (20ae7762) registered 13 more
 // probes without bumping this tripwire, so it had been failing at HEAD.
 // 233 → 238: W1-completion F4 added 5 Adaptive AI ai_* WITH-CHECK write probes.
-Deno.test("tenant isolation probe count includes v7.6 + AI probes (238)", () => {
-  assertEquals(extractProbeNames(probesSource).length, 238);
+// 238 → 243: PLAT-0 (owner #14) added 5 negative multi-school isolation probes —
+// proving no cross-school leak after an authorized /auth/context/switch.
+Deno.test("tenant isolation probe count includes v7.6 + AI + multi-school probes (243)", () => {
+  assertEquals(extractProbeNames(probesSource).length, 243);
 });
