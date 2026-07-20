@@ -69,6 +69,33 @@ function requireSchool(claims: AccessTokenClaims): string {
   return claims.school_id;
 }
 
+/**
+ * PRA-P1-45: valid delivery channels for a broadcast fan-out (the
+ * `notification_deliveries.channel` CHECK). `push` is the primary/in-app channel
+ * and the ONLY one that carries the acknowledgement flag.
+ */
+const BROADCAST_CHANNELS = new Set(["push", "sms", "email"]);
+
+/**
+ * PRA-P1-45: normalize a caller-supplied channel list into the ADDITIVE set of
+ * delivery channels for a broadcast. `push` (the free in-app channel) is ALWAYS
+ * included — it is the baseline every recipient gets and the sole acknowledgement
+ * channel — and any opted-in `sms`/`email` are added on top as a fallback.
+ * Unknown labels are dropped. Omitted/empty ⇒ `["push"]`, so every existing
+ * caller is byte-for-byte unchanged (no automatic SMS/email cost). Order is
+ * stable push→sms→email.
+ */
+export function normalizeBroadcastChannels(
+  channels: string[] | undefined | null,
+): string[] {
+  const set = new Set<string>(["push"]);
+  for (const raw of channels ?? []) {
+    const c = String(raw ?? "").trim().toLowerCase();
+    if (BROADCAST_CHANNELS.has(c)) set.add(c);
+  }
+  return ["push", "sms", "email"].filter((c) => set.has(c));
+}
+
 /** Map shorthand audience labels to comm_broadcasts CHECK constraint values. */
 export function normalizeBroadcastAudience(audience: string): string {
   const aliases: Record<string, string> = {
@@ -286,6 +313,13 @@ export async function sendBroadcastMessage(
     audienceClass?: string | null;
     audienceSection?: string | null;
     requiresAck?: boolean;
+    /**
+     * PRA-P1-45: optional opt-in delivery channels (subset of push/sms/email).
+     * Omitted / empty ⇒ `["push"]`, i.e. no behaviour change from the old
+     * push-only fan-out. An admin who wants an SMS/email fallback passes them
+     * explicitly, so cost is never incurred automatically.
+     */
+    channels?: string[] | null;
   },
   req?: Request,
 ): Promise<Record<string, unknown>> {
@@ -332,17 +366,23 @@ export async function sendBroadcastMessage(
   const dropped = resolved.length - recipients.length;
 
   await insertBroadcastRecipientsBatch(db, broadcast.id, claims.tenant_id, recipients);
-  await enqueueDeliveriesBatch(db, {
-    organizationId: claims.tenant_id,
-    schoolId: schoolId ?? "a2000000-0000-4000-8000-000000000001",
-    recipientUserIds: recipients,
-    channel: "push",
-    category: "announcement",
-    renderedSubject: input.title,
-    renderedBody: input.body,
-    broadcastId: broadcast.id, // COM-1: tie the delivery ledger to this broadcast
-    requiresAck, // COM-D1: flag each delivery when the notice must be acknowledged
-  });
+  // PRA-P1-45: fan out to each opted-in channel (default push-only). `requiresAck`
+  // is attached to the push batch ONLY — acknowledgement is an in-app affordance,
+  // so counting it on an sms/email copy would double-count the ack total.
+  const channels = normalizeBroadcastChannels(input.channels);
+  for (const channel of channels) {
+    await enqueueDeliveriesBatch(db, {
+      organizationId: claims.tenant_id,
+      schoolId: schoolId ?? "a2000000-0000-4000-8000-000000000001",
+      recipientUserIds: recipients,
+      channel,
+      category: "announcement",
+      renderedSubject: input.title,
+      renderedBody: input.body,
+      broadcastId: broadcast.id, // COM-1: tie the delivery ledger to this broadcast
+      requiresAck: requiresAck && channel === "push", // COM-D1: ack on push only
+    });
+  }
   await finalizeBroadcast(db, broadcast.id);
 
   await recordMutationAudit(
@@ -358,6 +398,7 @@ export async function sendBroadcastMessage(
         audienceClass,
         audienceSection,
         requiresAck,
+        channels,
         recipientCount: recipients.length,
         resolvedCount: resolved.length,
         droppedOverCap: dropped,
@@ -379,6 +420,7 @@ export async function sendBroadcastMessage(
     audienceClass: broadcast.audience_class,
     audienceSection: broadcast.audience_section,
     requiresAck: broadcast.requires_ack,
+    channels,
     title: broadcast.title,
     recipientCount: recipients.length,
     droppedOverCap: dropped,

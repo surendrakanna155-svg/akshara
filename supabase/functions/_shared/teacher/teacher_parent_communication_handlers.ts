@@ -15,6 +15,9 @@ import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
+import { guardianUserIdsForStudents } from "../communication/guardian_recipients.ts";
+import { enqueueDelivery } from "../communication/communication_repository.ts";
+import { processDeliveryQueue } from "../communication/notification_service.ts";
 
 /**
  * MJ-H13 — teacher parent-communication + subject-concern writes.
@@ -141,6 +144,25 @@ function stringList(body: Record<string, unknown>, key: string): string[] {
 }
 
 /**
+ * PRA-P0-16: normalize the teacher-requested channel labels to the delivery
+ * channels the notification queue actually supports (`push`/`sms`/`email` — the
+ * `notification_deliveries.channel` CHECK). Any app/in-app/notification label
+ * maps to `push`; empty selection defaults to `push` (the always-available
+ * in-app channel). De-duplicated, order-stable.
+ */
+export function deliveryChannels(requested: string[]): string[] {
+  const mapped = requested.map((c) => {
+    const key = c.trim().toLowerCase();
+    if (key === "sms") return "sms";
+    if (key === "email") return "email";
+    // "app", "push", "notification", "in_app", … → the push/in-app channel.
+    return "push";
+  });
+  const deduped = Array.from(new Set(mapped));
+  return deduped.length > 0 ? deduped : ["push"];
+}
+
+/**
  * POST /teacher/parent-communication — log a parent-communication message. When
  * a `sourceConcernId` is supplied, the originating subject concern is marked
  * resolved in the same transaction. Returns `{ id, status }`.
@@ -161,6 +183,41 @@ export async function handleSendParentCommunication(
     const message = customMessage ?? `Communication regarding ${reason}.`;
     const sourceConcernId = str(body, "sourceConcernId", "source_concern_id");
 
+    // PRA-P0-16: this previously stamped a hardcoded status:"sent" and enqueued
+    // NOTHING — the parent never received anything. Resolve the student's ACTIVE
+    // guardian(s) and enqueue a REAL delivery per requested channel, then set the
+    // status HONESTLY from what was actually queued.
+    const title = `Message about ${reason}`;
+    const targetChannels = deliveryChannels(channels);
+    const guardianIds = await guardianUserIdsForStudents(
+      db,
+      organizationId,
+      schoolId,
+      [sisStudentId],
+    );
+    let enqueued = 0;
+    for (const recipientUserId of guardianIds) {
+      for (const channel of targetChannels) {
+        await enqueueDelivery(db, {
+          organizationId,
+          schoolId,
+          recipientUserId,
+          channel,
+          category: "announcement",
+          renderedSubject: title,
+          renderedBody: message,
+        });
+        enqueued += 1;
+      }
+    }
+    // Drain out of the request the same way sendDirectMessage does, so the push
+    // actually goes out. A guardian-less student yields an honest "no_recipients"
+    // rather than a fabricated "sent".
+    if (enqueued > 0) {
+      await processDeliveryQueue(db, organizationId, claims, request);
+    }
+    const status = guardianIds.length === 0 ? "no_recipients" : "queued";
+
     const id = crypto.randomUUID();
     const log = {
       id,
@@ -168,8 +225,10 @@ export async function handleSendParentCommunication(
       reason,
       tone,
       channels,
+      deliveredChannels: targetChannels,
+      recipientCount: guardianIds.length,
       message,
-      status: "sent",
+      status,
       createdBy: teacherId,
       createdAt: new Date().toISOString(),
     };
@@ -213,12 +272,22 @@ export async function handleSendParentCommunication(
         "teacher.parent_communication.sent",
         "teacher_parent_communication",
         id,
-        { sisStudentId, reason, sourceConcernId: sourceConcernId ?? null },
+        {
+          sisStudentId,
+          reason,
+          sourceConcernId: sourceConcernId ?? null,
+          status,
+          recipientCount: guardianIds.length,
+          channels: targetChannels,
+        },
       ),
       request,
     );
 
-    return { payload: { id, status: "sent" }, status: 201 };
+    return {
+      payload: { id, status, recipientCount: guardianIds.length },
+      status: 201,
+    };
   });
 }
 

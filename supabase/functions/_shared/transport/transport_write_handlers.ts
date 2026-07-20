@@ -10,7 +10,9 @@ import {
 } from "../entity_write/module_write_handlers.ts";
 import { createEntityWriteStore } from "../entity_write/entity_write_store.ts";
 import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
-import { sendBroadcastMessage } from "../communication/communication_service.ts";
+import { guardianUserIdsForStudents } from "../communication/guardian_recipients.ts";
+import { enqueueDeliveriesBatch } from "../communication/communication_repository.ts";
+import { processDeliveryQueue } from "../communication/notification_service.ts";
 import { scheduleReminder } from "../reminders/reminders_service.ts";
 import type { AccessTokenClaims } from "../jwt.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
@@ -379,12 +381,17 @@ export async function handleRemoveStudentTransport(
 }
 
 /**
- * POST /transport/notify-delay — broadcast a delay notification to the parents
- * of students on a given route. The real, certifiable half of TR-07: GPS live
- * telemetry needs hardware, but a delay alert does not — it reuses the
- * Communication broadcast pipeline ({@link sendBroadcastMessage}) which queues
- * push deliveries out of the request cycle. `recipientCount` is the number of
- * students currently allocated to the route (the affected cohort).
+ * POST /transport/notify-delay — notify the parents of students on a given route
+ * that the bus is delayed. The real, certifiable half of TR-07: GPS live
+ * telemetry needs hardware, but a delay alert does not.
+ *
+ * PRA-P1-44: this previously called `sendBroadcastMessage(audience:"parents")`,
+ * which fanned out to EVERY parent in the school while reporting
+ * `recipientCount` = students on the route — an over-broadcast (spam/privacy)
+ * and a lying count. It now resolves EXACTLY the affected students' active
+ * guardians (shared {@link guardianUserIdsForStudents}) and enqueues push
+ * deliveries only to them; `recipientCount` is the real number of guardians
+ * notified. Deliveries are drained out of band like every other enqueue path.
  */
 export async function handleNotifyRouteDelay(
   req: Request,
@@ -404,27 +411,51 @@ export async function handleNotifyRouteDelay(
 
     const allocations = await writeStore.findAll(db, organizationId, schoolId, "allocation");
     const affected = allocations.filter((a) => String(a.routeId ?? "") === routeId);
+    const sisStudentIds = affected
+      .map((a) => String(a.sisStudentId ?? ""))
+      .filter((s) => s.length > 0);
+
+    // Resolve only THIS route's affected students' active guardians.
+    const guardianIds = await guardianUserIdsForStudents(
+      db,
+      organizationId,
+      schoolId,
+      sisStudentIds,
+    );
 
     const title = `Transport delay — ${routeName}`;
-    await sendBroadcastMessage(
-      db,
-      claims,
-      { audience: "parents", title, body: message },
-      request,
-    );
+    if (guardianIds.length > 0) {
+      await enqueueDeliveriesBatch(db, {
+        organizationId,
+        schoolId,
+        recipientUserIds: guardianIds,
+        channel: "push",
+        category: "announcement",
+        renderedSubject: title,
+        renderedBody: message,
+      });
+      // Drain out of band, same as the broadcast/direct-message paths.
+      await processDeliveryQueue(db, organizationId, claims, request);
+    }
 
     await emitMutationAudit(
       db,
       claims,
       moduleEntityAudit("transport.delay.notified", "transport_route", routeId, {
         routeId,
-        recipientCount: affected.length,
+        affectedStudents: affected.length,
+        recipientCount: guardianIds.length,
       }),
       request,
     );
 
     return {
-      payload: { routeId, routeName, recipientCount: affected.length },
+      payload: {
+        routeId,
+        routeName,
+        affectedStudents: affected.length,
+        recipientCount: guardianIds.length,
+      },
       status: 200,
     };
   });

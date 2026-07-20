@@ -22,7 +22,7 @@
 | **S2** | Identity Lifecycle & Revocation (ILR · C1) | ✅ committed | `8e75616b` |
 | **S3** | Pilot-lane governance / canonical teacher↔class | ✅ committed | `972836b7` |
 | **S4** | Reporting & metric integrity | ✅ **COMPLETE** | `005695d5` (metric core) + `64e086da` (report card / export / queues) |
-| **S5** | Communication & delivery | 🔨 **IN PROGRESS** (recon complete; 1 uncommitted WIP file) | — |
+| **S5** | Communication & delivery | ✅ **COMPLETE** | `<pending-commit>` |
 | **S6** | Academic-operations blockers | ⬜ not started | — |
 | **S7** | Operational-module blockers | ⬜ not started | — |
 
@@ -87,23 +87,61 @@ committed in `64e086da` *after* that log was written.
 
 ---
 
-## S5 — Communication & delivery  🔨 IN PROGRESS
+## S5 — Communication & delivery  ✅ COMPLETE  `<pending-commit>`
 
 **Scope (PRA_FIX_STRATEGY §12.1):** P0-16, P0-18, P1-45; + N-11; P1-44 (route-scoped
-delay broadcast). EOS gate: FEATURE+SEC PASS. *(DLT template registration = ops sub-task
-PRA-P2-20 — out of code scope.)*
+delay broadcast). **EOS gate: PASS.** Regression: **578 affected-area backend tests green**
+(32 sms/guardian/channels + 204 communication/teacher/transport + 342 finance/academics),
+api-graph `deno check` clean, `deno lint` clean. No migration needed (reuses
+`notification_deliveries` / `students` / `student_guardians`); next free migration still
+`20260900000015`. *(DLT template registration = ops sub-task PRA-P2-20 — out of code scope,
+honestly excluded.)*
 
-### Uncommitted WIP in the worktree (do not lose)
-- `supabase/functions/_shared/sms_provider.ts` — **modified, uncommitted.** Adds a DLT
-  branch to `buildTransactionalRequest(config, mobile, message, templateId?)`: when
-  `config.fast2smsRoute === 'dlt'` it uses route=dlt + sender_id + template message id +
-  `variables_values`; else the existing Quick ("q") route (pilot default). Non-breaking:
-  all 18 existing SMS tests pass (`sms_provider_test.ts` + `sms_provider_transactional_qa_c_011_test.ts`).
-  **Still TODO for P0-18:** thread an optional `templateId` through `sendTransactionalSms`
-  (currently 3-arg, calls `buildTransactionalRequest` with no templateId) so the 2 callers
-  can pass a per-message-type DLT template; add a test for the new DLT branch.
+### What shipped
+- **Shared linchpin** `communication/guardian_recipients.ts` →
+  `guardianUserIdsForStudents(db, org, school, sisStudentIds[])`: resolves SIS
+  `student_code`s to DISTINCT **active** guardian user ids, scoped org+school (matches the
+  active-link RLS 20260900000012). Built once, used by BOTH P0-16 and P1-44.
+- **P0-16** (`teacher/teacher_parent_communication_handlers.ts`): "Send to parent" no longer
+  stamps a hardcoded `status:"sent"` with zero delivery. It resolves the student's active
+  guardians, enqueues a REAL delivery per requested channel (`deliveryChannels()` maps the
+  teacher UI labels → push/sms/email; empty ⇒ push), drains the queue, and returns an HONEST
+  `status` (`"queued"` vs `"no_recipients"`) + `recipientCount`.
+- **P0-18** (`sms_provider.ts`): `buildTransactionalRequest` now honours the DLT route
+  (route=dlt + sender_id + template message id + `variables_values`) instead of hard-coding
+  Quick; `sendTransactionalSms` gained an optional 4th `templateId` (defaults to
+  `config.fast2smsMessageId`) threaded to the builder. Both real callers
+  (exam-result + fee-receipt SMS) build a full DLT-capable `smsConfig`, so both now honour
+  DLT when configured. Quick route unchanged (pilot default).
+- **P1-45** (`communication/communication_service.ts` + `communication_handlers.ts`):
+  `sendBroadcastMessage` accepts an optional `channels?: string[]`. `normalizeBroadcastChannels`
+  is **additive** — `push` is always present (free in-app baseline + sole ack channel) and
+  `sms`/`email` are opt-in extras; omitted/empty ⇒ `["push"]` (byte-for-byte the old
+  behaviour, no automatic cost). Fan-out loops the channels, attaching `requiresAck` to the
+  push batch ONLY (no ack double-count). Handler reads `channels` from the request body.
+- **P1-44** (`transport/transport_write_handlers.ts`): `handleNotifyRouteDelay` no longer
+  `sendBroadcastMessage(audience:"parents")` (which spammed EVERY parent while lying about
+  the count). It extracts the on-route allocations' `sisStudentId`s, resolves their active
+  guardians via the shared helper, enqueues push to exactly them, and reports a truthful
+  `recipientCount` (+ `affectedStudents`).
+- **N-11**: verified — `api_parent_repository.dart` `acknowledgeCommunication` calls
+  `_remote.acknowledgeCommunication` (fail-closed, PRA-N-10 S0), server endpoint
+  `communication_service.ts acknowledgeNotification` exists. No change needed.
 
-### Recon findings (complete — implement directly, no re-analysis needed)
+### New tests (4 files)
+`communication/guardian_recipients_test.ts` (scope/active-only/dedup/empty),
+`sms_provider_dlt_p0_18_test.ts` (Quick unchanged, DLT branch, templateId override, wire
+threading via fetch stub), `communication/communication_channels_p1_45_test.ts` (additive
+default push, opt-in sms/email, dedup, unknown dropped), `teacher/teacher_parent_communication_p0_16_test.ts`
+(channel mapping); + P1-44 route-scope extraction test added to `transport_write_handlers_test.ts`.
+
+### Tracked follow-ups (non-blocking)
+- **PRA-P2-20 (ops):** register the per-message-type DLT templates (fee receipt vs result)
+  with the provider; code already accepts a distinct `templateId` the day config carries them.
+- **Live lane (INFRA-BLOCKED here):** the Fast2SMS DLT network leg + real guardian push
+  delivery are certified on the VPS live lane (same boundary as QA-C-011).
+
+### Recon findings (historical — implemented above)
 
 **P0-16 — teacher "Send to parent" delivers nothing.**
 `supabase/functions/_shared/teacher/teacher_parent_communication_handlers.ts` →
@@ -200,19 +238,23 @@ gateway-bypass hardening; P2-12 per-role borrow limit. EOS: FEATURE+SEC PASS.
 
 ---
 
-## CHECKPOINT — 2026-07-18 (session closing)
+## CHECKPOINT — 2026-07-20 (S5 complete)
 
 **Committed & verified:** S0 `1b893f6d` · S1 `e4807308` · S2 `8e75616b` · S3 `972836b7` ·
-S4 `005695d5` + `64e086da`. All isolated, regression-tested, on
-`feature/erp-pra-remediation`, **NOT pushed**.
+S4 `005695d5` + `64e086da` · **S5 `<pending-commit>`** (this commit). All isolated,
+regression-tested, on `feature/erp-pra-remediation`, **NOT pushed**.
 
-**In-flight (uncommitted, on disk in the worktree):** `sms_provider.ts` DLT builder WIP
-(P0-18, non-breaking, 18/18 SMS tests green).
+**In-flight:** none — the working tree is clean at the S5 commit.
 
-**Resume point:** finish **S5** using the recon above — implement P0-16 (real enqueue),
-P0-18 (thread templateId through `sendTransactionalSms` + DLT test), P1-45 (opt-in
-`channels`), P1-44 (route-scoped guardians); verify N-11. Then run the S5 suites + api-graph
-`deno check` + EOS gate → commit S5 → proceed S6 → S7 (pause at P0-02 gateway choice).
+**Resume point:** proceed to **S6 (Academic-operations blockers)**. Scope below: P0-13
+admission approval gate, P0-21 parent-insights AI RLS scope, P0-14 promotion engine
+contract; + the P1 tail. Reuse the per-school settings-persistence pattern. Then **S7
+(Operational-module blockers)** — **PAUSE at P0-02** (payment gateway/SDK = owner decision +
+external credential dependency) and confirm P0-15 staff GPS/face scope before the large build.
 
-**Clean resume boundaries:** every committed stage. Build the student→guardian resolution
-helper once (shared by P0-16 and P1-44).
+**Per-stage rule (unchanged):** full affected-area regression green + EOS gate before the
+next stage; isolated commit per stage; do NOT push.
+
+**Clean resume boundaries:** every committed stage. The student→guardian resolution helper
+now exists (`communication/guardian_recipients.ts`) — reuse it anywhere else a
+student-cohort→parent notification is needed.

@@ -119,20 +119,39 @@ export function isSmsConfigured(config: SmsConfig): boolean {
 }
 
 /**
- * Build a Fast2SMS request for a transactional (non-OTP) free-text message.
- * Uses the quick ("q") route — custom message, no DLT/template requirement
- * (the same route the pilot already uses). Pure.
+ * Build a Fast2SMS request for a transactional (non-OTP) message.
+ *
+ * PRA-P0-18 (S5): this previously HARD-CODED the Quick ("q") route and ignored
+ * the DLT config entirely — so fee-receipt and exam-result SMS were sent on the
+ * unregistered Quick route, which Indian carriers block to DND numbers (most
+ * parent mobiles). It now honours the DLT config exactly as the OTP builder
+ * (`buildFast2SmsRequest`) does: when `fast2smsRoute === 'dlt'` it uses the
+ * DLT-approved sender id + template message id, passing the rendered text as the
+ * template variable. `templateId` lets a caller supply a per-message-type DLT
+ * template (fee receipt vs result); it defaults to the single global
+ * `fast2smsMessageId`. The actual template registration is an ops task (P2-20).
  */
 export function buildTransactionalRequest(
   config: SmsConfig,
   mobile: string,
   message: string,
+  templateId?: string | null,
 ): { url: string; headers: Record<string, string>; body: string } {
   const params = new URLSearchParams();
-  params.set("route", "q");
-  params.set("message", message);
-  params.set("numbers", mobile);
-  params.set("flash", "0");
+  if (config.fast2smsRoute === "dlt") {
+    params.set("route", "dlt");
+    if (config.fast2smsSenderId) params.set("sender_id", config.fast2smsSenderId);
+    const dltMessage = (templateId ?? config.fast2smsMessageId) ?? "";
+    if (dltMessage) params.set("message", dltMessage);
+    params.set("variables_values", message);
+    params.set("numbers", mobile);
+  } else {
+    // Quick route (pilot default): custom free-text, no DLT/verification.
+    params.set("route", "q");
+    params.set("message", message);
+    params.set("numbers", mobile);
+    params.set("flash", "0");
+  }
   return {
     url: FAST2SMS_ENDPOINT,
     headers: {
@@ -147,11 +166,18 @@ export function buildTransactionalRequest(
  * Send a transactional SMS (fee receipt, results published, …) to a parent.
  * Same provider/HTTP shape as `sendOtpSms`; the caller owns the
  * `transactionalSmsEnabled` gate. The only impure part is `fetch`.
+ *
+ * PRA-P0-18 (S5): `templateId` lets a caller supply a per-message-type
+ * DLT-approved template id (e.g. a distinct one for fee receipts vs exam
+ * results). It only matters when the provider is configured for the DLT route
+ * (`config.fast2smsRoute === 'dlt'`); on the pilot's Quick route it is ignored.
+ * Defaults to the single global `config.fast2smsMessageId`.
  */
 export async function sendTransactionalSms(
   config: SmsConfig,
   phone: string,
   message: string,
+  templateId?: string | null,
 ): Promise<SmsResult> {
   if (!isSmsConfigured(config)) {
     return { ok: false, code: "SMS_NOT_CONFIGURED", detail: "No SMS provider/API key" };
@@ -163,7 +189,7 @@ export async function sendTransactionalSms(
   if (!mobile) {
     return { ok: false, code: "SMS_INVALID_NUMBER", detail: `Not an Indian mobile: ${phone}` };
   }
-  const { url, headers, body } = buildTransactionalRequest(config, mobile, message);
+  const { url, headers, body } = buildTransactionalRequest(config, mobile, message, templateId);
   try {
     const resp = await fetch(url, { method: "POST", headers, body });
     let json: unknown = null;

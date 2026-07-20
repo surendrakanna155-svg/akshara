@@ -5,8 +5,9 @@
 // unit-testable in isolation, so — mirroring transport_read_repository_test.ts
 // and broadcast_batch_test.ts — these tests pin the three load-bearing pieces
 // the handlers compose: (1) the entity-store persistence shape each handler
-// writes, (2) the notify-delay route lookup + affected-cohort count that drives
-// the broadcast reuse, and (3) the manageTransport RBAC gate + body validation.
+// writes, (2) the notify-delay route lookup + affected-cohort resolution that
+// scopes the delay alert to exactly the on-route students' guardians (PRA-P1-44),
+// and (3) the manageTransport RBAC gate + body validation.
 
 import {
   assertEquals,
@@ -254,6 +255,48 @@ Deno.test("notify-delay resolves the route and counts the affected cohort", asyn
   const allocations = await writeStore.findAll(db, ORG, SCHOOL_A, "allocation");
   const affected = allocations.filter((a) => String(a.routeId ?? "") === "route-12");
   assertEquals(affected.length, 2);
+});
+
+// PRA-P1-44: the delay alert must reach ONLY the on-route students' guardians —
+// not every parent in the school. The handler extracts the affected allocations'
+// sisStudentIds and hands them to guardianUserIdsForStudents; this pins that
+// route-scoped extraction (off-route students are excluded, blanks dropped).
+Deno.test("P1-44 notify-delay extracts only the on-route students' sisStudentIds", async () => {
+  const db = new MockTransportWriteDb() as unknown as TenantQueryClient;
+  await writeStore.insert(db, ORG, SCHOOL_A, "route", "route-12", {
+    id: "route-12",
+    name: "Route 12 — North",
+  });
+  await writeStore.insert(db, ORG, SCHOOL_A, "allocation", "a1", {
+    id: "a1",
+    routeId: "route-12",
+    sisStudentId: "SIS-STU-1",
+  });
+  await writeStore.insert(db, ORG, SCHOOL_A, "allocation", "a2", {
+    id: "a2",
+    routeId: "route-12",
+    sisStudentId: "SIS-STU-2",
+  });
+  // Off-route student — must NOT be notified.
+  await writeStore.insert(db, ORG, SCHOOL_A, "allocation", "a3", {
+    id: "a3",
+    routeId: "route-08",
+    sisStudentId: "SIS-STU-3",
+  });
+  // On-route allocation with no SIS id yet — dropped from the recipient set.
+  await writeStore.insert(db, ORG, SCHOOL_A, "allocation", "a4", {
+    id: "a4",
+    routeId: "route-12",
+  });
+
+  const allocations = await writeStore.findAll(db, ORG, SCHOOL_A, "allocation");
+  const affected = allocations.filter((a) => String(a.routeId ?? "") === "route-12");
+  const sisStudentIds = affected
+    .map((a) => String(a.sisStudentId ?? ""))
+    .filter((s) => s.length > 0);
+
+  // Exactly the two on-route students with a SIS id — never SIS-STU-3 (route-08).
+  assertEquals(sisStudentIds.sort(), ["SIS-STU-1", "SIS-STU-2"]);
 });
 
 Deno.test("notify-delay requires routeId and message", () => {
