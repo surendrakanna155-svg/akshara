@@ -9,6 +9,10 @@ import {
   WriteValidationError,
 } from "../entity_write/module_write_handlers.ts";
 import { createEntityWriteStore } from "../entity_write/entity_write_store.ts";
+import {
+  closeOpenAllocation,
+  recordAllocationChange,
+} from "./transport_allocation_history_repository.ts";
 import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
 import { guardianUserIdsForStudents } from "../communication/guardian_recipients.ts";
 import { enqueueDeliveriesBatch } from "../communication/communication_repository.ts";
@@ -380,6 +384,29 @@ export async function handleAssignStudentTransport(
     const saved = existing
       ? (await writeStore.replace(db, organizationId, schoolId, "allocation", id, payload)) ?? payload
       : await writeStore.insert(db, organizationId, schoolId, "allocation", id, payload);
+    // W4 (Owner decision #5): record the assignment on the effective-dated
+    // history timeline — CLOSE the prior open period + OPEN a new one, never
+    // overwriting the historical route/stop. A re-assign to the SAME route/stop
+    // is a no-op on the timeline. An optional effectiveDate back-dates the change.
+    await recordAllocationChange(
+      db,
+      organizationId,
+      schoolId,
+      id,
+      {
+        sisStudentId,
+        routeId,
+        pickupStop: payload.pickupStop,
+        dropStop: payload.dropStop,
+        shift: payload.shift,
+        payload,
+      },
+      {
+        changeDate: isoDateField(body, "effectiveDate", "effective_date") ??
+          new Date().toISOString(),
+        changedBy: claims.sub ?? null,
+      },
+    );
     await emitMutationAudit(
       db,
       claims,
@@ -445,6 +472,29 @@ export async function handleTransferStudentTransport(
       "allocation",
       allocationId,
       next,
+    );
+    // W4 (Owner decision #5): a transfer to a different route opens a new
+    // effective-dated period on the timeline (prior route period is CLOSEd, never
+    // overwritten), so the student's route history is fully reconstructable.
+    await recordAllocationChange(
+      db,
+      organizationId,
+      schoolId,
+      allocationId,
+      {
+        sisStudentId: (allocation.sisStudentId as string | undefined) ?? null,
+        routeId: targetRouteId,
+        pickupStop: next.pickupStop,
+        dropStop: next.dropStop,
+        // A transfer moves route/stops but keeps the student's shift.
+        shift: (allocation.shift as string | undefined) ?? null,
+        payload: next,
+      },
+      {
+        changeDate: isoDateField(body, "effectiveDate", "effective_date") ??
+          new Date().toISOString(),
+        changedBy: claims.sub ?? null,
+      },
     );
     await emitMutationAudit(
       db,
@@ -562,6 +612,11 @@ export async function stopStudentTransport(
     stoppedBy: options.actorId,
   };
   await writeStore.replace(db, organizationId, schoolId, "allocation", allocationId, stopped);
+
+  // W4 (Owner decision #5): the student stops riding → CLOSE the currently-open
+  // effective-dated period at the stop date (the timeline simply ends; no new
+  // period). The historical route/stop snapshot is preserved, never overwritten.
+  await closeOpenAllocation(db, organizationId, schoolId, allocationId, options.effectiveDate);
 
   return { stopped, cancelledInvoices, skippedInvoices };
 }
@@ -1271,6 +1326,9 @@ export async function handleBulkAllocateTransport(
     const dropStop = requireStr(body, "dropStop", "drop_stop");
     const shift = str(body, "shift") ?? "both";
     const allowOverCapacity = boolOr(body, false, "allowOverCapacity", "allow_over_capacity");
+    // W4: one change instant for the whole batch (optional back-dating via effectiveDate).
+    const bulkChangeDate = isoDateField(body, "effectiveDate", "effective_date") ??
+      new Date().toISOString();
 
     const route = await writeStore.find(db, organizationId, schoolId, "route", routeId);
     if (!route) throw new WriteNotFoundError(`Transport route not found: ${routeId}`);
@@ -1389,6 +1447,16 @@ export async function handleBulkAllocateTransport(
       } else {
         await writeStore.insert(db, organizationId, schoolId, "allocation", allocId, payload);
       }
+      // W4 (Owner decision #5): record each bulk assignment on the effective-dated
+      // timeline (close prior open period + open a new one), same as single assign.
+      await recordAllocationChange(
+        db,
+        organizationId,
+        schoolId,
+        allocId,
+        { sisStudentId, routeId, pickupStop, dropStop, shift, payload },
+        { changeDate: bulkChangeDate, changedBy: claims.sub ?? null },
+      );
       await emitMutationAudit(
         db,
         claims,
