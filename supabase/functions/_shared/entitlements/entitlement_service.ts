@@ -42,6 +42,9 @@ export interface ResolvedSubscription {
     schools: number | null;
     /** PRC-A Batch 4 — plan storage cap in BYTES. null = unlimited. */
     storageBytes: number | null;
+    /** W4 — plan SMS cap per calendar month. null = unlimited. Config-driven
+     * from the plan's `max_sms_per_month`; enforced by enforceSmsQuota. */
+    sms: number | null;
     graceBufferPercent: number;
   };
   usage: {
@@ -97,6 +100,7 @@ export async function resolveSubscription(
       students: resolveStudentLimit(subscription, plan),
       schools: resolveSchoolLimit(subscription, plan),
       storageBytes: resolveStorageLimit(subscription, plan),
+      sms: resolveSmsLimit(subscription, plan),
       graceBufferPercent: plan.graceBufferPercent,
     },
     usage: {
@@ -131,6 +135,16 @@ function resolveStorageLimit(
   return plan.maxStorageBytes;
 }
 
+// W4 — monthly SMS cap. Plan-level only (no per-org override column), so it is
+// simply the plan's value. null = unlimited. Config-driven: the number lives in
+// subscription_plans.max_sms_per_month, never hardcoded in the gate.
+function resolveSmsLimit(
+  _sub: OrgSubscriptionRow | null,
+  plan: PlanWithEntitlements,
+): number | null {
+  return plan.smsPerMonth;
+}
+
 function emptyTrialPlan(): PlanWithEntitlements {
   return {
     slug: FALLBACK_PLAN_SLUG,
@@ -141,6 +155,7 @@ function emptyTrialPlan(): PlanWithEntitlements {
     studentSlabMax: 100,
     maxSchools: 1,
     maxStorageBytes: null, // Trial fallback = unlimited (enforcement is also dark).
+    smsPerMonth: null, // Trial fallback = unlimited (enforcement is also dark).
     graceBufferPercent: 10,
     trialLengthDays: 30,
     trialGraceDays: 7,

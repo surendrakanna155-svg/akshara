@@ -33,6 +33,7 @@ import {
 } from "./finance_collections_repository.ts";
 import { getInvoice } from "./finance_invoices_repository.ts";
 import { isSmsConfigured, sendTransactionalSms, type SmsConfig } from "../sms_provider.ts";
+import { enforceSmsQuota } from "../entitlements/entitlement_limits.ts";
 import {
   cancelledCollectionToApi,
   collectionCreateToApi,
@@ -86,6 +87,13 @@ async function notifyParentOfReceipt(
     fast2smsMessageId: config.smsFast2smsMessageId,
   };
   if (!isSmsConfigured(smsConfig)) return;
+  // W4 (owner decision #1): per-plan monthly SMS quota — pre-send check. Deploy-
+  // dark behind ENTITLEMENT_ENFORCEMENT and fail-open (returns null unless the
+  // org is genuinely at its plan cap), so this is a no-op today. When on and the
+  // month's SMS is used up, the discretionary receipt SMS is skipped rather than
+  // pushing the org past its plan's SMS budget; the collection response itself is
+  // never affected (this hook is best-effort).
+  if (await enforceSmsQuota(config, claims)) return;
   try {
     const target = await runTenant(config, claims, (db) =>
       db.queryObject<{ phone: string; name: string }>(
