@@ -50,6 +50,15 @@ dependencies:
   # newest in-range version (4.9.1); this must be an exact pin.
   image: 4.8.0
 
+  # ASIP Phase 1 (support intelligence) — the reporter attaches a screenshot and
+  # the client auto-collects device/app diagnostics. image_picker: screenshot
+  # capture / gallery pick; package_info_plus: app version; device_info_plus:
+  # device model + OS version. (Screen recording is deferred — see
+  # lib/features/support/report_issue_screen.dart.)
+  image_picker: ^1.1.2
+  package_info_plus: ^8.1.1
+  device_info_plus: ^11.1.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

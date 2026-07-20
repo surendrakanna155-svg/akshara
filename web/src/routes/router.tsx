@@ -226,6 +226,13 @@ import {
   TeacherConversationPage,
   ParentConversationPage,
 } from '@/pages/detail/DetailPages';
+import {
+  SupportConsoleGate,
+  SupportQueuePage,
+  SupportIncidentPage,
+  SupportClustersPage,
+  SupportClusterDetailPage,
+} from '@/pages/support-console';
 import { ModuleScaffold } from '@/components/system/ModuleScaffold';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { ROLE_META } from '@/lib/auth/roles';
@@ -546,6 +553,18 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <RootRedirect /> },
       ...navChildren,
+      // ASIP Support Console (scoped unfreeze) — gated on the platformSupport
+      // permission by SupportConsoleGate; additive, does not touch frozen pages.
+      {
+        path: 'support-console',
+        element: <SupportConsoleGate />,
+        children: [
+          { index: true, element: <SupportQueuePage /> },
+          { path: 'incidents/:id', element: <SupportIncidentPage /> },
+          { path: 'clusters', element: <SupportClustersPage /> },
+          { path: 'clusters/:id', element: <SupportClusterDetailPage /> },
+        ],
+      },
       // Parametric detail routes (deep-linkable record views)
       { path: 'sis/students/:id', element: <SisStudentDetailPage /> },
       { path: 'finance/collections/:id', element: <CollectionDetailPage /> },

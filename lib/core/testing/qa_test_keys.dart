@@ -1570,6 +1570,28 @@ abstract final class QaTestKeys {
   static const teacherSettingsScreen =
       ValueKey<String>('teacher_settings_screen');
 
+  // ASIP — "Report an issue to Akshara Support" surface.
+  static const supportEntryLink = ValueKey<String>('support_entry_link');
+  static const supportReportScreen =
+      ValueKey<String>('support_report_screen');
+  static const supportReportTitleField =
+      ValueKey<String>('support_report_title_field');
+  static const supportReportDescriptionField =
+      ValueKey<String>('support_report_description_field');
+  static const supportReportSubmitButton =
+      ValueKey<String>('support_report_submit_button');
+  static const supportMyIssuesScreen =
+      ValueKey<String>('support_my_issues_screen');
+  static const supportReportIssueButton =
+      ValueKey<String>('support_report_issue_button');
+  static const supportIncidentDetailScreen =
+      ValueKey<String>('support_incident_detail_screen');
+  static const supportReplyField = ValueKey<String>('support_reply_field');
+  static const supportReplySendButton =
+      ValueKey<String>('support_reply_send_button');
+  static ValueKey<String> supportIncidentCard(String id) =>
+      ValueKey<String>('support_incident_card_$id');
+
   static const teacherProfileScreen =
       ValueKey<String>('teacher_profile_screen');
 

@@ -299,6 +299,13 @@ enum Permission {
   // organizationOwner, organizationAdmin, management. Deliberately no manage
   // permission — the limit is set by the PLAN, not granted ad hoc.
   viewStorageQuota,
+
+  // ASIP — platform support intelligence. Reporting an issue needs NO
+  // permission (any authenticated school user may report); these gate the
+  // Phase-2 Akshara support-staff view/manage surfaces and mirror the backend
+  // `viewSupport` / `manageSupport` permission slugs exactly.
+  viewSupport,
+  manageSupport,
 }
 
 /// Immutable set of [Permission] values for a session.

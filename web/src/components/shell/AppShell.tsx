@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { useGrantedModules } from '@/lib/auth/permissions';
-import { navForRole, PORTAL_NAV, workspaceForRole } from '@/routes/navConfig';
+import { useGrantedModules, useHasPermission } from '@/lib/auth/permissions';
+import { navForRole, PORTAL_NAV, SUPPORT_CONSOLE_NAV, workspaceForRole } from '@/routes/navConfig';
 import type { NavSection } from '@/routes/navConfig';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
@@ -13,16 +13,20 @@ import { SyncBanner } from './SyncBanner';
 export function AppShell() {
   const { user } = useAuth();
   const granted = useGrantedModules();
+  // ASIP scoped unfreeze: surface the Support Console nav only for a session that
+  // holds the platformSupport permission (the route + server also enforce it).
+  const platformSupport = useHasPermission('platformSupport');
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const sections: NavSection[] = (() => {
     if (!user) return [];
     const ws = workspaceForRole(user.role);
-    if (ws === 'teacher' || ws === 'parent' || ws === 'student') {
-      return [{ label: ws[0].toUpperCase() + ws.slice(1), items: PORTAL_NAV[ws] }];
-    }
-    return navForRole(user.role, granted);
+    const base =
+      ws === 'teacher' || ws === 'parent' || ws === 'student'
+        ? [{ label: ws[0].toUpperCase() + ws.slice(1), items: PORTAL_NAV[ws] }]
+        : navForRole(user.role, granted);
+    return platformSupport.granted ? [...base, SUPPORT_CONSOLE_NAV] : base;
   })();
 
   return (

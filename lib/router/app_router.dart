@@ -24,6 +24,9 @@ import '../features/auth/staff/staff_otp_screen.dart';
 import '../features/auth/staff/staff_login_provider.dart';
 import '../features/legal/legal_acceptance_screen.dart';
 import '../features/notifications/notifications_screen.dart';
+import '../features/support/report_issue_screen.dart';
+import '../features/support/my_reported_issues_screen.dart';
+import '../features/support/support_incident_detail_screen.dart';
 import '../features/finance/finance_models.dart';
 import '../features/parent/attendance/parent_attendance_screen.dart';
 import '../features/parent/academics/parent_academic_report_screen.dart';
@@ -141,6 +144,7 @@ GoRouter createAppRouter({
   required AuthState Function() readAuth,
   bool Function()? readQaLoginEnabled,
   bool Function()? readLegalBlocked,
+  List<NavigatorObserver> observers = const [],
 }) {
   final rootNavigatorKey = GlobalKey<NavigatorState>();
   String authEntryRoute() => (readQaLoginEnabled?.call() ?? false)
@@ -151,6 +155,7 @@ GoRouter createAppRouter({
     navigatorKey: rootNavigatorKey,
     initialLocation: RouteNames.splash,
     refreshListenable: refreshListenable,
+    observers: observers,
     debugLogDiagnostics: true,
     redirect: (context, state) {
       final auth = readAuth();
@@ -279,6 +284,30 @@ GoRouter createAppRouter({
         path: RouteNames.parentNotifications,
         name: 'parentNotifications',
         builder: (context, state) => const NotificationsScreen(),
+      ),
+      // ASIP Phase 1 — "Report an issue to Akshara Support". Top-level, auth-gated
+      // for every persona (see _isSharedSettingsRoute). `/support/new` is declared
+      // before `/support/:id` so the literal wins over the id parameter.
+      GoRoute(
+        path: RouteNames.support,
+        name: 'support',
+        builder: (context, state) =>
+            const AuthenticatedGuard(child: MyReportedIssuesScreen()),
+      ),
+      GoRoute(
+        path: RouteNames.supportNew,
+        name: 'supportNew',
+        builder: (context, state) =>
+            const AuthenticatedGuard(child: ReportIssueScreen()),
+      ),
+      GoRoute(
+        path: RouteNames.supportIncidentDetailPattern,
+        name: 'supportIncidentDetail',
+        builder: (context, state) => AuthenticatedGuard(
+          child: SupportIncidentDetailScreen(
+            incidentId: state.pathParameters['id'] ?? '',
+          ),
+        ),
       ),
       ShellRoute(
         builder: (context, state, child) =>
@@ -2532,7 +2561,11 @@ bool _isAiAssistantRoute(String location) {
 /// (e.g. Appearance / theme). Not an admin ERP route — authorized on
 /// authentication alone, like AI Assistant settings.
 bool _isSharedSettingsRoute(String location) {
-  return location == RouteNames.appearanceSettings;
+  return location == RouteNames.appearanceSettings ||
+      // ASIP: "Report an issue" is a shared, persona-agnostic surface — every
+      // authenticated school user may reach it (auth-gated, no RBAC permission).
+      location == RouteNames.support ||
+      location.startsWith('${RouteNames.support}/');
 }
 
 /// The standalone staff Face ID capture/enrolment routes (audit R3): they are

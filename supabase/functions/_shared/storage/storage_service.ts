@@ -7,6 +7,8 @@ const ADMISSIONS_BUCKET = "admissions-documents";
 const STUDENT_DOCUMENTS_BUCKET = "student-documents";
 // PRA-P1-30 — real file storage for homework attachments (teacher + student).
 const HOMEWORK_ATTACHMENTS_BUCKET = "homework-attachments";
+// ASIP — real file storage for support-incident screenshots + screen recordings.
+const SUPPORT_ATTACHMENTS_BUCKET = "support-incident-attachments";
 const DOWNLOAD_TTL_SECONDS = 900;
 
 export function createStorageAdmin(config: AppConfig) {
@@ -339,6 +341,70 @@ export async function createHomeworkAttachmentDownloadUrl(
 ): Promise<string> {
   const client = createStorageAdmin(config);
   const { data, error } = await client.storage.from(HOMEWORK_ATTACHMENTS_BUCKET)
+    .createSignedUrl(storagePath, DOWNLOAD_TTL_SECONDS);
+  if (error || !data?.signedUrl) {
+    throw new Error(error?.message ?? "Failed to create download URL");
+  }
+  return toPublicStorageUrl(config, data.signedUrl);
+}
+
+// ─── Support-incident attachments (ASIP) ───────────────────────────────────────
+// Screenshots + optional screen recordings the reporter provides. Same proven
+// presign → PUT bytes → confirm pattern against a dedicated, private,
+// tenant-isolated `support-incident-attachments` bucket. Path layout:
+//   {organization_id}/{school_id}/{incident_id}/{uuid}_{file}
+// Larger cap than the document buckets because screen recordings can be big.
+
+export const SUPPORT_ATTACHMENT_UPLOAD_CONSTRAINTS: UploadConstraints = {
+  maxBytes: 104857600, // 100 MiB — matches the support-incident-attachments bucket
+  allowedMimeTypes: [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/heic",
+    "video/mp4",
+    "video/webm",
+    "video/quicktime",
+    "text/plain",
+    "application/json",
+  ],
+  allowedExtensions: ["jpg", "jpeg", "png", "webp", "heic", "mp4", "webm", "mov", "txt", "json", "log"],
+};
+
+export function buildSupportAttachmentStoragePath(
+  organizationId: string,
+  schoolId: string,
+  incidentId: string,
+  filename: string,
+): string {
+  const safe = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const safeIncident = incidentId.replace(/[^a-zA-Z0-9._-]/g, "_");
+  return `${organizationId}/${schoolId}/${safeIncident}/${crypto.randomUUID()}_${safe}`;
+}
+
+export async function createSupportAttachmentUploadUrl(
+  config: AppConfig,
+  storagePath: string,
+): Promise<{ signedUrl: string; token: string; path: string }> {
+  const client = createStorageAdmin(config);
+  const { data, error } = await client.storage.from(SUPPORT_ATTACHMENTS_BUCKET)
+    .createSignedUploadUrl(storagePath, { upsert: false });
+  if (error || !data) {
+    throw new Error(error?.message ?? "Failed to create upload URL");
+  }
+  return {
+    signedUrl: toPublicStorageUrl(config, data.signedUrl),
+    token: data.token,
+    path: storagePath,
+  };
+}
+
+export async function createSupportAttachmentDownloadUrl(
+  config: AppConfig,
+  storagePath: string,
+): Promise<string> {
+  const client = createStorageAdmin(config);
+  const { data, error } = await client.storage.from(SUPPORT_ATTACHMENTS_BUCKET)
     .createSignedUrl(storagePath, DOWNLOAD_TTL_SECONDS);
   if (error || !data?.signedUrl) {
     throw new Error(error?.message ?? "Failed to create download URL");

@@ -59,6 +59,11 @@ const Map<String, Permission> kErpRouteViewPermissions = {
   RouteNames.inventory: Permission.viewInventory,
   RouteNames.alumni: Permission.viewAlumni,
   RouteNames.controlCenter: Permission.viewControlCenter,
+  // ASIP: the Phase-2 Akshara support-staff view maps here. The Phase-1 reporter
+  // route (`/support`) is auth-gated for every persona (see _isSharedSettingsRoute
+  // in app_router.dart) and is intentionally NOT part of the admin ERP shell, so
+  // this entry never gates the reporter — it documents the support-view contract.
+  RouteNames.support: Permission.viewSupport,
   RouteNames.director: Permission.viewDirectorPortal,
   RouteNames.copilot: Permission.viewAiCopilot,
   RouteNames.education: Permission.viewEducation,

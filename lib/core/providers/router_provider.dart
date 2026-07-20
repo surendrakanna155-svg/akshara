@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/auth_provider.dart';
 import '../../features/legal/legal_gate_provider.dart';
 import '../../core/config/environment_provider.dart';
+import '../../core/observability/incident_context_providers.dart';
 import '../../router/app_router.dart';
 import 'router_refresh_notifier.dart';
 
@@ -21,5 +22,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     readAuth: () => ref.read(authProvider),
     readQaLoginEnabled: () => ref.read(isQaLoginEnabledProvider),
     readLegalBlocked: () => ref.read(legalGateBlockedProvider),
+    // ASIP: observe navigation so a reported issue carries the screen the user
+    // was on + a breadcrumb trail (automatic evidence capture).
+    observers: [ref.read(incidentRouteObserverProvider)],
   );
 });

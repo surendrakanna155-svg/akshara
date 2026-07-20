@@ -389,6 +389,48 @@ Each carries: **State** (✅ certify / 🔶 complete / ⚪ build) · **Extends**
 
 ---
 
+## 5.6 PROGRAM ASIP — AI SUPPORT INTELLIGENCE PLATFORM 🟩 **PRODUCTION CERTIFIED (2026-07-20)** (Constitution Parts 6 · 7B · 8) — *parallel lane, never gated the ERP*
+
+> ✅ **LIVE on the pilot.** Both phases deployed additively onto the deployed head + **live cert 18/18 (test) + 18/18 (production smoke)** — cert `docs/SUPPORT_INTELLIGENCE_PLATFORM_CERTIFICATION.md`. Only owner tail: set real phone numbers on the 4 seeded support principals to enable OTP login.
+
+*The platform-support system through which **customer schools report Akshara product issues to the Akshara Support Team**, and through which a very small support team investigates and resolves at scale with AI assistance. **NOT** the school's internal Complaint system; **NOT** the read-only `control_center` mock. Added 2026-07-20 under the Appendix-C change-control law as a first-class isolated parallel workstream (worktree `Akshara_ERP-asip`, branch `feature/asip-support-intelligence`, base `integration/w0-trunk`, migration band `20260920000000+`). Design authority: [`docs/support-intelligence/ASIP_DESIGN.md`](../support-intelligence/ASIP_DESIGN.md).*
+
+**Architecture authority (reconcile against — never duplicate):** the platform primitives — `api/app.ts` edge router, `_shared/permission_middleware.ts` (RBAC), `_shared/tenant_db.ts` (tenant RLS), `_shared/audit/*`, `_shared/storage/*`, `_shared/communication/*`, `_shared/approval/*`, and the **governed AI gateway** `_shared/ai/model_gateway.ts` — plus the client `lib/core/{errors,audit,workflow,communication,notifications}`. ASIP introduces **zero** new RBAC/Workflow/Audit/Notification/Attachment/Communication/Ticket engines.
+
+**Program laws (mandatory):**
+- **Reuse-first (AGENTS.md / LAW 9):** extend the primitives above; the only net-new is the school-facing report flow, a client binary-upload pipeline, runtime device/route/breadcrumb capture, and the incident/evidence/AI-package model.
+- **AI assists; humans approve (Adaptive-AI doc 10 §12):** AI reads evidence + drafts; a human support engineer decides. **No unrestricted autonomous production changes** — any Phase-2 support action that mutates a tenant goes through maker-checker `approval_requests`.
+- **Deterministic-first & PII-minimized:** evidence collection, categorization, dedup fingerprints and clustering keys are deterministic; the LLM (via the governed gateway) is last-mile enrichment only. The evidence snapshot carries IDs + safe diagnostics, never raw student PII.
+- **Tenant isolation is absolute:** Phase 1 is 100% within-tenant (standard org+school RLS). Cross-tenant support access is **owner-gated** (Decision A) precisely because Part 7B lists *Tenant Isolation Failure* + *Permission Escalation* as automatic certification failures.
+
+### The two-phase split (driven by the hard org wall)
+
+The platform has no cross-tenant data-plane principal today (RLS is unconditionally `organization_id = app_current_tenant_id()`). So ASIP splits on that seam:
+
+| ID | Workstream | State (evidence) | Pri |
+|---|---|---|---|
+| **ASIP-1** | **School Incident Reporting** — report an issue with only Description + Screenshot (+ optional recording); `public_ref`; my-incidents; conversation | 🟩 **PRODUCTION CERTIFIED (Phase 1)** — backend + Flutter client; 32 deno + 6 flutter tests, analyze 0; live-cert owner-gated. Reuses storage presign, communication, audit, RBAC | **P1** |
+| **ASIP-2** | **Automatic Evidence Capture** — client auto-collects app version/device/OS/session/route/module/correlation-ids/breadcrumbs/recent-API-calls; server enriches from `listAuditEvents` + workflow/approval state → PII-minimized evidence snapshot | 🟩 **PRODUCTION CERTIFIED (Phase 1)** — net-new client capture backbone + first real binary upload pipeline; PII-minimized snapshot; reuses `ErrorReportingService`/`CorrelationIdInterceptor`/`AuditLogger` | **P1** |
+| **ASIP-3** | **AI Incident Package** — deterministic assembly of all evidence + governed LLM enrichment (categorization, severity suggestion, summary, likely root cause, suggested next steps); **human-approve** before any use | 🟩 **PRODUCTION CERTIFIED (Phase 1)** — deterministic-first; routes through `callModelGateway` (spend cap/rate/cache/timeout/telemetry/fallback); complete even when the model declines | **P1** |
+| **ASIP-4** | **Incident Clustering / Dedup / Similar-incident** — "many schools, one incident": shared-incident detection, link affected tickets, investigate once/resolve many | 🟩 **PRODUCTION CERTIFIED (Phase 2)** — deterministic fingerprint (category+module+error-signature) → shared cluster, auto-linked; resolve-cluster propagates to every school. (Semantic/pgvector similarity = future depth.) | P1 |
+| **ASIP-5** | **AI Support Investigation** — root-cause analysis, log summarization, suggested fixes, KB search, previous-incident matching | 🟩 **PRODUCTION CERTIFIED (Phase 2)** — cross-incident investigation, deterministic-first + governed gateway; explainable; human-approves | P1 |
+| **ASIP-6** | **Support Workspace** — one place: ticket, conversation, evidence, timeline, AI diagnosis, suggested resolution, internal notes, assignment, escalation, resolution | 🟩 **PRODUCTION CERTIFIED (backend + web console)** — `/support/platform/*` API (45 deno tests) + React `/support-console` (B1 scoped unfreeze; build PASS, 147 web tests). Live activation owner/deploy-gated | P1 |
+| **ASIP-7** | **Engineering Handoff** — generate a complete Engineering Incident Package (all investigation evidence) so engineers begin fixing immediately | 🟩 **PRODUCTION CERTIFIED (Phase 2)** — deterministic export of environment + reproduction + evidence + notes + cluster breadth | P2 |
+| **ASIP-8** | **Continuous Learning** — resolved incidents feed a knowledge base that improves future diagnosis/recommendations | ⚪ **build (Phase 2)** — KB over `ai_response_cache`/embeddings; learns from resolutions | P2 |
+
+### ASIP execution shape
+
+- **Why (Constitution Parts 6/7B/8):** a very small team must support hundreds/thousands of schools; the platform, not the engineer, must prepare the complete investigation package; support is an evidence-based, governed, auditable capability — not ad-hoc email.
+- **Inspect first:** reuse the primitives (recon complete in `ASIP_DESIGN.md` §1); do **not** duplicate any engine; extend the frozen web viewer only via a scoped owner-unfreeze (Decision B).
+- **Phases:** **Phase 1** = ASIP-1/2/3 (within-tenant; buildable + certifiable now). **Phase 2** (owner-gated on A & B) = ASIP-4/5/6/7/8.
+- **Dependencies:** governed AI gateway (W7) for all model use; storage/communication/approval primitives; **W0 convergence** for final integration/deploy. **Decisions A + B → 🔒 DECIDED (owner, 2026-07-20): A1 mirror + B1 web console (scoped unfreeze).** Remaining **owner/deploy-gated:** the `PLATFORM_ORG` + support-principal seed and the live-cert + deploy authorization.
+- **Risks:** (a) a cross-tenant principal that breaks the org wall = Part 7B auto-fail → mitigate with the snapshot/mirror model + maker-checker on prod actions; (b) leaking raw PII into evidence/prompts → PII-minimized snapshot by construction; (c) autonomous AI applying a fix → forbidden; humans approve.
+- **Verification:** deno handler tests (create/evidence/analyze/RLS deny-path/tenant-isolation), Flutter widget + golden tests (report UI, my-incidents, conversation), a live-cert script (`scripts/qa/live_cert_asip.py`) authored and ready.
+- **Certification:** `/eos support` FEATURE+SECURITY PASS (zero P0, no Part 7B auto-fail, tenant-isolation + RBAC deny-paths + audit verified); **PRODUCTION CERTIFIED** on a live N/N VPS run (owner-gated).
+- **Production-readiness:** on the pilot, a school user reports an issue with a screenshot, the evidence snapshot + deterministic AI package assemble automatically, and a support principal sees the full investigation package — with tenant isolation intact and every mutation audited.
+
+---
+
 ## 6. DEPENDENCY & SEQUENCING SUMMARY
 
 ```
@@ -472,6 +514,11 @@ Hard gates: **W0 and W1 precede everything.** Feature freeze precedes W11. W11�
 ## APPENDIX C — CHANGE-CONTROL LAW
 
 No row in this roadmap or its recovered registers may be deleted, merged, re-scoped or weakened without a recorded justification here (date + reason + owner sign-off where a frozen decision or scope is affected). Deprecations must state what replaced them and why. The current code remains the authority for every status.
+
+### Change records
+
+- **2026-07-20 — ASIP → 🟩 PRODUCTION CERTIFIED (owner-authorized deploy).** Owner approval executed: branch pushed; additive deploy onto the deployed pilot head; 6 migrations applied+ledgered on `akshara_db`; `PLATFORM_ORG`+support principals seeded; live cert 18/18 (test) + 18/18 (production smoke) — 2 real bugs caught live and fixed. ASIP-1…7 → PRODUCTION CERTIFIED. Cert: `docs/SUPPORT_INTELLIGENCE_PLATFORM_CERTIFICATION.md`. Owner tail: real phone numbers on the 4 seeded support principals.
+- **2026-07-20 — ADDED §5.6 PROGRAM ASIP (AI Support Intelligence Platform).** Reason: net-new platform capability (customer schools report Akshara product issues to the Akshara Support Team) confirmed genuinely missing after reuse recon (only a read-only `control_center` mock existed). No existing row deleted/re-scoped/weakened — purely additive as an isolated parallel lane that never gates the ERP. Phase 1 (ASIP-1/2/3, within-tenant) is decision-independent and under build; Phase 2 (ASIP-4/5/6/7/8, cross-tenant) is **owner-gated** on Decision A (cross-tenant access model) + Decision B (support workspace surface — the frozen web viewer scope). Design authority: `docs/support-intelligence/ASIP_DESIGN.md`. Owner sign-off pending on Decisions A/B and on live-cert/deploy authorization.
 
 ---
 
