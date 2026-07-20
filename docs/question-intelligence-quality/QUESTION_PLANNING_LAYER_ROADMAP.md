@@ -451,6 +451,14 @@ certify (EOS) → commit → doc.
 - This is a bounded proof-of-loop; scaling generation (volume, per-exam coverage, the qualitative owned-source
   lane) is the ongoing work beyond this roadmap.
 
+### Post-QPL — controlled production batches (owner: quality > quantity) — ✅ 22 certified
+- 3 parallel controlled batches (generator + judge agents, sympy certifier): **JEE Main Math 7, JEE Main
+  Physics 8, NEET Chemistry 7 = 22 CERTIFIED of 24 generated (92% yield)**; 1 rejected, 1 quarantined
+  (dimensional). The base-SI-unit generator guidance eliminated the physics dimensional-gate quarantines
+  (Physics 8/8 survived). Persistent local bank: `curriculum/knowledge/kie/qpl_question_bank.db` (gitignored).
+- The model PROPOSES; **sympy CERTIFIES** — every certified item's answer independently re-derived; wrong keys
+  and ambiguous items are refused, never promoted.
+
 ### QDI design-pattern mining (Owner Decision 5 approved) — governed pipeline PROVEN + data blocker surfaced
 - **`kie/qie/knowledge/run_qdi.py`** — governed mining/certification driver into a SEPARATE `qdi.db` (the frozen
   index is NEVER written). AI proposes (analyst) → **MANDATORY deterministic floor** (anti-copying 5-gram +
