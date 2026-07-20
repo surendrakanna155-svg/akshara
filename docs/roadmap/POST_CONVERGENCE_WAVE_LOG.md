@@ -65,3 +65,28 @@ After the 15-decision owner pack, executed the unblocked work via multi-agent pa
 
 **BATCH-2 (in flight):** transport hybrid-fee + own-transport (#2/#3, mig 027) · payment provider-abstraction (#7, 028) · device/asset lifecycle (#12, 029) · statutory payroll PF/ESI/PT/TDS (#9, 030) · EIP-6 learning-evidence spine (031, W5 prereq).
 **Held for careful/sequential handling:** PLAT-0 multi-school identity (#14, security-critical), W5 Smart OMR/Assessment (#8/#15, after EIP-6), W8 web write layer, W7 AI hardening, expense-ledger source wiring.
+
+---
+
+## BATCH-3 + OWNER-PACK COMPLETE (2026-07-20, `main` @ `5f309f79`)
+
+**BATCH-3 (3/3 merged):**
+| Decision | Module (migration) | Result |
+|---|---|---|
+| #14 PLAT-0 multi-school identity | `_shared/school_membership.ts` + auth (032) | Silent `.limit(1)` → membership-gated `/auth/context/switch` (non-member 403, ≥2-no-choice 409); **NO RLS broadened** (ADD-only migration); +5 negative cross-school isolation probes. **33/0** — security-reviewed. |
+| #8 Smart OMR + #15 Assessment | `_shared/education/` (033) | Pure `scoreOmrSheet` (blank≠wrong, multi-mark ambiguous, guards→422); emits into the **same EIP-6 spine** (`source:'omr'`); item-analysis difficulty/discrimination null-when-empty. **Frozen marks-grid untouched** (D1 additive). **187/0** |
+| #4 Expense-ledger wiring (make live) | transport/hr/inventory/management | All 4 sources post to the canonical ledger, **SAVEPOINT-fenced** (a ledger error rolls back only the projection, never the source money-move), idempotent, no double-count; management `expenseBreakdown` now real. **378/0** |
+
+**Fixed on integration:** the isolation-probe count-lock 238→243 (PLAT-0's 5 new probes — a legitimate tripwire update, documented history).
+
+**Integrated regression:** backend `deno test _shared/` **3977 passed / 0 failed / 3 ignored** · full typecheck **clean** · `flutter analyze` **No issues**. Pushed.
+
+### ✅ ALL 15 OWNER DECISIONS IMPLEMENTED + TESTED + MERGED
+#1 SaaS limits · #2/#3 transport hybrid-fee/own-transport · #4 expense ledger (live) · #5 transport history · #6 staff-duty models · #7 payment abstraction · #8 Smart OMR · #9 statutory payroll · #10 leave accrual · #11 library accession · #12 device management · #13 secrets vault · #14 PLAT-0 multi-school identity · #15 Assessment Intelligence (EIP-6 spine + item-analysis). Plus the W0 AI-convergence typecheck fix.
+
+**Build stats:** ~17 new backend modules/extensions across 3 parallel batches (16 build agents, 1 stall salvaged) · 14 new migrations (`…020`–`…033`) · every module tested (pure-function cores + fake-DB integration), append-only + idempotent + fail-safe where money/security is involved · zero tests weakened · zero fabrication.
+
+### 🚦 PRODUCTION-DEPLOY GATE (owner)
+All 14 new migrations + modules ship **deploy-dark / behind flags** and are **NOT applied to any live DB**. Going live needs an owner deploy decision (apply migrations `…020`–`…033` to the pilot; activate the relevant enforcement/dark flags) — this is the owner-gated live-provisioning step (W1 ledger §5 #10). Nothing is live/certified until then.
+
+**Remaining roadmap (large, non-owner-gated build):** W7 AI consolidation · **W8 web write layer** (the entire functional web ERP — biggest remaining) · W9 enterprise/multi-school rollup · W10 engineering hardening · W11 red-team · W12 pilot · W13 GA. Plus tracked per-module follow-ups (EIP-6/OMR producer wiring, TDS projected-annual, transport source-adapter call-sites, etc.).
