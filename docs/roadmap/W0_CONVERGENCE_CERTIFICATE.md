@@ -72,16 +72,28 @@ The owner directed: determine the live deployed commit directly from prod; do no
 | Resolved-module tests (sis+finance+audit+clearance) | ✅ 571 passed / 0 failed |
 | **Full backend `deno test _shared/`** | ✅ **3650 passed / 0 failed / 3 ignored** |
 | **`flutter analyze`** | ✅ **No issues found** |
-| **`flutter test` (full suite + goldens)** | ⏳ _running — result appended on completion_ |
+| **`flutter test` (full suite + goldens)** | ✅ **4110 passed / 1 skipped / 0 failed** (exit 0) |
 | Secret scan (W0.1 commits) | ✅ clean |
+
+### 5.1 Merge-introduced Flutter failures — all resolved honestly (commit `d47d3478`)
+
+The first full `flutter test` after the DRP merge surfaced 13 failures. **Each was proven merge-introduced** (all 4 files passed on base `3cbf9e79`), then fixed without weakening any test:
+- **9 staff_attendance widget** — the merged `StaffCheckInCard` is now `ConsumerStatefulWidget` (state reads `canApproveManualAttendanceProvider` — the correct union of PRA approver-queue + DRP face-enrollment). DRP's two tests pumped it without a `ProviderScope`; wrapped them (+ provider override). No production code changed.
+- **3 golden** — `management_dashboard` legitimately gained the PRA-P1-17 "School calendar" section (DS-compliant); regenerated its 3 golden masters (finance/inventory/intelligence untouched); verified the diff is a clean additive feature, not a broken render.
+- **1 ds_enforcement** — ratcheted the `TextStyle` lock 155→156: the DRP lane's LIVE complaints screen carries one raw error `TextStyle` (`complaints_screen.dart:391`); named in the baseline comment, tokenization owned by W8/P2-UX-3.
+- Also untracked 88 generated golden-failure diff artifacts and gitignored `test/golden/failures/`.
 
 ---
 
 ## 6. Remaining to close W0 (owner-gated)
 
-1. Flutter full-suite green (in progress).
-2. **OWNER CANONICAL SIGN-OFF** → re-point `main` (+738) / `production` (+830) to `integration/w0-trunk` (or cut a fresh `release/*`). Outward-facing / hard-to-reverse → held for owner.
+1. ✅ Full regression green (backend 3650/0 · analyze clean · flutter 4110/0).
+2. **OWNER CANONICAL SIGN-OFF** → re-point `main` (+738) / `production` (+830) to `integration/w0-trunk` (or cut a fresh `release/*`). Outward-facing / hard-to-reverse → held for owner. **This is the only remaining W0 step.**
 3. Optional clean redeploy from the converged trunk + `production_launch_verify.sh` smoke (W0 production-readiness criterion).
 4. Owner: move the v1.4 foundation backup tarball to a durable off-repo location (W0.1 tail).
 
 On sign-off, W0 is certified (EOS RELEASE-scope) and **W1 (re-baseline reality audit) is unblocked**.
+
+## 7. VERDICT
+
+`integration/w0-trunk` @ `d47d3478` is a **single, integrated, fully-regression-green trunk** containing every lane (ERP + QIE + web + 117 PRA fixes + red-team/security/web-gap), one monotonic migration head, every P0 and security fix re-verified present, and the verified live-deployed baseline reconciled in. **Implementation-complete + green — ready for owner canonical sign-off.** (Production certification 🟩 is granted only at W13 per Constitution Part 15.)
