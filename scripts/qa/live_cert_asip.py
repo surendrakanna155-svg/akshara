@@ -144,6 +144,25 @@ try:
                   f"where incident_id='{incident_id}' and payload::text ~ '[0-9]{{7,}}'")
         rec("evidence:pii-minimized", "PASS" if leak == "0" else "FAIL", f"long-digit hits={leak}")
 
+    # 2b. Phase 2 MIRROR-WRITE (Decision A1) — the SECURITY DEFINER bridge copied
+    #     a PII-minimized snapshot into the platform-support domain. This works as
+    #     soon as the migrations are deployed (no PLATFORM_ORG seed needed for the
+    #     WRITE; only the support-side READ needs the seed).
+    if incident_id:
+        mirrored = db(f"select count(*) from support_platform_incident where id='{incident_id}'")
+        rec("mirror:incident-written", "PASS" if mirrored == "1" else "FAIL",
+            f"mirror rows={mirrored} (expect 1)")
+        m_evid = db("select count(*) from support_platform_evidence "
+                    f"where incident_id='{incident_id}'")
+        rec("mirror:evidence-written", "PASS" if m_evid == "5" else "FAIL",
+            f"mirror evidence kinds={m_evid} (expect 5)")
+        # The mirror stores the source org/school for write-back — and only ever
+        # the caller's own org (the bridge takes it from the session GUC).
+        src = db("select source_org_id from support_platform_incident "
+                 f"where id='{incident_id}'")
+        rec("mirror:source-org-from-session", "PASS" if src == ORG else "FAIL",
+            f"source_org_id={src} (expect the reporter's org, not a forged one)")
+
     # 3. deterministic AI Incident Package (governed; works even with no AI key)
     if incident_id:
         s, b = http("POST", f"/support/incidents/{incident_id}/analyze", token=support)
@@ -178,9 +197,13 @@ try:
     rec("auth:unauth-denied", "PASS" if s == 401 else "FAIL", f"HTTP {s} (expect 401)")
 
 finally:
-    # 8. non-destructive cleanup — delete the marked incident(s); children cascade.
-    deleted = db(f"delete from support_incident where title like '{MARKER}%' returning 1")
-    rec("cleanup:non-destructive", "PASS", f"rows removed (cascade)")
+    # 8. non-destructive cleanup — delete the marked incident(s) + their mirror
+    #    rows (the mirror is not FK-cascaded from support_incident). Children of
+    #    each cascade. prod data is untouched.
+    if incident_id:
+        db(f"delete from support_platform_incident where id='{incident_id}'")
+    db(f"delete from support_incident where title like '{MARKER}%'")
+    rec("cleanup:non-destructive", "PASS", "school + mirror rows removed (cascade)")
 
 n_pass = sum(1 for _, l, _ in results if l == "PASS")
 n_total = len(results)
