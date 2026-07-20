@@ -21,9 +21,18 @@ typedef _SurfaceGate = ({List<String> prefixes, Provider<bool> flag});
 
 final List<_SurfaceGate> _backendLessSurfaces = <_SurfaceGate>[
   (prefixes: const ['/management/workflow-automation'], flag: workflowApiEnabledProvider),
+  // PRA-P0-14: /sis/promotion is the REAL year-transition surface — keep it on
+  // the academic-operations flag so enabling that flag surfaces the now-fixed
+  // promotion wizard. /sis/reshuffle + /sis/section-balance have NO backend
+  // (deferred), so they are decoupled onto an always-false flag and never
+  // surface in a live build.
   (
-    prefixes: const ['/sis/promotion', '/sis/reshuffle', '/sis/section-balance'],
+    prefixes: const ['/sis/promotion'],
     flag: academicOperationsApiEnabledProvider,
+  ),
+  (
+    prefixes: const ['/sis/reshuffle', '/sis/section-balance'],
+    flag: advancedAcademicOperationsEnabledProvider,
   ),
   (prefixes: const ['/sis/continuity'], flag: continuityApiEnabledProvider),
   (prefixes: const ['/control-center/intelligence'], flag: platformIntelligenceApiEnabledProvider),
@@ -37,6 +46,10 @@ final List<_SurfaceGate> _backendLessSurfaces = <_SurfaceGate>[
     prefixes: const ['/white-label', '/control-center/white-label'],
     flag: whiteLabelPlatformApiEnabledProvider,
   ),
+  // PRA-N-7 / N-8 (S0/T2-D): backend-less mock surfaces — hidden in live builds.
+  (prefixes: const ['/branches'], flag: branchApiEnabledProvider),
+  (prefixes: const ['/franchise'], flag: franchiseApiEnabledProvider),
+  (prefixes: const ['/resource-optimization'], flag: resourceOptimizationApiEnabledProvider),
 ];
 
 /// True when [location] belongs to a backend-less surface that must be hidden in

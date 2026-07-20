@@ -23,7 +23,7 @@ enum LibraryScreen {
       };
 }
 
-enum LibraryBookStatus { available, issued, reserved, damaged }
+enum LibraryBookStatus { available, issued, reserved, damaged, lost }
 
 enum LibraryMemberType { student, staff, teacher }
 
@@ -35,7 +35,7 @@ enum LibraryFineStatus { pending, paid, waived }
 
 enum LibraryResourceType { ebook, pdf, link, video }
 
-enum LibraryReturnCondition { good, fair, damaged }
+enum LibraryReturnCondition { good, fair, damaged, lost }
 
 @immutable
 class LibraryKpi {

@@ -212,7 +212,7 @@ export async function markIntentCaptured(
          collection_id = COALESCE($4, collection_id),
          receipt_id = COALESCE($5, receipt_id),
          updated_at = timezone('utc', now())
-     WHERE id = $1
+     WHERE id = $1 AND status <> 'captured'
      RETURNING *`,
     [
       intentId,
@@ -224,6 +224,18 @@ export async function markIntentCaptured(
   );
   const row = rows[0];
   if (!row) {
+    // PRA-M-2 (S1): the guarded write matched no row — distinguish an already-
+    // captured intent (a duplicate capture attempt) from a genuinely missing one,
+    // so a double-capture surfaces as a clear state error rather than "not found".
+    const existing = await db.queryObject<{ status: string }>(
+      `SELECT status FROM payment_intents WHERE id = $1`,
+      [intentId],
+    );
+    if (existing[0]?.status === "captured") {
+      throw new PaymentIntentStateError(
+        `Payment intent already captured: ${intentId}`,
+      );
+    }
     throw new PaymentIntentNotFoundError(intentId);
   }
   await db.queryObject(

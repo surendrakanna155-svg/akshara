@@ -130,8 +130,84 @@ export async function handleDrivers(req: Request, config: AppConfig): Promise<Re
   return await handleList(req, config, "driver", "Failed to load transport drivers");
 }
 
+/**
+ * PRA-P0-20 — derive a per-allocation `demandRaised` flag by matching raised
+ * transport `demand` entities to each allocation. A demand matches when it
+ * carries the allocation's id, OR (the dedupe-key shape) the same sisStudentId +
+ * routeId. Pure — exported for tests.
+ */
+export function annotateAllocationsWithDemand(
+  allocations: Array<Record<string, unknown>>,
+  demands: Array<Record<string, unknown>>,
+): Array<Record<string, unknown>> {
+  const byAllocationId = new Set<string>();
+  const byStudentRoute = new Set<string>();
+  for (const d of demands) {
+    const allocationId = String(d.allocationId ?? "");
+    if (allocationId.length > 0) byAllocationId.add(allocationId);
+    const sisStudentId = String(d.sisStudentId ?? "");
+    const routeId = String(d.routeId ?? "");
+    if (sisStudentId.length > 0 && routeId.length > 0) {
+      byStudentRoute.add(`${sisStudentId}::${routeId}`);
+    }
+  }
+  return allocations.map((a) => {
+    const allocationId = String(a.id ?? "");
+    const sisStudentId = String(a.sisStudentId ?? "");
+    const routeId = String(a.routeId ?? "");
+    const demandRaised = (allocationId.length > 0 && byAllocationId.has(allocationId)) ||
+      (sisStudentId.length > 0 && routeId.length > 0 &&
+        byStudentRoute.has(`${sisStudentId}::${routeId}`));
+    return { ...a, demandRaised };
+  });
+}
+
+/**
+ * GET /transport/allocations — list student allocations, each annotated with a
+ * derived `demandRaised` (PRA-P0-20) so the client can surface per-row billed
+ * status and offer to raise a demand for the unbilled. Same viewTransport gate
+ * and pagination as the generic entity list.
+ */
 export async function handleAllocations(req: Request, config: AppConfig): Promise<Response> {
-  return await handleList(req, config, "allocation", "Failed to load transport allocations");
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requireTransportRead(auth.claims);
+  if (denied) return denied;
+
+  const url = new URL(req.url);
+  const pagination = parsePagination(url);
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const result = await runTenant(config, auth.claims, async (db) => {
+      const page = await listEntities(db, orgId, schoolId, "allocation", pagination);
+      const demandRows = await db.queryObject<{ payload: Record<string, unknown> }>(
+        `SELECT payload FROM transport_entities
+         WHERE organization_id = $1 AND school_id = $2 AND entity_type = 'demand'`,
+        [orgId, schoolId],
+      );
+      const demands = demandRows.map((r) => r.payload);
+      return { ...page, items: annotateAllocationsWithDemand(page.items, demands) };
+    });
+    return jsonResponse(
+      envelope(
+        listEnvelope(result.items, {
+          page: result.page,
+          pageSize: result.pageSize,
+          total: result.total,
+          hasMore: result.hasMore,
+        }),
+      ),
+    );
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    console.error("handleAllocations error:", error);
+    return errorEnvelope("INTERNAL_ERROR", "Failed to load transport allocations", 500);
+  }
 }
 
 export async function handleAttendance(req: Request, config: AppConfig): Promise<Response> {

@@ -119,6 +119,24 @@ void main() {
           );
         }
         if (options.method == 'POST' &&
+            options.path ==
+                SisApiPaths.studentDocumentsPresign('SIS-STU-10421')) {
+          // PRA-P1-19 — presign returns a signed URL + the tenant-scoped path.
+          return _fixtures.envelope({
+            'signedUrl': 'https://storage.local/upload?token=abc',
+            'token': 'abc',
+            'storagePath': 'org/school/SIS-STU-10421/uuid_tc.pdf',
+          });
+        }
+        if (options.method == 'GET' &&
+            options.path ==
+                SisApiPaths.studentDocumentDownload(
+                    'SIS-STU-10421', 'SIS-DOC-1201')) {
+          return _fixtures.envelope({
+            'downloadUrl': 'https://storage.local/download?token=xyz',
+          });
+        }
+        if (options.method == 'POST' &&
             options.path == SisApiPaths.studentDocuments('SIS-STU-10421')) {
           return _fixtures.envelope({
             'id': 'SIS-DOC-1201',
@@ -245,6 +263,33 @@ void main() {
       expect(document.id, 'SIS-DOC-1201');
       expect(document.type, 'Transfer Certificate');
       expect(document.status, 'Pending');
+    });
+
+    test('PRA-P1-19 presignStudentDocumentUpload maps signed URL + storage path',
+        () async {
+      final remote = SisRemoteDataSource(createTestDio());
+
+      final presign = await remote.presignStudentDocumentUpload(
+        query: kQuery,
+        studentId: 'SIS-STU-10421',
+        fileName: 'tc.pdf',
+      );
+
+      expect(presign.signedUrl, 'https://storage.local/upload?token=abc');
+      expect(presign.storagePath, 'org/school/SIS-STU-10421/uuid_tc.pdf');
+    });
+
+    test('PRA-P1-19 fetchStudentDocumentDownloadUrl maps download URL',
+        () async {
+      final remote = SisRemoteDataSource(createTestDio());
+
+      final url = await remote.fetchStudentDocumentDownloadUrl(
+        query: kQuery,
+        studentId: 'SIS-STU-10421',
+        documentId: 'SIS-DOC-1201',
+      );
+
+      expect(url, 'https://storage.local/download?token=xyz');
     });
   });
 }

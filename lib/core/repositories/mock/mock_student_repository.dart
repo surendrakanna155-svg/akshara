@@ -188,6 +188,19 @@ class MockStudentRepository implements StudentRepository {
     _store.submittedHomework[request.homeworkId] = submitted;
     return submitted;
   }
+
+  @override
+  Future<StudentHomeworkItem> submitHomeworkFile({
+    required RepositoryQuery query,
+    required StudentHomeworkSubmitRequest request,
+    required String fileName,
+    required List<int> bytes,
+    required String contentType,
+  }) async {
+    // PRA-P1-30: the mock has no real Storage; the file bytes are exercised only
+    // on the API path. Persist the submission metadata as usual.
+    return submitHomework(query: query, request: request);
+  }
 }
 
 

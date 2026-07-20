@@ -119,7 +119,16 @@ async function resolveSchoolContext(
 
   if (schoolId) query = query.eq("school_id", schoolId);
 
-  const { data, error } = await query.limit(1).maybeSingle();
+  // PRA-P1-04 (S2): a user with memberships in more than one school must resolve
+  // to a STABLE school across logins — `.limit(1)` with no ORDER BY let Postgres
+  // pick any row, so the same staff-parent could land in a different school (and
+  // permission set) request to request. Order deterministically (oldest
+  // membership first, school_id as the tiebreak).
+  const { data, error } = await query
+    .order("created_at", { ascending: true })
+    .order("school_id", { ascending: true })
+    .limit(1)
+    .maybeSingle();
   if (error || !data) return null;
 
   const membership = data as unknown as {
@@ -165,7 +174,12 @@ async function resolveOrganizationContext(
 
   if (organizationId) query = query.eq("organization_id", organizationId);
 
-  const { data, error } = await query.limit(1).maybeSingle();
+  // PRA-P1-04 (S2): deterministic pick when a user has multiple org memberships.
+  const { data, error } = await query
+    .order("created_at", { ascending: true })
+    .order("organization_id", { ascending: true })
+    .limit(1)
+    .maybeSingle();
   if (error || !data) return null;
 
   const membership = data as {
@@ -260,7 +274,11 @@ async function resolveParentContext(
   if (schoolId) query = query.eq("school_id", schoolId);
 
   // RT-34: bound the guardian-link fan-out (no family has 50+ active links).
-  const { data, error } = await query.limit(PARENT_FANOUT_LIMIT);
+  // PRA-P1-04 (S2): order by student_id so the resolved child list — and the
+  // default active child (childIds[0]) — is stable across logins.
+  const { data, error } = await query
+    .order("student_id", { ascending: true })
+    .limit(PARENT_FANOUT_LIMIT);
   if (error || !data?.length) return null;
 
   const links = data as Array<{
@@ -270,7 +288,9 @@ async function resolveParentContext(
     students?: { id: string; display_name: string; status: string }[] | null;
   }>;
 
-  const schoolIds = [...new Set(links.map((l) => l.school_id))];
+  // PRA-P1-04 (S2): sort so a guardian linked across multiple schools resolves
+  // to a stable default school (was Set-iteration order = non-deterministic).
+  const schoolIds = [...new Set(links.map((l) => l.school_id))].sort();
   const activeSchoolId = schoolId ?? schoolIds[0];
   const schoolLinks = links.filter((l) => l.school_id === activeSchoolId);
   if (schoolLinks.length === 0) return null;
@@ -387,8 +407,19 @@ export async function resolveAuthSessionContextFromSession(
   const ctx = await resolveAuthSessionContext(client, userId, request);
   if (!ctx) return null;
 
-  if (session.scope === "parent" && session.context_child_ids?.length) {
-    return { ...ctx, childIds: session.context_child_ids };
+  // PRA-P1-03 (S2): on refresh/context rebuild, do NOT blindly restore the child
+  // list captured in the session at login — a guardian link revoked since then
+  // would silently persist, keeping the parent's access to a child they are no
+  // longer linked to. Start from the FRESHLY resolved active links (ctx.childIds,
+  // derived from live `student_guardians` rows with status='active') and keep
+  // only those the session was actually scoped to. This drops revoked children
+  // and never widens the session's scope.
+  if (session.scope === "parent") {
+    const sessionChildIds = session.context_child_ids ?? [];
+    const childIds = sessionChildIds.length
+      ? ctx.childIds.filter((id) => sessionChildIds.includes(id))
+      : ctx.childIds;
+    return { ...ctx, childIds };
   }
   if (session.scope === "student" && session.context_student_id) {
     return { ...ctx, studentId: session.context_student_id };

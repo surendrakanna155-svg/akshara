@@ -100,6 +100,50 @@ class ApiSisRepository implements SisRepository {
   }
 
   @override
+  Future<SisDocumentSummary> uploadStudentDocumentFile({
+    required RepositoryQuery query,
+    required String studentId,
+    required UploadStudentDocumentRequest request,
+    required List<int> bytes,
+    required String contentType,
+  }) async {
+    // PRA-P1-19: presign → PUT bytes → confirm with the real storage_path.
+    final presign = await _remote.presignStudentDocumentUpload(
+      query: query,
+      studentId: studentId,
+      fileName: request.fileName,
+    );
+    await _remote.putSignedUpload(
+      signedUrl: presign.signedUrl,
+      bytes: bytes,
+      contentType: contentType,
+    );
+    return _remote.uploadStudentDocument(
+      query: query,
+      studentId: studentId,
+      request: UploadStudentDocumentRequest(
+        type: request.type,
+        fileName: request.fileName,
+        status: request.status,
+        storagePath: presign.storagePath,
+      ),
+    );
+  }
+
+  @override
+  Future<String> getStudentDocumentDownloadUrl({
+    required RepositoryQuery query,
+    required String studentId,
+    required String documentId,
+  }) async {
+    return _remote.fetchStudentDocumentDownloadUrl(
+      query: query,
+      studentId: studentId,
+      documentId: documentId,
+    );
+  }
+
+  @override
   Future<SisDocumentSummary> verifyStudentDocument({
     required RepositoryQuery query,
     required String studentId,

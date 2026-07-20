@@ -69,6 +69,23 @@ function toApiPaymentMethod(method: string | null): string {
   return method ?? "upi";
 }
 
+/// PRA-P0-02 (S1): resolve the invoice backing a fee installment so a captured
+/// payment can be posted to the school's books as a real collection. Returns null
+/// when the installment (or its invoice) does not exist — the caller fails closed.
+async function resolveInstallmentInvoiceId(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  installmentId: string,
+): Promise<string | null> {
+  const rows = await db.queryObject<{ invoice_id: string }>(
+    `SELECT invoice_id FROM finance_invoice_installments
+     WHERE id = $1 AND organization_id = $2 AND school_id = $3`,
+    [installmentId, organizationId, schoolId],
+  );
+  return rows[0]?.invoice_id ?? null;
+}
+
 export async function initiatePayment(
   db: TenantQueryClient,
   claims: AccessTokenClaims,
@@ -102,6 +119,24 @@ export async function initiatePayment(
     }
   }
 
+  // PRA-P0-02 (S1): resolve the installment's invoice and FAIL CLOSED when it
+  // cannot be found. Previously this hard-coded `invoiceId: null`, so the capture
+  // path's `if (intent.invoice_id)` gate was always false — Razorpay took the
+  // money, NO finance_collections/finance_receipts row was written, and the parent
+  // was shown a fabricated receipt number. A payment that cannot be tied to an
+  // invoice must not proceed rather than silently lose money.
+  const resolvedInvoiceId = await resolveInstallmentInvoiceId(
+    db,
+    orgId,
+    schoolId,
+    input.installmentId,
+  );
+  if (!resolvedInvoiceId) {
+    throw new PaymentIntentStateError(
+      `No invoice found for installment ${input.installmentId} — cannot initiate payment`,
+    );
+  }
+
   const seeded = await findRequestByInstallment(db, orgId, claims.sub, input.installmentId);
   const request = seeded ?? await upsertPaymentRequest(db, {
     organizationId: orgId,
@@ -110,7 +145,7 @@ export async function initiatePayment(
     payerUserId: claims.sub,
     sourceType: "fee_installment",
     sourceId: input.installmentId,
-    invoiceId: null,
+    invoiceId: resolvedInvoiceId,
     amount: input.amount,
     idempotencyKey: input.idempotencyKey,
   });
@@ -233,23 +268,46 @@ export async function confirmPayment(
     }
   }
 
-  let collectionId: string | null = null;
-  let receiptId: string | null = null;
-  let receiptNumber = `APS-${new Date().getFullYear()}-${intent.id.slice(0, 8).toUpperCase()}`;
-
-  if (intent.invoice_id) {
-    const collection = await createCollection(db, orgId, schoolId, {
-      invoiceId: intent.invoice_id,
-      amountCollected: intent.amount,
-      paymentMethod: intent.payment_method ?? "upi",
-      referenceNumber: input.transactionRef,
-      notes: "Universal Payment Engine capture",
-      collectedBy: claims.sub,
-    });
-    collectionId = collection.collection.id;
-    receiptId = collection.receipt.id;
-    receiptNumber = collection.receipt.receipt_number;
+  // PRA-M-2 (S1): serialize capture. Lock the intent row and re-read its status
+  // BEFORE creating a collection. Without this, a duplicate confirm or a Razorpay
+  // webhook racing the confirm would each pass the status check and each
+  // createCollection — double-posting the student's ledger (a race that only
+  // becomes live now that P0-02 makes the capture actually record a collection).
+  // The lock is held to commit, so the concurrent caller blocks here, then re-reads
+  // 'captured' and is rejected rather than posting a second collection.
+  const captureLock = await db.queryObject<{ status: string }>(
+    `SELECT status FROM payment_intents
+     WHERE id = $1 AND organization_id = $2
+     FOR UPDATE`,
+    [intent.id, orgId],
+  );
+  if (captureLock[0]?.status === "captured") {
+    throw new PaymentIntentStateError(
+      `Payment already captured for intent ${intent.id}`,
+    );
   }
+
+  // PRA-P0-02 (S1): fail closed. A capture that cannot be tied to an invoice must
+  // NOT fabricate a receipt number and report success while writing nothing to the
+  // books. initiatePayment now resolves + persists the invoice, so this only fires
+  // for a legacy/null-invoice intent — where erroring is the safe outcome, not a
+  // fake "Payment successful — Receipt APS-…".
+  if (!intent.invoice_id) {
+    throw new PaymentIntentStateError(
+      "Payment intent has no invoice — refusing to capture without recording a collection",
+    );
+  }
+  const collection = await createCollection(db, orgId, schoolId, {
+    invoiceId: intent.invoice_id,
+    amountCollected: intent.amount,
+    paymentMethod: intent.payment_method ?? "upi",
+    referenceNumber: input.transactionRef,
+    notes: "Universal Payment Engine capture",
+    collectedBy: claims.sub,
+  });
+  const collectionId: string = collection.collection.id;
+  const receiptId: string = collection.receipt.id;
+  const receiptNumber: string = collection.receipt.receipt_number;
 
   const captured = await markIntentCaptured(db, intent.id, {
     transactionRef: input.transactionRef,

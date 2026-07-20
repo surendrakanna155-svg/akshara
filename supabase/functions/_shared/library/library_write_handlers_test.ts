@@ -7,6 +7,8 @@ import {
   assertReturnAllowed,
   buildMemberPayload,
   buildReturnFinePayload,
+  capForMemberType,
+  computeReturnCharge,
   DEFAULT_LIBRARY_SETTINGS,
   intFromString,
   LIBRARY_OVERDUE_AUDIENCE,
@@ -16,6 +18,7 @@ import {
   planImportRow,
   runOverdueReminder,
 } from "./library_write_handlers.ts";
+import { FINE_PER_DAY } from "./library_aggregations.ts";
 import { computeFines } from "./library_aggregations.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 import type { AccessTokenClaims } from "../jwt.ts";
@@ -176,13 +179,13 @@ Deno.test("intFromString: parses numbers and numeric strings, falls back otherwi
 
 Deno.test("issue: a clean issue with copies available and no fines passes", () => {
   // Should NOT throw.
-  assertIssueAllowed("Arjun", "111", [], [], catalogBook(), settings(), NOW);
+  assertIssueAllowed("Arjun", "student", "111", [], [], catalogBook(), settings(), NOW);
 });
 
 Deno.test("issue: duplicate ACTIVE loan for same member+book is rejected", () => {
   const issues = [loan({ memberName: "Arjun", isbn: "111", status: "active" })];
   const err = assertThrows(
-    () => assertIssueAllowed("Arjun", "111", issues, [], catalogBook(), settings(), NOW),
+    () => assertIssueAllowed("Arjun", "student", "111", issues, [], catalogBook(), settings(), NOW),
     WriteValidationError,
     "already has an active loan",
   );
@@ -191,12 +194,12 @@ Deno.test("issue: duplicate ACTIVE loan for same member+book is rejected", () =>
 
 Deno.test("issue: a RETURNED prior loan for the same book does NOT block a re-issue", () => {
   const issues = [loan({ memberName: "Arjun", isbn: "111", status: "returned" })];
-  assertIssueAllowed("Arjun", "111", issues, [], catalogBook(), settings(), NOW);
+  assertIssueAllowed("Arjun", "student", "111", issues, [], catalogBook(), settings(), NOW);
 });
 
 Deno.test("issue: over-issue against zero stock is rejected", () => {
   assertThrows(
-    () => assertIssueAllowed("Arjun", "111", [], [], catalogBook({ availableCopies: 0 }), settings(), NOW),
+    () => assertIssueAllowed("Arjun", "student", "111", [], [], catalogBook({ availableCopies: 0 }), settings(), NOW),
     WriteValidationError,
     "No copies available to issue",
   );
@@ -204,7 +207,7 @@ Deno.test("issue: over-issue against zero stock is rejected", () => {
 
 Deno.test("issue: an unknown book (no catalog row) skips the stock check", () => {
   // book === undefined => availability not enforced (loan still recorded).
-  assertIssueAllowed("Arjun", "999", [], [], undefined, settings(), NOW);
+  assertIssueAllowed("Arjun", "student", "999", [], [], undefined, settings(), NOW);
 });
 
 Deno.test("issue: loan cap enforced — 3rd concurrent loan rejected at maxBooksPerMember=2", () => {
@@ -213,32 +216,120 @@ Deno.test("issue: loan cap enforced — 3rd concurrent loan rejected at maxBooks
     loan({ memberName: "Arjun", isbn: "222", status: "active" }),
   ];
   assertThrows(
-    () => assertIssueAllowed("Arjun", "333", issues, [], catalogBook({ isbn: "333" }), settings(), NOW),
+    () => assertIssueAllowed("Arjun", "student", "333", issues, [], catalogBook({ isbn: "333" }), settings(), NOW),
     WriteValidationError,
     "Loan limit reached",
   );
 });
 
-Deno.test("issue: a higher maxBooksPerMember setting allows the 3rd loan", () => {
+Deno.test("issue: a higher per-type cap allows the 3rd loan", () => {
   const issues = [
     loan({ memberName: "Arjun", isbn: "111", status: "active" }),
     loan({ memberName: "Arjun", isbn: "222", status: "active" }),
   ];
   assertIssueAllowed(
     "Arjun",
+    "student",
     "333",
     issues,
     [],
     catalogBook({ isbn: "333" }),
-    settings({ maxBooksPerMember: 5 }),
+    settings({ maxBooksByMemberType: { student: 5, teacher: 5, staff: 5 } }),
     NOW,
   );
+});
+
+// ── PRA-P2-12: per-member-type loan caps ─────────────────────────────────────
+
+Deno.test("P2-12: default caps differ by type — student 2, teacher 5, staff 5", () => {
+  assertEquals(capForMemberType(settings(), "student"), 2);
+  assertEquals(capForMemberType(settings(), "teacher"), 5);
+  assertEquals(capForMemberType(settings(), "staff"), 5);
+  // Unknown type falls back to the global maxBooksPerMember.
+  assertEquals(capForMemberType(settings(), "guest"), settings().maxBooksPerMember);
+});
+
+Deno.test("P2-12: a teacher may hold a 3rd loan where a student (same settings) may not", () => {
+  const twoLoans = [
+    loan({ memberName: "Arjun", isbn: "111", status: "active" }),
+    loan({ memberName: "Arjun", isbn: "222", status: "active" }),
+  ];
+  // Student cap is 2 → the 3rd is rejected …
+  assertThrows(
+    () =>
+      assertIssueAllowed("Arjun", "student", "333", twoLoans, [], catalogBook({ isbn: "333" }), settings(), NOW),
+    WriteValidationError,
+    "a student may hold at most 2",
+  );
+  // … but a teacher (cap 5) with the same two loans is allowed the 3rd.
+  assertIssueAllowed("Arjun", "teacher", "333", twoLoans, [], catalogBook({ isbn: "333" }), settings(), NOW);
+});
+
+Deno.test("P2-12: normalizeSettings seeds per-type defaults for a fresh library", () => {
+  const s = normalizeSettings(null);
+  assertEquals(s.maxBooksByMemberType, { student: 2, teacher: 5, staff: 5 });
+});
+
+Deno.test("P2-12: an existing global-only config back-compat applies to every type", () => {
+  // A school that only ever set the single global cap keeps it for all types.
+  const s = normalizeSettings({ maxBooksPerMember: 4 });
+  assertEquals(s.maxBooksByMemberType, { student: 4, teacher: 4, staff: 4 });
+});
+
+Deno.test("P2-12: an explicit per-type block overrides, other types keep the global fallback", () => {
+  const s = normalizeSettings({ maxBooksPerMember: 3, maxBooksByMemberType: { teacher: 8 } });
+  assertEquals(s.maxBooksByMemberType.teacher, 8);
+  assertEquals(s.maxBooksByMemberType.student, 3); // falls back to the stored global
+  assertEquals(s.maxBooksByMemberType.staff, 3);
+});
+
+// ── PRA-P1-42: lost-book replacement charge + no restock ─────────────────────
+
+Deno.test("P1-42: a lost return levies the replacement fee on top of overdue and does NOT restock", () => {
+  const s = settings(); // lostBookReplacementFee default 300
+  const outcome = computeReturnCharge("lost", 5, s); // 5 overdue days too
+  assertEquals(outcome.overdueFine, 5 * FINE_PER_DAY);
+  assertEquals(outcome.replacementFee, 300);
+  assertEquals(outcome.totalCharge, 5 * FINE_PER_DAY + 300);
+  assertEquals(outcome.restocked, false);
+  assertEquals(outcome.fineReason, "lost");
+});
+
+Deno.test("P1-42: a lost return with no overdue days still charges the flat replacement fee", () => {
+  const outcome = computeReturnCharge("lost", 0, settings());
+  assertEquals(outcome.overdueFine, 0);
+  assertEquals(outcome.totalCharge, 300);
+  assertEquals(outcome.restocked, false);
+});
+
+Deno.test("P1-42: a good/damaged return restocks and levies overdue-only (no replacement)", () => {
+  for (const condition of ["good", "fair", "damaged"]) {
+    const outcome = computeReturnCharge(condition, 3, settings());
+    assertEquals(outcome.replacementFee, 0);
+    assertEquals(outcome.totalCharge, 3 * FINE_PER_DAY);
+    assertEquals(outcome.restocked, true);
+    assertEquals(outcome.fineReason, "overdue");
+  }
+});
+
+Deno.test("P1-42: the persisted lost fine carries the total amount and reason 'lost'", () => {
+  const issue = { id: "iss-9", memberName: "Arjun", bookTitle: "Beta", isbn: "111" };
+  const fine = buildReturnFinePayload("f-1", issue, 300, 0, NOW, "lost");
+  assertEquals(fine.amount, 300);
+  assertEquals(fine.reason, "lost");
+  assertEquals(fine.status, "outstanding");
+});
+
+Deno.test("P1-42: normalizeSettings defaults + parses the replacement fee", () => {
+  assertEquals(normalizeSettings(null).lostBookReplacementFee, 300);
+  assertEquals(normalizeSettings({ lostBookReplacementFee: "450" }).lostBookReplacementFee, 450);
+  assertEquals(normalizeSettings({ lost_book_replacement_fee: 500 }).lostBookReplacementFee, 500);
 });
 
 Deno.test("issue: blocked when outstanding un-waived fine exceeds threshold", () => {
   const fines = [{ memberName: "Arjun", amount: 150, status: "outstanding" }];
   assertThrows(
-    () => assertIssueAllowed("Arjun", "111", [], fines, catalogBook(), settings(), NOW),
+    () => assertIssueAllowed("Arjun", "student", "111", [], fines, catalogBook(), settings(), NOW),
     WriteValidationError,
     "exceeds the ₹100 limit",
   );
@@ -246,12 +337,12 @@ Deno.test("issue: blocked when outstanding un-waived fine exceeds threshold", ()
 
 Deno.test("issue: a WAIVED fine does NOT count toward the block threshold", () => {
   const fines = [{ memberName: "Arjun", amount: 150, status: "waived" }];
-  assertIssueAllowed("Arjun", "111", [], fines, catalogBook(), settings(), NOW);
+  assertIssueAllowed("Arjun", "student", "111", [], fines, catalogBook(), settings(), NOW);
 });
 
 Deno.test("issue: fine exactly AT the threshold is allowed (block is strictly-greater)", () => {
   const fines = [{ memberName: "Arjun", amount: 100, status: "outstanding" }];
-  assertIssueAllowed("Arjun", "111", [], fines, catalogBook(), settings(), NOW);
+  assertIssueAllowed("Arjun", "student", "111", [], fines, catalogBook(), settings(), NOW);
 });
 
 // ── P0 double-return guard (assertReturnAllowed) ─────────────────────────────

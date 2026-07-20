@@ -4,6 +4,7 @@ import {
   approvePurchaseOrder,
   type PurchaseOrderRow,
   PurchaseOrderSelfApproveDeniedError,
+  receiveGoods,
 } from "./inventory_finance_repository.ts";
 
 Deno.test("weighted average cost formula", () => {
@@ -214,4 +215,75 @@ Deno.test("PO maker-checker: legacy PO with no requested_by is not blocked (defe
   (fake.po as any).requested_by = null;
   const result = await approvePurchaseOrder(poDb(fake), PO_ORG, PO_SCHOOL, PO_ID, PO_MAKER);
   assertEquals(result.purchaseOrder.status, "approved");
+});
+
+// ─── PRA-P2-10 (S1): GRN over-receipt TOCTOU ────────────────────────────────
+//
+// Two concurrent GRNs on the same PO line both read quantity_received, both pass
+// the over-receipt check, and both increment — receiving past the ordered
+// quantity. The fix locks the PO-line SELECT `FOR UPDATE` so the second GRN sees
+// the first's committed increment and is correctly rejected. Structural (the lock
+// is on the exact read) + behavioral (the over-receipt guard still fires).
+
+const GRN_ORG = "f1000000-0000-4000-8000-000000000001";
+const GRN_SCHOOL = "f2000000-0000-4000-8000-000000000001";
+
+/** Minimal fake of the receiveGoods read path up to the over-receipt guard. */
+class FakeGrnDb {
+  poLine = { sku: "SKU-1", quantity: 10, quantity_received: 8, unit_cost: 100 };
+  poLineSelectSql: string | null = null;
+
+  // deno-lint-ignore no-explicit-any
+  async queryObject<T>(sql: string, args: any[] = []): Promise<T[]> {
+    const q = sql.replace(/\s+/g, " ").trim();
+    if (q.includes("FROM purchase_orders") && q.includes("SELECT id, po_number")) {
+      return [{
+        id: args[0],
+        po_number: "PO-1",
+        vendor_id: "vendor-1",
+        status: "approved",
+        total_amount: 1000,
+        currency: "INR",
+        created_at: "2026-07-08T00:00:00.000Z",
+        requested_by: "u1",
+      }] as unknown as T[];
+    }
+    if (q.startsWith("INSERT INTO goods_receipts")) {
+      return [{ id: "grn-1" }] as unknown as T[];
+    }
+    if (q.startsWith("SELECT sku, quantity, quantity_received, unit_cost FROM purchase_order_lines")) {
+      this.poLineSelectSql = q;
+      return [{ ...this.poLine }] as unknown as T[];
+    }
+    throw new Error(`Unhandled SQL in FakeGrnDb: ${q.slice(0, 80)}`);
+  }
+  // deno-lint-ignore no-explicit-any
+  queryCount(_sql: string, _args: any[] = []): Promise<number> {
+    return Promise.resolve(0);
+  }
+}
+
+Deno.test("PRA-P2-10: over-receipt is rejected and the PO-line read is locked FOR UPDATE", async () => {
+  const fake = new FakeGrnDb();
+  await assertRejects(
+    () =>
+      receiveGoods(fake as unknown as TenantQueryClient, GRN_ORG, GRN_SCHOOL, "po-1", "receiver", [
+        { purchaseOrderLineId: "pol-1", quantityReceived: 5 }, // 8 + 5 = 13 > 10 ordered
+      ]),
+    Error,
+    "Over-receipt",
+  );
+  // The read that gates the over-receipt check took the row lock.
+  assertEquals(fake.poLineSelectSql?.includes("FOR UPDATE"), true);
+});
+
+Deno.test("PRA-P2-10: source locks the PO-line read in receiveGoods FOR UPDATE", async () => {
+  const src = await Deno.readTextFile(
+    new URL("./inventory_finance_repository.ts", import.meta.url),
+  );
+  assertEquals(
+    /SELECT sku, quantity, quantity_received, unit_cost\s+FROM purchase_order_lines\s+WHERE id = \$1 AND purchase_order_id = \$2\s+FOR UPDATE/
+      .test(src),
+    true,
+  );
 });

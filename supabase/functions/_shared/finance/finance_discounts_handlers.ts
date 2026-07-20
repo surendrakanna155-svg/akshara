@@ -11,8 +11,10 @@ import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
 import {
+  applyDiscountRuleToInvoice,
   createDiscountRule,
   discountRuleToApi,
+  DiscountRuleNotApplicableError,
   DiscountRuleNotFoundError,
   type DiscountRuleStatus,
   isDiscountRuleStatus,
@@ -23,6 +25,10 @@ import {
   listScholarships,
   scholarshipToApi,
 } from "./finance_scholarships_repository.ts";
+import {
+  FeeReductionValidationError,
+  feeReductionToApi,
+} from "./finance_fee_reductions_repository.ts";
 
 function requireFinanceWrite(claims: Parameters<typeof requirePermission>[0]): Response | null {
   return requirePermission(claims, "manageFinance") ??
@@ -236,6 +242,77 @@ export async function handleUpdateDiscountRule(
     }
     if (error instanceof DiscountRuleNotFoundError) {
       return errorEnvelope("NOT_FOUND", error.message, 404);
+    }
+    throw error;
+  }
+}
+
+// PRA-P1-10 (S1): POST /finance/discounts/:id/apply — apply an approved/active
+// discount rule to a student's INVOICE. This is the MAKER step: it emits a
+// PENDING fee-reduction (money-neutral) through the certified maker-checker path,
+// with the percent derived from the rule (never the client). A DIFFERENT user
+// then approves it via /finance/fee-reductions/:id/approve to actually reduce the
+// payable (self-approval blocked). Closes the "a discount never reduces a
+// payable" gap without forking the money mechanism.
+export async function handleApplyDiscountRule(
+  req: Request,
+  config: AppConfig,
+  ruleId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requireFinanceWrite(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) {
+    return errorEnvelope("VALIDATION_ERROR", "Request body is required", 422);
+  }
+
+  const invoiceId = optionalStr(body, "invoice_id", "invoiceId");
+  const reason = optionalStr(body, "reason", "reason");
+  if (!invoiceId) {
+    return errorEnvelope("VALIDATION_ERROR", "invoiceId is required", 422);
+  }
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const reduction = await withTenantContext(config, auth.claims, async (db) => {
+      const row = await applyDiscountRuleToInvoice(db, orgId, schoolId, {
+        ruleId,
+        invoiceId,
+        reason,
+        createdBy: auth.claims.sub,
+      });
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        moduleEntityAudit(
+          "finance.feeReduction.proposed",
+          "finance_fee_reduction",
+          row.id,
+          { sourceKind: "discount", sourceId: ruleId, invoiceId, reductionKind: row.reduction_kind },
+        ),
+        req,
+      );
+      return row;
+    });
+    return jsonResponse(envelope(feeReductionToApi(reduction)), { status: 201 });
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse();
+    }
+    if (error instanceof DiscountRuleNotFoundError) {
+      return errorEnvelope("NOT_FOUND", error.message, 404);
+    }
+    if (
+      error instanceof DiscountRuleNotApplicableError ||
+      error instanceof FeeReductionValidationError
+    ) {
+      return errorEnvelope("VALIDATION_ERROR", error.message, 422);
     }
     throw error;
   }

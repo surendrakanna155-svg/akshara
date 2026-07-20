@@ -60,6 +60,17 @@ final academicOperationsApiEnabledProvider = Provider<bool>((ref) {
     defaultValue: false,
   );
 });
+/// PRA-P0-14: `/sis/reshuffle` and `/sis/section-balance` have NO backend
+/// anywhere in `supabase/` (recon-confirmed pure client-side mock) — only the
+/// year-transition/promotion path is real. They are DEFERRED: this provider has
+/// no `--dart-define` and always returns false, so the unbuilt surfaces stay
+/// honestly hidden in every live build (never surfaced-and-broken), while the
+/// now-fixed `/sis/promotion` surface stays behind
+/// [academicOperationsApiEnabledProvider] so enabling that flag reveals it.
+/// Kept decoupled so the two never share a flag again. (Local/mock dev builds
+/// still show them — `surface_backend_gate.dart` only hides in API-mode builds.)
+final advancedAcademicOperationsEnabledProvider = Provider<bool>((ref) => false);
+
 final continuityApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
   return const bool.fromEnvironment(
@@ -332,6 +343,33 @@ final salonApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
   return const bool.fromEnvironment(
     'SALON_API_ENABLED',
+    defaultValue: false,
+  );
+});
+
+// PRA-N-7 / N-8 (S0/T2-D): branch, franchise and resource-optimization surfaces
+// have no live backend — their repositories are unconditional Mock* returns
+// (`repository_providers.dart`). These flags are absent from `live_release.json`
+// (default false), so `surface_backend_gate.dart` hides the surfaces in a live
+// build (they would otherwise show fabricated dashboards) while local/mock dev
+// builds keep them visible.
+final branchApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment('BRANCH_API_ENABLED', defaultValue: false);
+});
+
+final franchiseApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'FRANCHISE_API_ENABLED',
+    defaultValue: false,
+  );
+});
+
+final resourceOptimizationApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'RESOURCE_OPTIMIZATION_API_ENABLED',
     defaultValue: false,
   );
 });

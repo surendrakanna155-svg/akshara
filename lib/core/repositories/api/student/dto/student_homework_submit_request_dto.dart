@@ -11,6 +11,9 @@ class StudentHomeworkSubmitRequestDto {
         'homework_id': request.homeworkId,
         if (request.attachmentLabel != null)
           'attachment_label': request.attachmentLabel,
+        // PRA-P1-30 — the REAL stored submission object path (when uploaded).
+        if (request.attachmentStoragePath != null)
+          'attachment_storage_path': request.attachmentStoragePath,
         'notes': request.notes,
       },
     );

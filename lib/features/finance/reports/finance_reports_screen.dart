@@ -5,7 +5,6 @@ import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../core/reports/finance_audit_register_service.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/operational_action_feedback.dart';
 import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -16,6 +15,28 @@ import '../finance_models.dart';
 import '../widgets/finance_module_scaffold.dart';
 import '../widgets/finance_responsive_grid.dart';
 import 'finance_reports_provider.dart';
+
+// PRA-P1-49 (S4): the finance report export must carry the report's real trend
+// DATA — the exact period series the on-screen chart plots (value vs target, in
+// ₹ lakhs) — not 3 catalog metadata rows. These ride the shared XCT-1 grid
+// primitive (buildGridReportPdf / shareGridCsv), mirroring how HR and Attendance
+// turn a report view-model into headers + string rows and export it.
+const List<String> _financeReportGridHeaders = <String>[
+  'Period',
+  'Amount (₹ L)',
+  'Target (₹ L)',
+];
+
+List<List<String>> _financeReportGridRows(List<FinanceReportTrendPoint> points) {
+  return [
+    for (final point in points)
+      [
+        point.label,
+        point.value.toStringAsFixed(1),
+        point.target.toStringAsFixed(1),
+      ],
+  ];
+}
 
 /// FN-10 — Finance reports catalog and trends.
 class FinanceReportsScreen extends ConsumerWidget {
@@ -115,15 +136,27 @@ class FinanceReportsScreen extends ConsumerWidget {
                 key: QaTestKeys.financeReportExportPdfButton,
                 onPressed: () async {
                   final service = ref.read(aksharaReportExportServiceProvider);
-                  final bytes = await service.buildTabularReportPdf(
+                  // PRA-P1-49 (S4): export the selected report's real trend DATA
+                  // (the same series the chart plots) as a grid, not 3 metadata
+                  // rows. Only claim success when real rows were exported.
+                  final rows = _financeReportGridRows(trendPoints);
+                  if (rows.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'No data to export for ${selectedReport.title}',
+                        ),
+                      ),
+                    );
+                    return;
+                  }
+                  final bytes = await service.buildGridReportPdf(
                     reportTitle: selectedReport.title,
                     moduleLabel: 'Finance · ${selectedReport.type.name}',
                     generatedAtLabel: DateTime.now().toIso8601String(),
-                    rows: [
-                      MapEntry('Report ID', selectedReport.id),
-                      MapEntry('Last generated', selectedReport.lastGenerated),
-                      MapEntry('Description', selectedReport.description),
-                    ],
+                    headers: _financeReportGridHeaders,
+                    rows: rows,
+                    rightAlignFrom: 1,
                   );
                   if (!context.mounted) return;
                   await service.previewPdf(
@@ -134,7 +167,9 @@ class FinanceReportsScreen extends ConsumerWidget {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       key: QaTestKeys.financeReportExportSuccessSnackbar,
-                      content: Text('${selectedReport.title} PDF ready'),
+                      content: Text(
+                        '${selectedReport.title} PDF ready (${rows.length} rows)',
+                      ),
                     ),
                   );
                 },
@@ -145,32 +180,32 @@ class FinanceReportsScreen extends ConsumerWidget {
                 key: QaTestKeys.financeReportExportExcelButton,
                 onPressed: () async {
                   final service = ref.read(aksharaReportExportServiceProvider);
-                  final csv = service.buildTabularReportCsv(
-                    reportTitle: selectedReport.title,
-                    rows: [
-                      MapEntry('Report ID', selectedReport.id),
-                      MapEntry('Last generated', selectedReport.lastGenerated),
-                      MapEntry('Description', selectedReport.description),
-                      MapEntry('Type', selectedReport.type.name),
-                    ],
-                  );
-                  if (!context.mounted) return;
-                  await service.shareTabularCsv(
+                  // PRA-P1-49 (S4): share the report's real trend DATA as a grid
+                  // CSV (header row + one row per period), mirroring HR/Attendance
+                  // — was previously 3 catalog-metadata key/value rows.
+                  final rows = _financeReportGridRows(trendPoints);
+                  if (rows.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'No data to export for ${selectedReport.title}',
+                        ),
+                      ),
+                    );
+                    return;
+                  }
+                  await service.shareGridCsv(
                     filename: '${selectedReport.id}.csv',
-                    reportTitle: selectedReport.title,
-                    rows: [
-                      MapEntry('Report ID', selectedReport.id),
-                      MapEntry('Last generated', selectedReport.lastGenerated),
-                      MapEntry('Description', selectedReport.description),
-                      MapEntry('Type', selectedReport.type.name),
-                    ],
+                    headers: _financeReportGridHeaders,
+                    rows: rows,
                   );
                   if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       key: QaTestKeys.financeReportExportSuccessSnackbar,
                       content: Text(
-                        '${selectedReport.title} Excel CSV ready (${csv.split('\n').length - 1} rows)',
+                        '${selectedReport.title} Excel CSV ready '
+                        '(${rows.length} rows)',
                       ),
                     ),
                   );
@@ -208,14 +243,11 @@ class FinanceReportsScreen extends ConsumerWidget {
                 icon: const Icon(Icons.fact_check_outlined),
                 label: const Text('Audit register'),
               ),
-              OutlinedButton.icon(
-                onPressed: () => showAksharaOperationalPreviewSnackBar(
-                  context,
-                  action: 'Email report',
-                ),
-                icon: const Icon(Icons.email_outlined),
-                label: const Text('Email report'),
-              ),
+              // PRA-P1-50 (S0/T7): the "Email report" button was removed. It only
+              // showed a "recorded in preview mode (no server write yet)" snackbar
+              // — no report was ever scheduled or emailed. It sat next to working
+              // PDF/Excel export buttons, advertising a capability that does not
+              // exist. A real scheduled/emailed-report pipeline is future work.
             ],
           ),
         ),

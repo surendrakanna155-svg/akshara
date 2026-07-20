@@ -10,4 +10,8 @@ abstract final class StudentApiPaths {
   static const String notices = '$base/notices';
   static const String profile = '$base/profile';
   static const String homeworkSubmit = '$base/homework/submit';
+
+  /// PRA-P1-30 — presign a real homework submission attachment upload.
+  static const String homeworkAttachmentPresign =
+      '$base/homework/attachment/presign';
 }

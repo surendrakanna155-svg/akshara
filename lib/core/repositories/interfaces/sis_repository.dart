@@ -40,6 +40,25 @@ abstract class SisRepository {
     required UploadStudentDocumentRequest request,
   });
 
+  /// PRA-P1-19 — uploads a real file to Storage (presign → PUT bytes → confirm)
+  /// so the student document is retrievable, then persists the row with the real
+  /// tenant-prefixed storage_path. Replaces the old metadata-only fabrication.
+  Future<SisDocumentSummary> uploadStudentDocumentFile({
+    required RepositoryQuery query,
+    required String studentId,
+    required UploadStudentDocumentRequest request,
+    required List<int> bytes,
+    required String contentType,
+  });
+
+  /// PRA-P1-19 — short-lived signed URL to open/download a stored student
+  /// document. Empty string when the row has no stored object.
+  Future<String> getStudentDocumentDownloadUrl({
+    required RepositoryQuery query,
+    required String studentId,
+    required String documentId,
+  });
+
   /// SIS-3 — marks a pending student document verified or rejected
   /// (manageSis). Returns the updated document incl. status / verifiedBy.
   Future<SisDocumentSummary> verifyStudentDocument({

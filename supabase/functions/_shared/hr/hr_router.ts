@@ -31,6 +31,7 @@ import {
   handleGeneratePayrollRun,
   handleProcessPayrollRun,
   handleRejectLeaveRequest,
+  handleUpdateSettings,
   handleUpsertSalaryStructure,
   handleSetEmployeeProbation,
   handleSetEmployeeStatus,
@@ -157,6 +158,11 @@ function matchHrRoute(
   }
 
   if (method === "PUT") {
+    // PRA-P1-33 — HR settings are now writable (previously GET-only). Literal
+    // path, registered before the /hr/employees/{id} catch-all.
+    if (path === "/hr/settings") {
+      return { handler: handleUpdateSettings, args: [] };
+    }
     const employeeMatch = path.match(/^\/hr\/employees\/([^/]+)$/);
     if (employeeMatch) {
       return { handler: handleUpdateEmployee, args: [employeeMatch[1]!] };

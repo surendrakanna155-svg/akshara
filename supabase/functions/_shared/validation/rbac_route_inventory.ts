@@ -41,6 +41,9 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "GET", path: "/sis/students/:id/certificates", permission: "viewSis", scope: "school", module: "sis" },
   { method: "POST", path: "/sis/students/:id/certificates", permission: "manageSis", scope: "school", module: "sis" },
   { method: "POST", path: "/sis/students/:id/transfer-certificate", permission: "manageSis", scope: "school", module: "sis" },
+  // PRA-P1-01 / PRA-P1-02 (S2): guardian link management (registrar-level).
+  { method: "POST", path: "/sis/students/:id/guardians", permission: "manageSis", scope: "school", module: "sis" },
+  { method: "DELETE", path: "/sis/students/:id/guardians/:guardianUserId", permission: "manageSis", scope: "school", module: "sis" },
   { method: "GET", path: "/academic/years", permission: "viewSis", scope: "school", module: "academic" },
   { method: "POST", path: "/academic/transitions/preview", permission: "manageSis", scope: "school", module: "academic" },
   { method: "POST", path: "/academic/transitions/:id/execute", permission: "manageSis", scope: "school", module: "academic" },
@@ -140,6 +143,11 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "GET", path: "/staff-attendance/my-history", permission: "markStaffAttendance", scope: "school", module: "staff_attendance" },
   { method: "GET", path: "/student/dashboard", permission: null, scope: "student", module: "student" },
   { method: "POST", path: "/audit/events/batch", permission: null, scope: "school", module: "audit" },
+  // PRA-P1-53 (S2): permission-gated read of the forensic audit trail.
+  { method: "GET", path: "/audit/events", permission: "viewManagement", scope: "school", module: "audit" },
+  // PRA-P1-05 (S2): identity-plane per-user permission-override admin.
+  { method: "POST", path: "/identity/permission-overrides", permission: "manageManagement", scope: "school", module: "identity" },
+  { method: "POST", path: "/identity/permission-overrides/remove", permission: "manageManagement", scope: "school", module: "identity" },
   { method: "GET", path: "/communications/templates", permission: "viewCommunications", scope: "school", module: "communication" },
   { method: "POST", path: "/communications/templates", permission: "sendBroadcast", scope: "school", module: "communication" },
   { method: "PUT", path: "/communications/templates/:id", permission: "sendBroadcast", scope: "school", module: "communication" },

@@ -41,6 +41,7 @@ function mockDb(
   captures: Capture[],
 ): TenantQueryClient {
   return {
+    // deno-lint-ignore require-await
     queryObject: async <T>(sql: string, args: unknown[] = []) => {
       captures.push({ sql, args });
       const hit = routes.find((r) => sql.includes(r.match));
@@ -773,21 +774,28 @@ Deno.test("insertHomeworkAssignment carries the teacher attachment into both pay
     studentName: "Asha Rao",
     attachmentName: "worksheet.pdf",
     attachmentRef: "https://drive.example/xyz",
+    // PRA-P1-30 — the REAL stored worksheet object.
+    attachmentStoragePath: "org/school/teacher-1/uuid_worksheet.pdf",
   });
 
   const teacherInsert = captures.find((c) =>
     c.sql.includes("INSERT INTO teacher_entities")
   );
   assert(teacherInsert!.sql.includes("'attachmentName'"));
+  assert(teacherInsert!.sql.includes("'attachmentStoragePath'"));
   assertEquals(teacherInsert!.args[9], "worksheet.pdf");
   assertEquals(teacherInsert!.args[10], "https://drive.example/xyz");
+  // PRA-P1-30 — storage path threaded as the last payload arg.
+  assertEquals(teacherInsert!.args[11], "org/school/teacher-1/uuid_worksheet.pdf");
 
   const studentInsert = captures.find((c) =>
     c.sql.includes("INSERT INTO student_entities")
   );
   assert(studentInsert!.sql.includes("'attachmentName'"));
+  assert(studentInsert!.sql.includes("'attachmentStoragePath'"));
   assertEquals(studentInsert!.args[8], "worksheet.pdf");
   assertEquals(studentInsert!.args[9], "https://drive.example/xyz");
+  assertEquals(studentInsert!.args[10], "org/school/teacher-1/uuid_worksheet.pdf");
 });
 
 // --- HWK-7: submit persists note + attachment reference ---
@@ -806,14 +814,19 @@ Deno.test("submitHomework persists notes + attachment_label on the submission", 
     homeworkId: "hw-1",
     notes: "Done, revised twice",
     attachmentLabel: "answer.jpg",
+    // PRA-P1-30 — the REAL stored submission object.
+    attachmentStoragePath: "org/school/stu-1/hw-1/uuid_answer.jpg",
   });
 
   const insert = captures.find((c) =>
     c.sql.includes("INSERT INTO homework_submissions")
   );
   assert(insert, "expected the submission insert");
+  assert(insert!.sql.includes("attachment_storage_path"));
   assertEquals(insert!.args[4], "Done, revised twice"); // notes
   assertEquals(insert!.args[5], "answer.jpg"); // attachment_label
+  // PRA-P1-30 — storage path threaded as the last insert arg.
+  assertEquals(insert!.args[6], "org/school/stu-1/hw-1/uuid_answer.jpg");
 });
 
 // --- HWK-3: multi-section fan-out target parsing (pure) ---

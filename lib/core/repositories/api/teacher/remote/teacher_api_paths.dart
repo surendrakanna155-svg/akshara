@@ -7,6 +7,10 @@ abstract final class TeacherApiPaths {
   static const String attendanceStudents = '$base/attendance/students';
   static const String homework = '$base/homework';
   static const String homeworkCreate = '$base/homework';
+
+  /// PRA-P1-30 — presign a real teacher worksheet attachment upload.
+  static const String homeworkAttachmentPresign =
+      '$base/homework/attachment/presign';
   static const String examsUpcoming = '$base/exams/upcoming';
   static const String examsMarksEntry = '$base/exams/marks-entry';
   static const String examsMarks = '$base/exams/marks';

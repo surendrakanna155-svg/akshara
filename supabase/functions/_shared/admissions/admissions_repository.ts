@@ -27,6 +27,27 @@ export class AdmissionsSelfApproveDeniedError extends Error {
   }
 }
 
+/**
+ * PRA-P0-13: thrown when an enrollment submit names an application that has not
+ * cleared the approval workflow (status ≠ 'approved'). Blocks minting a real
+ * active student from a draft/submitted/under_review application — the entrance/
+ * interview/merit control the module exists to enforce.
+ */
+export class EnrollmentNotApprovedError extends Error {
+  constructor(public readonly applicationId: string, public readonly status: string) {
+    super(`Application ${applicationId} is not approved (status: ${status})`);
+    this.name = "EnrollmentNotApprovedError";
+  }
+}
+
+/** PRA-P0-13: thrown when the named application does not exist in this tenant. */
+export class EnrollmentApplicationNotFoundError extends Error {
+  constructor(public readonly applicationId: string) {
+    super(`Admissions application not found: ${applicationId}`);
+    this.name = "EnrollmentApplicationNotFoundError";
+  }
+}
+
 export interface PaginationParams {
   page: number;
   pageSize: number;
@@ -1222,24 +1243,37 @@ export async function submitEnrollment(
   schoolId: string,
   input: EnrollmentSubmitInput,
 ): Promise<AdmissionsEnrollmentRow> {
-  // ── Idempotency guard (layers 1 + 2) ──────────────────────────────────────
+  // ── Idempotency guard (layers 1 + 2) + PRA-P0-13 approval gate ─────────────
   if (input.applicationId) {
-    // Lock anchor: serialize concurrent submits on the same application. The
-    // application row is guaranteed to exist for an approved application; the
+    // Lock anchor: serialize concurrent submits on the same application, and read
+    // status under the lock so the approval gate sees a consistent value. The
     // lock is held until this transaction commits/rolls back.
-    await db.queryObject(
-      `SELECT id FROM admissions_applications
+    const appRows = await db.queryObject<{ id: string; status: string }>(
+      `SELECT id, status FROM admissions_applications
        WHERE id = $1 AND organization_id = $2 AND school_id = $3
        FOR UPDATE`,
       [input.applicationId, organizationId, schoolId],
     );
+    const application = appRows[0];
+    if (!application) {
+      throw new EnrollmentApplicationNotFoundError(input.applicationId);
+    }
     const existing = await getEnrollmentByApplicationId(
       db,
       organizationId,
       schoolId,
       input.applicationId,
     );
+    // Idempotency FIRST: an already-converted application returns its enrollment
+    // regardless of a later status edit, so a repeat submit is never re-gated.
     if (existing) return existing;
+    // PRA-P0-13: only an APPROVED application may be minted into an active
+    // student. Previously the status was never read — a counselor with only
+    // manageAdmissions could enroll a draft/submitted/under_review application,
+    // bypassing the entrance/interview/merit/sign-off control.
+    if (application.status !== "approved") {
+      throw new EnrollmentNotApprovedError(input.applicationId, application.status);
+    }
   }
 
   const guardianRows = await db.queryObject<{ guardian_user_id: string | null }>(

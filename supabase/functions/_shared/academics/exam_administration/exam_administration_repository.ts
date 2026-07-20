@@ -183,14 +183,44 @@ export class ExamScopeForbiddenError extends Error {
   }
 }
 
-function gradeForPercent(percent: number): string {
-  if (percent >= 90) return "A+";
-  if (percent >= 80) return "A";
-  if (percent >= 70) return "B+";
-  if (percent >= 60) return "B";
-  if (percent >= 50) return "C";
-  if (percent >= 40) return "D";
-  return "F";
+/**
+ * PRA-P1-13 — one row of a grading scale: any percentage `>= minPercent` earns
+ * [letter]. Bands are held highest-threshold-first.
+ */
+export interface GradeBand {
+  minPercent: number;
+  letter: string;
+}
+
+/**
+ * PRA-P1-13 — the compiled LEGACY grading scale, kept EXACTLY as the old
+ * hardcoded `gradeForPercent` (>=90 A+, >=80 A, >=70 B+, >=60 B, >=50 C, >=40 D,
+ * else F). Used as the fallback when a school has NOT configured its own scale,
+ * so an unconfigured school sees ZERO behaviour change at publish/report time.
+ */
+export const DEFAULT_GRADE_BANDS: readonly GradeBand[] = [
+  { minPercent: 90, letter: "A+" },
+  { minPercent: 80, letter: "A" },
+  { minPercent: 70, letter: "B+" },
+  { minPercent: 60, letter: "B" },
+  { minPercent: 50, letter: "C" },
+  { minPercent: 40, letter: "D" },
+  { minPercent: 0, letter: "F" },
+];
+
+/**
+ * Grade letter for [percent] (0–100) using [bands] (highest threshold first).
+ * Defaults to {@link DEFAULT_GRADE_BANDS} so every call site that has not resolved
+ * a school scale reproduces the previous fixed output verbatim.
+ */
+export function gradeForPercent(
+  percent: number,
+  bands: readonly GradeBand[] = DEFAULT_GRADE_BANDS,
+): string {
+  for (const band of bands) {
+    if (percent >= band.minPercent) return band.letter;
+  }
+  return bands.length > 0 ? bands[bands.length - 1]!.letter : "";
 }
 
 export function examSessionToApi(row: ExamSessionRow): Record<string, unknown> {
@@ -246,6 +276,9 @@ export function examMarkToApi(row: ExamMarkRow): Record<string, unknown> {
 export function publishedResultToApi(
   row: ExamMarkRow,
   session: ExamSessionRow,
+  // PRA-P1-13 — resolved grading bands; defaults to the legacy scale so an
+  // unconfigured school is unchanged.
+  bands: readonly GradeBand[] = DEFAULT_GRADE_BANDS,
 ): Record<string, unknown> {
   const status: ExamMarkStatus = isExamMarkStatus(row.status)
     ? row.status
@@ -271,6 +304,7 @@ export function publishedResultToApi(
     grade: row.grade_letter ?? (effective != null
       ? gradeForPercent(
         session.max_marks > 0 ? (effective / session.max_marks) * 100 : 0,
+        bands,
       )
       : (examStatusDisplayCode(status) ?? "")),
     status,
@@ -878,6 +912,11 @@ export async function publishExamResults(
     throw new ExamValidationError(`No marks entered for exam: ${examId}`);
   }
 
+  // PRA-P1-13 — resolve the school's grading scale ONCE, then bake every letter
+  // grade against it. Falls back to the legacy bands when the school has no row,
+  // so an unconfigured school publishes identical grades to before.
+  const gradeScale = await loadGradeScale(db, organizationId, schoolId);
+
   let publishedCount = 0;
   for (const mark of enterable) {
     // EXM-D6 — a non-'present' student publishes with their display code
@@ -907,7 +946,7 @@ export async function publishExamResults(
       ? (effectiveMark / session.max_marks) * 100
       : 0;
     const gradeLetter = status === "present"
-      ? gradeForPercent(percent)
+      ? gradeForPercent(percent, gradeScale.bands)
       : examStatusDisplayCode(status)!;
     await db.queryObject(
       `UPDATE exam_mark_entries
@@ -921,6 +960,42 @@ export async function publishExamResults(
 
   await updateExamPhase(db, organizationId, schoolId, examId, "published");
   return publishedCount;
+}
+
+/**
+ * PRA-P1-12: reopen a PUBLISHED exam so a wrong mark can be corrected (or a
+ * re-evaluation / supplementary applied) and then re-published. Previously
+ * publish was one-way — the `AND published = false` fence in {@link updateExamMark}
+ * made every mark immutable forever, so a single error found after publish was
+ * uncorrectable in-system. This clears the `published` flag and the BAKED
+ * grade/effective marks (the ORIGINAL `marks_obtained` is never touched — the
+ * grace ledger stays intact and re-bakes on the next publish) and moves the phase
+ * back to `processed`, at which point marks are editable again through the normal
+ * per-mark path. Returns the number of rows reopened. Senior-gated at the handler.
+ */
+export async function unpublishExamResults(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  examId: string,
+): Promise<number> {
+  const session = await getExamSession(db, organizationId, schoolId, examId);
+  if (!session) throw new ExamNotFoundError(examId);
+  if (session.phase !== "published") {
+    throw new ExamValidationError(
+      `Exam ${examId} is not published (phase: ${session.phase}); nothing to reopen.`,
+    );
+  }
+  const reopened = await db.queryObject<{ id: string }>(
+    `UPDATE exam_mark_entries
+       SET published = false, grade_letter = NULL, effective_marks = NULL,
+           updated_at = timezone('utc', now())
+     WHERE organization_id = $1 AND school_id = $2 AND exam_id = $3 AND published = true
+     RETURNING id`,
+    [organizationId, schoolId, examId],
+  );
+  await updateExamPhase(db, organizationId, schoolId, examId, "processed");
+  return reopened.length;
 }
 
 export async function listPublishedResultsForStudent(
@@ -943,6 +1018,10 @@ export async function listPublishedResultsForStudent(
        AND (m.student_code = $3 OR m.student_id::text = $3)`,
     [organizationId, schoolId, studentIdOrCode],
   );
+
+  // PRA-P1-13 — resolve the school scale once so any grade derived on read
+  // (legacy rows without a baked grade_letter) honours the school's bands.
+  const gradeScale = await loadGradeScale(db, organizationId, schoolId);
 
   return rows.map((row) => {
     const status: ExamMarkStatus = isExamMarkStatus(row.status)
@@ -968,6 +1047,7 @@ export async function listPublishedResultsForStudent(
     grade: row.grade_letter ?? (effective != null
       ? gradeForPercent(
         row.session_max > 0 ? (effective / row.session_max) * 100 : 0,
+        gradeScale.bands,
       )
       : (examStatusDisplayCode(status) ?? "")),
     subject: row.session_subject,
@@ -996,6 +1076,214 @@ const REPORTABLE_PHASES = ["published", "processed"] as const;
 
 /** Default pass threshold (%) when no school setting exists — see EXM-5. */
 export const DEFAULT_PASS_MARK_PERCENT = 40;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PRA-P1-13 — per-school grade scale (grading bands + pass mark).
+//
+// The scale is stored in `exam_grade_scales` (one row per school) and is
+// AUTHORITATIVE at publish + report time. When a school has NO row, every read
+// resolves to {@link DEFAULT_GRADE_BANDS} + {@link DEFAULT_PASS_MARK_PERCENT},
+// which reproduces the legacy hardcoded scale EXACTLY — so a school that never
+// configures a scale has zero behaviour change.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** A grading scale resolved for a school (its own row, or the legacy default). */
+export interface ResolvedGradeScale {
+  scaleCode: string | null;
+  bands: readonly GradeBand[];
+  passMarkPercent: number;
+  source: "school" | "default";
+}
+
+/** The legacy scale, resolved — used whenever a school has no configured row. */
+export function defaultGradeScale(): ResolvedGradeScale {
+  return {
+    scaleCode: null,
+    bands: DEFAULT_GRADE_BANDS,
+    passMarkPercent: DEFAULT_PASS_MARK_PERCENT,
+    source: "default",
+  };
+}
+
+/**
+ * Coerce the persisted `bands` JSONB (or client input) into an ordered
+ * (descending) list of {@link GradeBand}. Invalid rows are dropped; the result
+ * is re-sorted highest-threshold-first so grading is deterministic regardless of
+ * stored order.
+ */
+function normalizeBands(raw: unknown): GradeBand[] {
+  if (!Array.isArray(raw)) return [];
+  const bands: GradeBand[] = [];
+  for (const entry of raw) {
+    if (typeof entry !== "object" || entry === null) continue;
+    const record = entry as Record<string, unknown>;
+    const min = Number(record.minPercent ?? record.min_percent);
+    const letter = String(record.letter ?? record.label ?? "").trim();
+    if (!Number.isFinite(min) || min < 0 || min > 100 || letter.length === 0) {
+      continue;
+    }
+    bands.push({ minPercent: min, letter });
+  }
+  bands.sort((a, b) => b.minPercent - a.minPercent);
+  return bands;
+}
+
+/**
+ * Load the school's grade scale, falling back to the legacy default when no row
+ * exists (or the stored bands are unusable). One SELECT — callers resolve it
+ * once per publish/report.
+ */
+export async function loadGradeScale(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+): Promise<ResolvedGradeScale> {
+  const rows = await db.queryObject<{
+    scale_code: string | null;
+    bands: unknown;
+    pass_mark_percent: number | string;
+  }>(
+    `SELECT scale_code, bands, pass_mark_percent
+       FROM exam_grade_scales
+      WHERE organization_id = $1 AND school_id = $2`,
+    [organizationId, schoolId],
+  );
+  const row = rows[0];
+  if (!row) return defaultGradeScale();
+
+  const bands = normalizeBands(row.bands);
+  if (bands.length === 0) return defaultGradeScale();
+
+  const passMark = Number(row.pass_mark_percent);
+  return {
+    scaleCode: row.scale_code,
+    bands,
+    passMarkPercent: Number.isFinite(passMark)
+      ? passMark
+      : DEFAULT_PASS_MARK_PERCENT,
+    source: "school",
+  };
+}
+
+/** A validated grade-scale save request (from the PUT endpoint). */
+export interface GradeScaleInput {
+  scaleCode: string;
+  bands: GradeBand[];
+  passMarkPercent: number;
+}
+
+/**
+ * Validate a client grade-scale payload (PUT /academics/exams/grade-scale).
+ * Enforces: a non-empty band list; each band a percentage in 0–100 with a
+ * non-empty letter; STRICTLY DESCENDING minPercent (no duplicates); and a pass
+ * mark in 0–100. Throws {@link ExamValidationError} (→ 422) on any violation so
+ * a malformed scale can never be persisted.
+ */
+export function parseGradeScaleInput(
+  body: Record<string, unknown>,
+): GradeScaleInput {
+  const rawBands = body.bands;
+  if (!Array.isArray(rawBands) || rawBands.length === 0) {
+    throw new ExamValidationError("bands must be a non-empty array");
+  }
+  const bands: GradeBand[] = [];
+  for (const entry of rawBands) {
+    if (typeof entry !== "object" || entry === null) {
+      throw new ExamValidationError("each band must be an object");
+    }
+    const record = entry as Record<string, unknown>;
+    const min = Number(record.minPercent ?? record.min_percent);
+    const letter = String(record.letter ?? record.label ?? "").trim();
+    if (!Number.isFinite(min) || min < 0 || min > 100) {
+      throw new ExamValidationError(
+        "each band minPercent must be a number in 0–100",
+      );
+    }
+    if (letter.length === 0) {
+      throw new ExamValidationError("each band letter must be non-empty");
+    }
+    bands.push({ minPercent: min, letter });
+  }
+  // Reject anything not strictly descending (each threshold below the previous):
+  // an out-of-order or duplicate band would silently shadow another grade.
+  for (let i = 1; i < bands.length; i++) {
+    if (bands[i]!.minPercent >= bands[i - 1]!.minPercent) {
+      throw new ExamValidationError(
+        "bands must be ordered by strictly descending minPercent",
+      );
+    }
+  }
+
+  const passRaw = body.passMarkPercent ?? body.pass_mark_percent ??
+    DEFAULT_PASS_MARK_PERCENT;
+  const passMarkPercent = Number(passRaw);
+  if (!Number.isFinite(passMarkPercent) || passMarkPercent < 0 ||
+    passMarkPercent > 100) {
+    throw new ExamValidationError("passMarkPercent must be a number in 0–100");
+  }
+
+  const scaleCode =
+    String(body.scaleCode ?? body.scale_code ?? "custom").trim() || "custom";
+
+  return { scaleCode, bands, passMarkPercent };
+}
+
+/**
+ * Upsert the school's grade scale (one row per school). Stores the validated
+ * bands verbatim (descending) and returns the resolved scale the client reads
+ * back. `actorId` is recorded as created_by/updated_by for the audit trail.
+ */
+export async function saveGradeScale(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  input: GradeScaleInput,
+  actorId: string | null,
+): Promise<ResolvedGradeScale> {
+  const bandsJson = JSON.stringify(
+    input.bands.map((b) => ({ minPercent: b.minPercent, letter: b.letter })),
+  );
+  await db.queryObject(
+    `INSERT INTO exam_grade_scales
+       (organization_id, school_id, scale_code, bands, pass_mark_percent,
+        created_by, updated_by)
+     VALUES ($1, $2, $3, $4::jsonb, $5, $6, $6)
+     ON CONFLICT (organization_id, school_id) DO UPDATE
+       SET scale_code = EXCLUDED.scale_code,
+           bands = EXCLUDED.bands,
+           pass_mark_percent = EXCLUDED.pass_mark_percent,
+           updated_by = EXCLUDED.updated_by`,
+    [
+      organizationId,
+      schoolId,
+      input.scaleCode,
+      bandsJson,
+      input.passMarkPercent,
+      actorId,
+    ],
+  );
+  return {
+    scaleCode: input.scaleCode,
+    bands: input.bands,
+    passMarkPercent: input.passMarkPercent,
+    source: "school",
+  };
+}
+
+/** Serialise a resolved grade scale for the API (GET/PUT response). */
+export function gradeScaleToApi(
+  scale: ResolvedGradeScale,
+): Record<string, unknown> {
+  return {
+    scaleCode: scale.scaleCode,
+    source: scale.source,
+    passMarkPercent: scale.passMarkPercent,
+    bands: scale.bands.map((b) => ({
+      minPercent: b.minPercent,
+      letter: b.letter,
+    })),
+  };
+}
 
 // --- EXM-3 — Tabulation register (students × subjects for a class + term) ---
 
@@ -1109,22 +1397,35 @@ export async function loadTabulationRegister(
 
     const status = isExamMarkStatus(r.status) ? r.status : "present";
     const present = status === "present" && r.marks_obtained != null;
+    // PRA-P1-12: last-write-wins PER SUBJECT. Rows arrive oldest→newest
+    // (ORDER BY es.updated_at ASC), so a later session (supplementary / re-exam)
+    // for the same subject REPLACES the earlier one here rather than being added
+    // alongside it. total/totalMax are computed from this deduped map below — the
+    // previous per-row `total +=` double-counted a subject that had two sessions,
+    // inflating total, percent and rank.
     student.perSubject[r.subject] = {
       subject: r.subject,
       marks: present ? r.marks_obtained : null,
       maxMarks: r.max_marks,
       statusCode: examStatusDisplayCode(status),
     };
-    // 🔴 EXCLUSION — only a present row contributes to total / max / percent.
-    if (present) {
-      student.total += r.marks_obtained!;
-      student.totalMax += r.max_marks;
-    }
   }
 
   const students = [...byStudent.values()];
   for (const s of students) {
-    s.percent = s.totalMax > 0 ? (s.total / s.totalMax) * 100 : 0;
+    // Sum ONCE per subject over the deduped map — only a present subject
+    // (non-null marks) contributes to total / max / percent.
+    let total = 0;
+    let totalMax = 0;
+    for (const cell of Object.values(s.perSubject)) {
+      if (cell.marks != null) {
+        total += cell.marks;
+        totalMax += cell.maxMarks;
+      }
+    }
+    s.total = total;
+    s.totalMax = totalMax;
+    s.percent = totalMax > 0 ? (total / totalMax) * 100 : 0;
   }
 
   // Rank by present-only percent. A student with NO present result this term
@@ -1347,8 +1648,12 @@ export async function loadExamDistribution(
   const session = await getExamSession(db, organizationId, schoolId, examId);
   if (!session) throw new ExamNotFoundError(examId);
 
-  const passMarkPercent = DEFAULT_PASS_MARK_PERCENT;
-  const passMarkSource = "default";
+  // PRA-P1-13 — the school's grade scale is authoritative for BOTH the pass
+  // boundary and the grade buckets. Falls back to the legacy 40% + default bands
+  // when the school has no configured row.
+  const gradeScale = await loadGradeScale(db, organizationId, schoolId);
+  const passMarkPercent = gradeScale.passMarkPercent;
+  const passMarkSource = gradeScale.source === "school" ? "school" : "default";
 
   const rows = await db.queryObject<{
     marks_obtained: number | null;
@@ -1389,10 +1694,11 @@ export async function loadExamDistribution(
       : 0;
     if (percent >= passMarkPercent) passCount++;
     else failCount++;
-    // Prefer the persisted (published) grade letter; else derive from percent.
+    // Prefer the persisted (published) grade letter; else derive from percent
+    // using the school's resolved scale.
     const grade = r.grade_letter && r.grade_letter.length > 0
       ? r.grade_letter
-      : gradeForPercent(percent);
+      : gradeForPercent(percent, gradeScale.bands);
     gradeCounts.set(grade, (gradeCounts.get(grade) ?? 0) + 1);
   }
 
@@ -1539,6 +1845,26 @@ export async function listExamRemarks(
   );
 }
 
+/**
+ * PRA-P0-10 (S3): resolve the author's display name SERVER-SIDE from the
+ * authenticated user record. NEVER trust a client-supplied name. Keyed on the
+ * author id (= claims.sub of the writer). `users.display_name` is
+ * `TEXT NOT NULL DEFAULT ''`, so treat empty/whitespace as "unset" and fall back
+ * to a safe default (the author id, else "Staff").
+ */
+async function resolveAuthorDisplayName(
+  db: TenantQueryClient,
+  authorId: string,
+): Promise<string> {
+  const rows = await db.queryObject<{ display_name: string | null }>(
+    `SELECT display_name FROM users WHERE id = $1`,
+    [authorId],
+  );
+  const name = rows[0]?.display_name?.trim();
+  if (name && name.length > 0) return name;
+  return authorId && authorId.length > 0 ? authorId : "Staff";
+}
+
 /** Creates or edits a (student, exam session) remark, appending to the audit trail. */
 export async function upsertExamRemark(
   db: TenantQueryClient,
@@ -1549,11 +1875,14 @@ export async function upsertExamRemark(
     studentId: string;
     text: string;
     authorId: string;
-    authorName: string;
+    // PRA-P0-10 (S3): author display name is NO LONGER accepted from the caller.
+    // It is resolved server-side from users.display_name below.
     authorRole?: string;
   },
 ): Promise<ExamRemarkRow> {
   const authorRole = input.authorRole ?? "classTeacher";
+  // PRA-P0-10 (S3): trusted author name from the user record, not the request.
+  const authorName = await resolveAuthorDisplayName(db, input.authorId);
   // Two independent remark slots per (exam, student): the class-teacher remark
   // and the leadership (principal/VP) remark. The id carries the slot so the two
   // never collide / overwrite each other (matches the app's store keying).
@@ -1562,7 +1891,7 @@ export async function upsertExamRemark(
   const revision = JSON.stringify({
     text: input.text,
     authorId: input.authorId,
-    authorName: input.authorName,
+    authorName, // PRA-P0-10 (S3): server-resolved trusted name into the audit trail
     authorRole,
   });
   const rows = await db.queryObject<ExamRemarkRow>(
@@ -1591,7 +1920,7 @@ export async function upsertExamRemark(
       input.studentId,
       input.text,
       input.authorId,
-      input.authorName,
+      authorName, // PRA-P0-10 (S3): server-resolved trusted name into the column
       authorRole,
       revision,
     ],
@@ -1903,7 +2232,18 @@ export async function loadReportCards(
     [organizationId, schoolId, classLabel, term],
   );
 
+  // PRA-P1-13 — resolve the school scale once; every derived letter grade on the
+  // report card honours it (baked grade_letter still wins where present).
+  const gradeScale = await loadGradeScale(db, organizationId, schoolId);
+
   const byStudent = new Map<string, ReportCardData>();
+  // PRA-P1-12: dedupe subject rows PER STUDENT so a subject with two published
+  // sessions (a supplementary / re-exam) contributes ONE row, not two. Rows come
+  // oldest→newest (ORDER BY es.updated_at ASC); an insertion-ordered Map keyed by
+  // subject keeps first-seen column order while replacing the value with the
+  // NEWEST session's cell. Previously each row was push()ed AND added to
+  // totalScore, double-counting the subject in the total, percent, grade and rank.
+  const subjectsByStudent = new Map<string, Map<string, ReportCardData["subjects"][number]>>();
   for (const r of rows) {
     let card = byStudent.get(r.student_id);
     if (!card) {
@@ -1921,36 +2261,50 @@ export async function loadReportCards(
         classSize: 0,
       };
       byStudent.set(r.student_id, card);
+      subjectsByStudent.set(r.student_id, new Map());
     }
     const status = isExamMarkStatus(r.status) ? r.status : "present";
     // Effective (grace-applied) score for a present student; null for AB/ML/DB.
     const score = status === "present"
       ? (r.effective_marks ?? r.marks_obtained)
       : null;
-    card.subjects.push({
+    subjectsByStudent.get(r.student_id)!.set(r.subject, {
       subject: r.subject,
       examTitle: r.exam_title,
       score,
       maxScore: r.max_marks,
       grade: r.grade_letter ??
         (score != null
-          ? gradeForPercent(r.max_marks > 0 ? (score / r.max_marks) * 100 : 0)
+          ? gradeForPercent(
+            r.max_marks > 0 ? (score / r.max_marks) * 100 : 0,
+            gradeScale.bands,
+          )
           : (examStatusDisplayCode(status) ?? "")),
       statusCode: examStatusDisplayCode(status),
     });
-    if (status === "present" && score != null) {
-      card.totalScore += score;
-      card.totalMax += r.max_marks;
-    }
   }
 
-  const cards = [...byStudent.values()];
-  for (const c of cards) {
+  for (const [studentId, c] of byStudent) {
+    // Materialize the deduped subjects and sum ONCE per subject.
+    c.subjects = [...subjectsByStudent.get(studentId)!.values()];
+    let totalScore = 0;
+    let totalMax = 0;
+    for (const cell of c.subjects) {
+      if (cell.score != null) {
+        totalScore += cell.score;
+        totalMax += cell.maxScore;
+      }
+    }
+    c.totalScore = totalScore;
+    c.totalMax = totalMax;
     c.overallPercent = c.totalMax > 0
       ? Math.round((c.totalScore / c.totalMax) * 10000) / 100
       : 0;
-    c.overallGrade = c.totalMax > 0 ? gradeForPercent(c.overallPercent) : "";
+    c.overallGrade = c.totalMax > 0
+      ? gradeForPercent(c.overallPercent, gradeScale.bands)
+      : "";
   }
+  const cards = [...byStudent.values()];
 
   // Present-only rank across the class (a student with no present result is not
   // ranked and never shifts another's rank — frozen exclusion rule).

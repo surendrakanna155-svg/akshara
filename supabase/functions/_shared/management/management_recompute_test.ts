@@ -30,7 +30,11 @@ const SCHOOL = "a2000000-0000-4000-8000-000000000001";
 // ---------------------------------------------------------------------------
 
 interface MockRows {
-  attendance: { present: string; total: string };
+  // PRA-P0-22/P2-22 (S4): the attendance query is now grouped per class and
+  // returns the canonical attended/denominator components.
+  attendance: Array<
+    { class_label: string; attended: string; denominator: string; total: string }
+  >;
   marksOverall: { passed: string; total: string; avg_percent: string };
   marksByClass: Array<{
     class_label: string;
@@ -53,7 +57,7 @@ function mockClient(rows: MockRows): TenantQueryClient {
   const client: any = {
     queryObject<T>(sql: string, _args: unknown[] = []): Promise<T[]> {
       if (sql.includes("FROM attendance_records")) {
-        return Promise.resolve([rows.attendance] as T[]);
+        return Promise.resolve(rows.attendance as T[]);
       }
       if (sql.includes("FROM exam_mark_entries") && sql.includes("GROUP BY") && sql.includes("class_label")) {
         return Promise.resolve(rows.marksByClass as T[]);
@@ -71,7 +75,7 @@ function mockClient(rows: MockRows): TenantQueryClient {
 }
 
 const EMPTY_ROWS: MockRows = {
-  attendance: { present: "0", total: "0" },
+  attendance: [],
   marksOverall: { passed: "0", total: "0", avg_percent: "0" },
   marksByClass: [],
   marksBySubject: [],
@@ -106,11 +110,17 @@ Deno.test("getAcademicAggregate returns honest zeros for an empty school", async
   assertEquals(agg.hasExams, false);
   assertEquals(agg.classPerformance, []);
   assertEquals(agg.subjectPerformance, []);
+  assertEquals(agg.attendanceByClass, []);
 });
 
 Deno.test("getAcademicAggregate computes attendance, pass rate and per-class/subject from real rows", async () => {
   const rows: MockRows = {
-    attendance: { present: "90", total: "100" }, // 90%
+    // Canonical: 10-A attended 27 of 30 (denominator excludes excused) = 90%;
+    // 9-B attended 40 of 50 = 80%. School = (27+40)/(30+50) = 67/80 ≈ 84%.
+    attendance: [
+      { class_label: "10-A", attended: "27", denominator: "30", total: "32" },
+      { class_label: "9-B", attended: "40", denominator: "50", total: "55" },
+    ],
     marksOverall: { passed: "8", total: "10", avg_percent: "72" }, // 80% pass
     marksByClass: [
       { class_label: "10-A", students: "30", passed: "27", total: "30", avg_percent: "75" },
@@ -122,7 +132,11 @@ Deno.test("getAcademicAggregate computes attendance, pass rate and per-class/sub
     ],
   };
   const agg = await getAcademicAggregate(mockClient(rows), ORG, SCHOOL);
-  assertEquals(agg.avgAttendancePercent, 90);
+  assertEquals(agg.avgAttendancePercent, 84); // 67/80 canonical, not 90
+  assertEquals(agg.attendanceByClass, [
+    { classLabel: "10-A", attendancePercent: 90 },
+    { classLabel: "9-B", attendancePercent: 80 },
+  ]);
   assertEquals(agg.passRate, 80);
   assertEquals(agg.avgScorePercent, 72);
   assertEquals(agg.hasAttendance, true);
@@ -181,9 +195,12 @@ function emptyAggregate(): ManagementAggregate {
       hasExams: false,
       classPerformance: [],
       subjectPerformance: [],
+      attendanceByClass: [],
     },
     activeStudents: 0,
     defaulterCount: 0,
+    collectedThisMonth: 0,
+    pendingApprovals: [],
   };
 }
 
@@ -204,6 +221,10 @@ function seededAggregate(): ManagementAggregate {
     conversionRate: 31.67,
     stageCounts: { new_enquiry: 50, confirmed: 45, joined: 38 },
     sourceCounts: { referral: 70, walk_in: 50 },
+    pipelineLeads: [
+      { stage: "joined", id: "l1", studentName: "Asha", classLabel: "1-A", score: "hot", source: "referral", daysInStage: 2 },
+      { stage: "new_enquiry", id: "l2", studentName: "Ravi", classLabel: "1-A", score: "warm", source: "walk_in", daysInStage: 5 },
+    ],
   };
   agg.academic = {
     avgAttendancePercent: 94,
@@ -217,9 +238,25 @@ function seededAggregate(): ManagementAggregate {
     subjectPerformance: [
       { subject: "Math", passPercent: 90, avgPercent: 70, atRiskCount: 3 },
     ],
+    attendanceByClass: [
+      { classLabel: "10-A", attendancePercent: 94 },
+    ],
   };
   agg.activeStudents = 540;
   agg.defaulterCount = 12;
+  // PRA-P0-23: month-to-date collections are DISTINCT from all-time totalCollected
+  // (₹2.4Cr) — proves the "Revenue MTD" KPI uses the MTD figure, not the total.
+  agg.collectedThisMonth = 4500000; // ₹45L
+  agg.pendingApprovals = [
+    {
+      id: "ap1",
+      type: "fee_concession",
+      title: "Fee concession",
+      summary: "10% for Asha",
+      requesterName: "Clerk",
+      createdAt: "2026-07-01T00:00:00Z",
+    },
+  ];
   return agg;
 }
 
@@ -238,7 +275,8 @@ Deno.test("dashboard payload: empty school => zeros + honest insight", () => {
 Deno.test("dashboard payload: seeded school => computed values", () => {
   const p = buildDashboardPayload(seededAggregate());
   const fee = p.feeSnapshot as Record<string, unknown>;
-  assertEquals(fee.collectedMtd, "₹2.4Cr");
+  // PRA-P0-23: month-to-date (₹45L), NOT the all-time totalCollected (₹2.4Cr).
+  assertEquals(fee.collectedMtd, "₹45L");
   assertEquals(fee.outstanding, "₹45L");
   assertEquals(fee.collectionRate, "80%");
   assertEquals(fee.defaulters, 12);
@@ -246,10 +284,17 @@ Deno.test("dashboard payload: seeded school => computed values", () => {
   assertEquals(adm.leadsMtd, 120);
   assertEquals(adm.confirmed, 45);
   assertEquals(adm.joined, 38);
-  // KPI keys preserved
+  // KPI keys preserved; Revenue MTD KPI shows the MTD figure.
   const kpis = p.kpis as Array<Record<string, unknown>>;
   assertEquals(kpis[0].id, "revenue");
-  assertEquals(kpis[0].value, "₹2.4Cr");
+  assertEquals(kpis[0].value, "₹45L");
+  // PRA-P1-48: the approval queue + recent conversions are now REAL (not []).
+  const queue = p.approvalQueue as Array<Record<string, unknown>>;
+  assertEquals(queue.length, 1);
+  assertEquals(queue[0].title, "Fee concession");
+  const conversions = adm.recentConversions as Array<Record<string, unknown>>;
+  assertEquals(conversions.length, 1); // only the 'joined' lead, not new_enquiry
+  assertEquals(conversions[0].studentName, "Asha");
 });
 
 Deno.test("financial-health payload: honest empty expenses, computed revenue", () => {

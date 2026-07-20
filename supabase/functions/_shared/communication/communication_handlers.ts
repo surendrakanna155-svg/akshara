@@ -142,6 +142,24 @@ function boolFlag(body: Record<string, unknown>, ...keys: string[]): boolean {
   return false;
 }
 
+/**
+ * PRA-P1-45: read a string[] from the body under any of the given keys (first
+ * that is an array wins). Non-array/absent ⇒ undefined, so the service applies
+ * its push-only default. Blanks are trimmed out.
+ */
+function stringArray(
+  body: Record<string, unknown>,
+  ...keys: string[]
+): string[] | undefined {
+  for (const key of keys) {
+    const value = body[key];
+    if (Array.isArray(value)) {
+      return value.map((v) => String(v ?? "").trim()).filter((v) => v.length > 0);
+    }
+  }
+  return undefined;
+}
+
 export async function handleListTemplates(
   req: Request,
   config: AppConfig,
@@ -539,6 +557,8 @@ export async function handleCreateBroadcast(
       return jsonResponse(envelope(scheduled), { status: 201 });
     }
 
+    // PRA-P1-45: opt-in SMS/email fallback channels (default push-only).
+    const channels = stringArray(body, "channels");
     const result = await withTenantContext(config, auth.claims, async (db) =>
       await sendBroadcastMessage(
         db,
@@ -550,6 +570,7 @@ export async function handleCreateBroadcast(
           audienceClass,
           audienceSection,
           requiresAck,
+          channels,
         },
         req,
       )

@@ -1,13 +1,14 @@
 import type { AppConfig } from "../config.ts";
-import { errorEnvelope } from "../http.ts";
 import {
+  handleHomeworkAttachmentDownload,
   handleParentLeaveAttachment,
   handleParentLeaveCancel,
   handleParentLeaveSubmit,
+  handleStudentHomeworkAttachmentPresign,
   handleStudentHomeworkSubmit,
   handleTeacherAttendanceDraft,
   handleTeacherAttendanceSubmit,
-  handleTeacherExamMarkUpdate,
+  handleTeacherHomeworkAttachmentPresign,
   handleTeacherHomeworkBulkReview,
   handleTeacherHomeworkCreate,
   handleTeacherHomeworkHistory,
@@ -49,6 +50,17 @@ function matchPilotRoute(
     return {
       handler: (req, config) => handleParentLeaveAttachment(req, config, leaveId),
     };
+  }
+  // PRA-P1-30 — homework attachment presign/download (static paths, matched
+  // BEFORE the generic homework routes so "attachment" is never a homework id).
+  if (method === "POST" && path === "/student/homework/attachment/presign") {
+    return { handler: handleStudentHomeworkAttachmentPresign };
+  }
+  if (method === "POST" && path === "/teacher/homework/attachment/presign") {
+    return { handler: handleTeacherHomeworkAttachmentPresign };
+  }
+  if (method === "POST" && path === "/homework/attachment/download") {
+    return { handler: handleHomeworkAttachmentDownload };
   }
   if (method === "POST" && path === "/student/homework/submit") {
     return { handler: handleStudentHomeworkSubmit };
@@ -100,13 +112,12 @@ function matchPilotRoute(
     };
   }
 
-  const markMatch = path.match(/^\/teacher\/exams\/marks\/([^/]+)$/);
-  if (method === "PUT" && markMatch) {
-    const markEntryId = decodeURIComponent(markMatch[1]!);
-    return {
-      handler: (req, config) => handleTeacherExamMarkUpdate(req, config, markEntryId),
-    };
-  }
+  // PRA-P0-12 (S0/T1a): the duplicate `PUT /teacher/exams/marks/:id` was removed
+  // here. It shadowed the identical route in `teacher_router` (which app.ts
+  // dispatches later) and reached an UNSCOPED handler — bypassing the certified
+  // `isSubjectTeacherScoped`/`teacherTeachesExamSession` check. With this gone,
+  // dispatch falls through to teacher_router → the governed `applyMarkUpdate`.
+  // See `dispatch_uniqueness_test.ts` (S0/T1b) which now guards against reintroduction.
 
   return null;
 }

@@ -270,7 +270,7 @@ Deno.test(
 );
 
 Deno.test(
-  "confirmPayment in stub mode still captures without a gateway signature",
+  "PRA-P0-02: stub mode skips the signature check but FAILS CLOSED without an invoice",
   withRazorpayEnv(
     {
       RAZORPAY_KEY_ID: undefined,
@@ -278,16 +278,33 @@ Deno.test(
       RAZORPAY_STUB_MODE: "true",
     },
     async () => {
+      // A null-invoice intent must no longer "capture" by fabricating a receipt
+      // while writing nothing to the books. Reaching the invoice check (rather
+      // than throwing a signature error) also proves stub mode skipped signature
+      // verification.
       const spy = new ConfirmSpyDb(false);
       const db = spy as unknown as TenantQueryClient;
 
-      const result = await confirmPayment(db, parentClaims(), {
-        paymentIntentId: CONFIRM_INTENT.id,
-        transactionRef: "TXN-STUB",
-      });
+      await assertRejects(
+        () =>
+          confirmPayment(db, parentClaims(), {
+            paymentIntentId: CONFIRM_INTENT.id,
+            transactionRef: "TXN-STUB",
+          }),
+        Error,
+        "no invoice",
+      );
 
-      assertEquals(spy.intentCaptured, true, "stub mode should still capture");
-      assertEquals(result.paidAmount, CONFIRM_INTENT.amount);
+      assertEquals(
+        spy.collectionCreated,
+        false,
+        "must not record a collection without an invoice",
+      );
+      assertEquals(
+        spy.intentCaptured,
+        false,
+        "must not mark captured without recording a collection",
+      );
     },
   ),
 );

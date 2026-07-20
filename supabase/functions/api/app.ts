@@ -35,6 +35,7 @@ import { routeTeacher } from "../_shared/teacher/teacher_router.ts";
 import { routeStudent } from "../_shared/student/student_router.ts";
 import { routeApproval } from "../_shared/approval/approval_router.ts";
 import { routeAudit } from "../_shared/audit/audit_router.ts";
+import { routeIdentity } from "../_shared/identity/identity_router.ts";
 import { routePayment } from "../_shared/payment/payment_router.ts";
 import { routeCommunication } from "../_shared/communication/communication_router.ts";
 import { routePilotOperations } from "../_shared/pilot/pilot_operations_router.ts";
@@ -159,6 +160,8 @@ export async function routeModuleRequest(
     routeStudent,
     routePayment,
     routeAudit,
+    // PRA-P1-05 (S2): identity-plane admin — per-user permission overrides.
+    routeIdentity,
   ] as const;
 
   // Universal store-and-replay idempotency (Data Reliability Platform §8.1):

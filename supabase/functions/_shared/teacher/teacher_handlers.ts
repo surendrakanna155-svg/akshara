@@ -143,6 +143,7 @@ export async function handleLeaveBalance(req: Request, config: AppConfig): Promi
   return await handleSnapshot(req, config, "snapshot_leave_balance", "Failed to load leave balance");
 }
 
-export async function handleMessages(req: Request, config: AppConfig): Promise<Response> {
-  return await handleList(req, config, "message_thread", "Failed to load message threads");
-}
+// PRA-N-13 (S0/T1a): `handleMessages` (GET /teacher/messages) was dead code —
+// `routeCommunication` (dispatched before `routeTeacher` in app.ts) already owns
+// that path via the governed `handleTeacherMessageThreads`. This handler read
+// demo-seeded `teacher_entities` `message_thread` rows and was never reached.

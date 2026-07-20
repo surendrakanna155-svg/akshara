@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/repositories/academic/academic_catalog_provider.dart';
+import '../../../core/repositories/academic/academic_models.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/forms/forms.dart';
@@ -87,21 +89,35 @@ class _SisPromotionScreenState extends ConsumerState<SisPromotionScreen> {
   }
 
   Widget _buildYearStep(String sourceYear, String targetYear) {
+    // PRA-P0-14: source/target years must be `academic_years.id` UUIDs, sourced
+    // from the real academic-years catalog (not hardcoded en-dash labels). The
+    // dropdown shows `yearLabel` but stores/passes the `yearId` UUID.
+    final catalog = ref.watch(academicCatalogProvider);
+    final years = (catalog?.years ?? const <AcademicYear>[])
+        .where((year) => year.status.isEmpty || year.status == 'active')
+        .toList(growable: false);
+    final ids = years.map((year) => year.yearId).toSet();
+    final items = [
+      for (final year in years)
+        DropdownMenuItem(value: year.yearId, child: Text(year.yearLabel)),
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Select source and target academic years',
             style: context.aksharaText.titleMedium),
         const SizedBox(height: AksharaSpacing.s3),
+        if (catalog == null)
+          const Padding(
+            padding: EdgeInsets.only(bottom: AksharaSpacing.s3),
+            child: Text('Loading academic years…'),
+          ),
         DropdownButtonFormField<String>(
           key: QaTestKeys.sisPromotionSourceYearField,
-          initialValue: sourceYear,
+          initialValue: ids.contains(sourceYear) ? sourceYear : null,
           decoration: const InputDecoration(labelText: 'Source year'),
-          items: const [
-            DropdownMenuItem(value: '2025–26', child: Text('2025–26')),
-            DropdownMenuItem(value: '2026–27', child: Text('2026–27')),
-            DropdownMenuItem(value: '2027–28', child: Text('2027–28')),
-          ],
+          items: items,
           onChanged: (value) {
             if (value == null) return;
             ref.read(promotionSourceYearProvider.notifier).state = value;
@@ -111,13 +127,9 @@ class _SisPromotionScreenState extends ConsumerState<SisPromotionScreen> {
         const SizedBox(height: AksharaSpacing.s3),
         DropdownButtonFormField<String>(
           key: QaTestKeys.sisPromotionTargetYearField,
-          initialValue: targetYear,
+          initialValue: ids.contains(targetYear) ? targetYear : null,
           decoration: const InputDecoration(labelText: 'Target year'),
-          items: const [
-            DropdownMenuItem(value: '2026–27', child: Text('2026–27')),
-            DropdownMenuItem(value: '2027–28', child: Text('2027–28')),
-            DropdownMenuItem(value: '2028–29', child: Text('2028–29')),
-          ],
+          items: items,
           onChanged: (value) {
             if (value == null) return;
             ref.read(promotionTargetYearProvider.notifier).state = value;

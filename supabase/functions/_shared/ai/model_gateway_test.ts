@@ -7,14 +7,18 @@ import {
   callModelGateway as _callModelGateway,
   decideGateway,
   DEFAULT_LIMITS,
+  type EmbeddingContext,
   estimateCostMicros,
+  estimateEmbeddingCostMicros,
   type GatewayContext,
   type GatewayDeps,
   type GatewayUsage,
   governedModelText,
   resolveLimits,
   runGateway,
+  runGovernedEmbedding,
 } from "./model_gateway.ts";
+import { embedText } from "./embeddings_client.ts";
 
 // keep the production export referenced (compile guard)
 const _ref = _callModelGateway;
@@ -527,4 +531,170 @@ Deno.test("runGateway A5: refusal consumes the reservation (tokens were billed)"
   assertEquals(finalized.length, 1);
   assertEquals(finalized[0]!.consumed, true);
   clearLimitEnv();
+});
+
+// ─── P1-46: governed embedding path ──────────────────────────────────────────
+
+const EMB_CTX: EmbeddingContext = {
+  scope: { organizationId: "org-1", schoolId: "sch-1" },
+  userId: null,
+  surface: "semantic_cache_embed",
+  provider: "voyage",
+  model: "voyage-3.5-lite",
+};
+const VEC = new Array(1024).fill(0.01);
+
+Deno.test("estimateEmbeddingCostMicros: 4 chars/token, never negative", () => {
+  assertEquals(estimateEmbeddingCostMicros(""), 0);
+  assertEquals(estimateEmbeddingCostMicros("abcd"), 1);
+  assertEquals(estimateEmbeddingCostMicros("abcdefgh"), 2);
+});
+
+Deno.test("runGovernedEmbedding: no embeddings key → pure no-op (no embed, no record, no reserve)", async () => {
+  const records: AiCallLogEntry[] = [];
+  let embedCalls = 0;
+  let reserveCalls = 0;
+  const out = await runGovernedEmbedding(EMB_CTX, "hello", {
+    embed: () => {
+      embedCalls++;
+      return Promise.resolve(VEC);
+    },
+    record: (e) => {
+      records.push(e);
+      return Promise.resolve();
+    },
+    reserve: () => {
+      reserveCalls++;
+      return Promise.resolve({ allow: true, reservationId: "r" });
+    },
+    limits: DEFAULT_LIMITS,
+    now: () => new Date(1_700_000_000_000),
+    hasKey: false,
+  });
+  assertEquals(out, null);
+  assertEquals(embedCalls, 0);
+  assertEquals(records.length, 0);
+  assertEquals(reserveCalls, 0);
+});
+
+Deno.test("runGovernedEmbedding: reservation admits → embed called, one voyage 'ok' row, consumed", async () => {
+  const records: AiCallLogEntry[] = [];
+  const finalized: Array<{ id: string; consumed: boolean; costMicros: number }> = [];
+  const out = await runGovernedEmbedding(EMB_CTX, "photosynthesis?", {
+    embed: () => Promise.resolve(VEC),
+    record: (e) => {
+      records.push(e);
+      return Promise.resolve();
+    },
+    reserve: (args) => {
+      assert(args.estimatedCostMicros > 0, "pre-call estimate must be conservative, not 0");
+      return Promise.resolve({ allow: true, reservationId: "res-e" });
+    },
+    finalizeReservation: (id, o) => {
+      finalized.push({ id, ...o });
+      return Promise.resolve();
+    },
+    limits: DEFAULT_LIMITS,
+    now: () => new Date(1_700_000_000_000),
+    hasKey: true,
+  });
+  assertEquals(out, VEC);
+  assertEquals(records.length, 1);
+  assertEquals(records[0]!.provider, "voyage");
+  assertEquals(records[0]!.outcome, "ok");
+  assertEquals(records[0]!.surface, "semantic_cache_embed");
+  assert(records[0]!.estimatedCostMicros > 0);
+  assertEquals(finalized, [{
+    id: "res-e",
+    consumed: true,
+    costMicros: records[0]!.estimatedCostMicros,
+  }]);
+});
+
+Deno.test("runGovernedEmbedding: reservation denies (spend cap) → no embed, logs fallback_spend_cap, null", async () => {
+  const records: AiCallLogEntry[] = [];
+  let embedCalls = 0;
+  const finalized: Array<{ id: string; consumed: boolean; costMicros: number }> = [];
+  const out = await runGovernedEmbedding(EMB_CTX, "q", {
+    embed: () => {
+      embedCalls++;
+      return Promise.resolve(VEC);
+    },
+    record: (e) => {
+      records.push(e);
+      return Promise.resolve();
+    },
+    reserve: () => Promise.resolve({ allow: false, reason: "spend_cap" }),
+    finalizeReservation: (id, o) => {
+      finalized.push({ id, ...o });
+      return Promise.resolve();
+    },
+    limits: DEFAULT_LIMITS,
+    now: () => new Date(1_700_000_000_000),
+    hasKey: true,
+  });
+  assertEquals(out, null);
+  assertEquals(embedCalls, 0, "denied embedding must never reach the provider");
+  assertEquals(records[0]!.outcome, "fallback_spend_cap");
+  assertEquals(records[0]!.estimatedCostMicros, 0);
+  assertEquals(finalized.length, 0, "nothing to finalize on a denial");
+});
+
+Deno.test("runGovernedEmbedding: embed failure → logs fallback_error, releases the reservation", async () => {
+  const records: AiCallLogEntry[] = [];
+  const finalized: Array<{ id: string; consumed: boolean; costMicros: number }> = [];
+  const out = await runGovernedEmbedding(EMB_CTX, "q", {
+    embed: () => Promise.resolve(null), // provider timeout/shape failure
+    record: (e) => {
+      records.push(e);
+      return Promise.resolve();
+    },
+    reserve: () => Promise.resolve({ allow: true, reservationId: "res-x" }),
+    finalizeReservation: (id, o) => {
+      finalized.push({ id, ...o });
+      return Promise.resolve();
+    },
+    limits: DEFAULT_LIMITS,
+    now: () => new Date(1_700_000_000_000),
+    hasKey: true,
+  });
+  assertEquals(out, null);
+  assertEquals(records[0]!.outcome, "fallback_error");
+  assertEquals(records[0]!.estimatedCostMicros, 0);
+  assertEquals(finalized, [{ id: "res-x", consumed: false, costMicros: 0 }]);
+});
+
+Deno.test("runGovernedEmbedding: end-to-end via embedText's fetch seam → one governed voyage row", async () => {
+  // Exercises BOTH injectable seams: embeddings_client's fetchImpl and the
+  // gateway's record dep. With a key set and a fake fetch returning a 1024-dim
+  // vector, the embedding is served AND a single governed ai_call_log row is
+  // written — proving the raw provider fetch is no longer un-audited.
+  Deno.env.set("AI_EMBEDDINGS_API_KEY", "vk-test");
+  try {
+    const fakeFetch = ((_url: string | URL | Request, _init?: RequestInit) =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({ data: [{ embedding: new Array(1024).fill(0.02) }] }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      )) as typeof fetch;
+    const records: AiCallLogEntry[] = [];
+    const out = await runGovernedEmbedding(EMB_CTX, "real user question", {
+      embed: (t) => embedText(t, fakeFetch),
+      record: (e) => {
+        records.push(e);
+        return Promise.resolve();
+      },
+      // No reservation infra wired (reserve absent) → the call is still audited.
+      limits: DEFAULT_LIMITS,
+      now: () => new Date(1_700_000_000_000),
+      hasKey: true,
+    });
+    assertEquals(out?.length, 1024);
+    assertEquals(records.length, 1);
+    assertEquals(records[0]!.provider, "voyage");
+    assertEquals(records[0]!.outcome, "ok");
+  } finally {
+    Deno.env.delete("AI_EMBEDDINGS_API_KEY");
+  }
 });

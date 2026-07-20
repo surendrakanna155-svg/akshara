@@ -89,6 +89,13 @@ abstract class TeacherRepository {
     required TeacherTeachingContext teachingContext,
   });
 
+  /// PRA-P0-17: live teacher→parent communication timeline for a student
+  /// (newest first), replacing the never-populated in-memory store.
+  Future<List<ParentCommunicationRecord>> listParentCommunications({
+    required RepositoryQuery query,
+    required String sisStudentId,
+  });
+
   Future<SubjectTeacherConcern> dismissSubjectConcern({
     required RepositoryQuery query,
     required String concernId,
@@ -109,6 +116,18 @@ abstract class TeacherRepository {
   Future<TeacherHomeworkAssignment> createHomework({
     required RepositoryQuery query,
     required TeacherHomeworkCreateRequest request,
+  });
+
+  /// PRA-P1-30 — create homework with a REAL worksheet attachment: presign → PUT
+  /// [bytes] → create with the resulting storage_path. Replaces the old label-only
+  /// attachment (which stored no file). The API impl performs the upload; the mock
+  /// persists metadata.
+  Future<TeacherHomeworkAssignment> createHomeworkFile({
+    required RepositoryQuery query,
+    required TeacherHomeworkCreateRequest request,
+    required String fileName,
+    required List<int> bytes,
+    required String contentType,
   });
 
   /// HWK-2 — students the assignment was delivered to who have NOT submitted.

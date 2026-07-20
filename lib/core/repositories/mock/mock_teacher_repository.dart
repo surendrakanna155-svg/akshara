@@ -417,6 +417,15 @@ class MockTeacherRepository implements TeacherRepository {
   }
 
   @override
+  Future<List<ParentCommunicationRecord>> listParentCommunications({
+    required RepositoryQuery query,
+    required String sisStudentId,
+  }) async {
+    // Local/mock dev keeps reading the in-memory store (populated by mock sends).
+    return ParentCommunicationStore.instance.timelineForStudent(sisStudentId);
+  }
+
+  @override
   Future<SubjectTeacherConcern> dismissSubjectConcern({
     required RepositoryQuery query,
     required String concernId,
@@ -547,6 +556,19 @@ class MockTeacherRepository implements TeacherRepository {
     );
 
     return SchoolHomeworkStore.instance.toTeacherAssignment(record);
+  }
+
+  @override
+  Future<TeacherHomeworkAssignment> createHomeworkFile({
+    required RepositoryQuery query,
+    required TeacherHomeworkCreateRequest request,
+    required String fileName,
+    required List<int> bytes,
+    required String contentType,
+  }) async {
+    // PRA-P1-30: the mock has no real Storage; the file bytes are exercised only
+    // on the API path. Persist the assignment metadata as usual.
+    return createHomework(query: query, request: request);
   }
 
   @override

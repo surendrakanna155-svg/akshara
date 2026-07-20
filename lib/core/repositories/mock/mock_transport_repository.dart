@@ -484,7 +484,26 @@ class MockTransportRepository implements TransportRepository {
   Future<PaginatedResult<StudentTransportAllocation>> getAllocations({
     required RepositoryQuery query,
   }) async =>
-      paginateList(await _loadAllocations(), query);
+      paginateList(_annotateDemandRaised(await _loadAllocations()), query);
+
+  /// PRA-P0-20 — mirror of the server annotation: an allocation reads as billed
+  /// when a raised transport demand matches its (sisStudentId, routeId).
+  List<StudentTransportAllocation> _annotateDemandRaised(
+    List<StudentTransportAllocation> allocations,
+  ) {
+    final store = MockTransportWriteStore.instance;
+    if (store.demands.isEmpty) return allocations;
+    final billed = <String>{
+      for (final d in store.demands.values) '${d.sisStudentId}::${d.routeId}',
+    };
+    return [
+      for (final a in allocations)
+        (a.routeId.isNotEmpty &&
+                billed.contains('${a.sisStudentId}::${a.routeId}'))
+            ? a.copyWith(demandRaised: true)
+            : a,
+    ];
+  }
 
   static const _seedAttendance = [
     TransportAttendanceRecord(
@@ -569,6 +588,74 @@ class MockTransportRepository implements TransportRepository {
       records.insert(0, record);
     }
     return record;
+  }
+
+  // ─── PRA-P1-43: generate a route's attendance roster from its allocations ────
+
+  TransportShift _parseShiftName(String value) => switch (value) {
+        'pm' => TransportShift.pm,
+        'both' => TransportShift.both,
+        _ => TransportShift.am,
+      };
+
+  /// Derives `waiting` attendance rows for a route+shift+date from the route's
+  /// live allocations (mirror of the backend) instead of a single client-provided
+  /// row. Idempotent by a stable id `${routeId}:${sisStudentId}:${shift}:${date}`
+  /// — a re-run never clobbers a status a driver already recorded. Returns the
+  /// number of rows added. Not part of [TransportRepository]: exercised directly.
+  Future<int> generateAttendanceRoster({
+    required RepositoryQuery query,
+    required String routeId,
+    String shift = 'am',
+    String? date,
+  }) async {
+    final routeIndex = _routes.indexWhere((r) => r.id == routeId);
+    if (routeIndex < 0) throw StateError('Route not found');
+    final route = _routes[routeIndex];
+    final day = date ?? DateTime.now().toIso8601String().substring(0, 10);
+    final shiftEnum = _parseShiftName(shift);
+    final allocations = await _loadAllocations();
+    final records = await _loadAttendance();
+
+    var added = 0;
+    for (final a in allocations) {
+      if (a.routeId != routeId) continue;
+      final matchesShift = a.shift == shiftEnum ||
+          a.shift == TransportShift.both ||
+          shiftEnum == TransportShift.both;
+      if (!matchesShift) continue;
+      if (a.sisStudentId.isEmpty) continue;
+      final id = '$routeId:${a.sisStudentId}:$shift:$day';
+      if (records.any((r) => r.id == id)) continue;
+      final stop = route.stops.firstWhere(
+        (s) => s.name.trim() == a.pickupStop.trim(),
+        orElse: () => const TransportStop(
+          id: '',
+          name: '',
+          sequence: 0,
+          scheduledTime: '',
+          status: TransportStopStatus.upcoming,
+          latitude: 0,
+          longitude: 0,
+        ),
+      );
+      records.insert(
+        0,
+        TransportAttendanceRecord(
+          id: id,
+          studentName: a.studentName,
+          stopName: a.pickupStop,
+          routeName: route.name,
+          scheduledTime: stop.scheduledTime,
+          actualTime: '',
+          status: TransportAttendanceStatus.waiting,
+          parentNotified: false,
+          shift: shiftEnum,
+        ),
+      );
+      added++;
+    }
+    return added;
   }
 
   @override
@@ -1204,6 +1291,60 @@ class MockTransportRepository implements TransportRepository {
       );
     }
     vehicles.removeAt(index);
+  }
+
+  // ─── PRA-P0-19: vehicle → route assignment ──────────────────────────────────
+
+  /// Assigns a vehicle (by registration or bus number) to a route, setting the
+  /// route's `assignedBus` so the capacity guard can resolve its capacity — the
+  /// missing write that previously left the guard inert. Rejects a vehicle whose
+  /// capacity is below the route's current allocation count (409 CAPACITY_EXCEEDED),
+  /// mirroring the backend. Not part of [TransportRepository]: exercised directly.
+  Future<TransportRoute> assignRouteVehicle({
+    required RepositoryQuery query,
+    required String routeId,
+    required String registration,
+  }) async {
+    final index = _routes.indexWhere((r) => r.id == routeId);
+    if (index < 0) throw StateError('Route not found');
+    final vehicles = await _loadVehicles();
+    final key = _regKey(registration);
+    final vehicle = vehicles.firstWhere(
+      (v) => _regKey(v.registration) == key || _regKey(v.busNumber) == key,
+      orElse: () => throw StateError('Vehicle not found'),
+    );
+    final allocations = await _loadAllocations();
+    final currentCount = _studentsOnRoute(allocations, routeId);
+    if (vehicle.capacity > 0 && vehicle.capacity < currentCount) {
+      throw ApiFailureException(
+        ApiFailure(
+          type: ApiFailureType.unknown,
+          message:
+              'Vehicle ${vehicle.registration} capacity (${vehicle.capacity}) is '
+              "below the route's current allocation of $currentCount students",
+          code: 'CAPACITY_EXCEEDED',
+          statusCode: 409,
+        ),
+      );
+    }
+    final current = _routes[index];
+    // The mock keys capacity on busNumber (createVehicle sets busNumber ==
+    // registration), so store busNumber to keep the mock's own guard resolvable.
+    final updated = TransportRoute(
+      id: current.id,
+      name: current.name,
+      stopCount: current.stopCount,
+      distanceKm: current.distanceKm,
+      amDeparture: current.amDeparture,
+      pmDeparture: current.pmDeparture,
+      assignedBus: vehicle.busNumber,
+      studentCount: current.studentCount,
+      status: current.status,
+      stops: current.stops,
+      shift: current.shift,
+    );
+    _routes[index] = updated;
+    return updated;
   }
 
   // ─── TRN-1/TRN-2: driver CRUD ───────────────────────────────────────────────

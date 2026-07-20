@@ -28,6 +28,7 @@ import {
   ReplacementRequestNotFoundError,
   requestReplacement,
 } from "./inventory_distribution_repository.ts";
+import { InsufficientStockError } from "../inventory_finance/inventory_stock_repository.ts";
 
 const ORG = "a1000000-0000-4000-8000-000000000001";
 const SCHOOL = "a2000000-0000-4000-8000-000000000001";
@@ -91,6 +92,11 @@ class FakeDistributionDb {
   /// policy existed). When true, every `replacement_status`-mutating UPDATE
   /// below returns `[]` instead of the updated row.
   simulateBlockedUpdate = false;
+  /// PRA-M-1 (S1): a one-shot hook that fires the instant loadReplacementRequest
+  /// snapshots a row — models a COMPETING transaction committing a status
+  /// transition between our (FOR UPDATE) read and our guarded terminal UPDATE.
+  /// The guarded write then matches 0 rows and the repository throws.
+  raceHook: (() => void) | null = null;
   private seq = 0;
 
   private nextId(prefix: string): string {
@@ -158,6 +164,19 @@ class FakeDistributionDb {
       return [row as unknown as T];
     }
 
+    // PRA-P1-37 (S1): createDistribution now locks the catalog row FOR UPDATE and
+    // reads sku_code/unit_price/stock_on_hand off it before issuing.
+    if (q.startsWith("SELECT sku_code, unit_price, stock_on_hand FROM inv_catalog_items")) {
+      const [catalogItemId] = params as [string];
+      const cat = this.catalog.get(catalogItemId);
+      if (!cat) return [];
+      return [{
+        sku_code: (cat as { sku_code?: string | null }).sku_code ?? null,
+        unit_price: cat.unit_price,
+        stock_on_hand: cat.stock_on_hand,
+      } as unknown as T];
+    }
+
     if (q.startsWith("INSERT INTO inv_student_distributions")) {
       const [organizationId, schoolId, studentId, catalogItemId, quantity, createdBy, replacementOfId] =
         params as [string, string, string, string, number, string | null, string | null];
@@ -185,10 +204,21 @@ class FakeDistributionDb {
       return [row as unknown as T];
     }
 
-    if (q.startsWith("UPDATE inv_catalog_items") && q.includes("stock_on_hand = greatest")) {
+    // PRA-P1-37 (S1): decrement is now unclamped (validated under the lock above).
+    if (q.startsWith("UPDATE inv_catalog_items") && q.includes("stock_on_hand = stock_on_hand -")) {
       const [quantity, catalogItemId] = params as [number, string];
       const cat = this.catalog.get(catalogItemId);
-      if (cat) cat.stock_on_hand = Math.max(0, cat.stock_on_hand - quantity);
+      if (cat) cat.stock_on_hand = cat.stock_on_hand - quantity;
+      return [];
+    }
+
+    // PRA-P1-38 (S1): createDistribution links the first-time issuance charge back
+    // onto the distribution row (SET payment_request_id = $1 WHERE id = $2).
+    if (q.startsWith("UPDATE inv_student_distributions") && q.includes("SET payment_request_id = $1")) {
+      const [paymentRequestId, distributionId] = params as [string, string];
+      const row = this.distributions.get(distributionId);
+      if (!row) return [];
+      row.payment_request_id = paymentRequestId;
       return [];
     }
 
@@ -223,16 +253,29 @@ class FakeDistributionDb {
       return rows as unknown as T[];
     }
 
+    // PRA-M-1 (S1): loadReplacementRequest now SELECTs ... FOR UPDATE. We return a
+    // SNAPSHOT (copy) of the row — a read is point-in-time — then fire the one-shot
+    // raceHook so a test can model a competitor committing a transition BETWEEN our
+    // read and our guarded write. The terminal UPDATE below re-checks the STORED
+    // (possibly-changed) row's pre-state.
     if (q.startsWith("SELECT * FROM inv_student_distributions WHERE id")) {
       const [requestId] = params as [string];
       const row = this.distributions.get(requestId);
       if (!row || row.replacement_status == null) return [];
-      return [row as unknown as T];
+      const snapshot = { ...row } as unknown as T;
+      if (this.raceHook) {
+        const hook = this.raceHook;
+        this.raceHook = null;
+        hook();
+      }
+      return [snapshot];
     }
 
     if (q.includes("SET replacement_status = 'approved'")) {
       const [requestId] = params as [string];
       const row = this.distributions.get(requestId)!;
+      // PRA-M-1 (S1): honor `AND d.replacement_status = 'pending'`.
+      if (row.replacement_status !== "pending") return [];
       row.replacement_status = "approved";
       return [this.withCatalog(row) as unknown as T];
     }
@@ -240,6 +283,8 @@ class FakeDistributionDb {
     if (q.includes("SET replacement_status = 'rejected'")) {
       const [requestId, reason] = params as [string, string | null];
       const row = this.distributions.get(requestId)!;
+      // PRA-M-1 (S1): honor `AND d.replacement_status IN ('pending','approved')`.
+      if (row.replacement_status !== "pending" && row.replacement_status !== "approved") return [];
       row.replacement_status = "rejected";
       row.replacement_resolved_at = new Date().toISOString();
       row.replacement_rejection_reason = reason;
@@ -249,6 +294,8 @@ class FakeDistributionDb {
     if (q.includes("SET replacement_status = 'fulfilled'")) {
       const [requestId] = params as [string];
       const row = this.distributions.get(requestId)!;
+      // PRA-M-1 (S1): honor `AND d.replacement_status = 'approved'`.
+      if (row.replacement_status !== "approved") return [];
       row.replacement_status = "fulfilled";
       row.replacement_resolved_at = new Date().toISOString();
       row.status = "reissued";
@@ -439,7 +486,15 @@ Deno.test("gap-remediation/P0-3: requestReplacement (paid item, unblocked) keeps
 
   assertEquals(result.distribution.status, "payment_pending");
   assertEquals(result.paymentRequestId !== null, true);
-  assertEquals(fake.paymentRequests.size, 1);
+  // PRA-P1-38 (S1): the paid item is now billed TWICE across two DISTINCT events
+  // — once at first issuance (createDistribution, 'inventory_issue') and once for
+  // the replacement (requestReplacement, 'inventory_replacement'). That is not a
+  // double-bill: they are separate chargeable events.
+  assertEquals(fake.paymentRequests.size, 2);
+  const issueCharge = [...fake.paymentRequests.values()].find((p) => p.source_type === "inventory_issue");
+  const replacementCharge = [...fake.paymentRequests.values()].find((p) => p.source_type === "inventory_replacement");
+  assertEquals(issueCharge?.amount, 500);
+  assertEquals(replacementCharge?.id, result.paymentRequestId);
   const stored = fake.distributions.get(created.id)!;
   assertEquals(stored.replacement_status, "pending");
   assertEquals(stored.payment_request_id, result.paymentRequestId);
@@ -471,12 +526,14 @@ Deno.test("gap-remediation/P0-3: requestReplacement throws DistributionUpdateBlo
     DistributionUpdateBlockedError,
   );
 
-  // The payment_request was already inserted by this point in a real
-  // Postgres transaction, `withTenantContext` (tenant_db.ts) wraps every
-  // repository call in BEGIN/COMMIT-or-ROLLBACK, so throwing here rolls that
-  // insert back too — the fix this proves is that the repository now
-  // SIGNALS the failure instead of returning `{ distribution: undefined }`.
-  assertEquals(fake.paymentRequests.size, 1);
+  // Two payment_requests exist by this point — the 'inventory_issue' charge from
+  // createDistribution (PRA-P1-38) and the 'inventory_replacement' charge from
+  // requestReplacement — both inserted before the blocked status UPDATE. In a
+  // real Postgres transaction `withTenantContext` (tenant_db.ts) wraps every
+  // repository call in BEGIN/COMMIT-or-ROLLBACK, so throwing here rolls BOTH
+  // inserts back — the fix this proves is that the repository now SIGNALS the
+  // failure instead of returning `{ distribution: undefined }`.
+  assertEquals(fake.paymentRequests.size, 2);
 
   // And the distribution row itself was never mutated into a false
   // "payment_pending"/"replacement_status=pending" state.
@@ -535,4 +592,185 @@ Deno.test("gap-remediation/P0-3: fulfill throws DistributionUpdateBlockedError i
   // Still whatever requestReplacement() left it at — never flipped to
   // 'reissued' by the blocked fulfil UPDATE.
   assertEquals(fake.distributions.get(approvedId)!.status, "replacement_requested");
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PRA Stage S1 — inventory/stock integrity fixes (M-1, P1-37, P1-38, and the
+// M-1 structural counterpart for P2-10 lives in the finance repo test).
+// ═══════════════════════════════════════════════════════════════════════════
+
+const REPO_SOURCE = await Deno.readTextFile(
+  new URL("./inventory_distribution_repository.ts", import.meta.url),
+);
+
+function seedPaidLowStock(fake: FakeDistributionDb, id: string, price: number, stock: number): void {
+  fake.catalog.set(id, {
+    id,
+    name: `Item ${id}`,
+    category: "uniforms",
+    unit_price: price,
+    stock_on_hand: stock,
+  });
+}
+
+// ── PRA-P1-37 — student distribution hard-blocks negative stock ──────────────
+
+Deno.test("PRA-P1-37: createDistribution refuses an over-issue (InsufficientStockError), stock untouched", async () => {
+  const { fake, db } = makeDb();
+  seedPaidLowStock(fake, "cat-scarce", 0, 1);
+
+  await assertRejects(
+    () =>
+      createDistribution(db, ORG, SCHOOL, {
+        studentId: STUDENT,
+        catalogItemId: "cat-scarce",
+        quantity: 2, // only 1 on hand
+        createdBy: STAFF,
+      }),
+    InsufficientStockError,
+  );
+  // Hard block: no distribution row was issued and stock never went negative.
+  assertEquals([...fake.distributions.values()].some((d) => d.catalog_item_id === "cat-scarce"), false);
+  assertEquals(fake.catalog.get("cat-scarce")!.stock_on_hand, 1);
+});
+
+Deno.test("PRA-P1-37: exact-stock issue succeeds and decrements without a floor clamp", async () => {
+  const { fake, db } = makeDb();
+  seedPaidLowStock(fake, "cat-exact", 0, 3);
+
+  await createDistribution(db, ORG, SCHOOL, {
+    studentId: STUDENT,
+    catalogItemId: "cat-exact",
+    quantity: 3,
+    createdBy: STAFF,
+  });
+  assertEquals(fake.catalog.get("cat-exact")!.stock_on_hand, 0);
+});
+
+Deno.test("PRA-P1-37: source locks the catalog row FOR UPDATE and drops the greatest() clamp", () => {
+  assertEquals(/SELECT sku_code, unit_price, stock_on_hand\s+FROM inv_catalog_items\s+WHERE id = \$1\s+FOR UPDATE/.test(REPO_SOURCE), true);
+  // The old silent clamp is gone; the decrement is a plain subtraction.
+  assertEquals(REPO_SOURCE.includes("stock_on_hand = greatest"), false);
+  assertEquals(REPO_SOURCE.includes("SET stock_on_hand = stock_on_hand - $1"), true);
+});
+
+// ── PRA-P1-38 — first-time issuance of a priced item is billed exactly once ───
+
+Deno.test("PRA-P1-38: a priced first-time issue raises one 'inventory_issue' charge and links it", async () => {
+  const { fake, db } = makeDb();
+  seedPaidLowStock(fake, "cat-blazer", 500, 5);
+
+  const created = await createDistribution(db, ORG, SCHOOL, {
+    studentId: STUDENT,
+    catalogItemId: "cat-blazer",
+    quantity: 2,
+    createdBy: STAFF,
+  });
+
+  assertEquals(fake.paymentRequests.size, 1);
+  const charge = [...fake.paymentRequests.values()][0]!;
+  assertEquals(charge.source_type, "inventory_issue");
+  assertEquals(charge.source_id, created.id);
+  assertEquals(charge.amount, 1000); // 500 * 2
+  assertEquals(charge.payer_user_id, STAFF); // defaults to createdBy
+  // The charge is linked back onto the distribution (in-memory + persisted).
+  assertEquals(created.payment_request_id, charge.id);
+  assertEquals(fake.distributions.get(created.id)!.payment_request_id, charge.id);
+});
+
+Deno.test("PRA-P1-38: a FREE first-time issue is never billed", async () => {
+  const { fake, db } = makeDb();
+  const created = await createDistribution(db, ORG, SCHOOL, {
+    studentId: STUDENT,
+    catalogItemId: "cat-1", // unit_price 0
+    quantity: 1,
+    createdBy: STAFF,
+  });
+  assertEquals(fake.paymentRequests.size, 0);
+  assertEquals(created.payment_request_id, null);
+});
+
+Deno.test("PRA-P1-38 reconciliation: a REPLACEMENT re-issue (replacementOfId set) is NOT billed by createDistribution", async () => {
+  const { fake, db } = makeDb();
+  seedPaidLowStock(fake, "cat-blazer", 500, 5);
+
+  // The fulfil path issues the physical item via createDistribution WITH
+  // replacementOfId set — the replacement was already charged at request time,
+  // so this second issue must not create a duplicate charge.
+  const reissued = await createDistribution(db, ORG, SCHOOL, {
+    studentId: STUDENT,
+    catalogItemId: "cat-blazer",
+    quantity: 1,
+    createdBy: STAFF,
+    replacementOfId: "orig-dist-1",
+  });
+  assertEquals(fake.paymentRequests.size, 0, "a replacement re-issue must not be billed here");
+  assertEquals(reissued.payment_request_id, null);
+  // Stock still decremented (the physical item was issued).
+  assertEquals(fake.catalog.get("cat-blazer")!.stock_on_hand, 4);
+});
+
+Deno.test("PRA-P1-38: source charges only a non-replacement priced issue via upsertPaymentRequest", () => {
+  assertEquals(REPO_SOURCE.includes('sourceType: "inventory_issue"'), true);
+  assertEquals(
+    /input\.replacementOfId == null && item\.unit_price > 0 && payerUserId/.test(REPO_SOURCE),
+    true,
+  );
+});
+
+// ── PRA-M-1 — replacement approve/reject/fulfill are race-guarded ─────────────
+
+Deno.test("PRA-M-1: source locks the load FOR UPDATE and guards each terminal write's pre-state", () => {
+  // FOR UPDATE on the request load.
+  assertEquals(/WHERE id = \$1 AND replacement_status IS NOT NULL\s+FOR UPDATE/.test(REPO_SOURCE), true);
+  // Each terminal UPDATE carries the required pre-state predicate.
+  assertEquals(REPO_SOURCE.includes("AND d.replacement_status = 'pending'"), true); // approve
+  assertEquals(REPO_SOURCE.includes("AND d.replacement_status IN ('pending', 'approved')"), true); // reject
+  assertEquals(REPO_SOURCE.includes("AND d.replacement_status = 'approved'"), true); // fulfill
+});
+
+Deno.test("PRA-M-1: approve loses the race (competitor moved it off 'pending') -> DistributionUpdateBlockedError", async () => {
+  const { fake, db } = makeDb();
+  const id = await seedDistribution(db);
+  await requestReplacement(db, ORG, SCHOOL, id, STAFF); // pending
+
+  // A competing transaction approves between our FOR-UPDATE read and our write.
+  fake.raceHook = () => {
+    fake.distributions.get(id)!.replacement_status = "approved";
+  };
+  await assertRejects(() => approveReplacementRequest(db, id), DistributionUpdateBlockedError);
+});
+
+Deno.test("PRA-M-1: reject loses the race (competitor resolved it) -> DistributionUpdateBlockedError", async () => {
+  const { fake, db } = makeDb();
+  const id = await seedDistribution(db);
+  await requestReplacement(db, ORG, SCHOOL, id, STAFF); // pending
+
+  fake.raceHook = () => {
+    fake.distributions.get(id)!.replacement_status = "rejected";
+  };
+  await assertRejects(() => rejectReplacementRequest(db, id, "late"), DistributionUpdateBlockedError);
+});
+
+Deno.test("PRA-M-1: double-fulfil is blocked — the SECOND fulfil throws instead of double-issuing stock", async () => {
+  const { fake, db } = makeDb();
+  const id = await seedDistribution(db);
+  await requestReplacement(db, ORG, SCHOOL, id, STAFF);
+  await approveReplacementRequest(db, id); // approved
+
+  const before = fake.distributions.size;
+  // A competing fulfil commits between our read and our guarded write.
+  fake.raceHook = () => {
+    fake.distributions.get(id)!.replacement_status = "fulfilled";
+  };
+  await assertRejects(
+    () => fulfillReplacementRequest(db, ORG, SCHOOL, id, STAFF),
+    DistributionUpdateBlockedError,
+  );
+  // Our fulfil DID issue a new distribution (a plain INSERT) before its guarded
+  // terminal UPDATE matched 0 rows and threw — in the real single tenant txn that
+  // duplicate issue rolls back with the throw. The point: the repository SIGNALS
+  // the lost race rather than silently double-issuing/reissuing.
+  assertEquals(fake.distributions.size, before + 1);
+  assertEquals(fake.distributions.get(id)!.replacement_status, "fulfilled"); // competitor's, not ours
 });

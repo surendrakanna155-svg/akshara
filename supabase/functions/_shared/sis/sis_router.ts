@@ -19,7 +19,9 @@ import {
   handleUpdateStudentStatus,
 } from "./sis_handlers.ts";
 import {
+  handleDownloadStudentDocument,
   handleListStudentDocuments,
+  handlePresignStudentDocumentUpload,
   handleUploadStudentDocument,
   handleVerifyStudentDocument,
 } from "./sis_document_handlers.ts";
@@ -33,6 +35,11 @@ import {
   handleGetStudentTimeline,
 } from "./sis_student_360_handlers.ts";
 import { handleListStudentSiblings } from "./sis_sibling_handlers.ts";
+// PRA-P1-01 / PRA-P1-02 (S2) — guardian link management.
+import {
+  handleAddGuardian,
+  handleRemoveGuardian,
+} from "./sis_guardian_handlers.ts";
 
 const UUID_SEGMENT =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -90,6 +97,29 @@ export function matchSisRoute(
     };
   }
 
+  // PRA-P1-19 — presign a real document upload (static "presign" segment; more
+  // specific than the /documents/:docId/download route below).
+  const documentPresignMatch = path.match(
+    /^\/sis\/students\/([^/]+)\/documents\/presign$/,
+  );
+  if (documentPresignMatch && method === "POST") {
+    return {
+      handler: handlePresignStudentDocumentUpload,
+      args: [documentPresignMatch[1]!],
+    };
+  }
+
+  // PRA-P1-19 — short-lived signed download URL for a stored document.
+  const documentDownloadMatch = path.match(
+    /^\/sis\/students\/([^/]+)\/documents\/([^/]+)\/download$/,
+  );
+  if (documentDownloadMatch && method === "GET") {
+    return {
+      handler: handleDownloadStudentDocument,
+      args: [documentDownloadMatch[1]!, documentDownloadMatch[2]!],
+    };
+  }
+
   const documentsMatch = path.match(/^\/sis\/students\/([^/]+)\/documents$/);
   if (documentsMatch) {
     if (method === "GET") {
@@ -128,6 +158,25 @@ export function matchSisRoute(
   const siblingsMatch = path.match(/^\/sis\/students\/([^/]+)\/siblings$/);
   if (siblingsMatch && method === "GET") {
     return { handler: handleListStudentSiblings, args: [siblingsMatch[1]!] };
+  }
+
+  // PRA-P1-02 (S2) — DELETE a specific guardian link (deactivate). The
+  // two-segment guardians path is more specific than the single-segment
+  // guardians collection and the generic student route, so it is matched first.
+  const guardianLinkMatch = path.match(
+    /^\/sis\/students\/([^/]+)\/guardians\/([^/]+)$/,
+  );
+  if (guardianLinkMatch && method === "DELETE") {
+    return {
+      handler: handleRemoveGuardian,
+      args: [guardianLinkMatch[1]!, guardianLinkMatch[2]!],
+    };
+  }
+
+  // PRA-P1-01 (S2) — add a guardian link to an existing student.
+  const guardiansMatch = path.match(/^\/sis\/students\/([^/]+)\/guardians$/);
+  if (guardiansMatch && method === "POST") {
+    return { handler: handleAddGuardian, args: [guardiansMatch[1]!] };
   }
 
   const profile360Match = path.match(/^\/sis\/students\/([^/]+)\/360$/);

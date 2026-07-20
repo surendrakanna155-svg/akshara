@@ -12,9 +12,31 @@ import {
 import { createEntityWriteStore } from "../entity_write/entity_write_store.ts";
 import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
 import { MAX_BULK_ITEMS } from "../http.ts";
+import { createServiceClient } from "../db.ts";
+import { revokeUserAccess } from "../identity/identity_revocation.ts";
+import {
+  buildPayrollFinancePosting,
+  postPayrollRunToFinance,
+  selectRunEntries,
+} from "./hr_finance_posting_repository.ts";
 
 const writeStore = createEntityWriteStore("hr_entities", "Hr");
 const { runWrite } = createModuleWriteHandlers("manageHr");
+
+/**
+ * PRA-P0-01 (S2): HR statuses that mean the employee has permanently left the
+ * school (offboarding). Reaching one of these triggers identity revocation of
+ * the linked login user. Deliberately excludes reversible states — 'active',
+ * 'probation', and 'on_leave' — which must NOT cut off access.
+ */
+const OFFBOARDING_STATUSES = new Set([
+  "inactive",
+  "terminated",
+  "relieved",
+  "resigned",
+  "separated",
+  "exited",
+]);
 
 function isoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -140,8 +162,98 @@ export async function handleSetEmployeeStatus(
       moduleEntityAudit("hr.employee.status_changed", "hr_employee", employeeId, { status }),
       request,
     );
+
+    // PRA-P0-01 (S2): offboarding an employee must actually cut off their login.
+    // When the new status is a permanent-exit state, revoke the linked login
+    // user's access to this school (flip membership → 'revoked' + sweep
+    // sessions/refresh tokens). Best-effort and non-fatal to the status change:
+    // an employee with no linked user is a safe no-op, and a revocation error is
+    // audited rather than rolling back a legitimate HR action (the revocation
+    // runs on a separate service client, so it cannot share this transaction).
+    if (OFFBOARDING_STATUSES.has(status.trim().toLowerCase())) {
+      const employeeCode = String(
+        (existing as Record<string, unknown>).employeeCode ??
+          (existing as Record<string, unknown>).employee_code ?? "",
+      );
+      await revokeAccessForOffboardedEmployee(
+        { config, db, claims, request, organizationId, schoolId, employeeId, employeeCode, status },
+      );
+    }
+
     return { payload: saved ?? next, status: 200 };
   });
+}
+
+/**
+ * PRA-P0-01 (S2): resolve an offboarded employee's linked login user and revoke
+ * their access to the school. The link lives in the canonical `employees`
+ * projection (`user_id`), keyed by the unique `(org, school, employee_code)`.
+ * Resolution + revocation run on the service-role client (the identity plane).
+ * Every failure path is audited and swallowed — never throws — so a login user
+ * that cannot be found, or a transient revoke error, does not fail the HR status
+ * change (which has already been recorded).
+ */
+async function revokeAccessForOffboardedEmployee(args: {
+  config: AppConfig;
+  // deno-lint-ignore no-explicit-any
+  db: any;
+  // deno-lint-ignore no-explicit-any
+  claims: any;
+  request: Request;
+  organizationId: string;
+  schoolId: string;
+  employeeId: string;
+  employeeCode: string;
+  status: string;
+}): Promise<void> {
+  const { config, db, claims, request, organizationId, schoolId, employeeId, employeeCode, status } =
+    args;
+  if (!employeeCode) return; // no canonical key → nothing to resolve.
+  try {
+    const service = createServiceClient(config);
+    const { data: emp, error } = await service
+      .from("employees")
+      .select("user_id")
+      .eq("organization_id", organizationId)
+      .eq("school_id", schoolId)
+      .eq("employee_code", employeeCode)
+      .not("user_id", "is", null)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+
+    const userId = (emp as { user_id: string | null } | null)?.user_id;
+    if (!userId) return; // employee has no login identity — nothing to revoke.
+
+    const result = await revokeUserAccess(service, {
+      organizationId,
+      schoolId,
+      userId,
+      reason: `HR offboarding: employee ${employeeCode} status → ${status}`,
+    });
+    await emitMutationAudit(
+      db,
+      claims,
+      moduleEntityAudit("hr.employee.access_revoked", "hr_employee", employeeId, {
+        status,
+        userId,
+        membershipsRevoked: result.membershipsRevoked,
+        sessionsRevoked: result.sessionsRevoked,
+        refreshTokensRevoked: result.refreshTokensRevoked,
+      }),
+      request,
+    );
+  } catch (err) {
+    // Do not fail the status change; surface the failure loudly for follow-up.
+    await emitMutationAudit(
+      db,
+      claims,
+      moduleEntityAudit("hr.employee.access_revocation_failed", "hr_employee", employeeId, {
+        status,
+        error: err instanceof Error ? err.message : String(err),
+      }),
+      request,
+    );
+  }
 }
 
 /** Default annual leave entitlement (days) used when a policy row is absent. */
@@ -679,6 +791,42 @@ export async function handleRejectLeaveRequest(
 }
 
 /**
+ * PRA-P1-33 — PUT /hr/settings (manageHr). HR settings were READ-ONLY: only
+ * `GET /hr/settings` existed, so the leave policy / payable-days / other HR
+ * config in `snapshot_settings` could never be changed through the API. This
+ * write merges the provided top-level keys onto the existing settings snapshot
+ * (a fresh school with no settings row degrades to `{}` and is created), so
+ * unspecified keys are preserved. Audited as `hr.settings.updated`.
+ */
+export async function handleUpdateSettings(req: Request, config: AppConfig): Promise<Response> {
+  return await runWrite(req, config, async (ctx) => {
+    const { db, organizationId, schoolId, body, claims, req: request } = ctx;
+
+    // Guard the one structured field the rest of HR reads: a supplied leave
+    // policy must be an array (each row {leaveType, entitlement}). Everything else
+    // is opaque HR config merged as-is.
+    if ("leavePolicy" in body && body.leavePolicy != null && !Array.isArray(body.leavePolicy)) {
+      throw new WriteValidationError("leavePolicy must be an array");
+    }
+
+    const saved = await writeStore.mutateSnapshot(
+      db,
+      organizationId,
+      schoolId,
+      "snapshot_settings",
+      (current) => ({ ...current, ...body }),
+    );
+    await emitMutationAudit(
+      db,
+      claims,
+      moduleEntityAudit("hr.settings.updated", "hr_settings", schoolId, {}),
+      request,
+    );
+    return { payload: saved, status: 200 };
+  });
+}
+
+/**
  * POST /hr/performance — create a performance review (entity_type 'review').
  */
 export async function handleCreatePerformanceReview(
@@ -942,7 +1090,7 @@ export async function handleProcessPayrollRun(req: Request, config: AppConfig): 
     // The guard raises inside the mutator; capture it and re-throw AFTER the
     // snapshot resolves so a rejected run never mutates the snapshot.
     let guardError: WriteValidationError | null = null;
-    await writeStore.mutateSnapshot(
+    const savedSnapshot = await writeStore.mutateSnapshot(
       db,
       organizationId,
       schoolId,
@@ -972,7 +1120,40 @@ export async function handleProcessPayrollRun(req: Request, config: AppConfig): 
       moduleEntityAudit("hr.payroll_run.processed", "hr_payroll_run", runId, { processedOn }),
       request,
     );
-    return { payload: processedRun!, status: 201 };
+
+    // PRA-P0-24 (S7, B5 Option C): post the DISBURSED run to Finance as a
+    // per-school payroll EXPENSE / DEMAND record (no cash movement, no student-fee
+    // ledger touched). The totals are summed from the SAME entries the salary
+    // register reports, so the posted gross/net are honest run totals. Runs inside
+    // this write's tenant transaction (posting + processed-run commit atomically),
+    // and is idempotent on payroll_run_id (ON CONFLICT DO NOTHING) — the existing
+    // 409 re-process guard already blocks a second process, and even if reached it
+    // cannot double-post.
+    const runEntries = selectRunEntries(savedSnapshot, runId);
+    const posting = buildPayrollFinancePosting(processedRun!, runEntries);
+    const { posted, postingId } = await postPayrollRunToFinance(
+      db,
+      organizationId,
+      schoolId,
+      posting,
+      claims.sub ?? "",
+    );
+    if (posted) {
+      await emitMutationAudit(
+        db,
+        claims,
+        moduleEntityAudit("payroll.finance.posted", "payroll_finance_posting", runId, {
+          period: posting.period,
+          grossAmount: posting.grossAmount,
+          netAmount: posting.netAmount,
+          employeeCount: posting.employeeCount,
+          postingId,
+        }),
+        request,
+      );
+    }
+
+    return { payload: { ...processedRun!, financePosted: posted }, status: 201 };
   });
 }
 
@@ -1059,6 +1240,86 @@ export function upsertSalaryStructure(
   return { ...current, structures: next };
 }
 
+// ── PRA-P1-36 — loss-of-pay (LOP) automation ────────────────────────────────
+//
+// Payroll generation used to compute each line from the salary structure ONLY,
+// ignoring whether the employee was actually present. These helpers read the
+// REAL attendance + approved-unpaid-leave snapshots and derive the LOP days that
+// generatePayrollRun folds into an itemised deduction.
+
+/** Default working days in a payroll period (per-day pay = basic / payableDays). */
+export const DEFAULT_PAYABLE_DAYS = 30;
+
+/**
+ * Leave types that mean loss-of-pay (unpaid leave). Matched case-insensitively.
+ * Paid leave (casual/sick/earned) never causes an LOP deduction.
+ */
+const UNPAID_LEAVE_TYPES = new Set([
+  "unpaid",
+  "lop",
+  "loss_of_pay",
+  "leave_without_pay",
+  "lwp",
+]);
+
+/**
+ * The YYYY-MM prefix of a payroll period label ("2026-07" / "2026-07-01" →
+ * "2026-07"), or null when the label is not ISO-month-shaped (e.g. a free-form
+ * "May 2026") — in which case no date filter can be derived and the caller's
+ * period-scoped snapshots are used as-is.
+ */
+function periodPrefix(period: string): string | null {
+  const m = period.match(/^(\d{4})-(\d{2})/);
+  return m ? `${m[1]}-${m[2]}` : null;
+}
+
+function withinPeriod(date: string, prefix: string | null): boolean {
+  return prefix === null ? true : date.startsWith(prefix);
+}
+
+/**
+ * PRA-P1-36 — counts an employee's loss-of-pay (LOP) days for a payroll period
+ * from the REAL attendance + leave snapshots:
+ *   • each 'absent' attendance record dated within the period, PLUS
+ *   • each APPROVED unpaid-leave day whose request falls in the period.
+ * When the period label is not ISO-month-shaped (so no date filter can be
+ * derived) every provided record counts — the caller passes period-scoped
+ * snapshots. Pure, so the deduction math is unit-testable DB-free.
+ */
+export function countLopDays(
+  employeeId: string,
+  period: string,
+  attendance: Record<string, unknown>,
+  leave: Record<string, unknown>,
+): number {
+  const prefix = periodPrefix(period);
+
+  const records = Array.isArray(attendance.records)
+    ? attendance.records as Array<Record<string, unknown>>
+    : [];
+  const absentDays = records.filter((r) =>
+    String(r.employeeId ?? r.employee_id ?? "") === employeeId &&
+    String(r.status ?? "").toLowerCase() === "absent" &&
+    withinPeriod(String(r.date ?? ""), prefix)
+  ).length;
+
+  const requests = Array.isArray(leave.requests)
+    ? leave.requests as Array<Record<string, unknown>>
+    : [];
+  const unpaidDays = requests
+    .filter((r) =>
+      String(r.employeeId ?? r.employee_id ?? "") === employeeId &&
+      String(r.status ?? "").toLowerCase() === "approved" &&
+      UNPAID_LEAVE_TYPES.has(
+        String(r.leaveType ?? r.leave_type ?? "").toLowerCase(),
+      ) &&
+      withinPeriod(String(r.fromDate ?? r.from_date ?? ""), prefix)
+    )
+    .reduce((sum, r) => sum + (Number(r.days ?? 0) || 0), 0);
+
+  return absentDays + unpaidDays;
+}
+
 /**
  * Pure payroll-run GENERATION transform (MOD-2). Given the current
  * `snapshot_payroll`, generates a DRAFT run `runId` for `period` from the stored
@@ -1066,6 +1327,12 @@ export function upsertSalaryStructure(
  *   • Refuses to regenerate an already-`processed` run (409) — never overwrite a
  *     disbursed run.
  *   • Requires at least one matching structure (422 `PAYROLL_NO_STRUCTURES`).
+ *   • PRA-P1-36 — reads the REAL attendance + approved-unpaid-leave snapshots and
+ *     subtracts an itemised loss-of-pay (LOP) deduction of
+ *     `lopDays × (basicPay / payableDays)` from each line, folded into
+ *     `deductions` so the money-safety invariant
+ *     (netPay = basic + allowances − deductions) still holds. LOP is clamped so
+ *     net take-home never goes negative.
  *   • Computes each line's netPay = basic + allowances − deductions and runs the
  *     SAME money-safety guards the processor enforces (validatePayrollEntries).
  *   • Replaces any prior entries for this run (idempotent regenerate of a draft),
@@ -1074,9 +1341,24 @@ export function upsertSalaryStructure(
  */
 export function generatePayrollRun(
   current: Record<string, unknown>,
-  opts: { runId: string; period: string; employeeIds?: string[] },
+  opts: {
+    runId: string;
+    period: string;
+    employeeIds?: string[];
+    /** `snapshot_attendance` payload (records[]), for LOP absence days. */
+    attendance?: Record<string, unknown>;
+    /** `snapshot_leave` payload (requests[]), for approved unpaid-leave days. */
+    leave?: Record<string, unknown>;
+    /** Working days in the period (per-day basic = basicPay / payableDays). */
+    payableDays?: number;
+  },
 ): { next: Record<string, unknown>; run: Record<string, unknown>; entries: Array<Record<string, unknown>> } {
   const { runId, period } = opts;
+  const attendance = opts.attendance ?? {};
+  const leave = opts.leave ?? {};
+  const payableDays = opts.payableDays && opts.payableDays > 0
+    ? opts.payableDays
+    : DEFAULT_PAYABLE_DAYS;
   const runs = Array.isArray(current.runs)
     ? current.runs as Array<Record<string, unknown>>
     : [];
@@ -1109,15 +1391,34 @@ export function generatePayrollRun(
   const entries = selected.map((s) => {
     const basicPay = money(s, "basicPay", "basic_pay");
     const allowances = money(s, "allowances");
-    const deductions = money(s, "deductions");
+    const structuralDeductions = money(s, "deductions");
+    const employeeId = String(s.employeeId ?? s.employee_id ?? "");
+
+    // PRA-P1-36 — itemised LOP deduction from real attendance / unpaid leave.
+    // Per-day pay is basic / payableDays; clamp the LOP so it can at most zero out
+    // take-home (you cannot deduct more than what is payable, and a negative net
+    // would fail validatePayrollEntries).
+    const lopDays = countLopDays(employeeId, period, attendance, leave);
+    const rawLop = Math.round(lopDays * (basicPay / payableDays));
+    const maxLop = Math.max(0, basicPay + allowances - structuralDeductions);
+    const lopAmount = Math.min(Math.max(0, rawLop), maxLop);
+    const deductions = structuralDeductions + lopAmount;
+
     return {
       runId,
-      employeeId: String(s.employeeId ?? s.employee_id ?? ""),
+      employeeId,
       employeeCode: String(s.employeeCode ?? s.employee_code ?? ""),
       employeeName: String(s.employeeName ?? s.employee_name ?? ""),
       department: String(s.department ?? ""),
       basicPay,
       allowances,
+      // Itemised: the structural deductions and the LOP component are recorded
+      // separately; `deductions` carries their SUM so the money-safety invariant
+      // (netPay === basic + allowances − deductions) still holds and the salary
+      // register / payslip totals stay correct.
+      structuralDeductions,
+      lopDays,
+      lopAmount,
       deductions,
       netPay: basicPay + allowances - deductions,
     };
@@ -1194,6 +1495,24 @@ export async function handleGeneratePayrollRun(req: Request, config: AppConfig):
       }
       employeeIds = rawIds.map((v) => String(v ?? "").trim()).filter((v) => v.length > 0);
     }
+    // PRA-P1-36 — an optional per-run payable-days override (0/absent → default 30).
+    const payableDays = intOr(body, 0, "payableDays", "payable_days") || undefined;
+
+    // PRA-P1-36 — load the REAL attendance + leave snapshots so generation can
+    // subtract a loss-of-pay deduction for absence / approved unpaid leave. Both
+    // are plain reads inside this write's tenant transaction.
+    const attendance = await getSnapshotOrEmptyForWrite(
+      db,
+      organizationId,
+      schoolId,
+      "snapshot_attendance",
+    );
+    const leave = await getSnapshotOrEmptyForWrite(
+      db,
+      organizationId,
+      schoolId,
+      "snapshot_leave",
+    );
 
     let generated: { run: Record<string, unknown>; entries: Array<Record<string, unknown>> } | null = null;
     let guardError: WriteValidationError | null = null;
@@ -1204,7 +1523,14 @@ export async function handleGeneratePayrollRun(req: Request, config: AppConfig):
       "snapshot_payroll",
       (current) => {
         try {
-          const result = generatePayrollRun(current, { runId, period, employeeIds });
+          const result = generatePayrollRun(current, {
+            runId,
+            period,
+            employeeIds,
+            attendance,
+            leave,
+            payableDays,
+          });
           generated = { run: result.run, entries: result.entries };
           return result.next;
         } catch (error) {

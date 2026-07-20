@@ -1,5 +1,28 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
 
+/**
+ * PRA-P1-18: thrown when no real curriculum template exists for the requested
+ * board+grade+subject. Previously the generator silently inserted a fabricated
+ * 2-chapter "Unit 1 / Unit 2" stub — indistinguishable from a real syllabus and
+ * counted into the Principal's coverage-% over a meaningless denominator. Now it
+ * refuses: no fake curriculum is ever written. The provisioning flows already
+ * catch this and record an honest "syllabus auto-generation skipped" warning; the
+ * direct generate endpoint returns 422 so the school KNOWS the grade is unseeded.
+ */
+export class NoSyllabusTemplateError extends Error {
+  constructor(
+    public readonly board: string,
+    public readonly gradeLabel: string,
+    public readonly subjectName: string,
+  ) {
+    super(
+      `No curriculum template for ${board} / ${gradeLabel} / ${subjectName}; ` +
+        `syllabus cannot be auto-generated (only seeded grades are supported).`,
+    );
+    this.name = "NoSyllabusTemplateError";
+  }
+}
+
 export interface SubjectTemplateRow {
   id: string;
   board: string;
@@ -85,16 +108,20 @@ export async function generateSyllabusFromTemplates(
     createdBy: string;
   },
 ): Promise<{ chaptersCreated: number; topicsCreated: number; generationId: string }> {
-  const templates = await listSubjectTemplates(db, input.board ?? "CBSE", input.gradeLabel);
+  const board = input.board ?? "CBSE";
+  const templates = await listSubjectTemplates(db, board, input.gradeLabel);
   const match = templates.find(
     (t) =>
       t.subject_name.toLowerCase() === input.subjectName.toLowerCase() ||
       t.subject_code.toLowerCase() === input.subjectName.slice(0, 3).toLowerCase(),
   );
-  const chapters = match?.chapters ?? [
-    { name: "Unit 1", topics: ["Introduction", "Basics"] },
-    { name: "Unit 2", topics: ["Practice", "Review"] },
-  ];
+  // PRA-P1-18: refuse rather than fabricate. A missing template used to seed a
+  // fake "Unit 1 / Unit 2" scaffold (with no manual-edit path to fix it) that
+  // then polluted syllabus coverage-%. Only real, seeded curriculum is written.
+  if (!match || match.chapters.length === 0) {
+    throw new NoSyllabusTemplateError(board, input.gradeLabel, input.subjectName);
+  }
+  const chapters = match.chapters;
 
   let chaptersCreated = 0;
   let topicsCreated = 0;

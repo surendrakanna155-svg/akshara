@@ -31,7 +31,9 @@ class _TeacherHomeworkCreateScreenState
   final _subjectController = TextEditingController();
   final _titleController = TextEditingController();
   final _studentController = TextEditingController();
-  // HWK-4 — optional teacher attachment (reference/label, not a real upload).
+  // HWK-4 / PRA-P1-30 — optional teacher attachment. When a name is entered the
+  // client uploads a REAL worksheet file (presign → PUT → create with the
+  // storage_path); the ref field stays a legacy free-text link.
   final _attachmentNameController = TextEditingController();
   final _attachmentRefController = TextEditingController();
 

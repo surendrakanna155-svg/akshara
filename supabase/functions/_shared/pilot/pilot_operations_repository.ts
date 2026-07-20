@@ -1,5 +1,13 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
 import { attendancePercentFromCounts } from "../attendance/attendance_percentage.ts";
+// PRA-P0-07 / P0-08 / P0-11 (S3): the canonical teacher↔class binding
+// (`teacher_subject_assignments`), replacing the unwritten `timetable_slots`.
+import {
+  buildClassLabel,
+  listCanonicalTeacherClasses,
+  teacherOwnsClass,
+  teacherOwnsClassSubject,
+} from "../school_completion/subject_assignments_repository.ts";
 
 export const ATTENDANCE_SESSION_PROBE_SQL = `
   SELECT count(*)::text AS count FROM attendance_sessions WHERE id = $1::uuid
@@ -724,6 +732,10 @@ export async function submitHomework(
     homeworkId: string;
     notes: string;
     attachmentLabel?: string | null;
+    // PRA-P1-30 — tenant-prefixed path of the REAL uploaded submission file (null
+    // when the student submits without an attachment). attachment_label stays as
+    // the human file-name label.
+    attachmentStoragePath?: string | null;
   },
 ): Promise<Record<string, unknown>> {
   // Cross-class scope: the assignment must have been delivered to THIS student.
@@ -747,8 +759,9 @@ export async function submitHomework(
   try {
     await db.queryObject<{ id: string }>(
       `INSERT INTO homework_submissions (
-         organization_id, school_id, student_id, homework_id, notes, attachment_label
-       ) VALUES ($1,$2,$3,$4,$5,$6)
+         organization_id, school_id, student_id, homework_id, notes,
+         attachment_label, attachment_storage_path
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7)
        RETURNING id`,
       [
         input.organizationId,
@@ -757,6 +770,7 @@ export async function submitHomework(
         input.homeworkId,
         input.notes,
         input.attachmentLabel ?? null,
+        input.attachmentStoragePath ?? null,
       ],
     );
   } catch (error) {
@@ -853,55 +867,10 @@ export async function reviewHomework(
   };
 }
 
-export async function updateExamMark(
-  db: TenantQueryClient,
-  orgId: string,
-  schoolId: string,
-  markEntryId: string,
-  marksObtained: number,
-  updatedBy: string,
-): Promise<Record<string, unknown>> {
-  const rows = await db.queryObject<{
-    id: string;
-    exam_id: string;
-    exam_title: string;
-    class_label: string;
-    marks_obtained: number;
-    max_marks: number;
-    student_id: string;
-  }>(
-    `UPDATE exam_mark_entries
-     SET marks_obtained = $4, marks_entered = true, updated_by = $5, updated_at = timezone('utc', now())
-     WHERE organization_id = $1 AND school_id = $2 AND id = $3
-       AND published = false
-     RETURNING *`,
-    [orgId, schoolId, markEntryId, marksObtained, updatedBy],
-  );
-  const row = rows[0];
-  if (!row) {
-    // Enforce the SAME published-immutability as the academics path: a published
-    // mark changes only via the correction workflow. Distinguish a published
-    // (locked) row from a genuinely missing one for a precise error.
-    const existing = await db.queryObject<{ published: boolean }>(
-      `SELECT published FROM exam_mark_entries
-       WHERE organization_id = $1 AND school_id = $2 AND id = $3`,
-      [orgId, schoolId, markEntryId],
-    );
-    if (existing[0]?.published) {
-      throw new Error(`Exam mark is published and immutable: ${markEntryId}`);
-    }
-    throw new Error(`Exam mark entry not found: ${markEntryId}`);
-  }
-  return {
-    id: row.id,
-    examId: row.exam_id,
-    title: row.exam_title,
-    classLabel: row.class_label,
-    marksObtained: row.marks_obtained,
-    maxMarks: row.max_marks,
-    studentId: row.student_id,
-  };
-}
+// PRA-P0-12 (S0/T1a): `updateExamMark` was removed together with its only caller,
+// the shadowing pilot handler `handleTeacherExamMarkUpdate`. The governed exam
+// engine (`exam_administration_repository.applyMarkUpdate`) is now the sole writer
+// of `exam_mark_entries` on the teacher path, preserving subject-teacher scoping.
 
 // Map a stored mark to the parent/student calendar status (AttendanceDayStatus
 // on the client). excused + half_day now render as their own distinct cells.
@@ -1137,7 +1106,7 @@ export async function overlayTimetableSnapshotFromSlots(
 
   const days: Record<string, unknown>[] = [];
   let totalPeriods = 0;
-  let completedToday = 0;
+  const completedToday = 0;
   let upcomingToday = 0;
 
   for (const meta of TIMETABLE_DAY_META) {
@@ -1927,9 +1896,11 @@ export async function overlayStudentHomeworkFromSubmissions(
     grade: string | null;
     comment: string | null;
     submitted_label: string | null;
+    attachment_storage_path: string | null;
   }>(
     `SELECT homework_id, status, grade, comment,
-            to_char(submitted_at, 'DD Mon YYYY') AS submitted_label
+            to_char(submitted_at, 'DD Mon YYYY') AS submitted_label,
+            attachment_storage_path
      FROM homework_submissions
      WHERE organization_id = $1 AND school_id = $2 AND student_id = $3::uuid
        AND homework_id = ANY($4::text[])`,
@@ -1961,6 +1932,11 @@ export async function overlayStudentHomeworkFromSubmissions(
     if (sub.status === "reviewed") {
       overlay.reviewGrade = sub.grade ?? null;
       overlay.reviewComment = sub.comment ?? null;
+    }
+    // PRA-P1-30 — surface the real stored submission object so the client can
+    // request a signed download URL for it.
+    if (sub.attachment_storage_path != null) {
+      overlay.submissionAttachmentStoragePath = sub.attachment_storage_path;
     }
     return overlay;
   });
@@ -2068,6 +2044,121 @@ export function parseClassLabel(
     };
   }
   return { className: trimmed, sectionName: null };
+}
+
+// ─── PRA-P0-11 (S3): per-class ownership guards for the pilot write lane ─────────
+//
+// The pilot teacher writes (attendance, homework) checked PERMISSION but never
+// CLASS OWNERSHIP — any teacher with `markAttendance`/`manageHomework` could
+// write to ANY class. These guards close that hole using the canonical binding.
+//
+// Scope mirrors the certified exam engine's `isSubjectTeacherScoped`: only a
+// PLAIN teacher (one WITHOUT `verifyExamResults`) is ownership-scoped; oversight
+// roles (superAdmin / schoolAdmin / principal / vicePrincipal / management, who
+// hold `verifyExamResults`) may write to any class. Fail-closed for scoped
+// teachers — identical to the behaviour already shipping on /academics/exams/*.
+
+/** Raised when an ownership-scoped teacher writes to a class they are not bound to. */
+export class ClassOwnershipError extends Error {
+  readonly classLabel: string;
+  constructor(classLabel: string) {
+    super(`You are not assigned to class ${classLabel}`);
+    this.name = "ClassOwnershipError";
+    this.classLabel = classLabel;
+  }
+}
+
+/** True when the caller must be ownership-scoped (a plain teacher). */
+function isOwnershipScoped(permissions: readonly string[]): boolean {
+  return !permissions.includes("verifyExamResults");
+}
+
+/**
+ * PRA-P0-11 — a plain teacher may only mark attendance for a class they own
+ * (teach any subject in, or are the class teacher of). Oversight roles bypass.
+ */
+export async function assertTeacherOwnsClass(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  teacherUserId: string,
+  permissions: readonly string[],
+  classLabel: string,
+): Promise<void> {
+  if (!isOwnershipScoped(permissions)) return;
+  const { className, sectionName } = parseClassLabel(classLabel);
+  const owns = await teacherOwnsClass(
+    db,
+    organizationId,
+    schoolId,
+    teacherUserId,
+    className,
+    sectionName,
+  );
+  if (!owns) throw new ClassOwnershipError(classLabel);
+}
+
+/**
+ * PRA-P0-11 — a plain teacher may only assign homework for a (class, subject)
+ * they are assigned to teach. Oversight roles bypass.
+ */
+export async function assertTeacherOwnsClassSubject(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  teacherUserId: string,
+  permissions: readonly string[],
+  classLabel: string,
+  subject: string,
+): Promise<void> {
+  if (!isOwnershipScoped(permissions)) return;
+  const { className, sectionName } = parseClassLabel(classLabel);
+  const owns = await teacherOwnsClassSubject(
+    db,
+    organizationId,
+    schoolId,
+    teacherUserId,
+    className,
+    sectionName,
+    subject,
+  );
+  if (!owns) throw new ClassOwnershipError(classLabel);
+}
+
+/**
+ * PRA-P0-11 — a plain teacher may only review/grade/notify on a homework they
+ * OWN (created). `teacher_entities` records the assignment with the owning
+ * `teacher_id`; the id may arrive as a homework_submissions.id or the homework_id
+ * itself, so we resolve either to the homework_id first. Oversight roles bypass.
+ */
+export async function assertTeacherOwnsHomework(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  teacherUserId: string,
+  permissions: readonly string[],
+  submissionOrHomeworkId: string,
+): Promise<void> {
+  if (!isOwnershipScoped(permissions)) return;
+  const rows = await db.queryObject<{ owns: boolean }>(
+    `SELECT EXISTS (
+        SELECT 1
+        FROM teacher_entities te
+        WHERE te.organization_id = $1 AND te.school_id = $2
+          AND te.entity_type = 'homework_assignment'
+          AND te.teacher_id = $3
+          AND (
+            te.id = $4
+            OR te.id IN (
+              SELECT hs.homework_id FROM homework_submissions hs
+              WHERE hs.organization_id = $1 AND hs.school_id = $2
+                AND (hs.id::text = $4 OR hs.homework_id = $4)
+            )
+          )
+     ) AS owns`,
+    [organizationId, schoolId, teacherUserId, submissionOrHomeworkId],
+  );
+  if (rows[0]?.owns !== true) throw new ClassOwnershipError(submissionOrHomeworkId);
 }
 
 // --- HWK-1 real due date helpers (pilot homework path) ---
@@ -2204,19 +2295,28 @@ export async function overlayParentHomeworkFromRealState(
     id: string;
     attachment_name: string | null;
     attachment_ref: string | null;
+    attachment_storage_path: string | null;
   }>(
     `SELECT id,
             payload->>'attachmentName' AS attachment_name,
-            payload->>'attachmentRef' AS attachment_ref
+            payload->>'attachmentRef' AS attachment_ref,
+            payload->>'attachmentStoragePath' AS attachment_storage_path
        FROM student_entities
       WHERE organization_id = $1 AND school_id = $2 AND student_id = $3::uuid
         AND entity_type = 'homework_item'
         AND id = ANY($4::text[])`,
     [orgId, schoolId, studentId, homeworkIds],
   );
-  const attachmentByHw = new Map<string, { name: string | null; ref: string | null }>();
+  const attachmentByHw = new Map<
+    string,
+    { name: string | null; ref: string | null; storagePath: string | null }
+  >();
   for (const r of itemRows) {
-    attachmentByHw.set(r.id, { name: r.attachment_name, ref: r.attachment_ref });
+    attachmentByHw.set(r.id, {
+      name: r.attachment_name,
+      ref: r.attachment_ref,
+      storagePath: r.attachment_storage_path,
+    });
   }
 
   // The child's own submission (note + attachment + status/grade/comment).
@@ -2227,9 +2327,11 @@ export async function overlayParentHomeworkFromRealState(
     comment: string | null;
     notes: string | null;
     attachment_label: string | null;
+    attachment_storage_path: string | null;
     submitted_label: string | null;
   }>(
     `SELECT homework_id, status, grade, comment, notes, attachment_label,
+            attachment_storage_path,
             to_char(submitted_at, 'DD Mon YYYY') AS submitted_label
        FROM homework_submissions
       WHERE organization_id = $1 AND school_id = $2 AND student_id = $3::uuid
@@ -2247,6 +2349,10 @@ export async function overlayParentHomeworkFromRealState(
     if (attachment) {
       if (attachment.name) item.attachmentName = attachment.name;
       if (attachment.ref) item.attachmentRef = attachment.ref;
+      // PRA-P1-30 — the teacher worksheet's real stored object.
+      if (attachment.storagePath) {
+        item.attachmentStoragePath = attachment.storagePath;
+      }
     }
     const sub = subByHw.get(id);
     if (sub) {
@@ -2256,6 +2362,10 @@ export async function overlayParentHomeworkFromRealState(
       if (sub.notes != null && sub.notes.length > 0) item.submissionNote = sub.notes;
       if (sub.attachment_label != null) {
         item.submissionAttachmentLabel = sub.attachment_label;
+      }
+      // PRA-P1-30 — the child's submitted file's real stored object.
+      if (sub.attachment_storage_path != null) {
+        item.submissionAttachmentStoragePath = sub.attachment_storage_path;
       }
       if (sub.submitted_label != null) item.submittedLabel = sub.submitted_label;
     }
@@ -2302,10 +2412,15 @@ export async function insertHomeworkAssignment(
     // homework detail can surface it. Null keeps a plain assignment.
     attachmentName?: string | null;
     attachmentRef?: string | null;
+    // PRA-P1-30 — tenant-prefixed path of the REAL uploaded teacher worksheet
+    // (null when the teacher attaches no file). Rides the assignment + delivered
+    // item JSONB payload alongside the display name.
+    attachmentStoragePath?: string | null;
   },
 ): Promise<{ id: string; deliveredCount: number }> {
   const attachmentName = input.attachmentName?.trim() || null;
   const attachmentRef = input.attachmentRef?.trim() || null;
+  const attachmentStoragePath = input.attachmentStoragePath?.trim() || null;
   // teacher_entities is teacher-scoped (PK + RLS include teacher_id =
   // app_current_user_id()), so the assignment is owned by the creating teacher.
   // dueDate is stored as a top-level payload key; when null it degrades to a
@@ -2318,6 +2433,7 @@ export async function insertHomeworkAssignment(
          'id', $1::text, 'title', $4::text, 'classLabel', $5::text,
          'subject', $6::text, 'dueLabel', $7::text, 'dueDate', $8::text,
          'attachmentName', $10::text, 'attachmentRef', $11::text,
+         'attachmentStoragePath', $12::text,
          'pendingReviews', 0))
      ON CONFLICT (organization_id, school_id, teacher_id, entity_type, id)
        DO UPDATE SET payload = EXCLUDED.payload`,
@@ -2333,6 +2449,7 @@ export async function insertHomeworkAssignment(
       input.teacherId,
       attachmentName,
       attachmentRef,
+      attachmentStoragePath,
     ],
   );
 
@@ -2387,6 +2504,7 @@ export async function insertHomeworkAssignment(
            'id', $1::text, 'subject', $5::text, 'title', $6::text,
            'dueLabel', $7::text, 'dueDate', $8::text,
            'attachmentName', $9::text, 'attachmentRef', $10::text,
+           'attachmentStoragePath', $11::text,
            'status', 'pending'))
        ON CONFLICT (organization_id, school_id, student_id, entity_type, id)
          DO UPDATE SET payload = EXCLUDED.payload`,
@@ -2401,6 +2519,7 @@ export async function insertHomeworkAssignment(
         input.dueDate,
         attachmentName,
         attachmentRef,
+        attachmentStoragePath,
       ],
     );
   }
@@ -2633,24 +2752,19 @@ export async function listTeacherHomeworkHistory(
 // RLS context. A fresh school with no data returns honest zeros/empty arrays.
 // ===========================================================================
 
-// The teacher's own classes (class labels) come from the timetable: any slot
-// where the teacher is the assigned or substitute teacher. Distinct, ordered.
+// PRA-P0-07 (S3): a teacher's own classes come from the CANONICAL binding
+// (`teacher_subject_assignments` + class-teacher `teacher_assignments`), NOT the
+// unwritten `timetable_slots` (which is empty for every real tenant, so this used
+// to return seed fiction or nothing). This is the seed of the whole teacher lane
+// (roster, upcoming exams, exam marks), so repointing it repairs those readers.
 async function listTeacherClassLabels(
   db: TenantQueryClient,
   orgId: string,
   schoolId: string,
   teacherUserId: string,
 ): Promise<string[]> {
-  const rows = await db.queryObject<{ class_label: string }>(
-    `SELECT DISTINCT class_label
-       FROM timetable_slots
-      WHERE organization_id = $1 AND school_id = $2
-        AND (teacher_user_id = $3::uuid OR substitute_teacher_user_id = $3::uuid)
-        AND class_label IS NOT NULL AND class_label <> ''
-      ORDER BY class_label`,
-    [orgId, schoolId, teacherUserId],
-  );
-  return rows.map((r) => r.class_label);
+  const classes = await listCanonicalTeacherClasses(db, orgId, schoolId, teacherUserId);
+  return classes.map((c) => buildClassLabel(c.class_name, c.section_name));
 }
 
 // Map a stored attendance mark to the client-facing status string. Wire values
@@ -2683,46 +2797,55 @@ export async function listTeacherAttendanceClasses(
   total: number;
   hasMore: boolean;
 }> {
-  // One slot row per (class, subject, period) the teacher teaches; the picker
-  // shows the class with its subject + earliest period label.
+  // PRA-P0-07 / P1-31 (S3): the class list comes from the CANONICAL binding —
+  // one row per class the teacher is bound to, NOT one per weekly timetable slot.
+  // This repairs the picker for real tenants (timetable_slots is unwritten) AND
+  // fixes P1-31: the old query exploded the teacher's whole weekly timetable, so
+  // every class/period showed as "pending today"; now each class appears once and
+  // `isPending` is the real "no submitted session today" signal.
+  const canonical = await listCanonicalTeacherClasses(db, orgId, schoolId, teacherUserId);
+  const labels = canonical.map((c) => buildClassLabel(c.class_name, c.section_name));
+  if (labels.length === 0) {
+    return {
+      items: [],
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      total: 0,
+      hasMore: false,
+    };
+  }
+
   const rows = await db.queryObject<{
     class_label: string;
-    subject_label: string;
-    period_number: number;
     marked: boolean;
     student_count: number;
   }>(
-    `SELECT ts.class_label,
-            ts.subject_label,
-            min(ts.period_number) AS period_number,
-            bool_or(ses.id IS NOT NULL) AS marked,
+    `SELECT cl.class_label,
+            EXISTS (
+              SELECT 1 FROM attendance_sessions ses
+               WHERE ses.organization_id = $1 AND ses.school_id = $2
+                 AND ses.class_label = cl.class_label
+                 AND ses.session_date = CURRENT_DATE
+                 AND ses.status = 'submitted'
+            ) AS marked,
             (
               SELECT count(*)::int FROM sis_student_enrollments e2
-               WHERE e2.organization_id = $1
-                 AND e2.school_id = $2
+               WHERE e2.organization_id = $1 AND e2.school_id = $2
                  AND e2.is_current = true
-                 AND (e2.class_name || '-' || e2.section_name) = ts.class_label
+                 AND (e2.class_name || '-' || e2.section_name) = cl.class_label
             ) AS student_count
-       FROM timetable_slots ts
-       LEFT JOIN attendance_sessions ses
-         ON ses.organization_id = ts.organization_id
-        AND ses.school_id = ts.school_id
-        AND ses.class_label = ts.class_label
-        AND ses.session_date = CURRENT_DATE
-        AND ses.status = 'submitted'
-      WHERE ts.organization_id = $1 AND ts.school_id = $2
-        AND (ts.teacher_user_id = $3::uuid OR ts.substitute_teacher_user_id = $3::uuid)
-        AND ts.class_label IS NOT NULL AND ts.class_label <> ''
-      GROUP BY ts.class_label, ts.subject_label
-      ORDER BY ts.class_label, ts.subject_label`,
-    [orgId, schoolId, teacherUserId],
+       FROM unnest($3::text[]) AS cl(class_label)
+      ORDER BY cl.class_label`,
+    [orgId, schoolId, labels],
   );
 
   const all = rows.map((r) => ({
     id: `class_${r.class_label}`,
-    label: `${r.class_label} ${r.subject_label}`,
-    subject: r.subject_label,
-    periodLabel: `Period ${r.period_number}`,
+    label: r.class_label,
+    // subject/periodLabel are not part of the daily-class-attendance model; kept
+    // in the shape (empty) so existing clients ignore them without breaking.
+    subject: "",
+    periodLabel: "",
     studentCount: r.student_count,
     isPending: !r.marked,
   }));

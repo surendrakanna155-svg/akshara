@@ -10,6 +10,9 @@ log() { echo "[ci-gates] $*"; }
 log "Gate 1: flutter analyze (0-issue bar — warnings AND infos are fatal so lint drift can't recur)"
 flutter analyze --fatal-infos
 
+log "Gate 1b: mock/demo-scaffolding import recurrence guard (PRA S0/T2-H)"
+bash scripts/qa/check_mock_imports.sh
+
 log "Gate 2: module coverage report generation"
 python3 scripts/qa/generate_module_coverage_report.py
 

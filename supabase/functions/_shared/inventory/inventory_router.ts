@@ -17,6 +17,13 @@ import {
   handleProcurementWorkflow,
   handleRecordAssetLifecycleEvent,
 } from "./inventory_intelligence_handlers.ts";
+import {
+  handleCreateAllocation,
+  handleCreateAsset,
+  handleCreateCategory,
+  handleRecordMaintenance,
+  handleUpdateAsset,
+} from "./inventory_write_handlers.ts";
 import { routeInventoryFinanceWrite } from "../inventory_finance/inventory_finance_router.ts";
 
 function matchInventoryIntelligenceRoute(
@@ -41,6 +48,28 @@ function matchInventoryIntelligenceRoute(
     return { handler: handleAdvanceProcurementWorkflow, args: [advanceMatch[1]!] };
   }
 
+  return null;
+}
+
+// PRA-P1-39: the inventory register's write surface (create/update asset,
+// create category, allocate asset, record maintenance). Kept separate from the
+// GET table below (which hard-rejects every non-GET method) and delegated from
+// routeInventory before the base match, mirroring routeInventoryFinanceWrite.
+function matchInventoryWriteRoute(
+  method: string,
+  path: string,
+): { handler: (req: Request, config: AppConfig) => Promise<Response> } | null {
+  if (method === "POST") {
+    if (path === "/inventory/assets") return { handler: handleCreateAsset };
+    if (path === "/inventory/categories") return { handler: handleCreateCategory };
+    if (path === "/inventory/allocations") return { handler: handleCreateAllocation };
+    if (path === "/inventory/maintenance") return { handler: handleRecordMaintenance };
+    return null;
+  }
+  if (method === "PUT") {
+    if (/^\/inventory\/assets\/[^/]+$/.test(path)) return { handler: handleUpdateAsset };
+    return null;
+  }
   return null;
 }
 
@@ -79,6 +108,15 @@ export async function routeInventory(
   const intelligenceMatch = matchInventoryIntelligenceRoute(method, path);
   if (intelligenceMatch) {
     return await intelligenceMatch.handler(req, config, ...intelligenceMatch.args);
+  }
+
+  // PRA-P1-39: the register's own POST/PUT writes, before the GET-only base
+  // table (which 404s every non-GET). These collide with none of the routes
+  // above (finance-write owns /inventory/procurement|vendors/catalog|stock/*,
+  // intelligence owns /inventory/intelligence/*).
+  const writeMatch = matchInventoryWriteRoute(method, path);
+  if (writeMatch) {
+    return await writeMatch.handler(req, config);
   }
 
   const match = matchInventoryRoute(method, path);

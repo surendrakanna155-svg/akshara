@@ -1,9 +1,14 @@
 import {
   assertEquals,
   assertExists,
+  assertRejects,
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
-import { submitEnrollment } from "./admissions_repository.ts";
+import {
+  EnrollmentApplicationNotFoundError,
+  EnrollmentNotApprovedError,
+  submitEnrollment,
+} from "./admissions_repository.ts";
 
 const ORG = "a1000000-0000-4000-8000-000000000001";
 const SCHOOL = "a2000000-0000-4000-8000-000000000001";
@@ -55,12 +60,13 @@ class MockEnrollmentDb {
     if (sql.includes("lookup_guardian_user_for_enrollment")) {
       return [{ guardian_user_id: null }] as T[];
     }
-    // Lock anchor on the application row.
+    // Lock anchor on the application row. PRA-P0-13: the repo now also reads
+    // `status` under the lock, so surface it (the seeds carry it).
     if (sql.includes("FROM admissions_applications") && sql.includes("FOR UPDATE")) {
       const row = this.applications.find((a) =>
         a.id === args[0] && a.organization_id === args[1] && a.school_id === args[2]
       );
-      return (row ? [{ id: row.id }] : []) as T[];
+      return (row ? [{ id: row.id, status: row.status }] : []) as T[];
     }
     // Idempotency guard: existing enrollment for this application?
     if (
@@ -241,4 +247,60 @@ Deno.test("submitEnrollment with null application_id is NOT deduped (walk-in enr
   assertEquals(db.students.length, 2);
   assertEquals(db.enrollments.length, 2);
   assertEquals(db.handoffs.length, 2);
+});
+
+// ── PRA-P0-13: application must be APPROVED before it becomes an active student ──
+
+Deno.test("PRA-P0-13: submitEnrollment REJECTS a non-approved application and mints nothing", async () => {
+  for (const status of ["draft", "submitted", "documents_pending", "under_review", "rejected"]) {
+    const db = new MockEnrollmentDb();
+    db.applications = [{ id: APPLICATION, organization_id: ORG, school_id: SCHOOL, status }];
+
+    await assertRejects(
+      () =>
+        submitEnrollment(
+          db as unknown as TenantQueryClient,
+          ORG,
+          SCHOOL,
+          baseInput(APPLICATION),
+        ),
+      EnrollmentNotApprovedError,
+      undefined,
+      `status='${status}' must be blocked`,
+    );
+
+    // The gate fires BEFORE any student/enrollment/handoff is minted.
+    assertEquals(db.students.length, 0, `no student minted for status='${status}'`);
+    assertEquals(db.enrollments.length, 0, `no enrollment for status='${status}'`);
+    assertEquals(db.handoffs.length, 0, `no fee handoff for status='${status}'`);
+  }
+});
+
+Deno.test("PRA-P0-13: an APPROVED application still converts (control — one student)", async () => {
+  const db = new MockEnrollmentDb(); // seeded status = 'approved'
+  const result = await submitEnrollment(
+    db as unknown as TenantQueryClient,
+    ORG,
+    SCHOOL,
+    baseInput(APPLICATION),
+  );
+  assertExists(result);
+  assertEquals(db.students.length, 1);
+  assertEquals(db.enrollments.length, 1);
+});
+
+Deno.test("PRA-P0-13: an unknown application id is rejected, not silently enrolled", async () => {
+  const db = new MockEnrollmentDb();
+  db.applications = []; // the named application does not exist in this tenant
+  await assertRejects(
+    () =>
+      submitEnrollment(
+        db as unknown as TenantQueryClient,
+        ORG,
+        SCHOOL,
+        baseInput(APPLICATION),
+      ),
+    EnrollmentApplicationNotFoundError,
+  );
+  assertEquals(db.students.length, 0);
 });

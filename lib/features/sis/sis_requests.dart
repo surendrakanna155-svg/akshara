@@ -56,17 +56,23 @@ class UpdateStudentRequest {
   final String? email;
 }
 
-/// Domain request to upload a student document metadata record.
+/// Domain request to confirm a student document upload.
+///
+/// PRA-P1-19: [storagePath] is the tenant-prefixed path of the object the client
+/// already PUT to Storage via the presign step. The backend refuses to persist a
+/// document without it (no more fabricated `storage://documents/<name>` rows).
 class UploadStudentDocumentRequest {
   const UploadStudentDocumentRequest({
     required this.type,
     required this.fileName,
     this.status = 'Pending',
+    this.storagePath,
   });
 
   final String type;
   final String fileName;
   final String status;
+  final String? storagePath;
 }
 
 /// SIS-3 — the two allowed review outcomes for a pending student document.

@@ -21,6 +21,7 @@ import {
   generateSyllabusFromTemplates,
   listSubjectTemplates,
   listSyllabusChapters,
+  NoSyllabusTemplateError,
   templateToApi,
 } from "./syllabus_automation_service.ts";
 import {
@@ -36,6 +37,10 @@ import { schoolCompletionUuidPattern } from "./school_completion_handlers.ts";
 
 function tenantError(error: unknown): Response {
   if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+  // PRA-P1-18: an unseeded grade/board is a client-actionable state, not a 500.
+  if (error instanceof NoSyllabusTemplateError) {
+    return errorEnvelope("NO_SYLLABUS_TEMPLATE", error.message, 422);
+  }
   return errorEnvelope("INTERNAL_ERROR", String(error), 500);
 }
 

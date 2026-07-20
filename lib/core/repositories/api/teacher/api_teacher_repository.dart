@@ -206,6 +206,18 @@ class ApiTeacherRepository implements TeacherRepository {
   }
 
   @override
+  Future<List<ParentCommunicationRecord>> listParentCommunications({
+    required RepositoryQuery query,
+    required String sisStudentId,
+  }) async {
+    final items = await _remote.listParentCommunications(
+      query: query,
+      sisStudentId: sisStudentId,
+    );
+    return _mapper.toParentCommunicationTimeline(items);
+  }
+
+  @override
   Future<SubjectTeacherConcern> dismissSubjectConcern({
     required RepositoryQuery query,
     required String concernId,
@@ -245,6 +257,41 @@ class ApiTeacherRepository implements TeacherRepository {
     required TeacherHomeworkCreateRequest request,
   }) async {
     return _remote.createHomework(query: query, request: request);
+  }
+
+  @override
+  Future<TeacherHomeworkAssignment> createHomeworkFile({
+    required RepositoryQuery query,
+    required TeacherHomeworkCreateRequest request,
+    required String fileName,
+    required List<int> bytes,
+    required String contentType,
+  }) async {
+    // PRA-P1-30: presign → PUT bytes → create with the real storage_path.
+    final presign = await _remote.presignHomeworkAttachment(
+      query: query,
+      fileName: fileName,
+    );
+    await _remote.putSignedUpload(
+      signedUrl: presign.signedUrl,
+      bytes: bytes,
+      contentType: contentType,
+    );
+    return _remote.createHomework(
+      query: query,
+      request: TeacherHomeworkCreateRequest(
+        classLabel: request.classLabel,
+        subject: request.subject,
+        title: request.title,
+        dueDate: request.dueDate,
+        dueLabel: request.dueLabel,
+        studentName: request.studentName,
+        classLabels: request.classLabels,
+        attachmentName: request.attachmentName,
+        attachmentRef: request.attachmentRef,
+        attachmentStoragePath: presign.storagePath,
+      ),
+    );
   }
 
   @override

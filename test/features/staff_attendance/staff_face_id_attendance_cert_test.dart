@@ -26,10 +26,12 @@ import 'package:akshara_erp/core/security/mutation_permission_registry.dart';
 import 'package:akshara_erp/core/security/permissions.dart';
 import 'package:akshara_erp/core/security/role_permissions.dart';
 import 'package:akshara_erp/features/staff_attendance/attendance_capture_sources.dart';
+import 'package:akshara_erp/features/staff_attendance/manual_attendance_request_providers.dart';
 import 'package:akshara_erp/features/staff_attendance/staff_attendance_controller.dart';
 import 'package:akshara_erp/features/staff_attendance/staff_attendance_models.dart';
 import 'package:akshara_erp/features/staff_attendance/widgets/staff_check_in_card.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -297,8 +299,13 @@ void main() {
         writer: _FakeWriter(),
         audit: audit,
       );
-      await tester.pumpWidget(MaterialApp(
-        home: Scaffold(body: StaffCheckInCard(onRecord: controller.record)),
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          canApproveManualAttendanceProvider.overrideWithValue(false),
+        ],
+        child: MaterialApp(
+          home: Scaffold(body: StaffCheckInCard(onRecord: controller.record)),
+        ),
       ));
 
       expect(find.byKey(const Key('staff-check-in-button')), findsOneWidget);
@@ -320,8 +327,13 @@ void main() {
         writer: _FakeWriter(),
         audit: audit,
       );
-      await tester.pumpWidget(MaterialApp(
-        home: Scaffold(body: StaffCheckInCard(onRecord: controller.record)),
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          canApproveManualAttendanceProvider.overrideWithValue(false),
+        ],
+        child: MaterialApp(
+          home: Scaffold(body: StaffCheckInCard(onRecord: controller.record)),
+        ),
       ));
 
       await tester.tap(find.byKey(const Key('staff-check-in-button')));

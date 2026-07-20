@@ -100,6 +100,9 @@ const GENERIC_FACTORY_MODULES = new Set<string>([
   "social",
   "school_calendar",
   "director",
+  // PRA-P1-05 (S2): identity permission-override endpoints emit
+  // moduleEntityAudit("identity.permission_override.*").
+  "identity",
 ]);
 
 /**

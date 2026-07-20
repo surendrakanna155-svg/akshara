@@ -21,6 +21,28 @@ void main() {
       expect(json['homework_id'], 'hw-1');
       expect(json['attachment_label'], 'worksheet.pdf');
     });
+
+    test('PRA-P1-30 homework submit serializes attachment_storage_path when set',
+        () {
+      final json = StudentHomeworkSubmitRequestDto.fromDomain(
+        const StudentHomeworkSubmitRequest(
+          homeworkId: 'hw-1',
+          attachmentLabel: 'worksheet.pdf',
+          attachmentStoragePath: 'org/school/stu-1/hw-1/uuid_worksheet.pdf',
+          notes: 'Completed all questions.',
+        ),
+      ).toJson();
+      expect(json['attachment_storage_path'],
+          'org/school/stu-1/hw-1/uuid_worksheet.pdf');
+    });
+
+    test('PRA-P1-30 homework submit omits attachment_storage_path when absent',
+        () {
+      final json = StudentHomeworkSubmitRequestDto.fromDomain(
+        const StudentHomeworkSubmitRequest(homeworkId: 'hw-1'),
+      ).toJson();
+      expect(json.containsKey('attachment_storage_path'), isFalse);
+    });
   });
 
   group('Mock student write repository', () {

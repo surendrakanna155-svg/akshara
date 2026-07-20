@@ -153,6 +153,64 @@ class SisRemoteDataSource {
     return _mapper.toDocumentSummary(_requireData(response));
   }
 
+  /// PRA-P1-19 — presign a direct-to-Storage upload, returning the signed URL and
+  /// the storage path to confirm with afterwards.
+  Future<({String signedUrl, String storagePath})> presignStudentDocumentUpload({
+    required RepositoryQuery query,
+    required String studentId,
+    required String fileName,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      SisApiPaths.studentDocumentsPresign(studentId),
+      queryParameters: _queryParams(query),
+      data: {'file_name': fileName},
+    );
+    final data = _requireData(response);
+    return (
+      signedUrl: data['signedUrl'] as String? ?? '',
+      storagePath: data['storagePath'] as String? ?? '',
+    );
+  }
+
+  /// PUT file bytes to the Supabase signed upload URL (separate host from API).
+  Future<void> putSignedUpload({
+    required String signedUrl,
+    required List<int> bytes,
+    required String contentType,
+  }) async {
+    final uploadClient = Dio(
+      BaseOptions(
+        headers: {'Content-Type': contentType},
+        validateStatus: (status) => status != null && status < 500,
+      ),
+    );
+    final response = await uploadClient.put<List<int>>(
+      signedUrl,
+      data: bytes,
+      options: Options(responseType: ResponseType.bytes),
+    );
+    if (response.statusCode == null || response.statusCode! >= 400) {
+      throw DioException(
+        requestOptions: response.requestOptions,
+        response: response,
+        message: 'Upload failed (${response.statusCode})',
+      );
+    }
+  }
+
+  /// PRA-P1-19 — resolve a signed download URL for a stored document.
+  Future<String> fetchStudentDocumentDownloadUrl({
+    required RepositoryQuery query,
+    required String studentId,
+    required String documentId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      SisApiPaths.studentDocumentDownload(studentId, documentId),
+      queryParameters: _queryParams(query),
+    );
+    return _requireData(response)['downloadUrl'] as String? ?? '';
+  }
+
   /// SIS-3 — PATCH /sis/students/{id}/documents/{docId}/verify. Response is
   /// the updated document envelope incl. status / verifiedBy / verifiedAt.
   Future<SisDocumentSummary> verifyStudentDocument({

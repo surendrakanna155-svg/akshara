@@ -38,6 +38,11 @@ import {
   hallTicketToApi,
   isExamMarkStatus,
   getExamSession,
+  // PRA-P1-13 — per-school grade scale (authoritative at publish/report).
+  gradeScaleToApi,
+  loadGradeScale,
+  parseGradeScaleInput,
+  saveGradeScale,
   isClassTeacherForExam,
   listExamMarkAdjustments,
   listExamMarks,
@@ -61,6 +66,7 @@ import {
   processExamResults,
   publishExamResults,
   recordExamMarkAdjustment,
+  unpublishExamResults,
   reportCardToApi,
   scheduleExamSession,
   tabulationRegisterToApi,
@@ -125,6 +131,11 @@ export const EXAM_OPERATION_PERMISSIONS = {
   // EXM-D5 — seating: generating a plan is a manage action; reading it is a read.
   generateSeating: "manageExams",
   getSeating: "viewExams",
+  // PRA-P1-13 — read/write the school's grade scale. Reading is a report read
+  // (viewExams); saving reuses the existing manage-exams settings gate — no new
+  // permission slug is invented (that would need a separate RBAC migration).
+  getGradeScale: "viewExams",
+  putGradeScale: "manageExams",
 } as const;
 
 /**
@@ -605,8 +616,8 @@ function parseMarkPayload(
  * subject-teacher scope, per-row audit). Both the single PATCH and the EXM-1
  * bulk save funnel through here so the integrity guards can never diverge.
  */
-// deno-lint-ignore no-explicit-any
 async function applyMarkUpdate(
+  // deno-lint-ignore no-explicit-any
   db: any,
   req: Request,
   claims: ExamClaims,
@@ -919,6 +930,48 @@ export async function handlePublishExamResults(
   });
 }
 
+/**
+ * PRA-P1-12: POST /academics/exams/{id}/unpublish — reopen a published exam so a
+ * wrong mark can be corrected / re-evaluated and re-published. Senior-gated on
+ * `publishExamResults` (the same authority that published it). Audited as a
+ * distinct, alertable event because it reverses a parent-visible result set.
+ */
+export async function handleUnpublishExamResults(
+  req: Request,
+  config: AppConfig,
+  examId: string,
+): Promise<Response> {
+  return await withAuth(req, config, "publishExamResults", async (claims) => {
+    const { organizationId, schoolId } = tenantIds(claims);
+    const reopenedCount = await withTenantContext(config, claims, async (db) => {
+      const count = await unpublishExamResults(db, organizationId, schoolId, examId);
+      await emitMutationAudit(
+        db,
+        claims,
+        {
+          audit: {
+            eventType: "examResultsUnpublished",
+            category: "workflow",
+            entityType: "exam_session",
+            entityId: examId,
+            metadata: { examId, reopenedCount: count },
+          },
+          domain: {
+            eventType: "exam.results.unpublished",
+            payload: { examId, reopenedCount: count },
+            sourceModule: "exam",
+            // Reopen is intentionally repeatable across correction cycles.
+            idempotencyKey: `exam.results.unpublished:${examId}:${crypto.randomUUID()}`,
+          },
+        },
+        req,
+      );
+      return count;
+    });
+    return { examId, reopenedCount };
+  });
+}
+
 export async function handleListExamRemarks(
   req: Request,
   config: AppConfig,
@@ -982,12 +1035,15 @@ export async function handleUpsertExamRemark(
           );
         }
       }
+      // PRA-P0-10 (S3): the author DISPLAY NAME is NO LONGER read from the
+      // request body (it was spoofable). upsertExamRemark resolves the trusted
+      // name server-side from users.display_name keyed on the authenticated
+      // author (claims.sub). body.authorName / body.author_name are ignored.
       const row = await upsertExamRemark(db, organizationId, schoolId, {
         examId,
         studentId,
         text,
         authorId: claims.sub,
-        authorName: String(body.authorName ?? body.author_name ?? claims.sub),
         authorRole,
       });
       return examRemarkToApi(row);
@@ -1155,6 +1211,99 @@ export async function handleReportCards(
       ));
     return cards.map(reportCardToApi);
   });
+}
+
+/**
+ * PRA-P1-13 — GET /academics/exams/grade-scale. Returns the school's configured
+ * grading scale (bands + pass mark), or the resolved legacy default when the
+ * school has not configured one (source: "default"). Read gate: viewExams.
+ */
+export async function handleGetGradeScale(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  return await withAuth(
+    req,
+    config,
+    EXAM_OPERATION_PERMISSIONS.getGradeScale,
+    async (claims) => {
+      const { organizationId, schoolId } = tenantIds(claims);
+      const scale = await withTenantContext(config, claims, (db) =>
+        loadGradeScale(db, organizationId, schoolId));
+      return gradeScaleToApi(scale);
+    },
+  );
+}
+
+/**
+ * PRA-P1-13 — PUT /academics/exams/grade-scale. Saves the school's grade scale
+ * (bands validated server-side: strictly descending minPercent, non-empty
+ * letters, pass mark in 0–100). This scale becomes AUTHORITATIVE at the next
+ * publish + on every report. Gated on manageExams (an existing settings gate —
+ * no new permission slug). Audited so a scale change is traceable.
+ */
+export async function handlePutGradeScale(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  return await withAuth(
+    req,
+    config,
+    EXAM_OPERATION_PERMISSIONS.putGradeScale,
+    async (claims) => {
+      const body = await readJson<Record<string, unknown>>(req);
+      if (!body) throw new ExamValidationError("JSON body required");
+      // Validate BEFORE the DB so a malformed scale is rejected 422 up front.
+      const input = parseGradeScaleInput(body);
+
+      const { organizationId, schoolId } = tenantIds(claims);
+      const saved = await withTenantContext(config, claims, async (db) => {
+        const scale = await saveGradeScale(
+          db,
+          organizationId,
+          schoolId,
+          input,
+          claims.sub,
+        );
+        try {
+          await emitMutationAudit(
+            db,
+            claims,
+            {
+              audit: {
+                eventType: "examGradeScaleUpdated",
+                category: "workflow",
+                entityType: "exam_grade_scale",
+                entityId: schoolId,
+                metadata: {
+                  scaleCode: input.scaleCode,
+                  passMarkPercent: input.passMarkPercent,
+                  bandCount: input.bands.length,
+                },
+              },
+              domain: {
+                eventType: "exam.grade_scale.updated",
+                payload: {
+                  scaleCode: input.scaleCode,
+                  passMarkPercent: input.passMarkPercent,
+                },
+                sourceModule: "exam",
+                idempotencyKey: `exam.grade_scale.updated:${schoolId}`,
+              },
+            },
+            req,
+          );
+        } catch (auditError) {
+          console.error(
+            "exam grade-scale audit not recorded:",
+            auditError instanceof Error ? auditError.message : auditError,
+          );
+        }
+        return scale;
+      });
+      return gradeScaleToApi(saved);
+    },
+  );
 }
 
 /**

@@ -228,6 +228,7 @@ class TeacherHomeworkCreateRequest {
     this.classLabels = const [],
     this.attachmentName,
     this.attachmentRef,
+    this.attachmentStoragePath,
   });
 
   final String classLabel;
@@ -251,11 +252,14 @@ class TeacherHomeworkCreateRequest {
   /// assignment delivery per class). [classLabel] stays the back-compat single.
   final List<String> classLabels;
 
-  /// HWK-4 — an OPTIONAL teacher attachment on the assignment (a reference/label,
-  /// not a real uploaded file — no homework storage bucket yet). [attachmentName]
-  /// is the display name; [attachmentRef] an optional URL/reference.
+  /// HWK-4 — an OPTIONAL teacher attachment on the assignment. [attachmentName] is
+  /// the display name; [attachmentRef] an optional legacy URL/reference.
+  /// PRA-P1-30: [attachmentStoragePath] is the tenant-prefixed path of the REAL
+  /// worksheet object the client PUT to Storage via the presign step (the backend
+  /// rejects a foreign-tenant path). Null when no real file was uploaded.
   final String? attachmentName;
   final String? attachmentRef;
+  final String? attachmentStoragePath;
 }
 
 /// HWK-6 — domain request to bulk mark homework submissions reviewed. When

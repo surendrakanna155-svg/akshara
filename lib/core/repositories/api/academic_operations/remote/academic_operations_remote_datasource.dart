@@ -24,7 +24,8 @@ class AcademicOperationsRemoteDataSource {
           'targetYearId': targetYearId,
         }),
     );
-    final rows = _list(_requireData(response)['mappings']);
+    // PRA-P0-14: backend envelopes the suggestions under `items`, not `mappings`.
+    final rows = _list(_requireData(response)['items']);
     return rows.map(ClassMappingRuleResponseDto.fromJson).toList(growable: false);
   }
 
@@ -43,7 +44,7 @@ class AcademicOperationsRemoteDataSource {
         mappings: mappings,
       ).toJson(),
     );
-    return AcademicTransitionJobResponseDto.fromJson(_requireData(response));
+    return AcademicTransitionJobResponseDto.fromJson(_job(response));
   }
 
   Future<ExecutionReportResponseDto> executeYearTransition({
@@ -54,10 +55,10 @@ class AcademicOperationsRemoteDataSource {
       AcademicOperationsApiPaths.executeTransition(jobId),
       queryParameters: _query(query),
     );
-    final data = _requireData(response);
+    final job = _job(response);
     return ExecutionReportResponseDto.fromJson({
-      'id': data['jobId'] ?? jobId,
-      ...data,
+      'id': job['id'] ?? jobId,
+      ...job,
     });
   }
 
@@ -69,7 +70,7 @@ class AcademicOperationsRemoteDataSource {
       AcademicOperationsApiPaths.transitionJob(jobId),
       queryParameters: _query(query),
     );
-    return AcademicTransitionJobResponseDto.fromJson(_requireData(response));
+    return AcademicTransitionJobResponseDto.fromJson(_job(response));
   }
 
   Future<AcademicOperationPlanResponseDto> previewStudentReshuffle({
@@ -209,6 +210,16 @@ class AcademicOperationsRemoteDataSource {
   Map<String, dynamic> _requireData(Response<Map<String, dynamic>> response) {
     final raw = response.data ?? const {};
     return ApiEnvelopeDto.fromJson(raw).requireData();
+  }
+
+  /// PRA-P0-14: transition preview/execute/get responses envelope the row under
+  /// `data.job` (preview additionally carries a sibling `data.preview`). Unwrap
+  /// it here; fall back to the raw data map for any flat/legacy shape.
+  Map<String, dynamic> _job(Response<Map<String, dynamic>> response) {
+    final data = _requireData(response);
+    final job = data['job'];
+    if (job is Map) return job.cast<String, dynamic>();
+    return data;
   }
 
   List<Map<String, dynamic>> _list(Object? value) {

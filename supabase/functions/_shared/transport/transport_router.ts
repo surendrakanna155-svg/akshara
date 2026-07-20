@@ -16,14 +16,17 @@ import {
 import {
   handleActivateRoute,
   handleAddStop,
+  handleAssignRouteVehicle,
   handleAssignStudentTransport,
   handleBulkAllocateTransport,
+  handleBulkRaiseTransportDemand,
   handleCreateDriver,
   handleCreateRoute,
   handleCreateVehicle,
   handleDeleteDriver,
   handleDeleteVehicle,
   handleDocumentExpiryReminder,
+  handleGenerateAttendanceRoster,
   handleNotifyRouteDelay,
   handleRaiseTransportDemand,
   handleRecordAttendance,
@@ -72,6 +75,11 @@ function matchTransportRoute(method: string, path: string): { handler: RouteHand
     if (path === "/transport/allocations/bulk") {
       return { handler: handleBulkAllocateTransport };
     }
+    // PRA-P1-43: generate a route's attendance roster from its allocations
+    // (more specific than the collection POST — match first).
+    if (path === "/transport/attendance/generate") {
+      return { handler: handleGenerateAttendanceRoster };
+    }
     // --- A6 writes (AgentC) ---
     if (path === "/transport/attendance") {
       return { handler: handleRecordAttendance };
@@ -90,6 +98,10 @@ function matchTransportRoute(method: string, path: string): { handler: RouteHand
     // TRN-8: document-expiry reminder.
     if (path === "/transport/reminders/document-expiry") {
       return { handler: handleDocumentExpiryReminder };
+    }
+    // PRA-P0-20: bulk-raise transport-fee demands (more specific — match first).
+    if (path === "/transport/demands/bulk") {
+      return { handler: handleBulkRaiseTransportDemand };
     }
     // TRN-9: raise a Finance transport-fee demand.
     if (path === "/transport/demands") {
@@ -112,6 +124,11 @@ function matchTransportRoute(method: string, path: string): { handler: RouteHand
   }
 
   if (method === "PUT") {
+    // PRA-P0-19: assign a vehicle to a route (more specific than the stop update
+    // — but distinct paths; wires the TRN-7 capacity guard live).
+    if (/^\/transport\/routes\/[^/]+\/vehicle$/.test(path)) {
+      return { handler: handleAssignRouteVehicle };
+    }
     // TRN-1: vehicle & driver update.
     if (/^\/transport\/vehicles\/[^/]+$/.test(path)) {
       return { handler: handleUpdateVehicle };

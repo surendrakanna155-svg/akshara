@@ -1573,6 +1573,24 @@ GoRouter createAppRouter({
                 pageBuilder: (context, state) => NoTransitionPage(
                   child: hrAttendanceRouteBuilder(context, state),
                 ),
+                routes: [
+                  // PRA-P0-15 — audited manual-attendance fallback.
+                  GoRoute(
+                    path: 'manual-request',
+                    name: 'hrStaffManualRequest',
+                    pageBuilder: (context, state) => NoTransitionPage(
+                      child: hrStaffManualRequestRouteBuilder(context, state),
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'requests',
+                    name: 'hrStaffManualRequestQueue',
+                    pageBuilder: (context, state) => NoTransitionPage(
+                      child:
+                          hrStaffManualRequestQueueRouteBuilder(context, state),
+                    ),
+                  ),
+                ],
               ),
               GoRoute(
                 path: 'leave',
@@ -1726,6 +1744,13 @@ GoRouter createAppRouter({
                 name: 'managementSettings',
                 pageBuilder: (context, state) => NoTransitionPage(
                   child: managementSettingsRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'school-calendar',
+                name: 'managementSchoolCalendar',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: managementSchoolCalendarRouteBuilder(context, state),
                 ),
               ),
             ],

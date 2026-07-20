@@ -11,6 +11,8 @@ import 'app/app.dart';
 import 'core/errors/error_observer.dart';
 import 'core/errors/error_reporting_service.dart';
 import 'core/errors/global_error_handler.dart';
+import 'core/exams/exam_administration_persistence.dart';
+import 'core/exams/exam_administration_store.dart';
 import 'core/notifications/push_messaging_service.dart';
 import 'core/providers/shared_preferences_provider.dart';
 import 'core/reliability/reliability_providers.dart';
@@ -32,6 +34,14 @@ Future<void> main() async {
     });
   }
   final prefs = await SharedPreferences.getInstance();
+  // PRA-P1-13: bind durable storage to the exam administration store at startup
+  // so the per-school grading scale (and published results) SURVIVE a cold
+  // restart. Previously attachPersistence was wired only in tests, so in prod
+  // `_persist()` early-returned and the grading scale reset to Standard on every
+  // launch. Must run BEFORE the exam settings provider first triggers
+  // ensureSeeded() (which loads the persisted snapshot).
+  ExamAdministrationStore.instance
+      .attachPersistence(ExamAdministrationPersistence(prefs));
   // Data Reliability Platform: open the durable, encrypted on-device store for
   // drafts + the outbox once, and bind it so every write inherits offline-safe
   // queue/retry and draft persistence (Phase 0b).

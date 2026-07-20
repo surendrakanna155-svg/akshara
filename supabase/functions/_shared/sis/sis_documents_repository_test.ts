@@ -28,7 +28,9 @@ class DocsMockDb {
       student_id: STUDENT_A,
       document_type: "birth_certificate",
       status: "pending",
-      file_uri: "storage://documents/bc.pdf",
+      // PRA-P1-19: the human label lives in file_uri; the real object is storage_path.
+      file_uri: "bc.pdf",
+      storage_path: `${ORG}/${SCHOOL_A}/${STUDENT_A}/abc_bc.pdf`,
       uploaded_by: STUDENT_A,
       uploaded_at: "2026-06-10T00:00:00.000Z",
       verified_by: null,
@@ -45,6 +47,7 @@ class DocsMockDb {
       document_type: "transfer_certificate",
       status: "pending",
       file_uri: null,
+      storage_path: null,
       uploaded_by: STUDENT_A,
       uploaded_at: "2026-06-10T00:00:00.000Z",
       verified_by: null,
@@ -54,6 +57,7 @@ class DocsMockDb {
     },
   ];
 
+  // deno-lint-ignore require-await
   async queryObject<T>(sql: string, args: unknown[] = []): Promise<T[]> {
     if (sql.includes("UPDATE student_documents")) {
       const [docId, org, school, status, verifier] = args;
@@ -137,7 +141,8 @@ Deno.test("SIS-3 documentToApi exposes verifiedBy + status", () => {
     student_id: STUDENT_A,
     document_type: "birth_certificate",
     status: "verified",
-    file_uri: "storage://documents/bc.pdf",
+    file_uri: "bc.pdf",
+    storage_path: `${ORG}/${SCHOOL_A}/${STUDENT_A}/abc_bc.pdf`,
     uploaded_by: STUDENT_A,
     uploaded_at: "2026-06-10T00:00:00.000Z",
     verified_by: VERIFIER,
@@ -149,4 +154,26 @@ Deno.test("SIS-3 documentToApi exposes verifiedBy + status", () => {
   assertEquals(api.status, "verified");
   assertEquals(api.verifiedBy, VERIFIER);
   assertEquals(api.verifiedAt, "2026-06-11T09:00:00.000Z");
+  // PRA-P1-19 — a stored object is retrievable.
+  assertEquals(api.hasFile, true);
+});
+
+Deno.test("PRA-P1-19 documentToApi flags a metadata-only row as not retrievable", () => {
+  const row: StudentDocumentRow = {
+    id: DOC_ID,
+    organization_id: ORG,
+    school_id: SCHOOL_A,
+    student_id: STUDENT_A,
+    document_type: "birth_certificate",
+    status: "pending",
+    file_uri: null,
+    storage_path: null,
+    uploaded_by: STUDENT_A,
+    uploaded_at: "2026-06-10T00:00:00.000Z",
+    verified_by: null,
+    verified_at: null,
+    created_at: "2026-06-10T00:00:00.000Z",
+    updated_at: "2026-06-10T00:00:00.000Z",
+  };
+  assertEquals(documentToApi(row).hasFile, false);
 });

@@ -43,6 +43,15 @@ export const FINANCE_SETTINGS_TEMPLATE: SettingSectionTemplate[] = [
         editable: true,
       },
       {
+        // PRA-P1-08 (S1): per-school feature gate for gapless receipt numbering.
+        id: "receipt_sequencing",
+        label: "Gapless Receipt Numbering",
+        defaultValue: "false",
+        description:
+          "Use a per-school, per-financial-year sequential receipt number (e.g. RCP/2026-27/000042). When off, receipts use the legacy random number.",
+        editable: true,
+      },
+      {
         id: "invoice_prefix",
         label: "Invoice Number Prefix",
         defaultValue: "INV",

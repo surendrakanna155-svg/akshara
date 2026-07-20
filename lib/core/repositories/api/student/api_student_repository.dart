@@ -77,4 +77,35 @@ class ApiStudentRepository implements StudentRepository {
     final dto = await _remote.submitHomework(query: query, request: request);
     return _mapper.toHomeworkSubmitResult(dto);
   }
+
+  @override
+  Future<StudentHomeworkItem> submitHomeworkFile({
+    required RepositoryQuery query,
+    required StudentHomeworkSubmitRequest request,
+    required String fileName,
+    required List<int> bytes,
+    required String contentType,
+  }) async {
+    // PRA-P1-30: presign → PUT bytes → submit with the real storage_path.
+    final presign = await _remote.presignHomeworkAttachment(
+      query: query,
+      homeworkId: request.homeworkId,
+      fileName: fileName,
+    );
+    await _remote.putSignedUpload(
+      signedUrl: presign.signedUrl,
+      bytes: bytes,
+      contentType: contentType,
+    );
+    final dto = await _remote.submitHomework(
+      query: query,
+      request: StudentHomeworkSubmitRequest(
+        homeworkId: request.homeworkId,
+        attachmentLabel: request.attachmentLabel,
+        notes: request.notes,
+        attachmentStoragePath: presign.storagePath,
+      ),
+    );
+    return _mapper.toHomeworkSubmitResult(dto);
+  }
 }
