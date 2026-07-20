@@ -1,6 +1,7 @@
 import type { AppConfig } from "../config.ts";
 import { errorEnvelope } from "../http.ts";
 import { routeStaffDuty } from "../staff_duty/staff_duty_router.ts";
+import { routeStatutory } from "./statutory_payroll_router.ts";
 import {
   handleAttendance,
   handleDashboard,
@@ -219,6 +220,12 @@ export async function routeHr(
   // match table. Returns null for every other /hr path, so those fall through.
   const staffDuty = await routeStaffDuty(req, config, method, path);
   if (staffDuty) return staffDuty;
+
+  // PRA-P1-35 (owner #9) statutory-payroll config sub-module: /hr/payroll/statutory/*
+  // (PF/ESI/PT/TDS rates, ceilings, PT slabs). Served by its dedicated router; returns
+  // null for every other /hr path so those fall through to the main match table.
+  const statutory = await routeStatutory(req, config, method, path);
+  if (statutory) return statutory;
 
   const match = matchHrRoute(method, path);
   if (!match) {
