@@ -200,24 +200,25 @@ export async function handlePlatformInvestigate(
 ): Promise<Response> {
   const a = await auth(req, config);
   if (!a.ok) return a.response;
-  const result = await withTenantContext(config, a.claims, async (db) => {
+  const loaded = await withTenantContext(config, a.claims, async (db) => {
     const incident = await getPlatformIncident(db, incidentId);
     if (!incident) return { notFound: true as const };
     const evidence = await listPlatformEvidence(db, incidentId);
     const clusterSize = incident.cluster_id
       ? (await listClusterIncidentIds(db, incident.cluster_id)).length
       : 1;
-    const investigation = await investigate(
-      db,
-      { organizationId: a.claims.tenant_id, userId: a.claims.sub },
-      incident,
-      evidence,
-      clusterSize,
-    );
-    return { investigation };
+    return { incident, evidence, clusterSize };
   });
-  if ("notFound" in result) return errorEnvelope("NOT_FOUND", "Incident not found", 404);
-  return jsonResponse(envelope(result.investigation));
+  if ("notFound" in loaded) return errorEnvelope("NOT_FOUND", "Incident not found", 404);
+  // The model call runs in its own transaction (inside investigate).
+  const investigation = await investigate(
+    config,
+    a.claims,
+    loaded.incident,
+    loaded.evidence,
+    loaded.clusterSize,
+  );
+  return jsonResponse(envelope(investigation));
 }
 
 export async function handlePlatformHandoff(

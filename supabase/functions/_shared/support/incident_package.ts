@@ -6,7 +6,9 @@
 // model declines. AI produces a DRAFT; a human approves it (never auto-applied).
 
 import { callModelGateway } from "../ai/model_gateway.ts";
-import type { TenantQueryClient } from "../tenant_db.ts";
+import { withTenantContext } from "../tenant_db.ts";
+import type { AppConfig } from "../config.ts";
+import type { AccessTokenClaims } from "../jwt.ts";
 import type { Diagnostics } from "./evidence_collector.ts";
 import type { SupportCategory, SupportSeverity } from "./support_types.ts";
 
@@ -182,13 +184,6 @@ export async function sha256Hex(input: string): Promise<string> {
 
 // ─── Governed LLM enrichment (optional, drafts only) ──────────────────────────
 
-export interface EnrichGovernance {
-  db: TenantQueryClient;
-  organizationId: string;
-  schoolId: string | null;
-  userId?: string | null;
-}
-
 export interface EnrichedPackage extends DeterministicPackage {
   method: "deterministic" | "ai_enriched";
   model: string;
@@ -199,9 +194,14 @@ export interface EnrichedPackage extends DeterministicPackage {
  * (no key / rate / spend cap / timeout / unparseable) the deterministic package
  * is returned unchanged with method "deterministic" — never fabricated. The
  * evidence handed to the model is the ALREADY-MINIMIZED summary (no raw PII).
+ *
+ * The gateway call runs in its OWN transaction (a nested withTenantContext) so a
+ * gateway-side DB error can never poison the caller's write transaction — the
+ * caller then persists the deterministic package on a clean transaction.
  */
 export async function enrichWithModel(
-  gov: EnrichGovernance,
+  config: AppConfig,
+  claims: AccessTokenClaims,
   base: DeterministicPackage,
   input: IncidentSummaryInput,
   minimizedEvidenceSummary: string,
@@ -227,17 +227,18 @@ export async function enrichWithModel(
 
   let result;
   try {
-    result = await callModelGateway(
-      gov.db,
-      {
-        organizationId: gov.organizationId,
-        schoolId: gov.schoolId,
-        userId: gov.userId ?? null,
-        surface: "support_rca",
-      },
-      { system, messages: [{ role: "user", content: user }], maxTokens: 700 },
-      "", // no fallback text — a decline means "keep the deterministic package"
-    );
+    result = await withTenantContext(config, claims, (db) =>
+      callModelGateway(
+        db,
+        {
+          organizationId: claims.tenant_id,
+          schoolId: claims.school_id,
+          userId: claims.sub,
+          surface: "support_rca",
+        },
+        { system, messages: [{ role: "user", content: user }], maxTokens: 700 },
+        "", // no fallback text — a decline means "keep the deterministic package"
+      ));
   } catch {
     return { ...base, method: "deterministic", model: "" };
   }

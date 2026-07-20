@@ -175,7 +175,7 @@ export function minimizedEvidenceSummary(
  * limit, ai_call_log). Returns the persisted row.
  */
 export async function runAnalysis(
-  _config: AppConfig,
+  config: AppConfig,
   db: TenantQueryClient,
   claims: AccessTokenClaims,
   incident: IncidentRow,
@@ -189,17 +189,9 @@ export async function runAnalysis(
     JSON.stringify(evidenceRows.map((e) => ({ kind: e.kind, payload: e.payload }))),
   );
 
-  const enriched = await enrichWithModel(
-    {
-      db,
-      organizationId: claims.tenant_id,
-      schoolId: claims.school_id,
-      userId: claims.sub,
-    },
-    base,
-    summaryInput,
-    minimized,
-  );
+  // Enrichment runs in its OWN transaction (inside enrichWithModel) so a
+  // gateway-side error can never abort this analysis-write transaction.
+  const enriched = await enrichWithModel(config, claims, base, summaryInput, minimized);
 
   const version = await nextAnalysisVersion(db, claims, incident.id);
   return await insertAnalysis(db, claims, incident.id, version, {

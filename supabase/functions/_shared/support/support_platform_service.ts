@@ -4,6 +4,8 @@
 // many": incidents sharing a deterministic fingerprint join one cluster.
 
 import { callModelGateway } from "../ai/model_gateway.ts";
+import { withTenantContext } from "../tenant_db.ts";
+import type { AppConfig } from "../config.ts";
 import type { AccessTokenClaims } from "../jwt.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 import { safeParseEnrichment } from "./incident_package.ts";
@@ -200,8 +202,8 @@ export function deterministicInvestigation(
 }
 
 export async function investigate(
-  db: TenantQueryClient,
-  gov: { organizationId: string; userId: string | null },
+  config: AppConfig,
+  claims: AccessTokenClaims,
   incident: PlatformIncidentRow,
   evidence: PlatformEvidenceRow[],
   clusterSize: number,
@@ -228,12 +230,15 @@ export async function investigate(
   let confidence = base.confidence;
 
   try {
-    const res = await callModelGateway(
-      db,
-      { organizationId: gov.organizationId, schoolId: null, userId: gov.userId, surface: "support_investigation" },
-      { system, messages: [{ role: "user", content: user }], maxTokens: 600 },
-      "",
-    );
+    // Own transaction (nested) so a gateway-side DB error never aborts the
+    // caller's transaction.
+    const res = await withTenantContext(config, claims, (db) =>
+      callModelGateway(
+        db,
+        { organizationId: claims.tenant_id, schoolId: null, userId: claims.sub, surface: "support_investigation" },
+        { system, messages: [{ role: "user", content: user }], maxTokens: 600 },
+        "",
+      ));
     if (res.ok && res.text) {
       const parsed = safeParseEnrichment(res.text);
       if (parsed) {
