@@ -1225,6 +1225,26 @@ export const educationAudit = {
       idempotencyKey: `education.report_remark.published:${remarkId}`,
     },
   }),
+  // EIP-6 — a learning-evidence item interaction was recorded on the spine.
+  // idempotencyKey is the response row id (stable per attempt), so an idempotent
+  // re-record does not enqueue a second domain event.
+  itemResponseRecorded: (
+    responseId: string,
+    source: string,
+    studentId: string,
+  ): MutationAuditSpec => ({
+    ...workflow("learningEvidenceRecorded", "student_item_response", responseId, {
+      responseId,
+      source,
+      studentId,
+    }),
+    domain: {
+      eventType: "education.learning_evidence.recorded",
+      payload: { responseId, source, studentId },
+      sourceModule: "education",
+      idempotencyKey: `education.learning_evidence:${responseId}`,
+    },
+  }),
 };
 
 // ─── Intelligence Layer (v8.9–v9.3) ─────────────────────────────────────────
