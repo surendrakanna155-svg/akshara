@@ -133,12 +133,15 @@ def exam_sources(kconn: sqlite3.Connection, subject: Optional[str] = None,
     the JEE-Physics -> NEET-Biology leak. Here a doc qualifies only if its own exam identity is one requested.
     The `subject` argument is accepted for call compatibility but intentionally NOT used to filter documents.
     """
+    # single canonical exam identity: COALESCE(exam, category). Using ONE column removes the latent
+    # broadening of `category IN (...) OR exam IN (...)` (safe only while category==exam) — a doc now
+    # qualifies solely on its own exam identity.
     ph = ",".join("?" * len(exams))
     q = ("SELECT doc_id, rel_path, category, exam, subject, year, "
          "(SELECT COUNT(*) FROM chunks c WHERE c.doc_id=sd.doc_id) AS n "
-         f"FROM source_documents sd WHERE (category IN ({ph}) OR exam IN ({ph}))")
+         f"FROM source_documents sd WHERE COALESCE(exam, category) IN ({ph})")
     out = []
-    for r in kconn.execute(q, list(exams) + list(exams)):
+    for r in kconn.execute(q, list(exams)):
         if r["n"]:
             out.append({"doc_id": r["doc_id"], "rel_path": r["rel_path"], "exam": r["exam"] or r["category"],
                         "subject": r["subject"], "year": r["year"], "chunks": r["n"]})
@@ -236,34 +239,48 @@ _SECTION_SUBJECT = re.compile(
     re.I)
 _SUBJECT_CANON = {"physics": "Physics", "chemistry": "Chemistry", "botany": "Biology", "zoology": "Biology",
                   "biology": "Biology", "mathematics": "Mathematics", "maths": "Mathematics"}
+# chars of content BEFORE a chunk's first section marker that make it a genuine mixed BOUNDARY chunk
+_BOUNDARY_PREFIX = 120
 
 
 def resolve_chunk_subjects(kconn: sqlite3.Connection, doc_id: str) -> Dict[str, Optional[str]]:
     """{chunk_id: true subject} for a (possibly combined) paper. Walks chunks in `ordinal` order and
-    propagates the most-recent in-paper section-subject marker to each chunk. Chunks before the first marker
-    stay None (unclassified — never guessed). This is where SUBJECT correctly lives for combined papers."""
+    propagates the most-recent in-paper section-subject marker. Chunks before the first marker stay None
+    (never guessed). A chunk that carries substantial content BEFORE a subject-changing marker is a mixed
+    BOUNDARY chunk — its prefix belongs to the previous subject and its suffix to the new one; rather than
+    contaminate either subject with the other's text, it is marked None (excluded from subject-filtered
+    reads). This is where SUBJECT correctly lives for combined papers."""
     rows = kconn.execute("SELECT chunk_id, text FROM chunks WHERE doc_id=? ORDER BY ordinal", (doc_id,)).fetchall()
     out: Dict[str, Optional[str]] = {}
     current: Optional[str] = None
     for r in rows:
-        last = None
-        for m in _SECTION_SUBJECT.finditer(r["text"] or ""):
-            last = m  # a chunk may span a boundary; the last marker in it governs what follows
-        if last:
-            current = _SUBJECT_CANON.get(last.group(1).lower())
-        out[r["chunk_id"]] = current
+        markers = list(_SECTION_SUBJECT.finditer(r["text"] or ""))
+        if not markers:
+            out[r["chunk_id"]] = current
+            continue
+        new_subj = _SUBJECT_CANON.get(markers[-1].group(1).lower())
+        if markers[0].start() > _BOUNDARY_PREFIX and current is not None and current != new_subj:
+            out[r["chunk_id"]] = None          # mixed boundary chunk — safe over throughput
+        else:
+            out[r["chunk_id"]] = new_subj
+        if new_subj is not None:
+            current = new_subj
     return out
 
 
-# page furniture that carries no question: exam instructions, and OCR mojibake (bilingual Devanagari sludge).
+# page furniture that carries no question: exam instructions, OCR mojibake (bilingual Devanagari sludge),
+# and content-free digital-exam HTML scaffolding (digialm dumps: "Question ID / Option ID / Status ...").
 _BOILERPLATE = re.compile(r"read carefully|do not open|test booklet|instructions to|rough work|"
                           r"in case of any ambiguity|attempt (?:all|any)|answer sheet|omr", re.I)
+_FURNITURE = re.compile(r"question id|option \d+ id|chosen option|status\s*:?\s*(answered|not answered)|"
+                        r"response time|section\s*:?\s*answered", re.I)
 
 
 def _usable_chunk(text: str) -> bool:
-    """Reject exam-instruction boilerplate and OCR mojibake — keep chunks with legible English question text."""
+    """Reject exam-instruction boilerplate, OCR mojibake, and content-free HTML scaffolding — keep chunks
+    with legible question text the analyst can actually mine."""
     t = text or ""
-    if len(t) < 200 or _BOILERPLATE.search(t):
+    if len(t) < 200 or _BOILERPLATE.search(t) or _FURNITURE.search(t):
         return False
     ascii_alnum = sum(1 for ch in t if ch.isascii() and ch.isalnum())
     return ascii_alnum >= 0.30 * len(t)  # too few Latin alphanumerics => Devanagari mojibake, skip

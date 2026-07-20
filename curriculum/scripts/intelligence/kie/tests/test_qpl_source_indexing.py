@@ -29,6 +29,14 @@ _BIO = ("Section (Botany) 45. Which of the following is NOT an objective of the 
 _BOILER = ("Read carefully the following instructions before you begin. Do not open the test booklet until "
            "you are asked to do so. Rough work must be done only in the space provided. Attempt all questions "
            "in the answer sheet as per the OMR instructions given on the cover page of this booklet today.")
+# a MIXED boundary chunk: substantial Chemistry content, THEN a Biology section marker mid-chunk
+_BOUNDARY = ("18. Identify the non-polar molecule among the following on the basis of its geometry and the "
+             "cancellation of individual bond dipole moments across the central atom. (1) POCl3 (2) CH2O "
+             "(3) SbCl5 (4) NO2  Ans (3)  Section (Zoology) 45. Which structure in the human nephron is the "
+             "primary site of ultrafiltration of blood plasma? (1) glomerulus (2) loop of Henle  Ans (1)")
+# content-free digital-exam HTML scaffolding (digialm dump) — no question stem
+_FURNITURE = ("Question ID : 5551234 Option 1 ID : 221 Option 2 ID : 222 Option 3 ID : 223 Option 4 ID : 224 "
+              "Status : Not Answered Chosen Option : -- Question Type : MCQ Response Time : 0 seconds marks 4")
 
 
 def _mkkie():
@@ -41,7 +49,9 @@ def _mkkie():
     # a NEET combined paper MIS-TAGGED subject='Physics' (the exact real defect shape), + a JEE_Main paper
     k.execute("INSERT INTO source_documents VALUES ('D_neet','NEET/Previous_Papers/2021/x','NEET','NEET','Physics',2021)")
     k.execute("INSERT INTO source_documents VALUES ('D_jee','JEE_Main/Previous_Papers/2020/y','JEE_Main','JEE_Main',NULL,2020)")
-    for cid, o, t in [("c1", 1, _PHYS), ("c2", 2, _PHYS2), ("c3", 3, _CHEM), ("c4", 4, _BIO), ("c5", 5, _BOILER)]:
+    # ordinal order: Physics, Physics, Chemistry, [Chem->Bio boundary chunk], Biology, boilerplate, furniture
+    for cid, o, t in [("c1", 1, _PHYS), ("c2", 2, _PHYS2), ("c3", 3, _CHEM), ("c6", 4, _BOUNDARY),
+                      ("c4", 5, _BIO), ("c5", 6, _BOILER), ("c7", 7, _FURNITURE)]:
         k.execute("INSERT INTO chunks VALUES (?,?,?,?)", (cid, "D_neet", o, t))
     k.execute("INSERT INTO chunks VALUES ('j1','D_jee',1,?)",
               ("Section (Physics) 1. A projectile is launched; find its range and time of flight for the "
@@ -87,8 +97,21 @@ class SectionSubjectResolution(unittest.TestCase):
         finally:
             k.close()
 
-    def test_usable_chunk_rejects_boilerplate_and_mojibake(self):
+    def test_boundary_chunk_resolves_to_none_not_leaked(self):
+        # a chunk with substantial CHEMISTRY content before a Biology section marker must NOT be stamped
+        # Biology (it would leak chemistry into a Biology-subject read); it resolves to None (excluded).
+        k = _mkkie()
+        try:
+            res = QDI.resolve_chunk_subjects(k, "D_neet")
+            self.assertIsNone(res["c6"], "mixed boundary chunk must be None, not the post-marker subject")
+            self.assertNotIn("c6", {r["chunk_id"] for r in QDI.candidate_chunks(k, ["D_neet"], subject="Biology")})
+            self.assertNotIn("c6", {r["chunk_id"] for r in QDI.candidate_chunks(k, ["D_neet"], subject="Chemistry")})
+        finally:
+            k.close()
+
+    def test_usable_chunk_rejects_boilerplate_mojibake_and_furniture(self):
         self.assertFalse(QDI._usable_chunk(_BOILER))
+        self.assertFalse(QDI._usable_chunk(_FURNITURE))            # content-free HTML scaffolding
         self.assertTrue(QDI._usable_chunk(_PHYS))
         self.assertFalse(QDI._usable_chunk("ÁŸêŸ ◊¥ ∑§ÊÒŸ »§‚‹Ê¥ ∑§ ’ÊÿÊ»§ÊÁ≈¸UÁ»§∑§‡ÊŸ " * 8))  # mojibake
 
