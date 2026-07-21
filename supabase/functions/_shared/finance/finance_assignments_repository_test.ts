@@ -59,6 +59,37 @@ class MockAssignmentsDb {
   accounts: Row[] = [];
   invoices: Row[] = [];
   failOnInvoiceInsert = false;
+  // ICA-C4 — set the FIRST batched (unnest) finance_student_accounts INSERT to
+  // raise a Postgres unique_violation, simulating a concurrent writer that
+  // opened a finance_student_accounts row (UNIQUE(student_id, academic_year))
+  // between the set-based read and the batched INSERT. Exercises the
+  // ROLLBACK-TO-SAVEPOINT + per-student fallback recovery.
+  raceOnBatchAccountInsert = false;
+  // ICA-C4 — every SQL string issued, so a test can prove the set-based path is
+  // BOUNDED (no per-student duplicate SELECT / SAVEPOINT that grows with N).
+  queryLog: string[] = [];
+  // ICA-C4 — a faithful model of Postgres SAVEPOINT / RELEASE / ROLLBACK TO
+  // SAVEPOINT: a snapshot of every mutable table, so a rolled-back set-based
+  // batch is actually undone before the fallback loop re-runs (otherwise the
+  // fallback would see the half-written rows as duplicates and skip everyone).
+  private savepoints = new Map<
+    string,
+    { assignments: Row[]; accounts: Row[]; invoices: Row[] }
+  >();
+
+  private snapshot() {
+    return {
+      assignments: structuredClone(this.assignments),
+      accounts: structuredClone(this.accounts),
+      invoices: structuredClone(this.invoices),
+    };
+  }
+
+  private restore(snap: { assignments: Row[]; accounts: Row[]; invoices: Row[] }) {
+    this.assignments = structuredClone(snap.assignments);
+    this.accounts = structuredClone(snap.accounts);
+    this.invoices = structuredClone(snap.invoices);
+  }
   handoffs = [{
     id: HANDOFF,
     organization_id: ORG,
@@ -96,6 +127,181 @@ class MockAssignmentsDb {
   }
 
   async queryObject<T>(sql: string, args: unknown[] = []): Promise<T[]> {
+    this.queryLog.push(sql);
+    // ── Transaction-control (SAVEPOINT / RELEASE / ROLLBACK TO SAVEPOINT) ──
+    const trimmed = sql.trim();
+    if (trimmed.startsWith("SAVEPOINT ")) {
+      this.savepoints.set(trimmed.slice("SAVEPOINT ".length).trim(), this.snapshot());
+      return [] as T[];
+    }
+    if (trimmed.startsWith("RELEASE SAVEPOINT ")) {
+      this.savepoints.delete(trimmed.slice("RELEASE SAVEPOINT ".length).trim());
+      return [] as T[];
+    }
+    if (trimmed.startsWith("ROLLBACK TO SAVEPOINT ")) {
+      const snap = this.savepoints.get(trimmed.slice("ROLLBACK TO SAVEPOINT ".length).trim());
+      if (snap) this.restore(snap);
+      return [] as T[];
+    }
+
+    // ── ICA-C4 set-based (batched) reads/writes. These are gated on `= ANY` /
+    // `unnest` / `DISTINCT ON`, which the pre-existing scalar branches below
+    // never contain, so they must be matched FIRST to avoid mis-routing. ──
+
+    // Batched duplicate-assignment check (one query for the whole cohort).
+    if (sql.includes("SELECT student_id FROM finance_fee_assignments") && sql.includes("= ANY")) {
+      const feeStructureId = args[0];
+      const academicYear = args[1];
+      const ids = new Set(args[4] as string[]);
+      return this.assignments
+        .filter((a) =>
+          a.fee_structure_id === feeStructureId &&
+          a.academic_year === academicYear &&
+          ids.has(a.student_id as string)
+        )
+        .map((a) => ({ student_id: a.student_id })) as T[];
+    }
+
+    // Batched existing-account read (one query for the whole cohort).
+    if (
+      sql.includes("SELECT * FROM finance_student_accounts") &&
+      sql.includes("academic_year = $1") &&
+      sql.includes("= ANY")
+    ) {
+      const academicYear = args[0];
+      const ids = new Set(args[3] as string[]);
+      return this.accounts.filter((a) =>
+        a.academic_year === academicYear && ids.has(a.student_id as string)
+      ) as T[];
+    }
+
+    // Multi-row assignment INSERT (unnest) with ON CONFLICT DO NOTHING.
+    if (sql.includes("INSERT INTO finance_fee_assignments") && sql.includes("unnest")) {
+      const ids = args[2] as string[];
+      const feeStructureId = args[3];
+      const academicYear = args[4];
+      const inserted: Row[] = [];
+      for (const sid of ids) {
+        // ON CONFLICT (student_id, fee_structure_id, academic_year) DO NOTHING.
+        const conflict = this.assignments.some((a) =>
+          a.student_id === sid &&
+          a.fee_structure_id === feeStructureId &&
+          a.academic_year === academicYear
+        );
+        if (conflict) continue;
+        const row = {
+          id: crypto.randomUUID(),
+          organization_id: args[0],
+          school_id: args[1],
+          student_id: sid,
+          fee_structure_id: feeStructureId,
+          academic_year: academicYear,
+          assignment_status: "active",
+          assigned_by: args[5],
+          assigned_at: "2026-06-12T00:00:00.000Z",
+          created_at: "2026-06-12T00:00:00.000Z",
+          updated_at: "2026-06-12T00:00:00.000Z",
+          proration_policy: args[6],
+          proration_basis: args[7],
+          proration_total_months: args[8],
+          proration_months_charged: args[9],
+          proration_reference_date: args[10],
+          proration_annual_amount: args[11] != null ? String(args[11]) : null,
+          proration_charged_amount: args[12] != null ? String(args[12]) : null,
+          proration_fallback_reason: args[13],
+          proration_is_override: args[14],
+          proration_override_reason: args[15],
+          proration_overridden_by: args[16],
+        };
+        this.assignments.push(row);
+        inserted.push(row);
+      }
+      return inserted as T[];
+    }
+
+    // Multi-row account INSERT (unnest over parallel student_id/assignment_id).
+    if (sql.includes("INSERT INTO finance_student_accounts") && sql.includes("unnest")) {
+      if (this.raceOnBatchAccountInsert) {
+        // Model the whole statement failing atomically on a unique_violation —
+        // nothing is inserted.
+        const err = new Error(
+          "duplicate key value violates unique constraint \"finance_student_accounts_student_id_academic_year_key\"",
+        ) as Error & { code: string };
+        err.code = "23505";
+        throw err;
+      }
+      const studentIds = args[4] as string[];
+      const assignmentIds = args[5] as string[];
+      const total = String(args[3]);
+      const inserted: Row[] = [];
+      for (let i = 0; i < studentIds.length; i++) {
+        const row = {
+          id: crypto.randomUUID(),
+          organization_id: args[0],
+          school_id: args[1],
+          student_id: studentIds[i],
+          fee_assignment_id: assignmentIds[i],
+          academic_year: args[2],
+          total_fee: total,
+          amount_paid: "0",
+          outstanding_amount: total,
+          status: "open",
+          created_at: "2026-06-12T00:00:00.000Z",
+          updated_at: "2026-06-12T00:00:00.000Z",
+        };
+        this.accounts.push(row);
+        inserted.push(row);
+      }
+      return inserted as T[];
+    }
+
+    // Batched TRN-9 reuse bump (one UPDATE for every reuse account).
+    if (
+      sql.includes("UPDATE finance_student_accounts SET") &&
+      sql.includes("total_fee = total_fee +") &&
+      sql.includes("= ANY")
+    ) {
+      const delta = Number(args[0]);
+      const ids = new Set(args[1] as string[]);
+      const updated: Row[] = [];
+      for (const a of this.accounts) {
+        if (ids.has(a.id as string)) {
+          a.total_fee = String(Number(a.total_fee) + delta);
+          a.outstanding_amount = String(Number(a.outstanding_amount) + delta);
+          a.status = "open";
+          updated.push(a);
+        }
+      }
+      return updated as T[];
+    }
+
+    // Batched enrichment — student display names.
+    if (sql.includes("SELECT id, display_name FROM students") && sql.includes("= ANY")) {
+      const ids = new Set(args[0] as string[]);
+      return this.students
+        .filter((s) => ids.has(s.id))
+        .map((s) => ({ id: s.id, display_name: s.display_name })) as T[];
+    }
+
+    // Batched enrichment — latest handoff per student (DISTINCT ON).
+    if (sql.includes("DISTINCT ON (student_id)") && sql.includes("admissions_fee_handoffs")) {
+      const ids = new Set(args[0] as string[]);
+      const seen = new Set<string>();
+      const out: Row[] = [];
+      for (const h of this.handoffs) {
+        if (ids.has(h.student_id) && !seen.has(h.student_id)) {
+          seen.add(h.student_id);
+          out.push({
+            student_id: h.student_id,
+            admission_number: h.admission_number,
+            class_label: h.class_label,
+            student_name: h.student_name,
+          });
+        }
+      }
+      return out as T[];
+    }
+
     if (sql.includes("FROM finance_fee_structures") && sql.includes("status = 'active'")) {
       const found = this.structures.find((s) => s.id === args[0]);
       return (found
@@ -968,4 +1174,251 @@ Deno.test("bulkAssignFeeStructure over auto-resolved ids still works exactly lik
     assignedBy: STAFF,
   });
   assertEquals(result.assigned.length, 2);
+});
+
+// ─── ICA-C4 (P1, Performance) — set-based bulk assignment ──────────────────
+
+Deno.test("ICA-C4: a cohort assign creates exactly one linked assignment + account + invoice per student and returns correct counts and money", async () => {
+  const db = new MockAssignmentsDb();
+  const result = await bulkAssignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    feeStructureId: STRUCTURE,
+    academicYear: "2026-27",
+    studentIds: [STUDENT, STUDENT_2, STUDENT_3],
+    assignedBy: STAFF,
+  });
+
+  // Correct counts returned + persisted (one row per student, no fan-out dupes).
+  assertEquals(result.total, 3);
+  assertEquals(result.assigned.length, 3);
+  assertEquals(result.skipped.length, 0);
+  assertEquals(db.assignments.length, 3);
+  assertEquals(db.accounts.length, 3);
+  assertEquals(db.invoices.length, 3);
+  assertEquals(new Set(db.assignments.map((a) => a.student_id)).size, 3);
+
+  for (const item of result.assigned) {
+    // The account + invoice each hang off THIS student's own new assignment —
+    // no cross-wiring in the multi-row INSERT / unnest.
+    assertEquals(item.account.fee_assignment_id, item.assignment.id);
+    assertEquals(item.invoice.fee_assignment_id, item.assignment.id);
+    assertEquals(item.account.student_id, item.assignment.student_id);
+    // Money math is identical to the single-assign path (full annual, no proration).
+    assertEquals(item.account.total_fee, "50000");
+    assertEquals(item.account.outstanding_amount, "50000");
+    assertEquals(item.account.amount_paid, "0");
+    assertEquals(item.invoice.total_amount, "50000");
+    assertEquals(item.invoice.outstanding_amount, "50000");
+    assertEquals(item.invoice.invoice_status, "issued");
+  }
+});
+
+Deno.test("ICA-C4: students who already have the structure are skipped (already_assigned) with NO duplicate rows; the rest still assign", async () => {
+  const db = new MockAssignmentsDb();
+  // Two of the three students already have THIS structure for THIS year.
+  for (const sid of [STUDENT, STUDENT_2]) {
+    await assignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+      studentId: sid,
+      feeStructureId: STRUCTURE,
+      academicYear: "2026-27",
+      assignedBy: STAFF,
+    });
+  }
+  assertEquals(db.assignments.length, 2);
+
+  const result = await bulkAssignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    feeStructureId: STRUCTURE,
+    academicYear: "2026-27",
+    studentIds: [STUDENT, STUDENT_2, STUDENT_3],
+    assignedBy: STAFF,
+  });
+
+  assertEquals(result.total, 3);
+  assertEquals(result.skipped.length, 2);
+  assertEquals(result.skipped.map((s) => s.studentId).sort(), [STUDENT, STUDENT_2].sort());
+  assertEquals(result.skipped.every((s) => s.reason === "already_assigned"), true);
+  assertEquals(result.assigned.length, 1);
+  assertEquals(result.assigned[0]?.assignment.student_id, STUDENT_3);
+  // The two pre-existing students did NOT get a second assignment/account/invoice.
+  assertEquals(db.assignments.length, 3);
+  assertEquals(db.accounts.length, 3);
+  assertEquals(db.invoices.length, 3);
+});
+
+Deno.test("ICA-C4: a repeated studentId within ONE call assigns once and skips the repeat as already_assigned", async () => {
+  const db = new MockAssignmentsDb();
+  const result = await bulkAssignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    feeStructureId: STRUCTURE,
+    academicYear: "2026-27",
+    studentIds: [STUDENT, STUDENT, STUDENT_2],
+    assignedBy: STAFF,
+  });
+  assertEquals(result.total, 3);
+  assertEquals(result.assigned.map((a) => a.assignment.student_id).sort(), [STUDENT, STUDENT_2].sort());
+  assertEquals(result.skipped.length, 1);
+  assertEquals(result.skipped[0]?.studentId, STUDENT);
+  assertEquals(result.skipped[0]?.reason, "already_assigned");
+  // Exactly one assignment per distinct student — the repeat created nothing.
+  assertEquals(db.assignments.length, 2);
+  assertEquals(db.accounts.length, 2);
+});
+
+Deno.test("ICA-C4: TRN-9 reuse inside a bulk batch — a student with an existing per-year account is bumped (one account), a fresh student opens a new one", async () => {
+  const db = new MockAssignmentsDb();
+  const TRANSPORT = "b7000000-0000-4000-8000-000000000099";
+  db.structures.push({
+    id: TRANSPORT,
+    name: "Transport Fee",
+    academic_year: "2026-27",
+    academic_year_id: ACADEMIC_YEAR_ID,
+    class_id: null,
+    section_id: null,
+    status: "active",
+  });
+  db.items.push({ fee_structure_id: TRANSPORT, amount: "12000", organization_id: ORG, school_id: SCHOOL_A });
+
+  // STUDENT already has a tuition account for the year.
+  await assignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    studentId: STUDENT,
+    feeStructureId: STRUCTURE,
+    academicYear: "2026-27",
+    assignedBy: STAFF,
+  });
+  assertEquals(db.accounts.length, 1);
+
+  // Bulk-assign the TRANSPORT structure to STUDENT (reuse+bump) and STUDENT_2 (fresh).
+  const result = await bulkAssignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    feeStructureId: TRANSPORT,
+    academicYear: "2026-27",
+    studentIds: [STUDENT, STUDENT_2],
+    assignedBy: STAFF,
+  });
+
+  assertEquals(result.assigned.length, 2);
+  assertEquals(result.skipped.length, 0);
+  // STUDENT reused the SAME account (no 2nd account) — STUDENT_2 opened a fresh one.
+  assertEquals(db.accounts.length, 2);
+  const studentItem = result.assigned.find((a) => a.assignment.student_id === STUDENT)!;
+  const student2Item = result.assigned.find((a) => a.assignment.student_id === STUDENT_2)!;
+  // STUDENT's shared account now aggregates tuition 50000 + transport 12000.
+  assertEquals(studentItem.account.total_fee, "62000");
+  assertEquals(studentItem.account.outstanding_amount, "62000");
+  assertEquals(studentItem.account.amount_paid, "0");
+  // STUDENT_2's brand-new account carries the transport charge only.
+  assertEquals(student2Item.account.total_fee, "12000");
+  assertEquals(student2Item.account.outstanding_amount, "12000");
+  // 1 tuition + 2 transport assignments/invoices.
+  assertEquals(db.assignments.length, 3);
+  assertEquals(db.invoices.length, 3);
+  assertEquals(studentItem.invoice.total_amount, "12000");
+  assertEquals(student2Item.invoice.total_amount, "12000");
+});
+
+Deno.test("ICA-C4: a concurrent-duplicate unique_violation on the batched account INSERT is handled gracefully — the batch rolls back to its SAVEPOINT and the per-student fallback completes the whole class", async () => {
+  const db = new MockAssignmentsDb();
+  // Simulate a concurrent writer opening a finance_student_accounts row
+  // (UNIQUE(student_id, academic_year)) between our batched read and our
+  // batched INSERT — the set-based account INSERT raises 23505.
+  db.raceOnBatchAccountInsert = true;
+
+  const result = await bulkAssignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    feeStructureId: STRUCTURE,
+    academicYear: "2026-27",
+    studentIds: [STUDENT, STUDENT_2, STUDENT_3],
+    assignedBy: STAFF,
+  });
+
+  // Recovery is transparent: every student still assigned, exactly once, with
+  // correct money — no half-written / orphan rows survived the rolled-back
+  // fast path (proves the mock's SAVEPOINT/ROLLBACK actually undid them).
+  assertEquals(result.total, 3);
+  assertEquals(result.assigned.length, 3);
+  assertEquals(result.skipped.length, 0);
+  assertEquals(db.assignments.length, 3);
+  assertEquals(db.accounts.length, 3);
+  assertEquals(db.invoices.length, 3);
+  assertEquals(new Set(db.assignments.map((a) => a.student_id)).size, 3);
+  for (const item of result.assigned) {
+    assertEquals(item.account.total_fee, "50000");
+    assertEquals(item.account.fee_assignment_id, item.assignment.id);
+  }
+});
+
+Deno.test("ICA-C4: bulk enrichment resolves student name/admission/class from the latest handoff, falling back to display_name", async () => {
+  const db = new MockAssignmentsDb();
+  const result = await bulkAssignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    feeStructureId: STRUCTURE,
+    academicYear: "2026-27",
+    studentIds: [STUDENT, STUDENT_2],
+    assignedBy: STAFF,
+  });
+  const a = result.assigned.find((x) => x.assignment.student_id === STUDENT)!;
+  const b = result.assigned.find((x) => x.assignment.student_id === STUDENT_2)!;
+  // STUDENT has a handoff fixture → name + admission + class come from it.
+  assertEquals(a.studentName, "Probe Student A");
+  assertEquals(a.admissionNumber, "ADM-PROBE-A");
+  assertEquals(a.classLabel, "5");
+  assertEquals(a.feeStructureName, "Probe Structure A");
+  // STUDENT_2 has NO handoff → falls back to students.display_name, no admission/class.
+  assertEquals(b.studentName, "Probe Student B");
+  assertEquals(b.admissionNumber, undefined);
+  assertEquals(b.classLabel, undefined);
+  assertEquals(b.feeStructureName, "Probe Structure A");
+});
+
+Deno.test("ICA-C4: set-based path issues a BOUNDED query set — zero per-student duplicate SELECTs, zero per-student SAVEPOINTs, batched reads/writes run once regardless of class size", async () => {
+  function core(log: string[]) {
+    return {
+      perStudentDupCheck: log.filter((s) =>
+        s.includes("SELECT id FROM finance_fee_assignments") && s.includes("student_id = $1")
+      ).length,
+      perStudentSavepoint: log.filter((s) => s.trim() === "SAVEPOINT bulk_fee_assignment").length,
+      batchedDupCheck: log.filter((s) =>
+        s.includes("SELECT student_id FROM finance_fee_assignments") && s.includes("= ANY")
+      ).length,
+      batchedAssignmentInsert: log.filter((s) =>
+        s.includes("INSERT INTO finance_fee_assignments") && s.includes("unnest")
+      ).length,
+      batchedAccountInsert: log.filter((s) =>
+        s.includes("INSERT INTO finance_student_accounts") && s.includes("unnest")
+      ).length,
+    };
+  }
+
+  const small = new MockAssignmentsDb();
+  await bulkAssignFeeStructure(asDb(small), ORG, SCHOOL_A, {
+    feeStructureId: STRUCTURE,
+    academicYear: "2026-27",
+    studentIds: [STUDENT, STUDENT_2],
+    assignedBy: STAFF,
+  });
+
+  const large = new MockAssignmentsDb();
+  const bigIds: string[] = [];
+  for (let i = 1; i <= 8; i++) {
+    const id = `a4000000-0000-4000-8000-00000000010${i}`;
+    large.students.push({ id, display_name: `Bulk Student ${i}`, status: "active" });
+    bigIds.push(id);
+  }
+  await bulkAssignFeeStructure(asDb(large), ORG, SCHOOL_A, {
+    feeStructureId: STRUCTURE,
+    academicYear: "2026-27",
+    studentIds: bigIds,
+    assignedBy: STAFF,
+  });
+
+  const s = core(small.queryLog);
+  const l = core(large.queryLog);
+
+  // The N+1 storm is gone: NO per-student duplicate SELECT, NO per-student SAVEPOINT.
+  assertEquals(s.perStudentDupCheck, 0);
+  assertEquals(l.perStudentDupCheck, 0);
+  assertEquals(s.perStudentSavepoint, 0);
+  assertEquals(l.perStudentSavepoint, 0);
+  // The batched read + writes each run EXACTLY ONCE, and do NOT scale with N.
+  assertEquals(s.batchedDupCheck, 1);
+  assertEquals(l.batchedDupCheck, 1);
+  assertEquals(s.batchedAssignmentInsert, 1);
+  assertEquals(l.batchedAssignmentInsert, 1);
+  assertEquals(s.batchedAccountInsert, 1);
+  assertEquals(l.batchedAccountInsert, 1);
 });

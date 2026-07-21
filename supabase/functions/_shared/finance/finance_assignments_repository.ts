@@ -534,30 +534,382 @@ export interface BulkAssignResult {
 }
 
 /**
- * Bulk/class-wide fee-structure assignment. Reuses `assignFeeStructure`
- * UNCHANGED per student — identical invoice/account math, including the
- * TRN-9 get-or-create per-year account — inside the SAME transaction the
+ * Bulk/class-wide fee-structure assignment inside the SAME transaction the
  * caller opened via `withTenantContext`, so the whole batch commits or rolls
- * back together.
+ * back together. Identical invoice/account math to the single-student path,
+ * including the TRN-9 get-or-create per-year account and Cap 73 proration.
  *
  * Partial-failure semantics (deliberate design choice): a bulk call over a
  * class routinely includes students who already have THIS exact structure
- * assigned for THIS academic year — `assignFeeStructure` throws
- * `DuplicateAssignmentError` for those. Treating that as fatal would make the
+ * assigned for THIS academic year. Treating that as fatal would make the
  * feature unusable (one already-assigned student would abort the whole
- * class). So a duplicate is SKIPPED AND REPORTED, not fatal, and the loop
- * continues to the next student. A genuine unexpected error (bad fee
- * structure, invoice failure, etc.) is NOT swallowed — it propagates and
- * aborts the whole transaction, because silently half-committing a bulk
- * assignment would be worse than failing loudly.
+ * class). So a duplicate is SKIPPED AND REPORTED (`already_assigned`), not
+ * fatal. A genuine unexpected error (bad fee structure, invoice failure, etc.)
+ * is NOT swallowed — it propagates and aborts the whole transaction, because
+ * silently half-committing a bulk assignment would be worse than failing loudly.
  *
- * Each per-student attempt is wrapped in its own SAVEPOINT so a Postgres
- * unique_violation (the app-level check above raced with a concurrent
- * writer) can be rolled back to WITHOUT poisoning the surrounding
- * transaction — mirrors `insertDemandIdempotent`'s
- * SAVEPOINT / ROLLBACK TO SAVEPOINT recovery in transport_write_handlers.ts.
+ * ICA-C4 (P1, Performance) — this runs the SET-BASED fast path
+ * (`bulkAssignFeeStructureSetBased`): a BOUNDED number of `= ANY($ids)` reads
+ * and multi-row INSERTs regardless of class size, instead of the previous
+ * per-student loop (~9 sequential round-trips × N — a 60-student class ≈ 540
+ * round-trips holding row locks the whole time). The one residual
+ * concurrent-duplicate race the set-based `ON CONFLICT` cannot absorb (a
+ * concurrent writer opening a `finance_student_accounts` row —
+ * UNIQUE(student_id, academic_year) — between our batched read and our batched
+ * INSERT) surfaces as a unique_violation; we roll the set-based mutation back
+ * to its SAVEPOINT and finish via the proven per-student loop
+ * (`bulkAssignFeeStructurePerStudent`), which isolates and skips only the raced
+ * student. The common path never touches that fallback.
  */
 export async function bulkAssignFeeStructure(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  input: BulkAssignFeeStructureInput,
+): Promise<BulkAssignResult> {
+  if (input.studentIds.length === 0) {
+    return { assigned: [], skipped: [], total: 0 };
+  }
+  try {
+    return await bulkAssignFeeStructureSetBased(db, organizationId, schoolId, input);
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      // A residual concurrent-duplicate race the batched ON CONFLICT couldn't
+      // absorb (e.g. a finance_student_accounts UNIQUE(student_id, academic_year)
+      // collision a concurrent writer opened between our batched read and our
+      // batched INSERT). Undo the partial set-based writes and finish via the
+      // per-student SAVEPOINT loop, which isolates and skips only the raced
+      // student without poisoning the surrounding transaction.
+      await db.queryObject(`ROLLBACK TO SAVEPOINT bulk_fee_setbased`);
+      await db.queryObject(`RELEASE SAVEPOINT bulk_fee_setbased`);
+      return await bulkAssignFeeStructurePerStudent(db, organizationId, schoolId, input);
+    }
+    // Any other error is unexpected — let it propagate so withTenantContext
+    // rolls back the whole batch rather than half-committing it silently.
+    throw error;
+  }
+}
+
+/**
+ * ICA-C4 set-based fast path. Collapses every phase that CAN be set-based into
+ * a BOUNDED number of queries independent of the cohort size N:
+ *   • cohort-invariant reads (fee structure, proration policy, academic-year
+ *     bounds, structure-item total) run ONCE — the whole class shares the same
+ *     fee structure / policy / charged total;
+ *   • the duplicate-check and existing-account reads are ONE `= ANY($ids)`
+ *     query each (was one SELECT per student);
+ *   • assignment rows insert as ONE multi-row `INSERT … SELECT unnest(...)`
+ *     with `ON CONFLICT (student_id, fee_structure_id, academic_year) DO
+ *     NOTHING` — so the common "some students already assigned" case needs NO
+ *     per-student SAVEPOINT: conflicting rows are skipped and detected via the
+ *     RETURNING set;
+ *   • account rows insert as ONE multi-row INSERT (students with no account
+ *     yet) plus ONE batched UPDATE bump (TRN-9 reuse students, all bumped by
+ *     the SAME charged total);
+ *   • enrichment (student name + latest handoff) is ONE `= ANY` query each.
+ *
+ * The only genuinely per-row work left is `createAnnualInvoice` (its own
+ * invoice number + informational installment schedule + head-allocation seed,
+ * in finance_invoices_repository.ts) — one call per NEWLY-assigned student,
+ * money math unchanged. The whole mutation runs inside ONE SAVEPOINT so a
+ * residual account-table race can be rolled back to (see caller).
+ */
+async function bulkAssignFeeStructureSetBased(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  input: BulkAssignFeeStructureInput,
+): Promise<BulkAssignResult> {
+  const studentIds = input.studentIds;
+
+  // ── Cohort-invariant setup — computed ONCE for the whole class. Every
+  // student in a bulk call shares the same fee structure, the same proration
+  // decision (uniform reference date/policy per the input), and therefore the
+  // same charged total, so this exactly reproduces the per-student math. ──
+  const structure = await ensureFeeStructureExists(
+    db,
+    organizationId,
+    schoolId,
+    input.feeStructureId,
+  );
+
+  if (input.prorationPolicyOverride && !input.prorationOverrideReason?.trim()) {
+    throw new FeeProrationOverrideReasonRequiredError();
+  }
+  const configuredPolicy = parseFeeProrationPolicy(
+    await getFinanceSettingValue(
+      db,
+      organizationId,
+      schoolId,
+      FEE_PRORATION_SETTING.sectionId,
+      FEE_PRORATION_SETTING.itemId,
+      DEFAULT_FEE_PRORATION_POLICY,
+    ),
+  );
+  const isOverride = input.prorationPolicyOverride != null &&
+    input.prorationPolicyOverride !== configuredPolicy;
+  const effectivePolicy = input.prorationPolicyOverride ?? configuredPolicy;
+  const yearBounds = await resolveProrationYearBounds(
+    db,
+    organizationId,
+    schoolId,
+    structure.academic_year_id,
+  );
+  const referenceDate = input.admissionDate?.trim() || todayIsoDate();
+  const totalFee = await sumStructureFees(
+    db,
+    organizationId,
+    schoolId,
+    input.feeStructureId,
+  );
+  const proration = computeFeeProration({
+    policy: effectivePolicy,
+    annualAmount: totalFee,
+    referenceDate,
+    yearBounds,
+    isOverride,
+    overrideReason: input.prorationOverrideReason ?? null,
+  });
+  // The amount every assignment in this batch ACTUALLY charges — never the raw
+  // annual total. Account seed/bump and invoice total all use THIS.
+  const chargedTotal = proration.chargedAmount;
+  const overriddenBy = proration.isOverride ? input.assignedBy : null;
+
+  // ── Batched cohort reads: ONE query each. ──
+  const existingAssignmentRows = await db.queryObject<{ student_id: string }>(
+    `SELECT student_id FROM finance_fee_assignments
+     WHERE fee_structure_id = $1 AND academic_year = $2
+       AND organization_id = $3 AND school_id = $4
+       AND student_id = ANY($5::uuid[])`,
+    [input.feeStructureId, input.academicYear, organizationId, schoolId, studentIds],
+  );
+  const alreadyAssigned = new Set(existingAssignmentRows.map((r) => r.student_id));
+
+  const existingAccountRows = await db.queryObject<FinanceStudentAccountRow>(
+    `SELECT * FROM finance_student_accounts
+     WHERE academic_year = $1 AND organization_id = $2 AND school_id = $3
+       AND student_id = ANY($4::uuid[])`,
+    [input.academicYear, organizationId, schoolId, studentIds],
+  );
+  const existingAccountByStudent = new Map<string, FinanceStudentAccountRow>();
+  for (const acc of existingAccountRows) {
+    existingAccountByStudent.set(acc.student_id, acc);
+  }
+
+  // Candidate insert set: students with no pre-existing assignment, de-duped
+  // preserving first occurrence. A student listed twice in one call assigns
+  // once and is reported already_assigned for the rest — matching the
+  // per-student loop, where the 2nd attempt hit DuplicateAssignmentError.
+  const candidateStudentIds: string[] = [];
+  const candidateSeen = new Set<string>();
+  for (const sid of studentIds) {
+    if (alreadyAssigned.has(sid) || candidateSeen.has(sid)) continue;
+    candidateSeen.add(sid);
+    candidateStudentIds.push(sid);
+  }
+
+  // ── SAVEPOINT wraps every WRITE below so a residual account-table race
+  // (see caller) can be rolled back to without poisoning the transaction. ──
+  await db.queryObject(`SAVEPOINT bulk_fee_setbased`);
+
+  // Multi-row assignment INSERT. ON CONFLICT DO NOTHING absorbs both the common
+  // already-assigned case that survived our read and any concurrent-duplicate
+  // race on the assignment's unique key — no per-student SAVEPOINT needed. Only
+  // the rows we actually inserted come back in RETURNING.
+  let insertedAssignments: FinanceFeeAssignmentRow[] = [];
+  if (candidateStudentIds.length > 0) {
+    insertedAssignments = await db.queryObject<FinanceFeeAssignmentRow>(
+      `INSERT INTO finance_fee_assignments (
+        organization_id, school_id, student_id, fee_structure_id,
+        academic_year, assignment_status, assigned_by,
+        proration_policy, proration_basis, proration_total_months,
+        proration_months_charged, proration_reference_date,
+        proration_annual_amount, proration_charged_amount,
+        proration_fallback_reason, proration_is_override,
+        proration_override_reason, proration_overridden_by
+      )
+      SELECT $1, $2, s.student_id, $4, $5, 'active', $6,
+             $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+      FROM unnest($3::uuid[]) AS s(student_id)
+      ON CONFLICT (student_id, fee_structure_id, academic_year) DO NOTHING
+      RETURNING *`,
+      [
+        organizationId,
+        schoolId,
+        candidateStudentIds,
+        input.feeStructureId,
+        input.academicYear,
+        input.assignedBy,
+        proration.policy,
+        proration.basis,
+        proration.totalMonths,
+        proration.monthsCharged,
+        proration.referenceDate,
+        proration.annualAmount,
+        proration.chargedAmount,
+        proration.fallbackReason,
+        proration.isOverride,
+        proration.overrideReason,
+        overriddenBy,
+      ],
+    );
+  }
+  const assignmentByStudent = new Map<string, FinanceFeeAssignmentRow>();
+  for (const a of insertedAssignments) assignmentByStudent.set(a.student_id, a);
+
+  // Account rows for the students whose assignment actually inserted:
+  //   • no existing account for the year  → open a fresh one (multi-row INSERT,
+  //     seeded from THIS structure's CHARGED total — a prorated assignment must
+  //     never inflate the account by months it isn't billing);
+  //   • existing account (TRN-9 reuse)    → fold this structure's charged total
+  //     into the shared per-year container (ONE batched bump — every reuse
+  //     student is bumped by the SAME charged total).
+  const newAccountStudentIds: string[] = [];
+  const newAccountAssignmentIds: string[] = [];
+  const reuseAccountIds: string[] = [];
+  for (const a of insertedAssignments) {
+    const existing = existingAccountByStudent.get(a.student_id);
+    if (existing) {
+      reuseAccountIds.push(existing.id);
+    } else {
+      newAccountStudentIds.push(a.student_id);
+      newAccountAssignmentIds.push(a.id);
+    }
+  }
+
+  const accountByStudent = new Map<string, FinanceStudentAccountRow>();
+  if (newAccountStudentIds.length > 0) {
+    const newAccounts = await db.queryObject<FinanceStudentAccountRow>(
+      `INSERT INTO finance_student_accounts (
+        organization_id, school_id, student_id, fee_assignment_id,
+        academic_year, total_fee, amount_paid, outstanding_amount, status
+      )
+      SELECT $1, $2, v.student_id, v.fee_assignment_id, $3, $4, 0, $4, 'open'
+      FROM unnest($5::uuid[], $6::uuid[]) AS v(student_id, fee_assignment_id)
+      RETURNING *`,
+      [
+        organizationId,
+        schoolId,
+        input.academicYear,
+        chargedTotal,
+        newAccountStudentIds,
+        newAccountAssignmentIds,
+      ],
+    );
+    for (const acc of newAccounts) accountByStudent.set(acc.student_id, acc);
+  }
+  if (reuseAccountIds.length > 0) {
+    const bumped = await db.queryObject<FinanceStudentAccountRow>(
+      `UPDATE finance_student_accounts SET
+         total_fee = total_fee + $1,
+         outstanding_amount = outstanding_amount + $1,
+         status = 'open',
+         updated_at = timezone('utc', now())
+       WHERE id = ANY($2::uuid[]) AND organization_id = $3 AND school_id = $4
+       RETURNING *`,
+      [chargedTotal, reuseAccountIds, organizationId, schoolId],
+    );
+    for (const acc of bumped) accountByStudent.set(acc.student_id, acc);
+  }
+
+  // Per newly-assigned student, raise the annual invoice. This is the only
+  // inherently per-row step (own invoice number + informational installment
+  // schedule + head-allocation seed, in finance_invoices_repository.ts); its
+  // money math is unchanged (totalAmount = chargedTotal). A non-duplicate
+  // failure here propagates out and aborts the whole transaction.
+  const invoiceByStudent = new Map<string, FinanceInvoiceRow>();
+  for (const a of insertedAssignments) {
+    const invoice = await createAnnualInvoice(db, organizationId, schoolId, {
+      studentId: a.student_id,
+      feeAssignmentId: a.id,
+      academicYear: input.academicYear,
+      totalAmount: chargedTotal,
+      createdBy: input.assignedBy,
+    });
+    invoiceByStudent.set(a.student_id, invoice);
+  }
+
+  await db.queryObject(`RELEASE SAVEPOINT bulk_fee_setbased`);
+
+  // ── Batched enrichment — structure name is cohort-invariant; student names
+  // and latest handoff are ONE `= ANY` query each. Same fields the single-assign
+  // path's enrichAssignmentWithAccount produces (handoff name wins over the
+  // student display_name; admission/class come from the latest handoff). ──
+  const assignedStudentIds = insertedAssignments.map((a) => a.student_id);
+  const studentNameByStudent = new Map<string, string>();
+  const handoffByStudent = new Map<
+    string,
+    { admission_number: string; class_label: string; student_name: string }
+  >();
+  if (assignedStudentIds.length > 0) {
+    const studentNameRows = await db.queryObject<{ id: string; display_name: string }>(
+      `SELECT id, display_name FROM students
+       WHERE id = ANY($1::uuid[]) AND organization_id = $2 AND school_id = $3`,
+      [assignedStudentIds, organizationId, schoolId],
+    );
+    for (const r of studentNameRows) studentNameByStudent.set(r.id, r.display_name);
+
+    const handoffRows = await db.queryObject<{
+      student_id: string;
+      admission_number: string;
+      class_label: string;
+      student_name: string;
+    }>(
+      `SELECT DISTINCT ON (student_id)
+         student_id, admission_number, class_label, student_name
+       FROM admissions_fee_handoffs
+       WHERE student_id = ANY($1::uuid[]) AND organization_id = $2 AND school_id = $3
+       ORDER BY student_id, created_at DESC`,
+      [assignedStudentIds, organizationId, schoolId],
+    );
+    for (const r of handoffRows) {
+      handoffByStudent.set(r.student_id, {
+        admission_number: r.admission_number,
+        class_label: r.class_label,
+        student_name: r.student_name,
+      });
+    }
+  }
+
+  // ── Final assembly in INPUT order; result shape identical to the loop. Any
+  // student without an inserted assignment (pre-existing duplicate, lost
+  // concurrent race, or a repeat within this call) is skipped already_assigned. ──
+  const assigned: AssignmentWithAccount[] = [];
+  const skipped: BulkAssignSkipped[] = [];
+  const emitted = new Set<string>();
+  for (const sid of studentIds) {
+    const assignment = assignmentByStudent.get(sid);
+    if (assignment && !emitted.has(sid)) {
+      emitted.add(sid);
+      const handoff = handoffByStudent.get(sid);
+      assigned.push({
+        assignment,
+        account: accountByStudent.get(sid)!,
+        invoice: invoiceByStudent.get(sid)!,
+        feeStructureName: structure.name,
+        studentName: handoff?.student_name ?? studentNameByStudent.get(sid),
+        admissionNumber: handoff?.admission_number,
+        classLabel: handoff?.class_label,
+      });
+    } else {
+      skipped.push({ studentId: sid, reason: "already_assigned" });
+    }
+  }
+
+  return { assigned, skipped, total: studentIds.length };
+}
+
+/**
+ * ICA-C4 fallback — the original per-student loop, retained verbatim as the
+ * proven recovery path when the set-based fast path hits a residual
+ * concurrent-duplicate race it cannot absorb with ON CONFLICT (see
+ * `bulkAssignFeeStructure`). Each per-student attempt is wrapped in its own
+ * SAVEPOINT so a Postgres unique_violation can be rolled back to WITHOUT
+ * poisoning the surrounding transaction — mirrors `insertDemandIdempotent`'s
+ * SAVEPOINT / ROLLBACK TO SAVEPOINT recovery in transport_write_handlers.ts.
+ * This runs ONLY on the rare race; the common path never reaches it.
+ */
+async function bulkAssignFeeStructurePerStudent(
   db: TenantQueryClient,
   organizationId: string,
   schoolId: string,
