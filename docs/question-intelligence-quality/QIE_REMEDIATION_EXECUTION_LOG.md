@@ -68,7 +68,26 @@ Lane B **CONFIRMED** + a P2 hardening; Lane C verifier stalled on a 206MB copy �
 match; v1.4 retained as `snapshots/knowledge_index_v1.5_frozen.db` sibling + v1.4 snapshot (never
 mutated). kie.db + index chmod a-w. Rollback copies + off-repo backup in place.
 
-*(Later phases R2–R6 tracked in the roadmap; rows added here as they are executed.)*
+### Phase R2 — Trust, independence & provenance — 🔵 IN PROGRESS
+
+| Item | State | Commit | Notes |
+|---|---|---|---|
+| R2-1 Proposer/certifier independence [C4] | ✅ | `04265407` | judge blind (no proposed_key leak); `independent` COMPUTED from actor families; same-actor ⇒ provisional + product-invisible; seeded judge controls; `evidence_class` stamped |
+| R2-2 Solution stage + distractor verification [C5] | ✅ | `04265407` | certify requires content-bound `solution_verified=1` + `distractor_verified=1`; sympy-executed `mis_relation` per distractor |
+| R2-4 No self-refuted metadata (step replay) | ✅ | `04265407` | `replay_steps` executes the DAG; depth EARNED; `depth_agreement` BLOCKING; earned_depth/computed_archetype on certified rows |
+| R2-3 Real model/actor provenance + telemetry | ⬜ | — | brief ready (factory-4); sequential after cluster + its verifier |
+| R2-5 Honest difficulty/exam labeling (P2) | ⬜ | — | pending |
+
+**factory-3 migration applied LIVE** (factory_corpus 15 + qpl_question_bank 22): counts preserved,
+**product_visible ⇒ 0** — the 22 production questions + 15 trial rows are recalled-by-construction
+(invisible to any product surface until re-certified under the R2 gates). This automatically enforces
+the audit's "quarantine the 22" condition; R0-2's status flip stays as belt-and-suspenders. Full suite
+**838 green** pre + post migration. Adversarial verifier running (findings → follow-up fix + lock).
+
+RI status: **RI-3 now COMPLETE** (full certified-row conjunction incl. solution_verified + independent
+judge). RI-8 same-actor-cannot-promote slice green (full RI-8 completes with R2-3's actor provenance).
+
+*(Later phases R3–R6 tracked in the roadmap; rows added here as they are executed.)*
 
 ---
 
