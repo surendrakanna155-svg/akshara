@@ -95,6 +95,16 @@ export interface AcademicAggregate {
 // A mark counts as a pass at 33% of max (standard Indian board threshold).
 const PASS_THRESHOLD = 0.33;
 
+// ICA-C2 (perf) — the management academic aggregates (attendance %, pass rate,
+// per-class / per-subject performance) reflect the CURRENT academic year, not an
+// ever-growing all-time scan. Attendance is bounded by the session date and exam
+// marks by their last-touched/publish time to a trailing 12-month window — the
+// same "current-year" convention the director dashboards use — so the aggregated
+// working set stays bounded as pilot data accumulates. Roster / defaulter counts
+// stay point-in-time and collectedThisMonth keeps its own month-to-date bound;
+// only these academic aggregates were the unbounded all-time scans.
+const CURRENT_ACADEMIC_YEAR_INTERVAL = "365 days";
+
 export async function getAcademicAggregate(
   db: TenantQueryClient,
   organizationId: string,
@@ -120,6 +130,10 @@ export async function getAcademicAggregate(
      JOIN attendance_sessions s ON s.id = ar.session_id
      WHERE ar.organization_id = $1 AND ar.school_id = $2
        AND s.status = 'submitted'
+       -- ICA-C2: current academic year only (trailing 365 days on the session
+       -- date). This only narrows which sessions are counted; the per-class
+       -- zero-denominator -> null contract (ICA-H3) below is unchanged.
+       AND s.session_date >= CURRENT_DATE - interval '${CURRENT_ACADEMIC_YEAR_INTERVAL}'
      GROUP BY COALESCE(NULLIF(s.class_label, ''), 'Unassigned')
      ORDER BY 1`,
     [organizationId, schoolId],
@@ -173,7 +187,10 @@ export async function getAcademicAggregate(
        )), 0)::text AS avg_percent
      FROM exam_mark_entries m
      WHERE m.organization_id = $1 AND m.school_id = $2
-       AND m.published = true`,
+       AND m.published = true
+       -- ICA-C2: current academic year only (trailing 365 days). exam_mark_entries
+       -- has no created_at, so bound on updated_at (last-touched/publish time).
+       AND m.updated_at >= now() - interval '${CURRENT_ACADEMIC_YEAR_INTERVAL}'`,
     [organizationId, schoolId, PASS_THRESHOLD],
   );
   const markTotal = Number(markRows[0]?.total ?? "0");
@@ -205,6 +222,9 @@ export async function getAcademicAggregate(
      FROM exam_mark_entries m
      WHERE m.organization_id = $1 AND m.school_id = $2
        AND m.published = true
+       -- ICA-C2: current academic year only (trailing 365 days). exam_mark_entries
+       -- has no created_at, so bound on updated_at (last-touched/publish time).
+       AND m.updated_at >= now() - interval '${CURRENT_ACADEMIC_YEAR_INTERVAL}'
      GROUP BY COALESCE(NULLIF(m.class_label, ''), 'Unassigned')
      ORDER BY 1`,
     [organizationId, schoolId, PASS_THRESHOLD],
@@ -248,6 +268,9 @@ export async function getAcademicAggregate(
       AND es.school_id = m.school_id
      WHERE m.organization_id = $1 AND m.school_id = $2
        AND m.published = true
+       -- ICA-C2: current academic year only (trailing 365 days). exam_mark_entries
+       -- has no created_at, so bound on updated_at (last-touched/publish time).
+       AND m.updated_at >= now() - interval '${CURRENT_ACADEMIC_YEAR_INTERVAL}'
      GROUP BY COALESCE(NULLIF(es.subject, ''), 'General')
      ORDER BY 1`,
     [organizationId, schoolId, PASS_THRESHOLD],

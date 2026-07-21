@@ -365,6 +365,145 @@ Deno.test("getSchoolSnapshot refuses a school outside the org (null, no aggregat
   assertEquals(mock.ranAggregate, false);
 });
 
+// ─── ICA-C2 — dashboard academic aggregates bounded to the current year ─────
+// The attendance-% and pass-rate aggregates used to scan attendance_records and
+// exam_mark_entries ALL-TIME (only admissions carried a window), so every
+// dashboard load recomputed over every record the chain had ever produced. They
+// are now bounded to a trailing 12-month window — the same "current-year"
+// convention getGrowth already uses for new enrollments. These tests prove the
+// bound is present (SQL shape) AND that out-of-window data is excluded from the
+// numbers (behavioural), so dropping the bound regresses a test rather than
+// silently reinstating the all-time scan.
+
+const YEAR_WINDOW_SQL = "interval '365 days'";
+
+Deno.test("ICA-C2: getSchoolRows bounds attendance + exam aggregates to the current year", async () => {
+  const seen: string[] = [];
+  const capturing = {
+    // deno-lint-ignore require-await
+    async queryObject<T>(sql: string, _args: unknown[] = []): Promise<T[]> {
+      seen.push(sql);
+      const has = (...f: string[]) => f.every((x) => sql.includes(x));
+      if (has("FROM schools s", "s.settings")) {
+        return [{ id: SCHOOL_A, name: "Akshara North", location: "Hyderabad" }] as T[];
+      }
+      if (has("FROM students", "status = 'active'", "GROUP BY school_id")) {
+        return [{ school_id: SCHOOL_A, cnt: 100 }] as T[];
+      }
+      if (has("FROM attendance_records", "GROUP BY school_id")) {
+        return [{ school_id: SCHOOL_A, attended: 90, denom: 100 }] as T[];
+      }
+      if (has("FROM exam_mark_entries", "GROUP BY school_id")) {
+        return [{ school_id: SCHOOL_A, pass: 80, total: 100 }] as T[];
+      }
+      return [] as T[]; // finance / admissions rows unneeded for this assertion
+    },
+    // deno-lint-ignore require-await
+    async queryCount(): Promise<number> {
+      return 0;
+    },
+    get raw(): never {
+      throw new Error("unused");
+    },
+  };
+  await getSchoolRows(capturing as unknown as TenantQueryClient, ORG);
+
+  const attSql = seen.find((s) =>
+    s.includes("FROM attendance_records") && s.includes("GROUP BY school_id")
+  )!;
+  const examSql = seen.find((s) =>
+    s.includes("FROM exam_mark_entries") && s.includes("GROUP BY school_id")
+  )!;
+  // Attendance is bounded on created_at; exam marks on updated_at (exam_mark_entries
+  // has no created_at column). Both to the trailing current-academic-year window.
+  assertEquals(attSql.includes(`created_at >= now() - ${YEAR_WINDOW_SQL}`), true);
+  assertEquals(examSql.includes(`updated_at >= now() - ${YEAR_WINDOW_SQL}`), true);
+  // Money / roster aggregates stay lifetime by design — no year bound leaks onto them.
+  const revSql = seen.find((s) =>
+    s.includes("FROM finance_collections") && s.includes("GROUP BY school_id")
+  )!;
+  assertEquals(revSql.includes(YEAR_WINDOW_SQL), false);
+});
+
+Deno.test("ICA-C2: getSchoolSnapshot excludes out-of-window attendance + marks (current year only)", async () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  const cutoff = now - 365 * DAY;
+  const recent = new Date(now - 10 * DAY); // inside the 365-day window
+  const stale = new Date(now - 400 * DAY); // outside the window
+
+  // In-window: 8 present + 2 absent -> attended 8 / denom 10 = 80%.
+  // Out-of-window: 100 absent -> if wrongly counted, denom balloons to 110 -> ~7%.
+  const attRows = [
+    ...Array.from({ length: 8 }, () => ({ mark: "present", at: recent })),
+    ...Array.from({ length: 2 }, () => ({ mark: "absent", at: recent })),
+    ...Array.from({ length: 100 }, () => ({ mark: "absent", at: stale })),
+  ];
+  // In-window: 8 pass + 2 fail -> 80%. Out-of-window: 100 fail -> would drop to ~7%.
+  const markRows = [
+    ...Array.from({ length: 8 }, () => ({ obtained: 80, max: 100, at: recent })),
+    ...Array.from({ length: 2 }, () => ({ obtained: 30, max: 100, at: recent })),
+    ...Array.from({ length: 100 }, () => ({ obtained: 0, max: 100, at: stale })),
+  ];
+
+  let sawAttWindow = false;
+  let sawExamWindow = false;
+
+  const mock = {
+    // deno-lint-ignore require-await
+    async queryObject<T>(sql: string, _args: unknown[] = []): Promise<T[]> {
+      const has = (...f: string[]) => f.every((x) => sql.includes(x));
+      if (has("SELECT name", "FROM schools", "AND organization_id = $2")) {
+        return [{ name: "Akshara North", location: "Hyderabad" }] as T[];
+      }
+      if (has("FROM students", "AND school_id = $2")) return [{ cnt: 100 }] as T[];
+      if (has("FROM finance_invoices", "AND school_id = $2")) {
+        return [{ billed: 0, collected: 0 }] as T[];
+      }
+      if (has("FROM attendance_records", "AND school_id = $2")) {
+        sawAttWindow = sql.includes(`created_at >= now() - ${YEAR_WINDOW_SQL}`);
+        const rows = sawAttWindow ? attRows.filter((r) => r.at.getTime() >= cutoff) : attRows;
+        // canonical: attended = present + late + 0.5*half; denom = total - excused.
+        let attended = 0, denom = 0;
+        for (const r of rows) {
+          if (r.mark !== "excused") denom += 1;
+          if (r.mark === "present" || r.mark === "late") attended += 1;
+          if (r.mark === "half_day") attended += 0.5;
+        }
+        return [{ attended, denom }] as T[];
+      }
+      if (has("FROM exam_mark_entries", "AND school_id = $2")) {
+        sawExamWindow = sql.includes(`updated_at >= now() - ${YEAR_WINDOW_SQL}`);
+        const rows = sawExamWindow ? markRows.filter((r) => r.at.getTime() >= cutoff) : markRows;
+        let pass = 0;
+        for (const r of rows) if (r.obtained >= r.max * 0.4) pass += 1;
+        return [{ pass, total: rows.length }] as T[];
+      }
+      if (has("AS inquiries", "AS enrolled", "school_id = $2")) {
+        return [{ inquiries: 10, applications: 5, enrolled: 3 }] as T[];
+      }
+      return [] as T[];
+    },
+    // deno-lint-ignore require-await
+    async queryCount(): Promise<number> {
+      return 0;
+    },
+    get raw(): never {
+      throw new Error("unused");
+    },
+  };
+
+  const snap = await getSchoolSnapshot(mock as unknown as TenantQueryClient, ORG, SCHOOL_A);
+  // The queries carry the current-year bound...
+  assertEquals(sawAttWindow, true);
+  assertEquals(sawExamWindow, true);
+  // ...and the numbers reflect ONLY in-window data: 80%, not the ~7% an all-time
+  // scan (with the 400-day-old block folded in) would report.
+  assertEquals(snap?.attendancePercent, 80);
+  assertEquals(snap?.academic.passPercent, 80);
+  assertEquals(snap?.academic.gradedEntries, 10); // only the 10 in-window marks, not 110
+});
+
 Deno.test("buildBoardPack assembles a real document from live aggregates", async () => {
   const pack = await buildBoardPack(db(), ORG, "rpt-1", new Date("2026-06-15T00:00:00Z"));
   assertEquals(pack?.title, "Board Pack");

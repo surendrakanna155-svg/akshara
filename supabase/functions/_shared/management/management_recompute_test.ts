@@ -213,6 +213,75 @@ Deno.test("getAcademicAggregate (ICA-H3): all-classes-null -> every per-class va
   assertEquals(agg.avgAttendancePercent, 0);
 });
 
+// ICA-C2 (perf): the academic aggregates (attendance %, pass rate, per-class /
+// per-subject performance) used to scan attendance_records and exam_mark_entries
+// ALL-TIME, so every management dashboard load recomputed over the school's entire
+// history. They are now bounded to a trailing 12-month window (the current academic
+// year). This mock returns ONLY the recent bucket when the SQL carries the
+// current-year bound and recent+old when it does not — so removing the bound both
+// changes the numbers AND flips the window flags, failing this test.
+Deno.test("getAcademicAggregate (ICA-C2): attendance + marks bounded to the current academic year", async () => {
+  const ATT_BOUND = "s.session_date >= CURRENT_DATE - interval '365 days'";
+  const MARK_BOUND = "m.updated_at >= now() - interval '365 days'";
+
+  // Attendance: recent 10-A (8/10 = 80%); a stale class that, if folded in, would
+  // crater the pooled ratio to 8/100 = 8% and add a second per-class row.
+  const recentAttendance = [{ class_label: "10-A", attended: "8", denominator: "10", total: "10" }];
+  const staleAttendance = [{ class_label: "OLD-9", attended: "0", denominator: "90", total: "90" }];
+
+  let sawAttWindow = false;
+  let examQueriesSeen = 0;
+  let examQueriesWindowed = 0;
+
+  // deno-lint-ignore no-explicit-any
+  const client: any = {
+    queryObject<T>(sql: string, _args: unknown[] = []): Promise<T[]> {
+      if (sql.includes("FROM attendance_records")) {
+        sawAttWindow = sql.includes(ATT_BOUND);
+        const rows = sawAttWindow ? recentAttendance : [...recentAttendance, ...staleAttendance];
+        return Promise.resolve(rows as T[]);
+      }
+      // per-class marks
+      if (sql.includes("FROM exam_mark_entries") && sql.includes("GROUP BY") && sql.includes("class_label")) {
+        examQueriesSeen++;
+        if (sql.includes(MARK_BOUND)) examQueriesWindowed++;
+        return Promise.resolve([] as T[]);
+      }
+      // per-subject marks
+      if (sql.includes("JOIN exam_sessions") && sql.includes("GROUP BY")) {
+        examQueriesSeen++;
+        if (sql.includes(MARK_BOUND)) examQueriesWindowed++;
+        return Promise.resolve([] as T[]);
+      }
+      // overall marks
+      if (sql.includes("FROM exam_mark_entries")) {
+        examQueriesSeen++;
+        const windowed = sql.includes(MARK_BOUND);
+        if (windowed) examQueriesWindowed++;
+        // recent: 8/10 pass = 80%. stale-inclusive: 8/100 = 8%.
+        return Promise.resolve(
+          [windowed
+            ? { passed: "8", total: "10", avg_percent: "72" }
+            : { passed: "8", total: "100", avg_percent: "12" }] as T[],
+        );
+      }
+      return Promise.resolve([] as T[]);
+    },
+  };
+
+  const agg = await getAcademicAggregate(client as TenantQueryClient, ORG, SCHOOL);
+  // Every academic query carries the current-year bound (attendance on session_date,
+  // all three mark queries on updated_at).
+  assertEquals(sawAttWindow, true);
+  assertEquals(examQueriesSeen, 3);
+  assertEquals(examQueriesWindowed, 3);
+  // ...and the numbers reflect ONLY the current year: the stale OLD-9 class is gone,
+  // the pooled attendance is 80% (not 8%), and the pass rate is 80% (not 8%).
+  assertEquals(agg.attendanceByClass, [{ classLabel: "10-A", attendancePercent: 80 }]);
+  assertEquals(agg.avgAttendancePercent, 80);
+  assertEquals(agg.passRate, 80);
+});
+
 // ---------------------------------------------------------------------------
 // payload builders — fixtures
 // ---------------------------------------------------------------------------
