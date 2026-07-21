@@ -16,7 +16,16 @@ import {
   riskLevelFromScore,
 } from "../intelligence/student_risk_engine.ts";
 import { loadStudentSignals } from "../intelligence/student_risk_repository.ts";
+import type { MonitoringCompleteness } from "../intelligence/student_risk_repository.ts";
 import type { RiskLevel } from "../intelligence/intelligence_types.ts";
+
+// SAFEGUARDING (ICA-H4). Stored-band floor for an UNMONITORED student — mirrors
+// UNMONITORED_REVIEW_SCORE in student_risk_repository.ts (equal to the "medium"
+// threshold in riskLevelFromScore, so an unmonitored student can never be scored
+// "low" and never sinks to the bottom of a score-ordered early-warning list).
+// That repository constant is not exported, so it is mirrored here; a shared
+// extraction (e.g. into intelligence_types.ts) is a tidy follow-up.
+const UNMONITORED_REVIEW_SCORE = 40;
 
 function clamp(n: number): number {
   return Math.max(0, Math.min(100, Math.round(n)));
@@ -193,6 +202,11 @@ export interface StudentRiskPrediction {
   riskScore: number;
   riskLevel: RiskLevel;
   topReason: string;
+  // SAFEGUARDING (ICA-H4): explicit monitoring provenance so a consumer/UI can
+  // tell a real measurement apart from an ABSENCE of monitoring data, and so a
+  // no-data student is presented as "needs review", never silently low-risk.
+  unmonitored: boolean;
+  dataCompleteness: MonitoringCompleteness;
 }
 
 export async function computeStudentRiskList(
@@ -213,13 +227,37 @@ export async function computeStudentRiskList(
         feeOutstandingAmount: s.fee_outstanding_amount,
         feeOverdueDays: s.fee_overdue_days,
       });
+
+      // ── SAFEGUARDING (ICA-H4) ──────────────────────────────────────────────
+      // loadStudentSignals feeds a gap-0 placeholder (100) for an UNMONITORED
+      // dimension so it contributes nothing to the risk arithmetic — but that
+      // also means a student with NO attendance data computes a LOW score. This
+      // list previously ignored the new provenance flags, so such a student was
+      // labelled "low / Stable profile" and sorted to the BOTTOM of the
+      // early-warning list — hiding exactly the students no one is watching
+      // (fail-UNSAFE). Mirror computeAndStoreRiskSnapshots: floor an unmonitored
+      // student's score/level to the "needs review" band (never "low") and
+      // replace the misleading top reason with the no-monitoring-data caveat. A
+      // PARTIAL student keeps its honest engine band; the dataCompleteness flag
+      // surfaces the caveat to the UI.
+      let riskScore = computed.riskScore;
+      let riskLevel = computed.riskLevel;
+      let topReason = computed.reasons[0]?.label ?? "Stable profile";
+      if (s.unmonitored) {
+        riskScore = Math.max(computed.riskScore, UNMONITORED_REVIEW_SCORE);
+        riskLevel = riskLevelFromScore(riskScore); // >= "medium", never "low"
+        topReason = "No monitoring data";
+      }
+
       return {
         studentId: s.student_id,
         studentName: s.student_name,
         className: s.class_name,
-        riskScore: computed.riskScore,
-        riskLevel: computed.riskLevel,
-        topReason: computed.reasons[0]?.label ?? "Stable profile",
+        riskScore,
+        riskLevel,
+        topReason,
+        unmonitored: s.unmonitored,
+        dataCompleteness: s.data_completeness,
       };
     })
     .sort((a, b) => b.riskScore - a.riskScore);

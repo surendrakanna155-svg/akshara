@@ -1,5 +1,18 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
 import { loadStudentSignals } from "./student_risk_repository.ts";
+import type { MonitoringCompleteness } from "./student_risk_repository.ts";
+
+// SAFEGUARDING (ICA-H4). An UNMONITORED student (no attendance data) cannot be
+// scored from monitoring signals, so the optimistic outputs are untrustworthy.
+// Floor dropout onto the review watchlist and cap improvement out of the
+// "improving" bucket, so such a student is surfaced for review — never
+// low-concern / "improving" by default. These mirror UNMONITORED_REVIEW_SCORE
+// (=40) in student_risk_repository.ts (the risk "medium" / dropout "watchlist"
+// threshold); that constant is not exported, so the values are mirrored locally
+// and a shared extraction is a tidy follow-up. Both are valid integers within
+// the intel_student_success_snapshots CHECK (col BETWEEN 0 AND 100) bounds.
+const UNMONITORED_DROPOUT_FLOOR = 40; // >= "Moderate — watchlist", never "Low — stable"
+const UNMONITORED_IMPROVEMENT_CAP = 45; // below the "improving" (>= 70) bucket
 
 export interface StudentSuccessInputs {
   attendancePercent: number;
@@ -8,6 +21,17 @@ export interface StudentSuccessInputs {
   communicationGaps: number;
   behaviorIncidents: number;
   recentMarksTrend: number;
+  // SAFEGUARDING (ICA-H4): monitoring provenance. Defaults (true / not
+  // unmonitored) preserve the historical behaviour for callers with fully
+  // measured data. When a dimension has NO data it is EXCLUDED from the
+  // computation instead of being treated as a fabricated optimistic 100 (which
+  // would inflate the optimism scores). When the dominant attendance signal is
+  // absent the student is UNMONITORED and the outputs are floored to a "needs
+  // review" posture.
+  attendanceHasData?: boolean;
+  homeworkHasData?: boolean;
+  dataCompleteness?: MonitoringCompleteness;
+  unmonitored?: boolean;
 }
 
 export interface StudentSuccessPrediction {
@@ -21,6 +45,15 @@ export interface StudentSuccessPrediction {
     attendanceOutlook: string;
     performanceTrend: string;
     recommendedInterventions: string[];
+    // SAFEGUARDING (ICA-H4): monitoring provenance carried on the prediction so
+    // it can be persisted (intel_student_success_snapshots has no `inputs`
+    // column) and surfaced by the UI — a no-data student must read as "needs
+    // review", never silently low-concern.
+    unmonitored: boolean;
+    dataCompleteness: MonitoringCompleteness;
+    attendanceHasData: boolean;
+    homeworkHasData: boolean;
+    monitoringCaveat: string | null;
   };
 }
 
@@ -36,7 +69,7 @@ export function computeStudentSuccessPrediction(
   const academicGap = clamp(100 - inputs.averageMarksPercent);
   const declineSignal = clamp(inputs.recentMarksTrend < 0 ? Math.abs(inputs.recentMarksTrend) : 0);
 
-  const dropoutProbability = clamp(
+  let dropoutProbability = clamp(
     attendanceGap * 0.35 +
       academicGap * 0.3 +
       homeworkGap * 0.2 +
@@ -55,9 +88,32 @@ export function computeStudentSuccessPrediction(
       (inputs.homeworkCompletionRate < 60 ? 15 : 0),
   );
 
-  const improvementScore = clamp(
+  let improvementScore = clamp(
     100 - dropoutProbability * 0.4 - performanceDeclineScore * 0.35 - attendanceGap * 0.25,
   );
+
+  // ── SAFEGUARDING (ICA-H4) ──────────────────────────────────────────────────
+  // A missing monitoring dimension was already fed as a gap-0 placeholder (100)
+  // by loadStudentSignals, so it contributes NOTHING to the arithmetic above
+  // rather than a fabricated optimistic value. But when the dominant attendance
+  // signal is absent the student is UNMONITORED and these optimistic outputs are
+  // untrustworthy: floor dropout onto the review watchlist and cap improvement
+  // out of the "improving" bucket, so the student is surfaced for review — never
+  // low-concern / "improving" by default. Mirrors the unmonitored handling in
+  // computeAndStoreRiskSnapshots (student_risk_repository.ts). The floor/cap are
+  // applied AFTER the raw scores are computed so a floored dropout does not feed
+  // back into the improvement formula.
+  const attendanceHasData = inputs.attendanceHasData !== false;
+  const homeworkHasData = inputs.homeworkHasData !== false;
+  const dataCompleteness: MonitoringCompleteness = inputs.dataCompleteness ??
+    (attendanceHasData && homeworkHasData
+      ? "full"
+      : (!attendanceHasData && !homeworkHasData ? "none" : "partial"));
+  const unmonitored = inputs.unmonitored ?? !attendanceHasData;
+  if (unmonitored) {
+    dropoutProbability = Math.max(dropoutProbability, UNMONITORED_DROPOUT_FLOOR);
+    improvementScore = Math.min(improvementScore, UNMONITORED_IMPROVEMENT_CAP);
+  }
 
   const riskSignals: StudentSuccessPrediction["riskSignals"] = [];
   if (dropoutProbability >= 60) {
@@ -88,8 +144,31 @@ export function computeStudentSuccessPrediction(
       severity: "medium",
     });
   }
+  // SAFEGUARDING (ICA-H4): surface a monitoring-provenance caveat. For an
+  // unmonitored student it goes FIRST so the dashboard's top-signal reflects the
+  // real reason (no data), not a coincidental low-signal read.
+  if (unmonitored) {
+    riskSignals.unshift({
+      code: "no_monitoring_data",
+      label: "No monitoring data",
+      severity: "medium",
+    });
+  } else if (dataCompleteness === "partial") {
+    riskSignals.push({
+      code: "partial_monitoring_data",
+      label: "Partial monitoring data",
+      severity: "low",
+    });
+  }
 
   const interventions: string[] = [];
+  // SAFEGUARDING (ICA-H4): an unmonitored student cannot be assessed — recommend
+  // collecting data instead of ever falling through to "on track".
+  if (unmonitored) {
+    interventions.push(
+      "Collect attendance/homework data — student is unmonitored and cannot be assessed",
+    );
+  }
   if (dropoutProbability >= 50) interventions.push("Schedule counselor session within 7 days");
   if (inputs.attendancePercent < 75) interventions.push("Parent attendance improvement plan");
   if (performanceDeclineScore >= 40) interventions.push("Targeted remedial classes for weak subjects");
@@ -119,6 +198,18 @@ export function computeStudentSuccessPrediction(
         ? "Plateauing — monitor closely"
         : "Stable or improving",
       recommendedInterventions: interventions,
+      // SAFEGUARDING (ICA-H4): monitoring provenance persisted in the predictions
+      // jsonb (no `inputs` column on this table) so the UI can distinguish a real
+      // measurement from an ABSENCE of data and show the caveat.
+      unmonitored,
+      dataCompleteness,
+      attendanceHasData,
+      homeworkHasData,
+      monitoringCaveat: unmonitored
+        ? "No attendance has been marked for this student, so success cannot be assessed from monitoring data. Flagged for review — not confirmed on-track."
+        : dataCompleteness === "partial"
+        ? "Some monitoring data is missing; predictions reflect the available signals only."
+        : null,
     },
   };
 }
@@ -260,6 +351,14 @@ export async function computeAndStoreStudentSuccessSnapshots(
       communicationGaps: signal.communication_gaps,
       behaviorIncidents: signal.behavior_incidents,
       recentMarksTrend: recentTrend,
+      // SAFEGUARDING (ICA-H4): forward the monitoring-provenance flags so a
+      // no-attendance-data student is floored to "needs review" (never
+      // low-concern / "improving") instead of scoring optimistically off the
+      // gap-0 placeholders that loadStudentSignals feeds for missing dimensions.
+      attendanceHasData: signal.attendance_has_data,
+      homeworkHasData: signal.homework_has_data,
+      dataCompleteness: signal.data_completeness,
+      unmonitored: signal.unmonitored,
     });
 
     const rows = await client.queryObject<StudentSuccessSnapshotRow>(
