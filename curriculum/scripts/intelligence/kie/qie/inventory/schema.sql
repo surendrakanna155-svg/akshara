@@ -14,6 +14,10 @@ CREATE TABLE IF NOT EXISTS unified_inventory (
   subject              TEXT,
   exam                 TEXT,
   concept_code_src     TEXT,               -- as stored in the source (legacy / "Subject::Chapter")
+  compose_concept      TEXT,               -- RI-6: the EXACT product-binding concept key a compose module emits
+                                           --   for this asset ("Subject :: name/topic"), computed via the same
+                                           --   key functions the generators use. NULL for non-governed assets.
+                                           --   This is the ONE surface qp_bridge reads for its syllabus boundary.
   concept_kc           TEXT,               -- resolved KC_ id, or NULL (honest-null crosswalk)
   verification_methods TEXT,               -- json list of method labels (the battery)
   is_deterministic     INTEGER NOT NULL,   -- 1 iff every method is a non-model (deterministic) verifier

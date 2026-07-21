@@ -191,10 +191,12 @@ class TestPromotionHonesty(unittest.TestCase):
             self.assertEqual(PROMOTE.promote(u)["promoted"], 0)
             self.assertFalse(PROMOTE.promote(u)["wrote_to_bank"])
 
-    def test_ri6_followon_is_documented_not_executed(self):
+    def test_ri6_followon_is_closed(self):
+        # RI-6 re-point EXECUTED (owner-approved 2026-07-21): qp_bridge reads the manifest, not qie.db.
         f = PROMOTE.ri6_followon()
         self.assertIn("qp_bridge", f["issue"])
-        self.assertIn("OWNER-GATED", f["scope"])
+        self.assertEqual(f["status"], "CLOSED")
+        self.assertIn("governed_scope_rows", f["closure"])
 
 
 # ── LIVE targets (self-skip when the estate is absent) ────────────────────────────────────────────────

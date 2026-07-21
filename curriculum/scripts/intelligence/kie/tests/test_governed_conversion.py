@@ -117,7 +117,7 @@ class TestGovernedConceptTitles(unittest.TestCase):
     def test_governed_concepts_are_subject_gated_and_clean(self):
         from kie.qie import qp_bridge as QB
         from kie.qpgen import sanitize
-        concepts, by_chapter = QB._governed_concepts(["Biology"])
+        concepts, by_chapter, _warnings = QB._governed_concepts(["Biology"])  # RI-6: 3-tuple (manifest-sourced)
         for code, ref in concepts.items():
             self.assertEqual(ref.subject, "Biology")        # hard subject gate
             self.assertTrue(sanitize.is_clean_concept(ref.title), ref.title)

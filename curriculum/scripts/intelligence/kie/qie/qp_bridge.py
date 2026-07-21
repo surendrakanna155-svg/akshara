@@ -195,68 +195,65 @@ def _clean_title(chapter: str) -> str:
     return " ".join(trimmed[:5]).strip()
 
 
-def _governed_concepts(subjects) -> Tuple[Dict[str, object], Dict[str, Tuple[str, str]]]:
-    """Owner decision A (2026-07-14): verified governed-fact chapters — subject-gated, doc-grounded real
-    NEET/JEE syllabus topics — are FIRST-CLASS in-scope concepts for the qpgen boundary, guarded by the
-    deterministic subject gate AND the SAME concept sanitizer every other in-scope concept must pass (so no
-    junk/OCR-verbose title enters). A chapter whose title can't be cleaned to a sanitizer-clean concept is
-    skipped (its items become an honest shortfall, never a boundary breach)."""
-    import os
-    from kie.qie import store as QS
+def _governed_concepts(subjects, unified_path=None) -> Tuple[Dict[str, object], Dict[str, Tuple[str, str]], List[str]]:
+    """RI-6 re-point (BS-1/BS-6, 2026-07-21): the governed in-scope concepts a paper may use are read from the
+    UNIFIED MANIFEST (`unified_inventory.db`) — the single reconciled, deterministically-verified registry —
+    NEVER by opening qie.db directly. qie.db is an evidence source, not a product surface (RI-6); routing the
+    boundary through the manifest means a governed asset can enter a paper ONLY if it is registered AND holds
+    an admitted status: relations must be `promotable` (re-certified by the notation-recovery battery — a
+    relation that no longer re-derives is quarantined and thereby excluded); facts are `held_qualitative`
+    (model examiner) and define curriculum MEMBERSHIP only, honestly non-deterministic until R4-3.
+
+    Preserves owner decisions A (verified governed chapters are first-class in-scope) and B (topic-granular
+    binding) — the manifest stores the SAME `compose_concept` key the generators emit, so binding is identical
+    to the pre-manifest read; only the SOURCE changed (manifest, not qie.db). Each admitted concept still
+    passes the SAME subject gate + concept sanitizer as every other in-scope concept; an unclean title is an
+    honest shortfall, never a boundary breach. Returns (in_scope_concepts, chapter->(code,title), warnings)."""
+    from kie.qie.inventory import manifest as MF
     from kie.qpgen import sanitize
     out: Dict[str, object] = {}
     by_chapter: Dict[str, Tuple[str, str]] = {}
-    if not os.path.exists(QS.QIE_DB_PATH):
-        return out, by_chapter
+    warnings: List[str] = []
     subj_set = set(subjects)
-    c = sqlite3.connect(f"file:{QS.QIE_DB_PATH}?mode=ro", uri=True)
-    # chapters carrying governed knowledge: verified qualitative FACTS and/or CERTIFIED recovered RELATIONS
-    rows = []
+
+    # (subject, concept_key) governed pairs: relations + facts from the MANIFEST (the one product surface).
+    rows: List[Tuple[str, str]] = []
+    fr = MF.governed_scope_freshness(unified_path=unified_path)
+    if fr.get("fresh") is None and "absent" in (fr.get("reason") or ""):
+        warnings.append(f"governed scope: {fr['reason']} — no governed concepts contributed (honest shortfall)")
+    elif fr.get("fresh") is False:
+        # DRIFT: qie.db changed since the manifest was built. The manifest rows are still verified/registered
+        # assets, so we serve them (refusing would strand a whole paper on any drift) but surface it loudly so
+        # the registry is rebuilt — a stale boundary is never served silently (the audit's C3 drift class).
+        warnings.append("governed scope: unified_inventory.db is STALE vs qie.db "
+                        f"({fr['reason']}) — governed concepts served from the last verified build; rebuild it")
     try:
-        # Owner decision B (2026-07-15): bind a governed fact at its certified TOPIC — the smallest genuine
-        # curriculum concept its evidence supports ("Biology :: Uricotelism") — falling back to its chapter
-        # when no topic was certified. Chapter binding capped NEET Biology at 42% forever: qpgen dedups by
-        # (concept_code, question_type) GLOBALLY per paper, so one chapter = ONE question. Topics are gated by
-        # the same subject hard-gate + concept sanitizer as every other concept, plus evidence grounding.
-        from kie.qie.convert import topics as topics_mod
-        for _s, _cc, _tp in c.execute("SELECT DISTINCT subject, concept_candidate, topic FROM governed_fact "
-                                      "WHERE status='verified'"):
-            rows.append((_s, topics_mod.concept_key(
-                {"subject": _s, "concept_candidate": _cc, "topic": _tp})))
-    except sqlite3.Error:
-        pass
+        for g in MF.governed_scope_rows(subj_set, unified_path=unified_path):
+            rows.append((g["subject"], g["compose_concept"]))
+    except sqlite3.OperationalError:
+        if not warnings:
+            warnings.append("governed scope: unified_inventory.db unavailable — no governed concepts contributed")
+
+    # CERTIFIED depth-4/5 chains: a code-defined composition over already-certified relations (the HARD lane
+    # that alone fills depth>=4 cells). Not a qie.db table read, so outside the RI-6 second-surface concern;
+    # kept sourced from the certified chain registry.
     try:
-        # relation-granularity concepts ("Physics :: Ohm's law"): a certified relation IS a distinct syllabus
-        # concept, and qpgen dedups by (concept, question_type) — chapter-level binding would collapse every
-        # relation of a chapter into one paper slot.
-        rows += [(s, f"{s} :: {n}") for s, n in
-                 c.execute("SELECT DISTINCT subject, name FROM governed_relation WHERE status='certified'")]
-    except sqlite3.Error:
-        pass
-    try:
-        # CERTIFIED depth-4/5 chains. A chain composes already-certified relations, so it asserts no new
-        # knowledge — but it IS a distinct syllabus concept ("Wheatstone arm current"), and it is the only
-        # thing that can fill a blueprint's HARD cells (depth>=4). Certified at import by chains.certify.
         from kie.qie.convert.notation import chain_compose as chain_mod
         rows += [(ch.subject, f"{ch.subject} :: {ch.name}") for ch in chain_mod.CHAINS]
     except Exception:
         pass
-    try:
-        for subj, cc in rows:
-            if subj not in subj_set or not cc:
-                continue
-            title = _clean_title(cc.split("::")[-1].strip())
-            if not sanitize.is_clean_concept(title):        # same gate as every other in-scope concept
-                continue
-            code = "GOV_" + hashlib.sha256(cc.encode()).hexdigest()[:14]
-            out[code] = scope_mod.ConceptRef(concept_code=code, title=title, subject=subj, exam=None,
-                                             evidence=2, is_named_law=False, has_definition=True)
-            by_chapter[cc] = (code, title)
-    except sqlite3.Error:
-        pass
-    finally:
-        c.close()
-    return out, by_chapter
+
+    for subj, cc in rows:
+        if subj not in subj_set or not cc:
+            continue
+        title = _clean_title(cc.split("::")[-1].strip())
+        if not sanitize.is_clean_concept(title):            # same gate as every other in-scope concept
+            continue
+        code = "GOV_" + hashlib.sha256(cc.encode()).hexdigest()[:14]
+        out[code] = scope_mod.ConceptRef(concept_code=code, title=title, subject=subj, exam=None,
+                                         evidence=2, is_named_law=False, has_definition=True)
+        by_chapter[cc] = (code, title)
+    return out, by_chapter, warnings
 
 
 def _bind(item: dict, scope) -> Optional[Tuple[str, str]]:
@@ -318,8 +315,9 @@ def generate_paper(request: PaperRequest, per: int = 14) -> Tuple[GeneratedPaper
     conn.row_factory = sqlite3.Row
     try:
         scope = scope_mod.resolve_scope(conn, request)              # REUSE — certified boundary
-        # Owner decision A: extend the in-scope boundary with verified governed-fact chapters (subject-gated).
-        gov_concepts, gov_by_chapter = _governed_concepts(scope.subjects)
+        # Owner decision A: extend the in-scope boundary with governed-fact/relation concepts — RI-6-routed
+        # through the unified manifest (the single verified registry), never a direct qie.db read.
+        gov_concepts, gov_by_chapter, gov_warnings = _governed_concepts(scope.subjects)
         scope.concepts.update(gov_concepts)
         scope.gov_by_chapter = gov_by_chapter
         blueprint = bp_mod.resolve_blueprint(request, scope.exam_profile)   # REUSE — authentic structure
@@ -343,7 +341,7 @@ def generate_paper(request: PaperRequest, per: int = 14) -> Tuple[GeneratedPaper
         bound.sort(key=lambda x: hashlib.sha256((str(request.seed) + x[0]["gen_id"]).encode()).hexdigest())
 
         slots: List[QuestionSlot] = []
-        warnings: List[str] = []
+        warnings: List[str] = list(gov_warnings)     # RI-6: surface any governed-registry staleness/absence
         used_gen: set = set()
         used_ct: set = set()          # (concept_code, question_type) — mirror qpgen's dedup so we don't waste picks
         n = 0

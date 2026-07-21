@@ -161,3 +161,39 @@ product bank; qie.db can never satisfy a product read).
 **Still open in the roadmap:** R4-3 (qualitative certification lane — buildable on the qie.db evidence + KVS
 substrate now adopted), R4-4 (deferred audit passes), R5-1/R5-2 (prereq edge table + KC_ namespace convergence —
 buildable), R5-3 (ERP promotion — owner-gated), R5-4/R5-6 (need PYQ corpus), R6 (Tier-1 freeze — owner unfreeze).
+
+---
+
+## Checkpoint — RI-6 re-point (qp_bridge governed boundary → unified manifest) · 2026-07-21 · `EOS: PASS`
+
+Closes the `promote.ri6_followon()` flag surfaced at the R4-1 checkpoint: qp_bridge's `_governed_concepts` read
+governed_fact + governed_relation DIRECTLY from qie.db into paper generation — a de-facto SECOND product surface.
+
+- **Re-point** — `_governed_concepts` now reads governed relations (`promotable`) + facts (`held_qualitative`)
+  from the unified manifest via `manifest.governed_scope_rows`, keyed on a new manifest column `compose_concept`
+  that is computed with the SAME key functions the generators use (`topics.concept_key` for facts,
+  `"{subject} :: {name}"` for relations), so binding is byte-for-byte identical while the SOURCE is now the one
+  verified registry. A quarantined / rejected_source / duplicate governed asset can never define an in-scope
+  concept — so it can never reach a paper. qie.db is read only by the manifest builder + the generation
+  operators, never as a product boundary. Admitted set **identical** (41 promotable relations + 128
+  held_qualitative facts); live manifest rebuilt with counts unchanged.
+- **Freshness guard (finding #4)** — `governed_scope_freshness` compares a CONTENT fingerprint over the decisive
+  governed_relation/governed_fact fields, not COUNT(*), so a count-preserving in-place mutation (status flip,
+  equation edit, topic rename) is detected and surfaced (no stale boundary served silently).
+
+**Adversarial verification:** verify-RI-6 returned **CONFIRMED**. It could not construct a case where a
+quarantined/rejected/duplicate governed relation or fact reaches a paper: relations are structurally immune
+(`_targets` returns `[]` for every `relnum_` frame → the item is dropped, never re-bound); facts have no
+quarantine path and generation is lock-stepped to admission; 0 relation/fact items fall through `_bind`. It
+found the count-only freshness gap (#4) — fixed + regression-locked before this checkpoint. Papers still
+validate (`boundary_ok`, 0 rejects, NEET Biology reached).
+
+**Live outcome:** RI-6 enforced end-to-end — exactly ONE product surface for governed assets. New
+`kie/tests/test_ri6_repoint.py` (9 tests). Full suite **1031 green** (skipped=1). `ri6_followon()` → status
+`CLOSED`.
+
+**Standing laws honored:** RI-6 (one product-visible surface) strengthened; deterministic-certifies preserved
+(relations re-certified by the notation-recovery battery; facts remain honestly `held_qualitative`,
+model-verified, non-deterministic — no model agreement certified anything); no gate weakened for yield (identical
+admitted set); freeze untouched (the manifest is a derived local store; frozen index + kie.db never opened RW);
+honest-null discipline (freshness returns `None` on absence, warns loudly on drift).

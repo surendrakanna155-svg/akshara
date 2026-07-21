@@ -86,13 +86,17 @@ def promote(unified_path=None, dry_run: bool = True) -> Dict[str, object]:
 
 
 def ri6_followon() -> Dict[str, str]:
-    """The scoped RI-6 follow-on flag (R4-1 P6). Documented, NOT executed — do not edit qp_bridge.py here."""
+    """The scoped RI-6 follow-on — CLOSED (owner-approved, 2026-07-21). qp_bridge no longer reads qie.db for
+    its product boundary; it reads the unified manifest via `manifest.governed_scope_rows`."""
     return {
-        "issue": "qp_bridge.py:_governed_concepts (lines ~222, ~233) reads governed_fact + governed_relation "
-                 "DIRECTLY from qie.db into paper generation — a de-facto SECOND product surface for those two "
-                 "asset classes (the 1,496 pilot items are read by no consumer — orphaned).",
-        "closure": "route qp_bridge's governed reads through the manifest so product sees only "
-                   "manifest-registered, deterministically-verified relations/facts (ONE certified surface).",
-        "scope": "OWNER-GATED scoped follow-on — touches qp_bridge.py (the old compositional lane); NOT an R4-1 "
-                 "edit. Recorded here as the concrete RI-6 closure step.",
+        "status": "CLOSED",
+        "issue": "qp_bridge.py:_governed_concepts formerly read governed_fact + governed_relation DIRECTLY "
+                 "from qie.db into paper generation — a de-facto SECOND product surface for those two asset "
+                 "classes.",
+        "closure": "DONE: qp_bridge._governed_concepts now sources governed relations (promotable) + facts "
+                   "(held_qualitative) from the unified manifest (`manifest.governed_scope_rows`), keyed by the "
+                   "manifest's `compose_concept` (the exact generator key). A quarantined/rejected/duplicate "
+                   "governed asset can no longer reach a paper. qie.db is read ONLY by the manifest builder and "
+                   "the generation operators — never as a product boundary. ONE certified surface (RI-6).",
+        "scope": "IMPLEMENTED — routes qp_bridge's governed reads through the manifest; owner-approved.",
     }

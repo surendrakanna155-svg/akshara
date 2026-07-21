@@ -47,10 +47,10 @@ def _opts_dict(v) -> Dict[str, str]:
 
 
 def _rec(**kw) -> Dict[str, Any]:
-    base = dict(source_status=None, subject=None, exam=None, concept_code_src=None, concept_kc=None,
-                verification_methods=None, is_deterministic=0, evidence_class=None, evidence_refs=None,
-                item_hash=None, norm_hash=None, promotion_status="honest_null", promotion_target=None,
-                reverify_method=None, reverify_ok=None)
+    base = dict(source_status=None, subject=None, exam=None, concept_code_src=None, compose_concept=None,
+                concept_kc=None, verification_methods=None, is_deterministic=0, evidence_class=None,
+                evidence_refs=None, item_hash=None, norm_hash=None, promotion_status="honest_null",
+                promotion_target=None, reverify_method=None, reverify_ok=None)
     base.update(kw)
     base["uid"] = _uid(base["source_store"], base["source_table"], base["source_id"])
     return base
@@ -100,6 +100,10 @@ def iter_relations(qie: sqlite3.Connection, xw: Crosswalk) -> Iterator[Dict[str,
             source_store=QIE, source_table="governed_relation", source_id=row["relation_id"],
             source_status=row.get("status"), asset_class="relation", subject=row.get("subject"),
             exam=row.get("exam"), concept_code_src=row.get("concept_candidate"),
+            # RI-6: the product-binding key the relation_compose generator emits ("Subject :: name"). Computed
+            # here so the manifest is the ONE surface qp_bridge reads for scope; keys match the generator by
+            # construction. Only a `promotable` (re-certified) relation is admitted to a paper's boundary.
+            compose_concept=(f"{row.get('subject')} :: {row.get('name')}" if row.get("name") else None),
             concept_kc=xw.resolve(row.get("subject"), row.get("concept_candidate")),
             verification_methods=json.dumps(["notation_recovery"]),
             is_deterministic=1, evidence_class=("source_proven" if v.ok else None),
@@ -111,6 +115,7 @@ def iter_relations(qie: sqlite3.Connection, xw: Crosswalk) -> Iterator[Dict[str,
 
 # ── qie.db: governed_fact (128 verified, model examiner) -> HELD for R4-3 ──────────────────────────────
 def iter_facts(qie: sqlite3.Connection, xw: Crosswalk) -> Iterator[Dict[str, Any]]:
+    from kie.qie.convert import topics as TP
     for r in qie.execute("SELECT * FROM governed_fact"):
         row = dict(r)
         verified = row.get("status") == "verified"
@@ -118,6 +123,12 @@ def iter_facts(qie: sqlite3.Connection, xw: Crosswalk) -> Iterator[Dict[str, Any
             source_store=QIE, source_table="governed_fact", source_id=row["fact_id"],
             source_status=row.get("status"), asset_class="fact", subject=row.get("subject"),
             exam=row.get("exam"), concept_code_src=row.get("concept_candidate"),
+            # RI-6: the product-binding key the kvs_compose generator emits — the fact's certified TOPIC
+            # ("Biology :: Uricotelism"), chapter fallback — computed via the SAME topics.concept_key the
+            # generator + old qp_bridge used, so binding is identical. A fact is `held_qualitative` (model
+            # examiner, non-deterministic); it defines curriculum membership only and is honestly labelled as
+            # such until R4-3 supplies the non-model re-derivation.
+            compose_concept=(TP.concept_key(row) if verified else None),
             concept_kc=xw.resolve(row.get("subject"), row.get("certified_concept_code"),
                                   row.get("topic"), row.get("concept_candidate")),
             verification_methods=json.dumps(["subject_gate+model_examiner"]),

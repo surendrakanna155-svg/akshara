@@ -27,6 +27,8 @@ def open_store(db_path=None, *, writable: bool = False) -> sqlite3.Connection:
     conn = SO.open_store(path, read_only=not writable)
     if writable:
         conn.executescript(SCHEMA_PATH.read_text())
+        _ensure_columns(conn)                                        # additive migration (CREATE IF NOT EXISTS
+                                                                     # can't add a column to an existing table)
         conn.execute("INSERT INTO unified_meta(key, value) VALUES ('schema_version', ?) "
                      "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (SCHEMA_VERSION,))
         conn.execute("INSERT INTO unified_meta(key, value) VALUES ('role', ?) "
@@ -35,6 +37,16 @@ def open_store(db_path=None, *, writable: bool = False) -> sqlite3.Connection:
                      "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (PRODUCT_VISIBLE,))
         conn.commit()
     return conn
+
+
+def _ensure_columns(conn: sqlite3.Connection) -> None:
+    """Additively bring an EXISTING unified_inventory table up to the current schema. The manifest is a
+    rebuilt-from-scratch derived store, but its file persists across builds, so a newly-added column must be
+    ALTER-ed in (schema.sql's CREATE TABLE IF NOT EXISTS is a no-op once the table exists)."""
+    have = {r[1] for r in conn.execute("PRAGMA table_info(unified_inventory)")}
+    for col, decl in (("compose_concept", "TEXT"),):
+        if col not in have:
+            conn.execute(f"ALTER TABLE unified_inventory ADD COLUMN {col} {decl}")
 
 
 def store_role(conn: sqlite3.Connection) -> str:

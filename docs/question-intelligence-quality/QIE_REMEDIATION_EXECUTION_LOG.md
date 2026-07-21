@@ -7,8 +7,8 @@
 closed; this log records execution only, it never re-plans). **Certification checkpoints:**
 [`QIE_REMEDIATION_CERTIFICATION_HISTORY.md`](QIE_REMEDIATION_CERTIFICATION_HISTORY.md).
 
-**Phase status:** ✅ R0 · ✅ R1 (checkpoint) · ✅ R2 (checkpoint) · ✅ R3-3 · 🔵 rest of R3 in progress ·
-⛔ R4-1/R4-2/R5-3/R6 owner/external-gated.
+**Phase status:** ✅ R0 · ✅ R1 · ✅ R2 · ✅ R3 · ✅ R4-1 · ✅ R4-2 · ✅ R0-2 recall · ✅ RI-6 re-point ·
+🔵 R4-3 (buildable, next) · ⏸ R5-1/R5-2 (buildable) · ⛔ R5-3/R6/live-key owner/external-gated.
 
 This log is the running record of what has actually been implemented, verified, tested,
 certified, documented, and committed — one row per roadmap item.
@@ -126,8 +126,21 @@ crying-wolf boundary + prose section-regex leak fixed + regression-locked).
 
 Full suite **1022 green**. RI-6 preserved.
 
-**Follow-ons surfaced:** qp_bridge RI-6 re-point (route qie.db facts/relations through the manifest — `promote.ri6_followon()`);
+**Follow-ons surfaced:** ~~qp_bridge RI-6 re-point~~ **DONE (see below)**;
 R4-2 live tail = `OPENAI_API_KEY` (external); re-certification of recalled/held assets now has the layer + verifiers (needs a key + R4-3).
+
+### RI-6 re-point — qp_bridge governed boundary → unified manifest (owner-approved, 2026-07-21) — ✅
+
+The `promote.ri6_followon()` closure. Impl → **independent adversarial verifier (CONFIRMED)** → finding #4 fixed + regression-locked → tests → EOS PASS → committed.
+
+| Item | State | Notes |
+|---|---|---|
+| RI-6 re-point | ✅ | `qp_bridge._governed_concepts` no longer opens qie.db for the paper boundary; it reads governed relations (`promotable`) + facts (`held_qualitative`) from the unified manifest via `manifest.governed_scope_rows`, keyed on a new manifest column `compose_concept` (the EXACT generator concept key — `topics.concept_key` for facts, `"{subject} :: {name}"` for relations — so binding is identical). A quarantined / rejected_source / duplicate governed asset can never define an in-scope concept, so it can never reach a paper. Admitted set **identical** to the prior direct read (41 promotable relations + 128 held_qualitative facts = 169). Live `unified_inventory.db` rebuilt (counts unchanged: promotable 41 / held_qualitative 190 / eligible 77 / practice_tier 1434). |
+| Freshness guard (finding #4) | ✅ | `manifest.governed_scope_freshness` compares a **content** fingerprint over the decisive governed_relation/governed_fact fields (`_governed_fingerprint`), not COUNT(*) — so a count-preserving in-place mutation (status flip / equation edit / topic rename) is detected and surfaced as a loud paper warning (no stale boundary served silently). Regression test exercises the exact count-preserving flip. |
+
+**Adversarial verification:** verify-RI-6 returned **CONFIRMED** — the core guarantee survives (relations structurally immune: `_targets` returns `[]` for every `relnum_` frame so a quarantined relation's item is dropped, never re-bound; facts have no quarantine path and generation is lock-stepped to admission; 0 relation/fact items fall through `_bind`). It found the count-only freshness gap (#4), now fixed + locked. Chains stay code-defined (byte-identical, explicitly outside RI-6).
+
+**Live outcome:** qp_bridge boundary sourced exclusively from the manifest; NEET paper still `boundary_ok=True, rejected_slots=0`, Biology reached; JEE `boundary_ok`, ≥6 printable. New `kie/tests/test_ri6_repoint.py` (9 tests). Full suite **1031 green** (skipped=1). RI-6 now enforced end-to-end: exactly ONE product surface for governed assets.
 
 **Still open (roadmap):** R4-3 (qualitative certification lane — buildable on the adopted qie.db/KVS substrate),
 R4-4 (deferred audit passes), R5-1/R5-2 (prereq edge table + KC_ convergence — buildable), R5-3 (ERP promotion — **owner-gated**),
