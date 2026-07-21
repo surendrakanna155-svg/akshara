@@ -66,8 +66,12 @@ void main() {
       );
       expect(submitBefore.onPressed, isNull); // disabled while any are unmarked
 
-      // Tap "All present" → every student is marked present.
+      // Tap "All present" → because some rows are already marked, F-080's
+      // destructive-bulk guard first asks to confirm the overwrite; confirming
+      // then marks every student present.
       await tester.tap(find.text('All present'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Overwrite'));
       await tester.pumpAndSettle();
 
       // After: no students remain unmarked, the CTA reads "Submit" and is enabled.

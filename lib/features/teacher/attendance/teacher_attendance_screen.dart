@@ -195,6 +195,75 @@ class _AttendanceBodyState extends ConsumerState<_AttendanceBody>
     super.dispose();
   }
 
+  /// F-080 — a bulk "All present"/"All absent" is a destructive overwrite of an
+  /// in-progress roster: it wipes explicit marks AND lets the debounced autosave
+  /// persist the wiped state over the recoverable draft. Guard it two ways:
+  ///  1. Confirm first ONLY when the action would overwrite students who are
+  ///     already marked (a blank roster applies directly — no needless friction;
+  ///     the non-destructive "Fill remaining present" fast path is untouched).
+  ///  2. After applying, offer a SnackBar Undo that restores the exact prior
+  ///     roster. Restoring re-writes the provider state, which re-arms the
+  ///     debounced autosave (via the `ref.listen` in [build]) so the RESTORED
+  ///     roster — not the wiped one — is what gets persisted.
+  Future<void> _handleBulkMark(StudentAttendanceMark mark) async {
+    final data = ref.read(teacherAttendanceProvider);
+    if (data.isSubmitted) return;
+    final students = data.students;
+    if (students.isEmpty) return;
+
+    // Snapshot the exact prior roster (incl. unmarked rows) so Undo restores it.
+    final priorMarks = <String, StudentAttendanceMark>{
+      for (final s in students) s.id: s.mark,
+    };
+    final alreadyMarked = students
+        .where((s) => s.mark != StudentAttendanceMark.unmarked)
+        .length;
+
+    if (alreadyMarked > 0) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Overwrite existing marks?'),
+          content: Text(
+            'Marking all ${mark.label.toLowerCase()} will overwrite '
+            '$alreadyMarked ${alreadyMarked == 1 ? 'student' : 'students'} '
+            'you have already marked.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Overwrite'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+
+    applyBulkMark(ref, mark);
+
+    if (!mounted) return;
+    final classId = data.selectedClassId;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('Marked all ${mark.label.toLowerCase()}.'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () {
+            if (!mounted) return;
+            restoreAttendanceMarks(ref, classId: classId, marks: priorMarks);
+          },
+        ),
+      ),
+    );
+  }
+
   List<TeacherAttendanceStudent> get _visibleStudents {
     final q = _query.trim().toLowerCase();
     if (q.isEmpty) return widget.data.students;
@@ -281,8 +350,7 @@ class _AttendanceBodyState extends ConsumerState<_AttendanceBody>
                         children: [
                           Expanded(
                             child: OutlinedButton(
-                              onPressed: () => applyBulkMark(
-                                ref,
+                              onPressed: () => _handleBulkMark(
                                 StudentAttendanceMark.present,
                               ),
                               child: const Text('All present'),
@@ -291,8 +359,7 @@ class _AttendanceBodyState extends ConsumerState<_AttendanceBody>
                           const SizedBox(width: AksharaSpacing.s2),
                           Expanded(
                             child: OutlinedButton(
-                              onPressed: () => applyBulkMark(
-                                ref,
+                              onPressed: () => _handleBulkMark(
                                 StudentAttendanceMark.absent,
                               ),
                               child: const Text('All absent'),
