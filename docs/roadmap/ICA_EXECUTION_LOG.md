@@ -111,10 +111,11 @@ Batch 1: payment **38/0** · finance **307/0** · guards+trunk-integrity+money-i
 Batch 2: combined 4 dirs + trunk-integrity **572/0**; intelligence **177/0**; predictions **5/0**.
 Batches 3–5: guard tests + trunk-integrity green; attendance **43/0**; idempotency **9/0**; internal-health **5/0**.
 Batches 6–7: finance **318/0**; communication **150/0**; director+management **53/0**.
-**Full backend suite (all batches together): `deno test supabase/functions/` → 4064 passed · 0 failed · 3 ignored** (the 3 ignored = the env-gated real-DB isolation tests, i.e. the ICA-D4 CI gap — a separate backlog item). `deno check` on every changed source → exit 0.
+Batches 8–10: sis+admissions+onboarding **320/0**; inventory_finance route-contract green; clearance+certificates **84/0** + flutter analyze clean + flutter test **+8**; approvals **72/0**.
+**Full backend suite (all batches together): `deno test supabase/functions/` → 4075 passed · 0 failed · 3 ignored** (the 3 ignored = the env-gated real-DB isolation tests, i.e. the ICA-D4 CI gap — itself a remaining backlog item). `deno check` on every changed source → exit 0.
 
 ## Migration slots consumed on the trunk (for cross-lane fold-in coordination)
-`…060` (A1 recovery backfill) · `…062` (A6 payment NUMERIC) · `…070` (A2 offline guard) · `…080` (B1 guardian RLS) · `…090` (E1 single-current) · `…100` (C1 attendance indexes) · `…110` (B3 DEFINER guards) · `…130` (D3 idempotency reaper) · `…140` (B6 audit school-bind) · `…160` (E2 operational FKs) · `…170` (A3 receipt scoping). **Current trunk max = `…170`.** **⚠ ASIP fold-in note:** the ASIP KB migration `…060` collides with A1's `…060` (tracked ASIP P1-D); its planned renumber to `…090` is also taken — **the ASIP fold-in must pick `…180`+ (above this trunk's current max `…170`).** Not actioned here (ASIP is a separate lane).
+`…060` (A1 recovery backfill) · `…062` (A6 payment NUMERIC) · `…070` (A2 offline guard) · `…080` (B1 guardian RLS) · `…090` (E1 single-current) · `…100` (C1 attendance indexes) · `…110` (B3 DEFINER guards) · `…130` (D3 idempotency reaper) · `…140` (B6 audit school-bind) · `…160` (E2 operational FKs) · `…170` (A3 receipt scoping) · `…180` (F5 soft-ref detector). **Current trunk max = `…180`.** **⚠ ASIP fold-in note:** the ASIP KB migration `…060` collides with A1's `…060` (tracked ASIP P1-D); its planned renumber to `…090` is also taken — **the ASIP fold-in must pick `…190`+ (above this trunk's current max `…180`).** Not actioned here (ASIP is a separate lane).
 
 ## Deploy-gated tail (owner-gated — NOT auto-run here)
 These complete the "live certification" lifecycle step and run at the **owner-gated trunk→pilot redeploy** (deploy authority is owner-held; the shared VPS is production):
@@ -149,14 +150,44 @@ These complete the "live certification" lifecycle step and run at the **owner-ga
 
 *(Note: two interrupted C2/A3 attempts were fully reverted and redone clean from the certified baseline — no partial work committed. F8 was committed independently first.)*
 
+## Batch 8 — Architecture P1/P2
+
+| ICA | Title | EOS | Commit |
+|---|---|---|---|
+| **F2** | students identity table has three writers, no owning service | PASS | `e5dd2d75` |
+| **F6** | inventory_finance HTTP surface split across two routers | PASS | `341a470d` |
+
+- **F2** — new `sis/sis_student_identity.ts` is the sole writer of `students` + `student_profiles`; SIS/admissions/onboarding all route through it. Admissions now gets the canonical PSID; a racing 23505 rolls back the whole student creation — **no orphan**. Frozen identity format/admission#/idempotency preserved. No migration.
+- **F6** — one `inventory_finance_router` owns both prefixes, registered once in `app.ts`, same handlers/guards (self-enforces `module.inventory` on `/inventory/*` only, per the org-builder precedent).
+
+## Batch 9 — Data integrity + test hardening
+
+| ICA | Title | EOS | Commit |
+|---|---|---|---|
+| **F5** | JSONB↔relational soft cross-module refs (no FK) | PASS | `2d439d25` |
+| **E3** | inconsistent migration idempotency guards | PASS | `285485ce` |
+| **D6** | approval SoD FakeDb can't catch a lost status guard | PASS | `e9befc93` |
+
+- **F5** — mig `…180`: `detect_orphan_cross_module_refs()` (privileged) + `JSONB_RELATIONAL_INVARIANTS.md`. Confirmed no dangle possible today.
+- **E3** — forward-looking re-runnability guard (cutoff `…060`, grandfathers 244 historical, 7 rules, non-vacuous) + `MIGRATION_CONVENTIONS.md`. All in-scope ICA migrations comply.
+- **D6** — verified the real `decideApproval` already has the two-layer status guard → TEST-ONLY faithfulness fix + re-decide/TOCTOU coverage.
+
+## Batch 10 — Trust + hygiene sweep
+
+| ICA | Title | EOS | Commit |
+|---|---|---|---|
+| **H2** | TC certificate falsely asserts "all dues cleared" | PASS | `ee99a5d8` |
+| **F8-sweep** | remaining no-op loops + hot-path dynamic imports | PASS | `c27d39fe` |
+
+- **H2** — truthful "financial dues" wording (backend `clearanceStatement` → Dart PDF), **frozen SCE-1 gate unchanged** (finance-blocking, inventory/library advisory). Cross-toolchain verified (deno 84/0 + flutter analyze clean + flutter test +8). Library name-key fragility left as an owner item.
+- **F8-sweep** — 4 more no-op loops (academic/admissions/hr/sis) + 18 dynamic→static imports (cycle-checked).
+
 ## Remaining ICA backlog
 
-**Done so far (Batches 1–7): 25 of 49 items** — A1, A2, A3, A5, A6, B1, B3, B4, B5, B6, B8, B9, C1, C2, C3, C4, C6, D1, D3, E1, E2, F8, H1, H3, H4(+ext). All P0s + the live/reachable set + the W10/W11 perf/security/reliability/data-model tranche.
+**Done so far (Batches 1–10): 32 of 49 items** — A1, A2, A3, A5, A6, B1, B3, B4, B5, B6, B8, B9, C1, C2, C3, C4, C6, D1, D3, D6, E1, E2, E3, F2, F5, F6, F8(+sweep), H1, H2, H3, H4(+ext). **All P0s + every buildable/locally-verifiable P1 + the W10/W11 perf/security/reliability/data-model/architecture tranche.**
 
-- **Owner-gated (do NOT auto-implement):** ICA-G1 (`domain_events` bus vs log), ICA-G2 (entitlement-flip timing), ICA-G3 (per-tenant custom roles), ICA-B2 policy (OTP pilot-phone removal). Raised in the ICA owner-decision batch (§5.6).
-- **ASIP session (do NOT implement here):** ICA-G4 (client mock/real fail-closed) + **ICA-B7** (support mirror bridge incident-id guard) — both modify the ASIP support lane; handled by the dedicated AI Support Engineering session.
-- **Still buildable (next batches, unblocked):**
-  - Architecture/W10: **F6** (`inventory_finance` single router), **F4** (prefix→router registry), **F7** (raw SQL → repository), **F2** (single student-identity service), **F5** (JSONB↔relational invariant + reconcile), **F8-sweep** (remaining routers/services). **Larger/assess:** **F1** (auth middleware — the W10 central-chokepoint item), **F3** (god-file decomposition).
-  - Reliability/CI: **A7 + D4 + D5 + D6** (real-DB concurrency + CI postgres gate + atomic-claim + SoD double-decide — validation is CI-on-push), **D7** (backend coverage gate).
-  - Domain/finance: **H2** (TC dues-wording vs inventory/library gate — spans backend clearance + Flutter PDF).
-  - Data model / infra: **E3** (migration-idempotency guard), **C5** (connection pooler — infra/ops), **C7** (generic-store keyset pagination).
+- **Owner-gated (do NOT auto-implement) — 4:** ICA-G1 (`domain_events` bus vs log), ICA-G2 (entitlement-flip timing), ICA-G3 (per-tenant custom roles), ICA-B2 policy (OTP pilot-phone removal). Raised in the ICA owner-decision batch (§5.6).
+- **ASIP session (do NOT implement here) — 2:** ICA-G4 (client mock/real fail-closed) + **ICA-B7** (support mirror bridge incident-id guard) — both modify the ASIP support lane; handled by the dedicated AI Support Engineering session.
+- **CI-infra — validation is CI-on-push (deferred), not locally certifiable — 4:** **A7** (real-DB money-race concurrency tests) + **D5** (real-DB idempotency atomic-claim test) + **D4** (add a Postgres service to the CI gate so the isolation + money-race probes RUN and fail-not-skip) + **D7** (backend coverage gate). These make the existing perpetually-ignored env-gated tests actually execute; their green is provable only on a CI runner with Postgres.
+- **Large refactors — recommend dedicated, individually-reviewed efforts (regression risk on the certified trunk) — 5:** **F1** (auth/RBAC middleware — 656 call sites; the roadmap itself scopes this to the W10 central-chokepoint item), **F3** (god-file decomposition — 3,000-line files), **F4** (prefix→router registry — changes routing across ~66 routers), **F7** (raw SQL → repository — 25 handler files), **C7** (generic-store keyset pagination — broad blast radius on the shared list store).
+- **Infra/ops — 1:** **C5** (front tenant connections with a transaction-mode pooler / global connection ceiling — needs PgBouncer/Supavisor infra + deploy; the code-side POOL_SIZE ceiling is a partial).
