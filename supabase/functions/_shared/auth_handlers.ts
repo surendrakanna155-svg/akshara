@@ -4,6 +4,7 @@ import {
   type AuthScope,
   bearerToken,
   expiresAtIso,
+  hashOtp,
   hashToken,
   randomToken,
   signAccessToken,
@@ -312,7 +313,10 @@ export async function handleLogin(req: Request, config: AppConfig): Promise<Resp
   }
 
   const otp = generateOtp();
-  const otpHash = await hashToken(otp);
+  // ICA-B4: OTPs are keyed-hashed (HMAC under the server secret), never a bare
+  // SHA-256 — a 6-digit code has only 10^6 preimages and would be reversible
+  // from a DB dump. Verify path (handleVerifyOtp) must use the SAME hashOtp.
+  const otpHash = await hashOtp(otp, config.jwtSecret);
   const expiresAt = expiresAtIso(config.otpTtlSeconds);
 
   const returnOtp = canReturnOtpInResponse(config, phone);
@@ -428,7 +432,8 @@ export async function handleVerifyOtp(
     return errorEnvelope("OTP_LOCKED", "Too many invalid attempts", 429);
   }
 
-  const submittedHash = await hashToken(body.otp.trim());
+  // ICA-B4: must mirror the store path's keyed hashOtp (same server secret).
+  const submittedHash = await hashOtp(body.otp.trim(), config.jwtSecret);
   if (submittedHash !== otpRow.otp_hash) {
     await client.from("otp_requests").update({
       attempts: (otpRow.attempts as number) + 1,
@@ -696,8 +701,13 @@ export async function handleRevokeSession(
   await client.from("sessions").update({ revoked_at: now })
     .eq("id", body.sessionId)
     .eq("user_id", claims.sub);
+  // ICA-B8: scope the refresh-token revoke to the CALLER's own tokens. Without
+  // the user_id predicate, knowing another user's session UUID would revoke the
+  // victim's refresh tokens (forced-logout DoS). refresh_tokens.user_id is NOT
+  // NULL (see 20260607100000_core_platform_schema.sql).
   await client.from("refresh_tokens").update({ revoked_at: now })
-    .eq("session_id", body.sessionId);
+    .eq("session_id", body.sessionId)
+    .eq("user_id", claims.sub);
 
   return jsonResponse(envelope({ success: true }));
 }
@@ -710,8 +720,13 @@ export async function handleMe(req: Request, config: AppConfig): Promise<Respons
   if (!claims) return errorEnvelope("UNAUTHORIZED", "Invalid access token", 401);
 
   const client = createServiceClient(config);
-  await setRequestContext(client, claims);
-
+  // ICA-B9: no setRequestContext here. This is a service_role client, which
+  // BYPASSES RLS; and set_request_context sets transaction-local GUCs while each
+  // PostgREST call runs in its own transaction, so the context would not persist
+  // to the read below — the call was an inert no-op that falsely implied tenant
+  // scoping. service_role reads MUST carry their own explicit filter. This one is
+  // safe because it is bounded to the caller by `.eq("id", claims.sub)` — any
+  // future list/read on a service_role client must do the same.
   const { data: user } = await client.from("users").select("id,phone,email,display_name")
     .eq("id", claims.sub).maybeSingle();
 

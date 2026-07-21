@@ -1,5 +1,9 @@
-import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { signAccessToken, verifyAccessToken } from "./jwt.ts";
+import {
+  assert,
+  assertEquals,
+  assertNotEquals,
+} from "https://deno.land/std@0.224.0/assert/mod.ts";
+import { hashOtp, hashToken, signAccessToken, verifyAccessToken } from "./jwt.ts";
 
 const TEST_SECRET = "test-jwt-secret-minimum-32-characters-long";
 
@@ -109,4 +113,42 @@ Deno.test("JWT verify backfills role_slugs from legacy role claim", async () => 
 
   const claims = await verifyAccessToken(TEST_SECRET, token);
   assertEquals(claims?.role_slugs, ["schoolAdmin"]);
+});
+
+// ─── ICA-B4: OTP hashing must be keyed, not a bare reversible SHA-256 ────────
+
+Deno.test("ICA-B4: a stored OTP hash is NOT a bare SHA-256 of the code", async () => {
+  const otp = "123456";
+  const stored = await hashOtp(otp, TEST_SECRET);
+  const bareSha256 = await hashToken(otp);
+  // If these were equal, a DB dump would let an attacker brute-force the 10^6
+  // preimages instantly. The HMAC key (server secret) must make them differ.
+  assertNotEquals(
+    stored,
+    bareSha256,
+    "OTP hash must be keyed (HMAC), not a plain SHA-256 of the code",
+  );
+  assertEquals(stored.length, 64, "HMAC-SHA256 hex digest is 64 chars");
+});
+
+Deno.test("ICA-B4: a correct OTP still verifies under the same secret", async () => {
+  const otp = "482913";
+  // Store path (requestOtp) and verify path (handleVerifyOtp) both use hashOtp
+  // with config.jwtSecret — a freshly issued OTP must still compare equal.
+  const storedHash = await hashOtp(otp, TEST_SECRET);
+  const submittedHash = await hashOtp("482913".trim(), TEST_SECRET);
+  assertEquals(submittedHash, storedHash, "correct OTP must verify");
+
+  // Wrong code must not match.
+  const wrong = await hashOtp("000000", TEST_SECRET);
+  assertNotEquals(wrong, storedHash, "wrong OTP must not verify");
+});
+
+Deno.test("ICA-B4: OTP hash is bound to the server secret (dump-only is useless)", async () => {
+  const otp = "654321";
+  const underRealSecret = await hashOtp(otp, TEST_SECRET);
+  const underOtherSecret = await hashOtp(otp, "a-different-secret-32-characters-xx");
+  // Same code, different key ⇒ different hash: without the secret, an attacker
+  // holding only the DB cannot recompute/verify candidate OTPs.
+  assertNotEquals(underRealSecret, underOtherSecret);
 });

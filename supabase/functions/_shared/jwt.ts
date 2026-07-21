@@ -106,6 +106,33 @@ export async function hashToken(value: string): Promise<string> {
     .join("");
 }
 
+/**
+ * ICA-B4 — Keyed OTP hash. A bare SHA-256 of a 6-digit OTP has only 10^6
+ * preimages and is reversible instantly from a DB dump; `hashToken` (plain
+ * SHA-256) must NOT be used for OTPs. `hashOtp` is HMAC-SHA256 under the server
+ * secret, so a DB dump alone (without the secret) cannot brute-force the code.
+ * Use this in BOTH the OTP store and OTP verify paths with the SAME secret.
+ * NOTE: keep `hashToken` for opaque high-entropy tokens (refresh tokens,
+ * gate-pass) — changing it would break comparison of already-stored hashes.
+ */
+export async function hashOtp(otp: string, secret: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(otp),
+  );
+  return Array.from(new Uint8Array(signature))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 export function randomToken(): string {
   return crypto.randomUUID().replace(/-/g, "") +
     crypto.randomUUID().replace(/-/g, "");
