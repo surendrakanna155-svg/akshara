@@ -148,10 +148,15 @@ Deno.test(
     assert(order.id.startsWith("order_stub_"));
     assertEquals(order.amount, 420000);
     assertEquals(order.currency, "INR");
-    // stub gateway = no live money = no signature required for capture
+    // stub gateway = no live money; the gateway itself requires no client signature
     assertEquals(provider.requiresGatewaySignature(), false);
     assertEquals(provider.publicClientKey(), null);
-    assert(await provider.verifyWebhookSignature("{}", null));
+    // ICA-A5: an absent webhook signature is NEVER valid, even in stub mode —
+    // a null signature previously returned true here, which let any public
+    // caller forge a payment.captured webhook. The explicit stub token is the
+    // only accepted stub-mode signature.
+    assertEquals(await provider.verifyWebhookSignature("{}", null), false);
+    assertEquals(await provider.verifyWebhookSignature("{}", "stub_signature"), true);
     assert(await provider.verifyPaymentSignature("order_abc", "pay_xyz", "stub_payment_signature"));
   }),
 );

@@ -215,6 +215,18 @@ export async function handleRazorpayWebhook(
     return errorEnvelope("FORBIDDEN", "Invalid Razorpay webhook signature", 403);
   }
 
+  // ICA-A5: while the provider is in stub mode (no live gateway — the pilot's
+  // current state) a webhook cannot carry a real cryptographic signature, so it
+  // MUST NOT post to the books. Real webhook captures are honoured only once live
+  // credentials + webhook secret exist. RAZORPAY_ALLOW_UNSIGNED opts local dev in.
+  if (!razorpayProvider.requiresGatewaySignature() && !allowUnsigned) {
+    return errorEnvelope(
+      "FORBIDDEN",
+      "Webhook capture is disabled while the payment gateway is in stub mode",
+      403,
+    );
+  }
+
   const eventId = String(payload.id ?? `evt_${crypto.randomUUID()}`);
   const eventType = String(payload.event ?? "unknown");
 

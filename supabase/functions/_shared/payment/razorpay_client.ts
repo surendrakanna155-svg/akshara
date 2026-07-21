@@ -85,10 +85,17 @@ export async function verifyRazorpayWebhookSignature(
   body: string,
   signature: string | null,
 ): Promise<boolean> {
-  if (config.stubMode) {
-    return signature === "stub_signature" || signature === null;
+  // ICA-A5: an absent signature is unauthenticated and is NEVER valid, in any
+  // mode. The handler's RAZORPAY_ALLOW_UNSIGNED flag is the sole, off-by-default
+  // dev escape hatch. Previously `signature === null` returned true under stub
+  // mode, letting any public caller forge a payment.captured webhook.
+  if (!signature) {
+    return false;
   }
-  if (!config.webhookSecret || !signature) {
+  if (config.stubMode) {
+    return signature === "stub_signature";
+  }
+  if (!config.webhookSecret) {
     return false;
   }
   // PRC-A Batch 5 — was `expected === signature` (timing-unsafe, a money-path
