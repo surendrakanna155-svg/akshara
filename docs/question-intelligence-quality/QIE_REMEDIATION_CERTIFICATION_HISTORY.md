@@ -71,3 +71,40 @@ cross-family/human judge yielding `independent=1` (today's single-actor path is 
 solution-writer, and a generator emitting `mis_relation` per distractor. Re-certifying the 22 + 15 + 14 + 7
 quarantined artifacts is downstream of those actors. R2-5 NCERT-template originality + empirical difficulty
 calibration are deferred to R5 (need the PYQ/exercise corpus).
+
+---
+
+## Checkpoint — Phase R3 (Store governance & engineering hygiene) · 2026-07-21 · `EOS: CONDITIONAL PASS`
+
+Closes C8 (bank unowned / stale default), C12 (cross-run duplicates), the AR red-team defect
+(#red-team-10), and the store/engine-hygiene reviewer findings. Method: 4 file-disjoint parallel lanes +
+a sequential hygiene batch; the certification-affecting lanes got independent adversarial verification.
+
+- **R3-1** one authoritative certified bank (RI-6): `factory_meta.role` stamp; `product_inventory` /
+  `certified_bank` refuse un-stamped/trial stores fail-closed; trial certs → `trial_certified`;
+  forever-candidates → `expired_unjudged`. — `ca568fab`
+- **R3-2** bank-level dedup (RI-9): gate-seed from ALL prior certified + certify duplicate-quarantine +
+  partial UNIQUE index over product-visible certified; no spec re-parenting. — `ca568fab`
+- **R3-3** CI for the kie suite + canonical vacuous-green guard + missing `sympy` dep. — `66938d41`
+- **R3-4** shared `store_open.py` (frozen openers untouched); run_planner fail-loud on a missing store;
+  concept_codes_all → ids; JSON-validity test; qp_bridge engine cache. — `e7bb9adb`
+- **R3-5** concept-identity ingest safety (refuse-and-log; never demote certified) + alias audit. — `dea15b63`
+- **R3-6** guarded, audited, dry-run-default run-scoped excision/recall tooling. — `ca568fab`
+- **R3-7** latent gate/leak paths: boundary "checked 0" → advisory + derived tokens; `certified_patterns`
+  exam-scoped; anchored section regex. — `baed52fc`
+- **R3-8** retire the defective assertion-reason path at the reachability layer (qpgen 0 bytes). — `4c229651`
+
+**Adversarial verification:** verify-R3-A returned **CONFIRMED** (RI-6/RI-9/excision hold; live DBs
+byte-identical during probing). verify-R3-C returned **REFUTED** — the R3-7 forbidden-token derivation
+crying-wolfed on a concept's own name (411 concepts) and the section regex still matched a parenthesised
+subject in prose; BOTH fixed + regression-locked before the checkpoint.
+
+**Live outcome:** question stores migrated factory-4 → **factory-5** (bank `role=production_bank`; trial
+corpus `role=trial_corpus` with 15 → `trial_certified` + 456 → `expired_unjudged`); `concept_codes_all`
+backfilled live (bank 24 rewritten / 0 unresolved; corpus 1000 / 99 honest-null). Full suite **957 green**.
+RI-6 + RI-9 hold. FTS5 + `chunks(doc_id,ordinal)` index deferred (would mutate the frozen v1.5 kie.db).
+
+**Remediation now PAUSES at the owner/external gates** (per the roadmap): R4-1 (adopt/mine/retire the hidden
+`qie.db` lane — OWNER decision), R4-2 (automated model-execution layer — needs an API layer, external
+dependency), R5-3 (ERP promotion — owner-gated), R6 (owner must unfreeze Tier-1). Re-certifying the 22 + 15
++ 14 + 7 quarantined artifacts is downstream of R4-2's actors.

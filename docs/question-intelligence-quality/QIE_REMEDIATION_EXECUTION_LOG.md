@@ -95,11 +95,30 @@ RI status: **RI-3 COMPLETE** (full certified-row conjunction: gates + independen
 solution_verified + distractor_verified, bound to item_hash). **RI-8 COMPLETE** (same-actor cannot promote;
 every certified row carries real per-candidate model+actor+prompt_sha256 provenance).
 
-### Phase R3 (partial, out of phase order — infra) — R3-3 ✅
+### Phase R3 — Store governance & engineering hygiene — ✅ COMPLETE (all buildable items)
+
+4 parallel file-disjoint lanes + a sequential hygiene batch. Certification-affecting lanes (A bank/dedup,
+C gate/leak) got independent adversarial verification (verify-R3-A **CONFIRMED**; verify-R3-C **REFUTED** →
+crying-wolf boundary + prose section-regex leak fixed + regression-locked).
 
 | Item | State | Commit | Notes |
 |---|---|---|---|
-| R3-3 CI + loud test-skip guard | ✅ | `66938d41` | `.github/workflows/kie-suite.yml` runs the suite on the intelligence lane; `run_kie_suite.py` fails on the canonical machine (`KIE_CANONICAL=1`) if any DB/input skip would make it vacuously green; `sympy` added to requirements (was missing) |
+| R3-1 Authoritative certified bank [C8] (RI-6) | ✅ | `ca568fab` | `factory_meta.role` stamp; `product_inventory`/`certified_bank` refuse un-stamped/trial stores fail-closed; trial→`trial_certified`; 456→`expired_unjudged` |
+| R3-2 Cross-run/bank-level dedup [C12] (RI-9) | ✅ | `ca568fab` | 3 layers: gate-seed from ALL prior certified · certify duplicate quarantine · partial UNIQUE index over product-visible certified · no spec re-parenting |
+| R3-3 CI + vacuous-green guard | ✅ | `66938d41` | kie-suite CI + `run_kie_suite.py` canonical guard + missing `sympy` dep |
+| R3-4 Schema/engine hygiene | ✅ | `e7bb9adb` | shared `store_open.py` (WAL/FK/ro/path-guard, frozen openers untouched); run_planner fail-loud on missing store; concept_codes_all → ids; JSON-validity test (20 cols); qp_bridge engine cache. **Deferred:** FTS5 + chunks index (frozen kie.db) |
+| R3-5 Concept-identity ingest safety | ✅ | `dea15b63` | `ingest_concept_safe` refuse-and-log on collision (never demote certified); alias audit |
+| R3-6 Rollback/excision tooling | ✅ | `ca568fab` | `excise_run.py` guarded + audited + dry-run-default recall; preserves reject_reason |
+| R3-7 Latent gate/leak paths | ✅ | `baed52fc` | boundary "checked 0"→advisory + derived tokens (concept-self dropped, no crying wolf); `certified_patterns` exam-scoped; anchored section regex |
+| R3-8 Retire the AR path [#red-team-10] | ✅ | `4c229651` | reachability denylist honored by qp_bridge; qpgen 0 bytes changed |
+
+**Live migration:** factory-4 → **factory-5** applied (bank role=production_bank; corpus role=trial_corpus,
+15→trial_certified, 456→expired_unjudged); concept_codes_all backfilled live (bank 24/0-unresolved; corpus
+1000 rewritten/99 honest-null). Full suite **957 green**. RI-6 + RI-9 hold.
+
+**Next = the owner/external gates (PAUSED here):** R4-1 (adopt/mine/retire the hidden `qie.db` lane — OWNER),
+R4-2 (automated model-execution layer — needs an API layer / external dep), R5-3 (ERP promotion — owner-gated),
+R6 (owner must unfreeze Tier-1). R4-3/R4-4/R5-*/others are buildable but gated behind or dependent on these.
 
 **Deferred-but-enforced across R2** (machinery fail-closed NOW; the ACTORS need an API layer — roadmap R4-2):
 a real cross-family/human judge yielding `independent=1` (today's path is provisional-only), an Opus
