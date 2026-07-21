@@ -6,10 +6,11 @@ import '../../../router/route_names.dart';
 import '../../../shared/navigation/persona_nav.dart';
 import '../../auth/qa_visual_switcher.dart';
 import '../../../theme/app_theme.dart';
+import '../../../theme/persona_accents.dart';
 import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
-import '../../../theme/stitch_palettes.dart';
 import '../../../theme/theme_extensions.dart';
+import '../../../theme/theme_mode_provider.dart';
 
 /// Parent mobile shell with bottom navigation
 /// (Home · Academics · Fees · Messages · More).
@@ -115,9 +116,16 @@ class ParentShell extends ConsumerWidget {
 
     final whiteLabel = ref.watch(schoolBrandingThemeProvider);
 
+    final themeMode = ref.watch(themeModeProvider);
+    final brightness = resolveEffectiveBrightness(
+      themeMode,
+      MediaQuery.platformBrightnessOf(context),
+    );
+
     return Theme(
-      data: AksharaAppTheme.stitch(
-        StitchPersonaPalette.aksharaParent,
+      data: AksharaAppTheme.persona(
+        brightness: brightness,
+        accent: AksharaPersonaAccent.parent,
         whiteLabel: whiteLabel,
       ),
       child: Scaffold(

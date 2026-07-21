@@ -66,6 +66,22 @@ abstract final class AksharaAppTheme {
     );
   }
 
+  /// DS V2 — unified persona theme: shared M15 Light/Dark surfaces with the persona
+  /// [accent] as primary. Honors the caller-resolved [brightness] (Appearance setting);
+  /// personas no longer force a fixed brightness. White-label branding still wins.
+  static ThemeData persona({
+    required Brightness brightness,
+    required Color accent,
+    WhiteLabelThemeConfig? whiteLabel,
+    Locale? locale,
+  }) {
+    final primary = whiteLabel?.primary ?? accent;
+    final tokens = brightness == Brightness.dark
+        ? AksharaColorTokens.dark(primaryOverride: primary)
+        : AksharaColorTokens.light(primaryOverride: primary);
+    return _build(tokens: tokens, brightness: brightness, locale: locale);
+  }
+
   static ThemeData _build({
     required AksharaColorTokens tokens,
     required Brightness brightness,

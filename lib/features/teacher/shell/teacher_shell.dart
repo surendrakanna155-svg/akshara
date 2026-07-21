@@ -6,7 +6,8 @@ import '../../../router/route_names.dart';
 import '../../../shared/navigation/persona_nav.dart';
 import '../../auth/qa_visual_switcher.dart';
 import '../../../theme/app_theme.dart';
-import '../../../theme/stitch_palettes.dart';
+import '../../../theme/persona_accents.dart';
+import '../../../theme/theme_mode_provider.dart';
 
 /// Teacher mobile shell with bottom navigation (Home · Classes · Teach · Messages).
 class TeacherShell extends ConsumerWidget {
@@ -94,9 +95,16 @@ class TeacherShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final whiteLabel = ref.watch(schoolBrandingThemeProvider);
 
+    final themeMode = ref.watch(themeModeProvider);
+    final brightness = resolveEffectiveBrightness(
+      themeMode,
+      MediaQuery.platformBrightnessOf(context),
+    );
+
     return Theme(
-      data: AksharaAppTheme.stitch(
-        StitchPersonaPalette.classroomCommand,
+      data: AksharaAppTheme.persona(
+        brightness: brightness,
+        accent: AksharaPersonaAccent.teacher,
         whiteLabel: whiteLabel,
       ),
       child: Scaffold(
