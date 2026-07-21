@@ -160,6 +160,116 @@ Deno.test("payment.captured webhook creates finance collection when invoice link
   assertEquals(spy.auditWritten, true);
 });
 
+// --- ICA-A6: paise are preserved through the capture path (NUMERIC amount) ---
+
+// A ₹1500.50 intent. With the pre-fix INTEGER `amount` column the 0.50 was
+// truncated at persistence; migration 20260920000062 retypes payment_requests/
+// payment_intents.amount to NUMERIC(12,2). This asserts the SERVICE passes the
+// exact decimal into finance_collections.amount_collected (already NUMERIC(12,2)),
+// so with the NUMERIC column the ₹1500.50 round-trips end-to-end.
+const PAISE_INTENT: PaymentIntentRow = {
+  ...INTENT,
+  id: "d0000000-0000-4000-8000-0000000000aa",
+  gateway_order_id: "order_paise_1",
+  amount: 1500.5,
+};
+
+class WebhookPaiseCaptureDb {
+  capturedCollectionAmount: string | null = null;
+  intentCaptured = false;
+
+  async queryObject<T>(sql: string, args: unknown[] = []): Promise<T[]> {
+    if (sql.includes("FROM payment_intents WHERE gateway_order_id")) {
+      return [PAISE_INTENT] as T[];
+    }
+    if (sql.includes("FROM finance_invoices fi")) {
+      return [{
+        id: PAISE_INTENT.invoice_id,
+        organization_id: PAISE_INTENT.organization_id,
+        school_id: PAISE_INTENT.school_id,
+        student_id: "a4000000-0000-4000-8000-000000000001",
+        student_account_id: "acct-1",
+        invoice_status: "issued",
+        outstanding_amount: "1500.50",
+        total_amount: "1500.50",
+        fee_assignment_id: "fa-1",
+      }] as T[];
+    }
+    if (sql.includes("INSERT INTO finance_collections")) {
+      this.capturedCollectionAmount = String(args[9]); // amount_collected arg
+      return [{
+        id: "col-paise-1",
+        organization_id: PAISE_INTENT.organization_id,
+        school_id: PAISE_INTENT.school_id,
+        student_id: "a4000000-0000-4000-8000-000000000001",
+        invoice_id: PAISE_INTENT.invoice_id,
+        student_account_id: "acct-1",
+        receipt_number: "APS-PAISE",
+        collection_date: "2026-06-10",
+        payment_method: "upi",
+        reference_number: args[8] ?? null,
+        amount_collected: String(args[9]),
+        notes: null,
+        collection_status: "completed",
+        collected_by: args[11],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }] as T[];
+    }
+    if (sql.includes("INSERT INTO finance_receipts")) {
+      return [{
+        id: "rcpt-paise-1",
+        organization_id: PAISE_INTENT.organization_id,
+        school_id: PAISE_INTENT.school_id,
+        collection_id: "col-paise-1",
+        receipt_number: "APS-PAISE",
+        receipt_date: "2026-06-10",
+        amount: "1500.50",
+        generated_by: args[6],
+        created_at: new Date().toISOString(),
+      }] as T[];
+    }
+    if (sql.includes("UPDATE finance_invoices")) return [] as T[];
+    if (sql.includes("UPDATE payment_intents") && sql.includes("captured")) {
+      this.intentCaptured = true;
+      return [{
+        ...PAISE_INTENT,
+        status: "captured",
+        collection_id: "col-paise-1",
+        receipt_id: "rcpt-paise-1",
+      }] as T[];
+    }
+    if (sql.includes("INSERT INTO audit_events")) return [{ id: crypto.randomUUID() }] as T[];
+    if (sql.includes("INSERT INTO domain_events")) return [{ id: crypto.randomUUID() }] as T[];
+    if (sql.includes("FROM domain_events")) return [] as T[];
+    return [] as T[];
+  }
+}
+
+Deno.test("ICA-A6: a ₹1500.50 capture posts amount_collected = 1500.50 (paise preserved, no INTEGER truncation)", async () => {
+  const spy = new WebhookPaiseCaptureDb();
+  const db = spy as unknown as TenantQueryClient;
+  const result = await processRazorpayWebhook(
+    db,
+    webhookClaims(),
+    "evt_paise_1",
+    "payment.captured",
+    {
+      payload: {
+        payment: {
+          id: "pay_paise_1",
+          order_id: PAISE_INTENT.gateway_order_id,
+        },
+      },
+    },
+  );
+  assertEquals(result.processed, true);
+  assertEquals(spy.intentCaptured, true);
+  // The exact decimal reaches the (NUMERIC) collection — 0.50 is NOT truncated.
+  assertEquals(spy.capturedCollectionAmount, "1500.5");
+  assertEquals(Number(spy.capturedCollectionAmount), 1500.5);
+});
+
 // --- confirmPayment fail-closed gateway verification (MJ-H11) ---
 
 const CONFIRM_INTENT: PaymentIntentRow = {

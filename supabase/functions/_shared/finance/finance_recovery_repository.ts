@@ -370,9 +370,12 @@ export async function collectorPerformanceForMonth(
           AND created_at >= $3::date
         GROUP BY created_by
      ), recovered AS (
+       -- ICA-A1: amount_collected is NUMERIC(12,2) rupees; the _minor alias is
+       -- BIGINT paise, so scale x100 and cast to bigint. Without this the
+       -- handler minorToRupees (div 100) understated per-collector recovery 100x.
        SELECT collected_by AS uid,
               count(*)::text AS n,
-              COALESCE(sum(amount_collected), 0)::text AS amt
+              ROUND(COALESCE(sum(amount_collected), 0) * 100)::bigint::text AS amt
          FROM finance_collections
         WHERE organization_id = $1 AND school_id = $2
           AND collected_by IS NOT NULL
@@ -434,10 +437,12 @@ export async function recoveryAggregates(
         (SELECT count(*) FROM finance_recovery_contacts
           WHERE organization_id = $1 AND school_id = $2
             AND created_at >= $3::date)::text AS contacts_this_month,
-        (SELECT COALESCE(sum(amount_collected), 0) FROM finance_collections
+        -- ICA-A1: scale NUMERIC rupees to BIGINT paise for the _minor alias
+        -- (the handler divides by 100). Previously stored rupee-scale, 100x low.
+        (SELECT ROUND(COALESCE(sum(amount_collected), 0) * 100) FROM finance_collections
           WHERE organization_id = $1 AND school_id = $2
             AND collection_status = 'completed'
-            AND collection_date >= $3::date)::text AS recovered_this_month_minor`,
+            AND collection_date >= $3::date)::bigint::text AS recovered_this_month_minor`,
     [orgId, schoolId, monthStart],
   );
   return rows[0]!;
