@@ -11,6 +11,11 @@ import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { emitMutationAudit, teacherAssistantAudit } from "../audit/mutation_audit_catalog.ts";
 import { buildTeacherAssistantInsights } from "./teacher_assistant_service.ts";
+import {
+  insertIntervention,
+  listOpenInterventions,
+  updateIntervention,
+} from "./teacher_assistant_repository.ts";
 
 export async function handleTeacherAssistantInsights(req: Request, config: AppConfig): Promise<Response> {
   const auth = await authenticateRequest(req, config);
@@ -42,14 +47,7 @@ export async function handleListInterventions(req: Request, config: AppConfig): 
 
   try {
     const items = await withTenantContext(config, auth.claims, async (db) =>
-      db.queryObject<Record<string, unknown>>(
-        `SELECT id, student_id AS "studentId", intervention_type AS "interventionType",
-                status, priority, title, notes, follow_up_at AS "followUpAt"
-         FROM teacher_interventions
-         WHERE status IN ('open', 'in_progress')
-         ORDER BY priority DESC, created_at DESC
-         LIMIT 50`,
-      )
+      listOpenInterventions(db)
     );
     return jsonResponse(envelope({ items }));
   } catch (error) {
@@ -82,32 +80,25 @@ export async function handleCreateIntervention(req: Request, config: AppConfig):
 
   try {
     const id = await withTenantContext(config, auth.claims, async (db) => {
-      const rows = await db.queryObject<{ id: string }>(
-        `INSERT INTO teacher_interventions (
-           organization_id, school_id, teacher_user_id, student_id,
-           intervention_type, title, notes, priority, follow_up_at, created_by
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-         RETURNING id`,
-        [
-          orgId,
-          schoolId,
-          auth.claims.sub,
-          body.studentId,
-          body.interventionType,
-          body.title,
-          body.notes ?? null,
-          body.priority ?? "medium",
-          body.followUpAt ?? null,
-          auth.claims.sub,
-        ],
-      );
+      const interventionId = await insertIntervention(db, {
+        organizationId: orgId,
+        schoolId,
+        teacherUserId: auth.claims.sub,
+        studentId: body.studentId,
+        interventionType: body.interventionType,
+        title: body.title,
+        notes: body.notes ?? null,
+        priority: body.priority ?? "medium",
+        followUpAt: body.followUpAt ?? null,
+        createdBy: auth.claims.sub,
+      });
       await emitMutationAudit(
         db,
         auth.claims,
-        teacherAssistantAudit.interventionCreated(rows[0]!.id),
+        teacherAssistantAudit.interventionCreated(interventionId),
         req,
       );
-      return rows[0]!.id;
+      return interventionId;
     });
     return jsonResponse(envelope({ id }), { status: 201 });
   } catch (error) {
@@ -131,16 +122,11 @@ export async function handleUpdateIntervention(
 
   try {
     await withTenantContext(config, auth.claims, async (db) => {
-      await db.queryObject(
-        `UPDATE teacher_interventions
-         SET status = coalesce($2, status),
-             notes = coalesce($3, notes),
-             follow_up_at = coalesce($4::timestamptz, follow_up_at),
-             completed_at = CASE WHEN $2 = 'completed' THEN timezone('utc', now()) ELSE completed_at END,
-             updated_at = timezone('utc', now())
-         WHERE id = $1`,
-        [interventionId, body?.status ?? null, body?.notes ?? null, body?.followUpAt ?? null],
-      );
+      await updateIntervention(db, interventionId, {
+        status: body?.status ?? null,
+        notes: body?.notes ?? null,
+        followUpAt: body?.followUpAt ?? null,
+      });
       await emitMutationAudit(
         db,
         auth.claims,

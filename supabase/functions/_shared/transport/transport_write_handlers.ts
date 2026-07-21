@@ -27,6 +27,8 @@ import {
   cancelInvoice,
   InvalidInvoiceTransitionError,
 } from "../finance/finance_invoices_repository.ts";
+import { listEnrollmentsForClassSection } from "./transport_read_repository.ts";
+import { releaseSavepoint, rollbackToSavepoint, savepoint } from "../db_savepoint.ts";
 
 const writeStore = createEntityWriteStore("transport_entities", "Transport");
 const { runWrite } = createModuleWriteHandlers("manageTransport");
@@ -1359,21 +1361,12 @@ export async function handleBulkAllocateTransport(
         targets.push({ rawId, sisStudentId: rawId, studentName: "", classLabel: "", admissionNumber: "" });
       }
     } else if (className) {
-      const rows = await db.queryObject<{
-        student_id: string;
-        display_name: string | null;
-        class_name: string | null;
-        section_name: string | null;
-      }>(
-        `SELECT e.student_id, s.display_name, e.class_name, e.section_name
-         FROM sis_student_enrollments e
-         JOIN students s ON s.id = e.student_id
-           AND s.organization_id = e.organization_id AND s.school_id = e.school_id
-         WHERE e.organization_id = $1 AND e.school_id = $2 AND e.is_current = true
-           AND e.class_name = $3
-           AND ($4::text IS NULL OR e.section_name = $4)
-         ORDER BY e.student_id`,
-        [organizationId, schoolId, className, sectionName ?? null],
+      const rows = await listEnrollmentsForClassSection(
+        db,
+        organizationId,
+        schoolId,
+        className,
+        sectionName ?? null,
       );
       for (const r of rows) {
         targets.push({
@@ -1679,7 +1672,7 @@ export async function insertDemandIdempotent(
   demandId: string,
   demandPayload: Record<string, unknown>,
 ): Promise<{ saved: Record<string, unknown>; idempotent: boolean }> {
-  await db.queryObject(`SAVEPOINT transport_demand_insert`);
+  await savepoint(db, "transport_demand_insert");
   try {
     const saved = await writeStore.insert(
       db,
@@ -1689,11 +1682,11 @@ export async function insertDemandIdempotent(
       demandId,
       demandPayload,
     );
-    await db.queryObject(`RELEASE SAVEPOINT transport_demand_insert`);
+    await releaseSavepoint(db, "transport_demand_insert");
     return { saved, idempotent: false };
   } catch (error) {
     if (!isUniqueViolation(error)) throw error;
-    await db.queryObject(`ROLLBACK TO SAVEPOINT transport_demand_insert`);
+    await rollbackToSavepoint(db, "transport_demand_insert");
     const existingDemands = await writeStore.findAll(db, organizationId, schoolId, "demand");
     const winner = existingDemands.find((d) => String(d.dedupeKey ?? "") === dedupeKey);
     // The unique index guarantees a winning row exists once 23505 fires; if it

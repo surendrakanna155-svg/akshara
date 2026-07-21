@@ -9,6 +9,7 @@ import {
   WriteValidationError,
 } from "../entity_write/module_write_handlers.ts";
 import { createEntityWriteStore } from "../entity_write/entity_write_store.ts";
+import { releaseSavepoint, rollbackToSavepoint, savepoint } from "../db_savepoint.ts";
 import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
 import { scheduleReminder } from "../reminders/reminders_service.ts";
 import type { AccessTokenClaims } from "../jwt.ts";
@@ -592,7 +593,7 @@ export async function handleBulkImportBooks(
       }
       // Per-row SAVEPOINT so a single bad insert rolls back only that row and
       // does NOT poison the outer tenant transaction (onboarding import pattern).
-      await db.queryObject(`SAVEPOINT library_import_row`);
+      await savepoint(db, "library_import_row");
       try {
         await writeStore.insert(
           db,
@@ -602,11 +603,11 @@ export async function handleBulkImportBooks(
           plan.payload.id as string,
           plan.payload,
         );
-        await db.queryObject(`RELEASE SAVEPOINT library_import_row`);
+        await releaseSavepoint(db, "library_import_row");
         if (plan.isbn.length > 0) seenIsbns.add(plan.isbn);
         imported++;
       } catch (error) {
-        await db.queryObject(`ROLLBACK TO SAVEPOINT library_import_row`);
+        await rollbackToSavepoint(db, "library_import_row");
         failed.push({
           row: rowNum,
           reason: error instanceof Error ? error.message : "Import failed",

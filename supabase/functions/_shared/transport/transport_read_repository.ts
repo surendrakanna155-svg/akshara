@@ -165,3 +165,74 @@ export async function listEntities(
     hasMore: offset + rows.length < total,
   };
 }
+
+/**
+ * All entity payloads of a given type for the tenant scope (unpaginated). Used
+ * by read handlers that need the full set to cross-reference in memory
+ * (e.g. demands to annotate allocations, allocations for a route roster).
+ */
+export async function listEntityPayloads(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  entityType: string,
+): Promise<Record<string, unknown>[]> {
+  const rows = await db.queryObject<{ payload: Record<string, unknown> }>(
+    `SELECT payload FROM transport_entities
+     WHERE organization_id = $1 AND school_id = $2 AND entity_type = $3`,
+    [organizationId, schoolId, entityType],
+  );
+  return rows.map((r) => r.payload);
+}
+
+/**
+ * The payload of a single entity by id, or null when absent (the caller decides
+ * how to handle the miss).
+ */
+export async function getEntityPayloadById(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  entityType: string,
+  id: string,
+): Promise<Record<string, unknown> | null> {
+  const rows = await db.queryObject<{ payload: Record<string, unknown> }>(
+    `SELECT payload FROM transport_entities
+     WHERE organization_id = $1 AND school_id = $2 AND entity_type = $3 AND id = $4`,
+    [organizationId, schoolId, entityType, id],
+  );
+  return rows[0]?.payload ?? null;
+}
+
+/** A current SIS enrollment row for bulk transport allocation by class/section. */
+export interface EnrollmentTargetRow {
+  student_id: string;
+  display_name: string | null;
+  class_name: string | null;
+  section_name: string | null;
+}
+
+/**
+ * Current enrollments for a class (optionally a specific section) — the roster a
+ * bulk transport allocation resolves when no explicit student id list is given.
+ * `sectionName` null means "any section of the class".
+ */
+export async function listEnrollmentsForClassSection(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  className: string,
+  sectionName: string | null,
+): Promise<EnrollmentTargetRow[]> {
+  return await db.queryObject<EnrollmentTargetRow>(
+    `SELECT e.student_id, s.display_name, e.class_name, e.section_name
+     FROM sis_student_enrollments e
+     JOIN students s ON s.id = e.student_id
+       AND s.organization_id = e.organization_id AND s.school_id = e.school_id
+     WHERE e.organization_id = $1 AND e.school_id = $2 AND e.is_current = true
+       AND e.class_name = $3
+       AND ($4::text IS NULL OR e.section_name = $4)
+     ORDER BY e.student_id`,
+    [organizationId, schoolId, className, sectionName ?? null],
+  );
+}

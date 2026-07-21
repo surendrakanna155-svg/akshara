@@ -27,8 +27,11 @@ import { generateParentGuidanceReport } from "./parent_guidance_generator.ts";
 import {
   computeAndStoreRiskSnapshots,
   getRiskSnapshotByStudent,
+  insertCommunicationDraft,
+  insertParentGuidanceReport,
   listClassRiskSummaries,
   listRiskSnapshots,
+  publishParentGuidanceReport,
 } from "./student_risk_repository.ts";
 import { buildTeacherSuccessCenter } from "./teacher_success_service.ts";
 import { buildPrincipalIntelligenceCenter } from "./principal_intelligence_service.ts";
@@ -211,29 +214,24 @@ export async function handleGenerateCommunication(req: Request, config: AppConfi
 
   try {
     const id = await runTenant(config, auth.claims, async (db) => {
-      const rows = await db.queryObject<{ id: string }>(
-        `INSERT INTO intel_communication_drafts (
-           organization_id, school_id, scenario, student_id, custom_note, languages, outputs, created_by
-         ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8)
-         RETURNING id`,
-        [
-          orgId,
-          schoolId,
-          body.scenario,
-          body.studentId ?? null,
-          note ?? null,
-          JSON.stringify(languages),
-          JSON.stringify(communicationDraftToApi(drafts)),
-          auth.claims.sub,
-        ],
+      const draftId = await insertCommunicationDraft(
+        db,
+        orgId,
+        schoolId,
+        body.scenario,
+        body.studentId ?? null,
+        note ?? null,
+        JSON.stringify(languages),
+        JSON.stringify(communicationDraftToApi(drafts)),
+        auth.claims.sub,
       );
       await emitMutationAudit(
         db,
         auth.claims,
-        intelligenceAudit.communicationGenerated(rows[0]!.id),
+        intelligenceAudit.communicationGenerated(draftId),
         req,
       );
-      return rows[0]!.id;
+      return draftId;
     });
 
     return jsonResponse(envelope({ id, ...communicationDraftToApi(drafts) }), { status: 201 });
@@ -307,30 +305,25 @@ export async function handleGenerateParentGuidance(req: Request, config: AppConf
       const report = generateParentGuidanceReport(body.mode, language, inputs);
       const status = publish ? "published" : "draft";
 
-      const rows = await db.queryObject<{ id: string }>(
-        `INSERT INTO intel_parent_guidance_reports (
-           organization_id, school_id, student_id, mode, language, inputs, report, status, created_by
-         ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8, $9)
-         RETURNING id`,
-        [
-          orgId,
-          schoolId,
-          body.studentId,
-          body.mode,
-          language,
-          JSON.stringify(inputs),
-          JSON.stringify(report),
-          status,
-          auth.claims.sub,
-        ],
+      const id = await insertParentGuidanceReport(
+        db,
+        orgId,
+        schoolId,
+        body.studentId,
+        body.mode,
+        language,
+        JSON.stringify(inputs),
+        JSON.stringify(report),
+        status,
+        auth.claims.sub,
       );
       await emitMutationAudit(
         db,
         auth.claims,
-        intelligenceAudit.parentGuidanceGenerated(rows[0]!.id),
+        intelligenceAudit.parentGuidanceGenerated(id),
         req,
       );
-      return { id: rows[0]!.id, report, inputs };
+      return { id, report, inputs };
     });
 
     return jsonResponse(envelope(
@@ -359,13 +352,7 @@ export async function handlePublishParentGuidance(
 
   try {
     await runTenant(config, auth.claims, async (db) => {
-      const rows = await db.queryObject<{ id: string }>(
-        `UPDATE intel_parent_guidance_reports
-         SET status = 'published', updated_at = timezone('utc', now())
-         WHERE id = $1
-         RETURNING id`,
-        [reportId],
-      );
+      const rows = await publishParentGuidanceReport(db, reportId);
       if (!rows.length) throw new Error("Guidance report not found");
       await emitMutationAudit(
         db,

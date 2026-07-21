@@ -13,6 +13,11 @@ import {
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
 import { enforceSchoolLimit } from "../entitlements/entitlement_limits.ts";
+import {
+  insertControlCenterEntity,
+  selectCrmSnapshot,
+  updateCrmSnapshot,
+} from "./control_center_write_repository.ts";
 
 /**
  * Write counterpart to the Control Center read handlers. Control Center is
@@ -22,8 +27,6 @@ import { enforceSchoolLimit } from "../entitlements/entitlement_limits.ts";
  * `school_id` column), so the shared entity write store cannot be reused — the
  * inserts below are keyed by `organization_id` only.
  */
-
-const TABLE = "control_center_entities";
 
 function tenantError(error: unknown): Response {
   if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
@@ -49,12 +52,7 @@ async function insertEntity(
   id: string,
   payload: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
-  const rows = await db.queryObject<{ payload: Record<string, unknown> }>(
-    `INSERT INTO ${TABLE} (id, organization_id, entity_type, payload)
-     VALUES ($1, $2, $3, $4::jsonb)
-     RETURNING payload`,
-    [id, organizationId, entityType, JSON.stringify(payload)],
-  );
+  const rows = await insertControlCenterEntity(db, organizationId, entityType, id, payload);
   return rows[0]?.payload ?? payload;
 }
 
@@ -67,22 +65,13 @@ async function mutateCrmSnapshot(
   organizationId: string,
   mutate: (current: Record<string, unknown>) => Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
-  const existing = await db.queryObject<{ payload: Record<string, unknown> }>(
-    `SELECT payload FROM ${TABLE}
-     WHERE organization_id = $1 AND entity_type = 'snapshot_crm' AND id = 'default'`,
-    [organizationId],
-  );
+  const existing = await selectCrmSnapshot(db, organizationId);
   const current = existing[0]?.payload ?? {};
   const next = mutate(current);
   if (existing.length === 0) {
     return await insertEntity(db, organizationId, "snapshot_crm", "default", next);
   }
-  const rows = await db.queryObject<{ payload: Record<string, unknown> }>(
-    `UPDATE ${TABLE} SET payload = $2::jsonb
-     WHERE organization_id = $1 AND entity_type = 'snapshot_crm' AND id = 'default'
-     RETURNING payload`,
-    [organizationId, JSON.stringify(next)],
-  );
+  const rows = await updateCrmSnapshot(db, organizationId, next);
   return rows[0]?.payload ?? next;
 }
 

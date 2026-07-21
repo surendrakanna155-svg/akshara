@@ -26,6 +26,7 @@ import {
   getCollection,
   getDailySummary,
   getReceipt,
+  getReceiptSmsRecipient,
   getStudentAccountById,
   listAllCollectionsForAccount,
   listCancelledCollections,
@@ -97,16 +98,7 @@ async function notifyParentOfReceipt(
   if (await enforceSmsQuota(config, claims)) return;
   try {
     const target = await runTenant(config, claims, (db) =>
-      db.queryObject<{ phone: string; name: string }>(
-        `SELECT u.phone AS phone, s.display_name AS name
-           FROM finance_invoices fi
-           JOIN students s ON s.id = fi.student_id
-           JOIN student_guardians sg ON sg.student_id = s.id
-           JOIN users u ON u.id = sg.guardian_user_id
-          WHERE fi.id = $1 AND u.phone IS NOT NULL
-          LIMIT 1`,
-        [invoiceId],
-      ).then((rows) => rows[0] ?? null)
+      getReceiptSmsRecipient(db, invoiceId)
     );
     if (!target?.phone) return;
     const msg =

@@ -2,7 +2,12 @@ import type { TenantQueryClient } from "../tenant_db.ts";
 import { attendancePercentSql } from "../attendance/attendance_percentage.ts";
 import { computeStudentRisk, riskLevelFromScore } from "./student_risk_engine.ts";
 import type { RiskReason } from "./student_risk_engine.ts";
-import type { StudentRiskSnapshotRow, StudentSignalRow } from "./intelligence_types.ts";
+import type {
+  CommunicationScenario,
+  GuidanceMode,
+  StudentRiskSnapshotRow,
+  StudentSignalRow,
+} from "./intelligence_types.ts";
 
 export const INTEL_RISK_PROBE_SCHOOL_A = "f0500000-0000-4000-8000-000000000001";
 export const INTEL_RISK_PROBE_SCHOOL_B = "f0500000-0000-4000-8000-000000000002";
@@ -412,4 +417,92 @@ export async function listClassRiskSummaries(
     mediumCount: r.medium_count,
     lowCount: r.low_count,
   }));
+}
+
+/**
+ * Persist a generated communication draft (v9.0 Communication Assistant) and
+ * return its new id.
+ */
+export async function insertCommunicationDraft(
+  client: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  scenario: CommunicationScenario,
+  studentId: string | null,
+  customNote: string | null,
+  languagesJson: string,
+  outputsJson: string,
+  createdBy: string,
+): Promise<string> {
+  const rows = await client.queryObject<{ id: string }>(
+    `INSERT INTO intel_communication_drafts (
+       organization_id, school_id, scenario, student_id, custom_note, languages, outputs, created_by
+     ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8)
+     RETURNING id`,
+    [
+      organizationId,
+      schoolId,
+      scenario,
+      studentId,
+      customNote,
+      languagesJson,
+      outputsJson,
+      createdBy,
+    ],
+  );
+  return rows[0]!.id;
+}
+
+/**
+ * Persist a generated parent guidance report (v9.1 Parent Guidance) and
+ * return its new id.
+ */
+export async function insertParentGuidanceReport(
+  client: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  studentId: string,
+  mode: GuidanceMode,
+  language: string,
+  inputsJson: string,
+  reportJson: string,
+  status: string,
+  createdBy: string,
+): Promise<string> {
+  const rows = await client.queryObject<{ id: string }>(
+    `INSERT INTO intel_parent_guidance_reports (
+       organization_id, school_id, student_id, mode, language, inputs, report, status, created_by
+     ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8, $9)
+     RETURNING id`,
+    [
+      organizationId,
+      schoolId,
+      studentId,
+      mode,
+      language,
+      inputsJson,
+      reportJson,
+      status,
+      createdBy,
+    ],
+  );
+  return rows[0]!.id;
+}
+
+/**
+ * Mark a parent guidance report as published. Returns the raw RETURNING rows
+ * (empty when the report id did not match any row) so the caller decides how
+ * to react to a not-found id.
+ */
+export async function publishParentGuidanceReport(
+  client: TenantQueryClient,
+  reportId: string,
+): Promise<Array<{ id: string }>> {
+  return await client.queryObject<{ id: string }>(
+    `UPDATE intel_parent_guidance_reports
+     SET status = 'published', updated_at = timezone('utc', now())
+     WHERE id = $1
+     RETURNING id`,
+    [reportId],
+  );
 }

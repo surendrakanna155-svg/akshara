@@ -11,9 +11,11 @@ import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { listEnvelope } from "../finance/finance_mapper.ts";
 import {
+  getEntityPayloadById,
   getOccupancyMetrics,
   getSnapshot,
   listEntities,
+  listEntityPayloads,
   TransportSnapshotNotFoundError,
 } from "./transport_read_repository.ts";
 import { getMonthlyFuelTrend, getMonthToDateFuel } from "./transport_expenses_repository.ts";
@@ -246,12 +248,7 @@ export async function handleAllocations(req: Request, config: AppConfig): Promis
   try {
     const result = await runTenant(config, auth.claims, async (db) => {
       const page = await listEntities(db, orgId, schoolId, "allocation", pagination);
-      const demandRows = await db.queryObject<{ payload: Record<string, unknown> }>(
-        `SELECT payload FROM transport_entities
-         WHERE organization_id = $1 AND school_id = $2 AND entity_type = 'demand'`,
-        [orgId, schoolId],
-      );
-      const demands = demandRows.map((r) => r.payload);
+      const demands = await listEntityPayloads(db, orgId, schoolId, "demand");
       return { ...page, items: annotateAllocationsWithDemand(page.items, demands) };
     });
     return jsonResponse(
@@ -373,23 +370,12 @@ export async function handleRouteRoster(req: Request, config: AppConfig): Promis
 
   try {
     const roster = await runTenant(config, auth.claims, async (db) => {
-      const routeRows = await db.queryObject<{ payload: Record<string, unknown> }>(
-        `SELECT payload FROM transport_entities
-         WHERE organization_id = $1 AND school_id = $2 AND entity_type = 'route' AND id = $3`,
-        [orgId, schoolId, routeId],
-      );
-      const route = routeRows[0]?.payload ?? null;
+      const route = await getEntityPayloadById(db, orgId, schoolId, "route", routeId);
       if (!route) {
         throw new TransportSnapshotNotFoundError("route");
       }
 
-      const allocRows = await db.queryObject<{ payload: Record<string, unknown> }>(
-        `SELECT payload FROM transport_entities
-         WHERE organization_id = $1 AND school_id = $2 AND entity_type = 'allocation'`,
-        [orgId, schoolId],
-      );
-      const allocations = allocRows
-        .map((r) => r.payload)
+      const allocations = (await listEntityPayloads(db, orgId, schoolId, "allocation"))
         .filter((a) => String(a.routeId ?? "") === routeId);
 
       return buildRoster(route, allocations);

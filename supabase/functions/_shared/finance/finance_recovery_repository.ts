@@ -447,3 +447,57 @@ export async function recoveryAggregates(
   );
   return rows[0]!;
 }
+
+// STF-3 / INT-2 — one open, overdue-eligible fee account (defaulters dashboard).
+export interface DefaulterRow {
+  student_id: string;
+  student_name: string;
+  admission_number: string;
+  class_label: string;
+  outstanding: string;
+  days_overdue: string;
+  fee_account_id: string;
+  guardian_phone: string | null;
+}
+
+/**
+ * List the school's open fee accounts with a positive outstanding balance,
+ * enriched with admission number, class label, aging days and the primary
+ * guardian's phone. Ordered by highest balance, capped at 200.
+ */
+export async function listDefaulterAccounts(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string | null,
+): Promise<DefaulterRow[]> {
+  return await db.queryObject<DefaulterRow>(
+    `SELECT
+        fsa.student_id,
+        COALESCE(s.display_name, 'Student') AS student_name,
+        COALESCE(
+          (SELECT afh.admission_number FROM admissions_fee_handoffs afh
+            WHERE afh.student_id = fsa.student_id
+              AND afh.organization_id = fsa.organization_id LIMIT 1),
+          s.student_code, '') AS admission_number,
+        COALESCE(
+          (SELECT afh.class_label FROM admissions_fee_handoffs afh
+            WHERE afh.student_id = fsa.student_id
+              AND afh.organization_id = fsa.organization_id LIMIT 1),
+          '') AS class_label,
+        COALESCE(fsa.outstanding_amount, 0)::text AS outstanding,
+        fsa.id::text AS fee_account_id,
+        ${overdueDaysSql("fsa.student_id", "fsa.organization_id")}::text AS days_overdue,
+        (SELECT u.phone FROM student_guardians sg
+           JOIN users u ON u.id = sg.guardian_user_id
+          WHERE sg.student_id = fsa.student_id AND u.phone IS NOT NULL
+          ORDER BY sg.is_primary DESC LIMIT 1) AS guardian_phone
+      FROM finance_student_accounts fsa
+      LEFT JOIN students s ON s.id = fsa.student_id
+     WHERE fsa.organization_id = $1 AND fsa.school_id = $2
+       AND fsa.status = 'open'
+       AND fsa.outstanding_amount > 0
+     ORDER BY fsa.outstanding_amount DESC
+     LIMIT 200`,
+    [orgId, schoolId],
+  );
+}

@@ -20,6 +20,7 @@ import {
   createMemoryAlbum,
   createMemoryEvent,
   getMediaByShareToken,
+  getMediaStoragePath,
   getMemoryEvent,
   listAlbumsForEvent,
   listMediaForAlbum,
@@ -390,11 +391,7 @@ export async function handleMemoryMediaDownload(
 
   try {
     const path = await withTenantContext(config, auth.claims, async (db) => {
-      const rows = await db.queryObject<{ storage_path: string }>(
-        `SELECT storage_path FROM school_memory_media WHERE id = $1`,
-        [mediaId],
-      );
-      const p = rows[0]?.storage_path;
+      const p = await getMediaStoragePath(db, mediaId);
       if (!p) throw new Error("Media not found");
       await emitMutationAudit(db, auth.claims, schoolMemoriesAudit.mediaDownloaded(mediaId), req);
       return p;

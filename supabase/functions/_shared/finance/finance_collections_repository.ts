@@ -1094,3 +1094,31 @@ export async function listReceiptsForAccount(
     [studentAccountId, organizationId, schoolId],
   );
 }
+
+/** The guardian phone + student name used for a post-payment receipt SMS. */
+export interface ReceiptSmsRecipient {
+  phone: string;
+  name: string;
+}
+
+/**
+ * Resolve the student's guardian phone + display name for a post-payment
+ * receipt SMS, keyed by the paid invoice. Tenant-scoped via the RLS context on
+ * `db`; returns null when no invoice/guardian with a phone is found.
+ */
+export async function getReceiptSmsRecipient(
+  db: TenantQueryClient,
+  invoiceId: string,
+): Promise<ReceiptSmsRecipient | null> {
+  const rows = await db.queryObject<ReceiptSmsRecipient>(
+    `SELECT u.phone AS phone, s.display_name AS name
+       FROM finance_invoices fi
+       JOIN students s ON s.id = fi.student_id
+       JOIN student_guardians sg ON sg.student_id = s.id
+       JOIN users u ON u.id = sg.guardian_user_id
+      WHERE fi.id = $1 AND u.phone IS NOT NULL
+      LIMIT 1`,
+    [invoiceId],
+  );
+  return rows[0] ?? null;
+}

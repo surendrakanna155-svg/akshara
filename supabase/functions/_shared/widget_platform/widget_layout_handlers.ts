@@ -31,6 +31,12 @@ import {
   WIDGET_DATA_SOURCES,
 } from "./widget_pack_catalog.ts";
 import { resolveSubscription } from "../entitlements/entitlement_service.ts";
+import {
+  getRoleLayoutOverrideRow,
+  insertRoleLayoutOverride,
+  type RoleLayoutOverrideRow,
+  updateRoleLayoutOverride,
+} from "./widget_platform_repository.ts";
 
 const DEFAULT_PACK = "school";
 
@@ -95,32 +101,18 @@ function widgetPlatformError(error: unknown): Response {
   return errorEnvelope("WIDGET_PLATFORM_ERROR", String(error), 500);
 }
 
-interface LayoutRow {
-  id: string;
-  layout: unknown;
-  updated_at: string | null;
-}
-
 async function fetchOverrideRow(
   config: AppConfig,
   claims: Parameters<typeof organizationIdFromClaims>[0],
   orgId: string,
   schoolId: string,
   role: string,
-): Promise<LayoutRow | undefined> {
-  return await withTenantContext(config, claims, async (db) => {
-    const rows = await db.queryObject<LayoutRow>(
-      `SELECT id, layout, updated_at FROM dashboard_layouts
-       WHERE organization_id = $1 AND school_id = $2
-         AND owner_user_id IS NULL AND dashboard_key = $3
-       LIMIT 1`,
-      [orgId, schoolId, roleKey(role)],
-    );
-    return rows[0];
-  });
+): Promise<RoleLayoutOverrideRow | undefined> {
+  return await withTenantContext(config, claims, async (db) =>
+    getRoleLayoutOverrideRow(db, orgId, schoolId, roleKey(role)));
 }
 
-function storedLayout(row: LayoutRow | undefined): RoleDashboardLayoutDef | null {
+function storedLayout(row: RoleLayoutOverrideRow | undefined): RoleDashboardLayoutDef | null {
   if (!row?.layout || typeof row.layout !== "object") return null;
   return row.layout as RoleDashboardLayoutDef;
 }
@@ -241,23 +233,21 @@ export async function handleSaveRoleLayout(
     await withTenantContext(config, auth.claims, async (db) => {
       // erp_tenant has no DELETE on dashboard_layouts, and a NULL owner_user_id
       // never trips the UNIQUE constraint, so upsert by UPDATE-first/INSERT-fallback.
-      const updated = await db.queryObject<{ id: string }>(
-        `UPDATE dashboard_layouts
-            SET layout = $4::jsonb, updated_at = timezone('utc', now())
-          WHERE organization_id = $1 AND school_id = $2
-            AND owner_user_id IS NULL AND dashboard_key = $3
-          RETURNING id`,
-        [orgId, schoolId, roleKey(role), JSON.stringify(saved)],
+      let id = await updateRoleLayoutOverride(
+        db,
+        orgId,
+        schoolId,
+        roleKey(role),
+        JSON.stringify(saved),
       );
-      let id = updated[0]?.id;
       if (!id) {
-        const inserted = await db.queryObject<{ id: string }>(
-          `INSERT INTO dashboard_layouts (organization_id, school_id, owner_user_id, dashboard_key, layout)
-           VALUES ($1, $2, NULL, $3, $4::jsonb)
-           RETURNING id`,
-          [orgId, schoolId, roleKey(role), JSON.stringify(saved)],
+        id = await insertRoleLayoutOverride(
+          db,
+          orgId,
+          schoolId,
+          roleKey(role),
+          JSON.stringify(saved),
         );
-        id = inserted[0]!.id;
       }
       await emitMutationAudit(db, auth.claims, widgetPlatformAudit.roleLayoutSaved(role, id), req);
     });
@@ -289,16 +279,14 @@ export async function handleResetRoleLayout(
     await withTenantContext(config, auth.claims, async (db) => {
       // No DELETE grant — clear the override by rewriting the row to the pack
       // default (isTenantOverride=false, version reset). No row → nothing to clear.
-      const rows = await db.queryObject<{ id: string }>(
-        `UPDATE dashboard_layouts
-            SET layout = $4::jsonb, updated_at = timezone('utc', now())
-          WHERE organization_id = $1 AND school_id = $2
-            AND owner_user_id IS NULL AND dashboard_key = $3
-          RETURNING id`,
-        [orgId, schoolId, roleKey(role), JSON.stringify(def)],
+      const id = await updateRoleLayoutOverride(
+        db,
+        orgId,
+        schoolId,
+        roleKey(role),
+        JSON.stringify(def),
       );
       // SEC-5 — audit the override clear (only when a row was actually rewritten).
-      const id = rows[0]?.id;
       if (id) {
         await emitMutationAudit(db, auth.claims, {
           audit: {

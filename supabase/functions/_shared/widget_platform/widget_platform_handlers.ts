@@ -12,6 +12,11 @@ import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { emitMutationAudit, widgetPlatformAudit } from "../audit/mutation_audit_catalog.ts";
 import { DEFAULT_WIDGET_LAYOUT, type DashboardWidgetPlacement } from "./widget_platform_service.ts";
 import { buildWidgetData, invalidateWidgetCache } from "./widget_data_service.ts";
+import {
+  getDashboardLayoutRow,
+  listActiveWidgetsFromRegistry,
+  upsertDashboardLayout,
+} from "./widget_platform_repository.ts";
 
 export async function handleListWidgets(req: Request, config: AppConfig): Promise<Response> {
   const auth = await authenticateRequest(req, config);
@@ -22,16 +27,7 @@ export async function handleListWidgets(req: Request, config: AppConfig): Promis
 
   try {
     const items = await withTenantContext(config, auth.claims, async (db) => {
-      return await db.queryObject<{
-        id: string;
-        title: string;
-        category: string;
-        required_permission: string;
-        description: string | null;
-        default_width: number;
-        default_height: number;
-      }>(`SELECT id, title, category, required_permission, description, default_width, default_height
-          FROM widget_registry WHERE is_active = true ORDER BY category, title`);
+      return await listActiveWidgetsFromRegistry(db);
     });
     return jsonResponse(envelope({
       items: items.map((w) => ({
@@ -63,18 +59,8 @@ export async function handleGetDashboardLayout(req: Request, config: AppConfig):
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const row = await withTenantContext(config, auth.claims, async (db) => {
-      const rows = await db.queryObject<{ id: string; layout: unknown }>(
-        `SELECT id, layout FROM dashboard_layouts
-         WHERE organization_id = $1 AND school_id = $2
-           AND (owner_user_id = $3 OR owner_user_id IS NULL)
-           AND dashboard_key = $4
-         ORDER BY owner_user_id NULLS LAST
-         LIMIT 1`,
-        [orgId, schoolId, auth.claims.sub, dashboardKey],
-      );
-      return rows[0];
-    });
+    const row = await withTenantContext(config, auth.claims, async (db) =>
+      getDashboardLayoutRow(db, orgId, schoolId, auth.claims.sub, dashboardKey));
     const layout = (row?.layout as DashboardWidgetPlacement[] | undefined) ?? DEFAULT_WIDGET_LAYOUT;
     return jsonResponse(envelope({ id: row?.id ?? null, dashboardKey, layout }));
   } catch (error) {
@@ -102,16 +88,16 @@ export async function handleSaveDashboardLayout(req: Request, config: AppConfig)
 
   try {
     const id = await withTenantContext(config, auth.claims, async (db) => {
-      const rows = await db.queryObject<{ id: string }>(
-        `INSERT INTO dashboard_layouts (organization_id, school_id, owner_user_id, dashboard_key, layout)
-         VALUES ($1, $2, $3, $4, $5::jsonb)
-         ON CONFLICT (organization_id, school_id, owner_user_id, dashboard_key)
-         DO UPDATE SET layout = EXCLUDED.layout, updated_at = timezone('utc', now())
-         RETURNING id`,
-        [orgId, schoolId, auth.claims.sub, dashboardKey, JSON.stringify(body.layout)],
+      const layoutId = await upsertDashboardLayout(
+        db,
+        orgId,
+        schoolId,
+        auth.claims.sub,
+        dashboardKey,
+        JSON.stringify(body.layout),
       );
-      await emitMutationAudit(db, auth.claims, widgetPlatformAudit.layoutSaved(rows[0]!.id), req);
-      return rows[0]!.id;
+      await emitMutationAudit(db, auth.claims, widgetPlatformAudit.layoutSaved(layoutId), req);
+      return layoutId;
     });
     return jsonResponse(envelope({ id, dashboardKey, layout: body.layout }));
   } catch (error) {

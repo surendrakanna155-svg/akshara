@@ -2803,3 +2803,31 @@ export async function loadSeatingPlan(
   }
   return { examId, roomCapacity: DEFAULT_SEATING_ROOM_CAPACITY, rooms };
 }
+
+export interface ResultsPublishedSmsTargetRow {
+  phone: string;
+  name: string;
+  exam_title: string;
+}
+
+/**
+ * Guardians (with phone numbers) of students whose marks were published for
+ * a given exam — used to fan out the "results published" transactional SMS.
+ */
+export async function listResultsPublishedSmsTargets(
+  db: TenantQueryClient,
+  examId: string,
+): Promise<ResultsPublishedSmsTargetRow[]> {
+  return await db.queryObject<ResultsPublishedSmsTargetRow>(
+    `SELECT u.phone AS phone, s.display_name AS name, es.title AS exam_title
+       FROM exam_mark_entries m
+       JOIN exam_sessions es ON es.id = m.exam_id
+        AND es.organization_id = m.organization_id
+        AND es.school_id = m.school_id
+       JOIN students s ON s.id = m.student_id
+       JOIN student_guardians sg ON sg.student_id = s.id
+       JOIN users u ON u.id = sg.guardian_user_id
+      WHERE m.exam_id = $1 AND m.published = true AND u.phone IS NOT NULL`,
+    [examId],
+  );
+}
