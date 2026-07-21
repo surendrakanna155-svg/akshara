@@ -100,49 +100,85 @@ class CertificationRuleChar(unittest.TestCase):
         }
         CO.ingest(conn, "R", [item], "gen", "b1")
         cid = CO._cid("R", spec_id)
-        # certify_run now requires a gate battery bound to the candidate's CURRENT content (R1-2). This suite
-        # pins the promotion MATRIX (ind + judge outcomes), not the gate battery, so seed one passing gate row.
+        # certify_run requires a gate battery bound to the candidate's CURRENT content (R1-2). This suite pins
+        # the promotion MATRIX (ind + judge outcomes), not the gate battery, so seed one passing gate row.
         CO.record_gates(conn, cid, [{"gate": "schema", "ok": True, "severity": G.FATAL, "detail": "seed"}])
         return cid
+
+    def _seed_solution_stage(self, conn, cid, solution=True, distractor=True):
+        """R2-2: seed the solution_verified + distractor_verified gates (content-bound) so the matrix can
+        isolate the ind/judge dimensions above the mandatory solution stage."""
+        gs = []
+        if solution:
+            gs.append({"gate": "solution_verified", "ok": True, "severity": G.FATAL, "detail": "seed"})
+        if distractor:
+            gs.append({"gate": "distractor_verified", "ok": True, "severity": G.FATAL, "detail": "seed"})
+        if gs:
+            CO.record_gates(conn, cid, gs)
 
     def _status(self, conn, cid):
         return conn.execute("SELECT status FROM candidate WHERE candidate_id=?", (cid,)).fetchone()[0]
 
     def test_promotion_matrix(self):
+        """The R2 promotion ladder: gates -> solution -> distractor -> independent -> cross-family judge.
+        'gen' is the candidates' generator family; a judge_family != 'gen' is cross-family (R2-1)."""
         conn = CO.open_store(":memory:")
         try:
-            # 1. structured + judge accept + independent agree -> CERTIFIED
+            # 1. full R2 evidence + independent agree + CROSS-FAMILY judge accept -> CERTIFIED (product-visible)
             c1 = self._seed(conn, "SPEC_a", "STRUCTURED_NUMERIC")
-            CO.record_independent(conn, c1, "sympy", "2", "2", "agree", "")
-            CO.record_judge(conn, c1, "judge", True, {"verdict": "accept"})
-            # 2. structured + judge accept + independent disagree -> QUARANTINED (held_no_independent)
+            self._seed_solution_stage(conn, c1)
+            CO.record_independent(conn, c1, "sympy", "1", "1", "agree", "")
+            CO.record_judge(conn, c1, "judge", True, {"verdict": "accept"}, judge_family="human-review")
+            # 2. full R2 evidence + independent agree + SAME-FAMILY judge -> PROVISIONAL (product-invisible)
             c2 = self._seed(conn, "SPEC_b", "STRUCTURED_NUMERIC")
-            CO.record_independent(conn, c2, "sympy", "9", "2", "disagree", "")
-            CO.record_judge(conn, c2, "judge", True, {"verdict": "accept"})
-            # 3. judge reject -> REJECTED (even with independent agree)
+            self._seed_solution_stage(conn, c2)
+            CO.record_independent(conn, c2, "sympy", "1", "1", "agree", "")
+            CO.record_judge(conn, c2, "judge", False, {"verdict": "accept"}, judge_family="gen")
+            # 3. full evidence but independent DISAGREE -> QUARANTINED (held_no_independent)
             c3 = self._seed(conn, "SPEC_c", "STRUCTURED_NUMERIC")
-            CO.record_independent(conn, c3, "sympy", "2", "2", "agree", "")
-            CO.record_judge(conn, c3, "judge", True, {"verdict": "reject"})
-            # 4. qualitative + judge accept + NO independent -> QUARANTINED (awaiting_independent_evidence)
-            c4 = self._seed(conn, "SPEC_d", "QUALITATIVE")
-            CO.record_judge(conn, c4, "judge", False, {"verdict": "accept"})
-            # 5. judge missing -> skipped, stays CANDIDATE
+            self._seed_solution_stage(conn, c3)
+            CO.record_independent(conn, c3, "sympy", "9", "1", "disagree", "")
+            CO.record_judge(conn, c3, "judge", True, {"verdict": "accept"}, judge_family="human-review")
+            # 4. NO solution stage -> QUARANTINED (held_no_solution), before the independent check is reached
+            c4 = self._seed(conn, "SPEC_d", "STRUCTURED_NUMERIC")
+            CO.record_independent(conn, c4, "sympy", "1", "1", "agree", "")
+            CO.record_judge(conn, c4, "judge", True, {"verdict": "accept"}, judge_family="human-review")
+            # 5. solution but NO distractor gate -> QUARANTINED (held_no_distractors)
             c5 = self._seed(conn, "SPEC_e", "STRUCTURED_NUMERIC")
-            CO.record_independent(conn, c5, "sympy", "2", "2", "agree", "")
+            self._seed_solution_stage(conn, c5, distractor=False)
+            CO.record_independent(conn, c5, "sympy", "1", "1", "agree", "")
+            CO.record_judge(conn, c5, "judge", True, {"verdict": "accept"}, judge_family="human-review")
+            # 6. judge reject -> REJECTED (before any R2 leg)
+            c6 = self._seed(conn, "SPEC_f", "STRUCTURED_NUMERIC")
+            self._seed_solution_stage(conn, c6)
+            CO.record_independent(conn, c6, "sympy", "1", "1", "agree", "")
+            CO.record_judge(conn, c6, "judge", True, {"verdict": "reject"}, judge_family="human-review")
+            # 7. judge missing -> skipped, stays CANDIDATE
+            c7 = self._seed(conn, "SPEC_g", "STRUCTURED_NUMERIC")
+            self._seed_solution_stage(conn, c7)
+            CO.record_independent(conn, c7, "sympy", "1", "1", "agree", "")
 
             m = CERT.certify_run(conn, "R")
             self.assertEqual(m["certified"], 1)
+            self.assertEqual(m["provisional_same_actor"], 1)
+            self.assertEqual(m["held_no_independent"], 1)
+            self.assertEqual(m["held_no_solution"], 1)
+            self.assertEqual(m["held_no_distractors"], 1)
             self.assertEqual(m["judge_rejected"], 1)
-            self.assertEqual(m["held_no_independent"], 2)  # disagree + no-independent both parked
             self.assertEqual(m["judge_missing"], 1)
 
             self.assertEqual(self._status(conn, c1), CO.CERTIFIED)
-            self.assertEqual(self._status(conn, c2), CO.QUARANTINED)
-            self.assertEqual(self._status(conn, c3), CO.REJECTED)
+            self.assertEqual(self._status(conn, c2), CO.CERTIFIED)          # status certified...
+            self.assertEqual(conn.execute("SELECT certification_class FROM candidate WHERE candidate_id=?",
+                                          (c2,)).fetchone()[0], CO.CERT_PROVISIONAL)  # ...but provisional
+            self.assertEqual(self._status(conn, c3), CO.QUARANTINED)
             self.assertEqual(self._status(conn, c4), CO.QUARANTINED)
-            self.assertEqual(self._status(conn, c5), CO.CANDIDATE)
+            self.assertEqual(self._status(conn, c5), CO.QUARANTINED)
+            self.assertEqual(self._status(conn, c6), CO.REJECTED)
+            self.assertEqual(self._status(conn, c7), CO.CANDIDATE)
 
-            # the quarantine boundary: only CERTIFIED is ever product-visible
+            # the quarantine boundary: only the FULL (cross-family) certification is product-visible; the
+            # provisional same-actor row (c2) is not.
             inv = CO.product_inventory(conn, "R")
             self.assertEqual({r["candidate_id"] for r in inv}, {c1})
         finally:

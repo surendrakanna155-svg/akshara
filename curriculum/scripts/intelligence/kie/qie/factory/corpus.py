@@ -20,12 +20,36 @@ from kie import config
 from kie.qie.factory.gates import item_hash, norm_hash
 
 SCHEMA_PATH = Path(__file__).resolve().parent / "corpus_schema.sql"
-SCHEMA_VERSION = "factory-2"          # R1-2: append-only, content-bound certification records
+SCHEMA_VERSION = "factory-3"          # R2: certification hardening (solution+distractor gates, independence,
+                                      # replay) — additive over factory-2 (R1-2 append-only, content-bound)
 CORPUS_DB_PATH = config.KIE_HOME / "factory_corpus.db"
 
 # The lifecycle. Only CERTIFIED may ever be promoted to product inventory.
 CANDIDATE, QUARANTINED, REJECTED, CERTIFIED = "candidate", "quarantined", "rejected", "certified"
+
+# The certification CLASS (factory-3, R2-1) is orthogonal to the lifecycle STATUS: it records HOW a certified
+# row earned its promotion, so a same-actor review can be labelled provisional without inventing a new status
+# (which would disturb R1's guarded transitions). Only status=CERTIFIED + certification_class=CERT_CERTIFIED is
+# product-visible; CERT_PROVISIONAL (same-actor review) is deliberately invisible until a cross-family reviewer
+# disposes it in a fresh run.
+CERT_CERTIFIED, CERT_PROVISIONAL = "certified", "provisional"
+# evidence_class values. The factory lane ALWAYS earns 'sympy_rederived' (a non-model re-derivation via
+# independent_solve); the other two are reserved for the knowledge/OCR lane and are never stamped here.
+EVIDENCE_SYMPY, EVIDENCE_MODEL_OWNED, EVIDENCE_SOURCE = (
+    "sympy_rederived", "model_agreed_on_owned_evidence", "source_proven")
 PRODUCT_VISIBLE = (CERTIFIED,)
+
+
+def actor_family(model: str) -> str:
+    """The ACTOR FAMILY behind a model/role label — the unit of proposer/certifier independence (R2-1).
+
+    Independence is a property of WHO produced the artifact, not of the role name it was given. Absent an
+    explicit family, we fall back to the model string itself, and — critically — a judge with no declared family
+    defaults to the CANDIDATE'S generator family (see judge.ingest), so 'generator-agent' and 'judge-agent'
+    (today's code defaults, the SAME orchestrator wearing two hats) are treated as one family and can never
+    satisfy the cross-family certification gate. A genuinely different actor must assert its family explicitly.
+    """
+    return (str(model or "").strip()) or "unknown"
 
 
 class CorpusIntegrityError(Exception):
@@ -54,7 +78,8 @@ def open_store(db_path=None) -> sqlite3.Connection:
     # Upgrade an existing factory-1 store to the append-only shape BEFORE the schema script runs: the _latest
     # views reference the new id/item_hash columns, so the evidence tables must already be new-shape when the
     # view DDL validates. On a fresh DB this is a no-op (no tables yet) and the schema creates everything.
-    migrate_appendonly(conn)
+    migrate_appendonly(conn)                      # factory-1 -> factory-2 (table rebuild)
+    migrate_r2(conn)                              # factory-2 -> factory-3 (additive ADD COLUMN; R2)
     conn.executescript(SCHEMA_PATH.read_text())
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("INSERT INTO factory_meta(key, value) VALUES ('schema_version', ?) "
@@ -100,13 +125,19 @@ def _guard_ingest(conn: sqlite3.Connection, run_id: str, sid: str) -> None:
 
 
 def ingest(conn: sqlite3.Connection, run_id: str, raw_items: Iterable[dict], generator_model: str,
-           batch: str) -> dict:
+           batch: str, generator_family: str = None) -> dict:
     """Ingest raw generator output. Records EVERYTHING — including refusals and malformed payloads — because
     the trial must measure the generator's real behaviour, not a cleaned-up version of it.
 
     Fails CLOSED (R1-2): a plain INSERT, guarded by _guard_ingest, so re-ingesting different content over an
     existing candidate (certified or otherwise) raises CorpusIntegrityError instead of silently overwriting.
+
+    `generator_family` (R2-1) is the proposer's actor family, stamped now so certification can structurally
+    reject a same-actor audit later. When a caller does not declare one (the current run_generation default), it
+    falls back to the generator_model — so an independence claim later requires a DIFFERENT family to be
+    asserted explicitly, never inferred.
     """
+    gen_family = actor_family(generator_family or generator_model)
     m = {"ingested": 0, "refused": 0, "malformed": 0, "unknown_spec": 0}
     known = {r["spec_id"] for r in conn.execute("SELECT spec_id FROM generation_spec WHERE run_id=?", (run_id,))}
     for it in raw_items:
@@ -121,10 +152,10 @@ def ingest(conn: sqlite3.Connection, run_id: str, raw_items: Iterable[dict], gen
         _guard_ingest(conn, run_id, sid)
         if it.get("refuse"):
             conn.execute(
-                "INSERT INTO candidate (candidate_id, run_id, spec_id, generator_model, "
+                "INSERT INTO candidate (candidate_id, run_id, spec_id, generator_model, generator_family, "
                 "generator_batch, stem, options, answer_label, status, reject_reason, raw, created_at) "
-                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-                (cid, run_id, sid, generator_model, batch, "", "{}", None, REJECTED,
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (cid, run_id, sid, generator_model, gen_family, batch, "", "{}", None, REJECTED,
                  f"generator_refused: {it.get('reason', '')}"[:400], json.dumps(it), _now()))
             m["refused"] += 1
             continue
@@ -132,11 +163,11 @@ def ingest(conn: sqlite3.Connection, run_id: str, raw_items: Iterable[dict], gen
         options = it.get("options") or {}
         ans = it.get("answer_label")
         conn.execute(
-            "INSERT INTO candidate (candidate_id, run_id, spec_id, generator_model, "
+            "INSERT INTO candidate (candidate_id, run_id, spec_id, generator_model, generator_family, "
             "generator_batch, stem, options, answer_label, answer_value, claimed, structure, solution, "
             "distractor_rationale, visual_spec, raw, status, item_hash, stem_norm_hash, created_at) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-            (cid, run_id, sid, generator_model, batch, stem, json.dumps(options), ans,
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (cid, run_id, sid, generator_model, gen_family, batch, stem, json.dumps(options), ans,
              str(it.get("answer_value") or ""), json.dumps(it.get("claimed") or {}),
              json.dumps(it.get("structure") or {}), json.dumps(it.get("solution") or {}),
              json.dumps(it.get("distractor_rationale") or {}),
@@ -180,6 +211,28 @@ def set_status(conn: sqlite3.Connection, candidate_id: str, status: str, reason:
             f"(rowcount={cur.rowcount}) — refusing to overwrite a moved/certified row")
 
 
+def mark_certified(conn: sqlite3.Connection, candidate_id: str, evidence_class: str, certification_class: str,
+                   reason: str = "", earned_depth: int = None, computed_archetype: str = None,
+                   expected: str = CANDIDATE) -> None:
+    """Promote a candidate to status=CERTIFIED and stamp the R2 certification metadata in ONE guarded write.
+
+    Keeps R1's money-integrity contract: the UPDATE is conditioned on the row still being `expected`
+    (default CANDIDATE) and MUST touch exactly one row, so a certified/already-moved row throws instead of being
+    silently re-stamped. `certification_class` is CERT_CERTIFIED (product-visible) or CERT_PROVISIONAL
+    (same-actor review — deliberately product-invisible). `earned_depth`/`computed_archetype` are the values the
+    factory EARNED by executing the DAG and classifying the stem (R2-4), stored so downstream reads the honest
+    number/label, never a refuted generator claim."""
+    cur = conn.execute(
+        "UPDATE candidate SET status=?, reject_reason=?, evidence_class=?, certification_class=?, "
+        "earned_depth=?, computed_archetype=? WHERE candidate_id=? AND status=?",
+        (CERTIFIED, reason[:400], evidence_class, certification_class,
+         earned_depth, computed_archetype, candidate_id, expected))
+    if cur.rowcount != 1:
+        raise CorpusIntegrityError(
+            f"mark_certified blocked: {candidate_id} not in expected state {expected!r} "
+            f"(rowcount={cur.rowcount}) — refusing to overwrite a moved/certified row")
+
+
 def record_independent(conn: sqlite3.Connection, candidate_id: str, method: str, solver_answer,
                        generator_answer, verdict: str, detail: str) -> None:
     ih = _current_item_hash(conn, candidate_id)
@@ -190,14 +243,18 @@ def record_independent(conn: sqlite3.Connection, candidate_id: str, method: str,
 
 
 def record_judge(conn: sqlite3.Connection, candidate_id: str, judge_model: str, independent: bool,
-                 v: dict) -> None:
+                 v: dict, judge_family: str = None) -> None:
+    """Append a judge verdict. `judge_family` (R2-1) records the disposing reviewer's actor family so
+    certification can RE-DERIVE independence (judge_family != generator_family) rather than trust the stored
+    `independent` flag alone. judge.ingest computes `independent` from the families and passes both here; direct
+    callers that pass only `independent` leave judge_family NULL (which certify treats as NOT cross-family)."""
     ih = _current_item_hash(conn, candidate_id)
     conn.execute(
-        "INSERT INTO judge_verdict (candidate_id, item_hash, judge_model, independent, verdict, well_posed, "
-        "curriculum_ok, answer_correct, unique_answer, concepts_real, composition_real, "
+        "INSERT INTO judge_verdict (candidate_id, item_hash, judge_model, judge_family, independent, verdict, "
+        "well_posed, curriculum_ok, answer_correct, unique_answer, concepts_real, composition_real, "
         "difficulty_plausible, distractors_plausible, visual_judgement, reasons, checked_at) "
-        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-        (candidate_id, ih, judge_model, int(independent), v.get("verdict", "quarantine"),
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (candidate_id, ih, judge_model, judge_family, int(independent), v.get("verdict", "quarantine"),
          _b(v.get("well_posed")), _b(v.get("curriculum_ok")), _b(v.get("answer_correct")),
          _b(v.get("unique_answer")), _b(v.get("concepts_real")), _b(v.get("composition_real")),
          _b(v.get("difficulty_plausible")), _b(v.get("distractors_plausible")),
@@ -219,10 +276,15 @@ def telemetry(conn: sqlite3.Connection, run_id: str, stage: str, model: str, **k
 
 def product_inventory(conn: sqlite3.Connection, run_id: str) -> List[sqlite3.Row]:
     """The ONLY function any product surface may ever call. Certified rows exclusively — the quarantine
-    boundary expressed as code rather than as a convention someone has to remember."""
+    boundary expressed as code rather than as a convention someone has to remember.
+
+    R2-1 tightens the gate: a row is product-visible only when status=CERTIFIED AND certification_class marks it
+    a full (cross-family) certification. A CERT_PROVISIONAL row (same-actor review) and any legacy row that
+    predates the R2 gates (certification_class NULL) are STRUCTURALLY excluded here — they can never reach a
+    student surface, no matter their lifecycle status."""
     return conn.execute(
-        f"SELECT * FROM candidate WHERE run_id=? AND status IN ({','.join('?' * len(PRODUCT_VISIBLE))})",
-        (run_id, *PRODUCT_VISIBLE)).fetchall()
+        "SELECT * FROM candidate WHERE run_id=? AND status=? AND certification_class=?",
+        (run_id, CERTIFIED, CERT_CERTIFIED)).fetchall()
 
 
 # ── in-place schema migration: factory-1 → factory-2 (append-only, content-bound) ────────────────────
@@ -337,6 +399,45 @@ def migrate_appendonly(conn: sqlite3.Connection) -> bool:
     return changed
 
 
+# ── in-place schema migration: factory-2 → factory-3 (R2 certification hardening) ─────────────────────
+# PURELY ADDITIVE columns — no table rebuild, no AUTOINCREMENT disturbance, no view change. Idempotent (each
+# ALTER guarded by _has_col). Called by open_store right after migrate_appendonly, and standalone via
+# kie.qie.remediation.migrate_factory_r2 against an existing DB. NEVER promotes/demotes: a legacy certified row
+# simply acquires NULL evidence_class/certification_class and therefore falls OUT of product_inventory until it
+# is re-certified under the R2 gates — the intended R0-2 quarantine-by-construction, not a status change.
+_R2_CANDIDATE_COLS = (
+    ("generator_family", "ALTER TABLE candidate ADD COLUMN generator_family TEXT"),
+    ("evidence_class", "ALTER TABLE candidate ADD COLUMN evidence_class TEXT"),
+    ("certification_class", "ALTER TABLE candidate ADD COLUMN certification_class TEXT"),
+    ("earned_depth", "ALTER TABLE candidate ADD COLUMN earned_depth INTEGER"),
+    ("computed_archetype", "ALTER TABLE candidate ADD COLUMN computed_archetype TEXT"),
+)
+
+
+def migrate_r2(conn: sqlite3.Connection) -> bool:
+    """Idempotent factory-2 → factory-3 additive upgrade. Returns True if anything changed. No-op on a fresh DB
+    (tables not yet created — the schema script births them factory-3) and on an already-migrated DB."""
+    changed = False
+    if _table_exists(conn, "candidate"):
+        for col, ddl in _R2_CANDIDATE_COLS:
+            if not _has_col(conn, "candidate", col):
+                conn.execute(ddl)
+                changed = True
+        # Backfill the proposer's actor family from the recorded generator_model where absent — so an existing
+        # row has a family to compare a future cross-family judge against. Never touches evidence/certification
+        # class (those stay NULL => product-invisible until re-certified).
+        if _has_col(conn, "candidate", "generator_family") and _has_col(conn, "candidate", "generator_model"):
+            conn.execute("UPDATE candidate SET generator_family = generator_model "
+                         "WHERE (generator_family IS NULL OR generator_family='') "
+                         "AND generator_model IS NOT NULL")
+    if _table_exists(conn, "judge_verdict") and not _has_col(conn, "judge_verdict", "judge_family"):
+        conn.execute("ALTER TABLE judge_verdict ADD COLUMN judge_family TEXT")
+        changed = True
+    if changed:
+        conn.commit()
+    return changed
+
+
 def _status_counts(conn: sqlite3.Connection) -> Dict[str, int]:
     if not _table_exists(conn, "candidate"):
         return {}
@@ -356,7 +457,8 @@ def migrate_db(db_path) -> dict:
     conn.row_factory = sqlite3.Row
     try:
         before = _status_counts(conn)
-        changed = migrate_appendonly(conn)
+        changed = migrate_appendonly(conn)                    # factory-1 -> factory-2 (table rebuild)
+        changed = migrate_r2(conn) or changed                 # factory-2 -> factory-3 (additive; R2)
         conn.executescript(SCHEMA_PATH.read_text())           # create views/indexes; bump nothing it already has
         conn.execute("PRAGMA foreign_keys = ON")
         conn.execute("INSERT INTO factory_meta(key, value) VALUES ('schema_version', ?) "

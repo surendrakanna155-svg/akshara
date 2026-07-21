@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import List, Tuple
 
 from kie.qie.factory import gates as G
+from kie.qie.factory import judge as JUDGE
 
 
 class ControlBreach(Exception):
@@ -180,6 +181,65 @@ def check_notation_controls() -> dict:
     return {"notation_controls": len(results), "all_ok": True, "results": results}
 
 
+# ── R2-2 distractor gate controls: must-catch a bad mis_relation, must-not-cry-wolf on legit ones ──
+# givens F=12, m=3, solve a=F/m=4 (option b). The three wrong options are each REACHABLE by a named mistake:
+#   a = F*m = 36 ;  a = m/F = 0.25 ;  a = F - m = 9.  Any mis_relation that does NOT compute its option must be
+# refused; the honest 'uncertifiable' escape must be honored.
+_DISTRACTOR_STRUCT = {"givens": {"F": {"value": 12}, "m": {"value": 3}, "a": {"value": None}}, "solve_for": "a"}
+_DISTRACTOR_OPTS = {"a": "36", "b": "4", "c": "0.25", "d": "9"}
+_DISTRACTOR_GOOD = {"a": {"misconception": "multiplied instead of divided", "mis_relation": "a = F*m"},
+                    "c": {"misconception": "inverted the ratio", "mis_relation": "a = m/F"},
+                    "d": {"misconception": "subtracted the mass", "mis_relation": "a = F - m"}}
+
+
+def check_distractor_controls() -> dict:
+    """The deterministic distractor gate must PROVE each wrong option, catch a fabricated rationale, and honor
+    the uncertifiable escape. A gate that verifies a mis_relation which does not compute the option would let a
+    plausible-looking decoy pass as evidence (R2-2)."""
+    # 1. MUST-CATCH: a declared mis_relation that does NOT compute its option (F+m=15, not 36) — plus the two
+    #    undeclared wrong options — must make the gate fail; a fabricated rationale is not evidence.
+    bad = {"a": {"misconception": "guessed", "mis_relation": "a = F + m"}}
+    if G.verify_distractors(_DISTRACTOR_STRUCT, _DISTRACTOR_OPTS, "b", bad)["ok"]:
+        raise ControlBreach("distractor gate ACCEPTED a mis_relation that does not compute its option — a "
+                            "plausible-but-wrong rationale passed as evidence.")
+    # 2. MUST-NOT-CRY-WOLF: legit mis_relations that each compute their option must all verify.
+    good = G.verify_distractors(_DISTRACTOR_STRUCT, _DISTRACTOR_OPTS, "b", _DISTRACTOR_GOOD)
+    if not good["ok"]:
+        raise ControlBreach(f"distractor gate FALSE-REJECTED legit mis_relations: {good['unverified']}")
+    # 3. the honest escape: an option listed uncertifiable is not required to compute.
+    esc = G.verify_distractors(_DISTRACTOR_STRUCT, _DISTRACTOR_OPTS, "b",
+                               {"a": _DISTRACTOR_GOOD["a"], "c": _DISTRACTOR_GOOD["c"]}, uncertifiable=["d"])
+    if not esc["ok"]:
+        raise ControlBreach("distractor gate did NOT honor distractor_uncertifiable for an unnameable decoy.")
+    return {"distractor_controls": 3, "all_ok": True}
+
+
+def check_judge_controls() -> dict:
+    """The seeded known-bad JUDGE controls must ABORT the pass when the judge accepts a planted bad item, PASS
+    when it catches them, and ABORT when a control is skipped entirely (R2-1). Mirrors the deterministic
+    controls-before-batch discipline, extended to the AI judge."""
+    plants = JUDGE.judge_control_items()
+    # (a) judge accepts every planted bad item -> must raise
+    accepted = {c["candidate_id"]: {"candidate_id": c["candidate_id"], "verdict": "accept"} for c in plants}
+    try:
+        JUDGE.check_judge_controls(accepted)
+    except JUDGE.JudgeControlBreach:
+        pass
+    else:
+        raise ControlBreach("judge controls did NOT abort when the judge accepted every planted bad item.")
+    # (b) judge rejects/quarantines them -> must NOT raise
+    caught = {c["candidate_id"]: {"candidate_id": c["candidate_id"], "verdict": "reject"} for c in plants}
+    JUDGE.check_judge_controls(caught)
+    # (c) a skipped control -> must raise (a judge cannot silently drop a planted item)
+    try:
+        JUDGE.check_judge_controls({})
+    except JUDGE.JudgeControlBreach:
+        pass
+    else:
+        raise ControlBreach("judge controls did NOT abort when planted control items were skipped.")
+    return {"judge_control_harness": len(plants), "all_ok": True}
+
+
 def check_controls(ctx: dict) -> dict:
     """Run every control. Raise ControlBreach on the first one the battery fails to catch."""
     results = []
@@ -226,5 +286,11 @@ def check_controls(ctx: dict) -> dict:
                 f"order-swapped legit relation 'F = a*m' was NOT grounded — grounding is over-tight and would "
                 f"false-quarantine rearrangements: {rg.get('detail')!r}")
 
+    # R2 must-catch controls run in the SAME pre-batch pass as the deterministic battery: the distractor gate
+    # (R2-2) and the seeded judge controls (R2-1) must each prove they can fail a known-bad before any real
+    # candidate is certified. Either raises ControlBreach on a hole.
+    dctl = check_distractor_controls()
+    jctl = check_judge_controls()
+
     return {"controls_run": len(results), "all_caught": True, "results": results,
-            "good_control_survives": True}
+            "good_control_survives": True, "distractor_controls": dctl, "judge_controls": jctl}

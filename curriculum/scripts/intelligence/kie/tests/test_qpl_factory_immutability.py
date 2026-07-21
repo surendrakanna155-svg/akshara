@@ -37,12 +37,20 @@ def _item(spec_id="S1", stem="An object of mass 3 kg moves at 4 m/s. Find its mo
 
 def _seed_full_evidence(conn, cid, agree=True, judge="accept"):
     """Record a passing gate battery + independent + judge, all content-stamped to the candidate's CURRENT
-    item_hash (that is what record_* does). Mirrors a real verify+judge pass without any model call."""
-    CO.record_gates(conn, cid, [{"gate": "schema", "ok": True, "severity": G.FATAL, "detail": ""},
-                                {"gate": "dimensional", "ok": True, "severity": G.QUARANTINE, "detail": ""}])
+    item_hash (that is what record_* does). Mirrors a real verify+judge pass without any model call.
+
+    R2 raised the certification bar, so 'full evidence' now also seeds the solution_verified + distractor_verified
+    gates (R2-2) and a CROSS-FAMILY judge (judge_family != the candidate's generator_model 'gen', R2-1). The R1
+    INVARIANTS being asserted (immutability, append-only, stale-evidence-refused, guarded transitions) are
+    unchanged — only the fabricated 'certifiable' fixture is updated to the current bar."""
+    CO.record_gates(conn, cid, [
+        {"gate": "schema", "ok": True, "severity": G.FATAL, "detail": ""},
+        {"gate": "dimensional", "ok": True, "severity": G.QUARANTINE, "detail": ""},
+        {"gate": "solution_verified", "ok": True, "severity": G.FATAL, "detail": ""},
+        {"gate": "distractor_verified", "ok": True, "severity": G.FATAL, "detail": ""}])
     CO.record_independent(conn, cid, "sympy_relation_solve", "12", "12",
                           "agree" if agree else "disagree", "ok")
-    CO.record_judge(conn, cid, "judge", True, {"verdict": judge})
+    CO.record_judge(conn, cid, "judge", True, {"verdict": judge}, judge_family="human-review")
     conn.commit()
 
 
@@ -235,7 +243,8 @@ CREATE TABLE generation_spec (spec_id TEXT PRIMARY KEY, run_id TEXT NOT NULL, la
   question_type TEXT NOT NULL, intended_depth INTEGER NOT NULL, intended_difficulty TEXT NOT NULL,
   visual_required INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL);
 CREATE TABLE candidate (candidate_id TEXT PRIMARY KEY, run_id TEXT NOT NULL, spec_id TEXT, generator_model TEXT NOT NULL,
-  stem TEXT NOT NULL, options TEXT, answer_label TEXT, status TEXT NOT NULL DEFAULT 'candidate',
+  stem TEXT NOT NULL, options TEXT, answer_label TEXT, answer_value TEXT, claimed TEXT, structure TEXT,
+  status TEXT NOT NULL DEFAULT 'candidate',
   reject_reason TEXT, item_hash TEXT, stem_norm_hash TEXT, created_at TEXT NOT NULL);
 CREATE TABLE gate_result (candidate_id TEXT NOT NULL, gate TEXT NOT NULL, ok INTEGER NOT NULL,
   severity TEXT NOT NULL, detail TEXT, checked_at TEXT NOT NULL, PRIMARY KEY (candidate_id, gate));
@@ -257,8 +266,10 @@ class MigrationFactory1ToFactory2(unittest.TestCase):
         c.executescript(_FACTORY1_DDL)
         c.execute("INSERT INTO factory_meta VALUES ('schema_version','factory-1')")
         c.execute("INSERT INTO candidate (candidate_id, run_id, spec_id, generator_model, stem, options, "
-                  "answer_label, status, item_hash, created_at) VALUES "
-                  "('CAND_old1','R','S1','gen','A stem','{}','b','certified','IH_orig','2026-01-01T00:00:00.000+00:00')")
+                  "answer_label, answer_value, structure, status, item_hash, created_at) VALUES "
+                  "('CAND_old1','R','S1','gen','A stem','{}','b','12',"
+                  "'{\"givens\":{\"m\":{\"value\":3},\"v\":{\"value\":4}},\"relation\":\"p = m*v\",\"solve_for\":\"p\"}',"
+                  "'certified','IH_orig','2026-01-01T00:00:00.000+00:00')")
         c.execute("INSERT INTO gate_result VALUES ('CAND_old1','schema',1,'fatal','ok','2026-01-01T01:00:00.000+00:00')")
         c.execute("INSERT INTO independent_answer VALUES ('CAND_old1','sympy','12','12','agree','ok','2026-01-01T01:00:00.000+00:00')")
         c.execute("INSERT INTO judge_verdict (candidate_id, judge_model, independent, verdict, checked_at) "
@@ -298,20 +309,29 @@ class MigrationFactory1ToFactory2(unittest.TestCase):
 
     def test_migration_certified_row_still_certifies_after_upgrade(self):
         # the migrated certified row must still satisfy the NEW certify preconditions when re-evaluated as a
-        # candidate (freshness + item_hash binding both hold, since evidence postdates creation).
+        # candidate (freshness + item_hash binding both hold, since evidence postdates creation). Under R2 the
+        # bar additionally needs the solution/distractor gates and a cross-family judge; seed them (all bound to
+        # the migrated row's item_hash) to prove the full R2 chain certifies a legacy row after upgrade.
         with tempfile.TemporaryDirectory() as d:
             path = str(Path(d) / "factory1.db")
             self._build_factory1(path)
             conn = sqlite3.connect(path)
             conn.row_factory = sqlite3.Row
             try:
-                CO.migrate_appendonly(conn)
+                CO.migrate_appendonly(conn)                       # factory-1 -> factory-2
+                CO.migrate_r2(conn)                               # factory-2 -> factory-3 (backfills gen family)
                 conn.executescript(CO.SCHEMA_PATH.read_text())
                 # flip the migrated row back to candidate to dry-run the new predicate against its own evidence
                 conn.execute("UPDATE candidate SET status='candidate' WHERE candidate_id='CAND_old1'")
+                # R2 evidence, content-bound to the migrated row's item_hash (IH_orig) + a cross-family judge
+                CO.record_gates(conn, "CAND_old1", [
+                    {"gate": "solution_verified", "ok": True, "severity": G.FATAL, "detail": ""},
+                    {"gate": "distractor_verified", "ok": True, "severity": G.FATAL, "detail": ""}])
+                conn.execute("UPDATE judge_verdict SET judge_family='human-review' WHERE candidate_id='CAND_old1'")
                 conn.commit()
                 m = CERT.certify_run(conn, "R")
                 self.assertEqual(m["certified"], 1, "migrated certified row must still meet the new preconditions")
+                self.assertEqual(len(CO.product_inventory(conn, "R")), 1)
             finally:
                 conn.close()
 

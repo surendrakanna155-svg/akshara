@@ -32,9 +32,14 @@ RULES
   answer: set "dispute": true with a reason. That is a certification event and is respected.
 - Steps must be genuinely student-readable at the stated class level. No hand-waving, no skipped algebra.
 - `final` MUST equal the locked answer. It is machine-compared.
-- For each WRONG option, name the specific misconception or slip that produces it. If you cannot identify a
-  real mistake that yields that option, say so honestly with "distractor_uncertifiable": ["c"] rather than
-  inventing a plausible-sounding rationale. A fabricated rationale is worse than an admitted gap.
+- For each WRONG option, declare the specific misconception AND the exact wrong equation (`mis_relation`) it
+  produces — e.g. a student who inverts F=m*a computes `a = m/F`. A DETERMINISTIC gate re-executes that
+  mis_relation with the item's givens via sympy and REQUIRES the result to equal that option's value. A
+  rationale whose mis_relation does not compute the option is rejected — a plausible sentence is not evidence.
+- Use the SAME symbol names as the item's declared givens/solve_for in every `mis_relation`.
+- If a wrong option corresponds to no nameable mechanical error, list it in "distractor_uncertifiable": ["c"]
+  rather than inventing one. A fabricated rationale is worse than an admitted gap. Every wrong option must be
+  EITHER given a computing `mis_relation` OR listed uncertifiable — there are no silent gaps.
 - Do not exceed the class level in your explanation either.
 
 OUTPUT — JSON array, one object per item, candidate_id copied EXACTLY, no prose outside the JSON:
@@ -45,7 +50,10 @@ OUTPUT — JSON array, one object per item, candidate_id copied EXACTLY, no pros
     "steps": ["Step 1 — Identify ...", "Step 2 — Apply ...", "Step 3 — Compute ...", "Step 4 — Conclude ..."],
     "final": "<must equal the locked answer>"
   },
-  "distractor_rationale": {"a": "obtained by using m/F instead of F/m", "c": "...", "d": "..."},
+  "distractor_rationale": {
+    "a": {"misconception": "inverted the law, used m/F instead of F/m", "mis_relation": "a = m/F"},
+    "c": {"misconception": "...", "mis_relation": "..."}
+  },
   "distractor_uncertifiable": [],
   "common_mistake": "<the single most likely error a student makes on this item>"
 }
@@ -95,13 +103,16 @@ def write_worksheet(items: List[dict], path: str) -> int:
 
 
 def ingest(conn: sqlite3.Connection, run_id: str, payload: List[dict]) -> Dict[str, int]:
-    """Attach solutions, then VERIFY them deterministically against the locked key."""
-    m = {"in": 0, "disputed": 0, "verified": 0, "failed_verification": 0, "unmatched": 0}
+    """Attach solutions, then VERIFY them deterministically against the locked key AND verify every distractor's
+    declared mis_relation actually computes its option (R2-2). Both gates are recorded append-only + content-
+    bound (via record_gates) so certification consumes only evidence bound to the candidate's CURRENT content."""
+    m = {"in": 0, "disputed": 0, "verified": 0, "failed_verification": 0, "distractor_unverified": 0,
+         "unmatched": 0}
     for p in payload:
         cid = p.get("candidate_id")
         row = conn.execute(
-            "SELECT candidate_id, options, answer_label FROM candidate WHERE candidate_id=? AND run_id=?",
-            (cid, run_id)).fetchone()
+            "SELECT candidate_id, options, answer_label, structure FROM candidate "
+            "WHERE candidate_id=? AND run_id=?", (cid, run_id)).fetchone()
         if not row:
             m["unmatched"] += 1
             continue
@@ -113,13 +124,17 @@ def ingest(conn: sqlite3.Connection, run_id: str, payload: List[dict]) -> Dict[s
             continue
 
         sol = p.get("solution") or {}
+        distractor_rationale = p.get("distractor_rationale") or {}
+        uncertifiable = p.get("distractor_uncertifiable") or []
         conn.execute(
             "UPDATE candidate SET solution=?, distractor_rationale=? WHERE candidate_id=?",
-            (json.dumps(sol), json.dumps(p.get("distractor_rationale") or {}), cid))
+            (json.dumps(sol), json.dumps(distractor_rationale), cid))
 
         # deterministic solution verification: the solution must terminate on the LOCKED key
         opts = json.loads(row["options"] or "{}")
-        keyed = opts.get(row["answer_label"])
+        structure = json.loads(row["structure"] or "{}")
+        ans_label = row["answer_label"]
+        keyed = opts.get(ans_label)
         final = sol.get("final")
         fn, kn = G._num(final), G._num(keyed)
         if fn is not None and kn is not None:
@@ -129,16 +144,30 @@ def ingest(conn: sqlite3.Connection, run_id: str, payload: List[dict]) -> Dict[s
             ok = bool(a) and bool(b) and (a in b or b in a)
         ok = ok and bool(sol.get("steps"))
 
-        # append-only + content-stamped (R1-2): route through record_gates so the solution_verified gate is
-        # bound to the candidate's CURRENT item_hash, exactly like every other gate, and never overwrites.
-        CO.record_gates(conn, cid, [{
-            "gate": "solution_verified", "ok": bool(ok), "severity": G.FATAL,
-            "detail": f"solution_final={final!r} locked_key={keyed!r} steps={len(sol.get('steps') or [])}"}])
-        if ok:
-            m["verified"] += 1
-        else:
+        # deterministic DISTRACTOR verification (R2-2): every wrong option's declared mis_relation must compute
+        # that option's value, or be explicitly listed uncertifiable. A named misconception per wrong option is
+        # now a certification gate — a populated, VERIFIED distractor_rationale, not free prose.
+        dres = G.verify_distractors(structure, opts, ans_label, distractor_rationale, uncertifiable=uncertifiable)
+
+        # append-only + content-stamped (R1-2): route through record_gates so both gates are bound to the
+        # candidate's CURRENT item_hash, exactly like every other gate, and never overwrite.
+        CO.record_gates(conn, cid, [
+            {"gate": "solution_verified", "ok": bool(ok), "severity": G.FATAL,
+             "detail": f"solution_final={final!r} locked_key={keyed!r} steps={len(sol.get('steps') or [])}"},
+            {"gate": "distractor_verified", "ok": bool(dres["ok"]), "severity": G.FATAL,
+             "detail": dres["detail"][:400]}])
+        if not ok:
             CO.set_status(conn, cid, CO.REJECTED,
                           f"solution_verification_failed: final={final!r} vs locked_key={keyed!r}")
             m["failed_verification"] += 1
+            continue
+        if not dres["ok"]:
+            # the solution is right but a distractor's named mistake does not compute its option — the rationale,
+            # not the question, is unproven. Quarantine for a human to fix or mark uncertifiable; never certify.
+            CO.set_status(conn, cid, CO.QUARANTINED,
+                          f"distractor_verification_failed: {dres['detail'][:200]}")
+            m["distractor_unverified"] += 1
+            continue
+        m["verified"] += 1
     conn.commit()
     return m

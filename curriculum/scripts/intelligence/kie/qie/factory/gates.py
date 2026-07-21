@@ -264,6 +264,143 @@ def structure_depth(structure: dict) -> Optional[int]:
     return last
 
 
+def replay_steps(structure: dict) -> dict:
+    """EXECUTE the declared step DAG forward with sympy and EARN the reasoning depth (R2-4).
+
+    Returns {"ok": bool, "depth": int|None, "final": float|None, "reason": str}. This is the multi-step
+    counterpart to `independent_solve` (which checks a single relation): it topologically executes each step,
+    feeding one step's output into the next, and the depth it reports is the length of the longest chain that
+    ACTUALLY RAN — not a walk over an unexecuted DAG (that is `structure_depth`, which a padded DAG can inflate).
+
+    The rule that makes the number honest: a step is only counted if sympy solves it from inputs already in the
+    environment; a flat DAG whose steps all read givens reproduces the answer in ONE applied step (earned
+    depth 1) — which is exactly why the production run's claimed 2–5 was refuted. A step that cannot be solved,
+    an unresolvable/cyclic dependency, or a chain that fails to terminate ⇒ ok=False (fail-safe, like
+    compose.run_pipeline), depth unearned. The caller (run_gates) additionally checks that `final` reproduces
+    the item's keyed answer — replay and independent_solve cannot disagree without one failing.
+    """
+    structure = structure or {}
+    steps = structure.get("steps") or []
+    givens = structure.get("givens") or {}
+    target = structure.get("solve_for") or ""
+
+    # seed the environment with every NUMERIC given (the unknown/target is excluded — it is what we compute)
+    env: Dict[str, float] = {}
+    for sym, spec in givens.items():
+        if sym == target:
+            continue
+        val = spec.get("value") if isinstance(spec, dict) else spec
+        if val is None:
+            continue
+        try:
+            env[sym] = float(val)
+        except Exception:
+            continue
+
+    if not steps:
+        # no DAG: a single-relation item is one applied step. Depth is 1 iff the relation actually solves.
+        rel = structure.get("relation") or ""
+        if not rel:
+            return {"ok": False, "depth": None, "final": None, "reason": "no steps and no relation to execute"}
+        res = independent_solve(structure)
+        if res.get("verdict") != "solved":
+            return {"ok": False, "depth": None, "final": None,
+                    "reason": f"single relation did not solve: {res.get('reason', res.get('verdict'))}"}
+        return {"ok": True, "depth": 1, "final": res.get("solver_answer"), "reason": "single applied relation"}
+
+    depth = {k: 0 for k in env}                 # every seeded given sits at depth 0
+    pending = list(steps)
+    max_passes = len(steps) + 1                 # each pass must resolve >=1 step or we are stuck (cycle)
+    for _ in range(max_passes):
+        if not pending:
+            break
+        still, progressed = [], False
+        for st in pending:
+            out = st.get("out")
+            ins = st.get("inputs") or []
+            if not out:
+                return {"ok": False, "depth": None, "final": None, "reason": "a step is missing its 'out'"}
+            if any(i not in env for i in ins):
+                still.append(st)                # inputs not ready yet — defer to a later pass
+                continue
+            rel = st.get("relation") or ""
+            solve_for = st.get("solve_for") or out
+            probe = {"givens": {i: {"value": env[i]} for i in ins}, "relation": rel, "solve_for": solve_for}
+            res = independent_solve(probe)
+            if res.get("verdict") != "solved":
+                return {"ok": False, "depth": None, "final": None,
+                        "reason": f"step out={out!r} did not solve: {res.get('reason', res.get('verdict'))}"}
+            env[out] = res["solver_answer"]
+            depth[out] = 1 + max((depth.get(i, 0) for i in ins), default=0)
+            progressed = True
+        pending = still
+        if not progressed and pending:
+            return {"ok": False, "depth": None, "final": None,
+                    "reason": f"unresolvable steps (inputs never produced): {[s.get('out') for s in pending]}"}
+    if pending:
+        return {"ok": False, "depth": None, "final": None, "reason": "cyclic step dependencies"}
+
+    # terminal = the step producing the declared target; else the deepest produced output
+    if target and target in env:
+        term = target
+    elif depth:
+        term = max((k for k in depth if k not in givens or k in env), key=lambda k: depth[k], default=None)
+    else:
+        term = None
+    if term is None or term not in env:
+        return {"ok": False, "depth": None, "final": None, "reason": "DAG produced no terminal value"}
+    return {"ok": True, "depth": depth.get(term, 0), "final": env[term], "reason": "executed DAG forward"}
+
+
+def verify_distractors(structure: dict, options: dict, answer_label: str, distractor_rationale: dict,
+                       uncertifiable=None) -> dict:
+    """Deterministically PROVE each wrong option is what a specific student MISTAKE actually computes (R2-2).
+
+    Contract: for every wrong label L, `distractor_rationale[L]` declares a `mis_relation` — the wrong equation a
+    misconception produces (e.g. 'a = m/F' instead of 'a = F/m'). We build a probe from the item's givens + that
+    mis_relation, solve it with `independent_solve`, and require the computed value to EQUAL the option (value
+    compare, sci-notation aware). A distractor is verified ONLY when the named error reproduces that exact
+    number — proof it is a real trap, not a plausible-looking decoy. An option may instead be listed in
+    `uncertifiable` (the honest escape: no nameable mechanical error) and is then not required to compute.
+
+    Returns {"ok", "verified":[...], "unverified":[{label, reason}], "uncertifiable":[...], "detail"}. ok is
+    True only when EVERY wrong option is either verified or explicitly uncertifiable — no silent gaps.
+    """
+    options = options or {}
+    distractor_rationale = distractor_rationale or {}
+    uncert = set(uncertifiable or [])
+    givens = (structure or {}).get("givens") or {}
+    solve_for = (structure or {}).get("solve_for") or ""
+    wrong = [L for L in options if L != answer_label]
+
+    verified, unverified = [], []
+    for L in wrong:
+        if L in uncert:
+            continue
+        spec = distractor_rationale.get(L)
+        mis_rel = (spec or {}).get("mis_relation") if isinstance(spec, dict) else None
+        if not mis_rel:
+            unverified.append({"label": L, "reason": "no mis_relation declared and not listed uncertifiable"})
+            continue
+        # probe = item givens (target excluded) + the misconception's wrong relation, solved for the same target
+        probe_givens = {s: v for s, v in givens.items() if s != solve_for}
+        probe = {"givens": probe_givens, "relation": mis_rel, "solve_for": solve_for}
+        res = independent_solve(probe)
+        if res.get("verdict") != "solved":
+            unverified.append({"label": L, "reason": f"mis_relation did not solve: "
+                                                     f"{res.get('reason', res.get('verdict'))}"})
+            continue
+        agree, why = answers_agree(res["solver_answer"], options.get(L))
+        if agree:
+            verified.append(L)
+        else:
+            unverified.append({"label": L, "reason": f"mis_relation computes {res['solver_answer']!r}, "
+                                                     f"not the option: {why}"})
+    ok = not unverified
+    return {"ok": ok, "verified": verified, "unverified": unverified, "uncertifiable": sorted(uncert),
+            "detail": (f"verified={verified} uncertifiable={sorted(uncert)} unverified={unverified}")}
+
+
 # ── unit normalization for the DIMENSIONAL gate ─────────────────────────────────────────────────────
 # The frozen QIE gate `notation.dimensions.parse_unit` cannot parse ANY SI-prefixed unit — cm, mm, km,
 # nm, kPa, mL, min, h, deg all return None ("unparseable"). That never mattered for the 41 certified
@@ -456,14 +593,28 @@ def run_gates(cand: dict, ctx: dict, stage: str = "candidate") -> List[dict]:
         #     declared given (constants + grammatical counts allowlisted so it does not cry wolf).
         _stem_binding_gate(add, stem, structure)
 
-    # 10. DEPTH EARNED FROM THE DAG (HARNESS mirror of compose.reasoning_depth) — advisory; runs whenever
-    #     there is a structure to compute depth from, regardless of lane.
+    # 10. DEPTH EARNED BY EXECUTING THE DAG (R2-4) — no longer a walk over an unexecuted DAG. replay_steps runs
+    #     each step through sympy and reports the length of the longest chain that ACTUALLY ran; run_gates then
+    #     checks the executed chain reproduces the keyed answer. depth_agreement is now BLOCKING (QUARANTINE):
+    #     a self-refuted depth (claimed != earned, or the replay did not reproduce the answer) may not ship.
     if rel or structure.get("steps"):
-        d = structure_depth(structure)
+        rep = replay_steps(structure)
+        earned = rep.get("depth")
         claimed_d = claimed.get("depth")
-        add("depth_computable", d is not None, ADVISORY, f"structure_depth={d}")
-        if d is not None and isinstance(claimed_d, int):
-            add("depth_agreement", d == claimed_d, ADVISORY, f"claimed={claimed_d} computed_from_dag={d}")
+        keyed = options.get(ans_label) if ans_label in options else cand.get("answer_value")
+        ans_num = _num(keyed)
+        if rep["ok"] and rep.get("final") is not None and ans_num is not None:
+            reproduced, why = answers_agree(rep["final"], keyed)
+        elif rep["ok"] and rep.get("final") is not None:
+            reproduced, why = True, "executed but no comparable keyed number"
+        else:
+            reproduced, why = False, rep.get("reason", "replay did not execute")
+        add("depth_computable", rep["ok"], ADVISORY,
+            f"earned_depth={earned} replay_ok={rep['ok']} reproduced_answer={reproduced} :: {rep.get('reason')}")
+        if isinstance(claimed_d, int):
+            add("depth_agreement", bool(rep["ok"] and reproduced and earned == claimed_d), QUARANTINE,
+                f"claimed={claimed_d} earned_replay_depth={earned} replay_ok={rep['ok']} "
+                f"reproduced_answer={reproduced} ({why})")
 
     # ── 11. COMPOSITION HONESTY (HARNESS) — a 'multi' claim must be backed by MORE THAN two terms
     #      appearing in the text. We test the structure, not the vocabulary.

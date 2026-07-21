@@ -111,6 +111,27 @@ def build(conn: sqlite3.Connection, run_id: str) -> dict:
     R["certification_yield_pct"] = round(100 * cert / max(1, R["candidates_returned"]), 1)
     R["certified"] = cert
 
+    # R2 certification hardening — distinguish a full (cross-family) certification from a provisional same-actor
+    # review, and report what is actually PRODUCT-VISIBLE (product_inventory), not merely status='certified'.
+    # A legacy row that predates the R2 gates has NULL certification_class and is invisible until re-certified.
+    R["by_certification_class"] = _d(
+        conn, "SELECT COALESCE(certification_class,'(none)'), COUNT(*) FROM candidate WHERE run_id=? "
+              "AND status='certified' GROUP BY 1", (run_id,))
+    R["by_evidence_class"] = _d(
+        conn, "SELECT COALESCE(evidence_class,'(none)'), COUNT(*) FROM candidate WHERE run_id=? "
+              "AND status='certified' GROUP BY 1", (run_id,))
+    R["provisional_same_actor"] = conn.execute(
+        "SELECT COUNT(*) FROM candidate WHERE run_id=? AND status='certified' "
+        "AND certification_class='provisional'", (run_id,)).fetchone()[0]
+    R["product_visible"] = conn.execute(
+        "SELECT COUNT(*) FROM candidate WHERE run_id=? AND status='certified' "
+        "AND certification_class='certified'", (run_id,)).fetchone()[0]
+    # earned vs claimed depth (R2-4): a certified row carries the EARNED depth; report any legacy claim drift.
+    R["depth_refuted_shipped"] = conn.execute(
+        "SELECT COUNT(*) FROM candidate WHERE run_id=? AND status='certified' AND earned_depth IS NOT NULL "
+        "AND CAST(json_extract(claimed,'$.depth') AS INTEGER) IS NOT NULL "
+        "AND CAST(json_extract(claimed,'$.depth') AS INTEGER) != earned_depth", (run_id,)).fetchone()[0]
+
     R["telemetry"] = [dict(r) for r in conn.execute(
         "SELECT * FROM run_telemetry WHERE run_id=?", (run_id,))]
 
@@ -134,7 +155,10 @@ def render(R: dict) -> str:
     a(f"planned specs        : {R['planned_specs']}")
     a(f"candidates returned  : {R['candidates_returned']}  (never returned: {R['never_returned']})")
     a(f"generator refusals   : {R['generator_refusals']}")
-    a(f"certified            : {R['certified']}   yield = {R['certification_yield_pct']}%")
+    a(f"certified (status)   : {R['certified']}   yield = {R['certification_yield_pct']}%")
+    a(f"product-visible      : {R['product_visible']}   (provisional same-actor: {R['provisional_same_actor']})")
+    a(f"certification class  : {R['by_certification_class']}")
+    a(f"evidence class       : {R['by_evidence_class']}")
     a(f"status               : {R['by_status']}")
     a("")
     a("## Yield by lane"); a(json.dumps(R["yield_by_lane"], indent=1))

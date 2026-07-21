@@ -9,7 +9,9 @@ import unittest
 
 from kie import config
 from kie.qie.factory import corpus as CO
+from kie.qie.factory import judge as JUDGE
 from kie.qie.factory import run_generation as G
+from kie.qie.factory import solutions as SOL
 
 QIE_STORE = config.KIE_HOME / "qie.db"
 
@@ -62,10 +64,20 @@ class GenerationEndToEnd(unittest.TestCase):
             m = G.verify(conn, "R")
             self.assertEqual(m["independent"].get("agree"), 1)   # sympy re-derived 12/3 = 4
             cid = CO._cid("R", "S1")
-            G.ingest_judgements(conn, "R", [{
-                "candidate_id": cid, "verdict": "accept", "well_posed": True, "curriculum_ok": True,
-                "answer_correct": True, "unique_answer": True, "concepts_real": True,
-                "difficulty_plausible": True, "distractors_plausible": True}])
+            # R2-2 mandatory solution stage: each distractor's mis_relation must compute its option
+            #   a: m+v=7 ; c: m/v=0.75 ; d: v-m=1
+            SOL.ingest(conn, "R", [{"candidate_id": cid, "dispute": False,
+                                    "solution": {"steps": ["p = m*v = 3*4"], "final": "12"},
+                                    "distractor_rationale": {
+                                        "a": {"misconception": "added instead of multiplied", "mis_relation": "p = m + v"},
+                                        "c": {"misconception": "divided instead of multiplied", "mis_relation": "p = m/v"},
+                                        "d": {"misconception": "subtracted the masses", "mis_relation": "p = v - m"}}}])
+            # R2-1 independence: a CROSS-FAMILY (human) judge disposes the verdict with its OWN chosen_label
+            JUDGE.ingest(conn, "R", [{
+                "candidate_id": cid, "verdict": "accept", "chosen_label": "b", "well_posed": True,
+                "curriculum_ok": True, "unique_answer": True, "concepts_real": True,
+                "difficulty_plausible": True, "distractors_plausible": True}],
+                "human-examiner", judge_family="human-review")
             self.assertEqual(G.certify(conn, "R")["certified"], 1)
             self.assertEqual(len(CO.product_inventory(conn, "R")), 1)  # certified -> product-visible
         finally:

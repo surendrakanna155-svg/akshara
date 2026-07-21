@@ -10,12 +10,24 @@
 --
 -- Rows are LOCAL-ONLY (curriculum/knowledge/ is gitignored). Only this schema + the harness code are committed.
 --
--- SCHEMA VERSION: factory-2 (remediation R1-2 — append-only, content-bound certification records).
+-- SCHEMA VERSION: factory-3 (remediation R2 — certification hardening: solution+distractor gates, proposer/
+--   certifier independence, self-refuted-metadata replay).
+--   Builds ADDITIVELY on factory-2 (R1-2 — append-only, content-bound certification records).
 --   The evidence tables (gate_result / independent_answer / judge_verdict) are APPEND-ONLY: every attempt is a
 --   new row (id AUTOINCREMENT) stamped with the candidate's item_hash AT CHECK TIME, so evidence is bound to
 --   the exact content it was computed against. A `_latest` view exposes the most recent attempt for the
 --   single-row readers. Certified rows are immutable; re-ingest over a certified id hard-fails in code.
---   An in-place migrator (corpus.migrate_appendonly) upgrades a factory-1 DB to this shape; see corpus.py.
+--   In-place migrators upgrade older DBs: corpus.migrate_appendonly (factory-1 -> factory-2, table rebuild)
+--   then corpus.migrate_r2 (factory-2 -> factory-3, additive ADD COLUMN). Both idempotent; see corpus.py.
+--
+--   factory-3 columns (all additive; a legacy certified row acquires NULLs here and so falls OUT of
+--   product_inventory until re-certified under the R2 gates — the intended quarantine-by-construction):
+--     candidate.evidence_class       {sympy_rederived | model_agreed_on_owned_evidence | source_proven}
+--     candidate.certification_class  {certified | provisional}; provisional = same-actor review, product-invisible
+--     candidate.generator_family     actor family of the proposer (structural same-actor rejection input)
+--     candidate.earned_depth         reasoning depth EARNED by executing the step DAG (never the bare claim)
+--     candidate.computed_archetype   QIE-detected archetype stamped at certification (never a refuted claim)
+--     judge_verdict.judge_family     actor family of the disposing reviewer; `independent` is COMPUTED from it
 
 CREATE TABLE IF NOT EXISTS factory_meta (
   key   TEXT PRIMARY KEY,
@@ -74,6 +86,13 @@ CREATE TABLE IF NOT EXISTS candidate (
                                          -- never set by the generator, always an explicit auditable owner act.
   item_hash          TEXT,               -- sha256(stem|options|answer) — dedup + judge cache key + content bind
   stem_norm_hash     TEXT,               -- normalized-stem hash for near-duplicate detection
+  -- factory-3 (R2 certification hardening). Set ONLY at certification; a legacy row's NULLs keep it out of
+  -- product_inventory (R0-2 quarantine-by-construction) until it is re-certified under the R2 gates.
+  generator_family    TEXT,              -- R2-1: actor family of the proposer (structural same-actor rejection)
+  evidence_class      TEXT,              -- R2-1: sympy_rederived | model_agreed_on_owned_evidence | source_proven
+  certification_class TEXT,              -- R2-1: certified | provisional (same-actor => provisional, invisible)
+  earned_depth        INTEGER,           -- R2-4: reasoning depth EARNED by executing the DAG (not the claim)
+  computed_archetype  TEXT,              -- R2-4: QIE-detected archetype stamped at certification (not a claim)
   created_at         TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_cand_run ON candidate(run_id);
@@ -123,7 +142,9 @@ CREATE TABLE IF NOT EXISTS judge_verdict (
   candidate_id   TEXT NOT NULL REFERENCES candidate(candidate_id),
   item_hash      TEXT NOT NULL,         -- candidate.item_hash at check time (content binding)
   judge_model    TEXT NOT NULL,
-  independent    INTEGER NOT NULL,      -- 0 when same model family as generator (disclosed, not hidden)
+  judge_family   TEXT,                  -- factory-3 (R2-1): actor family of the disposing reviewer. `independent`
+                                        -- is COMPUTED as judge_family != generator_family, never caller-asserted.
+  independent    INTEGER NOT NULL,      -- 0 when same actor family as generator (disclosed, not hidden)
   verdict        TEXT NOT NULL,         -- accept | reject | quarantine
   well_posed     INTEGER,
   curriculum_ok  INTEGER,
