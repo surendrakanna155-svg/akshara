@@ -22,6 +22,7 @@ from collections import defaultdict
 from typing import Dict, List, Optional, Set
 
 from kie.qie import relations as R
+from kie.qie.knowledge.qdi import QDI_MIN_EVIDENCE_ITEMS, QDI_MIN_EVIDENCE_RESOURCES
 from kie.qie.lanes import LANES
 
 _QNUM = re.compile(r"(?:^|\n)\s*(\d{1,3})\s*[.\)]\s+")
@@ -292,7 +293,9 @@ def run(kconn: sqlite3.Connection, qconn: sqlite3.Connection, now: str,
         qualified, verified_models = [], []
         for (lane, concept), c in clusters[subj].items():
             n_dna, n_res = len(c["dna"]), len(c["docs"])
-            if n_dna >= 5 and n_res >= 2:
+            # shared evidence floor (kie.qie.knowledge.qdi): >=5 DNA from >=2 resources — same rule the QDI
+            # pattern lane enforces at certification, kept in ONE place so the two lanes never drift.
+            if n_dna >= QDI_MIN_EVIDENCE_ITEMS and n_res >= QDI_MIN_EVIDENCE_RESOURCES:
                 is_verified = (lane == "NUMERIC_RELATIONAL") or (len(c["verified"]) / n_dna >= 0.5)
                 imid = "IM_" + hashlib.sha256(f"{subj}|{lane}|{concept}".encode()).hexdigest()[:16]
                 qconn.execute(

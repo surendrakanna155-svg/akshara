@@ -69,7 +69,23 @@ intake (the doc-level tag is simply no longer trusted for combined papers):
 
 ## 6. Residual / recommended follow-ups (owner-visible, not blocking)
 
-- The 7 already-certified JEE-Main Math QDI patterns are unaffected (pure-math, not subject-mined here).
+- **CORRECTION (R1-3, 2026-07-21):** the earlier claim here that "the 7 already-certified JEE-Main Math QDI
+  patterns are unaffected (pure-math, not subject-mined here)" was **FALSE** and is retracted. All 7 were
+  mined at 19:35 on 2026-07-20 (commit `7da9a829`), **before** this fix landed at 20:44 (`8fb31ac7`), and are
+  **irreproducible** under the corrected `exam_sources()`: **5** rest solely on `Practice_Resources` docs
+  (canonical `exam='Practice_Resources'`, not `JEE_Main`) and **2** (`QDP_57333bb83da55b`,
+  `QDP_e3842c9a9d9c70`) rest solely on `JEE_Advanced 2023 Paper 2` **physics** chunks
+  (`cef4c09da7aeebaa#8/#9`: electric dipole, Young's modulus, Bohr-orbit comparison) that the doc-level
+  subject tag mis-labelled "Mathematics" — the exact whole-document mis-tag this RCA documents. Every one of
+  the 7 carries a **false canonical exam identity** (all stored `exam='JEE_Main'`, none evidenced by a
+  `JEE_Main` doc); the 2 physics patterns additionally violate the ≥5-item/≥2-resource evidence floor
+  (`evidence_count=1`, a single resource) and one injected a physics `expected_solving_path` into the
+  certified set-theory spec `QBP_8061e8a12761a23e` ("The Empty Set"). Under R1-3 the deterministic provenance
+  invariant + evidence floor + fail-closed floor now **recall/refuse all 7** (they can no longer reach
+  `certified`); re-derivation must run through the fixed exam-identity + provenance-invariant pipeline. The
+  live rows themselves stay flagged pending the owner-gated quarantine decision (R0-2). **Standing rule
+  (adopted): fix-forward without recalling the affected certified artifacts is prohibited** — an RCA fix must
+  also recall every artifact produced under the defect, not merely correct the code path going forward.
 - The **frozen `kie.db` intake** still stores the doc-level single-subject artifact. Correcting it *at ingest*
   (mark combined papers multi-subject + segment sections) would be an **intake v-next** (a separate, larger,
   versioned effort); the read-layer resolution above makes mining correct now without a risky mutation of the
@@ -77,4 +93,6 @@ intake (the doc-level tag is simply no longer trusted for combined papers):
 - OCR quality on bilingual papers remains a ceiling on qualitative mining yield (re-OCR is a separate effort).
 
 **Verdict:** root cause proven; correct architectural fix implemented and validated; the JEE-Physics → NEET-
-Biology leak is closed. Subject-scoped QDI mining is now sound. Track B generation may resume.
+Biology leak is closed. Subject-scoped QDI mining is now sound **for NEW mining**; pre-fix certified artifacts
+(the 7 patterns above) required RECALL, not merely a forward fix — see §6 correction. Track B generation may
+resume only once the R1-3 provenance/evidence gates (implemented) are in place AND the 7 are recalled.

@@ -73,11 +73,17 @@ CREATE TABLE IF NOT EXISTS qdi_pattern (
 
   -- provenance + governance
   evidence_refs     TEXT NOT NULL,        -- json[]: [{doc_id, chunk_id, exam, year}] — traceable, no wording
-  evidence_count    INTEGER NOT NULL DEFAULT 1,   -- how many real items evidence this pattern
+  evidence_count    INTEGER NOT NULL DEFAULT 1,   -- COMPUTED from evidence_refs (item count), never analyst-asserted
+  evidence_resource_count INTEGER,        -- R1-3: distinct evidence doc_id count, COMPUTED at ingest (>=2 required)
   analyst_model     TEXT NOT NULL,        -- proposes only; never self-certifies
   audit_verdict     TEXT,                 -- accept | reject | quarantine (INDEPENDENT second pass)
   audit_reasons     TEXT,
   audit_model       TEXT,
+  -- R1-3 deterministic-floor evidence: a pattern may be certified ONLY if the mandatory floor ran and passed
+  -- (anti-copy fetched real evidence AND the exam+subject provenance invariant held). NULL => floor never
+  -- cleared this pattern; ingest_qdi_audit refuses to certify it.
+  floor_passed_at   TEXT,                 -- ISO ts stamped ONLY by deterministic_floor on a genuine pass
+  provenance_verified INTEGER DEFAULT 0,  -- 1 only when every ref's doc canonical exam+chunk subject == pattern
   status            TEXT NOT NULL DEFAULT 'proposed',  -- proposed | certified | rejected | quarantined
   created_at        TEXT NOT NULL
 );

@@ -17,16 +17,21 @@ _EXAM_TO_PROFILE = {"JEE_Main": "JEE_MAIN", "JEE_Advanced": "JEE_ADVANCED", "NEE
 
 
 def scope_link_for(pattern: dict, min_class: int = 11) -> dict:
-    """Deterministic scope link for a competitive-exam design pattern (classes 11-12)."""
+    """Deterministic scope link for a competitive-exam design pattern (classes 11-12).
+
+    R1-3: an exam that is NOT one of the known competitive exams no longer maps silently to `SCHOOL` — it
+    yields an unmapped `exam_profile` (None) that `validate_scope_link` REFUSES. Silently downgrading an
+    unknown/mis-provenanced exam (e.g. `Practice_Resources`) to a valid SCHOOL scope is exactly how a pattern
+    with a false exam identity slipped through; an unknown exam must be an explicit error, not a default."""
     exam = pattern.get("exam", "")
     return {"pattern_id": pattern.get("pattern_id"), "subject": pattern.get("subject"),
-            "min_class": min_class, "exam_profile": _EXAM_TO_PROFILE.get(exam, "SCHOOL"),
+            "min_class": min_class, "exam_profile": _EXAM_TO_PROFILE.get(exam),
             "basis": f"{exam or 'unknown'} design pattern; machinery legal from class {min_class}"}
 
 
 def validate_scope_link(link: dict) -> Optional[str]:
     if link.get("exam_profile") not in VALID_EXAM_PROFILES:
-        return f"invalid exam_profile {link.get('exam_profile')!r}"
+        return f"invalid/unmapped exam_profile {link.get('exam_profile')!r} (unknown exam is not a valid scope)"
     mc = link.get("min_class")
     if not isinstance(mc, int) or not (1 <= mc <= 12):
         return f"invalid min_class {mc!r}"

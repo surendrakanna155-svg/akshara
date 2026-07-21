@@ -56,8 +56,12 @@ def open_kie_ro():
 
 def import_proposed_from_index(qconn: sqlite3.Connection, index_conn: sqlite3.Connection) -> int:
     """Copy prior analyst-proposed patterns out of the FROZEN index into the writable qdi.db, reset to
-    'proposed' (they get re-run through the current deterministic floor + a fresh independent audit)."""
-    rows = index_conn.execute("SELECT * FROM qdi_pattern WHERE status='proposed'").fetchall()
+    'proposed' (they get re-run through the current deterministic floor + a fresh independent audit).
+
+    Routed through the SAFE accessor (R1-5, cross-lane): a sanctioned v1.5+ freeze DROPs the legacy qdi_*
+    tables from the index, so a raw SELECT would raise OperationalError; the accessor returns [] instead."""
+    from kie.qie.knowledge import schema as S
+    rows = S.legacy_qdi_proposed_from_index(index_conn)
     for r in rows:
         d = {c: (r[c] if c in r.keys() else None) for c in _PATTERN_COLS}
         d["status"], d["audit_verdict"], d["audit_reasons"], d["audit_model"] = "proposed", None, None, None
@@ -78,10 +82,15 @@ def _source_text(kconn: sqlite3.Connection, evidence_refs, limit: int = 6) -> st
 
 
 def deterministic_floor(qconn: sqlite3.Connection, kconn: sqlite3.Connection) -> Dict[str, int]:
-    """MANDATORY pre-audit gate: re-run anti-copying (all evidence refs, current word-overlap floor) +
-    structural validity on every proposed pattern. A failure is QUARANTINED so it can never be certified."""
-    m = {"passed": 0, "quarantined_copying": 0, "quarantined_structural": 0}
-    rows = qconn.execute("SELECT pattern_id, design_summary, pattern_name, reasoning_chain, "
+    """MANDATORY pre-audit gate (R1-3 hardened): re-run structural validity, anti-copying, AND the
+    exam+subject PROVENANCE INVARIANT on every proposed pattern. Any failure is QUARANTINED so it can never
+    be certified. FAIL CLOSED: if a pattern's evidence cannot be fetched, the anti-copy/provenance checks are
+    unverifiable, so the pattern is quarantined (never silently skipped). Only a genuine, fully-verified pass
+    STAMPS `floor_passed_at` (+ provenance_verified=1) — the marker that `ingest_qdi_audit` requires before it
+    may certify anything."""
+    m = {"passed": 0, "quarantined_copying": 0, "quarantined_structural": 0,
+         "quarantined_unfetchable": 0, "quarantined_provenance": 0}
+    rows = qconn.execute("SELECT pattern_id, exam, subject, design_summary, pattern_name, reasoning_chain, "
                          "difficulty_mechanism, operators, constraints, distractor_structure, "
                          "solution_structure, misconceptions, evidence_refs FROM qdi_pattern "
                          "WHERE status='proposed'").fetchall()
@@ -91,20 +100,38 @@ def deterministic_floor(qconn: sqlite3.Connection, kconn: sqlite3.Connection) ->
                           ("floor: empty/short design_summary", r["pattern_id"]))
             m["quarantined_structural"] += 1
             continue
-        p = {"design_summary": r["design_summary"], "pattern_name": r["pattern_name"]}
+        p = {"design_summary": r["design_summary"], "pattern_name": r["pattern_name"],
+             "exam": r["exam"], "subject": r["subject"], "evidence_refs": r["evidence_refs"]}
         for j in _JSON_FIELDS:
             try:
                 p[j] = json.loads(r[j] or "[]")
             except Exception:
                 p[j] = []
+        # FAIL CLOSED: unfetchable evidence means anti-copy/provenance cannot be verified — quarantine.
         src = _source_text(kconn, r["evidence_refs"])
-        if src.strip():
-            why = QDI.assert_no_copying(p, src)
-            if why:
-                qconn.execute("UPDATE qdi_pattern SET status='quarantined', audit_reasons=? WHERE pattern_id=?",
-                              (f"floor: {why}", r["pattern_id"]))
-                m["quarantined_copying"] += 1
-                continue
+        if not src.strip():
+            qconn.execute("UPDATE qdi_pattern SET status='quarantined', audit_reasons=? WHERE pattern_id=?",
+                          ("floor: evidence unfetchable — cannot verify anti-copy/provenance (fail-closed)",
+                           r["pattern_id"]))
+            m["quarantined_unfetchable"] += 1
+            continue
+        why = QDI.assert_no_copying(p, src)
+        if why:
+            qconn.execute("UPDATE qdi_pattern SET status='quarantined', audit_reasons=? WHERE pattern_id=?",
+                          (f"floor: {why}", r["pattern_id"]))
+            m["quarantined_copying"] += 1
+            continue
+        # PROVENANCE INVARIANT: pattern.exam+subject must hold for every evidence doc (canonical exam +
+        # section-resolved subject). This is what recalls the 7 mis-provenanced pre-fix patterns.
+        pv = QDI.assert_provenance(kconn, p)
+        if pv:
+            qconn.execute("UPDATE qdi_pattern SET status='quarantined', audit_reasons=? WHERE pattern_id=?",
+                          (f"floor: {pv}", r["pattern_id"]))
+            m["quarantined_provenance"] += 1
+            continue
+        # genuine pass: stamp the marker the certification gate requires
+        qconn.execute("UPDATE qdi_pattern SET floor_passed_at=?, provenance_verified=1 WHERE pattern_id=?",
+                      (QDI._now(), r["pattern_id"]))
         m["passed"] += 1
     qconn.commit()
     return m
@@ -171,6 +198,32 @@ def certified_patterns_for_exam(qconn: sqlite3.Connection, exam_profile: str, su
                 pass
         out.append(d)
     return out
+
+
+def backfill_sources(qconn: sqlite3.Connection, kconn: sqlite3.Connection) -> Dict[str, int]:
+    """R1-3 one-shot repair for EXISTING qdi.db rows: backfill each pattern's evidence-ref doc_id, populate
+    the (previously-empty) qdi_source provenance table, and recompute evidence_count/evidence_resource_count
+    from the actual refs (never the analyst's asserted number). Does NOT change any pattern's status."""
+    m = {"patterns": 0, "sources": 0}
+    rows = qconn.execute("SELECT pattern_id, evidence_refs FROM qdi_pattern").fetchall()
+    for r in rows:
+        try:
+            refs = json.loads(r["evidence_refs"] or "[]")
+        except Exception:
+            refs = []
+        for ref in refs:
+            if not ref.get("doc_id"):
+                did = QDI.ref_doc_id(kconn, ref)
+                if did:
+                    ref["doc_id"] = did
+        m["sources"] += QDI.save_ref_sources(qconn, kconn, refs)
+        n_items = len(refs)
+        n_res = len({ref.get("doc_id") for ref in refs if ref.get("doc_id")})
+        qconn.execute("UPDATE qdi_pattern SET evidence_refs=?, evidence_count=?, evidence_resource_count=? "
+                      "WHERE pattern_id=?", (json.dumps(refs), n_items, n_res, r["pattern_id"]))
+        m["patterns"] += 1
+    qconn.commit()
+    return m
 
 
 def summary(qconn: sqlite3.Connection) -> dict:
