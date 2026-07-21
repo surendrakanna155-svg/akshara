@@ -386,6 +386,10 @@ class MigrationFactory2ToFactory3(unittest.TestCase):
         self.assertEqual(before, after)
         self.assertEqual(conn.execute("SELECT generator_family FROM candidate WHERE candidate_id='CAND_x'")
                          .fetchone()[0], "gen")
+        # stamp this store the production bank (R3-1) so product_inventory's role gate passes and we isolate the
+        # R2 assertion: even in the production bank the legacy row is invisible because its cert_class is NULL.
+        conn.execute("CREATE TABLE IF NOT EXISTS factory_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+        CO._stamp_role(conn, CO.ROLE_PRODUCTION, explicit=True)
         self.assertEqual(len(CO.product_inventory(conn, "R")), 0,
                          "a legacy certified row is invisible until re-certified under the R2 gates")
         self.assertFalse(CO.migrate_r2(conn), "idempotent")

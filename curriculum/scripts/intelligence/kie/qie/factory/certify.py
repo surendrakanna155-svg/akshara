@@ -46,6 +46,8 @@ REASON_PROVISIONAL_SAME_ACTOR = ("provisional_same_actor_review: the disposing j
 REASON_NO_PROVENANCE = ("missing_row_provenance: on the production path a certified row must itself carry real "
                         "generation + judge provenance (model+version+prompt_sha256+actor), not ride a sibling's "
                         "run-level telemetry — RI-8 (R2-3)")
+REASON_DUPLICATE_BANK = ("duplicate_of_certified: content already certified in this bank ({dup}) — bank-level "
+                         "dedup refuses a second certification of the same question (R3-2, RI-9)")
 REASON_CERTIFIED = "gates+sympy+solution+distractor+independent_judge"
 
 
@@ -75,7 +77,7 @@ def certify_run(conn: sqlite3.Connection, run_id: str, require_telemetry: bool =
 
     m = {"certified": 0, "provisional_same_actor": 0, "held_no_independent": 0, "held_no_solution": 0,
          "held_no_distractors": 0, "held_no_provenance": 0, "judge_rejected": 0, "judge_missing": 0,
-         "stale_evidence": 0, "quarantined_prior": 0}
+         "stale_evidence": 0, "duplicate_of_certified": 0, "quarantined_prior": 0}
 
     # The factory-4 provenance columns are SELECTed only on the production path (require_telemetry), which always
     # runs on a factory-4 store; low-level unit fixtures may be an earlier schema without these columns.
@@ -86,8 +88,8 @@ def certify_run(conn: sqlite3.Connection, run_id: str, require_telemetry: bool =
                    "jvl.prompt_sha256 AS judge_prompt_sha256, jvl.judge_actor AS judge_actor"
                    if require_telemetry else "")
     rows = conn.execute(f"""
-        SELECT c.candidate_id, c.item_hash, c.created_at, c.generator_family, c.structure, c.stem,
-               c.answer_label, c.answer_value, c.options{_gen_prov},
+        SELECT c.candidate_id, c.item_hash, c.stem_norm_hash, c.created_at, c.generator_family, c.structure,
+               c.stem, c.answer_label, c.answer_value, c.options{_gen_prov},
           (SELECT COUNT(*) FROM gate_result g
              WHERE g.candidate_id=c.candidate_id AND g.item_hash=c.item_hash) AS gates_for_hash,
           (SELECT COUNT(*) FROM gate_result g
@@ -190,6 +192,20 @@ def certify_run(conn: sqlite3.Connection, run_id: str, require_telemetry: bool =
         cross_family = bool(known and jud_fam != gen_fam)
         independent_judge = (r["judge_independent"] == 1) and cross_family
         if independent_judge:
+            # R3-2 (RI-9) bank-level dedup — gates ONLY the PRODUCT-visible promotion (a provisional same-actor
+            # row is product-invisible, so a duplicate there is harmless and must not be blocked). Defense-in-depth
+            # beneath validate_run's dedup-at-gate seeding and the partial UNIQUE index: never promote a SECOND
+            # product-visible certified row duplicating content already product-certified in THIS bank. A collision
+            # QUARANTINEs THIS candidate gracefully (it is not wrong, just redundant) rather than aborting the run
+            # at the UNIQUE index.
+            dup = conn.execute(
+                "SELECT candidate_id FROM candidate WHERE status=? AND certification_class=? AND candidate_id!=? "
+                "AND (stem_norm_hash=? OR item_hash=?) LIMIT 1",
+                (CO.CERTIFIED, CO.CERT_CERTIFIED, cid, r["stem_norm_hash"], ih)).fetchone()
+            if dup is not None:
+                CO.set_status(conn, cid, CO.QUARANTINED, REASON_DUPLICATE_BANK.format(dup=dup[0]))
+                m["duplicate_of_certified"] += 1
+                continue
             CO.mark_certified(conn, cid, CO.EVIDENCE_SYMPY, CO.CERT_CERTIFIED, REASON_CERTIFIED,
                               earned_depth=earned_depth, computed_archetype=computed_archetype)
             m["certified"] += 1

@@ -68,8 +68,16 @@ def save_blueprints(conn: sqlite3.Connection, blueprints: List[dict]) -> int:
     if not rows:
         return 0
     cols = list(rows[0].keys())
+    # R3-2 ([C12]): STOP RE-PARENTING spec provenance. spec_id = sha(blueprint_fingerprint|occurrence) is
+    # content-derived and run-INDEPENDENT, so the planner re-issues the SAME spec_id across runs. The old
+    # `INSERT OR REPLACE` overwrote the prior row — silently re-parenting an earlier run's spec (its run_id +
+    # created_at provenance) to the new run and corrupting historical run reports. A conflicting spec_id means
+    # the IDENTICAL blueprint already exists, so `ON CONFLICT DO NOTHING` keeps the original row untouched —
+    # provenance preserved, no re-parent. (Run-scoped spec ids / consumption-ledger semantics are a deferred
+    # design choice owned by the run-planner lane; see the R3-2 residual note.)
     conn.executemany(
-        f"INSERT OR REPLACE INTO generation_spec ({','.join(cols)}) VALUES ({','.join('?' * len(cols))})",
+        f"INSERT INTO generation_spec ({','.join(cols)}) VALUES ({','.join('?' * len(cols))}) "
+        f"ON CONFLICT(spec_id) DO NOTHING",
         [tuple(r[c] for c in cols) for r in rows])
     conn.commit()
     return len(rows)

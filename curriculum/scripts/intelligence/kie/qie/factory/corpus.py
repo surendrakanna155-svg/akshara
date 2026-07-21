@@ -20,10 +20,21 @@ from kie import config
 from kie.qie.factory.gates import item_hash, norm_hash
 
 SCHEMA_PATH = Path(__file__).resolve().parent / "corpus_schema.sql"
-SCHEMA_VERSION = "factory-4"          # R2-3: real model/actor provenance + full-stage telemetry ([C10], RI-8) —
-                                      # additive over factory-3 (R2-1/2/4 certification hardening), which is
-                                      # additive over factory-2 (R1-2 append-only, content-bound)
-CORPUS_DB_PATH = config.KIE_HOME / "factory_corpus.db"
+SCHEMA_VERSION = "factory-5"          # R3-1/R3-2: store-role governance + bank-level dedup ([C8]/[C12], RI-6/RI-9)
+                                      # — additive over factory-4 (R2-3 provenance/telemetry, [C10]/RI-8), which
+                                      # is additive over factory-3 (R2-1/2/4), which is additive over factory-2
+                                      # (R1-2 append-only, content-bound).
+CORPUS_DB_PATH = config.KIE_HOME / "factory_corpus.db"          # the TRIAL corpus (discredited 1.5%-yield trial)
+PRODUCTION_BANK_DB_PATH = config.KIE_HOME / "qpl_question_bank.db"   # the ONE authoritative production bank (R3-1)
+
+# ── R3-1 store-role governance ([C8], RI-6) ──────────────────────────────────────────────────────────
+# The audit found two factory stores sharing a schema_version with NO way to tell which is product: the
+# TRIAL corpus (factory_corpus.db — 15 discredited 'certified' + 456 forever-'candidate' rows) and the bank
+# (qpl_question_bank.db). A role STAMP in factory_meta names each store's purpose, and product_inventory()
+# refuses to serve any store that is not the production bank — un-stamped or trial stores fail CLOSED.
+META_ROLE = "role"
+ROLE_PRODUCTION = "production_bank"    # the ONE store product surfaces may read
+ROLE_TRIAL = "trial_corpus"           # a trial/experiment store; can NEVER satisfy product_inventory()
 
 # Placeholder model/actor ids that are NOT real provenance (R2-3, [C10]). These were the code defaults the audit
 # found stamped on every row (run_generation.py:51/:71). Ingest through the model-stage paths REFUSES them
@@ -51,6 +62,10 @@ def provenance_complete(d, fields=_PROVENANCE_FIELDS) -> bool:
 
 # The lifecycle. Only CERTIFIED may ever be promoted to product inventory.
 CANDIDATE, QUARANTINED, REJECTED, CERTIFIED = "candidate", "quarantined", "rejected", "certified"
+# R3-1 terminal status for run-closure of a trial store's forever-'candidate' rows (the 456 that a discredited
+# trial never judged to a terminal state). Terminal like rejected/certified — it is NOT a candidate any more,
+# so it can never be picked up by a later gate/certify pass. Set ONLY by the explicit factory-5 run-closure.
+EXPIRED_UNJUDGED = "expired_unjudged"
 
 # The certification CLASS (factory-3, R2-1) is orthogonal to the lifecycle STATUS: it records HOW a certified
 # row earned its promotion, so a same-actor review can be labelled provisional without inventing a new status
@@ -58,6 +73,9 @@ CANDIDATE, QUARANTINED, REJECTED, CERTIFIED = "candidate", "quarantined", "rejec
 # product-visible; CERT_PROVISIONAL (same-actor review) is deliberately invisible until a cross-family reviewer
 # disposes it in a fresh run.
 CERT_CERTIFIED, CERT_PROVISIONAL = "certified", "provisional"
+# R3-1: a certified row that lives in a TRIAL store. It keeps status=CERTIFIED (its evidence chain is real) but
+# is demoted to this certification_class so it can NEVER be product-visible — a trial corpus holds no product.
+CERT_TRIAL = "trial_certified"
 # evidence_class values. The factory lane ALWAYS earns 'sympy_rederived' (a non-model re-derivation via
 # independent_solve); the other two are reserved for the knowledge/OCR lane and are never stamped here.
 EVIDENCE_SYMPY, EVIDENCE_MODEL_OWNED, EVIDENCE_SOURCE = (
@@ -125,8 +143,52 @@ def _require_provenance(d: Optional[dict], fields=_PROVENANCE_FIELDS, kind: str 
                 f"refuse {kind} ingest: {f}={d.get(f)!r} is a placeholder id, not real provenance (RI-8)")
 
 
-def open_store(db_path=None) -> sqlite3.Connection:
+def store_role(conn: sqlite3.Connection) -> Optional[str]:
+    """The role stamp this store carries in factory_meta (R3-1), or None if un-stamped."""
+    if not _table_exists(conn, "factory_meta"):
+        return None
+    r = conn.execute("SELECT value FROM factory_meta WHERE key=?", (META_ROLE,)).fetchone()
+    return r[0] if r else None
+
+
+def _resolve_role(db_path, role):
+    """Decide which role (if any) open_store should stamp, and whether the caller asked EXPLICITLY.
+
+    Returns (role_or_None, explicit). A real FILE store is left un-stamped here — it is role-stamped only by
+    the explicit factory-5 migration (`kie.qie.remediation.migrate_factory_r3`) or by `open_production_bank`,
+    so an un-migrated store stays honestly un-stamped and product_inventory refuses it fail-closed. A `:memory:`
+    store (a test/consumer fixture that models the certify→product pipeline) defaults to the production role so
+    the product-inventory gate is exercised without an explicit stamp on every call."""
+    if role is not None:
+        return role, True
+    if str(db_path) == ":memory:":
+        return ROLE_PRODUCTION, False
+    return None, False
+
+
+def _stamp_role(conn: sqlite3.Connection, role: str, explicit: bool = False) -> bool:
+    """Idempotently stamp the store's role. NEVER silently flips an existing explicit stamp: a caller that
+    explicitly asks to re-stamp a store to a DIFFERENT role is refused fail-closed (a trial corpus must never be
+    quietly promoted to a production bank). An auto-default (explicit=False) never overrides an existing stamp."""
+    if role is None:
+        return False
+    cur = store_role(conn)
+    if cur == role:
+        return False
+    if cur is not None:
+        if explicit:
+            raise CorpusIntegrityError(
+                f"refuse role stamp: store already marked role={cur!r}; refusing to re-stamp as {role!r} "
+                f"(RI-6 — a trial corpus must never be silently promoted to a production bank)")
+        return False
+    conn.execute("INSERT INTO factory_meta(key, value) VALUES (?, ?) "
+                 "ON CONFLICT(key) DO UPDATE SET value = excluded.value", (META_ROLE, role))
+    return True
+
+
+def open_store(db_path=None, role: str = None) -> sqlite3.Connection:
     path = db_path or CORPUS_DB_PATH
+    resolved_role, explicit = _resolve_role(path, role)
     if str(path) != ":memory:":
         Path(path).parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(path))
@@ -139,12 +201,32 @@ def open_store(db_path=None) -> sqlite3.Connection:
     migrate_appendonly(conn)                      # factory-1 -> factory-2 (table rebuild)
     migrate_r2(conn)                              # factory-2 -> factory-3 (additive ADD COLUMN; R2-1/2/4)
     migrate_r2_3(conn)                            # factory-3 -> factory-4 (additive ADD COLUMN; R2-3 provenance)
+    migrate_r3(conn)                              # factory-4 -> factory-5 (bank-dedup UNIQUE; R3-2 — NO data
+                                                  # demotion/closure at open, only additive schema)
     conn.executescript(SCHEMA_PATH.read_text())
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("INSERT INTO factory_meta(key, value) VALUES ('schema_version', ?) "
                  "ON CONFLICT(key) DO UPDATE SET value = excluded.value", (SCHEMA_VERSION,))
+    _stamp_role(conn, resolved_role, explicit)
     conn.commit()
     return conn
+
+
+def open_production_bank(read_only: bool = False) -> sqlite3.Connection:
+    """Open THE one authoritative production bank (R3-1). The committed writer/consumer path: it opens
+    qpl_question_bank.db, stamps it role='production_bank', and is the store product surfaces read via
+    product_inventory / certified_bank. `read_only` opens it mode=ro for a pure consumer (no schema writes)."""
+    config.assert_under_kie_home(PRODUCTION_BANK_DB_PATH)
+    if read_only:
+        conn = sqlite3.connect(f"file:{PRODUCTION_BANK_DB_PATH}?mode=ro", uri=True)
+        conn.row_factory = sqlite3.Row
+        if store_role(conn) != ROLE_PRODUCTION:
+            conn.close()
+            raise CorpusIntegrityError(
+                f"refuse read-only production-bank open: {PRODUCTION_BANK_DB_PATH.name} is not stamped "
+                f"role={ROLE_PRODUCTION!r} (run the factory-5 migration first)")
+        return conn
+    return open_store(PRODUCTION_BANK_DB_PATH, role=ROLE_PRODUCTION)
 
 
 def save_specs(conn: sqlite3.Connection, specs: List[dict]) -> int:
@@ -300,11 +382,19 @@ def mark_certified(conn: sqlite3.Connection, candidate_id: str, evidence_class: 
     (same-actor review — deliberately product-invisible). `earned_depth`/`computed_archetype` are the values the
     factory EARNED by executing the DAG and classifying the stem (R2-4), stored so downstream reads the honest
     number/label, never a refuted generator claim."""
-    cur = conn.execute(
-        "UPDATE candidate SET status=?, reject_reason=?, evidence_class=?, certification_class=?, "
-        "earned_depth=?, computed_archetype=? WHERE candidate_id=? AND status=?",
-        (CERTIFIED, reason[:400], evidence_class, certification_class,
-         earned_depth, computed_archetype, candidate_id, expected))
+    try:
+        cur = conn.execute(
+            "UPDATE candidate SET status=?, reject_reason=?, evidence_class=?, certification_class=?, "
+            "earned_depth=?, computed_archetype=? WHERE candidate_id=? AND status=?",
+            (CERTIFIED, reason[:400], evidence_class, certification_class,
+             earned_depth, computed_archetype, candidate_id, expected))
+    except sqlite3.IntegrityError as e:
+        # R3-2 (RI-9) hard backstop: the partial UNIQUE index over certified item_hash / stem_norm_hash rejects
+        # a promotion that would create a second certified row duplicating content already in the bank. Surface
+        # it as the module's own integrity error rather than a raw sqlite error.
+        raise CorpusIntegrityError(
+            f"mark_certified blocked: {candidate_id} would duplicate content already certified in this bank "
+            f"(RI-9 — bank-level dedup UNIQUE): {e}")
     if cur.rowcount != 1:
         raise CorpusIntegrityError(
             f"mark_certified blocked: {candidate_id} not in expected state {expected!r} "
@@ -390,17 +480,52 @@ def require_stage_telemetry(conn: sqlite3.Connection, run_id: str, stages=("gene
                 f"({row['model']!r}/{row['actor']!r}) — not real provenance (RI-8)")
 
 
+def _assert_production_store(conn: sqlite3.Connection, fn: str) -> None:
+    """R3-1 / RI-6 fail-closed store-role gate. A product read is refused unless THIS store is stamped the one
+    authoritative production bank. An un-stamped store (no migration ran) and a trial store both raise — a
+    student surface can never be served the discredited trial corpus, nor an un-governed store, by accident."""
+    role = store_role(conn)
+    if role != ROLE_PRODUCTION:
+        raise CorpusIntegrityError(
+            f"{fn} refused: store role is {role!r}, not {ROLE_PRODUCTION!r} (RI-6 — exactly one product-visible "
+            f"certified store; un-stamped / trial stores are refused fail-closed)")
+
+
 def product_inventory(conn: sqlite3.Connection, run_id: str) -> List[sqlite3.Row]:
     """The ONLY function any product surface may ever call. Certified rows exclusively — the quarantine
     boundary expressed as code rather than as a convention someone has to remember.
 
-    R2-1 tightens the gate: a row is product-visible only when status=CERTIFIED AND certification_class marks it
-    a full (cross-family) certification. A CERT_PROVISIONAL row (same-actor review) and any legacy row that
-    predates the R2 gates (certification_class NULL) are STRUCTURALLY excluded here — they can never reach a
-    student surface, no matter their lifecycle status."""
+    R3-1 (RI-6): FIRST refuses any store that is not the one authoritative production bank — un-stamped or
+    trial stores fail CLOSED (see _assert_production_store). A trial corpus can therefore never satisfy this
+    function even if it holds status='certified' rows.
+
+    R2-1 tightens the row gate: a row is product-visible only when status=CERTIFIED AND certification_class marks
+    it a full (cross-family) certification. A CERT_PROVISIONAL row (same-actor review), a CERT_TRIAL row (trial
+    store), and any legacy row that predates the R2 gates (certification_class NULL) are STRUCTURALLY excluded
+    here — they can never reach a student surface, no matter their lifecycle status."""
+    _assert_production_store(conn, "product_inventory")
     return conn.execute(
         "SELECT * FROM candidate WHERE run_id=? AND status=? AND certification_class=?",
         (run_id, CERTIFIED, CERT_CERTIFIED)).fetchall()
+
+
+def certified_bank(conn: sqlite3.Connection) -> List[sqlite3.Row]:
+    """The bank-wide product consumer (R3-1): every product-visible certified row across ALL runs in the one
+    authoritative production bank. Same fail-closed store-role gate as product_inventory (RI-6). This is the
+    committed CONSUMER a downstream surface uses to read the whole bank rather than a single run."""
+    _assert_production_store(conn, "certified_bank")
+    return conn.execute(
+        "SELECT * FROM candidate WHERE status=? AND certification_class=? ORDER BY run_id, candidate_id",
+        (CERTIFIED, CERT_CERTIFIED)).fetchall()
+
+
+def read_production_bank() -> List[sqlite3.Row]:
+    """Open the production bank read-only and return its full product-visible inventory (R3-1 consumer)."""
+    conn = open_production_bank(read_only=True)
+    try:
+        return certified_bank(conn)
+    finally:
+        conn.close()
 
 
 # ── in-place schema migration: factory-1 → factory-2 (append-only, content-bound) ────────────────────
@@ -599,19 +724,158 @@ def migrate_r2_3(conn: sqlite3.Connection) -> bool:
     return changed
 
 
+# ── in-place schema migration: factory-4 → factory-5 (R3-1/R3-2 store-role governance + bank dedup) ──────
+# TWO parts, both idempotent:
+#   * ADDITIVE SCHEMA (safe on every open): the bank-level partial UNIQUE indexes over CERTIFIED item_hash /
+#     stem_norm_hash — the RI-9 hard backstop that no two certified rows in a store share content. Created only
+#     once the store is verified free of pre-existing certified duplicates (fails CLOSED with a diagnostic).
+#   * DATA GOVERNANCE (explicit only — never at open): the role stamp, the trial_certified demotion, and the
+#     forever-'candidate' run-closure. Run via kie.qie.remediation.migrate_factory_r3 against a COPY first.
+# The status-audit ledger records every closure flip so prior state stays queryable (never overwrites
+# reject_reason history) — the same table kie.qie.remediation.excise_run appends recall rows to.
+STATUS_AUDIT_DDL = """
+CREATE TABLE IF NOT EXISTS status_audit (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  entity_table TEXT NOT NULL,
+  entity_id    TEXT NOT NULL,
+  from_status  TEXT NOT NULL,
+  to_status    TEXT NOT NULL,
+  reason       TEXT NOT NULL,
+  at           TEXT NOT NULL DEFAULT (datetime('now'))
+);
+"""
+
+# partial UNIQUE indexes (index name -> DDL). Scoped to PRODUCT-VISIBLE certified rows
+# (status='certified' AND certification_class='certified') — the actual bank product surfaces read (RI-6/RI-9).
+# Excluding provisional (same-actor, product-invisible) and trial_certified rows keeps a harmless invisible
+# duplicate from tripping the index, while still forbidding two PRODUCT rows to share content. Duplicate
+# rejected/quarantined candidates (many NULL-hashed) are irrelevant.
+_CERT_VISIBLE_PRED = "status='certified' AND certification_class='certified'"
+_R3_UNIQUE_INDEXES = (
+    ("ux_cert_item_hash",
+     f"CREATE UNIQUE INDEX IF NOT EXISTS ux_cert_item_hash ON candidate(item_hash) WHERE {_CERT_VISIBLE_PRED}"),
+    ("ux_cert_norm_hash",
+     f"CREATE UNIQUE INDEX IF NOT EXISTS ux_cert_norm_hash ON candidate(stem_norm_hash) WHERE {_CERT_VISIBLE_PRED}"),
+)
+
+
+def _assert_no_certified_dupes(conn: sqlite3.Connection) -> None:
+    """Fail CLOSED before enforcing the bank UNIQUE if the store ALREADY holds two PRODUCT-visible certified
+    rows sharing content — a clear diagnostic beats a raw integrity error from CREATE UNIQUE INDEX. Excise the
+    duplicates (kie.qie.remediation.excise_run) before migrating."""
+    for col in ("item_hash", "stem_norm_hash"):
+        dupes = conn.execute(
+            f"SELECT {col}, COUNT(*) c FROM candidate WHERE {_CERT_VISIBLE_PRED} AND {col} IS NOT NULL "
+            f"GROUP BY {col} HAVING c>1").fetchall()
+        if dupes:
+            raise CorpusIntegrityError(
+                f"cannot enforce bank UNIQUE on product-certified {col}: {len(dupes)} duplicated value(s) "
+                f"already certified (e.g. {dupes[0][0]!r} x{dupes[0][1]}); excise them before migrating (RI-9)")
+
+
+def _ensure_status_audit(conn: sqlite3.Connection) -> None:
+    conn.executescript(STATUS_AUDIT_DDL)
+
+
+def _demote_trial_certified(conn: sqlite3.Connection) -> bool:
+    """A TRIAL store can hold no product-visible row: every certified row's certification_class becomes
+    'trial_certified' (status untouched — the certified STATUS count is preserved; only product-visibility
+    changes). Idempotent."""
+    if not _table_exists(conn, "candidate") or not _has_col(conn, "candidate", "certification_class"):
+        return False
+    cur = conn.execute(
+        "UPDATE candidate SET certification_class=? WHERE status=? "
+        "AND (certification_class IS NULL OR certification_class!=?)", (CERT_TRIAL, CERTIFIED, CERT_TRIAL))
+    return cur.rowcount > 0
+
+
+def _close_forever_candidates(conn: sqlite3.Connection) -> bool:
+    """Run-closure of a trial store's forever-'candidate' rows -> terminal 'expired_unjudged'. GUARDED per row
+    (AND status='candidate', rowcount==1) with a status_audit row preserving prior state. Idempotent (a
+    re-run finds nothing in 'candidate')."""
+    if not _table_exists(conn, "candidate"):
+        return False
+    ids = [r["candidate_id"] for r in conn.execute(
+        "SELECT candidate_id FROM candidate WHERE status=?", (CANDIDATE,))]
+    if not ids:
+        return False
+    _ensure_status_audit(conn)
+    for cid in ids:
+        cur = conn.execute("UPDATE candidate SET status=? WHERE candidate_id=? AND status=?",
+                           (EXPIRED_UNJUDGED, cid, CANDIDATE))
+        if cur.rowcount != 1:
+            raise CorpusIntegrityError(
+                f"run-closure guard failed for {cid}: rowcount={cur.rowcount} (expected 1) — aborting")
+        conn.execute("INSERT INTO status_audit(entity_table, entity_id, from_status, to_status, reason) "
+                     "VALUES('candidate',?,?,?,?)", (cid, CANDIDATE, EXPIRED_UNJUDGED, "run-closure-r3-1"))
+    return True
+
+
+def migrate_r3(conn: sqlite3.Connection, role: str = None, explicit_role: bool = False,
+               demote_trial: bool = False) -> bool:
+    """Idempotent factory-4 → factory-5 upgrade. Returns True if anything changed.
+
+    Default (open_store) does ONLY the additive schema: the bank-level partial UNIQUE indexes (RI-9 backstop).
+    The DATA-governance work runs only when explicitly requested by the standalone migration:
+      * role       — stamp factory_meta.role (production_bank | trial_corpus).
+      * demote_trial — trial store: demote certified rows to 'trial_certified' AND close forever-candidates to
+                       'expired_unjudged'. Use ONLY on a trial store; never a production bank."""
+    changed = False
+    if _table_exists(conn, "candidate"):
+        have = {r["name"] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='index'")}
+        need = [ddl for name, ddl in _R3_UNIQUE_INDEXES if name not in have]
+        if need:
+            _assert_no_certified_dupes(conn)
+            for ddl in need:
+                conn.execute(ddl)
+            changed = True
+    if role is not None:
+        changed = _stamp_role(conn, role, explicit_role) or changed
+    if demote_trial:
+        changed = _demote_trial_certified(conn) or changed
+        changed = _close_forever_candidates(conn) or changed
+    if changed:
+        conn.commit()
+    return changed
+
+
+def prior_certified_dedup(conn: sqlite3.Connection):
+    """Seed structures for cross-run / bank-level dedup (R3-2, RI-9): every PRIOR certified row in THIS store,
+    so the duplicate gates in validate_run see the WHOLE bank, not just the current run. Returns
+    (seen_norm {norm_hash: candidate_id}, corpus_by_cell {(class,subject): [(candidate_id, stem)]}).
+
+    A new candidate whose normalized stem collides with any certified row FATAL-fails `duplicate_exact`; a
+    near-duplicate is QUARANTINEd by `near_duplicate` — so no run can re-certify a question the bank already
+    holds. Trial-certified rows count too (they are real questions in the store); only status matters here."""
+    seen_norm: Dict[str, str] = {}
+    corpus_by_cell: Dict[tuple, list] = {}
+    for r in conn.execute(
+            "SELECT c.candidate_id, c.stem, c.stem_norm_hash, s.class_level, s.subject "
+            "FROM candidate c LEFT JOIN generation_spec s ON s.spec_id=c.spec_id WHERE c.status=?",
+            (CERTIFIED,)):
+        nh = r["stem_norm_hash"]
+        if nh:
+            seen_norm.setdefault(nh, r["candidate_id"])
+        corpus_by_cell.setdefault((r["class_level"], r["subject"]), []).append((r["candidate_id"], r["stem"]))
+    return seen_norm, corpus_by_cell
+
+
 def _status_counts(conn: sqlite3.Connection) -> Dict[str, int]:
     if not _table_exists(conn, "candidate"):
         return {}
     return {str(r[0]): r[1] for r in conn.execute("SELECT status, COUNT(*) FROM candidate GROUP BY status")}
 
 
-def migrate_db(db_path) -> dict:
-    """Standalone, idempotent in-place migration of an EXISTING factory DB to the append-only shape (R1-2).
+def migrate_db(db_path, role: str = None, demote_trial: bool = False) -> dict:
+    """Standalone, idempotent in-place migration of an EXISTING factory DB to the latest shape (R1-2 → R3).
 
-    Asserts the certified count is UNCHANGED (no re-promotion, no re-quarantine) and returns a summary. Safe to
-    run repeatedly. Path must live under KIE_HOME. This never runs the certify_run promotion — it only reshapes
-    storage and backfills item_hash — so the 22 live certified rows are neither flipped nor re-promoted here.
-    """
+    Asserts the certified STATUS count is UNCHANGED (no re-promotion, no re-quarantine) and returns a summary —
+    the trial demotion changes product-VISIBILITY (certification_class), never the certified STATUS count; the
+    run-closure moves 'candidate' rows to 'expired_unjudged' but never touches certified rows. Safe to run
+    repeatedly. Path must live under KIE_HOME. This never runs the certify_run promotion.
+
+    `role` (R3-1) stamps factory_meta.role. `demote_trial` (R3-1, trial store ONLY) demotes certified rows to
+    'trial_certified' and closes forever-'candidate' rows to 'expired_unjudged'."""
     if str(db_path) != ":memory:":
         config.assert_under_kie_home(db_path)
     conn = sqlite3.connect(str(db_path))
@@ -621,6 +885,8 @@ def migrate_db(db_path) -> dict:
         changed = migrate_appendonly(conn)                    # factory-1 -> factory-2 (table rebuild)
         changed = migrate_r2(conn) or changed                 # factory-2 -> factory-3 (additive; R2-1/2/4)
         changed = migrate_r2_3(conn) or changed               # factory-3 -> factory-4 (additive; R2-3)
+        changed = migrate_r3(conn, role=role, explicit_role=(role is not None),
+                             demote_trial=demote_trial) or changed   # factory-4 -> factory-5 (R3-1/R3-2)
         conn.executescript(SCHEMA_PATH.read_text())           # create views/indexes; bump nothing it already has
         conn.execute("PRAGMA foreign_keys = ON")
         conn.execute("INSERT INTO factory_meta(key, value) VALUES ('schema_version', ?) "
@@ -630,7 +896,8 @@ def migrate_db(db_path) -> dict:
         if before.get(CERTIFIED, 0) != after.get(CERTIFIED, 0):
             raise CorpusIntegrityError(
                 f"migration altered certified count {before.get(CERTIFIED, 0)} -> {after.get(CERTIFIED, 0)} "
-                f"— aborting (a migration must never promote or demote)")
-        return {"changed": changed, "schema_version": SCHEMA_VERSION, "before": before, "after": after}
+                f"— aborting (a migration must never promote or demote a certified STATUS)")
+        return {"changed": changed, "schema_version": SCHEMA_VERSION, "role": store_role(conn),
+                "before": before, "after": after}
     finally:
         conn.close()

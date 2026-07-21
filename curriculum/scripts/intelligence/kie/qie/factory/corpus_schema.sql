@@ -10,10 +10,22 @@
 --
 -- Rows are LOCAL-ONLY (curriculum/knowledge/ is gitignored). Only this schema + the harness code are committed.
 --
--- SCHEMA VERSION: factory-4 (remediation R2-3 — real model/actor provenance + full-stage telemetry, [C10]/RI-8).
---   Builds ADDITIVELY on factory-3 (R2-1/2/4 — certification hardening: solution+distractor gates, proposer/
---   certifier independence, self-refuted-metadata replay), which builds on factory-2 (R1-2 — append-only,
---   content-bound certification records).
+-- SCHEMA VERSION: factory-5 (remediation R3-1/R3-2 — store-role governance + bank-level dedup, [C8]/[C12],
+--   RI-6/RI-9). Builds ADDITIVELY on factory-4 (R2-3 — real model/actor provenance + full-stage telemetry,
+--   [C10]/RI-8), which builds on factory-3 (R2-1/2/4 — certification hardening: solution+distractor gates,
+--   proposer/certifier independence, self-refuted-metadata replay), which builds on factory-2 (R1-2 —
+--   append-only, content-bound certification records).
+--
+--   factory-5 additions:
+--     factory_meta.role  {production_bank | trial_corpus} — the ONE authoritative production bank vs a trial
+--                        store. product_inventory()/certified_bank() refuse any store not stamped production_bank
+--                        (un-stamped / trial fail CLOSED, RI-6). corpus.open_production_bank stamps the bank.
+--     ux_cert_item_hash / ux_cert_norm_hash — PARTIAL UNIQUE indexes over CERTIFIED rows only: no two certified
+--                        rows in a store may share item_hash / stem_norm_hash (RI-9 hard backstop, [C12]).
+--     certification_class='trial_certified' — a certified row in a TRIAL store; product-INVISIBLE forever.
+--     status='expired_unjudged' — terminal run-closure state for a trial store's forever-'candidate' rows.
+--   In-place migrator: corpus.migrate_r3 (factory-4 -> factory-5; additive indexes at open, data-governance
+--   role/demotion/closure only via kie.qie.remediation.migrate_factory_r3). Idempotent; see corpus.py.
 --   The evidence tables (gate_result / independent_answer / judge_verdict) are APPEND-ONLY: every attempt is a
 --   new row (id AUTOINCREMENT) stamped with the candidate's item_hash AT CHECK TIME, so evidence is bound to
 --   the exact content it was computed against. A `_latest` view exposes the most recent attempt for the
@@ -43,7 +55,7 @@
 --     run_telemetry.actor            WHO ran the stage (distinct from the model)
 
 CREATE TABLE IF NOT EXISTS factory_meta (
-  key   TEXT PRIMARY KEY,
+  key   TEXT PRIMARY KEY,             -- 'schema_version', and (factory-5) 'role' = production_bank | trial_corpus
   value TEXT NOT NULL
 );
 
@@ -122,6 +134,17 @@ CREATE INDEX IF NOT EXISTS idx_cand_norm ON candidate(stem_norm_hash);
 -- belt-and-suspenders behind the collision-free candidate_id: at most one candidate per (run_id, spec_id).
 -- Doubles as the plain-INSERT guard for the immutability rule (a second ingest for the pair raises).
 CREATE UNIQUE INDEX IF NOT EXISTS ux_candidate_run_spec ON candidate(run_id, spec_id);
+-- factory-5 (R3-2, [C12], RI-9): bank-level dedup. PARTIAL UNIQUE over CERTIFIED rows only — no two certified
+-- rows in a store may share content (item_hash) or a normalized stem (stem_norm_hash), so a later run can never
+-- re-certify a question the bank already holds. Scoped to certified so duplicate rejected/quarantined
+-- candidates (many NULL-hashed) are irrelevant. corpus.migrate_r3 adds these to existing DBs (after a
+-- fail-closed no-existing-dupe check); the certify path's validate_run seeding is the graceful first line.
+-- scoped to PRODUCT-VISIBLE certified rows (status='certified' AND certification_class='certified'): two
+-- product rows may never share content; a product-invisible provisional / trial_certified duplicate is harmless.
+CREATE UNIQUE INDEX IF NOT EXISTS ux_cert_item_hash ON candidate(item_hash)
+  WHERE status='certified' AND certification_class='certified';
+CREATE UNIQUE INDEX IF NOT EXISTS ux_cert_norm_hash ON candidate(stem_norm_hash)
+  WHERE status='certified' AND certification_class='certified';
 
 -- ── every gate outcome, per candidate — APPEND-ONLY (nothing is ever overwritten) ───────────────────
 -- Each row is one gate check for one attempt, stamped with the candidate's item_hash at check time. A later

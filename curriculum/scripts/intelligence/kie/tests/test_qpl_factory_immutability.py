@@ -287,6 +287,12 @@ class MigrationFactory1ToFactory2(unittest.TestCase):
             try:
                 self.assertFalse(CO._has_col(conn, "gate_result", "item_hash"))   # old shape
                 changed = CO.migrate_appendonly(conn)
+                # the real path (open_store/migrate_db) runs the WHOLE forward chain before executescript, so the
+                # factory-5 schema's partial UNIQUE index (which references certification_class) resolves. Mirror
+                # it: r2 adds the R2 columns, r2_3 the provenance columns, r3 the bank-dedup index.
+                CO.migrate_r2(conn)
+                CO.migrate_r2_3(conn)
+                CO.migrate_r3(conn)
                 conn.executescript(CO.SCHEMA_PATH.read_text())
                 conn.commit()
                 self.assertTrue(changed)
@@ -320,6 +326,8 @@ class MigrationFactory1ToFactory2(unittest.TestCase):
             try:
                 CO.migrate_appendonly(conn)                       # factory-1 -> factory-2
                 CO.migrate_r2(conn)                               # factory-2 -> factory-3 (backfills gen family)
+                CO.migrate_r3(conn, role=CO.ROLE_PRODUCTION,      # factory-4 -> factory-5: dedup index + stamp
+                              explicit_role=True)                 #   this migrated store as the production bank
                 conn.executescript(CO.SCHEMA_PATH.read_text())
                 # flip the migrated row back to candidate to dry-run the new predicate against its own evidence
                 conn.execute("UPDATE candidate SET status='candidate' WHERE candidate_id='CAND_old1'")

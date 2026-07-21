@@ -16,8 +16,24 @@ def _d(conn, sql, params=()) -> Dict[str, int]:
     return {str(r[0]): r[1] for r in conn.execute(sql, params)}
 
 
+def _store_role(conn: sqlite3.Connection):
+    r = conn.execute("SELECT value FROM factory_meta WHERE key='role'").fetchone()
+    return r[0] if r else None
+
+
 def build(conn: sqlite3.Connection, run_id: str) -> dict:
     R: dict = {"run_id": run_id}
+
+    # R3-1 store governance: name the store's role and whether it may serve product. A trial_corpus / un-stamped
+    # store can hold status='certified' rows yet serve ZERO product (RI-6). trial_certified + expired_unjudged
+    # are the trial-store demotion / run-closure counts.
+    R["store_role"] = _store_role(conn)
+    R["is_production_bank"] = (R["store_role"] == "production_bank")
+    R["trial_certified"] = conn.execute(
+        "SELECT COUNT(*) FROM candidate WHERE run_id=? AND status='certified' "
+        "AND certification_class='trial_certified'", (run_id,)).fetchone()[0]
+    R["expired_unjudged"] = conn.execute(
+        "SELECT COUNT(*) FROM candidate WHERE run_id=? AND status='expired_unjudged'", (run_id,)).fetchone()[0]
 
     R["planned_specs"] = conn.execute(
         "SELECT COUNT(*) FROM generation_spec WHERE run_id=?", (run_id,)).fetchone()[0]
@@ -152,6 +168,8 @@ def render(R: dict) -> str:
     a = L.append
     a(f"# Factory Trial — {R['run_id']}")
     a("")
+    a(f"store role           : {R['store_role']}   (serves product: {R['is_production_bank']})")
+    a(f"trial_certified      : {R['trial_certified']}   expired_unjudged: {R['expired_unjudged']}")
     a(f"planned specs        : {R['planned_specs']}")
     a(f"candidates returned  : {R['candidates_returned']}  (never returned: {R['never_returned']})")
     a(f"generator refusals   : {R['generator_refusals']}")

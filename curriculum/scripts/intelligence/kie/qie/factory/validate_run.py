@@ -45,10 +45,14 @@ def run(conn: sqlite3.Connection, qconn: sqlite3.Connection, run_id: str) -> dic
 
     metrics = {"examined": len(rows), "rejected": 0, "quarantined": 0, "survived_gates": 0,
                "gate_fail_counts": {}, "independent": {}}
-    seen_norm: Dict[str, str] = {}
+    # R3-2 ([C12], RI-9): SEED the dedup structures from ALL prior CERTIFIED rows in this store BEFORE gating —
+    # not just this run. The planner re-issues run-independent specs, so without this seed a second run silently
+    # re-certifies a question the bank already holds. With it, a template-identical candidate FATAL-fails
+    # `duplicate_exact` and a near-duplicate is QUARANTINEd against the whole bank, cross-run.
+    seen_norm, corpus_by_cell = CO.prior_certified_dedup(conn)
+    metrics["seeded_certified_norms"] = len(seen_norm)
     # near-duplicate scan is scoped per (class, subject) — a Class-6 maths item and a Class-12 physics item
     # sharing tokens is not a duplicate, and an unscoped O(n^2) scan would drown in false positives.
-    corpus_by_cell: Dict[tuple, List[tuple]] = {}
 
     for r in rows:
         spec = _spec_of(conn, r["spec_id"])

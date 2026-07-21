@@ -307,14 +307,18 @@ class MigrationFactory3ToFactory4(unittest.TestCase):
         self.assertFalse(CO.migrate_r2_3(conn), "idempotent")
         conn.close()
 
-    def test_open_store_is_factory4(self):
+    def test_open_store_is_factory5(self):
         conn = CO.open_store(":memory:")
         try:
-            self.assertEqual(CO.SCHEMA_VERSION, "factory-4")
+            self.assertEqual(CO.SCHEMA_VERSION, "factory-5")
             self.assertEqual(conn.execute("SELECT value FROM factory_meta WHERE key='schema_version'")
-                             .fetchone()[0], "factory-4")
+                             .fetchone()[0], "factory-5")
             for c in ("model_version", "prompt_sha256", "payload_sha256", "generator_actor", "contract_version"):
                 self.assertTrue(CO._has_col(conn, "candidate", c))
+            # factory-5: the bank-dedup partial UNIQUE indexes exist
+            idx = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='index'")}
+            self.assertIn("ux_cert_item_hash", idx)
+            self.assertIn("ux_cert_norm_hash", idx)
         finally:
             conn.close()
 
