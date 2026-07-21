@@ -68,26 +68,41 @@ Lane B **CONFIRMED** + a P2 hardening; Lane C verifier stalled on a 206MB copy �
 match; v1.4 retained as `snapshots/knowledge_index_v1.5_frozen.db` sibling + v1.4 snapshot (never
 mutated). kie.db + index chmod a-w. Rollback copies + off-repo backup in place.
 
-### Phase R2 — Trust, independence & provenance — 🔵 IN PROGRESS
+### Phase R2 — Trust, independence & provenance — ✅ COMPLETE
+
+Each item: impl → independent **adversarial verifier** (the cluster verifier REFUTED → 4 holes fixed+locked;
+the R2-3 verifier REFUTED → per-candidate-provenance hole fixed+locked) → live migration → committed.
 
 | Item | State | Commit | Notes |
 |---|---|---|---|
-| R2-1 Proposer/certifier independence [C4] | ✅ | `04265407` | judge blind (no proposed_key leak); `independent` COMPUTED from actor families; same-actor ⇒ provisional + product-invisible; seeded judge controls; `evidence_class` stamped |
-| R2-2 Solution stage + distractor verification [C5] | ✅ | `04265407` | certify requires content-bound `solution_verified=1` + `distractor_verified=1`; sympy-executed `mis_relation` per distractor |
-| R2-4 No self-refuted metadata (step replay) | ✅ | `04265407` | `replay_steps` executes the DAG; depth EARNED; `depth_agreement` BLOCKING; earned_depth/computed_archetype on certified rows |
-| R2-3 Real model/actor provenance + telemetry | ⬜ | — | brief ready (factory-4); sequential after cluster + its verifier |
-| R2-5 Honest difficulty/exam labeling (P2) | ⬜ | — | pending |
+| R2-1 Proposer/certifier independence [C4] | ✅ | `04265407` `7fca9c20` | judge blind (no proposed_key leak); `independent` COMPUTED from actor families; same-actor ⇒ provisional + product-invisible; seeded judge controls (dropped-all now caught); `evidence_class` stamped |
+| R2-2 Solution stage + distractor verification [C5] | ✅ | `04265407` `7fca9c20` | certify requires content-bound `solution_verified=1` + `distractor_verified=1`; sympy-executed `mis_relation`; all-uncertifiable no longer vacuous |
+| R2-3 Real model/actor provenance + telemetry [C10] | ✅ | `e03b1471` | factory-4; fail-closed ingest + placeholder ban; computed payload_sha256; mandatory telemetry; **per-candidate provenance a certify precondition** (RI-8); append-only ledger; ki_run |
+| R2-4 No self-refuted metadata (step replay) | ✅ | `04265407` `7fca9c20` | `replay_steps` executes the DAG; depth EARNED; `depth_agreement` BLOCKING (string-typed claim now coerced); earned_depth/computed_archetype on certified rows |
+| R2-5 Honest difficulty/exam labeling (P2) | ✅ | `e53b1522` | `difficulty_calibration='predicted_uncalibrated'`; ADVISORY method-leak gate (practice-tier vs exam-novel). NCERT-originality + empirical calibration deferred (R5 — need PYQ/exercise corpus) |
 
-**factory-3 migration applied LIVE** (factory_corpus 15 + qpl_question_bank 22): counts preserved,
-**product_visible ⇒ 0** — the 22 production questions + 15 trial rows are recalled-by-construction
-(invisible to any product surface until re-certified under the R2 gates). This automatically enforces
-the audit's "quarantine the 22" condition; R0-2's status flip stays as belt-and-suspenders. Full suite
-**838 green** pre + post migration. Adversarial verifier running (findings → follow-up fix + lock).
+**Live migrations applied** (factory-2 → factory-3 → factory-4): factory_corpus 15 + qpl_question_bank 22
+certified counts preserved; **product_visible ⇒ 0** — the 22 production questions + 15 trial rows are
+recalled-by-construction (invisible to any product surface until re-certified under the R2 gates). This
+automatically enforces the audit's "quarantine the 22" condition; R0-2's status flip is belt-and-suspenders.
+Full suite **868 green**.
 
-RI status: **RI-3 now COMPLETE** (full certified-row conjunction incl. solution_verified + independent
-judge). RI-8 same-actor-cannot-promote slice green (full RI-8 completes with R2-3's actor provenance).
+RI status: **RI-3 COMPLETE** (full certified-row conjunction: gates + independent + judge-accept +
+solution_verified + distractor_verified, bound to item_hash). **RI-8 COMPLETE** (same-actor cannot promote;
+every certified row carries real per-candidate model+actor+prompt_sha256 provenance).
 
-*(Later phases R3–R6 tracked in the roadmap; rows added here as they are executed.)*
+### Phase R3 (partial, out of phase order — infra) — R3-3 ✅
+
+| Item | State | Commit | Notes |
+|---|---|---|---|
+| R3-3 CI + loud test-skip guard | ✅ | `66938d41` | `.github/workflows/kie-suite.yml` runs the suite on the intelligence lane; `run_kie_suite.py` fails on the canonical machine (`KIE_CANONICAL=1`) if any DB/input skip would make it vacuously green; `sympy` added to requirements (was missing) |
+
+**Deferred-but-enforced across R2** (machinery fail-closed NOW; the ACTORS need an API layer — roadmap R4-2):
+a real cross-family/human judge yielding `independent=1` (today's path is provisional-only), an Opus
+solution-writer, and a generator emitting `mis_relation` per distractor. Re-certifying the 22+15+14+7
+quarantined artifacts is downstream of that.
+
+*(Remaining R3 items + R4–R6 tracked in the roadmap; rows added here as they are executed.)*
 
 ---
 
