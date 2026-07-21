@@ -24,6 +24,7 @@ import {
   AttendanceSessionNotFoundError,
   getAttendanceSession,
   listAttendanceSessions,
+  MAX_SESSIONS_WINDOW_DAYS,
 } from "./attendance_sessions_repository.ts";
 import {
   consecutiveAbsenceRowToApi,
@@ -107,16 +108,77 @@ function tenantIds(claims: AuthedClaims) {
   };
 }
 
+/**
+ * Parse an optional positive-int query param. Returns undefined for a
+ * missing/blank/non-numeric value so the repository applies its own default and
+ * clamping (pagination is silently clamped, not rejected — matching the shared
+ * entity-read pagination convention).
+ */
+function parseOptionalInt(raw: string | null): number | undefined {
+  if (raw === null || raw.trim() === "") return undefined;
+  const n = Number.parseInt(raw, 10);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+/**
+ * GET /attendance/sessions?page=&pageSize=&windowDays=
+ *
+ * ICA-C3 (P1, perf): the list is now paginated + date-windowed (see
+ * listAttendanceSessions). page/pageSize follow the shared pagination
+ * convention (pageSize hard-capped at 100 in the repository; silently clamped,
+ * not rejected). windowDays is an optional trailing look-back; when supplied it
+ * is range-validated (1..366) and 422'd, matching the sibling office reads.
+ *
+ * Response shape change: this used to return a bare array of sessions
+ * (`data: [...]`). It now returns a pagination envelope
+ * (`data: { items: [...], total, page, pageSize, hasMore }`) — the same
+ * convention as the generic entity read store. No client currently consumes
+ * this route, so there is no old-shape caller to preserve; the default page
+ * still carries the most recent sessions first.
+ */
 export async function handleListAttendanceSessions(
   req: Request,
   config: AppConfig,
 ): Promise<Response> {
+  const url = new URL(req.url);
+  const page = parseOptionalInt(url.searchParams.get("page"));
+  const pageSize = parseOptionalInt(url.searchParams.get("pageSize"));
+
+  // windowDays is validated up front (like the other office reads) so a bad
+  // explicit value is a clean 422 rather than being silently clamped.
+  const windowDaysRaw = url.searchParams.get("windowDays");
+  let windowDays: number | undefined;
+  if (windowDaysRaw !== null && windowDaysRaw.trim() !== "") {
+    const parsed = Number.parseInt(windowDaysRaw, 10);
+    if (
+      !Number.isFinite(parsed) || parsed < 1 ||
+      parsed > MAX_SESSIONS_WINDOW_DAYS
+    ) {
+      return errorEnvelope(
+        "ATTENDANCE_VALIDATION",
+        `windowDays must be between 1 and ${MAX_SESSIONS_WINDOW_DAYS}`,
+        422,
+      );
+    }
+    windowDays = parsed;
+  }
+
   return await withAuth(req, config, true, async (claims) => {
     const { organizationId, schoolId } = tenantIds(claims);
-    const rows = await withTenantContext(config, claims, (db) =>
-      listAttendanceSessions(db, organizationId, schoolId)
+    const result = await withTenantContext(config, claims, (db) =>
+      listAttendanceSessions(db, organizationId, schoolId, {
+        page,
+        pageSize,
+        windowDays,
+      })
     );
-    return rows.map(attendanceSessionToApi);
+    return {
+      items: result.items.map(attendanceSessionToApi),
+      total: result.total,
+      page: result.page,
+      pageSize: result.pageSize,
+      hasMore: result.hasMore,
+    };
   });
 }
 
