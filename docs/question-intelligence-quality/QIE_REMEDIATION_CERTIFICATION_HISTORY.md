@@ -236,3 +236,26 @@ acquired independent evidence (R5-4/R5-6 PYQ corpus) or a cross-family judge (R4
 verdict is structurally excluded); honest-null + fail-closed on every ambiguity ("wrong knowledge is worse than
 missing" — 0 certifiable is reported, never inflated); no gate weakened for yield (Lane A recovers only
 genuinely-dimensionless items; dimension-wrong still fails); freeze untouched; RI-6 preserved.
+
+---
+
+## Checkpoint — Phase R4-4 (deferred audit passes) · 2026-07-21 · `EOS: PASS`
+
+Closes the audit board's own scope debt (BS-3 downstream surfaces unexamined; BS-5 build process unaudited /
+ki_run=0; BS-6 no single-lane whole-system claim). Governance/interface tooling — no certification decision.
+New `kie/qie/scope_audit.py`:
+
+- **(a) BS-5** `build_process_audit()` — reads the frozen index read-only and reports honestly: build OUTPUTS
+  were audited (per-concept `audit_verdict`) and the freeze certified, but the phase-1-7 build PROCESS has no
+  per-run trail (`ki_run`=0). Names the gap + the forward requirement. Freeze-safe.
+- **(b) BS-3** `downstream_surface_contracts()` + `assert_surface_read()` — the 4 absent downstream surfaces
+  get fail-closed read-contracts (product bank / manifest / frozen-index-ro only; a raw store is never
+  sanctioned — the RI-6 mistake cannot recur).
+- **(c) BS-6** `reconciled_inventory_guard()` — a whole-system claim must span every source lane in the
+  manifest (qie.db + qpl_question_bank.db + factory_corpus.db); a single-lane claim is refused.
+
+**Live outcome:** three "we never looked" gaps now examined + guarded. New `kie/tests/test_r4_4_scope_audit.py`
+(12 tests). Full suite **1059 green** (skipped=1).
+
+**Standing laws honored:** freeze untouched (frozen index opened mode=ro); fail-closed guards (unsanctioned
+reads + single-lane whole-system claims refused); honest reporting (the ki_run=0 gap is surfaced, not hidden).

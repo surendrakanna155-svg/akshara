@@ -8,7 +8,7 @@ closed; this log records execution only, it never re-plans). **Certification che
 [`QIE_REMEDIATION_CERTIFICATION_HISTORY.md`](QIE_REMEDIATION_CERTIFICATION_HISTORY.md).
 
 **Phase status:** ✅ R0 · ✅ R1 · ✅ R2 · ✅ R3 · ✅ R4-1 · ✅ R4-2 · ✅ R0-2 recall · ✅ RI-6 re-point ·
-✅ R4-3 · 🔵 R4-4 / R5-1 / R5-2 (buildable, next) · ⛔ R5-3/R6/live-key owner/external-gated.
+✅ R4-3 · ✅ R4-4 · 🔵 R5-1 / R5-2 (buildable, next) · ⛔ R5-3/R6/live-key owner/external-gated.
 
 This log is the running record of what has actually been implemented, verified, tested,
 certified, documented, and committed — one row per roadmap item.
@@ -156,6 +156,18 @@ Two file-disjoint lanes. Certification-affecting Lane B ran **two** independent 
 - Round 2 **REFUTED** — (D1) subject was derived from the concept_code prefix, which disagrees with the authoritative `subject_term` on **44%** of live rows; (D2/D3) `subject=None`/`fact_subject=None` failed OPEN; (D4) empty own-doc disabled the independence exclusion; (D5) "concept" scoping was overclaimed (subject-only). Fixed: read `subject_term` as authoritative + cross-check the concept_code, **fail-closed** on any missing/ambiguous/disagreeing signal; HOLD when the fact has no source doc; honestly label it subject-level (concept-identity alignment deferred to R5-2).
 
 **Live outcome:** dimensional recovery landed (26 recoverable); the qualitative lane is correct + honest (0 certifiable is the true state of the substrate — a precise, valuable measurement of the independent-evidence gap that R5-4/R5-6 / R4-2 must close). New `kie/tests/test_r4_3_qualitative_and_dimensional.py` (16 tests). Full suite **1047 green** (skipped=1). RI-6 + all pinned counts preserved.
+
+### R4-4 — deferred audit passes (scope debt) [BS-3][BS-5][BS-6] — ✅
+
+Governance/interface tooling (no certification decision). New `kie/qie/scope_audit.py` closes three deferred passes:
+
+| Item | State | Notes |
+|---|---|---|
+| (a) BS-5 build-process audit | ✅ | `build_process_audit()` reads the FROZEN index read-only and reports honestly: build OUTPUTS were audited (per-concept `audit_verdict` present) + the freeze was certified (ki_meta package), but the phase-1-7 build PROCESS has NO per-run trail (`ki_run`=0). Names the residual gap + the forward requirement (a sanctioned rebuild MUST populate ki_run per phase). Freeze-safe (mode=ro). |
+| (b) BS-3 downstream contracts | ✅ | `downstream_surface_contracts()` + `assert_surface_read()`: the 4 absent surfaces (weakness-intelligence, adaptive-practice, AI-tutor, analytics) get DESIGNED read-contracts — exactly what each reads and from which SANCTIONED reader (product bank / manifest / frozen-index-ro). Fail-closed: a raw store is NEVER sanctioned (the RI-6 second-surface mistake can't recur). |
+| (c) BS-6 reconciled-inventory guard | ✅ | `reconciled_inventory_guard()`: a "whole-system" completeness claim must be computed FROM the manifest across ALL source lanes (live: qie.db + qpl_question_bank.db + factory_corpus.db); a single-lane claim is refused (the blind spot that hid qie.db). Raises if no manifest exists. |
+
+**Live outcome:** the three "we never looked" gaps are now examined + honestly reported + guarded. New `kie/tests/test_r4_4_scope_audit.py` (12 tests). Full suite **1059 green** (skipped=1).
 
 **Still open (roadmap):** R4-3 (qualitative certification lane — buildable on the adopted qie.db/KVS substrate),
 R4-4 (deferred audit passes), R5-1/R5-2 (prereq edge table + KC_ convergence — buildable), R5-3 (ERP promotion — **owner-gated**),
