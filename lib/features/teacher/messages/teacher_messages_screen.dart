@@ -24,7 +24,8 @@ class TeacherMessagesScreen extends ConsumerWidget {
   final void Function(MessageThread thread)? onThreadTap;
 
   static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
-  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
+  static const double _tabletMaxContentWidth =
+      AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -55,59 +56,62 @@ class TeacherMessagesScreen extends ConsumerWidget {
                 )
               : LayoutBuilder(
                   builder: (context, constraints) {
-                    final isTablet =
-                        constraints.maxWidth >= _tabletBreakpoint;
+                    final isTablet = constraints.maxWidth >= _tabletBreakpoint;
                     final pad = isTablet
                         ? AksharaSpacing.tabletMargin
                         : AksharaSpacing.mobileMargin;
 
                     return MobileDashboardLayout.boundedShellBody(
                       constraints: constraints,
-                      maxContentWidth:
-                          isTablet ? _tabletMaxContentWidth : null,
+                      maxContentWidth: isTablet ? _tabletMaxContentWidth : null,
                       child: Column(
-                          children: [
-                            Padding(
-                              padding: EdgeInsets.fromLTRB(
-                                pad,
-                                AksharaSpacing.s4,
-                                pad,
-                                AksharaSpacing.s3,
-                              ),
-                              child: Semantics(
-                                label: 'Mailbox selector',
-                                child: SegmentedButton<MessageMailbox>(
-                                  segments: [
-                                    for (final m in MessageMailbox.values)
-                                      ButtonSegment(
-                                        value: m,
-                                        label: Text(m.label),
-                                      ),
-                                  ],
-                                  selected: {mailbox},
-                                  showSelectedIcon: false,
-                                  onSelectionChanged: (v) => ref
-                                      .read(
-                                        teacherMessageMailboxProvider.notifier,
-                                      )
-                                      .state = v.first,
-                                ),
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              pad,
+                              AksharaSpacing.s4,
+                              pad,
+                              AksharaSpacing.s3,
+                            ),
+                            child: Semantics(
+                              label: 'Mailbox selector',
+                              child: SegmentedButton<MessageMailbox>(
+                                segments: [
+                                  for (final m in MessageMailbox.values)
+                                    ButtonSegment(
+                                      value: m,
+                                      label: Text(m.label),
+                                    ),
+                                ],
+                                selected: {mailbox},
+                                showSelectedIcon: false,
+                                onSelectionChanged: (v) => ref
+                                    .read(
+                                      teacherMessageMailboxProvider.notifier,
+                                    )
+                                    .state = v.first,
                               ),
                             ),
-                            Expanded(
-                              child: switch (mailbox) {
-                                MessageMailbox.compose => _ComposePane(
-                                    draft: draft,
-                                    pad: pad,
-                                  ),
-                                MessageMailbox.inbox ||
-                                MessageMailbox.sent =>
-                                  threads.isEmpty
-                                      ? const AksharaEmptyState(
-                                          message: 'No messages yet.',
-                                          icon: Icons.forum_outlined,
-                                        )
-                                      : ListView.separated(
+                          ),
+                          Expanded(
+                            child: switch (mailbox) {
+                              MessageMailbox.compose => _ComposePane(
+                                  draft: draft,
+                                  pad: pad,
+                                ),
+                              MessageMailbox.inbox ||
+                              MessageMailbox.sent =>
+                                threads.isEmpty
+                                    ? const AksharaEmptyState(
+                                        message: 'No messages yet.',
+                                        icon: Icons.forum_outlined,
+                                      )
+                                    : RefreshIndicator(
+                                        onRefresh: () async => ref.invalidate(
+                                            teacherMessageThreadsFutureProvider),
+                                        child: ListView.separated(
+                                          physics:
+                                              const AlwaysScrollableScrollPhysics(),
                                           padding: EdgeInsets.symmetric(
                                             horizontal: pad,
                                           ),
@@ -122,15 +126,15 @@ class TeacherMessagesScreen extends ConsumerWidget {
                                               thread: thread,
                                               onTap: onThreadTap == null
                                                   ? null
-                                                  : () =>
-                                                      onThreadTap!(thread),
+                                                  : () => onThreadTap!(thread),
                                             );
                                           },
                                         ),
-                              },
-                            ),
-                          ],
-                        ),
+                                      ),
+                            },
+                          ),
+                        ],
+                      ),
                     );
                   },
                 ),
@@ -187,7 +191,8 @@ class _ComposePane extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(pad, AksharaSpacing.s0, pad, AksharaSpacing.s6),
+      padding:
+          EdgeInsets.fromLTRB(pad, AksharaSpacing.s0, pad, AksharaSpacing.s6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

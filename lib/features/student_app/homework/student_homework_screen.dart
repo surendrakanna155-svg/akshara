@@ -19,7 +19,8 @@ class StudentHomeworkScreen extends ConsumerWidget {
   final VoidCallback? onNotificationsTap;
 
   static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
-  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
+  static const double _tabletMaxContentWidth =
+      AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -33,8 +34,7 @@ class StudentHomeworkScreen extends ConsumerWidget {
     final hasError = ref.watch(studentHomeworkErrorProvider) ||
         asyncHomework.hasError ||
         asyncDash.hasError;
-    final identityResolved =
-        asyncDash.hasValue && data.studentName.isNotEmpty;
+    final identityResolved = asyncDash.hasValue && data.studentName.isNotEmpty;
 
     return Scaffold(
       backgroundColor: context.colors.surfaceContainerLow,
@@ -53,16 +53,14 @@ class StudentHomeworkScreen extends ConsumerWidget {
               ? AksharaErrorState(
                   message: 'Unable to load homework right now.',
                   onRetry: () {
-                    ref
-                        .read(studentHomeworkErrorProvider.notifier)
-                        .state = false;
+                    ref.read(studentHomeworkErrorProvider.notifier).state =
+                        false;
                     ref.invalidate(studentHomeworkFutureProvider);
                   },
                 )
               : LayoutBuilder(
                   builder: (context, constraints) {
-                    final isTablet =
-                        constraints.maxWidth >= _tabletBreakpoint;
+                    final isTablet = constraints.maxWidth >= _tabletBreakpoint;
                     final horizontalPadding = isTablet
                         ? AksharaSpacing.tabletMargin
                         : AksharaSpacing.mobileMargin;
@@ -75,91 +73,102 @@ class StudentHomeworkScreen extends ConsumerWidget {
                               ? _tabletMaxContentWidth
                               : double.infinity,
                         ),
-                        child: SingleChildScrollView(
-                          padding: EdgeInsets.fromLTRB(
-                            horizontalPadding,
-                            AksharaSpacing.s4,
-                            horizontalPadding,
-                            AksharaSpacing.s6,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              SizedBox(
-                                height: 88,
-                                child: Row(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    Expanded(
-                                      child: AksharaKpiCard(
-                                        value: '${data.pendingCount}',
-                                        subtitle: 'Pending',
-                                        accent: KpiAccent.warning,
-                                        icon: Icons.pending_actions_outlined,
-                                      ),
-                                    ),
-                                    const SizedBox(width: AksharaSpacing.s2),
-                                    Expanded(
-                                      child: AksharaKpiCard(
-                                        value: '${data.submittedCount}',
-                                        subtitle: 'Submitted',
-                                        accent: KpiAccent.success,
-                                        icon: Icons.task_alt_outlined,
-                                      ),
-                                    ),
-                                    const SizedBox(width: AksharaSpacing.s2),
-                                    Expanded(
-                                      child: AksharaKpiCard(
-                                        value: '${data.overdueCount}',
-                                        subtitle: 'Overdue',
-                                        accent: KpiAccent.error,
-                                        icon: Icons.warning_amber_outlined,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: AksharaSpacing.s4),
-                              HomeworkFilterBar(
-                                selectedFilter: filter,
-                                onFilterChanged: (value) => ref
-                                    .read(studentHomeworkFilterProvider.notifier)
-                                    .state = value,
-                              ),
-                              const SizedBox(height: AksharaSpacing.s3),
-                              if (data.items.isEmpty)
-                                const AksharaEmptyState(
-                                  message: 'No homework in this filter.',
-                                  icon: Icons.assignment_turned_in_outlined,
-                                  compact: true,
-                                )
-                              else
-                                Column(
-                                  children: [
-                                    for (var i = 0; i < data.items.length; i++) ...[
-                                      HomeworkListRow(
-                                        item: data.items[i],
-                                        onSubmit: data.items[i]
-                                                    .effectiveStatus ==
-                                                StudentHomeworkStatus.pending ||
-                                            data.items[i].effectiveStatus ==
-                                                StudentHomeworkStatus.overdue
-                                            ? () => _showSubmitSheet(
-                                                  context,
-                                                  ref,
-                                                  data.items[i],
-                                                )
-                                            : null,
-                                      ),
-                                      if (i < data.items.length - 1)
-                                        const SizedBox(
-                                          height: AksharaSpacing.s2,
+                        child: RefreshIndicator(
+                          onRefresh: () async =>
+                              ref.invalidate(studentHomeworkFutureProvider),
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: EdgeInsets.fromLTRB(
+                              horizontalPadding,
+                              AksharaSpacing.s4,
+                              horizontalPadding,
+                              AksharaSpacing.s6,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                SizedBox(
+                                  height: 88,
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      Expanded(
+                                        child: AksharaKpiCard(
+                                          value: '${data.pendingCount}',
+                                          subtitle: 'Pending',
+                                          accent: KpiAccent.warning,
+                                          icon: Icons.pending_actions_outlined,
                                         ),
+                                      ),
+                                      const SizedBox(width: AksharaSpacing.s2),
+                                      Expanded(
+                                        child: AksharaKpiCard(
+                                          value: '${data.submittedCount}',
+                                          subtitle: 'Submitted',
+                                          accent: KpiAccent.success,
+                                          icon: Icons.task_alt_outlined,
+                                        ),
+                                      ),
+                                      const SizedBox(width: AksharaSpacing.s2),
+                                      Expanded(
+                                        child: AksharaKpiCard(
+                                          value: '${data.overdueCount}',
+                                          subtitle: 'Overdue',
+                                          accent: KpiAccent.error,
+                                          icon: Icons.warning_amber_outlined,
+                                        ),
+                                      ),
                                     ],
-                                  ],
+                                  ),
                                 ),
-                            ],
+                                const SizedBox(height: AksharaSpacing.s4),
+                                HomeworkFilterBar(
+                                  selectedFilter: filter,
+                                  onFilterChanged: (value) => ref
+                                      .read(studentHomeworkFilterProvider
+                                          .notifier)
+                                      .state = value,
+                                ),
+                                const SizedBox(height: AksharaSpacing.s3),
+                                if (data.items.isEmpty)
+                                  const AksharaEmptyState(
+                                    message: 'No homework in this filter.',
+                                    icon: Icons.assignment_turned_in_outlined,
+                                    compact: true,
+                                  )
+                                else
+                                  Column(
+                                    children: [
+                                      for (var i = 0;
+                                          i < data.items.length;
+                                          i++) ...[
+                                        HomeworkListRow(
+                                          item: data.items[i],
+                                          onSubmit: data.items[i]
+                                                          .effectiveStatus ==
+                                                      StudentHomeworkStatus
+                                                          .pending ||
+                                                  data.items[i]
+                                                          .effectiveStatus ==
+                                                      StudentHomeworkStatus
+                                                          .overdue
+                                              ? () => _showSubmitSheet(
+                                                    context,
+                                                    ref,
+                                                    data.items[i],
+                                                  )
+                                              : null,
+                                        ),
+                                        if (i < data.items.length - 1)
+                                          const SizedBox(
+                                            height: AksharaSpacing.s2,
+                                          ),
+                                      ],
+                                    ],
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       ),

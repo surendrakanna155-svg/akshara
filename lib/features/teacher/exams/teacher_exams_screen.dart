@@ -26,7 +26,8 @@ class TeacherExamsScreen extends ConsumerWidget {
   final VoidCallback? onNotificationsTap;
 
   static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
-  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
+  static const double _tabletMaxContentWidth =
+      AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -72,13 +73,13 @@ class TeacherExamsScreen extends ConsumerWidget {
           : hasError
               ? AksharaErrorState(
                   message: 'Unable to load exam data.',
-                  onRetry: () =>
-                      ref.read(teacherExamsErrorProvider.notifier).state = false,
+                  onRetry: () => ref
+                      .read(teacherExamsErrorProvider.notifier)
+                      .state = false,
                 )
               : LayoutBuilder(
                   builder: (context, constraints) {
-                    final isTablet =
-                        constraints.maxWidth >= _tabletBreakpoint;
+                    final isTablet = constraints.maxWidth >= _tabletBreakpoint;
                     final pad = isTablet
                         ? AksharaSpacing.tabletMargin
                         : AksharaSpacing.mobileMargin;
@@ -91,79 +92,85 @@ class TeacherExamsScreen extends ConsumerWidget {
                               ? _tabletMaxContentWidth
                               : double.infinity,
                         ),
-                        child: SingleChildScrollView(
-                          padding: EdgeInsets.fromLTRB(
-                            pad,
-                            AksharaSpacing.s4,
-                            pad,
-                            AksharaSpacing.s6,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              SizedBox(
-                                height: 88,
-                                child: Row(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    Expanded(
-                                      child: AksharaKpiCard(
-                                        value: '${data.upcomingExams.length}',
-                                        subtitle: 'Upcoming',
-                                        accent: KpiAccent.primary,
+                        child: RefreshIndicator(
+                          onRefresh: () async => ref
+                              .invalidate(teacherUpcomingExamsFutureProvider),
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: EdgeInsets.fromLTRB(
+                              pad,
+                              AksharaSpacing.s4,
+                              pad,
+                              AksharaSpacing.s6,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                SizedBox(
+                                  height: 88,
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      Expanded(
+                                        child: AksharaKpiCard(
+                                          value: '${data.upcomingExams.length}',
+                                          subtitle: 'Upcoming',
+                                          accent: KpiAccent.primary,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(width: AksharaSpacing.s2),
-                                    Expanded(
-                                      child: AksharaKpiCard(
-                                        value: '${data.classAveragePercent}%',
-                                        subtitle: 'Class avg',
-                                        accent: KpiAccent.success,
+                                      const SizedBox(width: AksharaSpacing.s2),
+                                      Expanded(
+                                        child: AksharaKpiCard(
+                                          value: '${data.classAveragePercent}%',
+                                          subtitle: 'Class avg',
+                                          accent: KpiAccent.success,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(width: AksharaSpacing.s2),
-                                    Expanded(
-                                      child: AksharaKpiCard(
-                                        value:
-                                            '${data.markEntries.where((m) => m.marksObtained == null).length}',
-                                        subtitle: 'Pending marks',
-                                        accent: KpiAccent.warning,
+                                      const SizedBox(width: AksharaSpacing.s2),
+                                      Expanded(
+                                        child: AksharaKpiCard(
+                                          value:
+                                              '${data.markEntries.where((m) => m.marksObtained == null).length}',
+                                          subtitle: 'Pending marks',
+                                          accent: KpiAccent.warning,
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: AksharaSpacing.s4),
-                              Semantics(
-                                label: 'Exam section selector',
-                                child: SegmentedButton<TeacherExamSection>(
-                                  segments: [
-                                    for (final s in TeacherExamSection.values)
-                                      ButtonSegment(
-                                        value: s,
-                                        label: Text(s.label),
-                                      ),
-                                  ],
-                                  selected: {section},
-                                  showSelectedIcon: false,
-                                  onSelectionChanged: (v) => ref
-                                      .read(teacherExamSectionProvider.notifier)
-                                      .state = v.first,
-                                ),
-                              ),
-                              const SizedBox(height: AksharaSpacing.s4),
-                              switch (section) {
-                                TeacherExamSection.upcoming =>
-                                  _UpcomingList(exams: data.upcomingExams),
-                                TeacherExamSection.marksEntry =>
-                                  _MarksEntryPanel(entries: data.markEntries),
-                                TeacherExamSection.results => _ResultsPanel(
-                                    classAveragePercent:
-                                        data.classAveragePercent,
+                                    ],
                                   ),
-                              },
-                            ],
+                                ),
+                                const SizedBox(height: AksharaSpacing.s4),
+                                Semantics(
+                                  label: 'Exam section selector',
+                                  child: SegmentedButton<TeacherExamSection>(
+                                    segments: [
+                                      for (final s in TeacherExamSection.values)
+                                        ButtonSegment(
+                                          value: s,
+                                          label: Text(s.label),
+                                        ),
+                                    ],
+                                    selected: {section},
+                                    showSelectedIcon: false,
+                                    onSelectionChanged: (v) => ref
+                                        .read(
+                                            teacherExamSectionProvider.notifier)
+                                        .state = v.first,
+                                  ),
+                                ),
+                                const SizedBox(height: AksharaSpacing.s4),
+                                switch (section) {
+                                  TeacherExamSection.upcoming =>
+                                    _UpcomingList(exams: data.upcomingExams),
+                                  TeacherExamSection.marksEntry =>
+                                    _MarksEntryPanel(entries: data.markEntries),
+                                  TeacherExamSection.results => _ResultsPanel(
+                                      classAveragePercent:
+                                          data.classAveragePercent,
+                                    ),
+                                },
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -185,7 +192,8 @@ class _ResultsPanel extends ConsumerWidget {
     final approvalRequired = ref.watch(examApprovalRequiredProvider);
     final pendingApproval = ref.watch(teacherExamPendingApprovalProvider);
     final rejectionComment = ref.watch(teacherExamRejectionCommentProvider);
-    final coordinatorVerified = ref.watch(teacherExamCoordinatorVerifiedProvider);
+    final coordinatorVerified =
+        ref.watch(teacherExamCoordinatorVerifiedProvider);
     final examPhase = ref.watch(teacherExamPhaseProvider);
     final processState = ref.watch(processTeacherExamResultsProvider);
     final publishState = ref.watch(publishTeacherExamResultsProvider);
@@ -203,9 +211,8 @@ class _ResultsPanel extends ConsumerWidget {
           message:
               'Class average is $classAveragePercent% for Unit Test — Mathematics.',
           actionLabel: 'Review marks',
-          onAction: () => ref
-              .read(teacherExamSectionProvider.notifier)
-              .state = TeacherExamSection.marksEntry,
+          onAction: () => ref.read(teacherExamSectionProvider.notifier).state =
+              TeacherExamSection.marksEntry,
         ),
         if (rejectionComment != null && rejectionComment.isNotEmpty) ...[
           const SizedBox(height: AksharaSpacing.s3),
@@ -363,8 +370,7 @@ class _UpcomingList extends ConsumerWidget {
                   : null,
             ),
           ),
-          if (i < exams.length - 1)
-            const SizedBox(height: AksharaSpacing.s2),
+          if (i < exams.length - 1) const SizedBox(height: AksharaSpacing.s2),
         ],
       ],
     );
@@ -380,7 +386,8 @@ class _MarksEntryPanel extends ConsumerWidget {
     final optionsAsync = ref.watch(teacherMarksExamOptionsProvider);
     final activeExamId = ref.watch(teacherActiveExamIdProvider);
     final activeExam = ref.watch(teacherActiveExamProvider);
-    final options = optionsAsync.valueOrNull ?? const <TeacherExamSessionOption>[];
+    final options =
+        optionsAsync.valueOrNull ?? const <TeacherExamSessionOption>[];
     // Hydrate backend-persisted remarks for the active exam into the local cache.
     if (activeExamId != null) {
       ref.watch(examRemarksHydrationProvider(activeExamId));
@@ -489,8 +496,7 @@ class _MarksEntryListState extends ConsumerState<_MarksEntryList> {
     );
   }
 
-  FocusNode _focusFor(String id) =>
-      _focusNodes.putIfAbsent(id, FocusNode.new);
+  FocusNode _focusFor(String id) => _focusNodes.putIfAbsent(id, FocusNode.new);
 
   // Refresh the per-cell dots + column stats + Save-all visibility as marks are
   // keyed (a small roster — a plain setState is cheap and keeps the grid live).
@@ -515,7 +521,8 @@ class _MarksEntryListState extends ConsumerState<_MarksEntryList> {
         : MarksCellState.unsaved;
   }
 
-  bool _isDirty(ExamMarkEntry entry) => _cellState(entry) == MarksCellState.unsaved;
+  bool _isDirty(ExamMarkEntry entry) =>
+      _cellState(entry) == MarksCellState.unsaved;
 
   void _focusNextRow(int fromIndex) {
     final next = fromIndex + 1;
@@ -552,7 +559,8 @@ class _MarksEntryListState extends ConsumerState<_MarksEntryList> {
     final message = errors.isEmpty
         ? '$saved saved'
         : '$saved saved, ${errors.length} need attention (${errors.first})';
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _openRemarkDialog(

@@ -31,7 +31,8 @@ class TeacherHomeworkScreen extends ConsumerStatefulWidget {
   final bool initialPendingOnly;
 
   static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
-  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
+  static const double _tabletMaxContentWidth =
+      AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   ConsumerState<TeacherHomeworkScreen> createState() =>
@@ -92,7 +93,8 @@ class _TeacherHomeworkScreenState extends ConsumerState<TeacherHomeworkScreen> {
                       message: 'No homework assignments to review.',
                       icon: Icons.assignment_outlined,
                     )
-                  : _HomeworkBody(assignment: selected, assignments: assignments),
+                  : _HomeworkBody(
+                      assignment: selected, assignments: assignments),
     );
   }
 }
@@ -204,8 +206,8 @@ class _HomeworkBodyState extends ConsumerState<_HomeworkBody> {
                         key: QaTestKeys.teacherHomeworkTabNotSubmitted,
                         child: Consumer(
                           builder: (context, ref, _) {
-                            final async = ref
-                                .watch(teacherHomeworkNonSubmittersProvider);
+                            final async =
+                                ref.watch(teacherHomeworkNonSubmittersProvider);
                             final count = async.valueOrNull?.length;
                             return Text(
                               count == null
@@ -237,8 +239,7 @@ class _HomeworkBodyState extends ConsumerState<_HomeworkBody> {
                             assignment.id,
                             submission,
                           ),
-                          onBulkReview: () =>
-                              _bulkReview(context, assignment),
+                          onBulkReview: () => _bulkReview(context, assignment),
                           onNotify: () => _notify(context, assignment),
                           pad: pad,
                         ),
@@ -430,109 +431,113 @@ class _SubmissionsTab extends ConsumerWidget {
     final visibleSubmissions =
         pendingOnly ? pendingSubmissions : assignment.submissions;
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(
-        pad,
-        AksharaSpacing.s3,
-        pad,
-        AksharaSpacing.s6,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AksharaSectionHeader(
-            title: assignment.title,
-            trailingLabel: assignment.dueLabel,
-            fixedHeight: false,
-          ),
-          if (pendingOnly) ...[
-            const SizedBox(height: AksharaSpacing.s2),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: InputChip(
-                avatar: const Icon(Icons.filter_alt_outlined, size: 18),
-                label: const Text('Pending review only'),
-                onDeleted: () => ref
-                    .read(teacherHomeworkReviewFilterProvider.notifier)
-                    .state = HomeworkReviewFilter.all,
-              ),
+    return RefreshIndicator(
+      onRefresh: () async => ref.invalidate(teacherHomeworkFutureProvider),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(
+          pad,
+          AksharaSpacing.s3,
+          pad,
+          AksharaSpacing.s6,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AksharaSectionHeader(
+              title: assignment.title,
+              trailingLabel: assignment.dueLabel,
+              fixedHeight: false,
             ),
-          ],
-          const SizedBox(height: AksharaSpacing.s2),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  key: QaTestKeys.teacherHomeworkBulkReviewButton,
-                  onPressed: pendingSubmissions.isEmpty ? null : onBulkReview,
-                  icon: const Icon(Icons.done_all, size: 18),
-                  label: Text(
-                    selected.isEmpty
-                        ? 'Mark all reviewed'
-                        : 'Review selected (${selected.length})',
-                  ),
-                ),
-              ),
-              const SizedBox(width: AksharaSpacing.s2),
-              Expanded(
-                child: OutlinedButton.icon(
-                  key: QaTestKeys.teacherHomeworkNotifyButton,
-                  onPressed: onNotify,
-                  icon: const Icon(Icons.notifications_active_outlined, size: 18),
-                  label: const Text('Nudge parents'),
+            if (pendingOnly) ...[
+              const SizedBox(height: AksharaSpacing.s2),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: InputChip(
+                  avatar: const Icon(Icons.filter_alt_outlined, size: 18),
+                  label: const Text('Pending review only'),
+                  onDeleted: () => ref
+                      .read(teacherHomeworkReviewFilterProvider.notifier)
+                      .state = HomeworkReviewFilter.all,
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: AksharaSpacing.s3),
-          if (visibleSubmissions.isEmpty)
-            AksharaEmptyState(
-              message: pendingOnly
-                  ? 'No submissions pending review.'
-                  : 'No submissions yet.',
-              icon: pendingOnly
-                  ? Icons.task_alt_outlined
-                  : Icons.assignment_outlined,
-              compact: true,
-            )
-          else
-            Column(
+            const SizedBox(height: AksharaSpacing.s2),
+            Row(
               children: [
-                for (var i = 0; i < visibleSubmissions.length; i++) ...[
-                  Row(
-                    children: [
-                      if (visibleSubmissions[i].status ==
-                          HomeworkReviewStatus.pending)
-                        Checkbox(
-                          key: QaTestKeys.teacherHomeworkSubmissionCheckbox(
-                            visibleSubmissions[i].id,
-                          ),
-                          value:
-                              selected.contains(visibleSubmissions[i].id),
-                          onChanged: (value) => onToggle(
-                            visibleSubmissions[i].id,
-                            value ?? false,
-                          ),
-                        )
-                      else
-                        const SizedBox(width: 48),
-                      Expanded(
-                        child: HomeworkSubmissionRow(
-                          submission: visibleSubmissions[i],
-                          onReview: visibleSubmissions[i].status ==
-                                  HomeworkReviewStatus.pending
-                              ? () => onReview(visibleSubmissions[i])
-                              : null,
-                        ),
-                      ),
-                    ],
+                Expanded(
+                  child: OutlinedButton.icon(
+                    key: QaTestKeys.teacherHomeworkBulkReviewButton,
+                    onPressed: pendingSubmissions.isEmpty ? null : onBulkReview,
+                    icon: const Icon(Icons.done_all, size: 18),
+                    label: Text(
+                      selected.isEmpty
+                          ? 'Mark all reviewed'
+                          : 'Review selected (${selected.length})',
+                    ),
                   ),
-                  if (i < visibleSubmissions.length - 1)
-                    Divider(color: context.colors.outlineVariant),
-                ],
+                ),
+                const SizedBox(width: AksharaSpacing.s2),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    key: QaTestKeys.teacherHomeworkNotifyButton,
+                    onPressed: onNotify,
+                    icon: const Icon(Icons.notifications_active_outlined,
+                        size: 18),
+                    label: const Text('Nudge parents'),
+                  ),
+                ),
               ],
             ),
-        ],
+            const SizedBox(height: AksharaSpacing.s3),
+            if (visibleSubmissions.isEmpty)
+              AksharaEmptyState(
+                message: pendingOnly
+                    ? 'No submissions pending review.'
+                    : 'No submissions yet.',
+                icon: pendingOnly
+                    ? Icons.task_alt_outlined
+                    : Icons.assignment_outlined,
+                compact: true,
+              )
+            else
+              Column(
+                children: [
+                  for (var i = 0; i < visibleSubmissions.length; i++) ...[
+                    Row(
+                      children: [
+                        if (visibleSubmissions[i].status ==
+                            HomeworkReviewStatus.pending)
+                          Checkbox(
+                            key: QaTestKeys.teacherHomeworkSubmissionCheckbox(
+                              visibleSubmissions[i].id,
+                            ),
+                            value: selected.contains(visibleSubmissions[i].id),
+                            onChanged: (value) => onToggle(
+                              visibleSubmissions[i].id,
+                              value ?? false,
+                            ),
+                          )
+                        else
+                          const SizedBox(width: 48),
+                        Expanded(
+                          child: HomeworkSubmissionRow(
+                            submission: visibleSubmissions[i],
+                            onReview: visibleSubmissions[i].status ==
+                                    HomeworkReviewStatus.pending
+                                ? () => onReview(visibleSubmissions[i])
+                                : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (i < visibleSubmissions.length - 1)
+                      Divider(color: context.colors.outlineVariant),
+                  ],
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -559,29 +564,34 @@ class _NotSubmittedTab extends ConsumerWidget {
             compact: true,
           );
         }
-        return ListView.separated(
-          padding: EdgeInsets.fromLTRB(
-            pad,
-            AksharaSpacing.s3,
-            pad,
-            AksharaSpacing.s6,
+        return RefreshIndicator(
+          onRefresh: () async =>
+              ref.invalidate(teacherHomeworkNonSubmittersProvider),
+          child: ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(
+              pad,
+              AksharaSpacing.s3,
+              pad,
+              AksharaSpacing.s6,
+            ),
+            itemCount: students.length,
+            separatorBuilder: (context, _) =>
+                Divider(color: context.colors.outlineVariant),
+            itemBuilder: (context, index) {
+              final student = students[index];
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.person_outline),
+                title: Text(student.name),
+                trailing: const AksharaStatusChip(
+                  label: 'Not submitted',
+                  tone: KpiAccent.warning,
+                  size: AksharaStatusChipSize.compact,
+                ),
+              );
+            },
           ),
-          itemCount: students.length,
-          separatorBuilder: (context, _) =>
-              Divider(color: context.colors.outlineVariant),
-          itemBuilder: (context, index) {
-            final student = students[index];
-            return ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.person_outline),
-              title: Text(student.name),
-              trailing: const AksharaStatusChip(
-                label: 'Not submitted',
-                tone: KpiAccent.warning,
-                size: AksharaStatusChipSize.compact,
-              ),
-            );
-          },
         );
       },
     );

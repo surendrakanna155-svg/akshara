@@ -40,7 +40,8 @@ class ParentMessagesScreen extends ConsumerWidget {
               ? AksharaErrorState(
                   message: 'Unable to load parent messages.',
                   onRetry: () {
-                    ref.read(parentMessagesErrorProvider.notifier).state = false;
+                    ref.read(parentMessagesErrorProvider.notifier).state =
+                        false;
                     ref.invalidate(parentCommunicationInboxFutureProvider);
                   },
                 )
@@ -49,70 +50,79 @@ class ParentMessagesScreen extends ConsumerWidget {
                       message: 'No messages from school yet.',
                       icon: Icons.inbox_outlined,
                     )
-                  : ListView(
-                      padding: const EdgeInsets.all(AksharaSpacing.s4),
-                      children: [
-                        if (inbox.isNotEmpty) ...[
-                          const AksharaSectionHeader(title: 'School messages'),
-                          const SizedBox(height: AksharaSpacing.s2),
-                          for (final item in inbox) ...[
-                            ListTile(
-                              tileColor: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerLow,
-                              title: Text(item.senderName),
-                              subtitle: Text(
-                                item.displayBody,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              trailing: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  if (item.isUnread)
-                                    const Badge(label: Text('New'))
-                                  else
+                  : RefreshIndicator(
+                      onRefresh: () async {
+                        ref.invalidate(parentCommunicationInboxFutureProvider);
+                        ref.invalidate(parentMessageThreadsFutureProvider);
+                      },
+                      child: ListView(
+                        padding: const EdgeInsets.all(AksharaSpacing.s4),
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: [
+                          if (inbox.isNotEmpty) ...[
+                            const AksharaSectionHeader(
+                                title: 'School messages'),
+                            const SizedBox(height: AksharaSpacing.s2),
+                            for (final item in inbox) ...[
+                              ListTile(
+                                tileColor: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerLow,
+                                title: Text(item.senderName),
+                                subtitle: Text(
+                                  item.displayBody,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                trailing: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    if (item.isUnread)
+                                      const Badge(label: Text('New'))
+                                    else
+                                      Text(
+                                        item.deliveryStatusLabel,
+                                        style: context.aksharaText.labelSmall,
+                                      ),
                                     Text(
-                                      item.deliveryStatusLabel,
+                                      item.sentAtLabel,
                                       style: context.aksharaText.labelSmall,
                                     ),
-                                  Text(
-                                    item.sentAtLabel,
-                                    style: context.aksharaText.labelSmall,
-                                  ),
-                                ],
+                                  ],
+                                ),
+                                onTap: onCommunicationTap == null
+                                    ? null
+                                    : () => onCommunicationTap!(item.id),
                               ),
-                              onTap: onCommunicationTap == null
-                                  ? null
-                                  : () => onCommunicationTap!(item.id),
-                            ),
+                              const SizedBox(height: AksharaSpacing.s2),
+                            ],
+                          ],
+                          if (threads.isNotEmpty) ...[
+                            const AksharaSectionHeader(title: 'Conversations'),
                             const SizedBox(height: AksharaSpacing.s2),
+                            for (final thread in threads)
+                              ListTile(
+                                tileColor: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerLow,
+                                title: Text(thread.studentName),
+                                subtitle: Text(
+                                  thread.preview,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                trailing: thread.unreadCount > 0
+                                    ? Badge(
+                                        label: Text('${thread.unreadCount}'))
+                                    : Text(thread.timeLabel),
+                                onTap: onThreadTap == null
+                                    ? null
+                                    : () => onThreadTap!(thread),
+                              ),
                           ],
                         ],
-                        if (threads.isNotEmpty) ...[
-                          const AksharaSectionHeader(title: 'Conversations'),
-                          const SizedBox(height: AksharaSpacing.s2),
-                          for (final thread in threads)
-                            ListTile(
-                              tileColor: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerLow,
-                              title: Text(thread.studentName),
-                              subtitle: Text(
-                                thread.preview,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              trailing: thread.unreadCount > 0
-                                  ? Badge(label: Text('${thread.unreadCount}'))
-                                  : Text(thread.timeLabel),
-                              onTap: onThreadTap == null
-                                  ? null
-                                  : () => onThreadTap!(thread),
-                            ),
-                        ],
-                      ],
+                      ),
                     ),
     );
   }

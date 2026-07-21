@@ -22,7 +22,8 @@ class ParentNoticesScreen extends ConsumerWidget {
   final void Function(ParentNotice notice)? onNoticeTap;
 
   static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
-  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
+  static const double _tabletMaxContentWidth =
+      AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -52,8 +53,7 @@ class ParentNoticesScreen extends ConsumerWidget {
                 )
               : LayoutBuilder(
                   builder: (context, constraints) {
-                    final isTablet =
-                        constraints.maxWidth >= _tabletBreakpoint;
+                    final isTablet = constraints.maxWidth >= _tabletBreakpoint;
                     final horizontalPadding = isTablet
                         ? AksharaSpacing.tabletMargin
                         : AksharaSpacing.mobileMargin;
@@ -66,55 +66,60 @@ class ParentNoticesScreen extends ConsumerWidget {
                               ? _tabletMaxContentWidth
                               : double.infinity,
                         ),
-                        child: SingleChildScrollView(
-                          padding: EdgeInsets.fromLTRB(
-                            horizontalPadding,
-                            AksharaSpacing.s4,
-                            horizontalPadding,
-                            AksharaSpacing.s6,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              _NoticesKpiRow(data: data),
-                              const SizedBox(height: AksharaSpacing.s4),
-                              NoticesFilterBar(
-                                selectedCategory: category,
-                                onCategoryChanged: (value) => ref
-                                    .read(
-                                      parentNoticeCategoryProvider.notifier,
-                                    )
-                                    .state = value,
-                              ),
-                              const SizedBox(height: AksharaSpacing.s3),
-                              if (data.notices.isEmpty)
-                                const AksharaEmptyState(
-                                  message: 'No notices in this category.',
-                                  icon: Icons.campaign_outlined,
-                                  compact: true,
-                                )
-                              else
-                                Column(
-                                  children: [
-                                    for (var i = 0;
-                                        i < data.notices.length;
-                                        i++) ...[
-                                      _NoticeListTile(
-                                        notice: data.notices[i],
-                                        onTap: onNoticeTap == null
-                                            ? null
-                                            : () => onNoticeTap!(
-                                                  data.notices[i],
-                                                ),
-                                      ),
-                                      if (i < data.notices.length - 1)
-                                        const SizedBox(
-                                          height: AksharaSpacing.s3,
-                                        ),
-                                    ],
-                                  ],
+                        child: RefreshIndicator(
+                          onRefresh: () async =>
+                              ref.invalidate(parentNoticesFutureProvider),
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: EdgeInsets.fromLTRB(
+                              horizontalPadding,
+                              AksharaSpacing.s4,
+                              horizontalPadding,
+                              AksharaSpacing.s6,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _NoticesKpiRow(data: data),
+                                const SizedBox(height: AksharaSpacing.s4),
+                                NoticesFilterBar(
+                                  selectedCategory: category,
+                                  onCategoryChanged: (value) => ref
+                                      .read(
+                                        parentNoticeCategoryProvider.notifier,
+                                      )
+                                      .state = value,
                                 ),
-                            ],
+                                const SizedBox(height: AksharaSpacing.s3),
+                                if (data.notices.isEmpty)
+                                  const AksharaEmptyState(
+                                    message: 'No notices in this category.',
+                                    icon: Icons.campaign_outlined,
+                                    compact: true,
+                                  )
+                                else
+                                  Column(
+                                    children: [
+                                      for (var i = 0;
+                                          i < data.notices.length;
+                                          i++) ...[
+                                        _NoticeListTile(
+                                          notice: data.notices[i],
+                                          onTap: onNoticeTap == null
+                                              ? null
+                                              : () => onNoticeTap!(
+                                                    data.notices[i],
+                                                  ),
+                                        ),
+                                        if (i < data.notices.length - 1)
+                                          const SizedBox(
+                                            height: AksharaSpacing.s3,
+                                          ),
+                                      ],
+                                    ],
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
