@@ -9,7 +9,10 @@ import {
   parseApiStatus,
   statusToDb,
 } from "./sis_status_codec.ts";
-import { allocatePublicStudentId } from "./sis_public_student_id.ts";
+import {
+  allocateAndInsertStudentProfile,
+  insertStudentIdentityRow,
+} from "./sis_student_identity.ts";
 import {
   ClearanceDuesBlockedError,
   resolveClearanceDecision,
@@ -650,15 +653,15 @@ export async function createStudent(
     const studentCode = await generateStudentCode(db, schoolId);
     await db.queryObject("SAVEPOINT sis_student_code");
     try {
-      const studentRows = await db.queryObject<{ id: string }>(
-        `INSERT INTO students (
-          organization_id, school_id, student_code, display_name, status, created_by
-        ) VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING id`,
-        [organizationId, schoolId, studentCode, displayName, dbStatus, input.createdBy],
-      );
+      // ICA-F2: identity-table row via the single SIS-owned writer.
+      const studentRow = await insertStudentIdentityRow(db, organizationId, schoolId, {
+        studentCode,
+        displayName,
+        status: dbStatus,
+        createdBy: input.createdBy,
+      });
       await db.queryObject("RELEASE SAVEPOINT sis_student_code");
-      studentId = studentRows[0]!.id;
+      studentId = studentRow!.id;
       break;
     } catch (error) {
       await db.queryObject("ROLLBACK TO SAVEPOINT sis_student_code");
@@ -670,44 +673,29 @@ export async function createStudent(
     throw new ValidationError("Could not allocate a unique student code; please retry");
   }
 
-  // PSID: allocate the permanent Public Student ID for this new profile. Set-once
-  // at creation; the counter is never-reused/gapped and concurrency-safe. Fails
+  // PSID + profile: allocate the permanent Public Student ID and write the
+  // identity profile via the single SIS-owned writer (ICA-F2). Set-once at
+  // creation; the counter is never-reused/gapped and concurrency-safe. Fails
   // loudly if the school has no code (PSID requires it).
-  const publicStudentId = await allocatePublicStudentId(db, organizationId, schoolId);
-
+  //
   // RT-02: the admissionNumberExists() check above is TOCTOU-racy. The DB now
   // enforces UNIQUE(school_id, admission_number); map the violation to the same
   // DuplicateAdmissionNumberError (409) so a concurrent duplicate is rejected
   // cleanly instead of 500ing. The whole transaction rolls back (no orphan
   // students row).
   try {
-    await db.queryObject(
-      `INSERT INTO student_profiles (
-        organization_id, school_id, student_id, admission_number, public_student_id,
-        date_of_birth, gender, blood_group, address, city, state, postal_code, country,
-        created_by
-      ) VALUES (
-        $1, $2, $3, $4, $5,
-        $6::date, $7, $8, $9, $10, $11, $12, $13,
-        $14
-      )`,
-      [
-        organizationId,
-        schoolId,
-        studentId,
-        admissionNumber,
-        publicStudentId,
-        input.dateOfBirth || null,
-        input.gender ?? null,
-        input.bloodGroup ?? null,
-        input.address ?? null,
-        input.city ?? null,
-        input.state ?? null,
-        input.postalCode ?? null,
-        input.country ?? null,
-        input.createdBy,
-      ],
-    );
+    await allocateAndInsertStudentProfile(db, organizationId, schoolId, studentId, {
+      admissionNumber,
+      dateOfBirth: input.dateOfBirth || null,
+      gender: input.gender ?? null,
+      bloodGroup: input.bloodGroup ?? null,
+      address: input.address ?? null,
+      city: input.city ?? null,
+      state: input.state ?? null,
+      postalCode: input.postalCode ?? null,
+      country: input.country ?? null,
+      createdBy: input.createdBy,
+    });
   } catch (error) {
     if (
       String(error).includes("duplicate key") &&

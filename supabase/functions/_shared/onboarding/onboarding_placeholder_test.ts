@@ -219,37 +219,22 @@ class FakeDb {
     }
 
     if (s.startsWith("INSERT INTO students")) {
-      // Placeholder insert: user_id is the literal NULL (VALUES ($1, $2, NULL ...).
-      // Imported insert: user_id is a bind param ($3) and includes aadhaar binds.
-      const isPlaceholder = s.includes("VALUES ($1, $2, NULL");
-      let rec: StudentRecord;
-      if (isPlaceholder) {
-        rec = {
-          id: this.id("stu"),
-          organization_id: String(args[0]),
-          school_id: String(args[1]),
-          user_id: null,
-          student_code: String(args[2]),
-          display_name: String(args[3]),
-          status: "active",
-          is_placeholder: true,
-          aadhaar: null,
-          aadhaar_hash: null,
-        };
-      } else {
-        rec = {
-          id: this.id("stu"),
-          organization_id: String(args[0]),
-          school_id: String(args[1]),
-          user_id: (args[2] as string | null) ?? null,
-          student_code: String(args[3]),
-          display_name: String(args[4]),
-          status: "active",
-          is_placeholder: false,
-          aadhaar: (args[5] as string | null) ?? null,
-          aadhaar_hash: (args[6] as string | null) ?? null,
-        };
-      }
+      // Canonical column order (ICA-F2 single identity writer): organization_id,
+      // school_id, student_code, display_name, status, created_by, user_id,
+      // is_placeholder, aadhaar, aadhaar_hash. Placeholder vs imported is now the
+      // is_placeholder bind (args[7]), not a literal-NULL user_id.
+      const rec: StudentRecord = {
+        id: this.id("stu"),
+        organization_id: String(args[0]),
+        school_id: String(args[1]),
+        user_id: (args[6] as string | null) ?? null,
+        student_code: String(args[2]),
+        display_name: String(args[3]),
+        status: String(args[4] ?? "active"),
+        is_placeholder: args[7] === true,
+        aadhaar: (args[8] as string | null) ?? null,
+        aadhaar_hash: (args[9] as string | null) ?? null,
+      };
       // ON CONFLICT DO NOTHING semantics for placeholders.
       if (this.students.some((st) => st.school_id === rec.school_id && st.student_code === rec.student_code)) {
         if (s.includes("ON CONFLICT")) return [];
@@ -259,8 +244,9 @@ class FakeDb {
     }
 
     if (s.startsWith("INSERT INTO student_profiles")) {
-      // Both onboarding INSERTs put public_student_id at $5 (index 4).
-      this.profiles.push({ student_id: args[0], public_student_id: args[4] });
+      // Canonical order: organization_id, school_id, student_id, admission_number,
+      // public_student_id (index 4), ...
+      this.profiles.push({ student_id: args[2], public_student_id: args[4] });
       return [];
     }
 

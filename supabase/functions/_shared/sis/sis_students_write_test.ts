@@ -131,9 +131,10 @@ class WriteMockDb {
       if (this.failProfileInsert) {
         throw new Error("forced profile insert failure");
       }
-      // Column order (createStudent): organization_id, school_id, student_id,
-      // admission_number, public_student_id, date_of_birth, gender, blood_group,
-      // address, city, state, postal_code, country, created_by.
+      // Canonical order (ICA-F2 single identity writer): organization_id,
+      // school_id, student_id, admission_number, public_student_id, date_of_birth,
+      // gender, blood_group, address, city, state, postal_code, country,
+      // mother_name, created_by.
       const row = {
         id: crypto.randomUUID(),
         organization_id: args[0],
@@ -149,7 +150,8 @@ class WriteMockDb {
         state: args[10],
         postal_code: args[11],
         country: args[12],
-        created_by: args[13],
+        mother_name: args[13],
+        created_by: args[14],
         created_at: "2026-06-09T00:00:00.000Z",
         updated_at: "2026-06-09T00:00:00.000Z",
       };

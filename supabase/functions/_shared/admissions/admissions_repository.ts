@@ -2,6 +2,10 @@ import type { TenantQueryClient } from "../tenant_db.ts";
 import { resolveAcademicPlacement } from "../academic/academic_catalog_resolver.ts";
 import { createHandoffFromEnrollment } from "./admissions_handoffs_repository.ts";
 import { normalizePhone } from "./admissions_format.ts";
+import {
+  allocateAndInsertStudentProfile,
+  insertStudentIdentityRow,
+} from "../sis/sis_student_identity.ts";
 import type {
   AdmissionsApplicationRow,
   AdmissionsApprovalRow,
@@ -1291,32 +1295,11 @@ export async function submitEnrollment(
 
   const admissionNumber = `ADM-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
   const studentCode = `STU-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
-
-  const studentRows = await db.queryObject<{ id: string }>(
-    `INSERT INTO students (
-      organization_id, school_id, student_code, display_name, status
-    ) VALUES ($1, $2, $3, $4, 'active')
-    RETURNING id`,
-    [organizationId, schoolId, studentCode, input.studentFullName],
-  );
-  const studentId = studentRows[0]!.id;
-
-  if (guardianUserId) {
-    await db.queryObject(
-      `INSERT INTO student_guardians (
-        organization_id, school_id, student_id, guardian_user_id,
-        relationship, is_primary, status
-      ) VALUES ($1, $2, $3, $4, $5, true, 'active')
-      ON CONFLICT (student_id, guardian_user_id) DO NOTHING`,
-      [
-        organizationId,
-        schoolId,
-        studentId,
-        guardianUserId,
-        input.relationship || "guardian",
-      ],
-    );
-  }
+  // Only pass a real ISO date to the PSID profile writer; a walk-in with an empty
+  // DOB stays NULL (the admissions_enrollments row keeps the raw input value).
+  const profileDateOfBirth = /^\d{4}-\d{2}-\d{2}$/.test(input.dateOfBirth.trim())
+    ? input.dateOfBirth.trim()
+    : null;
 
   const placement = await resolveAcademicPlacement(
     { db, organizationId, schoolId },
@@ -1331,15 +1314,50 @@ export async function submitEnrollment(
     { mode: "admissions" },
   );
 
-  // Layer 3 backstop: even with the lock anchor, insert under a SAVEPOINT so a
-  // racing 23505 on admissions_enrollments_application_uniq is recoverable
-  // WITHOUT aborting the whole transaction — we roll back to the savepoint and
-  // return the winning enrollment (idempotent), never surfacing a 500. The
-  // just-created student row is left orphaned but harmless (no admission number
-  // was minted for it, and it is never handed off to finance).
+  // ICA-F2 + Layer-3 backstop: mint the STUDENT IDENTITY (base row + canonical
+  // Public Student ID + profile), the guardian link, and the admissions
+  // enrolment ATOMICALLY inside ONE savepoint. Two wins:
+  //   (1) Every admissions-created student now carries the canonical PSID via the
+  //       single SIS-owned identity writer — no more no-PSID base rows.
+  //   (2) A racing double-submit that trips 23505 on
+  //       admissions_enrollments_application_uniq rolls the ENTIRE student
+  //       creation back (student + PSID/profile + guardian), so no orphan row is
+  //       left behind — we simply return the winning enrollment (idempotent),
+  //       never a 500.
   await db.queryObject(`SAVEPOINT admissions_enroll_insert`);
+  let studentId: string;
   let enrollRows: AdmissionsEnrollmentRow[];
   try {
+    const studentRow = await insertStudentIdentityRow(db, organizationId, schoolId, {
+      studentCode,
+      displayName: input.studentFullName,
+      status: "active",
+    });
+    studentId = studentRow!.id;
+
+    await allocateAndInsertStudentProfile(db, organizationId, schoolId, studentId, {
+      admissionNumber,
+      dateOfBirth: profileDateOfBirth,
+      gender: input.gender || null,
+    });
+
+    if (guardianUserId) {
+      await db.queryObject(
+        `INSERT INTO student_guardians (
+          organization_id, school_id, student_id, guardian_user_id,
+          relationship, is_primary, status
+        ) VALUES ($1, $2, $3, $4, $5, true, 'active')
+        ON CONFLICT (student_id, guardian_user_id) DO NOTHING`,
+        [
+          organizationId,
+          schoolId,
+          studentId,
+          guardianUserId,
+          input.relationship || "guardian",
+        ],
+      );
+    }
+
     enrollRows = await db.queryObject<AdmissionsEnrollmentRow>(
       `INSERT INTO admissions_enrollments (
         organization_id, school_id, application_id, student_id, guardian_user_id,

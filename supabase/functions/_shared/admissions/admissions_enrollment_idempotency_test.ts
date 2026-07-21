@@ -33,12 +33,25 @@ class MockEnrollmentDb {
     },
   ];
   students: Row[] = [];
+  profiles: Row[] = [];
   enrollments: Row[] = [];
   handoffs: Row[] = [];
 
   studentInsertCount = 0;
   enrollmentInsertAttempts = 0;
   handoffInsertCount = 0;
+
+  // ICA-F2 PSID plumbing: a per-school code + counter model for
+  // allocatePublicStudentId, so an admissions-created student now gets a
+  // canonical Public Student ID at submit (via the SIS-owned identity writer).
+  schoolCode: string | null = "ADMSCH";
+  counters = new Map<string, number>();
+
+  // Savepoint snapshot for the atomic student-creation region: on SAVEPOINT we
+  // snapshot students/profiles; on ROLLBACK TO SAVEPOINT we restore them — so
+  // the "no orphan on a racing 23505" property can be asserted honestly.
+  private savepointStudents: Row[] | null = null;
+  private savepointProfiles: Row[] | null = null;
 
   // When set, the idempotency guard SELECT ignores this application id (as if a
   // concurrent tx committed AFTER the guard read) so the enrollment INSERT is
@@ -59,6 +72,36 @@ class MockEnrollmentDb {
     // Guardian lookup — no guardian in these tests.
     if (sql.includes("lookup_guardian_user_for_enrollment")) {
       return [{ guardian_user_id: null }] as T[];
+    }
+    // PSID allocation seam (school code + never-reused counter).
+    if (sql.includes("SELECT code FROM schools")) {
+      return (this.schoolCode === null ? [] : [{ code: this.schoolCode }]) as T[];
+    }
+    if (sql.includes("INSERT INTO school_public_id_counters")) {
+      const key = `${args[0]}|${args[1]}`;
+      const current = this.counters.get(key);
+      let allocated: number;
+      if (current === undefined) {
+        this.counters.set(key, 2);
+        allocated = 1;
+      } else {
+        const next = current + 1;
+        this.counters.set(key, next);
+        allocated = next - 1;
+      }
+      return [{ allocated }] as T[];
+    }
+    if (sql.includes("INSERT INTO student_profiles")) {
+      // Canonical order: organization_id, school_id, student_id, admission_number,
+      // public_student_id, ...
+      this.profiles.push({
+        organization_id: args[0],
+        school_id: args[1],
+        student_id: args[2],
+        admission_number: args[3],
+        public_student_id: args[4],
+      });
+      return [{ id: crypto.randomUUID() }] as T[];
     }
     // Lock anchor on the application row. PRA-P0-13: the repo now also reads
     // `status` under the lock, so surface it (the seeds carry it).
@@ -81,10 +124,23 @@ class MockEnrollmentDb {
       );
       return (row ? [row] : []) as T[];
     }
-    if (sql.startsWith("SAVEPOINT") || sql.startsWith("RELEASE SAVEPOINT")) {
+    if (sql.startsWith("SAVEPOINT")) {
+      // Snapshot the mutable identity tables so ROLLBACK TO SAVEPOINT can undo an
+      // in-flight student creation (models the atomic no-orphan region).
+      this.savepointStudents = this.students.map((r) => ({ ...r }));
+      this.savepointProfiles = this.profiles.map((r) => ({ ...r }));
+      return [] as T[];
+    }
+    if (sql.startsWith("RELEASE SAVEPOINT")) {
+      this.savepointStudents = null;
+      this.savepointProfiles = null;
       return [] as T[];
     }
     if (sql.startsWith("ROLLBACK TO SAVEPOINT")) {
+      if (this.savepointStudents) this.students = this.savepointStudents;
+      if (this.savepointProfiles) this.profiles = this.savepointProfiles;
+      this.savepointStudents = null;
+      this.savepointProfiles = null;
       return [] as T[];
     }
     if (sql.includes("INSERT INTO students")) {
@@ -225,6 +281,60 @@ Deno.test("submitEnrollment maps a racing 23505 to the existing enrollment (back
   // No second enrollment row, no second handoff.
   assertEquals(db.enrollments.length, 1, "no duplicate enrollment row");
   assertEquals(db.handoffInsertCount, 0, "no fee handoff on the idempotent path");
+});
+
+Deno.test("ICA-F2: an admissions-created student now gets a canonical Public Student ID (no no-PSID base row)", async () => {
+  const db = new MockEnrollmentDb();
+
+  const enrollment = await submitEnrollment(
+    db as unknown as TenantQueryClient,
+    ORG,
+    SCHOOL,
+    baseInput(APPLICATION),
+  );
+
+  // One student + one identity profile, and the profile carries the canonical
+  // PSID (<SCHOOL_CODE>-0001) allocated via the single SIS-owned writer — the
+  // orphan-without-PSID base row is gone.
+  assertEquals(db.students.length, 1);
+  assertEquals(db.profiles.length, 1);
+  assertEquals(db.profiles[0].public_student_id, "ADMSCH-0001");
+  // The profile links the just-created student and mirrors the minted admission #.
+  assertEquals(db.profiles[0].student_id, db.students[0].id);
+  assertEquals(db.profiles[0].admission_number, enrollment.admission_number);
+});
+
+Deno.test("ICA-F2: a racing 23505 leaves NO orphan student or profile (atomic rollback)", async () => {
+  const db = new MockEnrollmentDb();
+
+  // A concurrent submit already committed the winning enrollment, but the guard
+  // is blind to it so the INSERT is what trips the unique index (23505).
+  const winner: Row = {
+    id: crypto.randomUUID(),
+    organization_id: ORG,
+    school_id: SCHOOL,
+    application_id: APPLICATION,
+    student_name: "Idempotent Student",
+    conversion_status: "pending",
+    admission_number: "ADM-2026-EXISTING",
+    submitted_at: "2026-07-02T00:00:00.000Z",
+  };
+  db.enrollments.push(winner);
+  db.hideFromGuardApplication = APPLICATION;
+
+  const result = await submitEnrollment(
+    db as unknown as TenantQueryClient,
+    ORG,
+    SCHOOL,
+    baseInput(APPLICATION),
+  );
+
+  assertEquals(result.admission_number, "ADM-2026-EXISTING");
+  // The whole student-creation region rolled back to the savepoint: no orphan
+  // student and no orphan profile survive the losing race.
+  assertEquals(db.students.length, 0, "no orphan student left behind");
+  assertEquals(db.profiles.length, 0, "no orphan profile left behind");
+  assertEquals(db.handoffInsertCount, 0);
 });
 
 Deno.test("submitEnrollment with null application_id is NOT deduped (walk-in enrollments)", async () => {
