@@ -227,11 +227,43 @@ function fiscalYearOf(isoDate: string): string {
 }
 
 /**
+ * ICA-A3 (P1): a per-school receipt prefix derived from the school's UNIQUE
+ * `code` (schools.code is UNIQUE per organization). Uppercased and reduced to
+ * A–Z0–9 so it is a safe, human-readable receipt prefix; falls back to "RCP"
+ * only if a school somehow has no usable code. Because two schools in one org can
+ * never share a code, their DEFAULT receipt numbers can never be identical — so a
+ * second school's first collection can no longer collide with the first school's.
+ */
+async function schoolReceiptPrefix(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+): Promise<string> {
+  const rows = await db.queryObject<{ code: string }>(
+    `SELECT code FROM schools WHERE id = $1 AND organization_id = $2`,
+    [schoolId, organizationId],
+  );
+  const cleaned = String(rows[0]?.code ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+  return cleaned || "RCP";
+}
+
+/**
  * PRA-P1-08 (S1): allocate a receipt number. When the per-school
  * `receipts.receipt_sequencing` flag is on, returns a GAPLESS per-school,
- * per-financial-year number `{prefix}/{FY}/{NNNNNN}` honouring the configured
- * `receipt_prefix`; otherwise the legacy random number (so existing receipts are
- * untouched and both formats coexist under UNIQUE(receipt_number)).
+ * per-financial-year number `{prefix}/{FY}/{NNNNNN}`; otherwise the legacy random
+ * number (so existing receipts are untouched and both formats coexist under the
+ * scoped UNIQUE(organization_id, school_id, receipt_number)).
+ *
+ * ICA-A3 (P1): the prefix is per-school so two schools in one org cannot both mint
+ * `RCP/{FY}/000001` and collide. An explicitly configured `receipt_prefix` is
+ * honoured verbatim (the school owns its namespace); otherwise the default prefix
+ * is the school's own UNIQUE code, which keeps numbers human-distinct across
+ * schools. The scoped UNIQUE index on finance_receipts
+ * (organization_id, school_id, receipt_number) is the DB backstop that keeps this
+ * correct even if two schools were ever set to the same explicit prefix.
  *
  * The atomic `INSERT ... ON CONFLICT ... RETURNING` runs inside the collection's
  * transaction, so if the collection rolls back the increment rolls back too — a
@@ -251,8 +283,10 @@ async function allocateReceiptNumber(
   if (!sequencingOn) {
     return buildReceiptNumber();
   }
-  const prefix =
-    (String(settings["receipts.receipt_prefix"] ?? "RCP").trim() || "RCP");
+  const configuredPrefix = String(settings["receipts.receipt_prefix"] ?? "").trim();
+  const prefix = configuredPrefix !== ""
+    ? configuredPrefix
+    : await schoolReceiptPrefix(db, organizationId, schoolId);
   const fiscalYear = fiscalYearOf(collectionDate);
   const rows = await db.queryObject<{ next_number: string }>(
     `INSERT INTO finance_receipt_sequences (organization_id, school_id, fiscal_year, next_number)

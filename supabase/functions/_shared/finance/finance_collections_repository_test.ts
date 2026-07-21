@@ -639,3 +639,283 @@ Deno.test("collectionDetailToApi builds timeline and receipt links from db rows"
   assertEquals(history[0]!.paidAmount, "5000");
   assertEquals((detail.summaryKpis as Array<Record<string, unknown>>).length, 5);
 });
+
+// ── ICA-A3 (P1): receipt-number uniqueness scoped per (org, school) ──────────
+// Before the fix, finance_receipts.receipt_number was globally UNIQUE. With the
+// opt-in gapless sequencing ON, the per-(org, school, FY) counter restarts at 1
+// per school and, on the shared default prefix, two schools in one org both mint
+// `RCP/2026-27/000001`. The SECOND school's first finance_receipts INSERT then
+// hit the global UNIQUE, threw duplicate-key, and rolled the whole collection
+// transaction back — that school could never record its first payment.
+//
+// The fix re-scopes the DB uniqueness to (organization_id, school_id,
+// receipt_number) and makes the default prefix the school's own UNIQUE code. The
+// fake below models that scoped uniqueness (the migration's UNIQUE index), the
+// per-school sequence counter, and the schools.code lookup.
+
+const SCHOOL_B = "a2000000-0000-4000-8000-000000000002";
+const STUDENT_B = "a4000000-0000-4000-8000-000000000002";
+const INVOICE_B = "inv-2";
+const ACCOUNT_B = "acct-2";
+
+class MultiSchoolReceiptDb {
+  invoices: Row[] = [
+    {
+      id: INVOICE,
+      organization_id: ORG,
+      school_id: SCHOOL_A,
+      student_id: STUDENT,
+      fee_assignment_id: "asg-1",
+      academic_year: "2026-27",
+      outstanding_amount: "50000",
+      total_amount: "50000",
+      invoice_status: "issued",
+      due_date: "2026-07-07",
+    },
+    {
+      id: INVOICE_B,
+      organization_id: ORG,
+      school_id: SCHOOL_B,
+      student_id: STUDENT_B,
+      fee_assignment_id: "asg-2",
+      academic_year: "2026-27",
+      outstanding_amount: "50000",
+      total_amount: "50000",
+      invoice_status: "issued",
+      due_date: "2026-07-07",
+    },
+  ];
+  accounts: Row[] = [
+    { id: ACCOUNT, fee_assignment_id: "asg-1", organization_id: ORG, school_id: SCHOOL_A, amount_paid: "0", outstanding_amount: "50000" },
+    { id: ACCOUNT_B, fee_assignment_id: "asg-2", organization_id: ORG, school_id: SCHOOL_B, amount_paid: "0", outstanding_amount: "50000" },
+  ];
+  collections: Row[] = [];
+  receipts: Row[] = [];
+  // per (org|school|fiscal_year) -> last allocated number (restarts per school).
+  seqCounters: Record<string, number> = {};
+  settingsBySchool: Record<string, Record<string, string>>;
+  codeBySchool: Record<string, string>;
+
+  constructor(opts: {
+    settingsBySchool: Record<string, Record<string, string>>;
+    codeBySchool: Record<string, string>;
+  }) {
+    this.settingsBySchool = opts.settingsBySchool;
+    this.codeBySchool = opts.codeBySchool;
+  }
+
+  async queryObject<T>(sql: string, args: unknown[] = []): Promise<T[]> {
+    // Invoice + account load (FOR UPDATE), scoped by org + school.
+    if (sql.includes("FROM finance_invoices fi") && sql.includes("JOIN finance_student_accounts")) {
+      const inv = this.invoices.find((i) =>
+        i.id === args[0] && i.organization_id === args[1] && i.school_id === args[2]
+      );
+      if (!inv) return [] as T[];
+      const acct = this.accounts.find((a) => a.fee_assignment_id === inv.fee_assignment_id);
+      return [{ ...inv, student_account_id: acct?.id }] as T[];
+    }
+    // getSettingsRow — per-school finance settings.
+    if (sql.includes("FROM finance_settings")) {
+      const settings = this.settingsBySchool[String(args[1])] ?? {};
+      return [{ organization_id: args[0], school_id: args[1], settings }] as T[];
+    }
+    // schoolReceiptPrefix — per-school unique code.
+    if (sql.includes("SELECT code FROM schools")) {
+      return [{ code: this.codeBySchool[String(args[0])] ?? "" }] as T[];
+    }
+    // finance_receipt_sequences INSERT ... ON CONFLICT — per (org, school, FY).
+    if (sql.includes("INSERT INTO finance_receipt_sequences")) {
+      const key = `${args[0]}|${args[1]}|${args[2]}`;
+      const next = (this.seqCounters[key] ?? 0) + 1;
+      this.seqCounters[key] = next;
+      return [{ next_number: String(next) }] as T[];
+    }
+    if (sql.includes("INSERT INTO finance_collections")) {
+      const row = {
+        id: crypto.randomUUID(),
+        organization_id: args[0],
+        school_id: args[1],
+        student_id: args[2],
+        invoice_id: args[3],
+        student_account_id: args[4],
+        receipt_number: args[5],
+        collection_date: args[6],
+        payment_method: args[7],
+        reference_number: args[8],
+        amount_collected: String(args[9]),
+        notes: args[10],
+        collection_status: "completed",
+        collected_by: args[11],
+        row_version: 1,
+        created_at: "2026-06-09T00:00:00.000Z",
+        updated_at: "2026-06-09T00:00:00.000Z",
+      };
+      this.collections.push(row);
+      return [row as T];
+    }
+    // finance_receipts INSERT — models the NEW scoped UNIQUE index
+    // finance_receipts_org_school_receipt_number_key on
+    // (organization_id, school_id, receipt_number): a clash only within the SAME
+    // (org, school) is a duplicate; the same number under a DIFFERENT school is
+    // allowed (the whole point of the fix).
+    if (sql.includes("INSERT INTO finance_receipts")) {
+      const [org, school, collectionId, receiptNumber] = args;
+      const clash = this.receipts.some((r) =>
+        r.organization_id === org && r.school_id === school && r.receipt_number === receiptNumber
+      );
+      if (clash) {
+        throw new Error(
+          'duplicate key value violates unique constraint "finance_receipts_org_school_receipt_number_key"',
+        );
+      }
+      const row = {
+        id: crypto.randomUUID(),
+        organization_id: org,
+        school_id: school,
+        collection_id: collectionId,
+        receipt_number: receiptNumber,
+        receipt_date: args[4],
+        amount: String(args[5]),
+        generated_by: args[6],
+        created_at: "2026-06-09T00:00:00.000Z",
+      };
+      this.receipts.push(row);
+      return [row as T];
+    }
+    if (sql.includes("UPDATE finance_invoices SET") && sql.includes("outstanding_amount")) {
+      const inv = this.invoices.find((i) => i.id === args[2]);
+      if (inv) {
+        inv.outstanding_amount = String(args[0]);
+        inv.invoice_status = String(args[1]);
+      }
+      return [] as T[];
+    }
+    if (sql.includes("UPDATE finance_student_accounts SET") && sql.includes("amount_paid +")) {
+      const acct = this.accounts.find((a) => a.id === args[1]);
+      if (acct) {
+        acct.amount_paid = String(parseFloat(String(acct.amount_paid)) + Number(args[0]));
+        acct.outstanding_amount = String(parseFloat(String(acct.outstanding_amount)) - Number(args[0]));
+      }
+      return [] as T[];
+    }
+    if (sql.includes("SELECT * FROM finance_invoices WHERE id = $1")) {
+      return this.invoices.filter((i) => i.id === args[0]) as T[];
+    }
+    // Day-close probe, allocateCollectionToHeads, etc. — no rows needed.
+    return [] as T[];
+  }
+
+  async queryCount(): Promise<number> {
+    return this.collections.length;
+  }
+}
+
+function asReceiptDb(mock: MultiSchoolReceiptDb): TenantQueryClient {
+  return mock as unknown as TenantQueryClient;
+}
+
+Deno.test("ICA-A3: two schools sharing the default receipt prefix both record collection #1 (scoped unique, no rollback)", async () => {
+  // The exact audit scenario: both schools have sequencing ON and the SAME
+  // explicit prefix "RCP", so both mint RCP/2026-27/000001.
+  const db = new MultiSchoolReceiptDb({
+    settingsBySchool: {
+      [SCHOOL_A]: { "receipts.receipt_sequencing": "true", "receipts.receipt_prefix": "RCP" },
+      [SCHOOL_B]: { "receipts.receipt_sequencing": "true", "receipts.receipt_prefix": "RCP" },
+    },
+    codeBySchool: { [SCHOOL_A]: "DPSA", [SCHOOL_B]: "DPSB" },
+  });
+
+  const a = await createCollection(asReceiptDb(db), ORG, SCHOOL_A, {
+    invoiceId: INVOICE,
+    amountCollected: 10000,
+    paymentMethod: "cash",
+    collectedBy: STAFF,
+    collectionDate: "2026-06-09",
+  });
+  // School B's FIRST collection — under the OLD global UNIQUE this threw a
+  // duplicate-key on the identical RCP/2026-27/000001 and rolled the whole
+  // transaction back. It must now succeed.
+  const b = await createCollection(asReceiptDb(db), ORG, SCHOOL_B, {
+    invoiceId: INVOICE_B,
+    amountCollected: 10000,
+    paymentMethod: "cash",
+    collectedBy: STAFF,
+    collectionDate: "2026-06-09",
+  });
+
+  // Both schools produced the SAME human number (shared prefix + per-school
+  // counter restarts at 1) …
+  assertEquals(a.receipt.receipt_number, "RCP/2026-27/000001");
+  assertEquals(b.receipt.receipt_number, "RCP/2026-27/000001");
+  // … yet BOTH receipts persisted — the scoped (org, school, receipt_number)
+  // uniqueness keeps them as distinct rows, no rollback.
+  assertEquals(db.receipts.length, 2);
+  assertEquals(db.receipts[0]!.school_id, SCHOOL_A);
+  assertEquals(db.receipts[1]!.school_id, SCHOOL_B);
+});
+
+Deno.test("ICA-A3: with no explicit prefix, each school's receipts carry its own code (human-distinct)", async () => {
+  const db = new MultiSchoolReceiptDb({
+    settingsBySchool: {
+      // Sequencing ON, no receipt_prefix set → default to the school's own code.
+      [SCHOOL_A]: { "receipts.receipt_sequencing": "true" },
+      [SCHOOL_B]: { "receipts.receipt_sequencing": "true" },
+    },
+    codeBySchool: { [SCHOOL_A]: "DPS-A", [SCHOOL_B]: "svn b" },
+  });
+
+  const a = await createCollection(asReceiptDb(db), ORG, SCHOOL_A, {
+    invoiceId: INVOICE,
+    amountCollected: 10000,
+    paymentMethod: "cash",
+    collectedBy: STAFF,
+    collectionDate: "2026-06-09",
+  });
+  const b = await createCollection(asReceiptDb(db), ORG, SCHOOL_B, {
+    invoiceId: INVOICE_B,
+    amountCollected: 10000,
+    paymentMethod: "cash",
+    collectedBy: STAFF,
+    collectionDate: "2026-06-09",
+  });
+
+  // schools.code is uppercased and reduced to A–Z0–9 → "DPSA" / "SVNB", so the
+  // two schools' first receipts are human-DISTINCT (and both persisted).
+  assertEquals(a.receipt.receipt_number, "DPSA/2026-27/000001");
+  assertEquals(b.receipt.receipt_number, "SVNB/2026-27/000001");
+  assertEquals(db.receipts.length, 2);
+});
+
+Deno.test("ICA-A3: an in-school duplicate receipt number is still rejected (scoped unique is real)", async () => {
+  // Proves the scoped uniqueness is genuinely enforced (so the tests above are
+  // not vacuous) and that a WITHIN-school collision is still a hard error.
+  const db = new MultiSchoolReceiptDb({
+    settingsBySchool: {
+      [SCHOOL_A]: { "receipts.receipt_sequencing": "true", "receipts.receipt_prefix": "RCP" },
+    },
+    codeBySchool: { [SCHOOL_A]: "DPSA" },
+  });
+
+  await createCollection(asReceiptDb(db), ORG, SCHOOL_A, {
+    invoiceId: INVOICE,
+    amountCollected: 10000,
+    paymentMethod: "cash",
+    collectedBy: STAFF,
+    collectionDate: "2026-06-09",
+  });
+  // Force the SAME school to reissue the identical number by rewinding the
+  // counter → the scoped (org, school, receipt_number) uniqueness must reject it,
+  // surfaced as DuplicateReceiptError.
+  db.seqCounters = {};
+  await assertRejects(
+    () =>
+      createCollection(asReceiptDb(db), ORG, SCHOOL_A, {
+        invoiceId: INVOICE,
+        amountCollected: 10000,
+        paymentMethod: "cash",
+        collectedBy: STAFF,
+        collectionDate: "2026-06-09",
+      }),
+    DuplicateReceiptError,
+  );
+});
