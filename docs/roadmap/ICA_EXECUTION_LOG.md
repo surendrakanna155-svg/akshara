@@ -110,10 +110,11 @@
 Batch 1: payment **38/0** · finance **307/0** · guards+trunk-integrity+money-invariant **11/0**.
 Batch 2: combined 4 dirs + trunk-integrity **572/0**; intelligence **177/0**; predictions **5/0**.
 Batches 3–5: guard tests + trunk-integrity green; attendance **43/0**; idempotency **9/0**; internal-health **5/0**.
-**Full backend suite (all batches together): `deno test supabase/functions/` → 4048 passed · 0 failed · 3 ignored** (the 3 ignored = the env-gated real-DB isolation tests, i.e. the ICA-D4 CI gap — a separate backlog item). `deno check` on every changed source → exit 0.
+Batches 6–7: finance **318/0**; communication **150/0**; director+management **53/0**.
+**Full backend suite (all batches together): `deno test supabase/functions/` → 4064 passed · 0 failed · 3 ignored** (the 3 ignored = the env-gated real-DB isolation tests, i.e. the ICA-D4 CI gap — a separate backlog item). `deno check` on every changed source → exit 0.
 
 ## Migration slots consumed on the trunk (for cross-lane fold-in coordination)
-`…060` (A1 recovery backfill) · `…062` (A6 payment NUMERIC) · `…070` (A2 offline guard) · `…080` (B1 guardian RLS) · `…090` (E1 single-current) · `…100` (C1 attendance indexes) · `…110` (B3 DEFINER guards) · `…130` (D3 idempotency reaper) · `…140` (B6 audit school-bind). **Current trunk max = `…140`.** **⚠ ASIP fold-in note:** the ASIP KB migration `…060` collides with A1's `…060` (tracked ASIP P1-D); its planned renumber to `…090` is also taken — **the ASIP fold-in must pick `…150`+ (above this trunk's current max `…140`).** Not actioned here (ASIP is a separate lane).
+`…060` (A1 recovery backfill) · `…062` (A6 payment NUMERIC) · `…070` (A2 offline guard) · `…080` (B1 guardian RLS) · `…090` (E1 single-current) · `…100` (C1 attendance indexes) · `…110` (B3 DEFINER guards) · `…130` (D3 idempotency reaper) · `…140` (B6 audit school-bind) · `…160` (E2 operational FKs) · `…170` (A3 receipt scoping). **Current trunk max = `…170`.** **⚠ ASIP fold-in note:** the ASIP KB migration `…060` collides with A1's `…060` (tracked ASIP P1-D); its planned renumber to `…090` is also taken — **the ASIP fold-in must pick `…180`+ (above this trunk's current max `…170`).** Not actioned here (ASIP is a separate lane).
 
 ## Deploy-gated tail (owner-gated — NOT auto-run here)
 These complete the "live certification" lifecycle step and run at the **owner-gated trunk→pilot redeploy** (deploy authority is owner-held; the shared VPS is production):
@@ -122,15 +123,40 @@ These complete the "live certification" lifecycle step and run at the **owner-ga
 3. A1 recovery-dashboard rupee-figure check against a seeded ledger + the one-time `…060` money backfill (owner confirms recovery-CRM row presence on the pilot before applying).
 4. A5 gate: the webhook signature enforcement must be in the deployed build before the route is exposed / live gateway enabled.
 
+## Batch 6 — Perf + data model (feeds W10)
+
+| ICA | Title | EOS | Commit |
+|---|---|---|---|
+| **C4** | bulkAssignFeeStructure N+1 → set-based | PASS | `c1654202` |
+| **C6** | broadcast fan-out silent truncation >5,000 | PASS | `04716c41` |
+| **E2** | operational soft FKs → real FKs (NOT VALID) + orphan detector | CONDITIONAL | `47cb9eea` |
+
+- **C4** — cohort-invariant reads hoisted; `= ANY` batched reads; multi-row `INSERT…SELECT unnest ON CONFLICT`; ~540→~11 queries; per-student SAVEPOINT retained only as the concurrent-23505 fallback. *Residual (out of scope): `createAnnualInvoice` stays O(N).*
+- **C6** — both entry points chunk the FULL cohort in bounded multi-row inserts; nothing dropped. *Sibling flagged: `publisher_dispatch.ts` MAX_PUBLISH_RECIPIENTS.*
+- **E2** — mig `…160`: 3 FKs `ON DELETE CASCADE` **NOT VALID** + `detect_orphan_operational_rows()` (privileged). **Deploy: run detector + `VALIDATE CONSTRAINT`.** (Corrected the audit's premise — the cited soft-FK migration doesn't touch these columns; no deliberate decoupling existed.)
+
+## Batch 7 — Hygiene + perf + finance availability
+
+| ICA | Title | EOS | Commit |
+|---|---|---|---|
+| **F8** | dead no-op loop + hot-path dynamic imports | PASS | `57c44685` |
+| **C2** | director/management dashboards recompute all-time aggregates | PASS | `367e4c21` |
+| **A3** | receipt-number global UNIQUE collision | PASS | `ed8e3c98` |
+
+- **F8** — removed finance_router no-op loop; 24 hot-path dynamic imports → static (cycle-checked). *Partial: same pattern in sis/academic/hr/admissions routers + other services left for an F8 sweep.*
+- **C2** — attendance + exam-marks aggregates bounded to a trailing current-academic-year window in both dashboards (reused the repo's own interval convention; avoided the per-school academic_years table for org-wide rollups). ICA-H3 preserved; lifetime metrics unchanged. No matview.
+- **A3** — mig `…170`: DROP global `finance_receipts_receipt_number_key` + scoped UNIQUE `(org,school,receipt_number)` (superset key, safe) + per-school `schools.code` default prefix. **Gate:** before multi-school receipt-sequencing.
+
+*(Note: two interrupted C2/A3 attempts were fully reverted and redone clean from the certified baseline — no partial work committed. F8 was committed independently first.)*
+
 ## Remaining ICA backlog
 
-**Done so far (Batches 1–5):** A1, A2, A5, A6, B1, B3, B4, B5, B6, B8, B9, C1, C3, D1, D3, E1, H1, H3, H4(+ext). **19 of 49 items** (all P0s + the live/reachable set + first tranche of W10/W11 hardening).
+**Done so far (Batches 1–7): 25 of 49 items** — A1, A2, A3, A5, A6, B1, B3, B4, B5, B6, B8, B9, C1, C2, C3, C4, C6, D1, D3, E1, E2, F8, H1, H3, H4(+ext). All P0s + the live/reachable set + the W10/W11 perf/security/reliability/data-model tranche.
 
 - **Owner-gated (do NOT auto-implement):** ICA-G1 (`domain_events` bus vs log), ICA-G2 (entitlement-flip timing), ICA-G3 (per-tenant custom roles), ICA-B2 policy (OTP pilot-phone removal). Raised in the ICA owner-decision batch (§5.6).
 - **ASIP session (do NOT implement here):** ICA-G4 (client mock/real fail-closed) + **ICA-B7** (support mirror bridge incident-id guard) — both modify the ASIP support lane; handled by the dedicated AI Support Engineering session.
 - **Still buildable (next batches, unblocked):**
-  - Perf/W10: **C2** (dashboard all-time aggregates → bounded/matview), **C4** (`bulkAssignFeeStructure` N+1), **C5** (connection-pool ceiling / pooler — infra), **C6** (broadcast >5,000 truncation), **C7** (keyset pagination).
-  - Reliability/CI: **A7 + D4 + D5 + D6** (real-DB concurrency + CI postgres gate + atomic-claim + SoD double-decide — a coherent CI-infra sub-batch), **D7** (backend coverage gate).
-  - Data model: **E2** (soft FKs), **E3** (migration idempotency guards).
-  - Architecture/W10: **F1** (auth middleware — same target as the W10 central-chokepoint item), **F2** (single student-identity service), **F3** (god-file decomposition), **F4** (prefix→router registry), **F5** (JSONB↔relational invariant), **F6** (`inventory_finance` single router), **F7** (raw SQL → repository), **F8** (dead code + hot-path dynamic imports).
-  - Domain/finance: **A3** (receipt-number scoping — gate before multi-school receipt-sequencing), **H2** (TC dues-wording vs inventory/library gate).
+  - Architecture/W10: **F6** (`inventory_finance` single router), **F4** (prefix→router registry), **F7** (raw SQL → repository), **F2** (single student-identity service), **F5** (JSONB↔relational invariant + reconcile), **F8-sweep** (remaining routers/services). **Larger/assess:** **F1** (auth middleware — the W10 central-chokepoint item), **F3** (god-file decomposition).
+  - Reliability/CI: **A7 + D4 + D5 + D6** (real-DB concurrency + CI postgres gate + atomic-claim + SoD double-decide — validation is CI-on-push), **D7** (backend coverage gate).
+  - Domain/finance: **H2** (TC dues-wording vs inventory/library gate — spans backend clearance + Flutter PDF).
+  - Data model / infra: **E3** (migration-idempotency guard), **C5** (connection pooler — infra/ops), **C7** (generic-store keyset pagination).
