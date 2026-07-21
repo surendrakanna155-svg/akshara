@@ -1,5 +1,18 @@
 # QIE — fresh-session handoff (authoritative resume point)
 
+> ⛔ **CERTIFICATION HALT IN FORCE (2026-07-21, R0-3).** No new certification runs —
+> no `certify_run`, no `--register`/`--apply` conversions, no QDI certification, no index
+> freeze — until Phase **R1** of the remediation roadmap exits and the invariant suite is
+> green. See [`QIE_REMEDIATION_EXECUTION_LOG.md`](QIE_REMEDIATION_EXECUTION_LOG.md) and
+> [`QIE_REMEDIATION_ROADMAP.md`](QIE_REMEDIATION_ROADMAP.md). This overrides §7 "remaining
+> work" below (which assumes a clean certification machinery the audit disproved).
+
+> ⏭ **PARTIALLY SUPERSEDED (2026-07-20).** This handoff (2026-07-15) reflects the pre-pivot state
+> (Decisions A/B). The QIE lane has since pivoted to **Owner Decision C / the Question Planning Layer** —
+> read [`QUESTION_PLANNING_LAYER_ROADMAP.md`](QUESTION_PLANNING_LAYER_ROADMAP.md) and
+> [`CERTIFIED_KNOWLEDGE_INDEX_AND_QDI.md`](CERTIFIED_KNOWLEDGE_INDEX_AND_QDI.md) **first**, then use the
+> environment/lineage detail below. See [`README.md`](README.md) for the full lane map.
+
 **Date:** 2026-07-15 · **Branch:** `feature/qp-content-readiness` · **Tip:** `94b74162` · **Working tree:** clean
 on the QIE lanes · **Tests:** 645 green (`python -m unittest discover -s kie/tests`)
 
