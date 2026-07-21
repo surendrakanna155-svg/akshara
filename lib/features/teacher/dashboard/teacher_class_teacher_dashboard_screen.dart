@@ -41,9 +41,11 @@ class TeacherClassTeacherDashboardScreen extends ConsumerWidget {
         showAi: true,
         showProfile: true,
         onAiTap: () => context.go(RouteNames.aiAssistant),
+        // F-128 — teacher-scoped notifications inbox (not the parent route).
         onNotificationsTap: () =>
-            context.push(RouteNames.parentNotifications),
-        onProfileTap: () => context.go(RouteNames.teacherDashboard),
+            context.push(RouteNames.teacherNotifications),
+        // F-164 — the profile avatar opens the teacher profile, not Home.
+        onProfileTap: () => context.go(RouteNames.teacherProfile),
       ),
       body: MobileAsyncBody(
         isLoading: isLoading,

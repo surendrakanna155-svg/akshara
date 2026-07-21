@@ -125,8 +125,10 @@ class _TeacherHomeworkCreateScreenState
         showProfile: true,
         unreadNotifications: ref.watch(teacherUnreadNotificationsProvider),
         onAiTap: () => context.push(RouteNames.aiAssistant),
-        onNotificationsTap: () => context.push(RouteNames.parentNotifications),
-        onProfileTap: () => context.go(RouteNames.teacherDashboard),
+        // F-128 — teacher-scoped notifications inbox (not the parent route).
+        onNotificationsTap: () => context.push(RouteNames.teacherNotifications),
+        // F-164 — the profile avatar opens the teacher profile, not Home.
+        onProfileTap: () => context.go(RouteNames.teacherProfile),
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),

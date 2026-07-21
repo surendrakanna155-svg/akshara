@@ -70,6 +70,31 @@ void main() {
                 return const SizedBox();
               },
             ),
+            GoRoute(
+              path: RouteNames.teacherProfile,
+              builder: (_, __) {
+                onRoute(RouteNames.teacherProfile);
+                return const SizedBox();
+              },
+            ),
+            GoRoute(
+              path: RouteNames.teacherNotifications,
+              builder: (_, __) {
+                onRoute(RouteNames.teacherNotifications);
+                return const SizedBox();
+              },
+            ),
+            GoRoute(
+              path: '${RouteNames.teacher}/student-risk/:sisStudentId',
+              builder: (_, state) {
+                onRoute(
+                  RouteNames.teacherStudentRisk(
+                    state.pathParameters['sisStudentId'] ?? '',
+                  ),
+                );
+                return const SizedBox();
+              },
+            ),
           ],
         ),
       ),
@@ -129,5 +154,43 @@ void main() {
       routes.add,
     );
     expect(routes, contains(RouteNames.teacherClassTeacherDashboard));
+  });
+
+  // F-163 — the dashboard "Students requiring attention → Review" tap emits a
+  // `student_risk_<id>` action id and must land on that student's risk detail.
+  testWidgets('teacher student_risk_<id> routes to student risk detail',
+      (tester) async {
+    final routes = <String>[];
+    await pumpNavHarness(
+      tester,
+      (context) => handleTeacherNavigation(context, 'student_risk_stu-42'),
+      routes.add,
+    );
+    expect(routes, contains(RouteNames.teacherStudentRisk('stu-42')));
+  });
+
+  // F-164 — the profile avatar opens the teacher profile, not Home.
+  testWidgets('teacher profile routes to teacher profile', (tester) async {
+    final routes = <String>[];
+    await pumpNavHarness(
+      tester,
+      (context) => handleTeacherNavigation(context, 'profile'),
+      routes.add,
+    );
+    expect(routes, contains(RouteNames.teacherProfile));
+    expect(routes, isNot(contains(RouteNames.teacherDashboard)));
+  });
+
+  // F-128 — the teacher bell opens the teacher-scoped notifications inbox, not
+  // the parent persona's route.
+  testWidgets('teacher notifications routes to teacher notifications',
+      (tester) async {
+    final routes = <String>[];
+    await pumpNavHarness(
+      tester,
+      (context) => handleTeacherNavigation(context, 'notifications'),
+      routes.add,
+    );
+    expect(routes, contains(RouteNames.teacherNotifications));
   });
 }

@@ -63,6 +63,10 @@ abstract final class RouteNames {
   static const String teacherLeave = '/teacher/leave';
   static const String teacherSettings = '/teacher/settings';
   static const String teacherProfile = '/teacher/profile';
+  // F-128 — teacher-scoped notifications inbox. Renders the same role-neutral
+  // NotificationsScreen the other personas use, but under a teacher-owned path
+  // so the teacher bell no longer borrows the parent persona's route.
+  static const String teacherNotifications = '/teacher/notifications';
 
   static String teacherConversation(String threadId) =>
       '$teacherMessages/$threadId';

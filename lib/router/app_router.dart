@@ -285,6 +285,14 @@ GoRouter createAppRouter({
         name: 'parentNotifications',
         builder: (context, state) => const NotificationsScreen(),
       ),
+      // F-128 — teacher-scoped notifications inbox. Same role-neutral
+      // NotificationsScreen, under a teacher-owned path so the teacher bell no
+      // longer routes into the parent persona's route.
+      GoRoute(
+        path: RouteNames.teacherNotifications,
+        name: 'teacherNotifications',
+        builder: (context, state) => const NotificationsScreen(),
+      ),
       // ASIP Phase 1 — "Report an issue to Akshara Support". Top-level, auth-gated
       // for every persona (see _isSharedSettingsRoute). `/support/new` is declared
       // before `/support/:id` so the literal wins over the id parameter.
@@ -2920,8 +2928,9 @@ Widget teacherDashboardRouteBuilder(BuildContext context, GoRouterState state) {
   );
 }
 
+// F-128 — the teacher bell opens the teacher-scoped notifications inbox.
 VoidCallback _teacherNotificationsTap(BuildContext context) =>
-    () => context.push(RouteNames.parentNotifications);
+    () => context.push(RouteNames.teacherNotifications);
 
 Widget teacherAttendanceRouteBuilder(
     BuildContext context, GoRouterState state) {

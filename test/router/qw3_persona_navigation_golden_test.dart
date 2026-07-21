@@ -125,13 +125,18 @@ void main() {
     'unread_messages': RouteNames.teacherMessages,
     'parent_communication': RouteNames.teacherParentCommunication,
     'leave': RouteNames.teacherLeave,
-    'notifications': RouteNames.parentNotifications,
+    // F-128 — teacher bell opens the teacher-scoped notifications inbox.
+    'notifications': RouteNames.teacherNotifications,
     'class_teacher_dashboard': RouteNames.teacherClassTeacherDashboard,
-    'profile': RouteNames.teacherDashboard,
+    // F-164 — the profile avatar opens the teacher profile, not Home.
+    'profile': RouteNames.teacherProfile,
     'home': RouteNames.teacherDashboard,
     // default-branch pattern matches.
     'mark_attendance_p3': RouteNames.teacherAttendance,
     'class_5b': RouteNames.teacherTimetable,
+    // F-163 — "Students requiring attention → Review" lands on the student's
+    // risk detail (default-branch `student_risk_<id>` prefix).
+    'student_risk_stu-7': '/teacher/student-risk/stu-7',
   };
 
   final teacherDestinations = teacherMap.values.toSet().toList();
