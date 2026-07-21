@@ -8,7 +8,7 @@ closed; this log records execution only, it never re-plans). **Certification che
 [`QIE_REMEDIATION_CERTIFICATION_HISTORY.md`](QIE_REMEDIATION_CERTIFICATION_HISTORY.md).
 
 **Phase status:** ✅ R0 · ✅ R1 · ✅ R2 · ✅ R3 · ✅ R4-1 · ✅ R4-2 · ✅ R0-2 recall · ✅ RI-6 re-point ·
-✅ R4-3 · ✅ R4-4 · 🔵 R5-1 / R5-2 (buildable, next) · ⛔ R5-3/R6/live-key owner/external-gated.
+✅ R4-3 · ✅ R4-4 · ✅ R5-1 · 🔵 R5-2 (buildable, next) · ⛔ R5-3/R6/live-key owner/external-gated.
 
 This log is the running record of what has actually been implemented, verified, tested,
 certified, documented, and committed — one row per roadmap item.
@@ -168,6 +168,23 @@ Governance/interface tooling (no certification decision). New `kie/qie/scope_aud
 | (c) BS-6 reconciled-inventory guard | ✅ | `reconciled_inventory_guard()`: a "whole-system" completeness claim must be computed FROM the manifest across ALL source lanes (live: qie.db + qpl_question_bank.db + factory_corpus.db); a single-lane claim is refused (the blind spot that hid qie.db). Raises if no manifest exists. |
 
 **Live outcome:** the three "we never looked" gaps are now examined + honestly reported + guarded. New `kie/tests/test_r4_4_scope_audit.py` (12 tests). Full suite **1059 green** (skipped=1).
+
+### R5-1 — prerequisite edge table [C13] — ✅
+
+New `kie/qie/graph/` package (schema.sql + store.py + prereq_edges.py): a DERIVED, versioned edge table
+resolving the frozen index's `ki_concept.prerequisites` NAME strings to KC_ concept_ids, built ON TOP of the
+frozen index (opened mode=ro — no foundation mutation). Resolution: subject-scoped unique match, then
+cross-subject-unique; a name matching ≥2 concept_ids (in-subject or cross-subject) is **ambiguous → honest-null
+(never guessed)**; 0 matches → unresolved (honest-null). Uses a MULTIMAP (not the crosswalk's collapsed
+first-wins map) so ambiguity is surfaced, not hidden. Versioned to the frozen fingerprint (`v1.5:ba3f8b7c…`),
+deterministic rebuild. Store `graph_edges.db` (gitignored derived).
+
+**Live outcome:** **1805 edges — 1183 resolved (65.5%), 552 unresolved, 70 ambiguous** (matches the audit's
+~30% unresolved + ~95 ambiguous; ambiguity now honest, not silently collapsed). `prerequisites_of()` drops
+honest-null by default; adaptive traversal can now key off resolved edges. New `kie/tests/test_r5_1_prereq_edges.py`
+(11 tests). Independently adversarially verified — **CONFIRMED** (no guessing, no inflation, frozen index
+never written, deterministic); a P3 note (self-loop guard: a concept naming itself as a prereq → honest-null)
+was applied + regression-locked. Full suite **1070 green** (skipped=1).
 
 **Still open (roadmap):** R4-3 (qualitative certification lane — buildable on the adopted qie.db/KVS substrate),
 R4-4 (deferred audit passes), R5-1/R5-2 (prereq edge table + KC_ convergence — buildable), R5-3 (ERP promotion — **owner-gated**),

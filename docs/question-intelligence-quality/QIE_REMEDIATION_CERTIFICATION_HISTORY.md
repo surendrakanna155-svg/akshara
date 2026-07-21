@@ -259,3 +259,30 @@ New `kie/qie/scope_audit.py`:
 
 **Standing laws honored:** freeze untouched (frozen index opened mode=ro); fail-closed guards (unsanctioned
 reads + single-lane whole-system claims refused); honest reporting (the ki_run=0 gap is surfaced, not hidden).
+
+---
+
+## Checkpoint — Phase R5-1 (prerequisite edge table) · 2026-07-21 · `EOS: PASS`
+
+Closes C13 (dangling, unkeyed prerequisite name strings — adaptive traversal blocked). New `kie/qie/graph/`
+package: a DERIVED, versioned edge table resolving `ki_concept.prerequisites` names → KC_ concept_ids, built ON
+TOP of the frozen index (mode=ro — no foundation mutation), reusing the certified crosswalk (canonical_name +
+aliases). A MULTIMAP surfaces ambiguity honestly (the crosswalk's collapsed first-wins map hid it).
+
+- Resolution: subject-scoped unique → cross-subject-unique. A name matching ≥2 concept_ids (same scope) is
+  **ambiguous → honest-null (never guessed)**; 0 matches → unresolved (honest-null); a self-referential name →
+  self_loop (honest-null). Versioned to the frozen fingerprint; deterministic rebuild.
+- Live: **1805 edges — 1183 resolved (65.5%), 552 unresolved, 70 ambiguous, 0 self_loop.**
+
+**Adversarial verification:** **CONFIRMED** — no path resolves an ambiguous name (every `candidate_count>1`
+row is null); the live numbers re-derive exactly (partition sums to total; nothing ambiguous counted as
+resolved; the 7 cross-subject resolutions are genuinely globally unique); the frozen index is never written
+(MD5 unchanged, perms 444; only graph_edges.db mutated); certified-only targets; deterministic across rebuilds.
+The one P3 note (no explicit self-loop guard — clean by data, latent for a future index revision) was applied +
+regression-locked before this checkpoint.
+
+**Live outcome:** adaptive traversal can now key off resolved prerequisite edges; unresolved/ambiguous kept
+honest-null. New `kie/tests/test_r5_1_prereq_edges.py` (11 tests). Full suite **1070 green** (skipped=1).
+
+**Standing laws honored:** freeze untouched (derived table on top of the mode=ro frozen index); honest-null +
+never-guess (ambiguous/unresolved/self-loop all null); resolution rate not inflated (65.5%, reported honestly).
