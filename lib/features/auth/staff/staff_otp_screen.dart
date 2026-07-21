@@ -128,13 +128,14 @@ class _StaffOtpScreenState extends ConsumerState<StaffOtpScreen> {
                 controller: _otpController,
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.done,
+                autofillHints: const [AutofillHints.oneTimeCode],
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
                   LengthLimitingTextInputFormatter(6),
                 ],
                 decoration: InputDecoration(
                   labelText: '6-digit OTP',
-                  hintText: MockStaffOtpWorkflow.validOtp,
+                  hintText: '••••••',
                   border: OutlineInputBorder(
                     borderRadius: AksharaRadius.inputBorder,
                   ),

@@ -210,27 +210,34 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                           ),
                         ),
                       const SizedBox(height: AksharaSpacing.s8),
-                      TextFormField(
-                        key: QaTestKeys.otpField,
-                        controller: _otpController,
-                        keyboardType: TextInputType.number,
-                        textInputAction: TextInputAction.done,
-                        textAlign: TextAlign.center,
-                        style: text.headlineSmall.copyWith(
-                          letterSpacing: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(6),
-                        ],
-                        decoration: InputDecoration(
-                          hintText: '••••••',
-                          border: OutlineInputBorder(
-                            borderRadius: AksharaRadius.inputBorder,
+                      AutofillGroup(
+                        child: Semantics(
+                          label: 'One-time password',
+                          textField: true,
+                          child: TextFormField(
+                            key: QaTestKeys.otpField,
+                            controller: _otpController,
+                            keyboardType: TextInputType.number,
+                            textInputAction: TextInputAction.done,
+                            textAlign: TextAlign.center,
+                            autofillHints: const [AutofillHints.oneTimeCode],
+                            style: text.headlineSmall.copyWith(
+                              letterSpacing: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(6),
+                            ],
+                            decoration: InputDecoration(
+                              hintText: '••••••',
+                              border: OutlineInputBorder(
+                                borderRadius: AksharaRadius.inputBorder,
+                              ),
+                            ),
+                            onFieldSubmitted: (_) => _verify(),
                           ),
                         ),
-                        onFieldSubmitted: (_) => _verify(),
                       ),
                       const SizedBox(height: AksharaSpacing.s6),
                       FilledButton(
