@@ -78,10 +78,16 @@ curriculum/acquisition/*.log
 # Node dependency trees (any depth) — never commit
 node_modules/
 
+# Local deploy virtualenv — never commit (relies on the venv's own self-ignore otherwise)
+.venv-deploy/
+
 # Local SQLite knowledge/question databases (kie.db, qie.db, …) — LOCAL ONLY.
 # The frozen KIE foundation + QIE dbs are backed up off-repo (owner-approved
 # location); they are derived data, never committed. See curriculum local-storage lock.
 *.db
+# SQLite WAL/SHM sidecars — transient, never commit (remediation R0-4).
+*.db-wal
+*.db-shm
 
 # Local progress-dashboard dev tool — LOCAL ONLY on this implementation branch (owner
 # decision 2026-07-08: keep local, do NOT commit here; it gets its own dedicated branch

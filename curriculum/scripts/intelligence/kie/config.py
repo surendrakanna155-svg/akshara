@@ -41,6 +41,23 @@ STAGES = (
 CERTIFIED = "certified"
 
 
+def assert_under_kie_home(path) -> Path:
+    """Assert a resolved store path lives under KIE_HOME (remediation R0-4).
+
+    Guards against wrong-cwd sqlite opens that silently create stray zero-byte
+    DBs (e.g. the repo-root / curriculum/ `qie.db` artifacts the audit found).
+    Returns the resolved Path so callers can use it directly. Store openers
+    should route their path through this before connecting.
+    """
+    p = Path(path).resolve()
+    home = KIE_HOME.resolve()
+    if home not in p.parents and p != home:
+        raise ValueError(
+            f"refusing to open store outside KIE_HOME: {p} (KIE_HOME={home})"
+        )
+    return p
+
+
 def ensure_dirs() -> None:
     for d in (KIE_HOME, PARSED_DIR, REPORTS_DIR):
         d.mkdir(parents=True, exist_ok=True)
