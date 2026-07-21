@@ -62,13 +62,58 @@
 
 ---
 
+## Batch 3 — Perf + DEFINER hardening (feeds W10)
+
+| ICA | Title | Class | EOS | Commit |
+|---|---|---|---|---|
+| **C1** | attendance_records missing tenant/student index | Perf P1 | PASS | `5282491f` |
+| **B3** | onboarding/subscription SECURITY DEFINER fns lack in-DB guards | Sec P1 | PASS | `d5c49644` |
+| **C3** | listAttendanceSessions unbounded | Perf P1 | PASS | `f554b9ab` |
+
+- **C1** — mig `…100`: `(org,school,student)` + `(org,school)` indexes; per-query coverage mapped for EXPLAIN at deploy. **Gate:** before multi-school scale-out.
+- **B3** — mig `…110`: in-fn guards on `onboarding_ensure_school_membership` (tenant-owns-school + session-school match + role allowlist), `onboarding_upsert_user_by_phone` (fail-closed on null context; global `users` table means the app gate stays the true boundary — documented), `assign_organization_subscription` (actor-binding + real-org; cross-org-by-design documented). Static drift guard `onboarding_secdef_guard_test`.
+- **C3** — code-only: pagination (cap 100) + 90-day window (override 1..366). **⚠ Client-contract change:** `GET /attendance/sessions` data → `{items,total,page,pageSize,hasMore}` (no Dart/web consumer found; verify at client integration).
+
+## Batch 4 — Idempotency/reliability cluster (feeds W10)
+
+| ICA | Title | Class | EOS | Commit |
+|---|---|---|---|---|
+| **A4** | idempotency wrapper non-atomic / key-poisoning | Eng P1 | PASS | `359e6afb` |
+| **D1** | idempotency replay ignores method/path | Eng P1 | PASS | `359e6afb` |
+| **D3** | request_idempotency has no retention/reaper | Eng/Ops P2 | PASS | `76f22244` |
+
+- **A4** — `store()` wrapped (no 500-for-committed-write); in-flight NULL-payload claim re-claimable via atomic CAS after a 5-min TTL (self-heals the permanent-409 poison; re-dispatch stays exactly-once via the route's money-safe backstop); fresh-concurrency 409 kept transient (deliberately not a blind yield — would double-dispatch non-backstopped routes). Code-only.
+- **D1** — claim() compares stored `(method,path)`; cross-endpoint key reuse → 422, checked before any replay.
+- **D3** — mig `…130`: `reap_request_idempotency(7d completed, 1h orphan)` SECURITY DEFINER + REVOKE-from-PUBLIC (cross-tenant purge, ops-cron only, matches DB-6 seam) + supporting index. **Deploy/ops step:** schedule the hourly `SELECT reap_request_idempotency();`.
+- Real-Postgres concurrent atomic-claim test = **ICA-D5/A7** (deploy-time CI gate, ICA-D4).
+
+## Batch 5 — Security tail (feeds W11)
+
+| ICA | Title | Class | EOS | Commit |
+|---|---|---|---|---|
+| **B4** | OTP stored as unsalted SHA-256 | Sec P2 | PASS | `65e9e39c` |
+| **B8** | session revoke without owner check | Sec P2 | PASS | `65e9e39c` |
+| **B9** | service_role setRequestContext no-op | Sec P2 | PASS | `65e9e39c` |
+| **B5** | health token non-constant-time compare | Sec P2 | PASS | `9f0898c6` |
+| **B6** | audit_events INSERT doesn't bind school_id | Sec P2 | PASS | `4da90ba7` |
+
+- **B4** — dedicated `hashOtp` HMAC(otp, jwt-secret) in both OTP paths; `hashToken` left intact for refresh/gate-pass tokens.
+- **B8** — refresh-token revoke now `.eq('user_id', claims.sub)`.
+- **B9** — inert `setRequestContext` removed from `handleMe`; explicit filter kept + documented. *(Residual, owner-flagged: the same dead idiom at `issueSessionTokens:200` — no read follows, left in place.)*
+- **B5** — `timingSafeEqualHex` for the internal health token.
+- **B6** — mig `…140`: audit_events INSERT WITH CHECK now binds `school_id`.
+- **⛔ ICA-B7 (support mirror bridge trusts attacker-chosen incident id)** — **NOT implemented here: it modifies the ASIP `support_platform_mirror.sql` → handled by the dedicated AI Support Engineering session** (likely folded into ASIP's own 5-P1 remediation).
+
+---
+
 ## Validation
 Batch 1: payment **38/0** · finance **307/0** · guards+trunk-integrity+money-invariant **11/0**.
 Batch 2: combined 4 dirs + trunk-integrity **572/0**; intelligence **177/0**; predictions **5/0**.
-**Full backend suite (all batches together): `deno test supabase/functions/` → 4022 passed · 0 failed · 3 ignored** (the 3 ignored = the env-gated real-DB isolation tests, i.e. the ICA-D4 CI gap — a separate backlog item). `deno check` on every changed source → exit 0.
+Batches 3–5: guard tests + trunk-integrity green; attendance **43/0**; idempotency **9/0**; internal-health **5/0**.
+**Full backend suite (all batches together): `deno test supabase/functions/` → 4048 passed · 0 failed · 3 ignored** (the 3 ignored = the env-gated real-DB isolation tests, i.e. the ICA-D4 CI gap — a separate backlog item). `deno check` on every changed source → exit 0.
 
 ## Migration slots consumed on the trunk (for cross-lane fold-in coordination)
-`20260920000060` (A1 recovery backfill) · `20260920000062` (A6 payment NUMERIC) · `20260920000070` (A2 offline guard) · `20260920000080` (B1 guardian RLS) · `20260920000090` (E1 single-current). **⚠ ASIP fold-in note:** the ASIP KB migration `…060` already collides with A1's `…060` (tracked as ASIP P1-D); its planned renumber target `…090` is now *also* taken by E1 — the ASIP fold-in must pick `…100`+ (next free slot above this trunk's max `…090`). Not actioned here (ASIP is a separate lane).
+`…060` (A1 recovery backfill) · `…062` (A6 payment NUMERIC) · `…070` (A2 offline guard) · `…080` (B1 guardian RLS) · `…090` (E1 single-current) · `…100` (C1 attendance indexes) · `…110` (B3 DEFINER guards) · `…130` (D3 idempotency reaper) · `…140` (B6 audit school-bind). **Current trunk max = `…140`.** **⚠ ASIP fold-in note:** the ASIP KB migration `…060` collides with A1's `…060` (tracked ASIP P1-D); its planned renumber to `…090` is also taken — **the ASIP fold-in must pick `…150`+ (above this trunk's current max `…140`).** Not actioned here (ASIP is a separate lane).
 
 ## Deploy-gated tail (owner-gated — NOT auto-run here)
 These complete the "live certification" lifecycle step and run at the **owner-gated trunk→pilot redeploy** (deploy authority is owner-held; the shared VPS is production):
@@ -77,7 +122,15 @@ These complete the "live certification" lifecycle step and run at the **owner-ga
 3. A1 recovery-dashboard rupee-figure check against a seeded ledger + the one-time `…060` money backfill (owner confirms recovery-CRM row presence on the pilot before applying).
 4. A5 gate: the webhook signature enforcement must be in the deployed build before the route is exposed / live gateway enabled.
 
-## Remaining ICA backlog (not in this batch)
+## Remaining ICA backlog
+
+**Done so far (Batches 1–5):** A1, A2, A5, A6, B1, B3, B4, B5, B6, B8, B9, C1, C3, D1, D3, E1, H1, H3, H4(+ext). **19 of 49 items** (all P0s + the live/reachable set + first tranche of W10/W11 hardening).
+
 - **Owner-gated (do NOT auto-implement):** ICA-G1 (`domain_events` bus vs log), ICA-G2 (entitlement-flip timing), ICA-G3 (per-tenant custom roles), ICA-B2 policy (OTP pilot-phone removal). Raised in the ICA owner-decision batch (§5.6).
-- **ASIP session (do NOT implement here):** ICA-G4 (client mock/real fail-closed → ASIP support fabricated tickets) — handled by the dedicated AI Support Engineering session.
-- **Feeds W10 (hardening) / W4-W5 (domain):** ICA-A3/A4/A7, ICA-B3…B9, ICA-C1…C7, ICA-D1…D7, ICA-E1…E3, ICA-F1…F8, ICA-H1…H4 — buildable next under their waves' EOS gates (see §5.6 absorption map).
+- **ASIP session (do NOT implement here):** ICA-G4 (client mock/real fail-closed) + **ICA-B7** (support mirror bridge incident-id guard) — both modify the ASIP support lane; handled by the dedicated AI Support Engineering session.
+- **Still buildable (next batches, unblocked):**
+  - Perf/W10: **C2** (dashboard all-time aggregates → bounded/matview), **C4** (`bulkAssignFeeStructure` N+1), **C5** (connection-pool ceiling / pooler — infra), **C6** (broadcast >5,000 truncation), **C7** (keyset pagination).
+  - Reliability/CI: **A7 + D4 + D5 + D6** (real-DB concurrency + CI postgres gate + atomic-claim + SoD double-decide — a coherent CI-infra sub-batch), **D7** (backend coverage gate).
+  - Data model: **E2** (soft FKs), **E3** (migration idempotency guards).
+  - Architecture/W10: **F1** (auth middleware — same target as the W10 central-chokepoint item), **F2** (single student-identity service), **F3** (god-file decomposition), **F4** (prefix→router registry), **F5** (JSONB↔relational invariant), **F6** (`inventory_finance` single router), **F7** (raw SQL → repository), **F8** (dead code + hot-path dynamic imports).
+  - Domain/finance: **A3** (receipt-number scoping — gate before multi-school receipt-sequencing), **H2** (TC dues-wording vs inventory/library gate).
