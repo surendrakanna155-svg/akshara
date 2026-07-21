@@ -93,9 +93,9 @@ Deno.test("QA-B-023: all 27 library routes path-match to a handler (not 404)", a
   assertEquals(REGISTERED.length, 27);
 });
 
-Deno.test("QA-B-023: unregistered path under /library 404s; path outside prefix is null", async () => {
+Deno.test("QA-B-023: unregistered path under /library returns null (central dispatcher 404s); path outside prefix is null", async () => {
   const under = await call(routeLibrary, "GET", "/library/not-a-route", ["viewLibrary"]);
-  assertEquals(under?.status, 404);
+  assertEquals(under, null);
   const outside = await call(routeLibrary, "GET", "/hostel/dashboard", ["viewLibrary"]);
   assertEquals(outside, null);
 });

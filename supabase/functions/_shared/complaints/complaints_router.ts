@@ -69,7 +69,7 @@ export async function routeComplaints(
 
   const match = matchComplaintsRoute(method, path);
   if (!match) {
-    return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+    return null;
   }
 
   return await match.handler(req, config, ...match.args);

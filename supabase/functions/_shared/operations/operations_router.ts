@@ -54,5 +54,5 @@ export async function routeOperations(
   }
 
   if (!path.startsWith("/operations")) return null;
-  return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+  return null;
 }

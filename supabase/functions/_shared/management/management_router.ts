@@ -54,7 +54,7 @@ export async function routeManagement(
 
   const match = matchManagementRoute(method, path);
   if (!match) {
-    return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+    return null;
   }
 
   return await match.handler(req, config);

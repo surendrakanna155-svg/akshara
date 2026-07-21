@@ -66,11 +66,9 @@ Deno.test("QA-B-037: the 7 widget-platform routes match the router", async () =>
   assertEquals((await call("PUT", ROLE, MANAGE, { layout: { widgets: [] } })).status, 503);
 });
 
-Deno.test("QA-B-037: an unregistered widgets path returns 404 NOT_FOUND", async () => {
-  const res = await call("GET", "/widgets/nope/extra/more", VIEW);
-  assertEquals(res.status, 404);
-  const env = await res.json();
-  assertEquals(env.error.code, "NOT_FOUND");
+Deno.test("QA-B-037: an unregistered widgets path returns null (central dispatcher 404s)", async () => {
+  const res = await raw("GET", "/widgets/nope/extra/more", VIEW);
+  assertEquals(res, null);
 });
 
 Deno.test("QA-B-037: a non-/widgets path returns null (no match)", async () => {

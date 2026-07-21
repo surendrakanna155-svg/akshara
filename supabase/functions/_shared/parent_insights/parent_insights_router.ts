@@ -33,5 +33,5 @@ export async function routeParentInsights(
     return handleListParentInsights(req, config, listMatch[1]!);
   }
 
-  return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+  return null;
 }

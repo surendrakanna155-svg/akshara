@@ -107,11 +107,9 @@ Deno.test("GAP9: /workload/rollup is not swallowed by the /:id detail matcher", 
   assertEquals(res.status, 503); // reached DB (authorized + valid), not 404/NOT_FOUND
 });
 
-Deno.test("QA-B-030: an unregistered timetable path returns 404 NOT_FOUND", async () => {
-  const res = await call("GET", "/academic/timetables/nope/extra", ["viewAcademicTimetable"]);
-  assertEquals(res.status, 404);
-  const env = await res.json();
-  assertEquals(env.error.code, "NOT_FOUND");
+Deno.test("QA-B-030: an unregistered timetable path returns null (central dispatcher 404s)", async () => {
+  const res = await raw("GET", "/academic/timetables/nope/extra", ["viewAcademicTimetable"]);
+  assertEquals(res, null);
 });
 
 Deno.test("QA-B-030: a non-timetable path returns null (no match)", async () => {

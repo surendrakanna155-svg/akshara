@@ -17,9 +17,9 @@ Deno.test("routeSupport returns null for a non-/support path (chain continues)",
   assertEquals(res, null);
 });
 
-Deno.test("routeSupport 404s an unmatched /support path", async () => {
+Deno.test("routeSupport returns null for an unmatched /support path (central dispatcher 404s)", async () => {
   const res = await routeSupport(req("GET", "/support/nope"), CFG, "GET", "/support/nope");
-  assertEquals(res?.status, 404);
+  assertEquals(res, null);
 });
 
 Deno.test("routeSupport 405s a wrong method on the collection", async () => {
@@ -37,10 +37,10 @@ Deno.test("routeSupport 422s a non-uuid incident id", async () => {
   assertEquals(res?.status, 422);
 });
 
-Deno.test("routeSupport 404s an unknown sub-resource under a valid incident", async () => {
+Deno.test("routeSupport returns null for an unknown sub-resource under a valid incident (central dispatcher 404s)", async () => {
   const path = `/support/incidents/${UUID}/bogus`;
   const res = await routeSupport(req("POST", path), CFG, "POST", path);
-  assertEquals(res?.status, 404);
+  assertEquals(res, null);
 });
 
 Deno.test("routeSupport requires auth: create with no bearer token => 401", async () => {
@@ -85,10 +85,10 @@ Deno.test("platform incident with a bad uuid => 422 (before auth)", async () => 
   assertEquals(res?.status, 422);
 });
 
-Deno.test("platform unknown sub-resource => 404", async () => {
+Deno.test("platform unknown sub-resource => null (central dispatcher 404s)", async () => {
   const p = "/support/platform/nope";
   const res = await routeSupport(req("GET", p), CFG, "GET", p);
-  assertEquals(res?.status, 404);
+  assertEquals(res, null);
 });
 
 Deno.test("platform queue wrong method => 405", async () => {

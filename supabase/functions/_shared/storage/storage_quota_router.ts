@@ -17,5 +17,5 @@ export async function routeStorageQuota(
   if (path === "/storage/quota" && method === "GET") {
     return await handleGetStorageQuota(req, config);
   }
-  return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+  return null;
 }

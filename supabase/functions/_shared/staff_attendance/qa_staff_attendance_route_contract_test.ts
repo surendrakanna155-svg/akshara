@@ -76,9 +76,9 @@ Deno.test("staff-attendance: the 8 routes path-match handlers (not 404)", async 
   }
 });
 
-Deno.test("staff-attendance: unregistered path under prefix 404s; outside prefix is null", async () => {
+Deno.test("staff-attendance: unregistered path under prefix returns null (central dispatcher 404s); outside prefix is null", async () => {
   const under = await call("GET", "/staff-attendance/nope", ["markStaffAttendance"]);
-  assertEquals(under?.status, 404);
+  assertEquals(under, null);
   const outside = await call("POST", "/attendance/sessions", ["markStaffAttendance"]);
   assertEquals(outside, null);
 });
@@ -124,7 +124,7 @@ Deno.test("staff-attendance: SLICE 4 manual-requests list — mine is self-servi
 
 Deno.test("staff-attendance: SLICE 4 manual-requests is GET-only (POST is the create route, singular)", async () => {
   const post = await call("POST", "/staff-attendance/manual-requests", ["approveStaffAttendance"], {});
-  assertEquals(post?.status, 404);
+  assertEquals(post, null);
 });
 
 Deno.test("staff-attendance: SHAPE 422 before DB — missing location, missing face, bad event_type", async () => {

@@ -206,12 +206,9 @@ Deno.test("QA-B-013: every registered finance route resolves to a handler and en
   }
 });
 
-Deno.test("QA-B-013: an unregistered finance path returns 404 NOT_FOUND", async () => {
+Deno.test("QA-B-013: an unregistered finance path returns null (central dispatcher 404s)", async () => {
   const res = await call("GET", "/finance/not-a-real-route", ["viewFinance", "manageFinance"]);
-  assertEquals(res?.status, 404);
-  const env = await res!.json();
-  assertEquals(env.error.code, "NOT_FOUND");
-  assertEquals(env.data, null);
+  assertEquals(res, null);
 });
 
 Deno.test("QA-B-013: a non-finance prefix is not owned by the finance router (returns null)", async () => {

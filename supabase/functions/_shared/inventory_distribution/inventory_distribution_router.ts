@@ -81,7 +81,7 @@ export async function routeInventoryDistribution(
   if (!path.startsWith("/inventory/distribution")) return null;
   const match = matchInventoryDistributionRoute(method, path);
   if (!match) {
-    return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+    return null;
   }
   try {
     return await match.handler(req, config, ...match.args);

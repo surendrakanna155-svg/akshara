@@ -75,10 +75,14 @@ Deno.test("routeCertificateDesk: returns null for a path outside its prefix (nex
   assertEquals(res, null);
 });
 
-Deno.test("routeCertificateDesk: an unmatched sub-path inside the prefix is a 404, not null", async () => {
-  const res = await call("GET", "/certificate-requests/abc/def/ghi", { permissions: ["requestStudentCertificate"] });
-  assertEquals(res.status, 404);
-  assertEquals((await res.json()).error.code, "NOT_FOUND");
+Deno.test("routeCertificateDesk: an unmatched sub-path inside the prefix returns null (central dispatcher 404s)", async () => {
+  const res = await routeCertificateDesk(
+    new Request("https://x/certificate-requests/abc/def/ghi"),
+    config,
+    "GET",
+    "/certificate-requests/abc/def/ghi",
+  );
+  assertEquals(res, null);
 });
 
 // ─── auth ──────────────────────────────────────────────────────────────────

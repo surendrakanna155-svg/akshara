@@ -201,7 +201,7 @@ export async function routeIntelligence(
   if (!path.startsWith("/intelligence")) return null;
   const match = matchIntelligenceRoute(method, path);
   if (!match) {
-    return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+    return null;
   }
   try {
     return await match.handler(req, config, ...match.args);

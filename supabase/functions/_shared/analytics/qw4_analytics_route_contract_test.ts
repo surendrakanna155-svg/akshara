@@ -47,11 +47,12 @@ Deno.test("QA-B-028: all 7 analytics routes match the router and authorize (503 
   }
 });
 
-Deno.test("QA-B-028: an unregistered analytics path returns 404 NOT_FOUND", async () => {
-  const res = await get("/analytics/nope", ["viewAnalytics"]);
-  assertEquals(res.status, 404);
-  const env = await res.json();
-  assertEquals(env.error.code, "NOT_FOUND");
+Deno.test("QA-B-028: an unregistered analytics path returns null (central dispatcher 404s)", async () => {
+  const token = await signAccessToken(SECRET, claims(["viewAnalytics"]), 900);
+  const req = new Request("https://x/analytics/nope", {
+    method: "GET", headers: { authorization: `Bearer ${token}` },
+  });
+  assertEquals(await routeAnalytics(req, config, "GET", "/analytics/nope"), null);
 });
 
 Deno.test("QA-B-028: a non-/analytics path returns null (no match)", async () => {

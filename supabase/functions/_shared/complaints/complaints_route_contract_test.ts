@@ -72,9 +72,9 @@ Deno.test("routeComplaints: a non-/complaints path returns null (not ours)", asy
   assertEquals(res, null);
 });
 
-Deno.test("routeComplaints: an unmatched /complaints/* path 404s (not null)", async () => {
+Deno.test("routeComplaints: an unmatched /complaints/* path returns null (central dispatcher 404s)", async () => {
   const res = await call("DELETE", "/complaints/abc", ["manageComplaints"]);
-  assertEquals(res?.status, 404);
+  assertEquals(res, null);
 });
 
 // ── raise ────────────────────────────────────────────────────────────────

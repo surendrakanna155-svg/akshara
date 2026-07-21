@@ -77,7 +77,7 @@ export async function routeDeviceManagement(
   if (path !== DEVICES_PREFIX && !path.startsWith(`${DEVICES_PREFIX}/`)) return null;
   const handler = matchDeviceRoute(method, path);
   if (!handler) {
-    return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+    return null;
   }
   return await handler(req, config);
 }

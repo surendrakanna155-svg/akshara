@@ -65,5 +65,5 @@ export async function routeOrganizationBuilder(
     if (path === "/platform/org-builder/provision") return await handleProvision(req, config);
   }
 
-  return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+  return null;
 }

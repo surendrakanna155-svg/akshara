@@ -20,5 +20,5 @@ export async function routePrincipalCommand(
     return handlePrincipalCommandQuery(req, config);
   }
 
-  return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+  return null;
 }

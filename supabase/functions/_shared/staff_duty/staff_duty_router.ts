@@ -51,7 +51,7 @@ export async function routeStaffDuty(
   if (!path.startsWith("/hr/staff-duties")) return null;
   const handler = matchStaffDutyRoute(method, path);
   if (!handler) {
-    return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+    return null;
   }
   return await handler(req, config);
 }

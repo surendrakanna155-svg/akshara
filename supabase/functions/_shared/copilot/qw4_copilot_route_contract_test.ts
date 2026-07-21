@@ -65,11 +65,9 @@ Deno.test("QA-B-029: the 4 primary copilot routes match the router", async () =>
   assertEquals(created.status, 503);
 });
 
-Deno.test("QA-B-029: an unregistered copilot path returns 404 NOT_FOUND", async () => {
-  const res = await call("GET", "/copilot/nope", ["viewAiCopilot"]);
-  assertEquals(res.status, 404);
-  const env = await res.json();
-  assertEquals(env.error.code, "NOT_FOUND");
+Deno.test("QA-B-029: an unregistered copilot path returns null (central dispatcher 404s)", async () => {
+  const res = await raw("GET", "/copilot/nope", ["viewAiCopilot"]);
+  assertEquals(res, null);
 });
 
 Deno.test("QA-B-029: a non-/copilot path returns null (no match)", async () => {
