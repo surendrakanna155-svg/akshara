@@ -25,6 +25,7 @@ import sqlite3
 from typing import Dict, List, Optional, Tuple
 
 from kie import config
+from kie.qie import retired_families
 from kie.qpgen import assemble, blueprint as bp_mod, scope as scope_mod, validate
 from kie.qpgen.models import (Bloom, Difficulty, GeneratedPaper, PaperRequest, QuestionSlot,
                               QuestionType, RenderMode, SlotStatus)
@@ -288,6 +289,11 @@ def generate_paper(request: PaperRequest, per: int = 14) -> Tuple[GeneratedPaper
             raise ValueError(f"invalid blueprint {blueprint.name}: {errs}")
 
         pool = _engine_pool(scope.subjects, request.seed, per)
+        # R3-8 reachability retirement: drop any item belonging to a known-defective retired family
+        # (e.g. the qpgen assertion-reason family whose key is hard-coded to option (a)) BEFORE it can
+        # enter the reachable pool. The qie lane emits none today, so this is a no-op on real data —
+        # a fail-closed guard so no future qie composition/generator can smuggle a retired form in.
+        pool = [it for it in pool if not retired_families.is_retired_item(it)]
         # bind to in-scope concepts; drop unbindable (honest — can't place it in-syllabus)
         bound = []
         for it in pool:
@@ -303,6 +309,13 @@ def generate_paper(request: PaperRequest, per: int = 14) -> Tuple[GeneratedPaper
         used_ct: set = set()          # (concept_code, question_type) — mirror qpgen's dedup so we don't waste picks
         n = 0
         for cell in blueprint.cells:
+            if retired_families.is_retired_question_type(cell.question_type):
+                # R3-8: the frozen qpgen builder for this type hard-codes the answer (red team
+                # 2026-07-11, #red-team-10). The type is RETIRED at the reachability layer — never
+                # assembled by the bridge; the slot is an honest shortfall left to authoring.
+                warnings.append(f"section {cell.section}: {cell.question_type} is RETIRED (R3-8: "
+                                f"known-defective qpgen path — hard-coded answer) — not assembled")
+                continue
             if cell.question_type not in (QuestionType.MCQ, QuestionType.NUMERICAL):
                 warnings.append(f"section {cell.section}: {cell.question_type} not served by qie (left to authoring)")
                 continue
