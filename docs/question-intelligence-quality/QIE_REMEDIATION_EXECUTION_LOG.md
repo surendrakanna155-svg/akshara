@@ -8,7 +8,8 @@ closed; this log records execution only, it never re-plans). **Certification che
 [`QIE_REMEDIATION_CERTIFICATION_HISTORY.md`](QIE_REMEDIATION_CERTIFICATION_HISTORY.md).
 
 **Phase status:** ✅ R0 · ✅ R1 · ✅ R2 · ✅ R3 · ✅ R4-1 · ✅ R4-2 · ✅ R0-2 recall · ✅ RI-6 re-point ·
-✅ R4-3 · ✅ R4-4 · ✅ R5-1 · 🔵 R5-2 (buildable, next) · ⛔ R5-3/R6/live-key owner/external-gated.
+✅ R4-3 · ✅ R4-4 · ✅ R5-1 · ✅ R5-2 · 🔵 R5-6 (evidence cleaning) + R5-3 DESIGN (buildable, next) ·
+⛔ R5-3 impl / R5-4 / R5-5 (PYQ+pilot) / R6 / live-key owner/external-gated.
 
 This log is the running record of what has actually been implemented, verified, tested,
 certified, documented, and committed — one row per roadmap item.
@@ -185,6 +186,28 @@ honest-null by default; adaptive traversal can now key off resolved edges. New `
 (11 tests). Independently adversarially verified — **CONFIRMED** (no guessing, no inflation, frozen index
 never written, deterministic); a P3 note (self-loop guard: a concept naming itself as a prereq → honest-null)
 was applied + regression-locked. Full suite **1070 green** (skipped=1).
+
+### R5-2 — concept-namespace convergence on the KC_ spine [C14] — ✅
+
+New `kie/qie/graph/namespace.py` (+ `concept_namespace` table): converges the three live ontologies (KC_ ids,
+authored "Subject :: topic" governed-fact codes, legacy factory codes) onto the KC_ spine. Governed-fact topics
+resolve to a KC_ id (fine-grained **topic_name**, else coarser **chapter_fallback** — labelled distinctly);
+legacy factory codes resolve via their name-tail, EXCEPT OCR-junk codes which are **retired** (never a concept).
+Reuses R5-1's confirmed multimap resolver; honest-null on unresolved/ambiguous; **no source store mutated**
+(qie.db/factory_corpus/frozen index all opened mode=ro — the backfill lives in the derived table, RI-6).
+
+**Live outcome:** governed_fact_topic 128 → 4 topic_name + 14 chapter_fallback + 110 honest-null; factory_legacy_code
+980 → 235 subject_name + 66 cross_subject_unique + 19 ambiguous + **4 OCR-junk retired** + 656 honest-null.
+`certified_concept_code` is now derivable per fact WITHOUT mutating qie.db.
+
+**Adversarial verification:** **REFUTED** → all fixed + regression-locked (mutation-safety, no-inflation,
+uniqueness, determinism were CONFIRMED). Findings: (1) `topic_name` was stamped on chapter-fallbacks too (14/18
+mislabelled) → now a distinct `chapter_fallback` method; (2) the OCR-junk detector stripped underscores and
+over-retired legit `THE_THEORY_OF_EVOLUTION`-style codes → rewritten to never strip separators + only real
+scaffolding-only tails retire (regression test locks it); (3) under-retire forms (`SOLUTIONS_SOLUTIONS`,
+`ANSWER_KEY`) now caught; (4) a bogus `KC_` code passed through as resolved → now membership-checked against
+certified `ki_concept` (`unknown_kc` honest-null). New `kie/tests/test_r5_2_namespace.py` (16 tests). Full suite
+**1086 green** (skipped=1).
 
 **Still open (roadmap):** R4-3 (qualitative certification lane — buildable on the adopted qie.db/KVS substrate),
 R4-4 (deferred audit passes), R5-1/R5-2 (prereq edge table + KC_ convergence — buildable), R5-3 (ERP promotion — **owner-gated**),

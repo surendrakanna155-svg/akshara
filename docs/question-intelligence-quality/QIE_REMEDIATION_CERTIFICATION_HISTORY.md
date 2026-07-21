@@ -286,3 +286,34 @@ honest-null. New `kie/tests/test_r5_1_prereq_edges.py` (11 tests). Full suite **
 
 **Standing laws honored:** freeze untouched (derived table on top of the mode=ro frozen index); honest-null +
 never-guess (ambiguous/unresolved/self-loop all null); resolution rate not inflated (65.5%, reported honestly).
+
+---
+
+## Checkpoint — Phase R5-2 (concept-namespace convergence on the KC_ spine) · 2026-07-21 · `EOS: PASS`
+
+Closes C14 (three un-joinable ontologies: KC_ ids, "Subject :: topic" governed-fact codes, legacy factory codes).
+New `kie/qie/graph/namespace.py` + `concept_namespace` table maps every non-KC_ source concept onto the KC_
+spine, reusing R5-1's confirmed multimap resolver; honest-null on unresolved/ambiguous; OCR-junk legacy codes
+RETIRED (never a concept). No source store mutated — the `certified_concept_code` backfill lives in the derived
+table (qie.db stays an evidence source, RI-6; frozen index mode=ro).
+
+- Live: governed_fact_topic 128 → 4 topic_name + 14 chapter_fallback + 110 honest-null; factory_legacy_code
+  980 → 235 subject_name + 66 cross_subject_unique + 19 ambiguous + 4 OCR-junk retired + 656 honest-null.
+
+**Adversarial verification:** **REFUTED → all fixed + regression-locked.** The load-bearing claims
+(no source-store mutation — MD5 byte-identical; no inflation; unique-only resolution; determinism) were
+CONFIRMED. Four defects fixed: (1) `topic_name` mislabelled 14/18 chapter-fallbacks → distinct `chapter_fallback`
+method; (2) the OCR-junk detector stripped underscores and over-retired a legit `THE_THEORY_OF_EVOLUTION` →
+rewritten to never strip separators (only scaffolding-only tails retire); (3) `SOLUTIONS_SOLUTIONS`/`ANSWER_KEY`
+under-retire caught; (4) a bogus `KC_` code passed through → now membership-checked (`unknown_kc` honest-null).
+
+**Live outcome:** the three ontologies now join on the KC_ spine for mastery/coverage/dedup; OCR-junk retired.
+New `kie/tests/test_r5_2_namespace.py` (16 tests). Full suite **1086 green** (skipped=1).
+
+**Standing laws honored:** no source-store mutation (derived layer); honest-null + never-guess; OCR-junk retired
+(never a product concept); truthful provenance (topic vs chapter_fallback labelled distinctly); freeze untouched.
+
+**Remaining BUILDABLE (continuing autonomously, per the sweep):** R5-6 (deterministic evidence-substrate
+cleaning — a derived pass over the frozen kie.db chunks, no PYQ/model/freeze-mutation) and the R5-3 ERP-promotion
+**design** (the roadmap's explicit "design now, implement owner-gated"). Owner/external-gated: R5-3 implementation,
+R5-4 (PYQ corpus), R5-5 (pilot response spine + PYQ), R6 (Tier-1 unfreeze), a live OPENAI_API_KEY.
