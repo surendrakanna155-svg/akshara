@@ -53,9 +53,6 @@ import {
   handleRevokeClearanceWaiver,
 } from "../clearance/clearance_waiver_handlers.ts";
 
-const UUID_SEGMENT =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export function matchSisRoute(
   method: string,
   path: string,
@@ -268,12 +265,6 @@ export async function routeSis(
   const match = matchSisRoute(method, path);
   if (!match) {
     return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
-  }
-
-  for (const arg of match.args) {
-    if (arg.includes("-") && !UUID_SEGMENT.test(arg)) {
-      // Allow non-UUID legacy mock ids in path for compatibility
-    }
   }
 
   return await match.handler(req, config, ...match.args);

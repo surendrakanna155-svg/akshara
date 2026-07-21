@@ -22,6 +22,11 @@ import {
   listThreadsForUser,
   listUnreadBroadcastRecipientIds,
   resolveBroadcastRecipients,
+  insertTemplate,
+  listBroadcastHistory,
+  listDeliveriesForUser,
+  listTemplates,
+  updateTemplate,
   type ChannelPolicyRow,
   getChannelPolicy,
   upsertChannelPolicy,
@@ -244,7 +249,6 @@ export async function listUserNotifications(
   limit = 50,
   offset = 0,
 ): Promise<Record<string, unknown>[]> {
-  const { listDeliveriesForUser } = await import("./communication_repository.ts");
   const rows = await listDeliveriesForUser(db, claims.tenant_id, claims.sub, limit, offset);
   return rows.map(deliveryToNotificationApi);
 }
@@ -711,7 +715,6 @@ export async function listNotificationTemplates(
   claims: AccessTokenClaims,
 ): Promise<Record<string, unknown>[]> {
   const schoolId = requireSchool(claims);
-  const { listTemplates } = await import("./communication_repository.ts");
   const rows = await listTemplates(db, claims.tenant_id, schoolId);
   return rows.map(templateToApi);
 }
@@ -759,7 +762,6 @@ export async function createNotificationTemplate(
     ? input.variables.map((v) => String(v))
     : [];
 
-  const { insertTemplate } = await import("./communication_repository.ts");
   const row = await insertTemplate(db, {
     organizationId: claims.tenant_id,
     schoolId,
@@ -844,7 +846,6 @@ export async function updateNotificationTemplate(
       ? input.variables.map((v) => String(v))
       : []);
 
-  const { updateTemplate } = await import("./communication_repository.ts");
   const row = await updateTemplate(db, {
     organizationId: claims.tenant_id,
     schoolId,
@@ -980,7 +981,6 @@ export async function listBroadcastHistoryEntries(
       "Broadcast history requires school or organization scope",
     );
   }
-  const { listBroadcastHistory } = await import("./communication_repository.ts");
   const rows = await listBroadcastHistory(
     db,
     claims.tenant_id,

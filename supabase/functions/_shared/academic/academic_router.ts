@@ -21,9 +21,6 @@ import {
   handleUpdateTeacherAssignment,
 } from "./academic_handlers.ts";
 
-const UUID_SEGMENT =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export function matchAcademicRoute(
   method: string,
   path: string,
@@ -111,12 +108,6 @@ export async function routeAcademic(
   if (!match) {
     // Let downstream routers (e.g. timetable) handle /academic/* paths we do not own.
     return null;
-  }
-
-  for (const arg of match.args) {
-    if (arg.includes("-") && !UUID_SEGMENT.test(arg)) {
-      // Allow non-UUID legacy mock ids in path for compatibility
-    }
   }
 
   return await match.handler(req, config, ...match.args);

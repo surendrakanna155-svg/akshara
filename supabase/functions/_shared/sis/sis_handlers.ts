@@ -10,6 +10,7 @@ import {
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { emitMutationAudit, sisAudit } from "../audit/mutation_audit_catalog.ts";
+import { recordMutationAudit } from "../audit/audit_repository.ts";
 import { enforceStudentLimit } from "../entitlements/entitlement_limits.ts";
 import {
   InvalidStudentStatusError,
@@ -359,7 +360,6 @@ export async function handleCreateStudent(
   try {
     const detail = await runTenant(config, auth.claims, async (db) => {
       const created = await createStudent(db, orgId, schoolId, input);
-      const { recordMutationAudit } = await import("../audit/audit_repository.ts");
       await recordMutationAudit(
         db,
         auth.claims,

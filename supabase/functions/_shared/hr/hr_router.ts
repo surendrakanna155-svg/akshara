@@ -46,9 +46,6 @@ import {
   handleUpdateRecruitmentOpening,
 } from "./hr_write_handlers.ts";
 
-const UUID_SEGMENT =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 function matchHrRoute(
   method: string,
   path: string,
@@ -230,12 +227,6 @@ export async function routeHr(
   const match = matchHrRoute(method, path);
   if (!match) {
     return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
-  }
-
-  for (const arg of match.args) {
-    if (arg.includes("-") && !UUID_SEGMENT.test(arg)) {
-      // Allow non-UUID legacy mock ids in path for compatibility
-    }
   }
 
   return await match.handler(req, config, ...match.args);

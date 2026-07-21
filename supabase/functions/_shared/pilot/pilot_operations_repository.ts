@@ -8,6 +8,7 @@ import {
   teacherOwnsClass,
   teacherOwnsClassSubject,
 } from "../school_completion/subject_assignments_repository.ts";
+import { listPublishedResultsForStudent } from "../academics/exam_administration/exam_administration_repository.ts";
 
 export const ATTENDANCE_SESSION_PROBE_SQL = `
   SELECT count(*)::text AS count FROM attendance_sessions WHERE id = $1::uuid
@@ -1847,9 +1848,6 @@ export async function overlayExamsSnapshotFromResults(
     // keep snapshot schoolName on any lookup failure
   }
 
-  const { listPublishedResultsForStudent } = await import(
-    "../academics/exam_administration/exam_administration_repository.ts"
-  );
   const published = await listPublishedResultsForStudent(db, orgId, schoolId, studentId);
 
   if (published.length === 0) {

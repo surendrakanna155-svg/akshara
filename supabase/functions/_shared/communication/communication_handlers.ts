@@ -38,6 +38,10 @@ import {
 import {
   BroadcastNotFoundError,
   getNotificationDeliveryMetrics,
+  markAllNotificationsRead,
+  markNotificationRead,
+  registerDeviceToken,
+  unregisterDeviceToken,
 } from "./communication_repository.ts";
 import { processDeliveryQueue } from "./notification_service.ts";
 import {
@@ -1093,7 +1097,6 @@ export async function handleMarkNotificationRead(
   }
 
   try {
-    const { markNotificationRead } = await import("./communication_repository.ts");
     const updated = await withTenantContext(config, auth.claims, async (db) => {
       const ok = await markNotificationRead(db, auth.claims.tenant_id, auth.claims.sub, notificationId);
       if (ok) {
@@ -1160,7 +1163,6 @@ export async function handleMarkAllNotificationsRead(
   }
 
   try {
-    const { markAllNotificationsRead } = await import("./communication_repository.ts");
     const count = await withTenantContext(config, auth.claims, async (db) => {
       const c = await markAllNotificationsRead(db, auth.claims.tenant_id, auth.claims.sub);
       if (c > 0) {
@@ -1197,7 +1199,6 @@ export async function handleRegisterDeviceToken(
   }
 
   try {
-    const { registerDeviceToken } = await import("./communication_repository.ts");
     await withTenantContext(config, auth.claims, async (db) => {
       await registerDeviceToken(db, auth.claims.tenant_id, auth.claims.sub, platform, token);
       await auditComm(db, auth.claims, "deviceTokenRegistered", "communication.device_token.registered",
@@ -1230,7 +1231,6 @@ export async function handleUnregisterDeviceToken(
   }
 
   try {
-    const { unregisterDeviceToken } = await import("./communication_repository.ts");
     await withTenantContext(config, auth.claims, async (db) => {
       await unregisterDeviceToken(db, auth.claims.tenant_id, auth.claims.sub, token);
       await auditComm(db, auth.claims, "deviceTokenUnregistered", "communication.device_token.unregistered",

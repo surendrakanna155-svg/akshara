@@ -1,5 +1,10 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
 import type { RawSchoolMetrics } from "./analytics_types.ts";
+import {
+  getSchoolConflicts,
+  getSchoolWorkload,
+  getTimetableSummary,
+} from "../timetable/timetable_repository.ts";
 
 export async function loadRawSchoolMetrics(
   db: TenantQueryClient,
@@ -78,9 +83,6 @@ export async function loadRawSchoolMetrics(
       [organizationId, schoolId],
     );
     if (yearRows[0]?.id) {
-      const { getTimetableSummary, getSchoolConflicts, getSchoolWorkload } = await import(
-        "../timetable/timetable_repository.ts"
-      );
       const summary = await getTimetableSummary(db, organizationId, schoolId, yearRows[0].id);
       const conflicts = await getSchoolConflicts(db, organizationId, schoolId, yearRows[0].id);
       const workload = await getSchoolWorkload(db, organizationId, schoolId, yearRows[0].id);

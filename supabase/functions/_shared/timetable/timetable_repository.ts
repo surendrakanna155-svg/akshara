@@ -3,6 +3,7 @@ import { listTeacherAssignmentsPage } from "../academic/teacher_assignments_repo
 import { listSectionsPage } from "../academic/sections_repository.ts";
 import {
   detectAllConflicts,
+  findTimetableGaps,
   generateSectionPeriods,
   type CatalogAssignment,
   type GenerationSectionContext,
@@ -601,7 +602,6 @@ export async function getTimetableSummary(
 ): Promise<TimetableSummary> {
   const timetables = await listTimetables(db, orgId, schoolId, academicYearId);
   const schoolPeriods = await loadSchoolPeriodsWithMeta(db, orgId, schoolId, academicYearId);
-  const { detectAllConflicts } = await import("./timetable_engine.ts");
   const conflicts = detectAllConflicts(schoolPeriods);
   const workload = workloadFromSchoolPeriods(schoolPeriods, new Map());
 
@@ -609,7 +609,6 @@ export async function getTimetableSummary(
   for (const timetable of timetables) {
     if (timetable.status === "archived") continue;
     const periods = schoolPeriods.filter((p) => p.timetableId === timetable.id);
-    const { findTimetableGaps } = await import("./timetable_engine.ts");
     gapCount += findTimetableGaps(
       timetable.section_id,
       periods,
@@ -637,7 +636,6 @@ export async function getSchoolConflicts(
   academicYearId: string,
 ) {
   const schoolPeriods = await loadSchoolPeriodsWithMeta(db, orgId, schoolId, academicYearId);
-  const { detectAllConflicts } = await import("./timetable_engine.ts");
   return detectAllConflicts(schoolPeriods);
 }
 
