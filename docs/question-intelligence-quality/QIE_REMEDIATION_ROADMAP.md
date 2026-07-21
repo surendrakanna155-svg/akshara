@@ -1,9 +1,18 @@
 # QIE/QDI REMEDIATION ROADMAP — Single Source of Truth
 
-**Date:** 2026-07-21 · **Status:** PLANNING ONLY — nothing here is implemented; execution happens in a
-dedicated QIE remediation session. · **Source of every item:** the completed Independent Certification
-Audit — `INDEPENDENT_CERTIFICATION_AUDIT_2026-07-21.md` (34 agents, 17/17 defect clusters
-adversarially CONFIRMED, 0 refuted, blind-spot analysis complete; audit permanently closed).
+**Date:** 2026-07-21 · **Status:** ⏩ **UNDER EXECUTION.** This document is the plan; the live execution
+record is [`QIE_REMEDIATION_EXECUTION_LOG.md`](QIE_REMEDIATION_EXECUTION_LOG.md) and the certification
+history is [`QIE_REMEDIATION_CERTIFICATION_HISTORY.md`](QIE_REMEDIATION_CERTIFICATION_HISTORY.md). Read
+those for current state — the phase items below are the design, not the status.
+· **Source of every item:** the completed Independent Certification Audit —
+`INDEPENDENT_CERTIFICATION_AUDIT_2026-07-21.md` (34 agents, 17/17 defect clusters adversarially
+CONFIRMED, 0 refuted, blind-spot analysis complete; audit permanently closed).
+
+> **Execution progress (2026-07-21):** ✅ **R0 · R1 · R2 COMPLETE + LIVE + adversarially verified**, plus
+> R3-3. Certification-integrity + trust/independence/provenance are remediated: **v1.5** knowledge index
+> and **factory-4** question stores are live; **RI-1, RI-2, RI-3, RI-4, RI-5, RI-8, RI-10** hold; the four
+> P0s (C0–C3) + freeze C6 + C4/C5/C10 are closed. Next = the remaining **buildable R3** items, then the
+> owner/external gates (R4-1 owner · R4-2 API dependency · R5-3 & R6 owner). See the execution log.
 
 **Audit verdict being remediated:** CERTIFIED — Continue with moderate redesign. Conditions: close the
 four P0s before any new certification run; quarantine the 22 production questions + 7 QDI patterns

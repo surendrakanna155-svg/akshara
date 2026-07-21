@@ -4,7 +4,11 @@
 `feature/qie-question-planning-layer`
 
 **SSOT:** [`QIE_REMEDIATION_ROADMAP.md`](QIE_REMEDIATION_ROADMAP.md) (the audit is permanently
-closed; this log records execution only, it never re-plans).
+closed; this log records execution only, it never re-plans). **Certification checkpoints:**
+[`QIE_REMEDIATION_CERTIFICATION_HISTORY.md`](QIE_REMEDIATION_CERTIFICATION_HISTORY.md).
+
+**Phase status:** ✅ R0 · ✅ R1 (checkpoint) · ✅ R2 (checkpoint) · ✅ R3-3 · 🔵 rest of R3 in progress ·
+⛔ R4-1/R4-2/R5-3/R6 owner/external-gated.
 
 This log is the running record of what has actually been implemented, verified, tested,
 certified, documented, and committed — one row per roadmap item.
