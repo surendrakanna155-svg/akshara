@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/config/school_build_scope.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../core/workspace/workspace_providers.dart';
 import '../../features/copilot/widgets/copilot_bottom_nav_ai_slot.dart';
@@ -202,17 +203,24 @@ class MoreNavSheet extends ConsumerWidget {
                 crossAxisSpacing: AksharaSpacing.s3,
                 childAspectRatio: 0.92,
                 children: [
+                  // Hide-first: drop scope-hidden destinations so the More sheet
+                  // never advertises a screen its route guard would bounce to
+                  // Access Denied (e.g. parent PTM, gated OFF via SchoolBuildScope
+                  // until its backend ships). Same predicate the routes and the
+                  // primary/sub-nav filters use (route_guards / HostelSubNav /
+                  // adminNavDestinationsProvider) — the tile and the route agree.
                   for (final d in spec.more)
-                    _MoreTile(
-                      destination: d,
-                      selected: currentLocation.startsWith(d.route),
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        if (!currentLocation.startsWith(d.route)) {
-                          context.go(d.route);
-                        }
-                      },
-                    ),
+                    if (!SchoolBuildScope.isRouteHidden(d.route))
+                      _MoreTile(
+                        destination: d,
+                        selected: currentLocation.startsWith(d.route),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          if (!currentLocation.startsWith(d.route)) {
+                            context.go(d.route);
+                          }
+                        },
+                      ),
                 ],
               ),
             ],

@@ -1,3 +1,4 @@
+import 'package:akshara_erp/core/config/school_build_scope.dart';
 import 'package:akshara_erp/core/security/erp_role.dart';
 import 'package:akshara_erp/core/security/rbac_service.dart';
 import 'package:akshara_erp/core/security/user_permissions.dart';
@@ -76,10 +77,50 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(QaTestKeys.moreNavSheet), findsOneWidget);
-    for (final label in ['Leave', 'Notices', 'Events', 'PTM', 'Transport',
+    // Accessible secondary screens are listed. 'PTM' is intentionally excluded
+    // here: it is scope-hidden (SchoolBuildScope) and asserted absent below.
+    for (final label in ['Leave', 'Notices', 'Events', 'Transport',
       'Profile']) {
       expect(find.byKey(QaTestKeys.moreNavSheetItem(label)), findsOneWidget,
           reason: '$label should appear in the More sheet');
+    }
+  });
+
+  testWidgets(
+      'More sheet drops scope-hidden destinations (hide-first) but keeps '
+      'accessible ones', (tester) async {
+    // PTM's route (RouteNames.parentPtm) is gated OFF via SchoolBuildScope —
+    // deep-linking it lands on Access Denied. Guard against UXR-G6: the More
+    // sheet must NOT advertise a tile whose route the guard would bounce. The
+    // sheet reuses the SAME SchoolBuildScope.isRouteHidden predicate the route
+    // and primary/sub-nav filters use, so the tile and the route agree.
+    expect(
+      SchoolBuildScope.isRouteHidden(RouteNames.parentPtm),
+      isTrue,
+      reason: 'test premise: parent PTM is scope-hidden',
+    );
+
+    await pump(tester, RouteNames.parentDashboard);
+    await tester.tap(find.byKey(QaTestKeys.moreNavTab));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(QaTestKeys.moreNavSheet), findsOneWidget);
+
+    // The scope-hidden destination is NOT listed...
+    expect(
+      find.byKey(QaTestKeys.moreNavSheetItem('PTM')),
+      findsNothing,
+      reason: 'scope-hidden PTM must not appear in the More sheet',
+    );
+
+    // ...while destinations the persona CAN reach remain listed (not over-hidden).
+    for (final label in ['My Children', 'Leave', 'Notices', 'Events',
+      'Transport', 'Profile']) {
+      expect(
+        find.byKey(QaTestKeys.moreNavSheetItem(label)),
+        findsOneWidget,
+        reason: '$label is accessible and must stay in the More sheet',
+      );
     }
   });
 
