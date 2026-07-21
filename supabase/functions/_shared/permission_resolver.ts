@@ -68,21 +68,42 @@ export function permissionsPayloadFromList(permissions: string[]) {
   }));
 }
 
-async function loadRolePermissionMap(
+/**
+ * Load role -> permission grants for the given slugs.
+ *
+ * ICA-G3: `role_permissions` now carries an `organization_id` (NULL = system
+ * built-in; non-NULL = a tenant custom role). When `organizationId` is provided,
+ * only SYSTEM grants (org NULL) OR grants owned by THAT org are read — so a
+ * membership can never pick up another tenant's custom-role permissions even in
+ * the (structurally impossible) event of a slug collision. Omitting the org keeps
+ * the pre-G3 behavior (all matching grants). System-only callers pass no org and
+ * hold only system slugs, so the result is byte-identical to before.
+ */
+export async function loadRolePermissionMap(
   client: SupabaseClient,
   roleSlugs: string[],
+  organizationId?: string,
 ): Promise<Map<string, string[]>> {
   const map = new Map<string, string[]>();
   if (roleSlugs.length === 0) return map;
 
-  const { data, error } = await client
+  let query = client
     .from("role_permissions")
-    .select("role_slug, permission_slug")
+    .select("role_slug, permission_slug, organization_id")
     .in("role_slug", roleSlugs);
+
+  if (organizationId) {
+    query = query.or(`organization_id.is.null,organization_id.eq.${organizationId}`);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
 
   for (const row of data ?? []) {
+    // Defense in depth: keep only system (NULL) or own-org grants.
+    const rowOrg = (row as { organization_id: string | null }).organization_id ?? null;
+    if (organizationId && rowOrg !== null && rowOrg !== organizationId) continue;
     const list = map.get(row.role_slug as string) ?? [];
     list.push(row.permission_slug as string);
     map.set(row.role_slug as string, list);
@@ -95,6 +116,7 @@ export async function resolveSchoolMembershipPermissions(
   schoolMembershipId: string,
   legacyRole?: string | null,
   permissionsVersion = 1,
+  organizationId?: string,
 ): Promise<ResolvedPermissions> {
   const { data: roleRows, error: rolesError } = await client
     .from("school_membership_roles")
@@ -108,7 +130,7 @@ export async function resolveSchoolMembershipPermissions(
   const roleSlugs = roles.map((r) => r.role_slug);
   if (roleSlugs.length === 0 && legacyRole) roleSlugs.push(legacyRole);
 
-  const rolePermissionMap = await loadRolePermissionMap(client, roleSlugs);
+  const rolePermissionMap = await loadRolePermissionMap(client, roleSlugs, organizationId);
   const aggregated = aggregateRolePermissions(roleSlugs, rolePermissionMap);
 
   const { data: overrideRows, error: overridesError } = await client
@@ -136,6 +158,7 @@ export async function resolveOrganizationMembershipPermissions(
   organizationMembershipId: string,
   legacyRole?: string | null,
   permissionsVersion = 1,
+  organizationId?: string,
 ): Promise<ResolvedPermissions> {
   const { data: roleRows, error: rolesError } = await client
     .from("organization_membership_roles")
@@ -149,7 +172,7 @@ export async function resolveOrganizationMembershipPermissions(
   const roleSlugs = roles.map((r) => r.role_slug);
   if (roleSlugs.length === 0 && legacyRole) roleSlugs.push(legacyRole);
 
-  const rolePermissionMap = await loadRolePermissionMap(client, roleSlugs);
+  const rolePermissionMap = await loadRolePermissionMap(client, roleSlugs, organizationId);
   const aggregated = aggregateRolePermissions(roleSlugs, rolePermissionMap);
 
   const { data: overrideRows, error: overridesError } = await client

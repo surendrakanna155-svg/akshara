@@ -144,6 +144,7 @@ async function resolveSchoolContext(
     membership.id,
     membership.role,
     membership.permissions_version,
+    membership.schools.organization_id, // ICA-G3: scope custom-role grants to this org
   );
 
   return {
@@ -194,6 +195,7 @@ async function resolveOrganizationContext(
     membership.id,
     membership.role,
     membership.permissions_version,
+    membership.organization_id, // ICA-G3: scope custom-role grants to this org
   );
 
   return {
@@ -366,10 +368,12 @@ async function loadRelationshipRolePermissions(
   client: SupabaseClient,
   roleSlug: string,
 ): Promise<ResolvedPermissions> {
+  // ICA-G3: parent/student are SYSTEM roles — read only system grants (org NULL).
   const { data, error } = await client
     .from("role_permissions")
     .select("permission_slug")
-    .eq("role_slug", roleSlug);
+    .eq("role_slug", roleSlug)
+    .is("organization_id", null);
 
   if (error) throw error;
 
