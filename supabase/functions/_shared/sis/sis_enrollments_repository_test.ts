@@ -15,9 +15,11 @@ import { ACADEMIC_SECTION_SCHOOL_A } from "../academic/sections_repository.ts";
 import { enrollmentListItemToApi } from "./sis_mapper.ts";
 import {
   createEnrollment,
+  CurrentEnrollmentConflictError,
   DuplicateEnrollmentError,
   EnrollmentNotFoundError,
   listEnrollments,
+  promoteStudentsBulk,
   updateEnrollment,
   ValidationError,
 } from "./sis_enrollments_repository.ts";
@@ -164,6 +166,14 @@ class MockEnrollmentsDb {
   ];
   queries: string[] = [];
 
+  // ICA-E1 race simulation: when set to a constraint/index name, the next
+  // INSERT into sis_student_enrollments raises a Postgres unique_violation
+  // (SQLSTATE 23505) carrying that constraint — exactly what the new
+  // single-current partial-unique index (or the per-year UNIQUE) raises for the
+  // LOSER of a concurrent enroll/promote once a winner has already committed a
+  // current row. Set to "" to simulate a 23505 with no constraint name surfaced.
+  uniqueViolationOnInsert: string | null = null;
+
   filterList(args: unknown[]): Row[] {
     const orgId = args[0];
     const schoolId = args[1];
@@ -306,6 +316,17 @@ class MockEnrollmentsDb {
       return [] as T[];
     }
     if (sql.includes("INSERT INTO sis_student_enrollments")) {
+      if (this.uniqueViolationOnInsert !== null) {
+        const constraint = this.uniqueViolationOnInsert;
+        const err = new Error(
+          `duplicate key value violates unique constraint "${constraint}"`,
+        ) as Error & { code?: string; fields?: Record<string, string> };
+        err.code = "23505";
+        err.fields = constraint === ""
+          ? { code: "23505" }
+          : { code: "23505", constraint };
+        throw err;
+      }
       const row = {
         id: crypto.randomUUID(),
         organization_id: args[0],
@@ -617,4 +638,124 @@ Deno.test("list enrollments uses single join query (no N+1)", async () => {
   assertEquals(listSelect.length, 1);
   assertEquals(countQueries.length, 1);
   assertEquals(listSelect[0]!.includes("for ("), false);
+});
+
+// ─── ICA-E1: single current-enrollment invariant ─────────────────────────────
+//
+// The AUTHORITATIVE guarantee is the DB partial-unique index
+// sis_student_enrollments_one_current_uq (migration 20260920000090). The fake-db
+// cannot enforce a partial-unique across a concurrent snapshot, so these tests
+// prove the REPOSITORY'S resilience: when the index raises the 23505 for the
+// racing loser, the clear-then-write path catches it and surfaces a typed,
+// retryable conflict — never a duplicate current row and never a raw 500. The
+// true DB-level race is proven separately by a live concurrency cert (see the
+// task report's live-cert plan: two concurrent createEnrollment(isCurrent:true)
+// for one student → exactly one is_current=true row survives).
+
+Deno.test("ICA-E1: createEnrollment maps single-current 23505 to a conflict, not a 500", async () => {
+  const mock = new MockEnrollmentsDb();
+  const db = mock as unknown as TenantQueryClient;
+  // A concurrent enroll already committed the student's current row; our INSERT
+  // trips the single-current partial-unique index.
+  mock.uniqueViolationOnInsert = "sis_student_enrollments_one_current_uq";
+  await assertRejects(
+    () =>
+      createEnrollment(db, ORG, SCHOOL_A, {
+        studentId: STUDENT_A,
+        academicYear: "2027-28",
+        className: "6",
+        isCurrent: true,
+        createdBy: STAFF,
+      }),
+    CurrentEnrollmentConflictError,
+  );
+});
+
+Deno.test("ICA-E1: CurrentEnrollmentConflictError is a DuplicateEnrollmentError (handler → 409)", () => {
+  // The handler maps `instanceof DuplicateEnrollmentError` → 409 CONFLICT; the
+  // subclass inherits that mapping so a concurrency conflict is a clean 409, not
+  // an INTERNAL_ERROR 500, without editing the handler.
+  const err = new CurrentEnrollmentConflictError(STUDENT_A);
+  assertEquals(err instanceof DuplicateEnrollmentError, true);
+  assertEquals(err.name, "CurrentEnrollmentConflictError");
+  assertEquals(err.message.includes("concurrently"), true);
+});
+
+Deno.test("ICA-E1: createEnrollment maps per-year 23505 (race past pre-check) to DuplicateEnrollmentError", async () => {
+  const mock = new MockEnrollmentsDb();
+  const db = mock as unknown as TenantQueryClient;
+  // New year passes the enrollmentExistsForYear pre-check, but a concurrent
+  // insert of the same (student, year) won → the UNIQUE(student_id, academic_year)
+  // constraint raises 23505.
+  mock.uniqueViolationOnInsert =
+    "sis_student_enrollments_student_id_academic_year_key";
+  await assertRejects(
+    () =>
+      createEnrollment(db, ORG, SCHOOL_A, {
+        studentId: STUDENT_A,
+        academicYear: "2027-28",
+        className: "6",
+        isCurrent: true,
+        createdBy: STAFF,
+      }),
+    DuplicateEnrollmentError,
+  );
+});
+
+Deno.test("ICA-E1: createEnrollment treats an unnamed 23505 while making-current as a conflict", async () => {
+  const mock = new MockEnrollmentsDb();
+  const db = mock as unknown as TenantQueryClient;
+  // Driver surfaced no constraint name; since this write is setting the row
+  // current, the only unique guard beyond the pre-checked per-year one is the
+  // single-current index → a retryable conflict beats a raw 500.
+  mock.uniqueViolationOnInsert = "";
+  await assertRejects(
+    () =>
+      createEnrollment(db, ORG, SCHOOL_A, {
+        studentId: STUDENT_A,
+        academicYear: "2027-28",
+        className: "6",
+        isCurrent: true,
+        createdBy: STAFF,
+      }),
+    CurrentEnrollmentConflictError,
+  );
+});
+
+Deno.test("ICA-E1: promoteStudentsBulk reports a single-current race as status 'conflict'", async () => {
+  const mock = new MockEnrollmentsDb();
+  const db = mock as unknown as TenantQueryClient;
+  mock.uniqueViolationOnInsert = "sis_student_enrollments_one_current_uq";
+  const outcomes = await promoteStudentsBulk(
+    db,
+    ORG,
+    SCHOOL_A,
+    [{ studentId: STUDENT_A, academicYear: "2027-28", className: "6" }],
+    STAFF,
+  );
+  assertEquals(outcomes.length, 1);
+  assertEquals(outcomes[0]!.status, "conflict");
+});
+
+Deno.test("ICA-E1: migration 20260920000090 declares the single-current partial-unique index + self-heal dedup", async () => {
+  const migration = await Deno.readTextFile(
+    new URL(
+      "../../../migrations/20260920000090_sis_single_current_enrollment_guarantee.sql",
+      import.meta.url,
+    ),
+  );
+  // The partial UNIQUE index that makes the invariant un-bypassable.
+  assertEquals(
+    migration.includes("CREATE UNIQUE INDEX IF NOT EXISTS sis_student_enrollments_one_current_uq"),
+    true,
+  );
+  assertEquals(migration.includes("WHERE is_current = true"), true);
+  // Column set + school scoping MATCH the existing non-unique partial index.
+  assertEquals(migration.includes("(school_id, student_id)"), true);
+  // Idempotent self-heal dedup runs BEFORE the CREATE so it cannot fail on data.
+  const updateIdx = migration.indexOf("UPDATE sis_student_enrollments");
+  const createIdx = migration.indexOf("CREATE UNIQUE INDEX");
+  assertEquals(updateIdx >= 0, true);
+  assertEquals(createIdx > updateIdx, true);
+  assertEquals(migration.includes("SET is_current = false"), true);
 });
