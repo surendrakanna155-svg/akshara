@@ -160,6 +160,11 @@ def open_examdna_ro(path=None) -> sqlite3.Connection:
 
 def build(index_conn: sqlite3.Connection, out_conn: sqlite3.Connection, version: str = VERSION) -> Dict[str, int]:
     """Materialize curated Exam DNA v1 for all three exams. Validates every distribution before writing."""
+    # refuse to curate exam DNA against a drifted substrate — the concept density it mines would be stale
+    # (R1-4, C3). Guarded on immutability so :memory: test fixtures (non-frozen) are unaffected.
+    from kie.qie.knowledge import schema as S
+    if S.is_immutable(index_conn):
+        S.assert_substrate_matches_freeze(index_conn)
     now = _now()
     wrows: List[tuple] = []
     drows: List[tuple] = []

@@ -23,6 +23,7 @@ from kie.qie.knowledge import plan_specs as PS
 from kie.qie.knowledge import planner as P
 from kie.qie.knowledge import qdi as QDI  # noqa: F401  (used by plan()'s certified-pattern reader)
 from kie.qie.knowledge import qdi_link as QL
+from kie.qie.knowledge import schema as S
 
 INDEX_DB_PATH = config.KIE_HOME / "knowledge_index.db"
 EXAM_CLASSES = (11, 12)
@@ -52,6 +53,10 @@ def plan(subject: str, run_id: str, classes: Optional[List[int]] = None, n: int 
     """certified_universe -> dedupe -> certified design patterns -> gate-validated specs."""
     conn = open_frozen_index(index_path)
     try:
+        # refuse to plan against a drifted substrate: if the frozen index froze against a kie.db whose
+        # chunks have since changed, its certified evidence no longer resolves as certified (R1-4, C3).
+        if S.is_immutable(conn):
+            S.assert_substrate_matches_freeze(conn)
         universe = P.certified_universe(conn, subject, classes)
         universe, _dups = P.dedupe_universe(universe)
         patterns = _certified_patterns(conn, subject)
@@ -101,6 +106,8 @@ def plan_blueprints(exam: str, total: int, index_path=None, examdna_path=None, q
     conn = open_frozen_index(index_path)
     edb = ED.open_examdna_ro(examdna_path)   # planner consumes Exam DNA READ-ONLY (never mutates it)
     try:
+        if S.is_immutable(conn):
+            S.assert_substrate_matches_freeze(conn)   # refuse to plan on a drifted substrate (R1-4, C3)
         fver = _foundation_version(conn)
         ever = (edb.execute("SELECT value FROM examdna_meta WHERE key='version'").fetchone() or ["v1"])[0]
         subj_w = ED.subject_weights(edb, exam)

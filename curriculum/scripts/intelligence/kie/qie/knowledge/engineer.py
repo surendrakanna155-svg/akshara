@@ -87,9 +87,132 @@ def duplicate_evidence_groups(records: list, threshold: float = 0.9) -> dict:
     return dup
 
 
-def open_index(db_path=None) -> sqlite3.Connection:
-    """Schema ownership lives in schema.py — this delegates so migrations always run."""
-    return SC.open_index(db_path or INDEX_DB_PATH)
+def open_index(db_path=None, *, unfreeze=False) -> sqlite3.Connection:
+    """Schema ownership lives in schema.py — this delegates so migrations always run.
+
+    RW opens of a FROZEN index are refused by the schema-layer freeze guard (R1-5) unless a sanctioned
+    version bump passes unfreeze=True / sets KIE_ALLOW_FROZEN_WRITE=1. Read-only callers use open_index_ro."""
+    return SC.open_index(db_path or INDEX_DB_PATH, unfreeze=unfreeze)
+
+
+def open_index_ro(db_path=None) -> sqlite3.Connection:
+    """Non-migrating READ-ONLY open — never writes, never migrates, cannot breach the freeze (R1-5)."""
+    return SC.open_index_ro(db_path or INDEX_DB_PATH)
+
+
+# ── DETERMINISTIC EVIDENCE GATE (R1-4, C3) ──────────────────────────────────────────────────────────
+# The AI auditor's `accept` is NECESSARY but NOT SUFFICIENT. Before a concept may reach status='certified'
+# its cited evidence must survive a pure, deterministic gate the auditor cannot waive: at least one cited
+# chunk must RESOLVE in the substrate, still MATCH its recorded sha (no drift), and be SUBSTANTIVE after
+# boilerplate strip. This is what closes the C3 holes (5 dangling refs; ~garbage OCR-furniture evidence).
+#
+# CALIBRATION NOTE (measured over all 2,023 live certified rows before shipping): a 4th "shares a token
+# with the concept name" OVERLAP check was specified but is NOT gated on — empirically it false-positives
+# ~90 CORRECT certified concepts (Gauss's Law, Subsets, Differentiability, Escape Speed…) because OCR
+# concatenates the heading into the body ("SubsetsConsider…") and short technical names tokenise away.
+# Gating on it would DELETE correct knowledge — the wrong kind of loss. The genuine mis-anchor class
+# (right heading on the wrong body) is already caught by the separate, better-calibrated shingle detector
+# `duplicate_evidence_groups` / `cmd_dupaudit`. So the fail-closed gate is RESOLVE + sha + SUBSTANCE, which
+# reproduces exactly the dangling + non-substantive set the audit identified.
+_GATE_STOPWORDS = frozenset({
+    "the", "of", "and", "a", "to", "in", "is", "for", "by", "at", "or", "its", "this", "that",
+    "with", "as", "an", "are", "be", "on"})
+_GATE_SECNUM = re.compile(r"\b\d{1,2}\.\d{1,2}(?:\.\d{1,2})?\b")
+_GATE_MIN_CHARS = 40
+_GATE_MIN_WORDS = 6
+
+
+def _boilerplate_strip(text: str) -> str:
+    """Deterministic removal of reprint banners, running headers/footers, page numbers, OCR answer-key
+    furniture and bare section numbers, then whitespace-collapse. Turns 'Reprint 2026-27\\n3answerS',
+    '2024-25\\nMATHEMATICS34', '1.6.2 Elevation ofBoiling Point', 'g', 'n\\ni' into empty/near-empty text
+    so they FAIL the substance floor."""
+    t = text or ""
+    t = re.sub(r"(?i)reprint\s*20\d\d-?\d*", " ", t)          # reprint/edition banners
+    t = re.sub(r"\b20\d\d-\d2\b", " ", t)                     # running year headers e.g. 2024-25
+    t = re.sub(r"\b\d*answer[sS]?\b", " ", t, flags=re.I)     # OCR answer-key furniture
+    t = _GATE_SECNUM.sub(" ", t)                              # bare section numbers 1.6.2
+    t = re.sub(r"(?m)^\s*\d{1,3}\s*$", " ", t)                # standalone page numbers
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def _gate_tokens(s: str) -> set:
+    """lowercase content tokens (len>=4, non-stopword) — used only for the ADVISORY overlap signal."""
+    return {w for w in re.split(r"[^a-z0-9]+", (s or "").lower())
+            if len(w) >= 4 and w not in _GATE_STOPWORDS}
+
+
+def _word_count(t: str) -> int:
+    return len(re.findall(r"[A-Za-z]{2,}", t))
+
+
+def _load_json_list(s) -> list:
+    if isinstance(s, list):
+        return s
+    try:
+        v = json.loads(s or "[]")
+        return v if isinstance(v, list) else []
+    except (ValueError, TypeError):
+        return []
+
+
+def _row_get(row, key):
+    """Column access tolerant of sqlite3.Row (no .get) vs dict, and of a missing column."""
+    try:
+        keys = row.keys()
+    except AttributeError:
+        return row.get(key) if isinstance(row, dict) else None
+    return row[key] if key in keys else None
+
+
+def evidence_gate(kconn, concept) -> tuple:
+    """(ok, reason). A concept PASSES iff at least one cited chunk resolves + sha-matches + is substantive.
+
+    `concept` is a row/dict exposing evidence_chunks (and, when present, evidence_sha256). `kconn` is a
+    read-only kie.db handle. Pure and deterministic — reused verbatim by RI-2 and the v1.5 rebuild."""
+    chunks = _load_json_list(_row_get(concept, "evidence_chunks"))
+    shas = _load_json_list(_row_get(concept, "evidence_sha256"))
+    if not chunks:
+        return False, "no evidence refs"
+    reasons = []
+    for i, cid in enumerate(chunks):
+        row = kconn.execute("SELECT text, sha256 FROM chunks WHERE chunk_id=?", (cid,)).fetchone()
+        if row is None:
+            reasons.append(f"dangling {cid}")
+            continue
+        sha = shas[i] if i < len(shas) else None
+        if sha is not None and row[1] != sha:
+            reasons.append(f"substrate drift {cid}")
+            continue
+        stripped = _boilerplate_strip(row[0])
+        if len(stripped) < _GATE_MIN_CHARS or _word_count(stripped) < _GATE_MIN_WORDS:
+            reasons.append(f"non-substantive {cid}")
+            continue
+        return True, "ok"
+    return False, "; ".join(reasons[:3]) or "no resolvable substantive evidence"
+
+
+def evidence_sha_for(kconn, ev_chunks) -> list:
+    """Resolve each chunk's current sha256 from kie.db (None => dangling AT WRITE time; the gate refuses)."""
+    out = []
+    for ch_id in ev_chunks:
+        row = kconn.execute("SELECT sha256 FROM chunks WHERE chunk_id=?", (ch_id,)).fetchone()
+        out.append(row[0] if row else None)
+    return out
+
+
+def backfill_evidence_sha256(conn, kconn) -> int:
+    """Populate evidence_sha256 for EVERY row from the live substrate (used once by the v1.5 rebuild before
+    the gate runs). Writes only the additive column — evidence_chunks and the content fingerprint are
+    untouched. Requires a writable (unfrozen) index handle."""
+    n = 0
+    for r in conn.execute("SELECT concept_id, evidence_chunks FROM ki_concept").fetchall():
+        shas = evidence_sha_for(kconn, _load_json_list(r["evidence_chunks"]))
+        conn.execute("UPDATE ki_concept SET evidence_sha256=? WHERE concept_id=?",
+                     (json.dumps(shas), r["concept_id"]))
+        n += 1
+    conn.commit()
+    return n
 
 
 ENGINEER_BRIEF = """\
@@ -275,16 +398,19 @@ def ingest_engineer(conn, kconn, payload: List[dict], book: dict, spine: Dict[in
                 ev_pages = sorted(spine[n]["pages"])[:20]
 
             kcid = S.concept_id(book["subject"], book["taught_at_class"], name)
+            # content-address each ref to the substrate at propose time (R1-4): store the sha alongside
+            # the positional chunk_id so later drift (re-chunk) is detectable and the gate can verify it.
+            ev_sha = evidence_sha_for(kconn, ev_chunks)
             conn.execute(
                 "INSERT OR REPLACE INTO ki_concept (concept_id, chapter_id, subject, taught_at_class, "
                 "canonical_name, aliases, sub_concepts, prerequisites, boundary, evidence_chunks, "
-                "evidence_pages, section_heading, extraction_basis, academic_discipline, "
+                "evidence_sha256, evidence_pages, section_heading, extraction_basis, academic_discipline, "
                 "discipline_basis, discipline_confidence, engineer_model, status, created_at) "
-                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (kcid, cid, book["subject"], book["taught_at_class"], name,
                  json.dumps(c.get("aliases") or []), json.dumps(c.get("sub_concepts") or []),
                  json.dumps(c.get("prerequisites") or []), json.dumps(c.get("boundary") or {}),
-                 json.dumps(ev_chunks), json.dumps(ev_pages),
+                 json.dumps(ev_chunks), json.dumps(ev_sha), json.dumps(ev_pages),
                  c.get("section_heading"), basis, c_disc, c_basis, c_conf, model, "proposed", _now()))
             m["concepts"] += 1
 
@@ -445,10 +571,18 @@ def _evidence_for(kconn, evidence_chunks_json: str, heading: str = None, limit: 
     return txt[:limit]
 
 
-def ingest_audit(conn, payload: List[dict], model: str) -> Dict[str, int]:
-    """Only `accept` promotes to certified. The engineer's word alone never certifies."""
+def ingest_audit(conn, payload: List[dict], model: str, kconn=None) -> Dict[str, int]:
+    """Only `accept` promotes to certified — AND only if the DETERMINISTIC EVIDENCE GATE passes (R1-4).
+
+    The AI auditor's word is necessary but not sufficient: `kconn` (a read-only kie.db handle) is REQUIRED
+    so every would-be-certified concept's cited evidence can be resolved + sha-checked + substance-checked.
+    A gate failure forces `quarantined` regardless of the AI verdict — the auditor cannot waive it."""
+    if kconn is None:
+        raise ValueError(
+            "ingest_audit requires kconn (kie.db, read-only): the deterministic evidence gate cannot "
+            "certify without substrate access (fail-closed, R1-4).")
     m = {"in": 0, "certified": 0, "rejected": 0, "quarantined": 0, "unmatched": 0, "class_corrected": 0,
-         "discipline_corrected": 0}
+         "discipline_corrected": 0, "gate_quarantined": 0}
     for v in payload:
         cid = v.get("concept_id")
         row = conn.execute("SELECT concept_id, subject, taught_at_class, canonical_name, "
@@ -459,9 +593,21 @@ def ingest_audit(conn, payload: List[dict], model: str) -> Dict[str, int]:
         m["in"] += 1
         verdict = v.get("verdict") or "quarantine"
         status = {"accept": "certified", "reject": "rejected", "quarantine": "quarantined"}.get(verdict, "quarantined")
+        reasons_txt = (v.get("reasons") or "")[:400]
+        # DETERMINISTIC EVIDENCE GATE — an `accept` may certify only if its evidence survives. On gate-fail
+        # the concept is quarantined (honest-null), not certified, and the reason is recorded verbatim.
+        if status == "certified":
+            crow = conn.execute(
+                "SELECT concept_id, canonical_name, section_heading, evidence_chunks, evidence_sha256 "
+                "FROM ki_concept WHERE concept_id=?", (cid,)).fetchone()
+            ok, gate_reason = evidence_gate(kconn, crow)
+            if not ok:
+                status = "quarantined"
+                reasons_txt = (f"evidence gate: {gate_reason} | {reasons_txt}")[:400]
+                m["gate_quarantined"] += 1
         conn.execute("UPDATE ki_concept SET audit_verdict=?, audit_reasons=?, audit_model=?, status=? "
                      "WHERE concept_id=?",
-                     (verdict, (v.get("reasons") or "")[:400], model, status, cid))
+                     (verdict, reasons_txt, model, status, cid))
 
         # The auditor may move the INFERRED dimension without touching the proven one. The concept_id is
         # unaffected by design (it hashes curriculum subject, not discipline), so nothing downstream that
@@ -480,6 +626,7 @@ def ingest_audit(conn, payload: List[dict], model: str) -> Dict[str, int]:
                      "reason": v.get("reasons")}, f"audit({model})")
         if v.get("correct_class") and v["correct_class"] != row["taught_at_class"]:
             m["class_corrected"] += 1
-        m[{"accept": "certified", "reject": "rejected", "quarantine": "quarantined"}.get(verdict, "quarantined")] += 1
+        # count by the ACTUAL persisted status (the gate may have flipped an `accept` to quarantined)
+        m[status] += 1
     conn.commit()
     return m

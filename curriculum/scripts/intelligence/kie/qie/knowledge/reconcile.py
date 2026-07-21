@@ -153,8 +153,10 @@ def reconcile_book(kconn: sqlite3.Connection, iconn: sqlite3.Connection, book: d
 
 
 def reconcile_all(subjects=None) -> list:
-    k = sqlite3.connect(config.DB_PATH); k.row_factory = sqlite3.Row
-    iconn = E.open_index()
+    # reconcile is declared read-only ("No AI. No fabrication."): open BOTH the substrate and the frozen
+    # index read-only so a completeness report can never mutate either (R1-5).
+    k = sqlite3.connect(f"file:{config.DB_PATH}?mode=ro", uri=True); k.row_factory = sqlite3.Row
+    iconn = E.open_index_ro()
     out = []
     for subj in (subjects or ("Mathematics", "Science", "Physics", "Chemistry", "Biology")):
         for b in S.admitted_books(k, subj):

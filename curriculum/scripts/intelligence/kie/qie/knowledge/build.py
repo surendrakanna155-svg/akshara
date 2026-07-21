@@ -30,7 +30,9 @@ SUBJECTS = ("Mathematics", "Science", "Physics", "Chemistry", "Biology")
 
 
 def _kie() -> sqlite3.Connection:
-    c = sqlite3.connect(config.DB_PATH)
+    # kie.db (the owned substrate) is only ever READ here (chunks); open it read-only so the build lane
+    # can never mutate the substrate and no -wal is created against it (R1-5).
+    c = sqlite3.connect(f"file:{config.DB_PATH}?mode=ro", uri=True)
     c.row_factory = sqlite3.Row
     return c
 
@@ -167,7 +169,7 @@ def cmd_retire(subject: str, code: str = None) -> None:
 
 
 def cmd_audit(subject: str, cls: str = None) -> None:
-    k, conn = _kie(), E.open_index()
+    k, conn = _kie(), E.open_index_ro()   # read-only: only writes a worksheet FILE, never the index
     SHEETS.mkdir(parents=True, exist_ok=True)
     c = int(cls) if cls else None
     path = SHEETS / f"audit_{subject}{'_c' + str(c) if c else ''}.txt"
@@ -176,9 +178,11 @@ def cmd_audit(subject: str, cls: str = None) -> None:
 
 
 def cmd_verdicts(payload_path: str) -> None:
-    conn = E.open_index()
+    # kconn (read-only kie.db) is REQUIRED: the deterministic evidence gate resolves + sha-checks +
+    # substance-checks each would-be-certified concept before promotion (R1-4). Refuses on a frozen index.
+    k, conn = _kie(), E.open_index()
     payload = json.loads(Path(payload_path).read_text())
-    m = E.ingest_audit(conn, payload, model="opus-4.8(independent-audit)")
+    m = E.ingest_audit(conn, payload, model="opus-4.8(independent-audit)", kconn=k)
     print(m)
 
 
@@ -189,7 +193,7 @@ def cmd_report(subject: str = None) -> None:
     That is the only denominator that cannot flatter us: it does not shrink when extraction does badly,
     and a corrupt book contributes 0 expected AND is named in GAPS rather than silently vanishing.
     """
-    k, conn = _kie(), E.open_index()
+    k, conn = _kie(), E.open_index_ro()   # pure read: coverage report never writes the index
     subjects = [subject] if subject else list(SUBJECTS)
 
     # THE DENOMINATOR: the numbered SECTIONS the books themselves printed, recomputed live from the owned
@@ -296,7 +300,7 @@ OUTPUT — JSON array, concept_id copied EXACTLY, no prose outside the JSON:
 
 def cmd_dupaudit(out: str = None) -> None:
     """Worksheet for an integrity re-audit of CERTIFIED records whose evidence duplicates a sibling's."""
-    k, conn = _kie(), E.open_index()
+    k, conn = _kie(), E.open_index_ro()   # read-only: only writes a worksheet FILE, never the index
     SHEETS.mkdir(parents=True, exist_ok=True)
     path = SHEETS / (out or "audit_duplicate_evidence.txt")
     n = 0
@@ -354,6 +358,56 @@ def cmd_dupverdicts(payload_path: str) -> None:
     print(m)
 
 
+def freeze_index(version: str, index_path=None, kie_path=None) -> dict:
+    """The SANCTIONED freeze — the ONLY committed writer of the ki_meta freeze keys (v1.4's were written
+    ad-hoc). In ONE transaction it (1) recomputes the certified-knowledge fingerprint (never count-only),
+    (2) records the substrate fingerprint of kie.db, (3) sanitizes stale legacy artefacts (index-resident
+    qdi_* tables + the unversioned/legacy meta keys), and (4) flips immutability. Opens the index with the
+    unfreeze hatch — this IS the sanctioned version-bump path — so it is exempt from the R1-5 freeze guard.
+
+    NON-DESTRUCTIVE to prior versions: earlier fingerprints stay recorded (as v1.2/v1.3 already are)."""
+    conn = E.open_index(index_path, unfreeze=True)
+    kp = str(kie_path or config.DB_PATH)
+    k = sqlite3.connect(f"file:{kp}?mode=ro", uri=True)
+    try:
+        content_fp = SC.certified_content_fingerprint(conn)
+        substrate_fp = SC.compute_substrate_fingerprint(k)
+        n_cert = conn.execute("SELECT COUNT(*) FROM ki_concept WHERE status='certified'").fetchone()[0]
+        n_chunks = k.execute("SELECT COUNT(*) FROM chunks").fetchone()[0]
+        san = SC.sanitize_legacy(conn)
+        stamp = SC.now()
+        meta = {
+            "frozen_version": version,
+            "immutable": "true",
+            "immutable_since": stamp,
+            "frozen_at": stamp,
+            "certified_count_at_freeze": str(n_cert),
+            f"certified_knowledge_fingerprint_{version}": content_fp,
+            "certified_knowledge_fingerprint_method": SC.CONTENT_FP_METHOD,
+            f"substrate_fingerprint_{version}": substrate_fp,
+            "substrate_fingerprint_method": SC.SUBSTRATE_FP_METHOD,
+            "substrate_chunks_at_freeze": str(n_chunks),
+            "qdi_seed_role": "dropped_legacy_seed (real design-intelligence lane = qdi.db)",
+        }
+        for kk, vv in meta.items():
+            conn.execute("INSERT OR REPLACE INTO ki_meta (key, value) VALUES (?,?)", (kk, vv))
+        conn.commit()
+    finally:
+        conn.close()
+        k.close()
+    return {"version": version, "certified": n_cert, "content_fingerprint": content_fp,
+            "substrate_fingerprint": substrate_fp, "chunks": n_chunks, **san}
+
+
+def cmd_freeze(version: str, index_path: str = None) -> None:
+    """CLI: freeze the CURRENT index state as <version>. ⚠ writes ki_meta + flips immutability — only run
+    against a copy or a genuinely-intended version bump (see remediation.rebuild_v15 for the v1.5 flow)."""
+    m = freeze_index(version, index_path)
+    print(f"FROZEN {m['version']}: certified={m['certified']} "
+          f"content_fp={m['content_fingerprint'][:12]}… substrate_fp={m['substrate_fingerprint'][:12]}… "
+          f"chunks={m['chunks']} dropped={m['dropped_tables']} meta_keys_removed={m['meta_keys_removed']}")
+
+
 def cmd_reconcile(subject: str = None) -> None:
     """Completeness proof: every printed section must resolve to a disposition. Flag silent omissions."""
     from kie.qie.knowledge import reconcile as RC
@@ -386,7 +440,7 @@ def main(argv) -> None:
     fn = {"spine": cmd_spine, "sheet": cmd_sheet, "ingest": cmd_ingest, "audit": cmd_audit,
           "verdicts": cmd_verdicts, "report": cmd_report, "retire": cmd_retire,
           "reconcile": cmd_reconcile, "dupaudit": cmd_dupaudit,
-          "dupverdicts": cmd_dupverdicts}.get(cmd)
+          "dupverdicts": cmd_dupverdicts, "freeze": cmd_freeze}.get(cmd)
     if not fn:
         raise SystemExit(__doc__)
     fn(*rest)

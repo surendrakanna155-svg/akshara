@@ -112,11 +112,14 @@ class CertifiedUniverseChar(unittest.TestCase):
     def tearDown(self):
         self.c.close()
 
-    def test_reads_v14_certified_counts(self):
+    def test_reads_v15_certified_counts(self):
+        # Pinned per-subject certified universe. v1.5 (R1-4 content-addressed-evidence remediation) quarantined
+        # 14 broken-evidence concepts vs v1.4 (2023): Science 559->555 (-4), Chemistry 283->273 (-10);
+        # Mathematics/Physics/Biology unchanged. Total 2023 -> 2009. Never mutate v1.4 (it lives on as a snapshot).
         counts = {s: len(P.certified_universe(self.c, s))
                   for s in ("Mathematics", "Science", "Physics", "Chemistry", "Biology")}
-        self.assertEqual(counts, {"Mathematics": 637, "Science": 559, "Physics": 306,
-                                  "Chemistry": 283, "Biology": 238})
+        self.assertEqual(counts, {"Mathematics": 637, "Science": 555, "Physics": 306,
+                                  "Chemistry": 273, "Biology": 238})
 
     def test_universe_records_are_wellformed_and_scoped(self):
         u = P.certified_universe(self.c, "Physics", classes=[11, 12])
