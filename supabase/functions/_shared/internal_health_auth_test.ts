@@ -43,6 +43,24 @@ Deno.test("internal health rejects missing token when configured", () => {
   assertEquals(denied?.status, 403);
 });
 
+Deno.test("internal health rejects a wrong token (different length)", () => {
+  const req = new Request("https://example/health/tenant-access", {
+    headers: { "x-internal-health-token": "nope" },
+  });
+  const denied = requireInternalHealthAccess(req, baseConfig);
+  assertEquals(denied?.status, 403);
+});
+
+Deno.test("internal health rejects a wrong token (same length, single differing byte)", () => {
+  // "test-internal-token" with only the last byte changed — exercises the
+  // constant-time compare path where a plain `!==` would short-circuit late.
+  const req = new Request("https://example/health/tenant-access", {
+    headers: { "x-internal-health-token": "test-internal-tokeX" },
+  });
+  const denied = requireInternalHealthAccess(req, baseConfig);
+  assertEquals(denied?.status, 403);
+});
+
 Deno.test("production blocks internal health when token not configured", () => {
   const req = new Request("https://example/health/operations");
   const denied = requireInternalHealthAccess(req, {
