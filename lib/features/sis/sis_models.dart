@@ -409,6 +409,7 @@ class SisCertificateData {
     required this.status,
     required this.schoolName,
     required this.schoolCode,
+    this.clearanceStatement,
   });
 
   final String issueId;
@@ -432,6 +433,12 @@ class SisCertificateData {
 
   final String schoolName;
   final String schoolCode;
+
+  /// ICA-H2 — the backend's truthful, gate-verified clearance sentence for a
+  /// transfer certificate (finance-scoped; the gate does NOT verify advisory
+  /// inventory/library dues, so it never claims "all dues"). Null for other
+  /// types. The PDF prints this instead of any hard-coded all-dues claim.
+  final String? clearanceStatement;
 }
 
 /// SIS-1 — one row in a student's certificate issuance register.

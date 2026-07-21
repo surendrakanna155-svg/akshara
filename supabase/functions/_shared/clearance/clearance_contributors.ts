@@ -98,7 +98,13 @@ export const inventoryContributor: ClearanceContributor = {
 
 /** Library — registered but NOT yet tracked: loans/fines key by member name,
  * not the student UUID, so a reliable per-student read is not possible today.
- * Surfaced as `not_tracked` (honest coverage gap), never a false block. */
+ * Surfaced as `not_tracked` (honest coverage gap), never a false block.
+ *
+ * OWNER ITEM (SCE-1 / ICA-H2): this name-key fragility is why the TC engine's
+ * separate PRA-P1-20 library gate (libraryDuesForStudent, keyed by sisStudentId)
+ * can null-read, and why the TC certificate wording asserts only FINANCE dues.
+ * Flipping library to `tracked: true` / a blocking gate requires a real
+ * student-UUID-keyed library ledger — an owner decision, not a code default. */
 export const libraryContributor: ClearanceContributor = {
   module: "library",
   tracked: false,

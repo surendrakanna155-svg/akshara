@@ -166,10 +166,18 @@ class SisCertificatePdfService {
         ? ''
         : ' of class ${data.className}${data.section.isEmpty ? '' : '-${data.section}'}';
     if (isTransfer) {
+      // ICA-H2: assert ONLY what the no-dues gate actually verified. The backend
+      // supplies a truthful, finance-scoped clearance statement; if it is absent
+      // (older backend) fall back to the same finance-only wording — NEVER the old
+      // blanket "All dues have been cleared", which over-claimed advisory
+      // inventory/library dues the gate does not verify.
+      final clearance = (data.clearanceStatement?.trim().isNotEmpty ?? false)
+          ? data.clearanceStatement!.trim()
+          : 'All financial dues have been cleared as of the date of issue.';
       return 'This is to certify that $name$classLabel, bearing admission number '
           '${data.admissionNumber.isEmpty ? '—' : data.admissionNumber}, has '
           'been a bonafide student of this institution and is hereby granted a '
-          'Transfer Certificate. All dues have been cleared.';
+          'Transfer Certificate. $clearance';
     }
     return 'This is to certify that $name$classLabel, bearing admission number '
         '${data.admissionNumber.isEmpty ? '—' : data.admissionNumber}, is a '

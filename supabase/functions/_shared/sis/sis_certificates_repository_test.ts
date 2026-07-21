@@ -7,6 +7,7 @@ import type { TenantQueryClient } from "../tenant_db.ts";
 import { InvalidStudentStatusTransitionError } from "./sis_status_codec.ts";
 import { StudentNotFoundError } from "./sis_students_repository.ts";
 import {
+  certificateDataToApi,
   formatTcSerial,
   InvalidCertificateTypeError,
   issueCertificate,
@@ -14,6 +15,7 @@ import {
   NoDuesPendingError,
   outstandingForStudent,
   SIMPLE_CERTIFICATE_TYPES,
+  TC_FINANCE_CLEARANCE_STATEMENT,
 } from "./sis_certificates_repository.ts";
 
 const ORG = "a1000000-0000-4000-8000-000000000001";
@@ -597,6 +599,50 @@ Deno.test("PRA-P1-20: fees + library both clear -> TC issues normally (control)"
   });
   assertEquals(mock.issues.length, 1);
   assertEquals(result.certificate.student.status, "transferred");
+});
+
+// ── ICA-H2: the TC asserts ONLY finance clearance, never a blanket "all dues" ──
+
+Deno.test("ICA-H2: an issued TC carries a FINANCE-scoped clearance statement, never 'all dues'", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({ id: STUDENT, status: "active", className: "Grade 8", academicYear: "2026-2027" });
+  mock.seedOpenAccounts(STUDENT, []); // finance clear → gate passes
+  const client = mock as unknown as TenantQueryClient;
+
+  const result = await issueTransferCertificate(client, ORG, SCHOOL, {
+    studentId: STUDENT,
+    reason: "relocation",
+    issuedBy: STAFF,
+  });
+
+  // The statement is present and scoped to the ONLY gate-verified source: finance.
+  assertEquals(result.certificate.clearanceStatement, TC_FINANCE_CLEARANCE_STATEMENT);
+  assertStringIncludes(result.certificate.clearanceStatement ?? "", "financial dues");
+  // It must NOT over-claim clearance of advisory (inventory/library) dues.
+  assertEquals(
+    (result.certificate.clearanceStatement ?? "").toLowerCase().includes("all dues have been cleared"),
+    false,
+    "the TC must never assert an unconditional 'all dues have been cleared'",
+  );
+
+  // The API projection the client PDF reads carries the same truthful sentence.
+  const api = certificateDataToApi(result.certificate);
+  assertEquals(api.clearanceStatement, TC_FINANCE_CLEARANCE_STATEMENT);
+});
+
+Deno.test("ICA-H2: a non-transfer certificate makes NO dues claim (clearanceStatement null)", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({ id: STUDENT, status: "active", className: "Grade 5" });
+  const client = mock as unknown as TenantQueryClient;
+
+  const data = await issueCertificate(client, ORG, SCHOOL, {
+    studentId: STUDENT,
+    type: "bonafide",
+    issuedBy: STAFF,
+  });
+
+  assertEquals(data.clearanceStatement, null);
+  assertEquals(certificateDataToApi(data).clearanceStatement, null);
 });
 
 Deno.test("issueTransferCertificate (SCE-1): a net-zero balance (due offset by a credit) CLEARS — the engine blocks on the authoritative NET, not per-account", async () => {

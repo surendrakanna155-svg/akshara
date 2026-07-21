@@ -43,6 +43,19 @@ export const SIMPLE_CERTIFICATE_TYPES: readonly CertificateType[] = [
 
 const TC_SEQ_PAD = 4;
 
+/**
+ * ICA-H2 — the TRUTHFUL clearance sentence printed on an issued Transfer
+ * Certificate. It asserts ONLY what the no-dues gate genuinely verifies: FINANCE
+ * (the sum of open fee dues, the single blocking source under the frozen SCE-1
+ * decision). It deliberately does NOT say "all dues": for a transfer_certificate
+ * the clearance engine treats inventory + library as ADVISORY, so unpaid
+ * inventory distributions are never queried at the gate and the library ledger is
+ * name-keyed (fragile) — asserting those cleared would over-claim. Making the gate
+ * block on inventory/library is an OWNER decision (SCE-1), not a wording change.
+ */
+export const TC_FINANCE_CLEARANCE_STATEMENT =
+  "All financial dues have been cleared as of the date of issue.";
+
 export class InvalidCertificateTypeError extends Error {
   constructor(type: string) {
     super(
@@ -63,8 +76,8 @@ export class NoDuesPendingError extends Error {
   readonly unreturnedBooks: number;
   constructor(outstanding: number, libraryFine = 0, unreturnedBooks = 0) {
     // PRA-P1-20: the message now names WHICH dues remain — fees, library fines,
-    // and/or unreturned books — so "All dues have been cleared" on the TC is only
-    // ever printed when every one of these is genuinely zero.
+    // and/or unreturned books — so a TC is only ever issued (with its truthful
+    // finance clearance statement, ICA-H2) when every one of these is genuinely zero.
     const parts: string[] = [];
     if (outstanding > 0) parts.push(`${outstanding} outstanding in fees`);
     if (libraryFine > 0) parts.push(`${libraryFine} in library fines`);
@@ -105,6 +118,15 @@ export interface CertificateData {
   issuedAt: string;
   /** Only populated for certificateType 'fee'; null for every other type. */
   fee: FeeCertificateSummary | null;
+  /**
+   * ICA-H2: the TRUTHFUL clearance sentence the TC PDF prints, scoped to exactly
+   * what the no-dues gate actually verified — FINANCE (fee dues). It intentionally
+   * does NOT claim "all dues": for a transfer_certificate the clearance engine
+   * treats inventory + library as ADVISORY (frozen SCE-1 decision), so those
+   * sources are never gate-verified here and must not be asserted as cleared.
+   * Null for every non-transfer type (they make no dues claim at all).
+   */
+  clearanceStatement: string | null;
   /** The certificate payload the client PDF renders from. */
   student: {
     studentId: string;
@@ -346,6 +368,7 @@ function buildCertificateData(
   detail: StudentDetailData,
   school: SchoolRow,
   fee: FeeCertificateSummary | null = null,
+  clearanceStatement: string | null = null,
 ): CertificateData {
   const guardianName = detail.guardians.find((g) => g.is_primary)?.display_name ??
     detail.guardians[0]?.display_name ?? null;
@@ -356,6 +379,7 @@ function buildCertificateData(
     reason: issued.reason,
     issuedAt: issued.issued_at,
     fee,
+    clearanceStatement,
     student: {
       studentId: detail.student.id,
       displayName: detail.student.display_name,
@@ -510,7 +534,10 @@ export async function issueTransferCertificate(
   //     outstandingForStudent, so a student with no dues (and no waiver) behaves
   //     EXACTLY as the prior finance-only gate; an APPROVED waiver clears the block.
   //   • PRA-P1-20: the LIBRARY-dues gate — un-waived fines + unreturned books.
-  // Every one must be clear so the TC's "All dues have been cleared" is truthful.
+  // The clearance engine treats INVENTORY as advisory for a transfer_certificate,
+  // so unpaid inventory distributions are NOT gate-verified here — which is exactly
+  // why the certificate wording asserts only FINANCE dues (see the
+  // TC_FINANCE_CLEARANCE_STATEMENT note), never a blanket "all dues" (ICA-H2).
   const decision = await resolveClearanceDecision(
     db,
     { organizationId, schoolId: schoolIdArg },
@@ -639,7 +666,17 @@ export async function issueTransferCertificate(
   };
 
   return {
-    certificate: buildCertificateData("transfer", issued, updatedDetail, school),
+    // ICA-H2: the certificate asserts ONLY the finance clearance the gate verified
+    // (inventory/library are advisory for a TC and not gate-verified) — never a
+    // blanket "all dues have been cleared".
+    certificate: buildCertificateData(
+      "transfer",
+      issued,
+      updatedDetail,
+      school,
+      null,
+      TC_FINANCE_CLEARANCE_STATEMENT,
+    ),
     serialNo,
   };
 }
@@ -693,6 +730,9 @@ export function certificateDataToApi(
     serialNo: data.serialNo ?? "",
     reason: data.reason ?? "",
     issuedAt: data.issuedAt,
+    // ICA-H2: truthful, gate-verified clearance sentence for the client PDF
+    // (finance-scoped for a TC; null for every other type).
+    clearanceStatement: data.clearanceStatement ?? null,
     fee: data.fee
       ? {
         academicYear: data.fee.academicYear,
