@@ -41,7 +41,12 @@ CREATE INDEX IF NOT EXISTS idx_srcdoc_corpus  ON source_documents(corpus);
 CREATE INDEX IF NOT EXISTS idx_srcdoc_certify ON source_documents(certify_status);
 CREATE INDEX IF NOT EXISTS idx_srcdoc_sha     ON source_documents(sha256);
 
--- ── Idempotent per-(doc, stage) checkpoint ledger (recovery) ────────────────────
+-- ── Idempotent per-(doc, stage) checkpoint ledger (recovery) — APPEND-ONLY (R2-3, RI-10) ──────────────
+-- Every re-run of a stage APPENDS a new attempt (PK includes `attempt`); nothing is overwritten, so a
+-- failed→done or content-change history is preserved rather than destroyed (the D5 defect). `stage_ledger_latest`
+-- exposes the most recent attempt per (doc_id, stage) so single-row readers keep working over the history.
+-- NOTE (freeze-hatch): this is the shape FRESH/intake stores get. The frozen kie.db copy keeps its historical
+-- upsert-shaped table (no `attempt` column) untouched; ledger.py detects the shape and stays back-compatible.
 CREATE TABLE IF NOT EXISTS stage_ledger (
   doc_id       TEXT NOT NULL,
   stage        TEXT NOT NULL,                 -- verify|parse|metadata|chunk|concept|graph|questions|generate
@@ -49,9 +54,16 @@ CREATE TABLE IF NOT EXISTS stage_ledger (
   input_sha256 TEXT,
   output_ref   TEXT,
   error        TEXT,
+  attempt      INTEGER NOT NULL DEFAULT 1,    -- append-only sequence per (doc_id, stage)
   updated_at   TEXT NOT NULL,
-  PRIMARY KEY (doc_id, stage)
+  PRIMARY KEY (doc_id, stage, attempt)
 );
+CREATE INDEX IF NOT EXISTS idx_stage_ledger_doc_stage ON stage_ledger(doc_id, stage);
+-- The most recent attempt per (doc_id, stage). Readers use this so a done-after-failed doc reads as done once.
+CREATE VIEW IF NOT EXISTS stage_ledger_latest AS
+  SELECT sl.* FROM stage_ledger sl
+  JOIN (SELECT doc_id, stage, MAX(attempt) AS matt FROM stage_ledger GROUP BY doc_id, stage) t
+    ON t.doc_id = sl.doc_id AND t.stage = sl.stage AND t.matt = sl.attempt;
 
 -- ── Phase 2/3: parsed document output is persisted to parsed/<doc_id>.json ───────
 -- (page text + tables + blocks); a lightweight index row lives here.

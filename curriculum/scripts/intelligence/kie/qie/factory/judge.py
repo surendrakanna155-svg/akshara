@@ -182,7 +182,8 @@ def write_worksheet(items: List[dict], path: str, with_controls: bool = True) ->
 
 
 def ingest(conn: sqlite3.Connection, run_id: str, payload: List[dict], judge_model: str,
-           judge_family: str = None, independent: bool = None, require_controls: bool = True) -> Dict[str, int]:
+           judge_family: str = None, independent: bool = None, require_controls: bool = True,
+           provenance: dict = None) -> Dict[str, int]:
     """Record judge verdicts. Independence is COMPUTED, never taken from the caller (R2-1):
 
       * If any planted control verdicts are present, they are checked (JudgeControlBreach on a miss) and then
@@ -195,7 +196,16 @@ def ingest(conn: sqlite3.Connection, run_id: str, payload: List[dict], judge_mod
 
     The legacy `independent` parameter is accepted for call-site compatibility (run_generation) but IGNORED —
     a caller can no longer assert its own independence.
+
+    `provenance` (R2-3, RI-8) is the judge-stage bundle {model, model_version, prompt_sha256, actor}. When
+    supplied (via run_generation.ingest_judgements) it is persisted on every verdict, with `payload_sha256`
+    COMPUTED here over the exact raw verdict array (never caller-supplied). Legacy/low-level callers leave the
+    judge-provenance columns NULL.
     """
+    prov = None
+    if provenance is not None:
+        prov = dict(provenance)
+        prov["payload_sha256"] = CO.payload_sha256(payload)   # bound to the exact verdict array as received
     control_ids = {c["candidate_id"] for c in judge_control_items()}
     control_verdicts = {v.get("candidate_id"): v for v in payload if v.get("candidate_id") in control_ids}
     # A real judge pass is issued via worksheet_with_controls, which ALWAYS injects the seeded known-bad items,
@@ -226,7 +236,8 @@ def ingest(conn: sqlite3.Connection, run_id: str, payload: List[dict], judge_mod
         vv = dict(v)
         vv["answer_correct"] = bool(chosen is not None and chosen == row["answer_label"])
         verdict = v.get("verdict") or "quarantine"
-        CO.record_judge(conn, cid, judge_model, computed_independent, vv, judge_family=eff_judge_family)
+        CO.record_judge(conn, cid, judge_model, computed_independent, vv, judge_family=eff_judge_family,
+                        provenance=prov)
         m["in"] += 1
         m[verdict] = m.get(verdict, 0) + 1
         m["independent" if computed_independent else "same_actor"] += 1

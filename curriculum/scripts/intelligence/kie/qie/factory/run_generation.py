@@ -47,9 +47,29 @@ def generator_brief(spec_rows: List[dict]) -> str:
     return PLAN.compact_brief(spec_rows)
 
 
-def ingest_candidates(conn: sqlite3.Connection, run_id: str, items: List[dict],
-                      model: str = "generator-agent", batch: str = "b1") -> dict:
-    return CO.ingest(conn, run_id, items, model, batch)
+def _gen_provenance(provenance: dict) -> dict:
+    """Normalize + fail-close the generation provenance bundle (R2-3, RI-8). contract_version defaults to the
+    planner→generator contract in force; everything else (real model id + version + prompt sha256 + actor) MUST
+    be supplied by the caller/CLI — a model stage that cannot name what ran it does not get to persist."""
+    prov = dict(provenance or {})
+    prov.setdefault("contract_version", PLAN.CONTRACT_VERSION)
+    CO._require_provenance(prov, kind="generation")
+    return prov
+
+
+def ingest_candidates(conn: sqlite3.Connection, run_id: str, items: List[dict], provenance: dict,
+                      batch: str = "b1") -> dict:
+    """THE generation model-stage ingest path (R2-3). REJECTS un-provenanced/placeholder payloads fail-closed,
+    persists real provenance (payload_sha256 computed inside CO.ingest), and writes the MANDATORY `generation`
+    telemetry row (real model + actor) that certify_run(require_telemetry=True) later demands."""
+    prov = _gen_provenance(provenance)
+    items = list(items)
+    m = CO.ingest(conn, run_id, items, prov["model"], batch, provenance=prov)
+    CO.telemetry(conn, run_id, "generation", prov["model"], actor=prov["actor"], batches=1, items=len(items),
+                 input_tokens=prov.get("input_tokens"), output_tokens=prov.get("output_tokens"),
+                 wall_seconds=prov.get("wall_seconds"),
+                 note=prov.get("note") or f"generation via {prov['model']} ({prov['model_version']})")
+    return m
 
 
 def verify(conn: sqlite3.Connection, run_id: str) -> dict:
@@ -67,17 +87,30 @@ def judge_worksheet(conn: sqlite3.Connection, run_id: str) -> List[dict]:
     return JUDGE.worksheet(JUDGE.to_judge(conn, run_id))
 
 
-def ingest_judgements(conn: sqlite3.Connection, run_id: str, payload: List[dict],
-                      model: str = "judge-agent", independent: bool = False) -> dict:
-    # Legacy single-actor path: it issues a plain worksheet (no seeded controls) and can only ever produce
-    # PROVISIONAL rows (its judge shares the generator family), so control enforcement does not apply here.
-    # TODO(R2-3/R4-2): the real cross-family judge lane must issue worksheet_with_controls and keep the default.
-    return JUDGE.ingest(conn, run_id, payload, model, independent=independent, require_controls=False)
+def ingest_judgements(conn: sqlite3.Connection, run_id: str, payload: List[dict], provenance: dict,
+                      require_controls: bool = False) -> dict:
+    """THE judge model-stage ingest path (R2-3). REJECTS un-provenanced/placeholder judge payloads fail-closed
+    (judge fields: model, model_version, prompt_sha256, actor), threads the judge provenance into
+    JUDGE.ingest (which computes the judge payload_sha256), and writes the MANDATORY `judge` telemetry row.
+    Independence stays COMPUTED from actor families in JUDGE.ingest (R2-1) — `judge_family` rides on the
+    provenance bundle, never a caller-asserted `independent` flag."""
+    prov = dict(provenance or {})
+    CO._require_provenance(prov, fields=CO._JUDGE_PROVENANCE_FIELDS, kind="judge")
+    m = JUDGE.ingest(conn, run_id, payload, prov["model"], judge_family=prov.get("judge_family"),
+                     require_controls=require_controls, provenance=prov)
+    CO.telemetry(conn, run_id, "judge", prov["model"], actor=prov["actor"], batches=1, items=m.get("in"),
+                 input_tokens=prov.get("input_tokens"), output_tokens=prov.get("output_tokens"),
+                 wall_seconds=prov.get("wall_seconds"),
+                 note=prov.get("note") or f"judge via {prov['model']} ({prov['model_version']})")
+    return m
 
 
 def certify(conn: sqlite3.Connection, run_id: str) -> dict:
-    """Promote only gates AND sympy-agree AND judge-accept. Never certifies on judge agreement alone."""
-    return CERT.certify_run(conn, run_id)
+    """Promote only gates AND sympy-agree AND judge-accept. Never certifies on judge agreement alone.
+
+    require_telemetry=True (R2-3): this is the PRODUCTION certification entrypoint, so a run cannot certify
+    without the mandatory generation+judge telemetry rows written by the ingest paths above (RI-8)."""
+    return CERT.certify_run(conn, run_id, require_telemetry=True)
 
 
 def report(conn: sqlite3.Connection, run_id: str) -> dict:

@@ -14,10 +14,18 @@ owes back. It never tells the generator what the answer should be, and it never 
 """
 from __future__ import annotations
 
+import hashlib
 import json
 from typing import Dict, List
 
 CONTRACT_VERSION = "factory-contract-1"
+
+
+def brief_sha256(text: str) -> str:
+    """sha256 of the exact brief string a generator/judge stage emitted, so provenance can bind a candidate to
+    the precise prompt it was produced under (R2-3, RI-8). Callers hash the string returned by brief() /
+    compact_brief() (generation) or the judge worksheet text (judge)."""
+    return hashlib.sha256((text or "").encode("utf-8")).hexdigest()
 
 _BRIEF = """\
 You are a QUESTION CANDIDATE GENERATOR inside a governed factory. QIE (the planner) has already decided WHAT

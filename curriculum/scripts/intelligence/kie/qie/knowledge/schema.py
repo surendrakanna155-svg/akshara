@@ -310,6 +310,25 @@ def open_index_ro(db_path: Optional[str] = None) -> sqlite3.Connection:
     return conn
 
 
+# ── build-run telemetry (R2-3, BS-5) ──────────────────────────────────────────────────────────────
+def record_run(conn: sqlite3.Connection, run_id: str, stage: str, model: str, items: Optional[int] = None,
+               tokens: Optional[int] = None, wall_seconds: Optional[float] = None,
+               note: Optional[str] = None) -> None:
+    """Record one model/build stage into ki_run — the per-run audit trail the audit found EMPTY across every
+    index version (D4/BS-5: ki_run = 0 rows, so the index build had no model/telemetry trail).
+
+    Called from build.py's model stages (engineer ingest, independent audit, freeze) via the R1-5 unfreeze
+    hatch — SC.open_index refuses a frozen index for writing, so record_run naturally fires ONLY during a
+    sanctioned versioned rebuild and can never breach the freeze. The frozen v1.4 index keeps ki_run=0 (an
+    honest null); population begins at the next sanctioned build (v1.5). Callers embed a timestamp in `run_id`
+    for a distinct row per build; INSERT OR REPLACE keeps it crash-free on a re-run of the same run_id/stage."""
+    conn.execute(
+        "INSERT OR REPLACE INTO ki_run (run_id, stage, model, items, tokens, wall_seconds, note, recorded_at) "
+        "VALUES (?,?,?,?,?,?,?,?)",
+        (run_id, stage, model, items, tokens, wall_seconds, (note or "")[:1000], now()))
+    conn.commit()
+
+
 # ── resumability ────────────────────────────────────────────────────────────────────────────────
 def mark(conn: sqlite3.Connection, scope: str, stage: str, status: str, detail: str = "") -> None:
     conn.execute(

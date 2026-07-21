@@ -10,10 +10,23 @@ import unittest
 from kie import config
 from kie.qie.factory import corpus as CO
 from kie.qie.factory import judge as JUDGE
+from kie.qie.factory import plan as PLAN
 from kie.qie.factory import run_generation as G
 from kie.qie.factory import solutions as SOL
 
 QIE_STORE = config.KIE_HOME / "qie.db"
+
+
+# ── R2-3 provenance bundles: real model id + version + prompt sha256 + actor (never placeholders) ──
+def _gen_prov(brief_text="generation brief for R"):
+    return {"model": "claude-opus-4-8", "model_version": "claude-opus-4-8[1m]",
+            "prompt_sha256": PLAN.brief_sha256(brief_text), "actor": "orchestrator"}
+
+
+def _judge_prov(brief_text="judge worksheet for R"):
+    return {"model": "human-examiner", "model_version": "human-examiner-v1",
+            "prompt_sha256": PLAN.brief_sha256(brief_text), "actor": "human:surendra",
+            "judge_family": "human-review"}
 
 
 class GenerationWiring(unittest.TestCase):
@@ -60,7 +73,8 @@ class GenerationEndToEnd(unittest.TestCase):
                                          "p": {"value": None, "unit": "kg*m/s"}},
                               "relation": "p = m * v", "solve_for": "p", "answer_unit": "kg*m/s"},
             }
-            self.assertEqual(G.ingest_candidates(conn, "R", [cand])["ingested"], 1)
+            # R2-3: the production generation ingest path requires real provenance and writes generation telemetry
+            self.assertEqual(G.ingest_candidates(conn, "R", [cand], _gen_prov())["ingested"], 1)
             m = G.verify(conn, "R")
             self.assertEqual(m["independent"].get("agree"), 1)   # sympy re-derived 12/3 = 4
             cid = CO._cid("R", "S1")
@@ -72,12 +86,13 @@ class GenerationEndToEnd(unittest.TestCase):
                                         "a": {"misconception": "added instead of multiplied", "mis_relation": "p = m + v"},
                                         "c": {"misconception": "divided instead of multiplied", "mis_relation": "p = m/v"},
                                         "d": {"misconception": "subtracted the masses", "mis_relation": "p = v - m"}}}])
-            # R2-1 independence: a CROSS-FAMILY (human) judge disposes the verdict with its OWN chosen_label
-            JUDGE.ingest(conn, "R", [{
+            # R2-1 independence + R2-3 judge provenance/telemetry: a CROSS-FAMILY (human) judge disposes the
+            # verdict with its OWN chosen_label, through the production judge ingest path.
+            G.ingest_judgements(conn, "R", [{
                 "candidate_id": cid, "verdict": "accept", "chosen_label": "b", "well_posed": True,
                 "curriculum_ok": True, "unique_answer": True, "concepts_real": True,
-                "difficulty_plausible": True, "distractors_plausible": True}],
-                "human-examiner", judge_family="human-review", require_controls=False)
+                "difficulty_plausible": True, "distractors_plausible": True}], _judge_prov())
+            # R2-3: certify (production entrypoint) demands the generation+judge telemetry rows written above
             self.assertEqual(G.certify(conn, "R")["certified"], 1)
             self.assertEqual(len(CO.product_inventory(conn, "R")), 1)  # certified -> product-visible
         finally:
@@ -102,10 +117,11 @@ class GenerationEndToEnd(unittest.TestCase):
                     "structure": {"givens": {"F": {"value": 12, "unit": "N"}, "m": {"value": 3, "unit": "kg"},
                                              "a": {"value": None, "unit": "m/s**2"}},
                                   "relation": "F = m * a", "solve_for": "a", "answer_unit": "m/s**2"}}
-            G.ingest_candidates(conn, "R", [cand])
+            G.ingest_candidates(conn, "R", [cand], _gen_prov())
             G.verify(conn, "R")
             cid = CO._cid("R", "S2")
-            G.ingest_judgements(conn, "R", [{"candidate_id": cid, "verdict": "accept", "answer_correct": True}])
+            G.ingest_judgements(conn, "R", [{"candidate_id": cid, "verdict": "accept", "chosen_label": "c"}],
+                                _judge_prov())
             self.assertEqual(G.certify(conn, "R")["certified"], 0)  # sympy disagree -> never certified
             self.assertEqual(len(CO.product_inventory(conn, "R")), 0)
         finally:

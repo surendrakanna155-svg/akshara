@@ -20,9 +20,34 @@ from kie import config
 from kie.qie.factory.gates import item_hash, norm_hash
 
 SCHEMA_PATH = Path(__file__).resolve().parent / "corpus_schema.sql"
-SCHEMA_VERSION = "factory-3"          # R2: certification hardening (solution+distractor gates, independence,
-                                      # replay) — additive over factory-2 (R1-2 append-only, content-bound)
+SCHEMA_VERSION = "factory-4"          # R2-3: real model/actor provenance + full-stage telemetry ([C10], RI-8) —
+                                      # additive over factory-3 (R2-1/2/4 certification hardening), which is
+                                      # additive over factory-2 (R1-2 append-only, content-bound)
 CORPUS_DB_PATH = config.KIE_HOME / "factory_corpus.db"
+
+# Placeholder model/actor ids that are NOT real provenance (R2-3, [C10]). These were the code defaults the audit
+# found stamped on every row (run_generation.py:51/:71). Ingest through the model-stage paths REFUSES them
+# fail-closed so a certified item can never again be attributed to an anonymous 'agent'. Compared case-folded.
+BANNED_PROVENANCE_IDS = frozenset({
+    "generator-agent", "judge-agent", "generator-model", "judge-model", "examiner-model",
+    "examiner-agent", "agent", "model", "unknown", "none", "null", "placeholder", "orchestrator-review",
+    # adversarial-verifier hardening: obvious placeholder-ish ids a real actor/model would never be.
+    "generator", "judge", "examiner", "test", "example", "tbd", "todo", "n/a", "na", "-", ".", "?", "x",
+})
+# The provenance a model stage MUST record (RI-8). `payload_sha256` is deliberately NOT in this set: it is
+# COMPUTED inside ingest from the exact bytes stored, never accepted from the caller, so it cannot be forged.
+_PROVENANCE_FIELDS = ("model", "model_version", "prompt_sha256", "actor", "contract_version")
+_JUDGE_PROVENANCE_FIELDS = ("model", "model_version", "prompt_sha256", "actor")
+
+
+def provenance_complete(d, fields=_PROVENANCE_FIELDS) -> bool:
+    """Boolean form of `_require_provenance` for callers that GATE rather than raise — the per-candidate RI-8
+    precondition in certify_run. True iff every field is present and neither model nor actor is a placeholder id."""
+    try:
+        _require_provenance(d, fields=fields)
+        return True
+    except CorpusIntegrityError:
+        return False
 
 # The lifecycle. Only CERTIFIED may ever be promoted to product inventory.
 CANDIDATE, QUARANTINED, REJECTED, CERTIFIED = "candidate", "quarantined", "rejected", "certified"
@@ -67,6 +92,39 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds")
 
 
+def _canonical_payload(raw_items) -> str:
+    """A deterministic, order-stable JSON serialization of a model payload, so its sha256 is reproducible on
+    re-ingest and cannot silently drift (R2-3). sort_keys makes it independent of dict insertion order."""
+    return json.dumps(raw_items, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+
+
+def payload_sha256(raw_items) -> str:
+    """sha256 of the exact model payload as stored. COMPUTED here, never caller-supplied — the whole point of
+    RI-8 is that provenance is verifiable, so the one field a caller could fake is the one we recompute."""
+    return hashlib.sha256(_canonical_payload(raw_items).encode("utf-8")).hexdigest()
+
+
+def _require_provenance(d: Optional[dict], fields=_PROVENANCE_FIELDS, kind: str = "generation") -> None:
+    """Fail-closed provenance gate (R2-3, [C10], RI-8) for the model-stage ingest paths.
+
+    Refuses (raises CorpusIntegrityError, never swallowed) when a model stage tries to persist without a real
+    model id + version + prompt sha256 + actor (+ contract_version for generation), OR when the model/actor is a
+    BANNED placeholder id (the old 'generator-agent'/'judge-agent' code defaults). This is what makes it
+    impossible to ever again certify an item attributed to an anonymous 'agent'. `payload_sha256` is not checked
+    here — it is computed inside ingest from the stored bytes and so cannot be missing or forged."""
+    if not isinstance(d, dict):
+        raise CorpusIntegrityError(f"refuse {kind} ingest: no provenance supplied (RI-8 requires real "
+                                   f"model id + version + prompt sha256 + actor)")
+    missing = [f for f in fields if not str(d.get(f) or "").strip()]
+    if missing:
+        raise CorpusIntegrityError(f"refuse {kind} ingest: missing provenance {missing} (RI-8)")
+    for f in ("model", "actor"):
+        v = str(d.get(f) or "").strip().lower()
+        if v in BANNED_PROVENANCE_IDS:
+            raise CorpusIntegrityError(
+                f"refuse {kind} ingest: {f}={d.get(f)!r} is a placeholder id, not real provenance (RI-8)")
+
+
 def open_store(db_path=None) -> sqlite3.Connection:
     path = db_path or CORPUS_DB_PATH
     if str(path) != ":memory:":
@@ -79,7 +137,8 @@ def open_store(db_path=None) -> sqlite3.Connection:
     # views reference the new id/item_hash columns, so the evidence tables must already be new-shape when the
     # view DDL validates. On a fresh DB this is a no-op (no tables yet) and the schema creates everything.
     migrate_appendonly(conn)                      # factory-1 -> factory-2 (table rebuild)
-    migrate_r2(conn)                              # factory-2 -> factory-3 (additive ADD COLUMN; R2)
+    migrate_r2(conn)                              # factory-2 -> factory-3 (additive ADD COLUMN; R2-1/2/4)
+    migrate_r2_3(conn)                            # factory-3 -> factory-4 (additive ADD COLUMN; R2-3 provenance)
     conn.executescript(SCHEMA_PATH.read_text())
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("INSERT INTO factory_meta(key, value) VALUES ('schema_version', ?) "
@@ -125,7 +184,7 @@ def _guard_ingest(conn: sqlite3.Connection, run_id: str, sid: str) -> None:
 
 
 def ingest(conn: sqlite3.Connection, run_id: str, raw_items: Iterable[dict], generator_model: str,
-           batch: str, generator_family: str = None) -> dict:
+           batch: str, generator_family: str = None, provenance: dict = None) -> dict:
     """Ingest raw generator output. Records EVERYTHING — including refusals and malformed payloads — because
     the trial must measure the generator's real behaviour, not a cleaned-up version of it.
 
@@ -136,10 +195,27 @@ def ingest(conn: sqlite3.Connection, run_id: str, raw_items: Iterable[dict], gen
     reject a same-actor audit later. When a caller does not declare one (the current run_generation default), it
     falls back to the generator_model — so an independence claim later requires a DIFFERENT family to be
     asserted explicitly, never inferred.
+
+    `provenance` (R2-3, RI-8) is the model-stage provenance bundle {model, model_version, prompt_sha256, actor,
+    contract_version}. When supplied (the production path, run_generation.ingest_candidates), it is checked
+    fail-closed by _require_provenance and its fields — plus a `payload_sha256` COMPUTED here over the exact
+    stored payload — are persisted on every candidate. Legacy/low-level callers that pass no provenance leave
+    those columns NULL; such rows are product-invisible (certification_class is NULL) and are surfaced by the
+    RI-8 placeholder scan. The DB-wide scan runs post-re-certification, never as a retro-fail of legacy rows.
     """
     gen_family = actor_family(generator_family or generator_model)
+    prov = None
+    p_sha = None
+    if provenance is not None:
+        _require_provenance(provenance, kind="generation")
+        raw_items = list(raw_items)          # materialize so the sha covers the exact batch we store
+        p_sha = payload_sha256(raw_items)
+        prov = provenance
     m = {"ingested": 0, "refused": 0, "malformed": 0, "unknown_spec": 0}
     known = {r["spec_id"] for r in conn.execute("SELECT spec_id FROM generation_spec WHERE run_id=?", (run_id,))}
+    # factory-4 provenance quintet, bound identically to every row in the batch (or NULL for legacy callers).
+    pv = (prov["model_version"], prov["prompt_sha256"], p_sha, prov["actor"], prov["contract_version"]) \
+        if prov else (None, None, None, None, None)
     for it in raw_items:
         if not isinstance(it, dict) or not it.get("spec_id"):
             m["malformed"] += 1
@@ -153,10 +229,11 @@ def ingest(conn: sqlite3.Connection, run_id: str, raw_items: Iterable[dict], gen
         if it.get("refuse"):
             conn.execute(
                 "INSERT INTO candidate (candidate_id, run_id, spec_id, generator_model, generator_family, "
-                "generator_batch, stem, options, answer_label, status, reject_reason, raw, created_at) "
-                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "generator_batch, stem, options, answer_label, status, reject_reason, raw, "
+                "model_version, prompt_sha256, payload_sha256, generator_actor, contract_version, created_at) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (cid, run_id, sid, generator_model, gen_family, batch, "", "{}", None, REJECTED,
-                 f"generator_refused: {it.get('reason', '')}"[:400], json.dumps(it), _now()))
+                 f"generator_refused: {it.get('reason', '')}"[:400], json.dumps(it), *pv, _now()))
             m["refused"] += 1
             continue
         stem = (it.get("stem") or "").strip()
@@ -165,14 +242,15 @@ def ingest(conn: sqlite3.Connection, run_id: str, raw_items: Iterable[dict], gen
         conn.execute(
             "INSERT INTO candidate (candidate_id, run_id, spec_id, generator_model, generator_family, "
             "generator_batch, stem, options, answer_label, answer_value, claimed, structure, solution, "
-            "distractor_rationale, visual_spec, raw, status, item_hash, stem_norm_hash, created_at) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "distractor_rationale, visual_spec, raw, status, item_hash, stem_norm_hash, "
+            "model_version, prompt_sha256, payload_sha256, generator_actor, contract_version, created_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (cid, run_id, sid, generator_model, gen_family, batch, stem, json.dumps(options), ans,
              str(it.get("answer_value") or ""), json.dumps(it.get("claimed") or {}),
              json.dumps(it.get("structure") or {}), json.dumps(it.get("solution") or {}),
              json.dumps(it.get("distractor_rationale") or {}),
              json.dumps(it.get("visual_spec")) if it.get("visual_spec") else None,
-             json.dumps(it), CANDIDATE, item_hash(stem, options, str(ans)), norm_hash(stem), _now()))
+             json.dumps(it), CANDIDATE, item_hash(stem, options, str(ans)), norm_hash(stem), *pv, _now()))
         m["ingested"] += 1
     conn.commit()
     return m
@@ -243,22 +321,32 @@ def record_independent(conn: sqlite3.Connection, candidate_id: str, method: str,
 
 
 def record_judge(conn: sqlite3.Connection, candidate_id: str, judge_model: str, independent: bool,
-                 v: dict, judge_family: str = None) -> None:
+                 v: dict, judge_family: str = None, provenance: dict = None) -> None:
     """Append a judge verdict. `judge_family` (R2-1) records the disposing reviewer's actor family so
     certification can RE-DERIVE independence (judge_family != generator_family) rather than trust the stored
     `independent` flag alone. judge.ingest computes `independent` from the families and passes both here; direct
-    callers that pass only `independent` leave judge_family NULL (which certify treats as NOT cross-family)."""
+    callers that pass only `independent` leave judge_family NULL (which certify treats as NOT cross-family).
+
+    `provenance` (R2-3, RI-8) is the judge-stage bundle {model, model_version, prompt_sha256, payload_sha256,
+    actor}. When supplied (via judge.ingest from run_generation.ingest_judgements) it is checked fail-closed and
+    persisted; the judge payload_sha256 is computed by judge.ingest over the raw verdict array. Legacy/low-level
+    callers leave the judge-provenance columns NULL."""
     ih = _current_item_hash(conn, candidate_id)
+    if provenance is not None:
+        _require_provenance(provenance, fields=_JUDGE_PROVENANCE_FIELDS, kind="judge")
+    p = provenance or {}
     conn.execute(
         "INSERT INTO judge_verdict (candidate_id, item_hash, judge_model, judge_family, independent, verdict, "
         "well_posed, curriculum_ok, answer_correct, unique_answer, concepts_real, composition_real, "
-        "difficulty_plausible, distractors_plausible, visual_judgement, reasons, checked_at) "
-        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        "difficulty_plausible, distractors_plausible, visual_judgement, reasons, "
+        "model_version, prompt_sha256, payload_sha256, judge_actor, checked_at) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (candidate_id, ih, judge_model, judge_family, int(independent), v.get("verdict", "quarantine"),
          _b(v.get("well_posed")), _b(v.get("curriculum_ok")), _b(v.get("answer_correct")),
          _b(v.get("unique_answer")), _b(v.get("concepts_real")), _b(v.get("composition_real")),
          _b(v.get("difficulty_plausible")), _b(v.get("distractors_plausible")),
-         v.get("visual_judgement"), json.dumps(v.get("reasons") or v.get("reason") or ""), _now()))
+         v.get("visual_judgement"), json.dumps(v.get("reasons") or v.get("reason") or ""),
+         p.get("model_version"), p.get("prompt_sha256"), p.get("payload_sha256"), p.get("actor"), _now()))
 
 
 def _b(x) -> Optional[int]:
@@ -266,12 +354,40 @@ def _b(x) -> Optional[int]:
 
 
 def telemetry(conn: sqlite3.Connection, run_id: str, stage: str, model: str, **kw) -> None:
+    """Record a per-stage telemetry row (cost/throughput evidence). `actor` (R2-3) is WHO ran the stage,
+    distinct from the model. Token columns stay nullable — real per-call token/latency capture arrives with the
+    automated model-execution layer (R4-2); until then a stage records its real model + actor + wall time."""
     conn.execute(
-        "INSERT OR REPLACE INTO run_telemetry (run_id, stage, model, batches, items, input_tokens, "
-        "output_tokens, wall_seconds, note, recorded_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
-        (run_id, stage, model, kw.get("batches"), kw.get("items"), kw.get("input_tokens"),
+        "INSERT OR REPLACE INTO run_telemetry (run_id, stage, model, actor, batches, items, input_tokens, "
+        "output_tokens, wall_seconds, note, recorded_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        (run_id, stage, model, kw.get("actor"), kw.get("batches"), kw.get("items"), kw.get("input_tokens"),
          kw.get("output_tokens"), kw.get("wall_seconds"), kw.get("note"), _now()))
     conn.commit()
+
+
+def require_stage_telemetry(conn: sqlite3.Connection, run_id: str, stages=("generation", "judge")) -> None:
+    """Mandatory-telemetry precondition (R2-3, RI-8): a run cannot be certified without a real model-stage
+    telemetry row for each named stage — one that records an actual model id AND an actor. Fails CLOSED
+    (CorpusIntegrityError) when a stage row is absent or carries no real model/actor, so a certification can
+    never be claimed for generation/judge work that left no accountable execution trail.
+
+    (Token/latency columns are recorded when available but are not required here — they depend on the automated
+    model-execution layer, R4-2. WHO and WHAT ran the stage are provable today and are what RI-8 demands.)"""
+    for stage in stages:
+        row = conn.execute(
+            "SELECT model, actor FROM run_telemetry WHERE run_id=? AND stage=? "
+            "AND model IS NOT NULL AND TRIM(model)!='' AND actor IS NOT NULL AND TRIM(actor)!='' "
+            "ORDER BY recorded_at DESC LIMIT 1", (run_id, stage)).fetchone()
+        if row is None:
+            raise CorpusIntegrityError(
+                f"refuse certify: run {run_id!r} has no '{stage}' telemetry row with a real model id + actor "
+                f"(RI-8 — every model stage must leave an accountable execution trail)")
+        m = str(row["model"]).strip().lower()
+        a = str(row["actor"]).strip().lower()
+        if m in BANNED_PROVENANCE_IDS or a in BANNED_PROVENANCE_IDS:
+            raise CorpusIntegrityError(
+                f"refuse certify: run {run_id!r} '{stage}' telemetry records a placeholder model/actor "
+                f"({row['model']!r}/{row['actor']!r}) — not real provenance (RI-8)")
 
 
 def product_inventory(conn: sqlite3.Connection, run_id: str) -> List[sqlite3.Row]:
@@ -438,6 +554,51 @@ def migrate_r2(conn: sqlite3.Connection) -> bool:
     return changed
 
 
+# ── in-place schema migration: factory-3 → factory-4 (R2-3 real model/actor provenance + telemetry) ──────
+# PURELY ADDITIVE columns — no table rebuild, no view change, no AUTOINCREMENT disturbance. Idempotent (each
+# ALTER guarded by _has_col). Called by open_store right after migrate_r2, and standalone via
+# kie.qie.remediation.migrate_factory_r2_3 against an existing DB. NEVER promotes/demotes: the new columns are
+# born NULL on legacy rows, which stay product-invisible (certification_class NULL, R2-1) and are surfaced by
+# the RI-8 placeholder scan — the scan runs post-re-certification, never as a retro-fail of legacy rows.
+_R2_3_CANDIDATE_COLS = (
+    ("model_version", "ALTER TABLE candidate ADD COLUMN model_version TEXT"),
+    ("prompt_sha256", "ALTER TABLE candidate ADD COLUMN prompt_sha256 TEXT"),
+    ("payload_sha256", "ALTER TABLE candidate ADD COLUMN payload_sha256 TEXT"),
+    ("generator_actor", "ALTER TABLE candidate ADD COLUMN generator_actor TEXT"),
+    ("contract_version", "ALTER TABLE candidate ADD COLUMN contract_version TEXT"),
+)
+_R2_3_JUDGE_COLS = (
+    ("model_version", "ALTER TABLE judge_verdict ADD COLUMN model_version TEXT"),
+    ("prompt_sha256", "ALTER TABLE judge_verdict ADD COLUMN prompt_sha256 TEXT"),
+    ("payload_sha256", "ALTER TABLE judge_verdict ADD COLUMN payload_sha256 TEXT"),
+    ("judge_actor", "ALTER TABLE judge_verdict ADD COLUMN judge_actor TEXT"),
+)
+
+
+def migrate_r2_3(conn: sqlite3.Connection) -> bool:
+    """Idempotent factory-3 → factory-4 additive upgrade. Returns True if anything changed. No-op on a fresh DB
+    (tables not yet created — the schema script births them factory-4) and on an already-migrated DB.
+
+    Adds the real-provenance columns to the two MODEL stages (candidate = generation, judge_verdict = judge),
+    an `actor` column to the deterministic-stage evidence tables (gate_result / independent_answer) so no table
+    is left without an actor column, and `actor` to run_telemetry. Nothing is backfilled: absence of provenance
+    is an HONEST NULL, not a fabricated value (RI-8 / honest-null discipline)."""
+    changed = False
+    for table, cols in (("candidate", _R2_3_CANDIDATE_COLS), ("judge_verdict", _R2_3_JUDGE_COLS)):
+        if _table_exists(conn, table):
+            for col, ddl in cols:
+                if not _has_col(conn, table, col):
+                    conn.execute(ddl)
+                    changed = True
+    for table in ("gate_result", "independent_answer", "run_telemetry"):
+        if _table_exists(conn, table) and not _has_col(conn, table, "actor"):
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN actor TEXT")
+            changed = True
+    if changed:
+        conn.commit()
+    return changed
+
+
 def _status_counts(conn: sqlite3.Connection) -> Dict[str, int]:
     if not _table_exists(conn, "candidate"):
         return {}
@@ -458,7 +619,8 @@ def migrate_db(db_path) -> dict:
     try:
         before = _status_counts(conn)
         changed = migrate_appendonly(conn)                    # factory-1 -> factory-2 (table rebuild)
-        changed = migrate_r2(conn) or changed                 # factory-2 -> factory-3 (additive; R2)
+        changed = migrate_r2(conn) or changed                 # factory-2 -> factory-3 (additive; R2-1/2/4)
+        changed = migrate_r2_3(conn) or changed               # factory-3 -> factory-4 (additive; R2-3)
         conn.executescript(SCHEMA_PATH.read_text())           # create views/indexes; bump nothing it already has
         conn.execute("PRAGMA foreign_keys = ON")
         conn.execute("INSERT INTO factory_meta(key, value) VALUES ('schema_version', ?) "

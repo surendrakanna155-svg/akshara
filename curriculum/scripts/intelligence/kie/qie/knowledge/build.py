@@ -129,6 +129,9 @@ def cmd_ingest(code: str, payload_path: str, force: str = None) -> None:
     payload = json.loads(Path(payload_path).read_text())
     m = E.ingest_engineer(conn, k, payload, b, sp, model="opus-4.8(engineer)")
     SC.mark(conn, b["doc_id"], "engineer", "done", json.dumps(m))
+    # ki_run trail (R2-3/BS-5): rides the R1-5 unfreeze hatch (open_index refuses a frozen index for writing).
+    SC.record_run(conn, f"engineer_{code}_{SC.now()}", "engineer", "opus-4.8(engineer)",
+                  items=m.get("concepts"), note=json.dumps(m))
     print(f"{code}: {m}")
 
 
@@ -183,6 +186,9 @@ def cmd_verdicts(payload_path: str) -> None:
     k, conn = _kie(), E.open_index()
     payload = json.loads(Path(payload_path).read_text())
     m = E.ingest_audit(conn, payload, model="opus-4.8(independent-audit)", kconn=k)
+    # ki_run trail (R2-3/BS-5): the INDEPENDENT audit stage — a distinct actor from the engineer (R2-1).
+    SC.record_run(conn, f"audit_{SC.now()}", "audit", "opus-4.8(independent-audit)",
+                  items=m.get("in"), note=json.dumps(m))
     print(m)
 
 
@@ -391,6 +397,9 @@ def freeze_index(version: str, index_path=None, kie_path=None) -> dict:
         }
         for kk, vv in meta.items():
             conn.execute("INSERT OR REPLACE INTO ki_meta (key, value) VALUES (?,?)", (kk, vv))
+        # ki_run trail (R2-3/BS-5): the deterministic freeze stage, tagged with the fingerprints it sealed.
+        SC.record_run(conn, f"freeze_{version}_{stamp}", "freeze", "deterministic", items=n_cert,
+                      note=f"content_fp={content_fp} substrate_fp={substrate_fp} chunks={n_chunks}")
         conn.commit()
     finally:
         conn.close()

@@ -43,10 +43,13 @@ REASON_NO_DISTRACTORS = ("awaiting_distractor_verification: no passing distracto
 REASON_PROVISIONAL_SAME_ACTOR = ("provisional_same_actor_review: the disposing judge is the same actor family "
                                  "as the generator; a cross-family (or human) reviewer is required before "
                                  "'certified' — this row is provisional and product-invisible (R2-1)")
+REASON_NO_PROVENANCE = ("missing_row_provenance: on the production path a certified row must itself carry real "
+                        "generation + judge provenance (model+version+prompt_sha256+actor), not ride a sibling's "
+                        "run-level telemetry — RI-8 (R2-3)")
 REASON_CERTIFIED = "gates+sympy+solution+distractor+independent_judge"
 
 
-def certify_run(conn: sqlite3.Connection, run_id: str) -> Dict[str, int]:
+def certify_run(conn: sqlite3.Connection, run_id: str, require_telemetry: bool = False) -> Dict[str, int]:
     """Promote only what the FULL evidence chain supports, BOUND TO THE CANDIDATE'S CURRENT CONTENT.
 
     The RI-3 conjunction, enforced here for the candidate's CURRENT item_hash (R1-1/2 + R2-1/2/4):
@@ -60,14 +63,31 @@ def certify_run(conn: sqlite3.Connection, run_id: str) -> Dict[str, int]:
     A promoted row is stamped `evidence_class='sympy_rederived'` and carries the EARNED depth + QIE-detected
     archetype (R2-4), never the generator's refuted claim. Evidence whose item_hash != the candidate's current
     item_hash (the replay case) can never certify. Never promotes on judge agreement alone.
-    """
-    m = {"certified": 0, "provisional_same_actor": 0, "held_no_independent": 0, "held_no_solution": 0,
-         "held_no_distractors": 0, "judge_rejected": 0, "judge_missing": 0, "stale_evidence": 0,
-         "quarantined_prior": 0}
 
-    rows = conn.execute("""
+    RUN-LEVEL PRECONDITION (R2-3, RI-8): when `require_telemetry` is set (the production path — see
+    run_generation.certify), the whole run is refused fail-closed unless the generation AND judge model stages
+    each left a real-provenance telemetry row (require_stage_telemetry). This composes ABOVE the per-candidate
+    R2-1/2/4 preconditions as an AND-gate on the run — a certification without an accountable execution trail
+    cannot be claimed. Low-level unit callers that construct fixtures in isolation leave it off (default False).
+    """
+    if require_telemetry:
+        CO.require_stage_telemetry(conn, run_id, ("generation", "judge"))
+
+    m = {"certified": 0, "provisional_same_actor": 0, "held_no_independent": 0, "held_no_solution": 0,
+         "held_no_distractors": 0, "held_no_provenance": 0, "judge_rejected": 0, "judge_missing": 0,
+         "stale_evidence": 0, "quarantined_prior": 0}
+
+    # The factory-4 provenance columns are SELECTed only on the production path (require_telemetry), which always
+    # runs on a factory-4 store; low-level unit fixtures may be an earlier schema without these columns.
+    _gen_prov = (", c.generator_model, c.model_version AS gen_model_version, "
+                 "c.prompt_sha256 AS gen_prompt_sha256, c.generator_actor, c.contract_version"
+                 if require_telemetry else "")
+    _judge_prov = (", jvl.judge_model AS judge_model, jvl.model_version AS judge_model_version, "
+                   "jvl.prompt_sha256 AS judge_prompt_sha256, jvl.judge_actor AS judge_actor"
+                   if require_telemetry else "")
+    rows = conn.execute(f"""
         SELECT c.candidate_id, c.item_hash, c.created_at, c.generator_family, c.structure, c.stem,
-               c.answer_label, c.answer_value, c.options,
+               c.answer_label, c.answer_value, c.options{_gen_prov},
           (SELECT COUNT(*) FROM gate_result g
              WHERE g.candidate_id=c.candidate_id AND g.item_hash=c.item_hash) AS gates_for_hash,
           (SELECT COUNT(*) FROM gate_result g
@@ -84,7 +104,7 @@ def certify_run(conn: sqlite3.Connection, run_id: str) -> Dict[str, int]:
                    AND g.gate='distractor_verified' AND g.ok=1) AS distractors_verified_for_hash,
           ial.verdict AS ind_verdict, ial.item_hash AS ind_hash, ial.checked_at AS ind_at,
           jvl.verdict AS judge_verdict, jvl.item_hash AS judge_hash, jvl.checked_at AS judge_at,
-          jvl.independent AS judge_independent, jvl.judge_family AS judge_family
+          jvl.independent AS judge_independent, jvl.judge_family AS judge_family{_judge_prov}
         FROM candidate c
         LEFT JOIN independent_answer_latest ial ON ial.candidate_id = c.candidate_id
         LEFT JOIN judge_verdict_latest      jvl ON jvl.candidate_id = c.candidate_id
@@ -115,6 +135,21 @@ def certify_run(conn: sqlite3.Connection, run_id: str) -> Dict[str, int]:
         if not content_bound:
             CO.set_status(conn, cid, CO.QUARANTINED, REASON_STALE)
             m["stale_evidence"] += 1
+            continue
+
+        # R2-3 (RI-8, adversarial-verifier fix): on the PRODUCTION path a certified row must ITSELF carry real
+        # generation + judge provenance — not merely ride a sibling candidate's run-level telemetry row. Gated
+        # to require_telemetry so low-level unit fixtures (built without a provenance bundle) stay green.
+        if require_telemetry and not (
+                CO.provenance_complete({"model": r["generator_model"], "model_version": r["gen_model_version"],
+                                        "prompt_sha256": r["gen_prompt_sha256"], "actor": r["generator_actor"],
+                                        "contract_version": r["contract_version"]})
+                and CO.provenance_complete(
+                    {"model": r["judge_model"], "model_version": r["judge_model_version"],
+                     "prompt_sha256": r["judge_prompt_sha256"], "actor": r["judge_actor"]},
+                    fields=CO._JUDGE_PROVENANCE_FIELDS)):
+            CO.set_status(conn, cid, CO.QUARANTINED, REASON_NO_PROVENANCE)
+            m["held_no_provenance"] += 1
             continue
 
         # R2-2: the mandatory solution stage — a passing solution_verified gate bound to this content.

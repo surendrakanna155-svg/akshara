@@ -10,15 +10,17 @@
 --
 -- Rows are LOCAL-ONLY (curriculum/knowledge/ is gitignored). Only this schema + the harness code are committed.
 --
--- SCHEMA VERSION: factory-3 (remediation R2 — certification hardening: solution+distractor gates, proposer/
---   certifier independence, self-refuted-metadata replay).
---   Builds ADDITIVELY on factory-2 (R1-2 — append-only, content-bound certification records).
+-- SCHEMA VERSION: factory-4 (remediation R2-3 — real model/actor provenance + full-stage telemetry, [C10]/RI-8).
+--   Builds ADDITIVELY on factory-3 (R2-1/2/4 — certification hardening: solution+distractor gates, proposer/
+--   certifier independence, self-refuted-metadata replay), which builds on factory-2 (R1-2 — append-only,
+--   content-bound certification records).
 --   The evidence tables (gate_result / independent_answer / judge_verdict) are APPEND-ONLY: every attempt is a
 --   new row (id AUTOINCREMENT) stamped with the candidate's item_hash AT CHECK TIME, so evidence is bound to
 --   the exact content it was computed against. A `_latest` view exposes the most recent attempt for the
 --   single-row readers. Certified rows are immutable; re-ingest over a certified id hard-fails in code.
 --   In-place migrators upgrade older DBs: corpus.migrate_appendonly (factory-1 -> factory-2, table rebuild)
---   then corpus.migrate_r2 (factory-2 -> factory-3, additive ADD COLUMN). Both idempotent; see corpus.py.
+--   then corpus.migrate_r2 (factory-2 -> factory-3) then corpus.migrate_r2_3 (factory-3 -> factory-4, additive
+--   ADD COLUMN). All idempotent; see corpus.py.
 --
 --   factory-3 columns (all additive; a legacy certified row acquires NULLs here and so falls OUT of
 --   product_inventory until re-certified under the R2 gates — the intended quarantine-by-construction):
@@ -28,6 +30,17 @@
 --     candidate.earned_depth         reasoning depth EARNED by executing the step DAG (never the bare claim)
 --     candidate.computed_archetype   QIE-detected archetype stamped at certification (never a refuted claim)
 --     judge_verdict.judge_family     actor family of the disposing reviewer; `independent` is COMPUTED from it
+--
+--   factory-4 columns (all additive; RI-8 — every model-stage row records real model id + prompt sha256 +
+--   actor; ingest through the model-stage paths REJECTS placeholders/missing provenance, fail-closed):
+--     candidate.model_version        exact resolved generator model id/snapshot (distinct from generator_model)
+--     candidate.prompt_sha256        sha256 of the exact brief the generator received
+--     candidate.payload_sha256       sha256 of the raw payload the generator returned (COMPUTED in ingest)
+--     candidate.generator_actor      WHO ran the generation stage (operator/agent), distinct from the model
+--     candidate.contract_version     plan.CONTRACT_VERSION the candidate was produced under
+--     judge_verdict.{model_version,prompt_sha256,payload_sha256,judge_actor}  the judge stage's real provenance
+--     gate_result.actor / independent_answer.actor   deterministic-stage actor (e.g. sympy / deterministic-harness)
+--     run_telemetry.actor            WHO ran the stage (distinct from the model)
 
 CREATE TABLE IF NOT EXISTS factory_meta (
   key   TEXT PRIMARY KEY,
@@ -93,6 +106,13 @@ CREATE TABLE IF NOT EXISTS candidate (
   certification_class TEXT,              -- R2-1: certified | provisional (same-actor => provisional, invisible)
   earned_depth        INTEGER,           -- R2-4: reasoning depth EARNED by executing the DAG (not the claim)
   computed_archetype  TEXT,              -- R2-4: QIE-detected archetype stamped at certification (not a claim)
+  -- factory-4 (R2-3, RI-8) generation-stage provenance. Set ONLY by the model-stage ingest path, which REFUSES
+  -- placeholders/missing provenance fail-closed; payload_sha256 is COMPUTED in ingest, never caller-supplied.
+  model_version       TEXT,              -- exact resolved generator model id/snapshot (distinct from generator_model)
+  prompt_sha256       TEXT,              -- sha256 of the exact brief the generator received
+  payload_sha256      TEXT,              -- sha256 of the raw generator payload as stored (computed in ingest)
+  generator_actor     TEXT,              -- WHO ran generation (operator/agent), distinct from the model
+  contract_version    TEXT,              -- plan.CONTRACT_VERSION the candidate was produced under
   created_at         TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_cand_run ON candidate(run_id);
@@ -116,6 +136,7 @@ CREATE TABLE IF NOT EXISTS gate_result (
   ok            INTEGER NOT NULL,       -- 1 pass | 0 fail
   severity      TEXT NOT NULL,          -- fatal | quarantine | advisory
   detail        TEXT,                   -- json/text: what was checked and what was found
+  actor         TEXT,                   -- factory-4 (R2-3): deterministic-stage actor (e.g. sympy / deterministic-harness)
   checked_at    TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_gate_cand ON gate_result(candidate_id, gate);
@@ -132,6 +153,7 @@ CREATE TABLE IF NOT EXISTS independent_answer (
   generator_answer TEXT,
   verdict          TEXT NOT NULL,       -- agree | disagree | solver_failed | not_applicable | ambiguous
   detail           TEXT,
+  actor            TEXT,                -- factory-4 (R2-3): deterministic-stage actor (e.g. sympy)
   checked_at       TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_ind_cand ON independent_answer(candidate_id);
@@ -156,6 +178,11 @@ CREATE TABLE IF NOT EXISTS judge_verdict (
   distractors_plausible INTEGER,
   visual_judgement TEXT,                -- ok | missing | unnecessary
   reasons        TEXT,
+  -- factory-4 (R2-3, RI-8) judge-stage provenance. Set via judge.ingest; payload_sha256 computed there.
+  model_version  TEXT,                  -- exact resolved judge model id/snapshot (distinct from judge_model)
+  prompt_sha256  TEXT,                  -- sha256 of the exact judge worksheet/brief
+  payload_sha256 TEXT,                  -- sha256 of the raw judge verdict payload as stored
+  judge_actor    TEXT,                  -- WHO ran the judge stage (distinct from the model)
   checked_at     TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_judge_cand ON judge_verdict(candidate_id);
@@ -182,6 +209,7 @@ CREATE TABLE IF NOT EXISTS run_telemetry (
   run_id        TEXT NOT NULL,
   stage         TEXT NOT NULL,          -- generation | gates | independent | judge | solution_verify
   model         TEXT,
+  actor         TEXT,                   -- factory-4 (R2-3): WHO ran the stage (distinct from the model)
   batches       INTEGER,
   items         INTEGER,
   input_tokens  INTEGER,
