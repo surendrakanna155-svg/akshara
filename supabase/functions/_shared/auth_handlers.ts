@@ -98,9 +98,19 @@ function smsConfigFrom(config: AppConfig): SmsConfig {
 
 /**
  * A phone gets the OTP in the response (no SMS) when it is explicitly
- * allowlisted, or when global dev mode is on outside production.
+ * allowlisted, or when global dev mode is on — but ONLY outside production.
+ *
+ * ICA-B2: production has NO privileged OTP-in-response bypass. Regardless of the
+ * pilot-phone allowlist or the dev-mode flag, a production login MUST require the
+ * normal SMS-possession OTP flow — the plaintext OTP is NEVER returned in the
+ * response body for ANY phone. The allowlist/dev-return path below is a
+ * non-production convenience only (avoids SMS spend in dev/test); the leading
+ * production short-circuit makes it structurally impossible to leak an OTP in the
+ * body once `environment === "production"`, whatever the allowlist contains.
+ * Exported so the invariant can be unit-asserted directly.
  */
-function canReturnOtpInResponse(config: AppConfig, phone: string): boolean {
+export function canReturnOtpInResponse(config: AppConfig, phone: string): boolean {
+  if (config.environment === "production") return false;
   if (config.otpPilotPhones.includes(phone)) return true;
   if (config.otpDevMode && config.environment !== "production") return true;
   return false;
