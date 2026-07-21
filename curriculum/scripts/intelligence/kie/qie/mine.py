@@ -193,6 +193,9 @@ def iter_kie_items(kconn: sqlite3.Connection):
     """Yield normalized items {stem, options{label:text}, answer_text, subject, doc_id, visual_dependent}
     from the certified kie.db chunk corpus (read-only)."""
     kconn.row_factory = sqlite3.Row
+    # PERF (R3-4 #perf-scale-9, DEFERRED): these leading-wildcard LIKEs cannot use an index and scan every
+    # kie.db chunk. The fix is an FTS5 index over chunks — but kie.db is frozen v1.5 (chmod a-w), so adding it
+    # mutates the substrate ⇒ a version bump under the freeze hatch. Do it at the next sanctioned kie.db rebuild.
     base = ("text LIKE '%(1)%' AND text LIKE '%(2)%' AND text LIKE '%(3)%' AND text LIKE '%(4)%'")
     for row in kconn.execute(f"SELECT c.doc_id, c.text FROM chunks c WHERE {base}"):
         doc, text = row[0], row[1]

@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Dict, List
 
 from kie import config
+from kie.qie import store_open as SO
 from kie.qie.archetypes import ARCHETYPES
 from kie.qie.knowledge import qdi as QDI
 from kie.qie.knowledge import qdi_link as QL
@@ -33,11 +34,10 @@ _JSON_FIELDS = ("reasoning_chain", "difficulty_mechanism", "operators", "constra
 
 
 def open_store(path=None) -> sqlite3.Connection:
-    p = path or QDI_DB_PATH
-    if str(p) != ":memory:":
-        Path(p).parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(p))
-    conn.row_factory = sqlite3.Row
+    # R3-4 (#database-9): route through the shared derived-store opener for row_factory + foreign_keys ON +
+    # the standardized WAL journal_mode (qdi.db was previously left on the sqlite default `delete`) + the R0-4
+    # path guard. Writable open; the QDI schema/migration is applied on top.
+    conn = SO.open_store(path or QDI_DB_PATH, read_only=False)
     QDI.open_qdi(conn)
     return conn
 

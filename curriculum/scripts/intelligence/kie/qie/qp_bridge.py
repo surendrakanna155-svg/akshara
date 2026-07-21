@@ -31,17 +31,56 @@ from kie.qpgen.models import (Bloom, Difficulty, GeneratedPaper, PaperRequest, Q
                               QuestionType, RenderMode, SlotStatus)
 
 
-def _engine_pool(subjects, seed: int, per: int = 14) -> List[dict]:
-    """Run the unified qie engine and collect independently-verified items for the requested subjects.
-    Sources: compositional templates (all domains) + single-concept Math generators. Only PASS items."""
+# #perf-scale-9 (R3-4): the engine pool is a PURE deterministic function of (registry version, subjects,
+# seed, per). Memoize it so a paper request never rebuilds the (expensive) engine run per call within a
+# process. Keyed on the registry FINGERPRINT so a code change that adds/removes/renames a template can never
+# serve a stale cached pool. NOTE (deferred #perf-scale-9): the QDI mining lane's leading-wildcard LIKEs over
+# ~57k kie.db chunks want an FTS5 index over chunks; kie.db is frozen v1.5 (chmod a-w), so that index waits
+# for the next sanctioned kie.db rebuild under the freeze hatch — see the R3-4 report.
+_ENGINE_POOL_CACHE: Dict[tuple, List[dict]] = {}
+
+
+def _register_generation_surface():
+    """Idempotently import the domain modules whose import side-effect registers operators/templates into the
+    shared composition registry, and return the compositions module. Safe to call repeatedly."""
     from kie.qie import compositions as K
-    # importing the domain modules registers their operators/templates into the shared registry
-    from kie.qie import physics, chemistry, genetics, biology  # noqa: F401
+    from kie.qie import physics, chemistry, genetics, biology  # noqa: F401 — register domain operators/templates
     from kie.qie.convert import kvs_compose  # noqa: F401 — registers governed-KVS templates (verified facts)
     from kie.qie.convert.notation import relation_compose  # noqa: F401 — CERTIFIED recovered relations (numeric)
     # CERTIFIED depth-4/5 chains — the HARD lane. A single relation is one operator application (depth 1) and
     # can only ever be MEDIUM, so every blueprint's hard cells stay empty without these.
     from kie.qie.convert.notation import chain_compose  # noqa: F401
+    return K
+
+
+def _registry_version() -> str:
+    """Fingerprint of the registered generation surface (composition TEMPLATE_REGISTRY keys). Changes iff a
+    template is added/removed/renamed, so a cached pool is reused ONLY while the generative registry is
+    identical — never across a code change that alters what the engine can emit."""
+    K = _register_generation_surface()
+    return hashlib.sha256("|".join(sorted(K.TEMPLATE_REGISTRY)).encode()).hexdigest()[:16]
+
+
+def clear_engine_pool_cache() -> None:
+    """Drop the memoized engine pools (#perf-scale-9). For tests / after a hot registry change in-process."""
+    _ENGINE_POOL_CACHE.clear()
+
+
+def _engine_pool(subjects, seed: int, per: int = 14) -> List[dict]:
+    """Memoized (#perf-scale-9) wrapper over `_build_engine_pool`, keyed by (registry version, subjects, seed,
+    per). Returns a fresh list each call (callers filter it in place) that shares the cached items."""
+    key = (_registry_version(), tuple(sorted(set(subjects))), int(seed), int(per))
+    cached = _ENGINE_POOL_CACHE.get(key)
+    if cached is None:
+        cached = _build_engine_pool(subjects, seed, per)
+        _ENGINE_POOL_CACHE[key] = cached
+    return list(cached)
+
+
+def _build_engine_pool(subjects, seed: int, per: int = 14) -> List[dict]:
+    """Run the unified qie engine and collect independently-verified items for the requested subjects.
+    Sources: compositional templates (all domains) + single-concept Math generators. Only PASS items."""
+    K = _register_generation_surface()
     subs = set(subjects)
     out: List[dict] = []
 

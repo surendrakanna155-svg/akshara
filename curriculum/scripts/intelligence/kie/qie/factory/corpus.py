@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
 from kie import config
+from kie.qie import store_open as SO
 from kie.qie.factory.gates import item_hash, norm_hash
 
 SCHEMA_PATH = Path(__file__).resolve().parent / "corpus_schema.sql"
@@ -189,12 +190,10 @@ def _stamp_role(conn: sqlite3.Connection, role: str, explicit: bool = False) -> 
 def open_store(db_path=None, role: str = None) -> sqlite3.Connection:
     path = db_path or CORPUS_DB_PATH
     resolved_role, explicit = _resolve_role(path, role)
-    if str(path) != ":memory:":
-        Path(path).parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(path))
-    conn.row_factory = sqlite3.Row
-    if str(path) != ":memory:":
-        conn.execute("PRAGMA journal_mode = WAL")
+    # R3-4 (#database-9): the shared derived-store opener supplies row_factory, the R0-4 path guard, and the
+    # standardized WAL journal_mode (foreign_keys is (re)asserted below after the table-rebuild migrations,
+    # which toggle it off/on internally). Writable open — this is the factory's authoritative write path.
+    conn = SO.open_store(path, read_only=False)
     # Upgrade an existing factory-1 store to the append-only shape BEFORE the schema script runs: the _latest
     # views reference the new id/item_hash columns, so the evidence tables must already be new-shape when the
     # view DDL validates. On a fresh DB this is a no-op (no tables yet) and the schema creates everything.

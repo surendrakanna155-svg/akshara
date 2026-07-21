@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from kie.qie.factory import corpus as CO  # noqa: F401  (re-exported convenience: same store)
 
@@ -31,6 +31,18 @@ def migrate(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
+def _concept_ids_all(bp: dict) -> list:
+    """#database-5 (R3-4): the composition-member concept IDS (not display titles). concept_code already
+    stores the primary concept_id, so concept_codes_all must be its ID sibling — a stable key a downstream
+    reader can join on, never a display string. The primary id plus any compose-partner ids the planner
+    attached (deduped, order-stable). Never fabricates an id: only ids the blueprint actually carries."""
+    ids = [bp["concept_id"]]
+    for partner in bp.get("compose_with", []) or []:
+        if partner and partner not in ids:
+            ids.append(partner)
+    return ids
+
+
 def _row(bp: dict) -> Dict[str, object]:
     ev = bp.get("planner_evidence", {})
     return {
@@ -39,7 +51,7 @@ def _row(bp: dict) -> Dict[str, object]:
         "class_level": bp["class_level"], "subject": bp["subject"],
         "chapter_id": bp["chapter_id"], "chapter_title": bp.get("chapter_title"),
         "concept_code": bp["concept_id"], "concept_title": bp["concept_name"],
-        "concept_codes_all": json.dumps([bp["concept_name"]]),
+        "concept_codes_all": json.dumps(_concept_ids_all(bp)),
         "sub_concept": bp.get("sub_concept"),
         "composition": bp["composition"], "archetype": bp["archetype"], "question_type": bp["question_type"],
         "intended_depth": bp["reasoning_depth"], "reasoning_depth": bp["reasoning_depth"],
@@ -86,3 +98,75 @@ def save_blueprints(conn: sqlite3.Connection, blueprints: List[dict]) -> int:
 def load_blueprints(conn: sqlite3.Connection, run_id: str) -> List[dict]:
     return [dict(r) for r in conn.execute(
         "SELECT * FROM generation_spec WHERE run_id=? ORDER BY spec_id", (run_id,))]
+
+
+# ── #database-5 one-shot backfill: rewrite existing generation_spec.concept_codes_all TITLES -> IDS ──────
+def _resolve_title_to_id(row: sqlite3.Row, member: str, index_conn: Optional[sqlite3.Connection]) -> Optional[str]:
+    """Resolve one concept_codes_all member to a concept_id, DETERMINISTICALLY, without fabricating:
+      1. it already equals this row's concept_code (the id-of-record)  -> keep it (already an id / self);
+      2. it equals this row's concept_title                            -> use concept_code (the primary id);
+      3. it resolves uniquely by canonical_name in the frozen index    -> use that concept_id;
+      otherwise -> None (unresolvable; the caller keeps the original member and logs — honest null)."""
+    code = row["concept_code"]
+    if member == code:
+        return member
+    if member == row["concept_title"] and code:
+        return code
+    if index_conn is not None:
+        hits = [r[0] for r in index_conn.execute(
+            "SELECT concept_id FROM ki_concept WHERE canonical_name=?", (member,))]
+        if len(hits) == 1:
+            return hits[0]
+    return None
+
+
+def backfill_concept_codes_all(conn: sqlite3.Connection,
+                               index_conn: Optional[sqlite3.Connection] = None) -> Dict[str, object]:
+    """One-shot, deterministic, idempotent backfill for the #database-5 defect (the pre-fix writer stored
+    concept TITLES in concept_codes_all instead of ids). Rewrites each generation_spec row's member list to
+    concept_ids where resolvable (see `_resolve_title_to_id`); leaves any unresolvable member AS-IS and
+    records it under `unresolved` — it NEVER fabricates an id. Rows already fully id-valued are untouched.
+
+    Pass `index_conn` (a read-only knowledge_index.db) to also resolve composition-partner TITLES by
+    canonical_name; without it, only the concept_code shortcut applies (sufficient for the single-concept
+    rows the pre-fix writer produced). Returns a summary; commits only if it changed anything."""
+    rewritten = unchanged = 0
+    unresolved: List[dict] = []
+    updates: List[tuple] = []
+    for row in conn.execute("SELECT spec_id, concept_code, concept_title, concept_codes_all "
+                            "FROM generation_spec"):
+        raw = row["concept_codes_all"]
+        if not raw:
+            unchanged += 1
+            continue
+        try:
+            members = json.loads(raw)
+        except (ValueError, TypeError):
+            unresolved.append({"spec_id": row["spec_id"], "reason": "concept_codes_all not valid JSON",
+                               "value": raw})
+            unchanged += 1
+            continue
+        if not isinstance(members, list):
+            unresolved.append({"spec_id": row["spec_id"], "reason": "concept_codes_all not a JSON list",
+                               "value": raw})
+            unchanged += 1
+            continue
+        new_members, changed_any = [], False
+        for m in members:
+            rid = _resolve_title_to_id(row, m, index_conn)
+            if rid is None:
+                new_members.append(m)  # honest: leave the original, do NOT fabricate an id
+                unresolved.append({"spec_id": row["spec_id"], "member": m})
+            else:
+                new_members.append(rid)
+                changed_any = changed_any or (rid != m)
+        if changed_any:
+            updates.append((json.dumps(new_members), row["spec_id"]))
+            rewritten += 1
+        else:
+            unchanged += 1
+    if updates:
+        conn.executemany("UPDATE generation_spec SET concept_codes_all=? WHERE spec_id=?", updates)
+        conn.commit()
+    return {"rewritten": rewritten, "unchanged": unchanged,
+            "unresolved_count": len(unresolved), "unresolved": unresolved}

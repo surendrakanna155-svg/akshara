@@ -12,10 +12,13 @@ same frozen index + same args -> same issued specs — is stable across that cha
 """
 from __future__ import annotations
 
+import logging
 import sqlite3
 from typing import Dict, List, Optional
 
 from kie import config
+
+_log = logging.getLogger(__name__)
 from kie.qie.knowledge import allocate as AL
 from kie.qie.knowledge import blueprint as BP
 from kie.qie.knowledge import examdna as ED
@@ -75,22 +78,45 @@ def _foundation_version(conn) -> str:
         return "unknown"
 
 
-def _load_certified_patterns(exam: str, qdi_path=None) -> list:
-    """Certified QDI design patterns for this exam profile, from the SEPARATE qdi.db. Empty (honest null)
-    if qdi.db has not been built or has no certified patterns for this exam yet."""
+def _open_ro_or_none(path: str, *, allow_missing: bool, what: str) -> Optional[sqlite3.Connection]:
+    """Open a derived store READ-ONLY. #perf-scale-8 (R3-4): a MISSING store no longer degrades SILENTLY.
+
+      allow_missing=False (DEFAULT — the standing law: fail loud over silent-empty): a missing/mis-pathed
+        store raises OperationalError WITH the resolved path, so a wrong KIE_HOME can never masquerade as an
+        empty result.
+      allow_missing=True (only where the store is legitimately optional, e.g. qdi.db not mined yet): emit a
+        WARNING naming the resolved PATH and return None (the honest empty), never a silent []."""
+    try:
+        conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+    except sqlite3.OperationalError as e:
+        if allow_missing:
+            _log.warning("%s not found at %s — attaching NONE (honest null). Build it to enable this data.",
+                         what, path)
+            return None
+        raise sqlite3.OperationalError(f"{what} could not be opened READ-ONLY at {path}: {e}") from e
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def _load_certified_patterns(exam: str, qdi_path=None, *, allow_missing: bool = False) -> list:
+    """Certified QDI design patterns for this exam profile, from the SEPARATE qdi.db.
+
+    #perf-scale-8 (R3-4): `allow_missing` defaults to False (fail loud). The one legitimately-optional caller
+    (plan_blueprints) passes allow_missing=True because qdi.db may not have been mined yet — an absent store
+    then yields honest-null WITH a WARNING naming the path, never a silent []."""
     from kie.qie.knowledge import run_qdi as RQ
     p = str(qdi_path or RQ.QDI_DB_PATH)
     out: list = []
-    try:
-        qdb = sqlite3.connect(f"file:{p}?mode=ro", uri=True)
-    except sqlite3.OperationalError:
+    qdb = _open_ro_or_none(p, allow_missing=allow_missing, what="certified QDI store (qdi.db)")
+    if qdb is None:
         return out
-    qdb.row_factory = sqlite3.Row
     try:
         for subject in ED.EXAM_SUBJECTS[exam]:
             out.extend(RQ.certified_patterns_for_exam(qdb, exam, subject))
-    except sqlite3.OperationalError:
-        pass
+    except sqlite3.OperationalError as e:
+        # store present but missing the expected qdi_* tables — a real schema fault, not "not built yet":
+        # surface it (WARNING with the path) instead of silently returning [].
+        _log.warning("certified QDI store at %s is missing expected tables (%s) — attaching NONE.", p, e)
     finally:
         qdb.close()
     return out
@@ -134,8 +160,10 @@ def plan_blueprints(exam: str, total: int, index_path=None, examdna_path=None, q
         edb.close()
 
     # certified design patterns from the SEPARATE qdi.db (honest-null until QDI mining certifies some),
-    # scoped to THIS exam's profile so a JEE pattern never enriches a NEET blueprint.
-    cert_patterns = _load_certified_patterns(exam, qdi_path)
+    # scoped to THIS exam's profile so a JEE pattern never enriches a NEET blueprint. qdi.db is LEGITIMATELY
+    # OPTIONAL here (not mined yet is normal), so allow_missing=True — but an absent store now emits a WARNING
+    # naming the path (#perf-scale-8) rather than degrading silently to [].
+    cert_patterns = _load_certified_patterns(exam, qdi_path, allow_missing=True)
     pat_idx = QL.index_by_key(cert_patterns)
     by_id = {c["concept_id"]: c for c in universe_all}
     issued, refused, seen_fp = [], [], set()

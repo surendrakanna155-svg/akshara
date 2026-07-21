@@ -25,6 +25,7 @@ from typing import Dict, List
 
 from kie import config
 from kie.qie import profiles as PR
+from kie.qie import store_open as SO
 
 SCHEMA_PATH = Path(__file__).resolve().parent / "examdna_schema.sql"
 EXAMDNA_DB_PATH = config.KIE_HOME / "examdna.db"
@@ -133,11 +134,10 @@ def valid_chapter_ids(index_conn: sqlite3.Connection, subject: str, classes=EXAM
 
 
 def open_examdna(path=None) -> sqlite3.Connection:
-    p = path or EXAMDNA_DB_PATH
-    if str(p) != ":memory:":
-        Path(p).parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(p))
-    conn.row_factory = sqlite3.Row
+    # R3-4 (#database-9): route through the shared derived-store opener for row_factory + foreign_keys ON +
+    # the standardized WAL journal_mode (examdna.db was previously left on the sqlite default `delete`) + the
+    # R0-4 path guard. Writable open; the Exam-DNA schema is applied on top.
+    conn = SO.open_store(path or EXAMDNA_DB_PATH, read_only=False)
     conn.executescript(SCHEMA_PATH.read_text())
     return conn
 
@@ -151,11 +151,10 @@ def open_frozen_index(path=None) -> sqlite3.Connection:
 
 def open_examdna_ro(path=None) -> sqlite3.Connection:
     """READ-ONLY open for consumers (e.g. the planner). Fails loudly if Exam DNA has not been built —
-    which is the honest outcome: the planner must not silently plan against an absent Exam DNA."""
-    p = str(path or EXAMDNA_DB_PATH)
-    conn = sqlite3.connect(f"file:{p}?mode=ro", uri=True)
-    conn.row_factory = sqlite3.Row
-    return conn
+    which is the honest outcome: the planner must not silently plan against an absent Exam DNA.
+    R3-4: routed through the shared derived-store opener (read_only default) — a missing file still raises
+    OperationalError (mode=ro), preserving the fail-loud contract."""
+    return SO.open_store(path or EXAMDNA_DB_PATH, read_only=True)
 
 
 def build(index_conn: sqlite3.Connection, out_conn: sqlite3.Connection, version: str = VERSION) -> Dict[str, int]:
