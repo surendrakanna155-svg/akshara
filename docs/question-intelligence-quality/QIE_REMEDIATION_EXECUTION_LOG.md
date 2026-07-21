@@ -8,8 +8,12 @@ closed; this log records execution only, it never re-plans). **Certification che
 [`QIE_REMEDIATION_CERTIFICATION_HISTORY.md`](QIE_REMEDIATION_CERTIFICATION_HISTORY.md).
 
 **Phase status:** ✅ R0 · ✅ R1 · ✅ R2 · ✅ R3 · ✅ R4-1 · ✅ R4-2 · ✅ R0-2 recall · ✅ RI-6 re-point ·
-✅ R4-3 · ✅ R4-4 · ✅ R5-1 · ✅ R5-2 · 🔵 R5-6 (evidence cleaning) + R5-3 DESIGN (buildable, next) ·
-⛔ R5-3 impl / R5-4 / R5-5 (PYQ+pilot) / R6 / live-key owner/external-gated.
+✅ R4-3 · ✅ R4-4 · ✅ R5-1 · ✅ R5-2 · ✅ R5-3 DESIGN · ✅ R5-6 · 🔵 R5-5 cross-class-revisits fragment (next) ·
+⛔ R5-3 impl / R5-4 / R5-5 calibration (PYQ+pilot) / R6 / live-key owner/external-gated.
+
+**R5-3 design (doc-only):** `docs/question-intelligence-quality/R5-3_ERP_PROMOTION_CONTRACT_DESIGN.md` — the ERP
+promotion contract (D1 platform bank + RLS · D2 KC_↔UUID map · D3 enum alignment · D4 freeze-pinned export
+manifest · D5 content-addressed ids · D6 LaTeX authoring contract). Implementation owner-gated (ERP lane).
 
 This log is the running record of what has actually been implemented, verified, tested,
 certified, documented, and committed — one row per roadmap item.
@@ -208,6 +212,26 @@ scaffolding-only tails retire (regression test locks it); (3) under-retire forms
 `ANSWER_KEY`) now caught; (4) a bogus `KC_` code passed through as resolved → now membership-checked against
 certified `ki_concept` (`unknown_kc` honest-null). New `kie/tests/test_r5_2_namespace.py` (16 tests). Full suite
 **1086 green** (skipped=1).
+
+### R5-6 — evidence-substrate cleaning [#data-integrity-2] — ✅
+
+New `kie/qie/graph/evidence_clean.py` + `cleaned_evidence` table: a deterministic pass over the chunks that
+GROUND certified concepts (2034 `doc_id#ordinal` evidence refs), producing a cleaned evidence_text BESIDE the raw
+pointer (the frozen kie.db chunk is NEVER mutated — opened mode=ro). Strips unambiguous whole-line boilerplate
+(reprint/rationalised footers, running heads, copyright) anywhere, and standalone page numbers ONLY when sparse
+(≤2 per chunk); flags near-prose-free / high-symbol chunks as advisory so mangled math never grounds a numeric
+item.
+
+**Live outcome:** 2034 chunks processed, **1220 boilerplate-removed (60%)**, 19 flagged mangled. Raw substrate
+byte-identical (freeze intact).
+
+**Adversarial verification:** **REFUTED → fixed + regression-locked** (freeze-safety CONFIRMED — full MD5
+byte-identical over repeated builds; scope + determinism CONFIRMED). The load-bearing finding: `^\d{1,4}$`
+deleted REAL data — 93 figure values from a math-activity chunk, 5–93 numbers from 92 chunks (they are data, not
+page numbers). Fixed: standalone numbers are stripped ONLY when SPARSE (≤2/chunk); a numeric-dense chunk keeps
+every digit (self-verified: **0** dense chunks now lose a number, was 92). Finding 2 (garble escaped the flag
+because spaces counted as linguistic) → the flag now also fires on near prose-free number soup. New
+`kie/tests/test_r5_6_evidence_clean.py` (14 tests). Full suite **1100 green** (skipped=1).
 
 **Still open (roadmap):** R4-3 (qualitative certification lane — buildable on the adopted qie.db/KVS substrate),
 R4-4 (deferred audit passes), R5-1/R5-2 (prereq edge table + KC_ convergence — buildable), R5-3 (ERP promotion — **owner-gated**),

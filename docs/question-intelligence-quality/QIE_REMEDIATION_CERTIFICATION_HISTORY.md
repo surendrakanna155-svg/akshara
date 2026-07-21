@@ -317,3 +317,26 @@ New `kie/tests/test_r5_2_namespace.py` (16 tests). Full suite **1086 green** (sk
 cleaning — a derived pass over the frozen kie.db chunks, no PYQ/model/freeze-mutation) and the R5-3 ERP-promotion
 **design** (the roadmap's explicit "design now, implement owner-gated"). Owner/external-gated: R5-3 implementation,
 R5-4 (PYQ corpus), R5-5 (pilot response spine + PYQ), R6 (Tier-1 unfreeze), a live OPENAI_API_KEY.
+
+---
+
+## Checkpoint — R5-3 design + R5-6 (ERP promotion contract + evidence cleaning) · 2026-07-21 · `EOS: PASS`
+
+- **R5-3 (design-only)** — `docs/question-intelligence-quality/R5-3_ERP_PROMOTION_CONTRACT_DESIGN.md` specifies
+  the ERP promotion contract (platform bank + RLS, KC_↔UUID map, enum alignment, freeze-pinned export manifest,
+  content-addressed ids, LaTeX authoring contract), grounded in the live `edu_question_bank_items` schema gap.
+  Implementation is OWNER-GATED (ERP lane) — no migration/exporter/RLS created.
+- **R5-6 (evidence-substrate cleaning)** [#data-integrity-2] — `kie/qie/graph/evidence_clean.py` +
+  `cleaned_evidence` table: cleans the 2034 certified-evidence chunks BESIDE the raw pointer (frozen kie.db never
+  mutated). Live: 1220 boilerplate-removed (60%), 19 flagged.
+
+**Adversarial verification (R5-6):** **REFUTED → fixed + regression-locked.** Freeze-safety CONFIRMED (full MD5
+byte-identical), scope + determinism CONFIRMED. The `^\d{1,4}$` page-number pattern was deleting REAL data (93
+figure values from one chunk; 5–93 numbers from 92 chunks). Fixed: strip standalone numbers ONLY when sparse
+(≤2/chunk); a numeric-dense chunk keeps every digit (self-verified: 0 dense chunks now lose a number). The
+mangled advisory now also fires on near prose-free number soup. New `kie/tests/test_r5_6_evidence_clean.py`
+(14 tests). Full suite **1100 green** (skipped=1).
+
+**Standing laws honored:** freeze untouched (frozen kie.db + index mode=ro, MD5 byte-identical); no content loss
+(data numbers preserved — only sparse page numbers stripped); honest advisory flag; RI-6 (design keeps
+qpl_question_bank the sole exporter source).

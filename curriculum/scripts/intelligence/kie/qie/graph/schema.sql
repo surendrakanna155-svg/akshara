@@ -36,3 +36,19 @@ CREATE TABLE IF NOT EXISTS concept_namespace (
 );
 CREATE INDEX IF NOT EXISTS idx_ns_resolved ON concept_namespace(resolved_kc);
 CREATE INDEX IF NOT EXISTS idx_ns_method   ON concept_namespace(method);
+
+-- R5-6 [#data-integrity-2] — deterministic evidence-substrate CLEANING. 54.3% of certified concepts ground on
+-- chunks carrying reprint/footer/running-head boilerplate, and some math evidence is OCR-mangled. This stores a
+-- CLEANED evidence_text BESIDE the raw chunk pointer (never mutating the frozen kie.db chunk) and FLAGS chunks
+-- whose non-linguistic character ratio is too high, so mangled math can never ground a generated numeric item.
+CREATE TABLE IF NOT EXISTS cleaned_evidence (
+  chunk_id             TEXT PRIMARY KEY,          -- doc_id#ordinal (matches kie.db chunks.chunk_id / evidence refs)
+  doc_id               TEXT,
+  raw_len              INTEGER NOT NULL,
+  cleaned_len          INTEGER NOT NULL,
+  cleaned_text         TEXT,                      -- boilerplate-stripped; the RAW chunk is never mutated
+  boilerplate_removed  INTEGER NOT NULL DEFAULT 0,
+  non_linguistic_ratio REAL,                      -- 1 - (letters+spaces)/len
+  flagged_mangled      INTEGER NOT NULL DEFAULT 0 -- 1 => advisory: too garbled to ground a numeric item
+);
+CREATE INDEX IF NOT EXISTS idx_cleaned_mangled ON cleaned_evidence(flagged_mangled);
