@@ -63,7 +63,7 @@ def survivors_for_solution(conn: sqlite3.Connection, run_id: str, only_certifiab
                s.class_level, s.subject, s.lane, i.verdict AS ind
         FROM candidate c
         JOIN generation_spec s ON s.spec_id = c.spec_id
-        LEFT JOIN independent_answer i ON i.candidate_id = c.candidate_id
+        LEFT JOIN independent_answer_latest i ON i.candidate_id = c.candidate_id
         WHERE c.run_id = ? AND c.status = 'candidate'
     """
     if only_certifiable:
@@ -129,11 +129,11 @@ def ingest(conn: sqlite3.Connection, run_id: str, payload: List[dict]) -> Dict[s
             ok = bool(a) and bool(b) and (a in b or b in a)
         ok = ok and bool(sol.get("steps"))
 
-        conn.execute(
-            "INSERT OR REPLACE INTO gate_result (candidate_id, gate, ok, severity, detail, checked_at) "
-            "VALUES (?,?,?,?,?,datetime('now'))",
-            (cid, "solution_verified", int(ok), G.FATAL,
-             f"solution_final={final!r} locked_key={keyed!r} steps={len(sol.get('steps') or [])}"))
+        # append-only + content-stamped (R1-2): route through record_gates so the solution_verified gate is
+        # bound to the candidate's CURRENT item_hash, exactly like every other gate, and never overwrites.
+        CO.record_gates(conn, cid, [{
+            "gate": "solution_verified", "ok": bool(ok), "severity": G.FATAL,
+            "detail": f"solution_final={final!r} locked_key={keyed!r} steps={len(sol.get('steps') or [])}"}])
         if ok:
             m["verified"] += 1
         else:

@@ -93,6 +93,28 @@ def controls() -> List[Tuple[str, str, dict]]:
     c = _base(); c["structure"]["relation"] = "F = m * a * k"
     out.append(("undetermined_symbol", "independent_solve", c))
 
+    # 11. WRONG-BUT-CONSISTENT relation: KE = m*v^2 (missing the 1/2). Its own key agrees with its own relation
+    #     (sympy cannot refute self-consistency) and it is dimensionally valid (1/2 is dimensionless). ONLY
+    #     relation-grounding refuses it — the R1-1 must-catch (audit C0). Refused by the deterministic layer
+    #     alone, with no model call.
+    c = _base()
+    c["stem"] = "A body of mass 2 kg moves at 3 m/s. Find its kinetic energy."
+    c["options"] = {"a": "9 J", "b": "18 J", "c": "6 J", "d": "36 J"}
+    c["answer_label"] = "b"; c["answer_value"] = "18"
+    c["claimed"]["concepts"] = ["Kinetic energy"]
+    c["structure"] = {"givens": {"m": {"value": 2, "unit": "kg"}, "v": {"value": 3, "unit": "m/s"},
+                                 "K": {"value": None, "unit": "J"}},
+                      "relation": "K = m*v**2", "solve_for": "K", "answer_unit": "J"}
+    c["solution"] = {"steps": ["K = m v^2 = 2*9"], "final": "18"}
+    out.append(("wrong_relation_ke_mv2", "relation_grounded", c))
+
+    # 12. dimensional 'not checkable' must now QUARANTINE, not silently pass (R1-1): strip every unit.
+    c = _base()
+    for g in c["structure"]["givens"].values():
+        g["unit"] = ""
+    c["structure"]["answer_unit"] = ""
+    out.append(("units_stripped_not_checkable", "dimensional", c))
+
     return out
 
 
@@ -192,6 +214,17 @@ def check_controls(ctx: dict) -> dict:
     agree, _ = G.answers_agree(res.get("solver_answer", 0), _base()["answer_value"])
     if v == "rejected" or not agree:
         raise ControlBreach(f"the known-GOOD control was rejected ({why}); the battery is over-tight")
+
+    # MUST-NOT-CRY-WOLF: an order-swapped legitimate relation (F = a*m, equivalent to certified F = m*a) must
+    # STILL ground — blocking grounding (R1-1) must not false-quarantine algebraic rearrangements. Needs a real
+    # certified_relation_eqs in ctx (the sympy equivalence layer); with an empty registry this is a no-op skip.
+    if ctx.get("certified_relation_eqs"):
+        swap = _base(); swap["structure"]["relation"] = "F = a * m"
+        rg = {g["gate"]: g for g in G.run_gates(swap, ctx)}.get("relation_grounded")
+        if rg is not None and not rg["ok"]:
+            raise ControlBreach(
+                f"order-swapped legit relation 'F = a*m' was NOT grounded — grounding is over-tight and would "
+                f"false-quarantine rearrangements: {rg.get('detail')!r}")
 
     return {"controls_run": len(results), "all_caught": True, "results": results,
             "good_control_survives": True}

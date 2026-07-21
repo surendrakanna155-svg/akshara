@@ -47,13 +47,14 @@ def build(conn: sqlite3.Connection, run_id: str) -> dict:
     R["visual_spec_emitted"] = conn.execute(
         "SELECT COUNT(*) FROM candidate WHERE run_id=? AND visual_spec IS NOT NULL", (run_id,)).fetchone()[0]
 
-    # ── gate outcomes ──
+    # ── gate outcomes ── (read the _latest views: the evidence tables are append-only, so a raw COUNT over
+    #    every historical attempt would double-count re-checks. One row per candidate/gate is the honest stat.)
     R["gate_failures"] = _d(conn, (
-        "SELECT g.gate, COUNT(*) FROM gate_result g JOIN candidate c ON c.candidate_id=g.candidate_id "
+        "SELECT g.gate, COUNT(*) FROM gate_result_latest g JOIN candidate c ON c.candidate_id=g.candidate_id "
         "WHERE c.run_id=? AND g.ok=0 GROUP BY 1 ORDER BY 2 DESC"), (run_id,))
     R["gate_pass_rate"] = {}
     for r in conn.execute(
-        "SELECT g.gate, SUM(g.ok) AS ok, COUNT(*) AS n FROM gate_result g "
+        "SELECT g.gate, SUM(g.ok) AS ok, COUNT(*) AS n FROM gate_result_latest g "
         "JOIN candidate c ON c.candidate_id=g.candidate_id WHERE c.run_id=? GROUP BY 1 ORDER BY 1", (run_id,)
     ):
         R["gate_pass_rate"][r["gate"]] = {"pass": r["ok"], "n": r["n"],
@@ -61,23 +62,23 @@ def build(conn: sqlite3.Connection, run_id: str) -> dict:
 
     # ── independent answer validation ──
     R["independent_answer"] = _d(conn, (
-        "SELECT i.verdict, COUNT(*) FROM independent_answer i JOIN candidate c "
+        "SELECT i.verdict, COUNT(*) FROM independent_answer_latest i JOIN candidate c "
         "ON c.candidate_id=i.candidate_id WHERE c.run_id=? GROUP BY 1 ORDER BY 2 DESC"), (run_id,))
 
     # ── AI judge ──
     R["judge"] = _d(conn, (
-        "SELECT j.verdict, COUNT(*) FROM judge_verdict j JOIN candidate c ON c.candidate_id=j.candidate_id "
+        "SELECT j.verdict, COUNT(*) FROM judge_verdict_latest j JOIN candidate c ON c.candidate_id=j.candidate_id "
         "WHERE c.run_id=? GROUP BY 1"), (run_id,))
     jd = {}
     for col in ("well_posed", "curriculum_ok", "answer_correct", "unique_answer", "concepts_real",
                 "composition_real", "difficulty_plausible", "distractors_plausible"):
         row = conn.execute(
-            f"SELECT SUM(CASE WHEN j.{col}=0 THEN 1 ELSE 0 END), COUNT(j.{col}) FROM judge_verdict j "
+            f"SELECT SUM(CASE WHEN j.{col}=0 THEN 1 ELSE 0 END), COUNT(j.{col}) FROM judge_verdict_latest j "
             f"JOIN candidate c ON c.candidate_id=j.candidate_id WHERE c.run_id=?", (run_id,)).fetchone()
         jd[col] = {"failed": row[0] or 0, "judged": row[1] or 0}
     R["judge_dimension_failures"] = jd
     R["judge_independence"] = _d(conn, (
-        "SELECT j.independent, COUNT(*) FROM judge_verdict j JOIN candidate c "
+        "SELECT j.independent, COUNT(*) FROM judge_verdict_latest j JOIN candidate c "
         "ON c.candidate_id=j.candidate_id WHERE c.run_id=? GROUP BY 1"), (run_id,))
 
     # ── failure rates by class / subject / arm (the owner asked for each) ──

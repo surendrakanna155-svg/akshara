@@ -399,40 +399,66 @@ def run_gates(cand: dict, ctx: dict, stage: str = "candidate") -> List[dict]:
     add("curriculum_boundary", not hits, QUARANTINE,
         f"above-class terms present: {hits}" if hits else f"no forbidden term (checked {len(banned)})")
 
-    # ── 8..10 STRUCTURED lane only: the bridge that makes claims falsifiable ──
+    # ── 8..10 the bridge that makes numeric claims falsifiable ──
+    # SECURITY (R1-1 hardening — closes the qualitative-lane bypass the adversarial verifier found):
+    # the truth gates key on the PRESENCE OF A CHECKABLE STRUCTURE, NOT on spec.lane. independent_solve
+    # (which yields the 'agree' that enables certification) is lane-agnostic, so ANY item it can 'agree' on
+    # MUST also be grounded here — otherwise a wrong-but-consistent numeric item (e.g. K=m*v**2) routed
+    # under a QUALITATIVE spec would certify unchecked. Only `structure_present` stays lane-specific: a
+    # genuine qualitative item legitimately declares no structure and must not be FATAL-failed for it.
     structure = cand.get("structure") or {}
+    rel = structure.get("relation") or ""
     if spec.get("lane") == "STRUCTURED_NUMERIC":
-        rel = structure.get("relation") or ""
         add("structure_present", bool(rel and structure.get("solve_for") and structure.get("givens")),
             FATAL, "declared {givens, relation, solve_for} required for the structured lane")
 
-        if rel and structure.get("givens"):
-            # 8. DIMENSIONAL (REUSED — kie...notation.dimensions.check_relation, real sympy SI analysis)
-            units = {s: normalize_unit(v.get("unit") or "") for s, v in (structure.get("givens") or {}).items()
-                     if isinstance(v, dict)}
-            tgt = structure.get("solve_for")
-            tgt_unit = normalize_unit((structure.get("givens", {}).get(tgt) or {}).get("unit")
-                                      or structure.get("answer_unit") or "")
-            if tgt_unit and "=" in rel and all(units.get(s) for s in units):
-                rhs = rel.split("=", 1)[1].strip()
-                try:
-                    dim = check_relation(tgt_unit, rhs, {k: v for k, v in units.items() if k != tgt})
-                    add("dimensional", dim.get("ok"), QUARANTINE, dim.get("reason") or dim)
-                except Exception as e:
-                    add("dimensional", False, ADVISORY, f"dimensional check errored: {e}")
-            else:
-                add("dimensional", True, ADVISORY, "not checkable: incomplete unit declaration")
+    if rel and structure.get("givens"):
+        # 8. DIMENSIONAL (REUSED — kie...notation.dimensions.check_relation, real sympy SI analysis)
+        units = {s: normalize_unit(v.get("unit") or "") for s, v in (structure.get("givens") or {}).items()
+                 if isinstance(v, dict)}
+        tgt = structure.get("solve_for")
+        tgt_unit = normalize_unit((structure.get("givens", {}).get(tgt) or {}).get("unit")
+                                  or structure.get("answer_unit") or "")
+        if tgt_unit and "=" in rel and all(units.get(s) for s in units):
+            rhs = rel.split("=", 1)[1].strip()
+            try:
+                dim = check_relation(tgt_unit, rhs, {k: v for k, v in units.items() if k != tgt})
+                add("dimensional", dim.get("ok"), QUARANTINE, dim.get("reason") or dim)
+            except Exception as e:
+                # a dimensional check that ERRORED is not a pass. Unverifiable => quarantine, never advisory.
+                add("dimensional", False, QUARANTINE, f"dimensional check errored: {e}")
+        else:
+            # "not checkable" is no longer a free pass (R1-1). A numeric item must declare complete units;
+            # an unverifiable dimension is a quarantine event, not a silent advisory.
+            add("dimensional", False, QUARANTINE,
+                "not checkable: incomplete/missing unit declaration — a numeric item must declare units")
 
-            # 9. RELATION GROUNDING — is this relation one QIE already CERTIFIED, or is the model
-            #    inventing physics? An ungrounded relation is a quarantine EVENT, not a rejection:
-            #    it may be legitimate and simply absent from our 41-relation registry.
-            certified = ctx.get("certified_relations") or {}
-            key = _rel_key(rel)
-            match = certified.get(key)
-            add("relation_grounded", match is not None, ADVISORY,
-                f"matches certified {match!r}" if match else f"relation not in governed_relation ({len(certified)} certified)")
+        # 9. RELATION GROUNDING — BLOCKING (R1-1). Is this relation one QIE already CERTIFIED (order-swaps
+        #    and algebraic rearrangements allowed via sympy equivalence), or is the model inventing physics?
+        #    An ungrounded relation CANNOT certify; the ONLY escape is an explicit, owner-recorded waiver on
+        #    the row. "advisory" is not a valid severity for factual grounding.
+        certified = ctx.get("certified_relations") or {}
+        cert_eqs = ctx.get("certified_relation_eqs") or []
+        grounded, match = is_relation_grounded(rel, structure, spec, certified, cert_eqs)
+        waiver = ctx.get("relation_waiver")
+        if grounded:
+            add("relation_grounded", True, QUARANTINE, f"matches certified {match!r}")
+        elif waiver and _valid_waiver(waiver):
+            add("relation_grounded", True, QUARANTINE,
+                f"UNGROUNDED relation WAIVED by {waiver.get('waived_by')!r}: "
+                f"{str(waiver.get('reason', ''))[:120]}")
+        else:
+            add("relation_grounded", False, QUARANTINE,
+                f"relation not in governed_relation registry ({_relation_count(certified)} certified)")
 
-        # 10. DEPTH EARNED FROM THE DAG (HARNESS mirror of compose.reasoning_depth)
+        # 9b. STEM ↔ STRUCTURE BINDING — bind the prose a student reads to what sympy solved (R1-1):
+        #     every declared given value must appear in the stem, and every stem quantity must be a
+        #     declared given (constants + grammatical counts allowlisted so it does not cry wolf).
+        _stem_binding_gate(add, stem, structure)
+
+    # 10. DEPTH EARNED FROM THE DAG (HARNESS mirror of compose.reasoning_depth) — advisory; runs whenever
+    #     there is a structure to compute depth from, regardless of lane.
+    if rel or structure.get("steps"):
         d = structure_depth(structure)
         claimed_d = claimed.get("depth")
         add("depth_computable", d is not None, ADVISORY, f"structure_depth={d}")
@@ -485,6 +511,181 @@ def _rel_key(rel: str) -> str:
     return s
 
 
+# ── R1-1: blocking relation grounding (sympy solve-for-target equivalence) ───────────────────────────
+_IDENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+_MATH_NAMES = {"sqrt", "sin", "cos", "tan", "cot", "sec", "csc", "log", "ln", "exp", "abs", "Abs"}
+
+
+def _symbols_of(rel: str) -> set:
+    """Identifier names in an equation string, minus math-function names — the symbol set to bind before
+    re-solving a certified relation for equivalence testing."""
+    return {t for t in _IDENT.findall(rel or "") if t not in _MATH_NAMES}
+
+
+def _solve_for_target(rel: str, target: str, symbols):
+    """Solve an 'LHS = RHS' string for `target`, returning the simplified solution expression (or None).
+
+    Order-insensitive by construction: `a = F/m` and `F = m*a` both solve for a to the same expression, so an
+    algebraic rearrangement of a certified relation still grounds; but `K = m*v**2` and `K = m*v**2/2` solve to
+    DIFFERENT expressions, so the wrong KE relation does not."""
+    if not rel or "=" not in rel or not target:
+        return None
+    lhs_s, rhs_s = rel.split("=", 1)
+    lhs, rhs = _to_expr(lhs_s.strip(), symbols), _to_expr(rhs_s.strip(), symbols)
+    if lhs is None or rhs is None:
+        return None
+    if not (isinstance(lhs, sympy.Basic) and isinstance(rhs, sympy.Basic)):
+        return None
+    tsym = sympy.Symbol(target)
+    try:
+        with _time_limit(SOLVE_TIMEOUT_S):
+            sols = sympy.solve(sympy.Eq(lhs, rhs), tsym, dict=False)
+    except Exception:
+        return None
+    if not sols:
+        return None
+    try:
+        return sympy.simplify(sols[0])
+    except Exception:
+        return sols[0]
+
+
+def is_relation_grounded(rel, structure, spec, certified, cert_eqs=None) -> Tuple[bool, Optional[str]]:
+    """Is `rel` one QIE already certified — allowing order-swaps and algebraic rearrangements (R1-1)?
+
+    1. fast path: exact normalized-string match against the certified index (cheap, common case).
+    2. sympy solve-for-target equivalence against SUBJECT-matched certified equations: solve both the candidate
+       relation and each certified relation for the SAME target and compare symbolically. Grounds a=F/m against
+       F=m*a; still refuses K=m*v**2 against the certified K=m*v**2/2 (KE vs ½mv²).
+
+    Symbol-name based: a generator emitting E_k for the registry's K will not auto-match — that mismatch is the
+    waiver's job, not meaning/unit alignment here (deliberately out of scope for R1-1)."""
+    certified = certified or {}
+    m = certified.get(_rel_key(rel))
+    if m:
+        return True, m
+    target = (structure or {}).get("solve_for")
+    if not target or "=" not in (rel or ""):
+        return False, None
+    cand_f = _solve_for_target(rel, target, _symbols_of(rel) | {target})
+    if cand_f is None:
+        return False, None
+    subj = (spec or {}).get("subject")
+    for row in (cert_eqs or []):
+        if subj and row.get("subject") and row["subject"] != subj:
+            continue
+        cert_eq = row.get("equation")
+        if not cert_eq:
+            continue
+        cert_syms = _symbols_of(cert_eq)
+        if target not in cert_syms:
+            continue
+        cert_f = _solve_for_target(cert_eq, target, cert_syms)
+        if cert_f is None:
+            continue
+        try:
+            if sympy.simplify(cand_f - cert_f) == 0:
+                return True, row.get("name")
+        except Exception:
+            continue
+    return False, None
+
+
+def _valid_waiver(w) -> bool:
+    """A waiver is an explicit, owner-visible record — not a bare truthy flag. Require a non-empty `waived_by`
+    AND a non-empty `reason`. It is the ONLY escape from blocking grounding and is logged in the gate detail
+    (and thus into the gate_result audit trail)."""
+    return bool(isinstance(w, dict) and str(w.get("waived_by") or "").strip()
+                and str(w.get("reason") or "").strip())
+
+
+def _relation_count(certified: dict) -> int:
+    """Distinct certified relation NAMES behind the index (which keys BOTH equation and display forms, so
+    len(certified) roughly doubles the true count — report relations, not keys)."""
+    return len(set(certified.values())) if certified else 0
+
+
+# ── R1-1: stem ↔ structure binding gate ──────────────────────────────────────────────────────────────
+# Physical constants excluded from the "must appear in the stem" rule: a stem rarely restates g=9.8 or
+# c=3e8. Curated conservatively — a value only skips the stem-presence check when it MATCHES the constant.
+_KNOWN_CONSTANTS = {
+    "g": 9.8, "G": 6.674e-11, "c": 3e8, "pi": 3.14159, "e": 2.71828, "R": 8.314,
+    "N_A": 6.022e23, "h": 6.626e-34, "hbar": 1.055e-34, "eps0": 8.854e-12, "mu0": 1.2566e-6,
+    "k_B": 1.381e-23, "q_e": 1.602e-19, "m_e": 9.109e-31, "F_faraday": 96485.0,
+}
+_SAFE_STEM_NUMS = {0.0, 1.0, 2.0}   # grammatical counts ("a body", "two blocks")
+
+
+def _all_nums(text) -> List[float]:
+    """Every numeric literal in a prose string, scientific-notation aware — so '6.6 x 10^-7 m and mass 2 kg'
+    yields [6.6e-7, 2.0], never [6.6, 10, -7, 2]. Sci-notation matches are consumed first, then plain decimals
+    over the residue (same ordering as _num)."""
+    if not text:
+        return []
+    s = str(text).replace(",", "")
+    out: List[float] = []
+    for pat in (_SCI_X10, _SCI_E):
+        for mo in pat.finditer(s):
+            try:
+                out.append(float(mo.group(1)) * (10.0 ** int(mo.group(2))))
+            except Exception:
+                pass
+        s = pat.sub(" ", s)          # remove consumed sci-notation so its digits are not re-read as decimals
+    for mo in _PLAIN.finditer(s):
+        try:
+            out.append(float(mo.group()))
+        except Exception:
+            pass
+    return out
+
+
+def _close(a, b, rel: float = 1e-3) -> bool:
+    """Relative-tolerance compare (handles 2 vs 2.0 and 6.626e-34)."""
+    try:
+        a, b = float(a), float(b)
+    except Exception:
+        return False
+    if b == 0:
+        return abs(a) < 1e-9
+    return abs(a - b) / abs(b) <= rel
+
+
+def _stem_binding_gate(add, stem: str, structure: dict) -> None:
+    """Bind the prose a student reads to the numbers sympy solved (R1-1). Two BLOCKING directions:
+      1. every declared GIVEN value appears in the stem (constants exempt);
+      2. every stem quantity is a declared given (known constants + grammatical counts allowlisted)."""
+    givens = (structure or {}).get("givens") or {}
+    target = (structure or {}).get("solve_for")
+    stem_nums = _all_nums(stem)
+
+    missing = []
+    for sym, g in givens.items():
+        if sym == target:
+            continue                                        # the unknown is not "given"
+        val = g.get("value") if isinstance(g, dict) else g
+        if val is None:
+            continue                                        # target/derived slot
+        try:
+            fval = float(val)
+        except Exception:
+            continue
+        if sym in _KNOWN_CONSTANTS and _close(fval, _KNOWN_CONSTANTS[sym]):
+            continue                                        # g, c, R… are knowledge, not stated givens
+        if not any(_close(fval, s) for s in stem_nums):
+            missing.append(f"{sym}={val}")
+    add("stem_binding_givens", not missing, QUARANTINE,
+        f"givens absent from stem: {missing}" if missing else "every given value appears in the stem")
+
+    given_vals = [float(g["value"]) for g in givens.values()
+                  if isinstance(g, dict) and g.get("value") is not None]
+    unbound = [n for n in stem_nums
+               if not any(_close(n, gv) for gv in given_vals)
+               and not any(_close(n, cv) for cv in _KNOWN_CONSTANTS.values())
+               and n not in _SAFE_STEM_NUMS]
+    add("stem_binding_stem", not unbound, QUARANTINE,
+        f"stem numbers not in givens: {unbound}" if unbound else "every stem quantity is a declared given")
+
+
 def load_certified_relations(qconn) -> Dict[str, str]:
     out = {}
     for r in qconn.execute("SELECT name, equation, display FROM governed_relation WHERE status='certified'"):
@@ -492,6 +693,15 @@ def load_certified_relations(qconn) -> Dict[str, str]:
             if form:
                 out[_rel_key(form)] = r["name"]
     return out
+
+
+def load_certified_relation_eqs(qconn) -> List[dict]:
+    """Certified relation equations, subject-scoped — the input to is_relation_grounded's sympy equivalence
+    layer. Kept separate from load_certified_relations (which is a normalized-string index) so grounding stays
+    connection-free: callers stash this in ctx['certified_relation_eqs']."""
+    return [{"name": r["name"], "equation": r["equation"], "subject": r["subject"]}
+            for r in qconn.execute(
+                "SELECT name, equation, subject FROM governed_relation WHERE status='certified'")]
 
 
 def verdict(gate_results: List[dict]) -> Tuple[str, str]:

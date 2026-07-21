@@ -9,6 +9,13 @@
 -- merely because it was stored.
 --
 -- Rows are LOCAL-ONLY (curriculum/knowledge/ is gitignored). Only this schema + the harness code are committed.
+--
+-- SCHEMA VERSION: factory-2 (remediation R1-2 — append-only, content-bound certification records).
+--   The evidence tables (gate_result / independent_answer / judge_verdict) are APPEND-ONLY: every attempt is a
+--   new row (id AUTOINCREMENT) stamped with the candidate's item_hash AT CHECK TIME, so evidence is bound to
+--   the exact content it was computed against. A `_latest` view exposes the most recent attempt for the
+--   single-row readers. Certified rows are immutable; re-ingest over a certified id hard-fails in code.
+--   An in-place migrator (corpus.migrate_appendonly) upgrades a factory-1 DB to this shape; see corpus.py.
 
 CREATE TABLE IF NOT EXISTS factory_meta (
   key   TEXT PRIMARY KEY,
@@ -42,7 +49,7 @@ CREATE INDEX IF NOT EXISTS idx_spec_cls ON generation_spec(class_level, subject)
 
 -- ── the CANDIDATE CORPUS ───────────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS candidate (
-  candidate_id       TEXT PRIMARY KEY,
+  candidate_id       TEXT PRIMARY KEY,   -- CAND_ + sha256(run_id|spec_id)[:16] — collision-free (R1-2)
   run_id             TEXT NOT NULL,
   spec_id            TEXT REFERENCES generation_spec(spec_id),
   generator_model    TEXT NOT NULL,      -- provenance: which model proposed this
@@ -62,7 +69,10 @@ CREATE TABLE IF NOT EXISTS candidate (
   -- lifecycle
   status             TEXT NOT NULL DEFAULT 'candidate',  -- candidate|quarantined|rejected|certified
   reject_reason      TEXT,
-  item_hash          TEXT,               -- sha256(stem|options|answer) — dedup + judge cache key
+  relation_waiver    TEXT,               -- json {waived_by, reason, waived_at}: owner override for an
+                                         -- UNGROUNDED relation. The ONLY escape from blocking grounding (R1-1);
+                                         -- never set by the generator, always an explicit auditable owner act.
+  item_hash          TEXT,               -- sha256(stem|options|answer) — dedup + judge cache key + content bind
   stem_norm_hash     TEXT,               -- normalized-stem hash for near-duplicate detection
   created_at         TEXT NOT NULL
 );
@@ -70,22 +80,34 @@ CREATE INDEX IF NOT EXISTS idx_cand_run ON candidate(run_id);
 CREATE INDEX IF NOT EXISTS idx_cand_status ON candidate(status);
 CREATE INDEX IF NOT EXISTS idx_cand_hash ON candidate(item_hash);
 CREATE INDEX IF NOT EXISTS idx_cand_norm ON candidate(stem_norm_hash);
+-- belt-and-suspenders behind the collision-free candidate_id: at most one candidate per (run_id, spec_id).
+-- Doubles as the plain-INSERT guard for the immutability rule (a second ingest for the pair raises).
+CREATE UNIQUE INDEX IF NOT EXISTS ux_candidate_run_spec ON candidate(run_id, spec_id);
 
--- ── every gate outcome, per candidate (the audit trail; nothing is overwritten) ─────────────────────
+-- ── every gate outcome, per candidate — APPEND-ONLY (nothing is ever overwritten) ───────────────────
+-- Each row is one gate check for one attempt, stamped with the candidate's item_hash at check time. A later
+-- re-check on new content appends a new row; the old evidence is retained. `gate_result_latest` exposes the
+-- most recent row per (candidate_id, gate). Certification consumes ONLY rows whose item_hash matches the
+-- candidate's CURRENT item_hash — evidence computed against different content can never certify (R1-2, [C1]).
 CREATE TABLE IF NOT EXISTS gate_result (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
   candidate_id  TEXT NOT NULL REFERENCES candidate(candidate_id),
+  item_hash     TEXT NOT NULL,          -- candidate.item_hash at check time (content binding)
   gate          TEXT NOT NULL,
   ok            INTEGER NOT NULL,       -- 1 pass | 0 fail
   severity      TEXT NOT NULL,          -- fatal | quarantine | advisory
   detail        TEXT,                   -- json/text: what was checked and what was found
-  checked_at    TEXT NOT NULL,
-  PRIMARY KEY (candidate_id, gate)
+  checked_at    TEXT NOT NULL
 );
+CREATE INDEX IF NOT EXISTS idx_gate_cand ON gate_result(candidate_id, gate);
 CREATE INDEX IF NOT EXISTS idx_gate_gate ON gate_result(gate, ok);
+CREATE INDEX IF NOT EXISTS idx_gate_hash ON gate_result(candidate_id, item_hash);
 
--- ── independent answer validation (deterministic re-derivation; generator answer is NOT evidence) ───
+-- ── independent answer validation — APPEND-ONLY (deterministic re-derivation; generator answer is NOT evidence)
 CREATE TABLE IF NOT EXISTS independent_answer (
-  candidate_id     TEXT PRIMARY KEY REFERENCES candidate(candidate_id),
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  candidate_id     TEXT NOT NULL REFERENCES candidate(candidate_id),
+  item_hash        TEXT NOT NULL,       -- candidate.item_hash at check time (content binding)
   method           TEXT NOT NULL,       -- sympy_relation_solve | sympy_pipeline | none_available
   solver_answer    TEXT,
   generator_answer TEXT,
@@ -93,10 +115,13 @@ CREATE TABLE IF NOT EXISTS independent_answer (
   detail           TEXT,
   checked_at       TEXT NOT NULL
 );
+CREATE INDEX IF NOT EXISTS idx_ind_cand ON independent_answer(candidate_id);
 
--- ── separate AI judge (semantic/quality review; independence limitations recorded honestly) ─────────
+-- ── separate AI judge — APPEND-ONLY (semantic/quality review; independence limitations recorded honestly) ──
 CREATE TABLE IF NOT EXISTS judge_verdict (
-  candidate_id   TEXT PRIMARY KEY REFERENCES candidate(candidate_id),
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  candidate_id   TEXT NOT NULL REFERENCES candidate(candidate_id),
+  item_hash      TEXT NOT NULL,         -- candidate.item_hash at check time (content binding)
   judge_model    TEXT NOT NULL,
   independent    INTEGER NOT NULL,      -- 0 when same model family as generator (disclosed, not hidden)
   verdict        TEXT NOT NULL,         -- accept | reject | quarantine
@@ -112,6 +137,24 @@ CREATE TABLE IF NOT EXISTS judge_verdict (
   reasons        TEXT,
   checked_at     TEXT NOT NULL
 );
+CREATE INDEX IF NOT EXISTS idx_judge_cand ON judge_verdict(candidate_id);
+
+-- ── latest-attempt views: the most recent row per candidate, so single-row readers keep working over an
+--    append-only history without double-counting older attempts. ────────────────────────────────────────
+CREATE VIEW IF NOT EXISTS independent_answer_latest AS
+  SELECT ia.* FROM independent_answer ia
+  JOIN (SELECT candidate_id, MAX(id) AS mid FROM independent_answer GROUP BY candidate_id) t
+    ON t.mid = ia.id;
+
+CREATE VIEW IF NOT EXISTS judge_verdict_latest AS
+  SELECT jv.* FROM judge_verdict jv
+  JOIN (SELECT candidate_id, MAX(id) AS mid FROM judge_verdict GROUP BY candidate_id) t
+    ON t.mid = jv.id;
+
+CREATE VIEW IF NOT EXISTS gate_result_latest AS
+  SELECT gr.* FROM gate_result gr
+  JOIN (SELECT candidate_id, gate, MAX(id) AS mid FROM gate_result GROUP BY candidate_id, gate) t
+    ON t.mid = gr.id;
 
 -- ── run-level telemetry (cost/throughput evidence) ─────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS run_telemetry (

@@ -10,12 +10,29 @@ spine. They are not a specification of desired behaviour.
 """
 from __future__ import annotations
 
+import sqlite3
 import unittest
 
+from kie import config
 from kie.qie.factory import certify as CERT
 from kie.qie.factory import controls as C
 from kie.qie.factory import corpus as CO
 from kie.qie.factory import gates as G
+
+_QIE = config.KIE_HOME / "qie.db"
+
+
+def _load_registry():
+    """Real certified-relation index + equations from qie.db (read-only), or empty if the local store is
+    absent. Blocking grounding (R1-1) needs a real registry so the good base + order-swap controls survive."""
+    if not _QIE.exists():
+        return {}, []
+    q = sqlite3.connect(f"file:{_QIE}?mode=ro", uri=True)
+    q.row_factory = sqlite3.Row
+    try:
+        return G.load_certified_relations(q), G.load_certified_relation_eqs(q)
+    finally:
+        q.close()
 
 
 class IndependentSolverChar(unittest.TestCase):
@@ -53,7 +70,13 @@ class GateBatteryControlsChar(unittest.TestCase):
         self.assertTrue(res["all_ok"])
 
     def test_full_gate_battery_catches_all_known_bad(self):
-        ctx = {"spec": C._spec(), "seen_norm": {}, "corpus": [], "certified_relations": {}}
+        # With blocking grounding (R1-1) the battery must be run against the REAL certified registry: the good
+        # base item (F=m*a) and the order-swap survivor (F=a*m) ground, while the KE=m*v**2 and units-stripped
+        # controls are caught. An empty registry would still pass (grounding fails known-bad), but real
+        # relations exercise the must-not-cry-wolf path.
+        cr, ceq = _load_registry()
+        ctx = {"spec": C._spec(), "seen_norm": {}, "corpus": [],
+               "certified_relations": cr, "certified_relation_eqs": ceq}
         res = C.check_controls(ctx)
         self.assertTrue(res["all_caught"])
         self.assertTrue(res["good_control_survives"])
@@ -76,7 +99,11 @@ class CertificationRuleChar(unittest.TestCase):
             "structure": ({"givens": {}, "relation": "x = 1", "solve_for": "x"} if structure_ok else {}),
         }
         CO.ingest(conn, "R", [item], "gen", "b1")
-        return CO._cid("R", spec_id)
+        cid = CO._cid("R", spec_id)
+        # certify_run now requires a gate battery bound to the candidate's CURRENT content (R1-2). This suite
+        # pins the promotion MATRIX (ind + judge outcomes), not the gate battery, so seed one passing gate row.
+        CO.record_gates(conn, cid, [{"gate": "schema", "ok": True, "severity": G.FATAL, "detail": "seed"}])
+        return cid
 
     def _status(self, conn, cid):
         return conn.execute("SELECT status FROM candidate WHERE candidate_id=?", (cid,)).fetchone()[0]

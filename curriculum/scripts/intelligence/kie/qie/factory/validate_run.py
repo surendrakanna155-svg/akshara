@@ -28,12 +28,14 @@ def _spec_of(conn, spec_id: str) -> dict:
 def run(conn: sqlite3.Connection, qconn: sqlite3.Connection, run_id: str) -> dict:
     t0 = time.time()
     certified_relations = G.load_certified_relations(qconn)
+    certified_relation_eqs = G.load_certified_relation_eqs(qconn)   # R1-1: sympy equivalence grounding input
 
     # ── 1. controls first, both directions ──
     # a battery that cannot fail a known-bad item cannot certify a good one; and a comparator that misreads
     # correct notation would manufacture disagreements. Both are run before a single candidate is judged.
     C.check_controls({"spec": C._spec(), "seen_norm": {}, "corpus": [],
-                      "certified_relations": certified_relations})
+                      "certified_relations": certified_relations,
+                      "certified_relation_eqs": certified_relation_eqs})
     C.check_notation_controls()
     C.check_magnitude_controls()
 
@@ -59,8 +61,11 @@ def run(conn: sqlite3.Connection, qconn: sqlite3.Connection, run_id: str) -> dic
             "solution": json.loads(r["solution"] or "{}"),
             "visual_spec": json.loads(r["visual_spec"]) if r["visual_spec"] else None,
         }
+        waiver = json.loads(r["relation_waiver"]) if r["relation_waiver"] else None
         ctx = {"spec": spec, "seen_norm": seen_norm, "corpus": corpus_by_cell.get(cell, []),
-               "certified_relations": certified_relations}
+               "certified_relations": certified_relations,
+               "certified_relation_eqs": certified_relation_eqs,
+               "relation_waiver": waiver}
 
         gr = G.run_gates(cand, ctx)
         CO.record_gates(conn, r["candidate_id"], gr)
