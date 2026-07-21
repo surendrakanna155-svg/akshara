@@ -351,10 +351,35 @@ def write_analyst_worksheet(kconn: sqlite3.Connection, chunk_rows: List[sqlite3.
 
 
 # A combined exam paper carries its subject structure in explicit section headers ("Section - A (Physics)",
-# "PART C — Botany", ...). Subject is resolved from THESE, not from the whole-document frequency tag.
+# "PART C (Botany)", ...). Subject is resolved from THESE, not from the whole-document frequency tag.
+#
+# R3-7: the old regex (`section ... (subject)?` with the parens OPTIONAL and the subject allowed within 14
+# loose chars) also matched PROSE — "in this section, physics of the problem ..." resolved a whole chunk to
+# Physics off a stray sentence. This ANCHORED header regex fires on the real header STRUCTURE only, via two
+# branches, neither of which a running-prose sentence satisfies:
+#   (p) the section keyword IMMEDIATELY followed (bar an optional "- A" / "C" / ":" label) by a PARENTHESISED
+#       subject — "(Physics)". Prose does not parenthesise its subject, so this defeats the stray-sentence
+#       match while still catching a header embedded MID-CHUNK across a section boundary.
+#   (b) a LINE-ANCHORED bare header "SECTION A : PHYSICS" at the start of a line, with a delimiter before the
+#       subject (so a line that merely begins with the word "section" in prose cannot match).
 _SECTION_SUBJECT = re.compile(
-    r"(?:section|part)\b[^()\n]{0,14}\(?\s*(physics|chemistry|botany|zoology|biology|mathematics|maths)\s*\)?",
-    re.I)
+    r"(?im)"
+    r"(?:"
+    # (p) section keyword + optional label + a PARENTHESISED subject "(Physics)" that INTRODUCES a section — i.e.
+    #     the paren is followed by a question number or the line/chunk end. That trailing signal (adversarial-
+    #     verifier fix) is what a genuine header has and running prose does not: "Section - B (Chemistry) 2. …"
+    #     matches while "in this part (physics) we analyse …" (paren followed by lowercase prose) does NOT.
+    r"\b(?:section|part)\b[ \t]*[-–—:]?[ \t]*[a-z0-9]{0,3}[ \t]*"
+    r"\(\s*(?P<p>physics|chemistry|botany|zoology|biology|mathematics|maths)\s*\)(?=\s*(?:\d|$))"
+    r"|"
+    r"^[ \t]*(?:section|part)\b[ \t]*[-–—:]?[ \t]*[a-z0-9]{0,3}[ \t]*[:\-–—][ \t]*"
+    r"(?P<b>physics|chemistry|botany|zoology|biology|mathematics|maths)\b"
+    r")")
+
+
+def _marker_subject(m: "re.Match") -> Optional[str]:
+    """Canonical subject for a section-header match, from whichever branch (parenthesised or bare) fired."""
+    return _SUBJECT_CANON.get((m.group("p") or m.group("b") or "").lower())
 _SUBJECT_CANON = {"physics": "Physics", "chemistry": "Chemistry", "botany": "Biology", "zoology": "Biology",
                   "biology": "Biology", "mathematics": "Mathematics", "maths": "Mathematics"}
 # chars of content BEFORE a chunk's first section marker that make it a genuine mixed BOUNDARY chunk
@@ -376,13 +401,21 @@ def resolve_chunk_subjects(kconn: sqlite3.Connection, doc_id: str) -> Dict[str, 
         if not markers:
             out[r["chunk_id"]] = current
             continue
-        new_subj = _SUBJECT_CANON.get(markers[-1].group(1).lower())
-        if markers[0].start() > _BOUNDARY_PREFIX and current is not None and current != new_subj:
-            out[r["chunk_id"]] = None          # mixed boundary chunk — safe over throughput
+        subs = [s for s in (_marker_subject(m) for m in markers) if s]
+        trailing = subs[-1] if subs else current   # subject in effect at the END of the chunk (for the next one)
+        if len(set(subs)) > 1:
+            # R3-7: a chunk that itself spans >=2 DISTINCT subject sections cannot be attributed to ONE
+            # subject — its earlier section's text would contaminate the later subject. Mark None (excluded
+            # from subject-filtered reads); never collapse the whole chunk onto the LAST marker as before.
+            out[r["chunk_id"]] = None
         else:
-            out[r["chunk_id"]] = new_subj
-        if new_subj is not None:
-            current = new_subj
+            new_subj = subs[0] if subs else current
+            if markers[0].start() > _BOUNDARY_PREFIX and current is not None and current != new_subj:
+                out[r["chunk_id"]] = None       # mixed boundary chunk — real content precedes a subject change
+            else:
+                out[r["chunk_id"]] = new_subj
+        if trailing is not None:
+            current = trailing
     return out
 
 
@@ -635,11 +668,17 @@ def ingest_qdi_audit(conn: sqlite3.Connection, payload: List[dict], model: str) 
     return m
 
 
-def certified_patterns(conn: sqlite3.Connection, subject: str, archetype: Optional[str] = None,
+def certified_patterns(conn: sqlite3.Connection, exam: str, subject: str, archetype: Optional[str] = None,
                        difficulty: Optional[str] = None) -> List[dict]:
-    """The ONLY design intelligence a generation brief may use."""
-    q = "SELECT * FROM qdi_pattern WHERE subject=? AND status='certified'"
-    args: List = [subject]
+    """The ONLY design intelligence a generation brief may use — EXAM-SCOPED (R3-7).
+
+    Requires BOTH `exam` AND `subject`. The former subject-only filter let a JEE pattern attach to a NEET
+    request (and vice-versa), because `subject` collides across exams (Physics/Chemistry/Mathematics appear in
+    both). Filtering on the pattern's own certified `exam` identity closes that cross-exam leak AT THE
+    ACCESSOR, so no caller can widen it back to subject-only. A NEET request can therefore never receive a
+    JEE_Main/JEE_Advanced pattern."""
+    q = "SELECT * FROM qdi_pattern WHERE exam=? AND subject=? AND status='certified'"
+    args: List = [exam, subject]
     if archetype:
         q += " AND archetype=?"
         args.append(archetype)

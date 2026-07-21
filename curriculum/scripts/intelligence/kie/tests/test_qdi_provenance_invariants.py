@@ -285,8 +285,8 @@ class NoContaminatedAttachment(unittest.TestCase):
                   archetype="multi_concept_integration", band="hard",
                   summary="Physics kinematics solving path masquerading as set-theory design intelligence.")
         Q.deterministic_floor(q, k)
-        # certified_patterns must EXCLUDE the recalled pattern
-        certified = QDI.certified_patterns(q, "Mathematics")
+        # certified_patterns must EXCLUDE the recalled pattern (R3-7: now EXAM-scoped — exam + subject)
+        certified = QDI.certified_patterns(q, "JEE_Main", "Mathematics")
         self.assertNotIn("QDP_phys", [p["pattern_id"] for p in certified])
         # a set-theory blueprint attaching over ONLY certified patterns keeps honest nulls (no physics DNA)
         bp = QL.attach_pattern(

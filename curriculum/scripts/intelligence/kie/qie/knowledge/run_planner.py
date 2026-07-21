@@ -21,7 +21,6 @@ from kie.qie.knowledge import blueprint as BP
 from kie.qie.knowledge import examdna as ED
 from kie.qie.knowledge import plan_specs as PS
 from kie.qie.knowledge import planner as P
-from kie.qie.knowledge import qdi as QDI  # noqa: F401  (used by plan()'s certified-pattern reader)
 from kie.qie.knowledge import qdi_link as QL
 from kie.qie.knowledge import schema as S
 
@@ -41,11 +40,14 @@ def open_frozen_index(path=None) -> sqlite3.Connection:
 
 
 def _certified_patterns(conn: sqlite3.Connection, subject: str) -> List[dict]:
-    """Certified design intelligence for this subject (0 today; QDI certification is Phase 4)."""
-    try:
-        return QDI.certified_patterns(conn, subject)
-    except sqlite3.OperationalError:
-        return []  # a stripped index without qdi_* tables — plan on the curriculum boundary alone
+    """R3-7: QDI design intelligence is EXAM-scoped and lives in the SEPARATE qdi.db, reachable ONLY through
+    the exam-aware `plan_blueprints` path (`run_qdi.certified_patterns_for_exam`, gated on `qdi_scope_link`).
+
+    The subject-only `plan()` entry has no exam context, and the frozen index no longer carries any `qdi_*`
+    tables (the v1.5 freeze dropped them), so it attaches NO QDI pattern here — an honest null. This closes the
+    latent leak where a subject-only read of a stale index `qdi_pattern` table could attach a JEE pattern to a
+    NEET request (subject collides across exams); a cross-exam pattern can no longer reach this planner path."""
+    return []
 
 
 def plan(subject: str, run_id: str, classes: Optional[List[int]] = None, n: int = 120,

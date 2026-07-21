@@ -461,6 +461,106 @@ def normalize_unit(u: str) -> str:
     return re.sub(r"[A-Za-zµ]+", _tok, s)
 
 
+# ── curriculum-boundary token derivation (R3-7a) ──────────────────────────────────────────────────────
+# The certified generation_spec's forbidden_terms fold in each concept's evidenced boundary.out_of_scope,
+# which is frequently SENTENCE-LENGTH ("this class does not treat the derivation of ...") and so can NEVER
+# word-boundary-match a stem — the old gate "checked" a term it could not possibly hit, then passed the item
+# as if the boundary held (15/22 certified items had EMPTY forbidden_terms => "checked 0" => a vacuous pass).
+# R3-7(a): derive SHORT lexical technique tokens (lone tokens + short verbatim phrases + tight adjacent
+# content bigrams) from that evidence, augment with a small list of techniques above the whole school/
+# competitive ceiling, and — per the standing law — treat a boundary gate that had NOTHING curriculum-
+# evidenced to check as an ADVISORY FAILURE (surfaced, non-blocking), never a silent pass. A real above-class
+# hit stays BLOCKING (QUARANTINE), exactly as before.
+
+# Genuinely above the NCERT 6-12 + JEE/NEET ceiling: undergraduate+ techniques that are out of scope for ANY
+# school/competitive item regardless of class, so they are safe to scan unconditionally (they can never false-
+# hit a legitimate class-11/12 stem). Distinctive tokens only — no everyday English word that could cry wolf.
+_ABOVE_CEILING_TECHNIQUES = (
+    "contour integration", "residue theorem", "residue calculus", "cauchy's theorem",
+    "fourier transform", "fourier series", "laplace transform", "z-transform",
+    "eigenvalue", "eigenvector", "eigenfunction", "tensor", "jacobian", "wronskian",
+    "lagrangian", "hamiltonian", "schrodinger equation", "partial differential equation",
+    "navier-stokes", "green's function", "gamma function", "beta function", "taylor series expansion",
+)
+
+# stopwords + generic academic filler stripped before deriving technique tokens from a boundary sentence, so
+# a distinctive bigram like "polynomial division" survives but "these applications" / "the concept" do not.
+_BND_STOP = {
+    "the", "a", "an", "of", "to", "in", "on", "at", "is", "are", "be", "and", "or", "for", "with", "by",
+    "that", "this", "it", "as", "from", "its", "their", "than", "not", "no", "if", "but", "any", "all",
+    "which", "into", "such", "does", "do", "only", "also", "level", "class", "here", "these", "those",
+    "covered", "cover", "include", "included", "including", "involving", "involve", "beyond", "using", "use",
+    "used", "application", "applications", "concept", "concepts", "topic", "topics", "problem", "problems",
+    "general", "simple", "complex", "basic", "advanced", "standard", "detailed", "detail", "student",
+    "students", "require", "requires", "required", "treatment", "derivation", "study", "studied", "example",
+    "examples", "case", "cases", "form", "forms", "type", "types", "given", "value", "values", "out", "scope",
+}
+
+
+def _boundary_checks(banned: List[str], concept_name: str = "") -> Tuple[List[tuple], List[tuple]]:
+    """(evidenced, baseline) -> two lists of (compiled_regex, label).
+
+    `evidenced` are checks derived from THIS spec's own curriculum-boundary evidence (forbidden_terms /
+    out_of_scope); `baseline` are the unconditional above-ceiling technique checks. A hit on EITHER is an
+    above-class breach. An EMPTY `evidenced` list is the "checked 0" case — the boundary rests on nothing
+    concept-specific — which the gate surfaces as an advisory failure.
+
+    NO CRYING WOLF (adversarial-verifier fix): a concept's own `out_of_scope` sentence usually restates the
+    concept's name (e.g. "advanced properties of inverse trigonometric functions are out of scope"), so a
+    naive bigram derives `inverse trigonometric` — the concept's OWN in-scope topic — and would then quarantine
+    a legitimate in-scope item. A derived token whose EVERY content word is part of `concept_name` is the topic
+    itself, not a boundary; it is dropped. (An above-class TERM can never consist solely of the concept's own
+    words, so this cannot open a leak.)"""
+    concept_words = {w for w in re.findall(r"[a-z][a-z\-]*", (concept_name or "").lower())
+                     if len(w) >= 4 and w not in _BND_STOP}
+
+    def _is_concept_self(label: str) -> bool:
+        toks = [w for w in re.findall(r"[a-z][a-z\-]*", label.lower()) if len(w) >= 4 and w not in _BND_STOP]
+        return bool(toks) and all(w in concept_words for w in toks)
+
+    def _mk(label: str):
+        label = re.sub(r"\s+", " ", (label or "").strip().lower())
+        if len(label) < 4:
+            return None
+        return (re.compile(rf"\b{re.escape(label)}\b", re.I), label)
+
+    baseline: List[tuple] = []
+    seen: set = set()
+    for tech in _ABOVE_CEILING_TECHNIQUES:
+        c = _mk(tech)
+        if c and c[1] not in seen:
+            seen.add(c[1])
+            baseline.append(c)
+
+    evidenced: List[tuple] = []
+    seen_e: set = set()
+
+    def _add_ev(label: str):
+        c = _mk(label)
+        if c and c[1] not in seen and c[1] not in seen_e and not _is_concept_self(c[1]):
+            seen_e.add(c[1])
+            evidenced.append(c)
+
+    for term in banned or []:
+        t = re.sub(r"\s+", " ", str(term or "").strip())
+        if not t:
+            continue
+        words = re.findall(r"[a-z][a-z\-]*", t.lower())
+        if not words:
+            continue
+        if len(words) == 1:
+            _add_ev(words[0])                       # a lone technique token authored as out-of-scope ("calculus")
+            continue
+        if len(words) <= 4:
+            _add_ev(t)                              # a short technique phrase, matched verbatim as before
+        # distinctive adjacent-content bigrams recovered from a long sentence (low false-positive: two
+        # adjacent domain words). Generic single words are NOT derived — they would cry wolf on in-scope stems.
+        content = [w for w in words if w not in _BND_STOP and len(w) >= 4]
+        for a, b in zip(content, content[1:]):
+            _add_ev(f"{a} {b}")
+    return evidenced, baseline
+
+
 # ── the gate battery ────────────────────────────────────────────────────────────────────────────────
 _REQUIRED = ("stem", "options", "answer_label", "claimed")
 
@@ -548,11 +648,25 @@ def run_gates(cand: dict, ctx: dict, stage: str = "candidate") -> List[dict]:
     add("near_duplicate", not near, QUARANTINE,
         f"max_jaccard={worst:.3f} vs {worst_id}" if worst_id else "no corpus neighbour")
 
-    # ── 7. CURRICULUM BOUNDARY (HARNESS; only as strong as the evidence — see the audit) ──
+    # ── 7. CURRICULUM BOUNDARY (HARNESS; R3-7a — the vacuous-gate + un-matchable-sentence fix) ──
+    # Derive short lexical technique tokens from the spec's own out-of-scope evidence (so a sentence-length
+    # boundary term still yields matchable tokens) and scan a small above-ceiling technique list. A real
+    # above-class hit is BLOCKING (QUARANTINE) as before; a boundary that had NOTHING curriculum-evidenced to
+    # check is an ADVISORY FAILURE (a gate that checked nothing is not a pass), never a silent clearance.
     banned = ((spec.get("boundary") and json.loads(spec["boundary"])) or {}).get("forbidden_terms") or []
-    hits = [t for t in banned if re.search(rf"\b{re.escape(t)}\b", stem, re.I)]
-    add("curriculum_boundary", not hits, QUARANTINE,
-        f"above-class terms present: {hits}" if hits else f"no forbidden term (checked {len(banned)})")
+    # the spec's authoritative in-scope concept — used to drop derived tokens that are the concept's own topic
+    _concept_name = spec.get("concept_title") or spec.get("concept_code") or ""
+    ev_checks, base_checks = _boundary_checks(banned, _concept_name)
+    hits = sorted({lbl for rx, lbl in (ev_checks + base_checks) if rx.search(stem)})
+    if hits:
+        add("curriculum_boundary", False, QUARANTINE, f"above-class terms present: {hits}")
+    elif not ev_checks:
+        add("curriculum_boundary", False, ADVISORY,
+            f"checked 0 curriculum-evidenced forbidden terms — boundary NOT verified for this concept "
+            f"(only {len(base_checks)} above-ceiling techniques scanned)")
+    else:
+        add("curriculum_boundary", True, QUARANTINE,
+            f"no above-class term (checked {len(ev_checks)} evidenced + {len(base_checks)} baseline)")
 
     # ── 8..10 the bridge that makes numeric claims falsifiable ──
     # SECURITY (R1-1 hardening — closes the qualitative-lane bypass the adversarial verifier found):
