@@ -1363,6 +1363,7 @@ export async function loadTabulationRegister(
     student_name: string | null;
     roll_number: string | null;
     subject: string;
+    exam_type: string | null;
     marks_obtained: number | null;
     max_marks: number;
     status: string;
@@ -1370,11 +1371,15 @@ export async function loadTabulationRegister(
   }>(
     // EXM-D2 — a published row's grace-applied effective mark drives the stats;
     // an un-published (processed) row has no effective_marks yet → original.
+    // ICA-H1 — es.exam_type identifies the ASSESSMENT SLOT within a subject so
+    // distinct assessments in one term (e.g. unit_test + terminal, FA + SA) are
+    // aggregated rather than collapsed to the latest-updated one.
     `SELECT m.student_id AS student_id,
             m.student_code AS student_code,
             m.student_name AS student_name,
             m.roll_number AS roll_number,
             es.subject AS subject,
+            es.exam_type AS exam_type,
             COALESCE(m.effective_marks, m.marks_obtained) AS marks_obtained,
             m.max_marks AS max_marks,
             m.status AS status,
@@ -1396,6 +1401,17 @@ export async function loadTabulationRegister(
   // Subject columns in first-seen (exam) order.
   const subjects: string[] = [];
   const byStudent = new Map<string, TabulationStudentRow>();
+  // ICA-H1 — per student → per subject → per ASSESSMENT SLOT (keyed by exam_type).
+  // Rows arrive oldest→newest (ORDER BY es.updated_at ASC), so within one slot a
+  // later session (a supplementary / re-exam of the SAME assessment) REPLACES the
+  // earlier one — preserving PRA-P1-12 (a re-exam must not double-count). But two
+  // DISTINCT assessments in the same term (different exam_type — e.g. unit_test +
+  // terminal, FA + SA) occupy DIFFERENT slots and are AGGREGATED into the subject
+  // cell below, rather than being silently collapsed to the latest-updated one.
+  const slotsByStudent = new Map<
+    string,
+    Map<string, Map<string, TabulationSubjectResult>>
+  >();
 
   for (const r of rows) {
     if (!subjects.includes(r.subject)) subjects.push(r.subject);
@@ -1414,34 +1430,64 @@ export async function loadTabulationRegister(
         rank: null,
       };
       byStudent.set(r.student_id, student);
+      slotsByStudent.set(r.student_id, new Map());
     }
 
     const status = isExamMarkStatus(r.status) ? r.status : "present";
     const present = status === "present" && r.marks_obtained != null;
-    // PRA-P1-12: last-write-wins PER SUBJECT. Rows arrive oldest→newest
-    // (ORDER BY es.updated_at ASC), so a later session (supplementary / re-exam)
-    // for the same subject REPLACES the earlier one here rather than being added
-    // alongside it. total/totalMax are computed from this deduped map below — the
-    // previous per-row `total +=` double-counted a subject that had two sessions,
-    // inflating total, percent and rank.
-    student.perSubject[r.subject] = {
+    const bySubject = slotsByStudent.get(r.student_id)!;
+    let slots = bySubject.get(r.subject);
+    if (!slots) {
+      slots = new Map();
+      bySubject.set(r.subject, slots);
+    }
+    // exam_type is the assessment-slot key; a re-run of the same slot replaces.
+    slots.set(r.exam_type ?? "", {
       subject: r.subject,
       marks: present ? r.marks_obtained : null,
       maxMarks: r.max_marks,
       statusCode: examStatusDisplayCode(status),
-    };
+    });
   }
 
   const students = [...byStudent.values()];
   for (const s of students) {
-    // Sum ONCE per subject over the deduped map — only a present subject
-    // (non-null marks) contributes to total / max / percent.
+    // Aggregate each subject's distinct assessment slots into ONE subject cell:
+    // present slots (non-null marks) SUM into the cell and the student total; a
+    // non-present slot (AB/ML/DB) never counts (frozen exclusion rule). A subject
+    // with only non-present slots shows a status code and contributes nothing.
+    const bySubject = slotsByStudent.get(s.studentId)!;
     let total = 0;
     let totalMax = 0;
-    for (const cell of Object.values(s.perSubject)) {
-      if (cell.marks != null) {
-        total += cell.marks;
-        totalMax += cell.maxMarks;
+    for (const subject of subjects) {
+      const slots = bySubject.get(subject);
+      if (!slots) continue; // this student sat no exam for the subject
+      let subjMarks = 0;
+      let subjMax = 0;
+      let anyPresent = false;
+      let nonPresentCell: TabulationSubjectResult | null = null;
+      for (const cell of slots.values()) {
+        if (cell.marks != null) {
+          anyPresent = true;
+          subjMarks += cell.marks;
+          subjMax += cell.maxMarks;
+        } else {
+          nonPresentCell = cell;
+        }
+      }
+      if (anyPresent) {
+        s.perSubject[subject] = {
+          subject,
+          marks: subjMarks,
+          maxMarks: subjMax,
+          statusCode: null,
+        };
+        total += subjMarks;
+        totalMax += subjMax;
+      } else {
+        // All slots non-present → display the latest status code; never counted.
+        s.perSubject[subject] = nonPresentCell ??
+          { subject, marks: null, maxMarks: 0, statusCode: null };
       }
     }
     s.total = total;
@@ -2219,6 +2265,7 @@ export async function loadReportCards(
     student_code: string | null;
     student_name: string | null;
     subject: string;
+    exam_type: string | null;
     exam_title: string;
     marks_obtained: number | null;
     effective_marks: number | null;
@@ -2227,10 +2274,14 @@ export async function loadReportCards(
     grade_letter: string | null;
     exam_updated_at: string;
   }>(
+    // ICA-H1 — es.exam_type identifies the ASSESSMENT SLOT within a subject so a
+    // term's DISTINCT assessments (e.g. unit_test + terminal, FA + SA) each keep
+    // their own report-card line instead of collapsing to the latest-updated one.
     `SELECT m.student_id AS student_id,
             m.student_code AS student_code,
             m.student_name AS student_name,
             es.subject AS subject,
+            es.exam_type AS exam_type,
             es.title AS exam_title,
             m.marks_obtained AS marks_obtained,
             m.effective_marks AS effective_marks,
@@ -2258,12 +2309,14 @@ export async function loadReportCards(
   const gradeScale = await loadGradeScale(db, organizationId, schoolId);
 
   const byStudent = new Map<string, ReportCardData>();
-  // PRA-P1-12: dedupe subject rows PER STUDENT so a subject with two published
-  // sessions (a supplementary / re-exam) contributes ONE row, not two. Rows come
-  // oldest→newest (ORDER BY es.updated_at ASC); an insertion-ordered Map keyed by
-  // subject keeps first-seen column order while replacing the value with the
-  // NEWEST session's cell. Previously each row was push()ed AND added to
-  // totalScore, double-counting the subject in the total, percent, grade and rank.
+  // ICA-H1 / PRA-P1-12: dedupe rows PER (subject, ASSESSMENT SLOT) — the slot is
+  // keyed by exam_type. Rows come oldest→newest (ORDER BY es.updated_at ASC); an
+  // insertion-ordered Map keeps first-seen line order while replacing the value
+  // with the NEWEST session's cell. Two sessions of the SAME slot (a supplementary
+  // / re-exam of one assessment) therefore contribute ONE line — preserving
+  // PRA-P1-12 (no double-count) — while DISTINCT assessments in the same term
+  // (different exam_type — e.g. unit_test + terminal, FA + SA) keep their own line
+  // and each contribute to totalScore, instead of collapsing to the latest.
   const subjectsByStudent = new Map<string, Map<string, ReportCardData["subjects"][number]>>();
   for (const r of rows) {
     let card = byStudent.get(r.student_id);
@@ -2289,7 +2342,10 @@ export async function loadReportCards(
     const score = status === "present"
       ? (r.effective_marks ?? r.marks_obtained)
       : null;
-    subjectsByStudent.get(r.student_id)!.set(r.subject, {
+    // Slot key = subject + exam_type. NUL-separated so distinct fields never
+    // alias (e.g. "Math" + "1" vs "Math1" + "").
+    const slotKey = `${r.subject}\u0000${r.exam_type ?? ""}`;
+    subjectsByStudent.get(r.student_id)!.set(slotKey, {
       subject: r.subject,
       examTitle: r.exam_title,
       score,
