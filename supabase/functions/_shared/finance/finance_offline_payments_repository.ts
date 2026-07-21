@@ -106,6 +106,25 @@ export class OfflinePaymentNotInvoicedError extends Error {
   }
 }
 
+/**
+ * ICA-A2 (P0): raised when the terminal reconcile UPDATE — the atomic
+ * money-integrity guard `AND status = 'pending_reconciliation'` — matches 0 rows,
+ * i.e. the instrument left the pending state after our locked read passed its
+ * checks. Under the row lock this is a "should never happen" invariant violation
+ * (the FOR UPDATE lock serializes concurrent reconciles, so the loser returns the
+ * idempotent no-op before it ever posts a collection); throwing here FAILS CLOSED
+ * — the enclosing transaction rolls back the collection just posted, so an
+ * instrument can never be double-credited. Fail-closed 500 (rollback) by design.
+ */
+export class OfflinePaymentStateError extends Error {
+  constructor(id: string) {
+    super(
+      `Offline instrument ${id} was no longer pending_reconciliation at the terminal write; reconcile rolled back to prevent a double credit.`,
+    );
+    this.name = "OfflinePaymentStateError";
+  }
+}
+
 export function isOfflinePaymentMethod(value: string): value is OfflinePaymentMethod {
   return (METHODS as readonly string[]).includes(value);
 }
@@ -212,10 +231,17 @@ export async function getOfflinePayment(
   organizationId: string,
   schoolId: string,
   id: string,
+  options: { forUpdate?: boolean } = {},
 ): Promise<FinanceOfflinePaymentRow | null> {
+  // ICA-A2 (P0): `forUpdate` takes a row-level write lock so the reconcile path
+  // can serialize concurrent reconciles of the SAME instrument. Because reconcile
+  // runs inside withTenantContext (one BEGIN…COMMIT on one connection), the loser
+  // blocks here until the winner commits, then re-reads the now-'reconciled'
+  // status and returns the idempotent no-op BEFORE posting a second collection.
+  const lockClause = options.forUpdate ? " FOR UPDATE" : "";
   const rows = await db.queryObject<FinanceOfflinePaymentRow>(
     `SELECT * FROM finance_offline_payments
-     WHERE id = $1 AND organization_id = $2 AND school_id = $3`,
+     WHERE id = $1 AND organization_id = $2 AND school_id = $3${lockClause}`,
     [id, organizationId, schoolId],
   );
   return rows[0] ?? null;
@@ -228,7 +254,16 @@ export async function reconcileOfflinePayment(
   id: string,
   input: ReconcileOfflinePaymentInput,
 ): Promise<FinanceOfflinePaymentRow> {
-  const existing = await getOfflinePayment(db, organizationId, schoolId, id);
+  // ICA-A2 (P0): lock the instrument row BEFORE the reconciled-check. Without the
+  // lock two concurrent reconciles both read 'pending_reconciliation', both pass
+  // the short-circuit below, both post a collection → a double credit. FOR UPDATE
+  // serializes them: the loser blocks here, then re-reads 'reconciled' at the
+  // short-circuit and returns the no-op. Lock order is instrument row first, then
+  // the invoice row inside createCollection — a single consistent order, so
+  // deadlock-free.
+  const existing = await getOfflinePayment(db, organizationId, schoolId, id, {
+    forUpdate: true,
+  });
   if (!existing) {
     throw new OfflinePaymentNotFoundError(id);
   }
@@ -265,10 +300,25 @@ export async function reconcileOfflinePayment(
       collectedBy: input.reconciledBy,
       collectionDate,
       allowInstrument: true,
+      // ICA-A2 (P0): tie the posted collection to this instrument. The DB unique
+      // index finance_collections_offline_payment_uq (migration 20260920000070)
+      // then makes "≤ 1 collection per instrument" a hard, un-bypassable invariant.
+      offlinePaymentId: existing.id,
+      // ICA-A2 (P0): derive the idempotency key from the instrument id so any
+      // residual same-instrument collision rides the existing
+      // finance_collections_idempotency_key_uq index and REPLAYS the winner's
+      // collection gracefully instead of raising a raw unique-violation 500.
+      idempotencyKey: `offline-reconcile:${existing.id}`,
     });
     collectionId = posted.collection.id;
   }
 
+  // ICA-A2 (P0): the terminal write is the ATOMIC money-integrity guard (project
+  // race pattern: `AND status = '<pre>'` + throw-on-0-rows). The predicate is now
+  // `AND status = 'pending_reconciliation'` (was the too-loose `<> 'bounced'`): it
+  // flips exactly one still-pending instrument and matches 0 rows otherwise. This
+  // is belt-and-suspenders behind the FOR UPDATE lock above — mirrors
+  // bounceOfflinePayment's guarded terminal write.
   const rows = await db.queryObject<FinanceOfflinePaymentRow>(
     `UPDATE finance_offline_payments
      SET status = 'reconciled',
@@ -278,7 +328,7 @@ export async function reconcileOfflinePayment(
          collection_id = COALESCE($7, collection_id),
          updated_at = timezone('utc', now())
      WHERE id = $1 AND organization_id = $2 AND school_id = $3
-       AND status <> 'bounced'
+       AND status = 'pending_reconciliation'
      RETURNING *`,
     [
       id,
@@ -290,6 +340,13 @@ export async function reconcileOfflinePayment(
       collectionId,
     ],
   );
+  // 0 rows means the instrument left 'pending_reconciliation' between our locked
+  // read and this write — impossible while we hold the row lock, so it signals a
+  // broken invariant. THROW so the enclosing transaction rolls back the collection
+  // we just posted: an instrument is never double-credited (fail-closed).
+  if (rows.length === 0) {
+    throw new OfflinePaymentStateError(id);
+  }
   return rows[0]!;
 }
 

@@ -88,6 +88,15 @@ export interface CreateCollectionInput {
    * its collection through this flag. Not a client-supplied field.
    */
   allowInstrument?: boolean;
+  /**
+   * ICA-A2 (P0): the offline instrument this collection settles, set ONLY by the
+   * Offline Instrument Register's reconcile path. Persisted to
+   * finance_collections.offline_payment_id, which carries a partial UNIQUE index
+   * (finance_collections_offline_payment_uq) so a single instrument can back at
+   * most ONE collection — the DB backstop against a reconcile double-credit race.
+   * Not a client-supplied field.
+   */
+  offlinePaymentId?: string;
 }
 
 export class InvoiceNotCollectibleError extends Error {
@@ -360,6 +369,26 @@ async function findCollectionByIdempotencyKey(
   return rows[0]?.id ?? null;
 }
 
+/**
+ * ICA-A2 (P0): locate the collection already posted for an offline instrument —
+ * used to REPLAY (rather than 500) when the partial-unique index
+ * finance_collections_offline_payment_uq rejects a second collection for the same
+ * instrument that slipped past the idempotency replay.
+ */
+async function findCollectionByOfflinePaymentId(
+  db: TenantQueryClient,
+  organizationId: string,
+  offlinePaymentId: string,
+): Promise<string | null> {
+  const rows = await db.queryObject<{ id: string }>(
+    `SELECT id FROM finance_collections
+     WHERE organization_id = $1 AND offline_payment_id = $2
+     LIMIT 1`,
+    [organizationId, offlinePaymentId],
+  );
+  return rows[0]?.id ?? null;
+}
+
 export async function createCollection(
   db: TenantQueryClient,
   organizationId: string,
@@ -441,8 +470,9 @@ export async function createCollection(
       `INSERT INTO finance_collections (
         organization_id, school_id, student_id, invoice_id, student_account_id,
         receipt_number, collection_date, payment_method, reference_number,
-        amount_collected, notes, collection_status, collected_by, idempotency_key
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'completed', $12, $13)
+        amount_collected, notes, collection_status, collected_by, idempotency_key,
+        offline_payment_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'completed', $12, $13, $14)
       RETURNING *`,
       [
         organizationId,
@@ -458,6 +488,10 @@ export async function createCollection(
         input.notes ?? null,
         input.collectedBy,
         input.idempotencyKey ?? null,
+        // ICA-A2 (P0): tie the collection to its offline instrument (NULL for the
+        // normal collection screen path). The partial UNIQUE index on this column
+        // makes a second collection for the same instrument a hard DB error.
+        input.offlinePaymentId ?? null,
       ],
     );
   } catch (error) {
@@ -473,6 +507,25 @@ export async function createCollection(
         db,
         organizationId,
         input.idempotencyKey,
+      );
+      const replayed = existingId
+        ? await loadCollectionWithReceipt(db, organizationId, schoolId, existingId)
+        : null;
+      if (replayed) return replayed;
+    }
+    // ICA-A2 (P0): the partial-unique index finance_collections_offline_payment_uq
+    // is the hard DB backstop for a reconcile race that slips past BOTH the
+    // instrument row lock and the idempotency replay — recover by replaying the
+    // one collection already posted for this instrument instead of a raw 500.
+    if (
+      input.offlinePaymentId &&
+      String(error).includes("duplicate key") &&
+      String(error).includes("offline_payment")
+    ) {
+      const existingId = await findCollectionByOfflinePaymentId(
+        db,
+        organizationId,
+        input.offlinePaymentId,
       );
       const replayed = existingId
         ? await loadCollectionWithReceipt(db, organizationId, schoolId, existingId)
