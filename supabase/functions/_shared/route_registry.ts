@@ -234,6 +234,32 @@ export const MODULE_ROUTES: readonly ModuleRouteEntry[] = [
 ] as const;
 
 /**
+ * ICA-F1 — public module routes: the ONLY module routes that legitimately reach a
+ * handler WITHOUT a user session, because they authenticate by another means. The
+ * central auth chokepoint (`routeModuleRequest`) skips authentication for these and
+ * for nothing else, so every other module route is authenticated by construction —
+ * no route can be unauthenticated by omission.
+ *
+ * The full set (both HMAC-signature-authed, no bearer JWT):
+ *  - `/webhooks/<gateway>` — payment-gateway callbacks (handleRazorpayWebhook). A prefix
+ *    so a second gateway's `/webhooks/<gateway>` is covered without a code change.
+ *  - `/communications/delivery/webhook` — message-provider delivery-status callback
+ *    (handleDeliveryWebhook, verifyCommunicationWebhookSignature).
+ * Any addition here is a deliberate decision to expose a route without a session; the
+ * ICA-F1 guard test asserts each listed route actually bypasses the gate.
+ */
+export const PUBLIC_MODULE_ROUTE_PREFIXES: readonly string[] = [
+  "/webhooks/",
+  "/communications/delivery/webhook",
+] as const;
+
+/** True when `path` is an explicitly-allowlisted public (non-session) module route. */
+export function isPublicModuleRoute(method: string, path: string): boolean {
+  void method; // reserved: today every public route is method-agnostic (signature-authed)
+  return PUBLIC_MODULE_ROUTE_PREFIXES.some((p) => path === p.replace(/\/$/, "") || path.startsWith(p));
+}
+
+/**
  * Iterate the registry in order and return the first router that OWNS the path (a
  * non-null Response). Returns null when no module router claims the path — the caller
  * (app.ts) turns that single null into the one canonical 404. Because ownership is

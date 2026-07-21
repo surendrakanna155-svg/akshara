@@ -16,8 +16,30 @@ export type AuthResult =
  * freshness against live state so logout/revoke/demotion take effect on the
  * very next request instead of waiting out the 15-minute token TTL. This is the
  * single chokepoint every authenticated handler funnels through.
+ *
+ * ICA-F1: memoized per Request. The central chokepoint (`routeModuleRequest` in
+ * api/app.ts) authenticates every non-public module route ONCE, up front; the
+ * ~664 per-handler `authenticateRequest` calls (and the idempotency scope
+ * resolver) then reuse this cached result instead of re-running the
+ * session-validation DB read. Keyed on the Request identity, which is stable for
+ * a request's lifetime; `config` is the per-request singleton, so it is not part
+ * of the key. Purely an optimization — correctness holds if the cache misses
+ * (the call simply recomputes).
  */
-export async function authenticateRequest(
+const _authMemo = new WeakMap<Request, Promise<AuthResult>>();
+
+export function authenticateRequest(
+  req: Request,
+  config: AppConfig,
+): Promise<AuthResult> {
+  const cached = _authMemo.get(req);
+  if (cached) return cached;
+  const pending = authenticateRequestUncached(req, config);
+  _authMemo.set(req, pending);
+  return pending;
+}
+
+async function authenticateRequestUncached(
   req: Request,
   config: AppConfig,
 ): Promise<AuthResult> {

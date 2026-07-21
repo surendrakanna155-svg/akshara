@@ -18,7 +18,8 @@ import { handleTenantAccessHealth, handleOperationsHealth, handleStorageHealth, 
 // ownership + rationale) in _shared/route_registry.ts. `matchModuleRoute` iterates it and
 // returns null when no router owns the path; this file turns that single null into the one
 // canonical 404. Every module router is non-greedy (returns null, never its own route-404).
-import { matchModuleRoute } from "../_shared/route_registry.ts";
+import { isPublicModuleRoute, matchModuleRoute } from "../_shared/route_registry.ts";
+import { authenticateRequest } from "../_shared/permission_middleware.ts";
 import { errorEnvelope, routePath } from "../_shared/http.ts";
 import { dispatchWithIdempotency } from "../_shared/idempotency_dispatch.ts";
 import {
@@ -39,6 +40,19 @@ export async function routeModuleRequest(
   method: string,
   path: string,
 ): Promise<Response> {
+  // ICA-F1: central auth/RBAC chokepoint. Every module route is authenticated HERE,
+  // before dispatch — so no route can be unauthenticated by omission (a handler that
+  // forgets its own `authenticateRequest` is still gated). Only the explicitly
+  // allowlisted public routes (signature-authed webhooks) bypass this. The result is
+  // memoized on the request, so the handlers' own `authenticateRequest` calls (and the
+  // idempotency scope resolver) reuse it with no extra session-validation DB read.
+  // Fine-grained RBAC (requirePermission/requireAnyPermission/scope) stays in the
+  // handlers, unchanged — this gate guarantees AUTHENTICATION, not authorization.
+  if (!isPublicModuleRoute(method, path)) {
+    const auth = await authenticateRequest(req, config);
+    if (!auth.ok) return auth.response;
+  }
+
   // Universal store-and-replay idempotency (Data Reliability Platform §8.1):
   // every mutating module route carrying an `Idempotency-Key` replays exactly
   // once. Inert for any request without the header, so existing traffic is
