@@ -243,9 +243,9 @@ Derived on the mode=ro frozen index. Live: **18 edges, all directed** (6→8, 7�
 the dead ki_mention. New `kie/tests/test_r5_5_revisits.py` (9 tests). *(Remaining R5-5 — calibration, response
 spine, predicted-time norms, per-concept difficulty mining — needs pilot data / PYQ corpus: owner/external-gated.)*
 
-**Still open (roadmap):** R4-3 (qualitative certification lane — buildable on the adopted qie.db/KVS substrate),
-R4-4 (deferred audit passes), R5-1/R5-2 (prereq edge table + KC_ convergence — buildable), R5-3 (ERP promotion — **owner-gated**),
-R5-4/R5-6 (need PYQ corpus), R6 (Tier-1 freeze — **owner unfreeze**).
+**Buildable roadmap sweep — COMPLETE (2026-07-21 → 07-22).** Every cleanly-buildable item is landed: RI-6 re-point,
+R4-3, R4-4, R5-1, R5-2, R5-3 (design), R5-5 (cross-class fragment), R5-6. What remains is genuinely
+owner/external-gated (see the queue below), including the R5-4 finding.
 
 **Deferred-but-enforced across R2** (machinery fail-closed NOW; the ACTORS need an API layer — roadmap R4-2):
 a real cross-family/human judge yielding `independent=1` (today's path is provisional-only), an Opus
@@ -256,12 +256,30 @@ quarantined artifacts is downstream of that.
 
 ---
 
-## Owner-decision / external-dependency queue (surfaced, not auto-run)
+## Owner-decision / external-dependency queue (the remaining boundary — nothing here is cleanly buildable)
 
-1. **R0-1 off-machine target** *(external)* — provide `AKSHARA_BACKUP_DEST` on an
-   off-machine volume + passphrase; install the daily LaunchAgent.
-2. **R0-2 quarantine execution** *(owner)* — approve flipping the 22 factory questions +
-   7 QDI patterns `certified → quarantined`. Script is ready (`quarantine_audited_estate.py`,
-   dry-run verified); it uses guarded transitions and preserves prior state.
-3. Downstream owner-gated items (R4-1 lane reconciliation, R5-3 ERP promotion, all of R6)
-   remain in the roadmap; not reached yet.
+All R0–R5 cleanly-buildable work is DONE (R0-2 recall executed; R4-1/R4-2 owner-approved+built; RI-6, R4-3, R4-4,
+R5-1, R5-2, R5-3-design, R5-5-fragment, R5-6 landed this program). What is left needs an owner decision, an
+external dependency, or a substantial re-mining/unfreeze effort:
+
+1. **R5-4 — Exam DNA v2 (measured weights)** *(re-mining sub-project + attribution decisions)* — the PYQ corpus
+   IS owned (226 previous_paper + 704 dpp + 9 mock_test in `source_documents`), but the mined `question_patterns`
+   attribution is DEGENERATE: `exam='foundation'` on all 4853, `subject=NULL` on all, and the `concept_code`
+   subject prefixes are mislabelled (`BIO_MOTION`, `CHE_NUMBERS`, `BIO_POWER`). A measured PER-EXAM/PER-SUBJECT
+   weight table cannot be computed honestly from this without RE-MINING the PYQ questions with correct
+   exam/subject attribution (linking each to its `source_documents` exam/subject) — a focused mining pass with
+   its own decisions, NOT a clean derived table. Building on the current data would violate the honest-null law.
+2. **R5-3 implementation** *(owner + ERP lane)* — the design is done (`R5-3_ERP_PROMOTION_CONTRACT_DESIGN.md`);
+   the platform bank migration + RLS + exporter + KC_↔UUID map + LaTeX authoring contract are owner-gated,
+   sequenced by the ERP lane (migration numbering).
+3. **R5-5 remainder** *(pilot data + model/key)* — calibration (PSYCHOMETRIC spec), the ERP response spine
+   (`edu_student_item_responses`, seeded at first pilot use — cannot be backfilled), predicted-time norms,
+   per-concept difficulty/misconception mining (needs R2 judge output at scale = a live key). Owner/external.
+4. **R6 (all)** *(owner must unfreeze Tier-1)* — R6-1 relocate the engine, R6-2 one canonical question vocabulary,
+   R6-3 truthful qpgen seam, R6-4 namespace hygiene. The Tier-1 freeze applies.
+5. **R4-2 live tail** *(external)* — a live `OPENAI_API_KEY` to run real generation/judging/re-certification (the
+   provider-agnostic layer is built; re-certifying the recalled/held 22+15+14+7 + the R4-3 held-128 needs it).
+6. **R0-1 off-machine backup** *(owner-DEFERRED)* — provide `AKSHARA_BACKUP_DEST` + passphrase, install the
+   LaunchAgent. Tooling built + restore-verified.
+7. **R3-4 FTS5 + `chunks(doc_id,ordinal)` index** *(freeze hatch)* — a sanctioned kie.db rebuild under
+   `KIE_ALLOW_FROZEN_WRITE` at the next version boundary (mutates the frozen v1.5 substrate).
