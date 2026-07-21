@@ -233,6 +233,16 @@ every digit (self-verified: **0** dense chunks now lose a number, was 92). Findi
 because spaces counted as linguistic) → the flag now also fires on near prose-free number soup. New
 `kie/tests/test_r5_6_evidence_clean.py` (14 tests). Full suite **1100 green** (skipped=1).
 
+### R5-5 (fragment) — cross-class revisits/deepens edges [#knowledge-ia-8] — ✅
+
+New `kie/qie/graph/revisits.py` + `revisits_edge` table: 18 certified concept names recur across classes as
+disjoint nodes (e.g. "Area of a rectangle" in Class 6 AND Class 8); the dead `ki_mention` table (0 rows) never
+captured this. This links the earlier node to the later (deepening) one — direction from the parsed
+`taught_at_class` order; a pair whose order can't be established is an undirected co-occurrence (never guessed).
+Derived on the mode=ro frozen index. Live: **18 edges, all directed** (6→8, 7→9, …), 0 co-occurrence, superseding
+the dead ki_mention. New `kie/tests/test_r5_5_revisits.py` (9 tests). *(Remaining R5-5 — calibration, response
+spine, predicted-time norms, per-concept difficulty mining — needs pilot data / PYQ corpus: owner/external-gated.)*
+
 **Still open (roadmap):** R4-3 (qualitative certification lane — buildable on the adopted qie.db/KVS substrate),
 R4-4 (deferred audit passes), R5-1/R5-2 (prereq edge table + KC_ convergence — buildable), R5-3 (ERP promotion — **owner-gated**),
 R5-4/R5-6 (need PYQ corpus), R6 (Tier-1 freeze — **owner unfreeze**).

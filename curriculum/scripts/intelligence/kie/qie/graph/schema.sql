@@ -52,3 +52,20 @@ CREATE TABLE IF NOT EXISTS cleaned_evidence (
   flagged_mangled      INTEGER NOT NULL DEFAULT 0 -- 1 => advisory: too garbled to ground a numeric item
 );
 CREATE INDEX IF NOT EXISTS idx_cleaned_mangled ON cleaned_evidence(flagged_mangled);
+
+-- R5-5 [#knowledge-ia-8] — cross-class "revisits / deepens" edges. A certified concept name that recurs across
+-- classes is stored as DISJOINT nodes (e.g. "Area of a rectangle" in Class 6 AND Class 8); the dead ki_mention
+-- table (0 rows) never captured this. This derived table links the earlier node to the later one so a mastery/
+-- adaptive layer knows Class 8's node DEEPENS Class 6's. Derived on TOP of the frozen index (mode=ro); a pair
+-- whose class order can't be established is recorded as an undirected co-occurrence (directed=0), never guessed.
+CREATE TABLE IF NOT EXISTS revisits_edge (
+  subject        TEXT,
+  concept_norm   TEXT NOT NULL,     -- normalized recurring canonical name
+  earlier_kc     TEXT NOT NULL,     -- concept_id taught earlier
+  earlier_class  TEXT,
+  later_kc       TEXT NOT NULL,     -- concept_id that revisits/deepens it
+  later_class    TEXT,
+  directed       INTEGER NOT NULL DEFAULT 1,  -- 1 = class order established; 0 = co-occurrence (order unknown)
+  PRIMARY KEY (earlier_kc, later_kc)
+);
+CREATE INDEX IF NOT EXISTS idx_revisits_later ON revisits_edge(later_kc);
