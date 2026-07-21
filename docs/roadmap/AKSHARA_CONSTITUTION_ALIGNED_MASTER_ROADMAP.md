@@ -387,9 +387,13 @@ Each carries: **State** (✅ certify / 🔶 complete / ⚪ build) · **Extends**
 
 ---
 
-## 5.6 PROGRAM ASIP — AI SUPPORT INTELLIGENCE PLATFORM 🟩 **PRODUCTION CERTIFIED (2026-07-20)** (Constitution Parts 6 · 7B · 8) — *parallel lane, never gated the ERP*
+## 5.6 PROGRAM ASIP — AI SUPPORT INTELLIGENCE PLATFORM 🟩 **ENGINEERING ROADMAP COMPLETE (ASIP-1…8, 2026-07-21)** (Constitution Parts 6 · 7B · 8) — *parallel lane, never gated the ERP*
 
-> ✅ **LIVE on the pilot.** Both phases deployed additively onto the deployed head + **live cert 18/18 (test) + 18/18 (production smoke)** — cert `docs/SUPPORT_INTELLIGENCE_PLATFORM_CERTIFICATION.md`. Only owner tail: set real phone numbers on the 4 seeded support principals to enable OTP login.
+> ✅ **ENGINEERING ROADMAP COMPLETE — ASIP-1…8 built + green; local implementation COMPLETE.**
+> - **ASIP-1…7:** 🟩 **PRODUCTION CERTIFIED + LIVE** on the pilot (both phases deployed additively + **live cert 18/18 test + 18/18 production smoke**) — cert `docs/SUPPORT_INTELLIGENCE_PLATFORM_CERTIFICATION.md`.
+> - **ASIP-8 (Continuous Learning / KB):** 🟢 **BUILT + GREEN** (2026-07-21, commit `13029559`, pushed) — 65 deno + 152 web tests, `deno check`/`tsc`/`vite build` clean; live-cert extended to **23 hermetic checks**.
+> - **Production certification of ASIP-8:** ⏸ pending ONLY the approved deployment gate — deploy migration `20260920000060` + run the live 23/23. **This deploy is intentionally deferred to the unified ERP pilot deployment phase** (do NOT deploy/activate ASIP-8 independently). All other Phase-2 deploy-gated tail (principal-phone seeding, etc.) likewise pending that phase.
+> - Owner tail (unchanged): set real phone numbers on the 4 seeded support principals to enable OTP login.
 
 *The platform-support system through which **customer schools report Akshara product issues to the Akshara Support Team**, and through which a very small support team investigates and resolves at scale with AI assistance. **NOT** the school's internal Complaint system; **NOT** the read-only `control_center` mock. Added 2026-07-20 under the Appendix-C change-control law as a first-class isolated parallel workstream (worktree `Akshara_ERP-asip`, branch `feature/asip-support-intelligence`, base `integration/w0-trunk`, migration band `20260920000000+`). Design authority: [`docs/support-intelligence/ASIP_DESIGN.md`](../support-intelligence/ASIP_DESIGN.md).*
 
@@ -420,7 +424,7 @@ The platform has no cross-tenant data-plane principal today (RLS is unconditiona
 
 - **Why (Constitution Parts 6/7B/8):** a very small team must support hundreds/thousands of schools; the platform, not the engineer, must prepare the complete investigation package; support is an evidence-based, governed, auditable capability — not ad-hoc email.
 - **Inspect first:** reuse the primitives (recon complete in `ASIP_DESIGN.md` §1); do **not** duplicate any engine; extend the frozen web viewer only via a scoped owner-unfreeze (Decision B).
-- **Phases:** **Phase 1** = ASIP-1/2/3 (within-tenant; buildable + certifiable now). **Phase 2** (owner-gated on A & B) = ASIP-4/5/6/7/8.
+- **Phases:** **Phase 1** = ASIP-1/2/3 (within-tenant). **Phase 2** = ASIP-4/5/6/7/8 (cross-tenant). **All eight items built + green as of 2026-07-21 — the ASIP engineering roadmap is COMPLETE.** ASIP-1…7 are PRODUCTION CERTIFIED + LIVE; ASIP-8 is built + green with its production certification deferred to the unified ERP pilot deployment phase (deploy gate).
 - **Dependencies:** governed AI gateway (W7) for all model use; storage/communication/approval primitives; **W0 convergence** for final integration/deploy. **Decisions A + B → 🔒 DECIDED (owner, 2026-07-20): A1 mirror + B1 web console (scoped unfreeze).** Remaining **owner/deploy-gated:** the `PLATFORM_ORG` + support-principal seed and the live-cert + deploy authorization.
 - **Risks:** (a) a cross-tenant principal that breaks the org wall = Part 7B auto-fail → mitigate with the snapshot/mirror model + maker-checker on prod actions; (b) leaking raw PII into evidence/prompts → PII-minimized snapshot by construction; (c) autonomous AI applying a fix → forbidden; humans approve.
 - **Verification:** deno handler tests (create/evidence/analyze/RLS deny-path/tenant-isolation), Flutter widget + golden tests (report UI, my-incidents, conversation), a live-cert script (`scripts/qa/live_cert_asip.py`) authored and ready.
