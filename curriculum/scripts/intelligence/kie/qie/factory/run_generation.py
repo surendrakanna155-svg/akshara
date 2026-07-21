@@ -64,7 +64,11 @@ def ingest_candidates(conn: sqlite3.Connection, run_id: str, items: List[dict], 
     telemetry row (real model + actor) that certify_run(require_telemetry=True) later demands."""
     prov = _gen_provenance(provenance)
     items = list(items)
-    m = CO.ingest(conn, run_id, items, prov["model"], batch, provenance=prov)
+    # generator_family (R2-1) rides on the provenance bundle when the execution layer supplies it (the provider's
+    # actor family) so a same-family judge cannot later fake independence; absent it, CO.ingest defaults family to
+    # the model string exactly as before — additive, no behaviour change for legacy callers.
+    m = CO.ingest(conn, run_id, items, prov["model"], batch,
+                  generator_family=prov.get("generator_family"), provenance=prov)
     CO.telemetry(conn, run_id, "generation", prov["model"], actor=prov["actor"], batches=1, items=len(items),
                  input_tokens=prov.get("input_tokens"), output_tokens=prov.get("output_tokens"),
                  wall_seconds=prov.get("wall_seconds"),
@@ -103,6 +107,38 @@ def ingest_judgements(conn: sqlite3.Connection, run_id: str, payload: List[dict]
                  wall_seconds=prov.get("wall_seconds"),
                  note=prov.get("note") or f"judge via {prov['model']} ({prov['model_version']})")
     return m
+
+
+# ── R4-2: the CANONICAL model-execution path (provider-agnostic ModelExecutor) ──────────────────────
+# generate_candidates / judge_run drive the R4-2 executor (execution queue -> cache -> provider -> telemetry) and
+# then feed the EXISTING ingest paths above. The executor produces exactly the provenance bundles + token
+# telemetry those paths require, so a real run satisfies certify_run(require_telemetry=True). The scratchpad-file
+# helpers below remain the manual fallback. `executor` is a kie.qie.execution.ModelExecutor (duck-typed here to
+# avoid importing the execution layer at module load).
+def generate_candidates(conn: sqlite3.Connection, run_id: str, executor, specs: List[dict],
+                        brief: str = None, batch: str = "b1") -> dict:
+    """Generate candidates for `specs` via the executor, then ingest them (with executor-produced provenance +
+    generation telemetry). One concept BRIEF for the batch (built from specs unless one is supplied); the model
+    PROPOSES the candidate array, the deterministic factory later CERTIFIES. Returns the ingest summary."""
+    brief = brief if brief is not None else generator_brief(specs)
+    (payload, provenance) = executor.generate([brief], run_id=run_id)[0]
+    return ingest_candidates(conn, run_id, payload, provenance, batch=batch)
+
+
+def judge_run(conn: sqlite3.Connection, run_id: str, executor) -> dict:
+    """Judge the run's still-'candidate' items via the executor, then ingest the verdicts (with executor-produced
+    judge provenance + judge telemetry). The seeded known-bad controls are appended to the worksheet and verified
+    on ingest (require_controls=True); the item_hash-keyed judge cache short-circuits already-judged identical
+    items inside the executor. Returns the ingest summary."""
+    items = JUDGE.to_judge(conn, run_id)
+    rows = JUDGE.worksheet(items)
+    item_hashes = {r["candidate_id"]: r["item_hash"] for r in conn.execute(
+        "SELECT candidate_id, item_hash FROM candidate WHERE run_id=? AND status='candidate'", (run_id,))}
+    controls = [{k: c[k] for k in ("candidate_id", "class", "subject", "stem", "options", "claims")}
+                for c in JUDGE.judge_control_items()]
+    payload, provenance = executor.judge(rows, item_hashes=item_hashes, brief=JUDGE.JUDGE_BRIEF,
+                                         controls=controls, run_id=run_id)
+    return ingest_judgements(conn, run_id, payload, provenance, require_controls=True)
 
 
 def certify(conn: sqlite3.Connection, run_id: str) -> dict:
