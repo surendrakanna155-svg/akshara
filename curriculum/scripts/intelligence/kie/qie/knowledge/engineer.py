@@ -13,6 +13,7 @@ boxes, front matter and page furniture are gone before it is asked anything, so 
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import sqlite3
@@ -333,9 +334,123 @@ def write_engineer_worksheet(kconn, chapters: List[dict], path: str, book: dict 
     return len(chapters)
 
 
+# ── CONCEPT-IDENTITY INGEST SAFETY (R3-5, #knowledge-ia-5 #knowledge-ia-10) ─────────────────────────
+# concept_id = sha(subject|class|canonical_name) and DELIBERATELY excludes the chapter (spine.concept_id:
+# an id must survive a discipline re-audit unchanged). The cost of that stability is that a bare
+# `INSERT OR REPLACE INTO ki_concept` on ingest can SILENTLY:
+#   (a) COLLAPSE two same-named concepts a class teaches in DIFFERENT chapters / parallel books into one
+#       row — the second REPLACE overwrites the first's chapter_id, section evidence and provenance; and
+#   (b) DEMOTE a row a prior pass already moved to certified/quarantined back to 'proposed' — resetting
+#       disposed knowledge on a re-ingest of stale content.
+# The `ki_gap cross_book_reattribution` residue is the observed footprint of (a). So concept ingest is no
+# longer an unconditional REPLACE. On a concept_id collision the incoming row is dispositioned:
+#   * stored status is NOT 'proposed' (certified|quarantined|rejected)  -> REFUSE + log, never demote (b)
+#   * incoming chapter_id != stored chapter_id                          -> REFUSE + log, keep the first (a)
+#   * same chapter, both 'proposed'                                     -> EXPLICIT, RECORDED merge (c)
+# Refusals/merges are logged to ki_gap (the honest-record sink) with an EVENT-keyed gap_id, so distinct
+# events each get a row yet a re-run of the same sanctioned rebuild is idempotent. Nothing is raised
+# mid-batch: the whole book ingests and the refusals stay queryable evidence afterwards. Standing laws:
+# refuse-and-log over silent collapse; never demote a certified row.
+
+_CONCEPT_COLS = (
+    "concept_id", "chapter_id", "subject", "taught_at_class", "canonical_name", "aliases",
+    "sub_concepts", "prerequisites", "boundary", "evidence_chunks", "evidence_sha256", "evidence_pages",
+    "section_heading", "extraction_basis", "academic_discipline", "discipline_basis",
+    "discipline_confidence", "engineer_model", "status", "created_at")
+
+# ki_gap.kind values this path writes (kept distinct from build.py's corpus-hole kinds).
+GAP_CROSS_CHAPTER = "cross_book_reattribution"        # same id, different chapter — the roadmap residue name
+GAP_WOULD_DEMOTE = "concept_collision_would_demote"   # same id, stored row already disposed (non-proposed)
+GAP_MERGE = "concept_merge"                           # same id, same chapter, both proposed — recorded merge
+
+
+def _merge_json_list(*json_values) -> str:
+    """Union of several json[] values, order-preserving and de-duplicated. Non-string members are compared
+    by their canonical json form so dict/list members don't duplicate. Used only for the recorded merge."""
+    seen, out = set(), []
+    for jv in json_values:
+        for x in _load_json_list(jv):
+            key = x if isinstance(x, str) else json.dumps(x, sort_keys=True, ensure_ascii=False)
+            if key not in seen:
+                seen.add(key)
+                out.append(x)
+    return json.dumps(out, ensure_ascii=False)
+
+
+def log_concept_ingest_event(conn, kind: str, kcid: str, stored, incoming: dict) -> str:
+    """Record a concept-identity ingest event (refusal or recorded merge) as a ki_gap audit row; return its
+    gap_id. The id is keyed on the EVENT identity so two DISTINCT collisions never collapse into one row,
+    while a re-run of the same rebuild is idempotent (INSERT OR REPLACE on the same id). Pure DB write."""
+    stored_chapter = _row_get(stored, "chapter_id")
+    stored_status = _row_get(stored, "status")
+    incoming_chapter = incoming.get("chapter_id")
+    key = f"{kind}|{kcid}|{incoming_chapter}|{stored_chapter}|{stored_status}"
+    gid = "GAP_" + hashlib.sha256(key.encode()).hexdigest()[:14]
+    detail = json.dumps({
+        "concept_id": kcid, "canonical_name": incoming.get("canonical_name"),
+        "stored_chapter_id": stored_chapter, "incoming_chapter_id": incoming_chapter,
+        "stored_status": stored_status,
+        "action": "merged" if kind == GAP_MERGE else "refused",
+    }, ensure_ascii=False)[:500]
+    scope = f"{incoming.get('subject')}|{incoming.get('taught_at_class')}|{incoming.get('canonical_name')}"
+    conn.execute(
+        "INSERT OR REPLACE INTO ki_gap (gap_id, scope, kind, detail, blocks, created_at) VALUES (?,?,?,?,?,?)",
+        (gid, scope[:200], kind, detail, "concept ingest (R3-5)", _now()))
+    return gid
+
+
+def ingest_concept_safe(conn, values: dict) -> str:
+    """Ingest ONE concept row under R3-5 collision safety. `values` carries every _CONCEPT_COLS field (json
+    columns already serialised). Returns the action taken:
+      'inserted'              — no prior row for this concept_id; plain INSERT
+      'merged'                — same concept_id, same chapter, both proposed; recorded, additive merge
+      'refused_cross_chapter' — same concept_id, DIFFERENT chapter; refused + logged, the first row kept
+      'refused_would_demote'  — same concept_id, stored row already disposed (non-proposed); refused + logged
+    Never raises on a collision — refusals are logged and the batch continues (a real sqlite error still
+    propagates). Replaces the old unconditional `INSERT OR REPLACE INTO ki_concept`."""
+    kcid = values["concept_id"]
+    stored = conn.execute(
+        "SELECT concept_id, chapter_id, status, aliases, sub_concepts FROM ki_concept WHERE concept_id=?",
+        (kcid,)).fetchone()
+    if stored is None:
+        conn.execute(
+            f"INSERT INTO ki_concept ({','.join(_CONCEPT_COLS)}) "
+            f"VALUES ({','.join('?' * len(_CONCEPT_COLS))})",
+            tuple(values[c] for c in _CONCEPT_COLS))
+        return "inserted"
+
+    stored_status = _row_get(stored, "status")
+    # (b) NEVER demote a row a prior pass already disposed. A re-ingest of stale content must not reset a
+    #     certified/quarantined/rejected row back to proposed. Refuse + log; leave the stored row untouched.
+    if stored_status != "proposed":
+        log_concept_ingest_event(conn, GAP_WOULD_DEMOTE, kcid, stored, values)
+        return "refused_would_demote"
+
+    # (a) different chapter => cross-book / cross-chapter reattribution. The first-ingested chapter owns the
+    #     id; refuse the second and log so the collision is queryable evidence, not a silent collapse.
+    if _row_get(stored, "chapter_id") != values["chapter_id"]:
+        log_concept_ingest_event(conn, GAP_CROSS_CHAPTER, kcid, stored, values)
+        return "refused_cross_chapter"
+
+    # (c) same name, same chapter, both proposed => an INTENTIONAL, RECORDED merge (not a silent REPLACE).
+    #     Union aliases + sub_concepts additively so nothing the second occurrence carried is lost; keep the
+    #     first row's identity, evidence and provenance. Record the merge before mutating.
+    log_concept_ingest_event(conn, GAP_MERGE, kcid, stored, values)
+    merged_aliases = _merge_json_list(_row_get(stored, "aliases"), values.get("aliases"))
+    merged_sub = _merge_json_list(_row_get(stored, "sub_concepts"), values.get("sub_concepts"))
+    cur = conn.execute(
+        "UPDATE ki_concept SET aliases=?, sub_concepts=? WHERE concept_id=? AND status='proposed'",
+        (merged_aliases, merged_sub, kcid))
+    if cur.rowcount != 1:   # guarded transition — the row was disposed between the SELECT and the UPDATE
+        log_concept_ingest_event(conn, GAP_WOULD_DEMOTE, kcid, stored, values)
+        return "refused_would_demote"
+    return "merged"
+
+
 def ingest_engineer(conn, kconn, payload: List[dict], book: dict, spine: Dict[int, dict],
                     model: str) -> Dict[str, int]:
-    m = {"chapters": 0, "concepts": 0, "rejects": 0, "unmatched": 0, "no_discipline": 0}
+    m = {"chapters": 0, "concepts": 0, "rejects": 0, "unmatched": 0, "no_discipline": 0,
+         "concepts_merged": 0, "refused_cross_chapter": 0, "refused_would_demote": 0}
     for ch in payload:
         n = ch.get("chapter_no")
         if n not in spine:
@@ -401,18 +516,30 @@ def ingest_engineer(conn, kconn, payload: List[dict], book: dict, spine: Dict[in
             # content-address each ref to the substrate at propose time (R1-4): store the sha alongside
             # the positional chunk_id so later drift (re-chunk) is detectable and the gate can verify it.
             ev_sha = evidence_sha_for(kconn, ev_chunks)
-            conn.execute(
-                "INSERT OR REPLACE INTO ki_concept (concept_id, chapter_id, subject, taught_at_class, "
-                "canonical_name, aliases, sub_concepts, prerequisites, boundary, evidence_chunks, "
-                "evidence_sha256, evidence_pages, section_heading, extraction_basis, academic_discipline, "
-                "discipline_basis, discipline_confidence, engineer_model, status, created_at) "
-                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                (kcid, cid, book["subject"], book["taught_at_class"], name,
-                 json.dumps(c.get("aliases") or []), json.dumps(c.get("sub_concepts") or []),
-                 json.dumps(c.get("prerequisites") or []), json.dumps(c.get("boundary") or {}),
-                 json.dumps(ev_chunks), json.dumps(ev_sha), json.dumps(ev_pages),
-                 c.get("section_heading"), basis, c_disc, c_basis, c_conf, model, "proposed", _now()))
-            m["concepts"] += 1
+            # R3-5: route through the collision-safe upsert instead of a bare INSERT OR REPLACE, so a
+            # same-name concept from a DIFFERENT chapter/book cannot silently collapse this row and a
+            # non-proposed row can never be demoted. Refusals/merges are logged; the batch never dies.
+            values = {
+                "concept_id": kcid, "chapter_id": cid, "subject": book["subject"],
+                "taught_at_class": book["taught_at_class"], "canonical_name": name,
+                "aliases": json.dumps(c.get("aliases") or []),
+                "sub_concepts": json.dumps(c.get("sub_concepts") or []),
+                "prerequisites": json.dumps(c.get("prerequisites") or []),
+                "boundary": json.dumps(c.get("boundary") or {}),
+                "evidence_chunks": json.dumps(ev_chunks), "evidence_sha256": json.dumps(ev_sha),
+                "evidence_pages": json.dumps(ev_pages), "section_heading": c.get("section_heading"),
+                "extraction_basis": basis, "academic_discipline": c_disc, "discipline_basis": c_basis,
+                "discipline_confidence": c_conf, "engineer_model": model, "status": "proposed",
+                "created_at": _now()}
+            action = ingest_concept_safe(conn, values)
+            if action == "inserted":
+                m["concepts"] += 1
+            elif action == "merged":
+                m["concepts_merged"] += 1
+            elif action == "refused_cross_chapter":
+                m["refused_cross_chapter"] += 1
+            elif action == "refused_would_demote":
+                m["refused_would_demote"] += 1
 
         for r in ch.get("rejects") or []:
             _reject(conn, book, r, f"engineer({model})")
