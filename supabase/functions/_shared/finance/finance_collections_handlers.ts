@@ -10,6 +10,7 @@ import {
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { emitMutationAudit, financeAudit } from "../audit/mutation_audit_catalog.ts";
+import { recordMutationAudit } from "../audit/audit_repository.ts";
 import {
   CancellationReasonRequiredError,
   CollectionAmountError,
@@ -319,7 +320,6 @@ export async function handleCreateCollection(
         idempotencyKey: req.headers.get("Idempotency-Key") ??
           req.headers.get("idempotency-key") ?? undefined,
       });
-      const { recordMutationAudit } = await import("../audit/audit_repository.ts");
       await recordMutationAudit(
         db,
         auth.claims,

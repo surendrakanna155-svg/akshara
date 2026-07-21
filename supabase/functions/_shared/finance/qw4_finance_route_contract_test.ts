@@ -311,3 +311,28 @@ Deno.test("QA-B-016: GET /finance/settings is readable by a viewFinance holder (
   const denied = await call("GET", "/finance/settings", ["viewInventory"]);
   assertEquals(denied?.status, 403);
 });
+
+// ── ICA-F8: legacy (non-UUID) id segments still route to their handler ─────────
+// `routeFinance` previously ran a no-op `for (const arg of match.args)` loop that
+// tested `!UUID_SEGMENT.test(arg)` but did nothing in its body — dead code that
+// merely *looked* like it validated/allowed legacy ids. It was deleted. This is
+// the behavioural guard that the deletion changed nothing: the id-segment routes
+// use `([^/]+)` (never a UUID-constrained pattern), so a non-UUID legacy id like
+// `legacy-mock-0001` (contains "-", is not a UUID) must still resolve to its
+// handler and reach the permission gate — holder → 503, non-holder → 403 — never
+// a 404/route-miss from any id-shape rejection.
+Deno.test("ICA-F8: a finance route with a non-UUID legacy id segment still routes to its handler (no dead-loop id gating)", async () => {
+  const legacyId = "legacy-mock-0001";
+  const holder = await call("GET", `/finance/receipts/${legacyId}`, ["viewFinance"]);
+  assertEquals(
+    holder?.status,
+    503,
+    `legacy id should route + pass the gate (503), got ${holder?.status}`,
+  );
+  const denied = await call("GET", `/finance/receipts/${legacyId}`, ["viewInventory"]);
+  assertEquals(
+    denied?.status,
+    403,
+    `legacy id should still reach the gate and be denied (403), got ${denied?.status}`,
+  );
+});

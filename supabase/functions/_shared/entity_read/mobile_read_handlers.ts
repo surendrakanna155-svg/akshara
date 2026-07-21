@@ -11,6 +11,22 @@ import {
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { listEnvelope } from "../finance/finance_mapper.ts";
+import {
+  buildDefaultParentSnapshot,
+  buildDefaultStudentSnapshot,
+  buildFeeCertificateData,
+  listParentLeaveRequests,
+  loadStudentParentSnapshotContext,
+  loadStudentSnapshotContext,
+  overlayAttendanceSnapshotFromRecords,
+  overlayExamsSnapshotFromResults,
+  overlayFeesSnapshotFromFinance,
+  overlayParentHomeworkDueState,
+  overlayParentHomeworkFromRealState,
+  overlayReceiptsFromFinance,
+  overlayStudentHomeworkFromSubmissions,
+  overlayTimetableSnapshotFromSlots,
+} from "../pilot/pilot_operations_repository.ts";
 import type { StudentScopedEntityReadStore } from "./student_scoped_entity_read_store.ts";
 
 function parsePagination(url: URL): { page: number; pageSize: number } {
@@ -85,10 +101,6 @@ export function createParentScopedReadHandlers(
       if (!(error instanceof store.SnapshotNotFoundError)) {
         throw error;
       }
-      const {
-        buildDefaultParentSnapshot,
-        loadStudentParentSnapshotContext,
-      } = await import("../pilot/pilot_operations_repository.ts");
       const context = await loadStudentParentSnapshotContext(
         db,
         orgId,
@@ -128,9 +140,6 @@ export function createParentScopedReadHandlers(
           entityType,
         );
         if (entityType === "snapshot_fees") {
-          const { overlayFeesSnapshotFromFinance } = await import(
-            "../pilot/pilot_operations_repository.ts"
-          );
           return await overlayFeesSnapshotFromFinance(
             db,
             orgId,
@@ -140,9 +149,6 @@ export function createParentScopedReadHandlers(
           );
         }
         if (entityType === "snapshot_exams") {
-          const { overlayExamsSnapshotFromResults } = await import(
-            "../pilot/pilot_operations_repository.ts"
-          );
           return await overlayExamsSnapshotFromResults(
             db,
             orgId,
@@ -156,10 +162,6 @@ export function createParentScopedReadHandlers(
           // (teacher attachment + the child's submission note/attachment/grade),
           // then derive overdue from the real dueDate (HWK-1). Both scoped to the
           // linked child under RLS.
-          const {
-            overlayParentHomeworkFromRealState,
-            overlayParentHomeworkDueState,
-          } = await import("../pilot/pilot_operations_repository.ts");
           const enriched = await overlayParentHomeworkFromRealState(
             db,
             orgId,
@@ -212,9 +214,6 @@ export function createParentScopedReadHandlers(
           studentIdResult,
           "snapshot_attendance",
         );
-        const { overlayAttendanceSnapshotFromRecords } = await import(
-          "../pilot/pilot_operations_repository.ts"
-        );
         const merged = await overlayAttendanceSnapshotFromRecords(
           db,
           orgId,
@@ -263,9 +262,6 @@ export function createParentScopedReadHandlers(
           schoolId,
           studentIdResult,
           "snapshot_timetable",
-        );
-        const { overlayTimetableSnapshotFromSlots } = await import(
-          "../pilot/pilot_operations_repository.ts"
         );
         return await overlayTimetableSnapshotFromSlots(
           db,
@@ -406,9 +402,6 @@ export function createParentScopedReadHandlers(
 
     try {
       const result = await runTenant(config, auth.claims, async (db) => {
-        const { overlayReceiptsFromFinance } = await import(
-          "../pilot/pilot_operations_repository.ts"
-        );
         return await overlayReceiptsFromFinance(
           db,
           orgId,
@@ -463,9 +456,6 @@ export function createParentScopedReadHandlers(
 
     try {
       const certificate = await runTenant(config, auth.claims, async (db) => {
-        const { buildFeeCertificateData } = await import(
-          "../pilot/pilot_operations_repository.ts"
-        );
         return await buildFeeCertificateData(
           db,
           orgId,
@@ -505,9 +495,6 @@ export function createParentScopedReadHandlers(
 
     try {
       const result = await runTenant(config, auth.claims, async (db) => {
-        const { listParentLeaveRequests } = await import(
-          "../pilot/pilot_operations_repository.ts"
-        );
         return await listParentLeaveRequests(
           db,
           orgId,
@@ -570,10 +557,6 @@ export async function resolveStudentSnapshot(
     if (!(error instanceof store.SnapshotNotFoundError)) {
       throw error;
     }
-    const {
-      buildDefaultStudentSnapshot,
-      loadStudentSnapshotContext,
-    } = await import("../pilot/pilot_operations_repository.ts");
     const context = await loadStudentSnapshotContext(db, orgId, schoolId, studentId);
     return buildDefaultStudentSnapshot(entityType, context);
   }
@@ -620,9 +603,6 @@ export function createStudentScopedReadHandlers(
           entityType,
         );
         if (entityType === "snapshot_exams") {
-          const { overlayExamsSnapshotFromResults } = await import(
-            "../pilot/pilot_operations_repository.ts"
-          );
           return await overlayExamsSnapshotFromResults(
             db,
             orgId,
@@ -635,9 +615,6 @@ export function createStudentScopedReadHandlers(
           // HWK-1 — derive overdue from each item's real dueDate rather than a
           // free-text label. Pure over the resolved snapshot; no-op for items
           // without a dueDate (legacy label-only homework).
-          const { overlayParentHomeworkDueState } = await import(
-            "../pilot/pilot_operations_repository.ts"
-          );
           return overlayParentHomeworkDueState(
             resolved as Record<string, unknown>,
           );
@@ -683,9 +660,6 @@ export function createStudentScopedReadHandlers(
           schoolId,
           studentId,
           "snapshot_attendance",
-        );
-        const { overlayAttendanceSnapshotFromRecords } = await import(
-          "../pilot/pilot_operations_repository.ts"
         );
         const merged = await overlayAttendanceSnapshotFromRecords(
           db,
@@ -733,9 +707,6 @@ export function createStudentScopedReadHandlers(
           schoolId,
           studentId,
           "snapshot_timetable",
-        );
-        const { overlayTimetableSnapshotFromSlots } = await import(
-          "../pilot/pilot_operations_repository.ts"
         );
         return await overlayTimetableSnapshotFromSlots(
           db,
@@ -796,9 +767,6 @@ export function createStudentScopedReadHandlers(
         // (+ grade/comment) even if the review write-back to student_entities
         // was missed. Keeps the student list authoritative against real data.
         if (entityType === "homework_item") {
-          const { overlayStudentHomeworkFromSubmissions } = await import(
-            "../pilot/pilot_operations_repository.ts"
-          );
           const items = await overlayStudentHomeworkFromSubmissions(
             db,
             orgId,
@@ -1008,9 +976,6 @@ export function createTeacherMobileReadHandlers(
     try {
       const payload = await runTenant(config, auth.claims, async (db) => {
         const snapshot = await store.getSnapshot(db, orgId, schoolId, "snapshot_timetable");
-        const { overlayTimetableSnapshotFromSlots } = await import(
-          "../pilot/pilot_operations_repository.ts"
-        );
         return await overlayTimetableSnapshotFromSlots(
           db,
           orgId,
