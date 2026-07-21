@@ -83,5 +83,13 @@ void main() {
       expect(modules.contains(AdminModule.sis), isTrue);
       expect(modules.contains(AdminModule.controlCenter), isTrue);
     });
+
+    test('School Administration includes the Exams module (UXR-D2)', () {
+      // Exams is a first-class academic surface for a school admin; it must be
+      // in the workspace module set so it is reachable from the admin hub /
+      // mobile nav (not just via a typed URL).
+      final modules = kWorkspaceCatalog[WorkspaceId.schoolAdministration]!.modules;
+      expect(modules.contains(AdminModule.exams), isTrue);
+    });
   });
 }

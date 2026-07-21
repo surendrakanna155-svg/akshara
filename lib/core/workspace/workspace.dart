@@ -70,6 +70,14 @@ const Map<WorkspaceId, Workspace> kWorkspaceCatalog = {
       AdminModule.marketing,
       AdminModule.finance,
       AdminModule.sis,
+      // UXR-D2 — Exams belongs in the admin workspace catalog next to SIS as an
+      // academic surface. The module, its route (RouteNames.examAdministration),
+      // and its nav destination all already exist; it was simply absent from the
+      // schoolAdministration module set, so workspaceScopedNavDestinationsProvider
+      // stripped it and a school admin could not reach Exams from the admin hub /
+      // mobile nav. It sits 6th in kAllAdminNavDestinations order, so it lands in
+      // the "More" catalog — never a 5th competing primary bottom-nav tab.
+      AdminModule.exams,
       AdminModule.hr,
       AdminModule.employee,
       AdminModule.management,
