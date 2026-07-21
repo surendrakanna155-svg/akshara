@@ -1,4 +1,5 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
+import { type DomainEvent, dispatchDomainEvent } from "./domain_event_subscribers.ts";
 
 const MAX_ATTEMPTS = 5;
 
@@ -22,9 +23,20 @@ export async function publishPendingDomainEvents(
   }
 > {
   const pending = await db.queryObject<
-    { id: string; attempt_count: number; school_id: string | null }
+    {
+      id: string;
+      attempt_count: number;
+      school_id: string | null;
+      event_type: string;
+      payload: Record<string, unknown> | null;
+      correlation_id: string | null;
+      source_module: string;
+      created_at: string;
+    }
   >(
-    `SELECT id::text, attempt_count, school_id::text FROM domain_events
+    `SELECT id::text, attempt_count, school_id::text,
+            event_type, payload, correlation_id, source_module, created_at
+     FROM domain_events
      WHERE organization_id = $1
        AND status IN ('pending', 'failed')
        AND (next_retry_at IS NULL OR next_retry_at <= timezone('utc', now()))
@@ -41,6 +53,25 @@ export async function publishPendingDomainEvents(
   for (const row of pending) {
     const nextAttempt = row.attempt_count + 1;
     try {
+      // Deliver to every registered in-process subscriber whose eventTypes
+      // match BEFORE the terminal publish (ICA-G1 seam). At-least-once: if any
+      // subscriber throws, the UPDATE below is skipped, so the event stays
+      // pending/failed and the SAME event is redelivered on the next drain
+      // (subscribers must be idempotent). With zero subscribers this is a no-op
+      // and "published" honestly means "durably logged". A throw here for THIS
+      // event does not block the loop — the next event is still processed.
+      const event: DomainEvent = {
+        id: row.id,
+        organizationId: orgId,
+        schoolId: row.school_id,
+        eventType: row.event_type,
+        payload: row.payload ?? {},
+        correlationId: row.correlation_id,
+        sourceModule: row.source_module,
+        createdAt: new Date(row.created_at).toISOString(),
+      };
+      await dispatchDomainEvent(event, db);
+
       await db.queryObject(
         `UPDATE domain_events
          SET status = 'published',
