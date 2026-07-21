@@ -151,6 +151,68 @@ Deno.test("getAcademicAggregate computes attendance, pass rate and per-class/sub
   assertEquals(agg.subjectPerformance[0].atRiskCount, 5);
 });
 
+// ICA-H3 regression: a class with a zero attendance denominator must report
+// `null` ("no data" / "—"), NEVER a fabricated 0% — matching the canonical
+// attendance_percentage null-on-zero-denominator contract.
+Deno.test("getAcademicAggregate (ICA-H3): a zero-denominator class -> attendancePercent is null, not 0", async () => {
+  const rows: MockRows = {
+    // 10-A attended 8 of 10 = 80%. 9-B has a zero denominator (every marked day
+    // was excused): "no data" -> null, NOT a catastrophic 0% for an unmarked class.
+    attendance: [
+      { class_label: "10-A", attended: "8", denominator: "10", total: "10" },
+      { class_label: "9-B", attended: "0", denominator: "0", total: "4" },
+    ],
+    marksOverall: { passed: "0", total: "0", avg_percent: "0" },
+    marksByClass: [],
+    marksBySubject: [],
+  };
+  const agg = await getAcademicAggregate(mockClient(rows), ORG, SCHOOL);
+  assertEquals(agg.attendanceByClass, [
+    { classLabel: "10-A", attendancePercent: 80 },
+    { classLabel: "9-B", attendancePercent: null }, // null, never 0
+  ]);
+});
+
+// ICA-H3 regression: the school-wide average is a pooled ratio, so a null
+// (zero-denominator) class is excluded from BOTH numerator and denominator and
+// can NEVER drag the school figure down. {A=80%, B=null} => 80%, NOT 40%.
+Deno.test("getAcademicAggregate (ICA-H3): school-wide average excludes null classes (80%, not 40%)", async () => {
+  const rows: MockRows = {
+    attendance: [
+      { class_label: "A", attended: "8", denominator: "10", total: "10" }, // 80%
+      { class_label: "B", attended: "0", denominator: "0", total: "3" }, // null
+    ],
+    marksOverall: { passed: "0", total: "0", avg_percent: "0" },
+    marksByClass: [],
+    marksBySubject: [],
+  };
+  const agg = await getAcademicAggregate(mockClient(rows), ORG, SCHOOL);
+  assertEquals(agg.avgAttendancePercent, 80); // null class excluded, not (80+0)/2=40
+  assertEquals(agg.attendanceByClass[1].attendancePercent, null);
+});
+
+// ICA-H3 regression: when every class has a zero denominator there is genuinely
+// no attendance data — every per-class value is null (no fabricated 0%).
+Deno.test("getAcademicAggregate (ICA-H3): all-classes-null -> every per-class value is null", async () => {
+  const rows: MockRows = {
+    attendance: [
+      { class_label: "A", attended: "0", denominator: "0", total: "5" },
+      { class_label: "B", attended: "0", denominator: "0", total: "2" },
+    ],
+    marksOverall: { passed: "0", total: "0", avg_percent: "0" },
+    marksByClass: [],
+    marksBySubject: [],
+  };
+  const agg = await getAcademicAggregate(mockClient(rows), ORG, SCHOOL);
+  // No class shows a fabricated 0% — every per-class value is null ("no data").
+  assertEquals(agg.attendanceByClass.map((c) => c.attendancePercent), [null, null]);
+  // School scalar: the pooled denominator is 0, so there is genuinely no
+  // attendance data. It stays a non-null number (0) so the management payload
+  // builders keep compiling; the honest "no data" signal is that EVERY per-class
+  // value is null. Rendering the all-null school scalar as "—" is a client follow-up.
+  assertEquals(agg.avgAttendancePercent, 0);
+});
+
 // ---------------------------------------------------------------------------
 // payload builders — fixtures
 // ---------------------------------------------------------------------------

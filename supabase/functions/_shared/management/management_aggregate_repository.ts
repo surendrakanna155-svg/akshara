@@ -82,8 +82,14 @@ export interface AcademicAggregate {
     avgPercent: number;
     atRiskCount: number;
   }>;
-  /** PRA-P2-22: real per-class attendance % (canonical formula), NOT the school scalar. */
-  attendanceByClass: Array<{ classLabel: string; attendancePercent: number }>;
+  /**
+   * PRA-P2-22: real per-class attendance % (canonical formula), NOT the school
+   * scalar. ICA-H3: `attendancePercent` is `null` — rendered "—"/"no data" — when a
+   * class has a zero attendance denominator (nothing marked yet, or every marked
+   * day was excused). Per the canonical `attendance_percentage` contract it is
+   * NEVER a fabricated 0 (which would show a catastrophic 0% for an unmarked class).
+   */
+  attendanceByClass: Array<{ classLabel: string; attendancePercent: number | null }>;
 }
 
 // A mark counts as a pass at 33% of max (standard Indian board threshold).
@@ -129,11 +135,23 @@ export async function getAcademicAggregate(
     attTotal += Number(r.total);
     return {
       classLabel: r.class_label,
+      // ICA-H3: a zero denominator (nothing marked, or every marked day excused)
+      // is "no data" -> null (client renders "—"), NEVER a fabricated 0% that
+      // would misreport an unmarked class as a catastrophic 0. This matches the
+      // canonical attendance_percentage null-on-zero-denominator contract.
       attendancePercent: denominator > 0
         ? Math.round((attended / denominator) * 100)
-        : 0,
+        : null,
     };
   });
+  // School-wide average is a POOLED ratio (Σ attended / Σ denominator), NOT a mean
+  // of the per-class percentages: a zero-denominator (null) class contributes
+  // attended=0 AND denominator=0, so it is excluded from BOTH sides and can never
+  // drag the school figure down. When every class is null (Σ denominator = 0) there
+  // is no attendance data; `hasAttendance` (below) carries that "no data" signal.
+  // (The scalar stays a non-null number so the management payload builders — which
+  // format it unconditionally — keep compiling; rendering it as "—" on the all-null
+  // case is a client-side follow-up, see report.)
   const avgAttendancePercent = attSchoolDenominator > 0
     ? Math.round((attSchoolAttended / attSchoolDenominator) * 100)
     : 0;
