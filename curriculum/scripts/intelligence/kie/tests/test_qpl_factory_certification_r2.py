@@ -80,7 +80,7 @@ def _prepare(conn, run="R", spec="S1", distractors=None, uncertifiable=None):
 
 def _judge(conn, cid, run="R", verdict="accept", judge_family="human-review", chosen="b"):
     JUDGE.ingest(conn, run, [{"candidate_id": cid, "verdict": verdict, "chosen_label": chosen}],
-                 "examiner-model", judge_family=judge_family)
+                 "examiner-model", judge_family=judge_family, require_controls=False)
 
 
 class RI3FullCertifiedRowInvariant(unittest.TestCase):
@@ -228,11 +228,11 @@ class RI8SameActorCannotPromote(unittest.TestCase):
             cid = _prepare(conn)
             # explicit same-family judge -> independent stored 0; different family -> 1
             JUDGE.ingest(conn, "R", [{"candidate_id": cid, "verdict": "accept", "chosen_label": "b"}],
-                         "generator-agent", judge_family="generator-agent")
+                         "generator-agent", judge_family="generator-agent", require_controls=False)
             self.assertEqual(conn.execute("SELECT independent FROM judge_verdict_latest WHERE candidate_id=?",
                                           (cid,)).fetchone()[0], 0)
             JUDGE.ingest(conn, "R", [{"candidate_id": cid, "verdict": "accept", "chosen_label": "b"}],
-                         "human-examiner", judge_family="human-review")
+                         "human-examiner", judge_family="human-review", require_controls=False)
             self.assertEqual(conn.execute("SELECT independent FROM judge_verdict_latest WHERE candidate_id=?",
                                           (cid,)).fetchone()[0], 1)
         finally:
@@ -244,7 +244,8 @@ class RI8SameActorCannotPromote(unittest.TestCase):
             cid = _prepare(conn)
             # the judge self-reports answer_correct=True but chose the WRONG label -> stored answer_correct=0
             JUDGE.ingest(conn, "R", [{"candidate_id": cid, "verdict": "accept", "chosen_label": "a",
-                                      "answer_correct": True}], "human-examiner", judge_family="human-review")
+                                      "answer_correct": True}], "human-examiner", judge_family="human-review",
+                         require_controls=False)
             self.assertEqual(conn.execute("SELECT answer_correct FROM judge_verdict_latest WHERE candidate_id=?",
                                           (cid,)).fetchone()[0], 0)
         finally:
@@ -443,6 +444,78 @@ class LiveEstateFailsRI3ReadOnly(unittest.TestCase):
 
     def test_question_bank_legacy_certified_fail_ri3(self):
         self._check(config.KIE_HOME / "qpl_question_bank.db")
+
+
+class AdversarialVerifierR2Regression(unittest.TestCase):
+    """Locks for the four holes the R2 adversarial verifier found — each was REFUTED, fixed, and pinned here."""
+
+    _ST = {"givens": {"F": {"value": 12}, "m": {"value": 3}, "a": {"value": None}}, "solve_for": "a"}
+    _OPTS = {"a": "36", "b": "4", "c": "0.25", "d": "9"}
+    _FLAT = {"givens": {"m": {"value": 2}, "v": {"value": 3}, "K": {"value": None}},
+             "relation": "K = m*v**2/2", "solve_for": "K",
+             "steps": [{"out": "K", "inputs": ["m", "v"], "relation": "K = m*v**2/2"}]}
+    _CTX = {"spec": {"lane": "STRUCTURED_NUMERIC", "subject": "Physics"}, "seen_norm": {}, "corpus": [],
+            "certified_relations": {}, "certified_relation_eqs": []}
+
+    # ── HOLE 1 (R2-2, production-reachable): all-uncertifiable distractors used to pass with ZERO proven ──
+    def test_all_uncertifiable_distractors_do_not_pass(self):
+        res = G.verify_distractors(self._ST, self._OPTS, "b", {}, uncertifiable=["a", "c", "d"])
+        self.assertFalse(res["ok"], "declaring EVERY wrong option uncertifiable must NOT pass the gate")
+
+    def test_bare_minority_proven_is_refused(self):
+        # 1 proven, 2 uncertifiable of 3 wrong — not a proven majority => refused.
+        res = G.verify_distractors(self._ST, self._OPTS, "b",
+                                   {"a": _DISTRACTORS["a"]}, uncertifiable=["c", "d"])
+        self.assertFalse(res["ok"])
+
+    def test_legit_minority_uncertifiable_still_allowed(self):
+        # the fix must not over-restrict: 2 proven + 1 uncertifiable stays honest.
+        res = G.verify_distractors(self._ST, self._OPTS, "b",
+                                   {"a": _DISTRACTORS["a"], "c": _DISTRACTORS["c"]}, uncertifiable=["d"])
+        self.assertTrue(res["ok"])
+
+    # ── HOLE 2 (R2-1): a NULL judge_family read as cross-family and certified ──
+    def test_null_judge_family_cannot_certify(self):
+        conn = CO.open_store(":memory:")
+        try:
+            cid = _prepare(conn)
+            # bypass judge.ingest's same-actor default — write independent=1 with a NULL family directly
+            CO.record_judge(conn, cid, "mystery-judge", True, {"verdict": "accept"}, judge_family=None)
+            conn.commit()
+            m = CERT.certify_run(conn, "R")
+            self.assertEqual(m["certified"], 0, "a NULL judge_family must never certify (fail-closed)")
+            self.assertEqual(conn.execute("SELECT certification_class FROM candidate WHERE candidate_id=?",
+                                          (cid,)).fetchone()[0], CO.CERT_PROVISIONAL)
+            self.assertEqual(len(CO.product_inventory(conn, "R")), 0)
+        finally:
+            conn.close()
+
+    # ── HOLE 3 (R2-4): a claimed depth declared as a STRING skipped the BLOCKING gate ──
+    def test_string_claimed_depth_still_blocks(self):
+        cand = {"stem": "A body of mass 2 kg moves at 3 m/s. Find its kinetic energy.",
+                "options": {"a": "9 J", "b": "18 J"}, "answer_label": "a", "answer_value": "9",
+                "claimed": {"depth": "3"}, "structure": self._FLAT}       # earned 1, claimed "3" (string)
+        by = {g["gate"]: g for g in G.run_gates(cand, self._CTX)}
+        self.assertIn("depth_agreement", by)
+        self.assertFalse(by["depth_agreement"]["ok"], "string depth '3' vs earned 1 must still FAIL")
+
+    def test_matching_string_depth_agrees(self):
+        cand = {"stem": "A body of mass 2 kg moves at 3 m/s. Find its kinetic energy.",
+                "options": {"a": "9 J", "b": "18 J"}, "answer_label": "a", "answer_value": "9",
+                "claimed": {"depth": "1"}, "structure": self._FLAT}       # earned 1, claimed "1" (string)
+        by = {g["gate"]: g for g in G.run_gates(cand, self._CTX)}
+        self.assertTrue(by["depth_agreement"]["ok"], "string depth '1' matching earned 1 must AGREE")
+
+    # ── HOLE 4 (R2-1 gap): a judge that DROPPED all seeded controls escaped the abort ──
+    def test_judge_dropping_all_controls_aborts(self):
+        conn = CO.open_store(":memory:")
+        try:
+            cid = _prepare(conn)
+            with self.assertRaises(JUDGE.JudgeControlBreach):
+                JUDGE.ingest(conn, "R", [{"candidate_id": cid, "verdict": "accept", "chosen_label": "b"}],
+                             "human-examiner", judge_family="human-review")   # require_controls defaults True
+        finally:
+            conn.close()
 
 
 if __name__ == "__main__":

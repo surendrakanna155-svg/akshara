@@ -182,7 +182,7 @@ def write_worksheet(items: List[dict], path: str, with_controls: bool = True) ->
 
 
 def ingest(conn: sqlite3.Connection, run_id: str, payload: List[dict], judge_model: str,
-           judge_family: str = None, independent: bool = None) -> Dict[str, int]:
+           judge_family: str = None, independent: bool = None, require_controls: bool = True) -> Dict[str, int]:
     """Record judge verdicts. Independence is COMPUTED, never taken from the caller (R2-1):
 
       * If any planted control verdicts are present, they are checked (JudgeControlBreach on a miss) and then
@@ -198,7 +198,12 @@ def ingest(conn: sqlite3.Connection, run_id: str, payload: List[dict], judge_mod
     """
     control_ids = {c["candidate_id"] for c in judge_control_items()}
     control_verdicts = {v.get("candidate_id"): v for v in payload if v.get("candidate_id") in control_ids}
-    if control_verdicts:                       # controls were injected into this pass — enforce them
+    # A real judge pass is issued via worksheet_with_controls, which ALWAYS injects the seeded known-bad items,
+    # so require_controls=True (default) demands they come back disposed. A judge that DROPS them all
+    # (control_verdicts=={}) therefore no longer escapes the abort (adversarial-verifier fix — the old
+    # `if control_verdicts:` guard only fired when at least one survived). A caller that deliberately issued a
+    # control-free worksheet opts out with require_controls=False.
+    if require_controls or control_verdicts:
         check_judge_controls(control_verdicts)
 
     m = {"in": 0, "accept": 0, "reject": 0, "quarantine": 0, "unmatched": 0,

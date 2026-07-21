@@ -77,7 +77,7 @@ class GenerationEndToEnd(unittest.TestCase):
                 "candidate_id": cid, "verdict": "accept", "chosen_label": "b", "well_posed": True,
                 "curriculum_ok": True, "unique_answer": True, "concepts_real": True,
                 "difficulty_plausible": True, "distractors_plausible": True}],
-                "human-examiner", judge_family="human-review")
+                "human-examiner", judge_family="human-review", require_controls=False)
             self.assertEqual(G.certify(conn, "R")["certified"], 1)
             self.assertEqual(len(CO.product_inventory(conn, "R")), 1)  # certified -> product-visible
         finally:

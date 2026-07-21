@@ -66,6 +66,18 @@ QUARANTINE = "quarantine"  # a certification EVENT — needs review, never silen
 ADVISORY = "advisory"      # measured and reported; does not by itself block
 
 
+def _as_int(x):
+    """Coerce a declared integer-ish value (int, '3', 3.0) to int, or None if it cannot be trusted as one.
+    `bool` is rejected (True is not a depth). Used so a self-refuted-metadata gate cannot be skipped by
+    declaring the value as a string/float instead of an int."""
+    if isinstance(x, bool):
+        return None
+    try:
+        return int(x)
+    except (TypeError, ValueError):
+        return None
+
+
 # ── identity / dedup ────────────────────────────────────────────────────────────────────────────────
 def item_hash(stem: str, options: Dict[str, str], answer: str) -> str:
     opts = "|".join(f"{k}={v}" for k, v in sorted((options or {}).items()))
@@ -397,8 +409,14 @@ def verify_distractors(structure: dict, options: dict, answer_label: str, distra
             unverified.append({"label": L, "reason": f"mis_relation computes {res['solver_answer']!r}, "
                                                      f"not the option: {why}"})
     ok = not unverified
+    if wrong:
+        # 'uncertifiable' is an escape for a distractor with no nameable mechanical error — but it must stay a
+        # MINORITY. If every wrong option hides behind it (or fewer than half are positively proven), the gate
+        # is vacuous: zero traps proven yet ok=True. (adversarial-verifier fix — all-uncertifiable must NOT pass.)
+        ok = ok and len(verified) >= 1 and (len(verified) * 2 >= len(wrong))
     return {"ok": ok, "verified": verified, "unverified": unverified, "uncertifiable": sorted(uncert),
-            "detail": (f"verified={verified} uncertifiable={sorted(uncert)} unverified={unverified}")}
+            "detail": (f"verified={verified} uncertifiable={sorted(uncert)} unverified={unverified} "
+                       f"(need >=1 proven and a proven majority of {len(wrong)} wrong options)")}
 
 
 # ── unit normalization for the DIMENSIONAL gate ─────────────────────────────────────────────────────
@@ -611,9 +629,13 @@ def run_gates(cand: dict, ctx: dict, stage: str = "candidate") -> List[dict]:
             reproduced, why = False, rep.get("reason", "replay did not execute")
         add("depth_computable", rep["ok"], ADVISORY,
             f"earned_depth={earned} replay_ok={rep['ok']} reproduced_answer={reproduced} :: {rep.get('reason')}")
-        if isinstance(claimed_d, int):
-            add("depth_agreement", bool(rep["ok"] and reproduced and earned == claimed_d), QUARANTINE,
-                f"claimed={claimed_d} earned_replay_depth={earned} replay_ok={rep['ok']} "
+        # A claimed depth is checked regardless of its declared TYPE (adversarial-verifier fix — a string "1"
+        # or float must not skip the BLOCKING gate). A present-but-uncoercible claim (garbage) fails closed.
+        if claimed_d is not None:
+            claimed_i = _as_int(claimed_d)
+            add("depth_agreement",
+                bool(rep["ok"] and reproduced and claimed_i is not None and earned == claimed_i), QUARANTINE,
+                f"claimed={claimed_d!r} coerced={claimed_i} earned_replay_depth={earned} replay_ok={rep['ok']} "
                 f"reproduced_answer={reproduced} ({why})")
 
     # ── 11. COMPOSITION HONESTY (HARNESS) — a 'multi' claim must be backed by MORE THAN two terms

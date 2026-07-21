@@ -147,7 +147,12 @@ def certify_run(conn: sqlite3.Connection, run_id: str) -> Dict[str, int]:
         # comparison must BOTH hold. A same-actor 'accept' can never satisfy 'certified'; it lands provisional.
         gen_fam = CO.actor_family(r["generator_family"] or "")
         jud_fam = CO.actor_family(r["judge_family"] or "")
-        cross_family = bool(jud_fam and gen_fam and jud_fam != gen_fam)
+        # FAIL-CLOSED (adversarial-verifier fix): an absent/unknown judge_family must NEVER read as cross-family.
+        # actor_family(NULL)=='unknown', and 'unknown' != generator would otherwise certify a judge that declared
+        # no family — the same-actor default lives in judge.ingest, but certify re-derives independently and must
+        # not depend on it. A family is only 'known' when it is an explicit, non-sentinel string.
+        known = jud_fam not in ("", "unknown") and gen_fam not in ("", "unknown")
+        cross_family = bool(known and jud_fam != gen_fam)
         independent_judge = (r["judge_independent"] == 1) and cross_family
         if independent_judge:
             CO.mark_certified(conn, cid, CO.EVIDENCE_SYMPY, CO.CERT_CERTIFIED, REASON_CERTIFIED,

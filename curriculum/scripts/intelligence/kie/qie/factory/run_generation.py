@@ -69,7 +69,10 @@ def judge_worksheet(conn: sqlite3.Connection, run_id: str) -> List[dict]:
 
 def ingest_judgements(conn: sqlite3.Connection, run_id: str, payload: List[dict],
                       model: str = "judge-agent", independent: bool = False) -> dict:
-    return JUDGE.ingest(conn, run_id, payload, model, independent=independent)
+    # Legacy single-actor path: it issues a plain worksheet (no seeded controls) and can only ever produce
+    # PROVISIONAL rows (its judge shares the generator family), so control enforcement does not apply here.
+    # TODO(R2-3/R4-2): the real cross-family judge lane must issue worksheet_with_controls and keep the default.
+    return JUDGE.ingest(conn, run_id, payload, model, independent=independent, require_controls=False)
 
 
 def certify(conn: sqlite3.Connection, run_id: str) -> dict:
