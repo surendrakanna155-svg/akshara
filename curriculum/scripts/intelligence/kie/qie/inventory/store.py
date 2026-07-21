@@ -44,7 +44,7 @@ def _ensure_columns(conn: sqlite3.Connection) -> None:
     rebuilt-from-scratch derived store, but its file persists across builds, so a newly-added column must be
     ALTER-ed in (schema.sql's CREATE TABLE IF NOT EXISTS is a no-op once the table exists)."""
     have = {r[1] for r in conn.execute("PRAGMA table_info(unified_inventory)")}
-    for col, decl in (("compose_concept", "TEXT"),):
+    for col, decl in (("compose_concept", "TEXT"), ("qualitative_grounding", "TEXT")):
         if col not in have:
             conn.execute(f"ALTER TABLE unified_inventory ADD COLUMN {col} {decl}")
 

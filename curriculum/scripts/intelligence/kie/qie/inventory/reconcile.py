@@ -50,7 +50,7 @@ def _rec(**kw) -> Dict[str, Any]:
     base = dict(source_status=None, subject=None, exam=None, concept_code_src=None, compose_concept=None,
                 concept_kc=None, verification_methods=None, is_deterministic=0, evidence_class=None,
                 evidence_refs=None, item_hash=None, norm_hash=None, promotion_status="honest_null",
-                promotion_target=None, reverify_method=None, reverify_ok=None)
+                qualitative_grounding=None, promotion_target=None, reverify_method=None, reverify_ok=None)
     base.update(kw)
     base["uid"] = _uid(base["source_store"], base["source_table"], base["source_id"])
     return base
@@ -114,11 +114,16 @@ def iter_relations(qie: sqlite3.Connection, xw: Crosswalk) -> Iterator[Dict[str,
 
 
 # ── qie.db: governed_fact (128 verified, model examiner) -> HELD for R4-3 ──────────────────────────────
-def iter_facts(qie: sqlite3.Connection, xw: Crosswalk) -> Iterator[Dict[str, Any]]:
+def iter_facts(qie: sqlite3.Connection, xw: Crosswalk, corroboration_index=None) -> Iterator[Dict[str, Any]]:
     from kie.qie.convert import topics as TP
+    from kie.qie.verifiers import qualitative as QUAL
+    idx = corroboration_index if corroboration_index is not None else QUAL.build_corroboration_index(qie)
     for r in qie.execute("SELECT * FROM governed_fact"):
         row = dict(r)
         verified = row.get("status") == "verified"
+        # R4-3: the NON-MODEL qualitative re-derivation verdict (independent >=2-source KVS corroboration).
+        # Orthogonal to promotion_status; a model examiner can never certify here (assert_not_model_agreement).
+        grounding = QUAL.grounding_label(QUAL.reverify_fact(row, idx)) if verified else None
         yield _rec(
             source_store=QIE, source_table="governed_fact", source_id=row["fact_id"],
             source_status=row.get("status"), asset_class="fact", subject=row.get("subject"),
@@ -138,7 +143,9 @@ def iter_facts(qie: sqlite3.Connection, xw: Crosswalk) -> Iterator[Dict[str, Any
                                       "item_hash": row.get("item_hash")}),
             item_hash=row.get("item_hash"),
             promotion_status=("held_qualitative" if verified else "rejected_source"),
-            reverify_method=None, reverify_ok=None)         # honest-null: R4-3 provides the non-model check
+            qualitative_grounding=grounding,                # R4-3 non-model examination verdict (independent KVS)
+            reverify_method=("independent_kvs_corroboration" if verified else None),
+            reverify_ok=(1 if grounding == QUAL.GROUNDING_CORROBORATED else None))  # honest-null unless corroborated
 
 
 # ── qie.db: kvs_assertion (>=2 source refs = evidence fact; else honest-null) ──────────────────────────

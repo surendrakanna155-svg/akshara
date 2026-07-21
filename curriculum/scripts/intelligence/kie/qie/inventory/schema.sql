@@ -28,6 +28,11 @@ CREATE TABLE IF NOT EXISTS unified_inventory (
   dedup_group          TEXT,               -- shared across duplicates (norm_hash-based)
   promotion_status     TEXT NOT NULL,      -- promotable | practice_tier_eligible | eligible | held_qualitative
                                            --   | held_low_quality | honest_null | quarantined | duplicate | rejected_source
+  qualitative_grounding TEXT,              -- R4-3: the NON-MODEL qualitative re-derivation verdict for a fact —
+                                           --   independently_corroborated | held_awaiting_independent_evidence |
+                                           --   contradicted | NULL(not a governed fact). Orthogonal to
+                                           --   promotion_status (a corroborated fact is qualitatively certifiable
+                                           --   but still needs the full R2 chain to reach the product bank).
   promotion_target     TEXT,               -- qpl_question_bank candidate_id if genuinely promoted, else NULL
   reverified_at        TEXT,
   reverify_method      TEXT,

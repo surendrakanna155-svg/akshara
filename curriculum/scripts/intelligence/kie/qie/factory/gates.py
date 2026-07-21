@@ -441,9 +441,21 @@ _UNIT_BASE = {
     "mv": "V", "kv": "V", "mA": "A", "ma": "A", "ka": "A",
     "uf": "F", "nf": "F", "pf": "F", "mf": "F",
     "kohm": "ohm", "mohm": "ohm",
-    "deg": "rad", "degree": "rad", "degrees": "rad",   # both are angle
     "kmol": "mol", "mmol": "mol",
     "kw": "W", "mw": "W",
+    # R4-3 dimensional-gate yield recovery — the three false-reject classes the audit named. All three are
+    # genuinely DIMENSIONLESS in SI, so mapping them to "1" is dimensionally CORRECT (not a weakened gate — a
+    # count/ratio/angle has no base dimension); the raw magnitude is untouched and the numeric solve is unaffected.
+    #  * ANGLE: radian & degree are dimensionless (a ratio of arc/radius). The frozen gate cannot parse "rad"
+    #    at all (deg->rad still hit an unparseable "rad" -> false quarantine), so angle items were killed outright.
+    "rad": "1", "radian": "1", "radians": "1", "deg": "1", "degree": "1", "degrees": "1",
+    "sr": "1", "steradian": "1",
+    #  * PERCENTAGE / ratio: a percentage is a pure dimensionless ratio ("20% of 1600 L").
+    "%": "1", "percent": "1", "pct": "1", "ratio": "1", "fraction": "1",
+    #  * COUNT: beats, revolutions, cycles, moles-as-count are pure counts (e.g. "72 beats/min -> per day" is a
+    #    dimensionless count per time). Frequency stays consistent: cycles/s reduces to 1/s == Hz.
+    "beat": "1", "beats": "1", "count": "1", "counts": "1", "rev": "1", "revolution": "1", "revolutions": "1",
+    "cycle": "1", "cycles": "1", "turn": "1", "turns": "1", "rpm_count": "1",
 }
 
 

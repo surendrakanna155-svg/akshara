@@ -197,3 +197,42 @@ validate (`boundary_ok`, 0 rejects, NEET Biology reached).
 model-verified, non-deterministic — no model agreement certified anything); no gate weakened for yield (identical
 admitted set); freeze untouched (the manifest is a derived local store; frozen index + kie.db never opened RW);
 honest-null discipline (freshness returns `None` on absence, warns loudly on drift).
+
+---
+
+## Checkpoint — Phase R4-3 (qualitative certification lane + dimensional-gate yield recovery) · 2026-07-21 · `EOS: PASS`
+
+Closes C16 (qualitative uncertifiable in the factory lane) + BS-2 (the qualitative substrate was unexamined).
+Two file-disjoint lanes; the certification-affecting Lane B ran **two** independent adversarial rounds.
+
+- **Lane A — dimensional-gate yield recovery.** `factory/gates.py::normalize_unit` now maps the three
+  false-reject unit classes the audit named — angle (rad/deg/sr), percentage (%), count (beats/rev/cycles) —
+  to dimensionless `1` (all are genuinely dimensionless in SI, so this is correctness, not a weakened gate).
+  Every dimension-WRONG relation still fails. Live: of 87 dimensional-reason quarantined candidates with a
+  complete structure, **26 now pass** the dimensional gate; 61 correctly still fail.
+- **Lane B — qualitative certification lane.** `verifiers/qualitative.py` + `qualitative_lane.py` supply the
+  NON-MODEL re-derivation the factory lane lacked: a qualitative governed fact certifies ONLY on **independent
+  ≥2-source KVS corroboration** — a `correct_answer_is` assertion attesting the exact answer from ≥2 source
+  docs that EXCLUDE the fact's own source, on a fail-closed subject-consistent concept. Model agreement is
+  refused; every ambiguity HOLDS. The manifest records `qualitative_grounding` per fact without touching
+  promotion_status (RI-6 scope + pinned counts preserved).
+
+**Adversarial verification — two rounds, both REFUTED, both fixed + regression-locked:**
+- Round 1: the independence bar counted the fact's own source doc; matching was concept-blind; the model guard
+  was a no-op. Fixed (exclude own doc + ≥2 independent; subject-scope; honest guard).
+- Round 2: subject was read from the concept_code prefix, which disagrees with the authoritative `subject_term`
+  on 44% of live rows; `subject=None`/no-doc failed OPEN. Fixed **fail-closed** (authoritative `subject_term`
+  + concept_code cross-check; HOLD on any missing/ambiguous/disagreeing signal or missing source doc).
+  Self-verified against the re-verifier's exact live probes (all now HOLD).
+
+**Live outcome (honest):** dimensional recovery landed (26 recoverable structured items); the qualitative lane
+yields **0 certifiable / 128 held** — the TRUE state of the owned substrate: the governed-fact and KVS lanes
+largely read the same corpus answer keys, so no genuinely-independent corroboration exists yet. This is a
+precise measurement of the independent-evidence gap, not a shortfall of the machinery — lifting it needs
+acquired independent evidence (R5-4/R5-6 PYQ corpus) or a cross-family judge (R4-2 + a live key). New
+`kie/tests/test_r4_3_qualitative_and_dimensional.py` (16 tests). Full suite **1047 green** (skipped=1).
+
+**Standing laws honored:** deterministic/source-grounded checks certify (never model agreement — the examiner
+verdict is structurally excluded); honest-null + fail-closed on every ambiguity ("wrong knowledge is worse than
+missing" — 0 certifiable is reported, never inflated); no gate weakened for yield (Lane A recovers only
+genuinely-dimensionless items; dimension-wrong still fails); freeze untouched; RI-6 preserved.

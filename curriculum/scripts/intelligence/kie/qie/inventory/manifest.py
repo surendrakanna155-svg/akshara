@@ -138,8 +138,8 @@ def _source_fingerprints(qie, bank, corpus) -> Dict[str, str]:
 _COLS = ("uid", "source_store", "source_table", "source_id", "source_status", "asset_class", "subject",
          "exam", "concept_code_src", "compose_concept", "concept_kc", "verification_methods",
          "is_deterministic", "evidence_class", "evidence_refs", "item_hash", "norm_hash", "dedup_group",
-         "promotion_status", "promotion_target", "reverified_at", "reverify_method", "reverify_ok",
-         "created_at")
+         "promotion_status", "qualitative_grounding", "promotion_target", "reverified_at", "reverify_method",
+         "reverify_ok", "created_at")
 
 
 def build(unified_path=None, qie_path=QIE_DB_PATH, bank_path=BANK_DB_PATH,
