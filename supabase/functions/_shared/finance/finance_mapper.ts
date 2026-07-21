@@ -147,6 +147,30 @@ export function listEnvelope(
   };
 }
 
+// ICA-C7: response shape for keyset (cursor) pagination — same `{items, pagination}`
+// envelope, but the pagination block carries the opaque `cursor`/`nextCursor` instead
+// of page/total (which keyset does not compute). `cursor` echoes the request cursor
+// (null on the first page) so a client can tell where it is.
+export function keysetEnvelope(
+  items: Record<string, unknown>[],
+  pagination: {
+    pageSize: number;
+    cursor: string | null;
+    nextCursor: string | null;
+    hasMore: boolean;
+  },
+): Record<string, unknown> {
+  return {
+    items,
+    pagination: {
+      pageSize: pagination.pageSize,
+      cursor: pagination.cursor,
+      nextCursor: pagination.nextCursor,
+      hasMore: pagination.hasMore,
+    },
+  };
+}
+
 export function parseItemInputsFromBody(
   body: Record<string, unknown>,
 ): FeeStructureItemInput[] {
