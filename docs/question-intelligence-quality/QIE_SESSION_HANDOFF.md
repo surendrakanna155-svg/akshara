@@ -1,11 +1,13 @@
 # QIE — fresh-session handoff (authoritative resume point)
 
-> ⛔ **CERTIFICATION HALT IN FORCE (2026-07-21, R0-3).** No new certification runs —
-> no `certify_run`, no `--register`/`--apply` conversions, no QDI certification, no index
-> freeze — until Phase **R1** of the remediation roadmap exits and the invariant suite is
-> green. See [`QIE_REMEDIATION_EXECUTION_LOG.md`](QIE_REMEDIATION_EXECUTION_LOG.md) and
-> [`QIE_REMEDIATION_ROADMAP.md`](QIE_REMEDIATION_ROADMAP.md). This overrides §7 "remaining
-> work" below (which assumes a clean certification machinery the audit disproved).
+> ✅ **R1 CERTIFICATION HALT LIFTED (2026-07-21).** Phase **R1** of the remediation roadmap is
+> COMPLETE — the 4 P0s (C0/C1/C2/C3) + the freeze P0 (C6) are closed, adversarially verified,
+> and live on the newly-promoted **v1.5** index (certified 2023→2009; 14 broken-evidence
+> concepts quarantined). A single controlled certification run is now permissible on the
+> repaired machinery. **⛔ SCALING generation still gates on Phase R2** (independence +
+> mandatory solution stage). Recall of the 22+7 (R0-2) + re-certification remain owner/model
+> steps. See [`QIE_REMEDIATION_EXECUTION_LOG.md`](QIE_REMEDIATION_EXECUTION_LOG.md) and
+> [`QIE_REMEDIATION_ROADMAP.md`](QIE_REMEDIATION_ROADMAP.md). §7 below is pre-remediation.
 
 > ⏭ **PARTIALLY SUPERSEDED (2026-07-20).** This handoff (2026-07-15) reflects the pre-pivot state
 > (Decisions A/B). The QIE lane has since pivoted to **Owner Decision C / the Question Planning Layer** —

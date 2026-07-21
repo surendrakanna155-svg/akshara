@@ -11,22 +11,27 @@ certified, documented, and committed — one row per roadmap item.
 
 ---
 
-## ⛔ ACTIVE GOVERNANCE HALT (R0-3)
+## ✅ R1 GOVERNANCE HALT — LIFTED (R1 exit, 2026-07-21)
 
-**No new certification runs until Phase R1 exits.** In force since 2026-07-21.
+The R0-3 halt is **lifted**: every R1 item (R1-1…R1-5) has landed, the R1 permanent
+invariants (RI-1, RI-2, RI-4, RI-5, RI-7, RI-10) are green, and the certification machinery
+the audit disproved has been repaired and independently adversarially verified. The four P0s
+(C0, C1, C2, C3) and the freeze P0 (C6) are closed. Full suite **815 green** against the
+newly-promoted **v1.5** index.
 
-Specifically prohibited until every R1 item (R1-1…R1-5) has landed and the permanent
-invariant suite (RI) is green:
+**Still gated (NOT lifted by R1 exit):**
+- ⛔ **Scaling generation** waits for **Phase R2** (proposer/certifier independence R2-1;
+  mandatory solution stage + distractor verification R2-2; real model/actor provenance R2-3).
+  RI-3 (full certified-row invariant incl. `solution_verified=1`) and RI-8 (independent
+  same-family audit rejection) complete only with R2.
+- ⏸ **Recall of the 22 factory questions + 7 QDI patterns** (R0-2) remains an OWNER decision.
+  The R1 machinery already REFUSES them on any re-run (grounding + provenance invariants);
+  the explicit `certified → quarantined` flip is owner-gated.
+- ⏸ **Re-certification** of the 14 v1.5-quarantined concepts + the 22 + the 7 needs the model
+  proposer (deterministic gates certify; the proposer is downstream of controlled R2 runs).
 
-- ❌ `certify_run` / any `status → 'certified'` transition in the factory lane
-- ❌ `--register` / `--apply` conversions (governed facts, relations, topics, chains)
-- ❌ QDI pattern certification (`ingest_qdi_audit`)
-- ❌ any new KIE index freeze / version promotion
-
-Rationale (audit): today's gates verify self-consistency, not truth; the replay bypass is
-proven; QDI provenance is false; the frozen-substrate evidence has drifted. Certifying
-anything on the current machinery would mint more un-trustworthy "certified" artifacts.
-The halt lifts automatically when R1 + RI are complete and this log records the exit.
+A single controlled certification run is now permissible on the repaired machinery; a
+bank-growth / scaling program is not, until R2.
 
 ---
 
@@ -44,16 +49,24 @@ Legend: ✅ done (committed) · 🔵 in progress · ⏸ owner-gated (prepared, n
 | R0-3 Halt cert runs | ✅ | (this doc) | Halt recorded above + handoff banner. |
 | R0-4 Directory hygiene | ✅ | `d45a03f9` | Stray qie.db deleted; backups relocated + chmod a-w; wal/shm gitignored; `assert_under_kie_home()` added. |
 
-### Phase R1 — Certification integrity (closes the 4 P0s) — HALT gate
+### Phase R1 — Certification integrity (closes the 4 P0s + freeze) — ✅ COMPLETE
+
+3 parallel file-disjoint lanes → 5 independent read-only briefs → 3 impl agents → 3 adversarial
+verifiers (Lane A **REFUTED** a lane-agnostic-grounding hole → fixed + regression-locked + re-verified;
+Lane B **CONFIRMED** + a P2 hardening; Lane C verifier stalled on a 206MB copy → **self-verified**).
 
 | Item | State | Commit | Notes |
 |---|---|---|---|
-| R1-1 Blocking grounding gates | ⬜ | — | brief ready |
-| R1-2 Append-only cert records | ⬜ | — | brief ready |
-| R1-3 QDI provenance truth | ⬜ | — | brief ready |
-| R1-4 Content-addressed evidence | ⬜ | — | brief ready |
-| R1-5 Enforce the freeze | ⬜ | — | brief ready |
-| RI  Invariant suite | ⬜ | — | built alongside R1–R3 |
+| R1-1 Blocking grounding gates [C0] | ✅ | `f6db2803` | relation_grounded BLOCKING + waiver; sympy equivalence; stem↔structure gate; **truth gates key on structure not lane** (verifier fix) |
+| R1-2 Append-only cert records [C1] | ✅ | `f6db2803` | collision-free id; immutability guard; append-only evidence + item_hash binding; guarded set_status; live migration (15+22 preserved) |
+| R1-3 QDI provenance truth [C2][BS-4] | ✅ | `99679f2a` | provenance invariant recalls all 7; fail-closed floor; evidence floor computed from refs; qdi_source populated; RCA corrected |
+| R1-4 Content-addressed evidence [C3] | ✅ | `842c472d` | evidence_sha256; substrate fingerprint + fail-closed guard; un-waivable evidence gate; **v1.5 live (2023→2009, 14 quarantined)** |
+| R1-5 Enforce the freeze [C6] | ✅ | `842c472d` | freeze guard + mode=ro + chmod a-w (index+kie.db); RI-1 fingerprint recompute; RI-10 |
+| RI  Invariant suite (R1 slice) | ✅ | (above) | RI-1,2,4,5,7,10 green. RI-3 partial (solution stage = R2-2); RI-6/8/9 = R2/R3 scope |
+
+**v1.5 promotion (live):** frozen_version=v1.5, certified 2009, RI-2 = 0 violations, substrate
+match; v1.4 retained as `snapshots/knowledge_index_v1.5_frozen.db` sibling + v1.4 snapshot (never
+mutated). kie.db + index chmod a-w. Rollback copies + off-repo backup in place.
 
 *(Later phases R2–R6 tracked in the roadmap; rows added here as they are executed.)*
 
