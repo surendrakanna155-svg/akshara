@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@/test/utils';
 import {
+  kbMatchMeta,
   normalizeIncident,
   normalizeIncidentDetail,
   normalizeInvestigation,
+  normalizeKbArticle,
+  normalizeKbMatch,
   severityMeta,
   supportStatusMeta,
 } from '@/lib/contracts/support';
@@ -13,6 +16,7 @@ import { SupportQueuePage } from './SupportQueuePage';
 import { SupportIncidentPage } from './SupportIncidentPage';
 import { SupportClustersPage } from './SupportClustersPage';
 import { SupportClusterDetailPage } from './SupportClusterDetailPage';
+import { SupportKbPage } from './SupportKbPage';
 
 describe('Support Console — render (demo/no-backend honest states)', () => {
   it('Gate requires a live platform-support session', () => {
@@ -43,6 +47,12 @@ describe('Support Console — render (demo/no-backend honest states)', () => {
   it('Cluster detail mounts', () => {
     renderWithProviders(<SupportClusterDetailPage />, { route: '/support-console/clusters/c1' });
     expect(screen.getByText(/Cluster detail is ready/i)).toBeInTheDocument();
+  });
+
+  it('Knowledge base page mounts with the KB nav tab + awaiting-backend state', () => {
+    renderWithProviders(<SupportKbPage />);
+    expect(screen.getByText('Knowledge base')).toBeInTheDocument();
+    expect(screen.getByText(/Knowledge base is ready/i)).toBeInTheDocument();
   });
 });
 
@@ -110,5 +120,78 @@ describe('Support Console — contract normalizers', () => {
     expect(supportStatusMeta('resolved').status).toBe('success');
     expect(severityMeta('sev1').status).toBe('error');
     expect(severityMeta('sev4').status).toBe('neutral');
+  });
+
+  it('detail composite carries recalled KB matches (ASIP-8)', () => {
+    const detail = normalizeIncidentDetail({
+      incident: { id: 'i3', public_ref: 'SUP-3' },
+      evidence: [],
+      notes: [],
+      cluster: null,
+      kbMatches: [
+        {
+          id: 'a1',
+          fingerprint: 'permission_rbac|sis|403',
+          category: 'permission_rbac',
+          moduleKey: 'sis',
+          title: 'permission/rbac in sis (403)',
+          rootCause: 'missing grant',
+          resolution: 'granted viewMarks',
+          resolvedCount: 3,
+          schoolsSeen: 5,
+          matchType: 'exact',
+          distance: null,
+          updatedAt: '2026-07-20T00:00:00Z',
+        },
+      ],
+    });
+    expect(detail.kbMatches).toHaveLength(1);
+    expect(detail.kbMatches[0].matchType).toBe('exact');
+    expect(detail.kbMatches[0].resolvedCount).toBe(3);
+  });
+
+  it('investigation carries prior resolutions used (ASIP-8)', () => {
+    const r = normalizeInvestigation({
+      summary: 's',
+      likelyRootCause: 'rc',
+      recommendedFix: 'f',
+      confidence: 80,
+      method: 'deterministic',
+      model: '',
+      clusterSize: 2,
+      priorResolutions: [{ id: 'a1', match_type: 'exact', resolution: 'granted viewMarks', resolved_count: 2, schools_seen: 3 }],
+    });
+    expect(r.priorResolutions).toHaveLength(1);
+    expect(r.priorResolutions[0].matchType).toBe('exact');
+    expect(r.priorResolutions[0].resolvedCount).toBe(2);
+  });
+
+  it('normalizeKbArticle maps a snake_case article row', () => {
+    const a = normalizeKbArticle({
+      id: 'a1',
+      fingerprint: 'permission_rbac|sis|403',
+      category: 'permission_rbac',
+      module_key: 'sis',
+      error_signature: '403',
+      title: 'permission/rbac in sis (403)',
+      root_cause: 'missing grant',
+      resolution: 'granted viewMarks',
+      source_incident_ref: 'SUP-1',
+      resolved_count: 4,
+      schools_seen: 6,
+      status: 'active',
+      created_at: '2026-07-20T00:00:00Z',
+      updated_at: '2026-07-20T01:00:00Z',
+    });
+    expect(a.moduleKey).toBe('sis');
+    expect(a.resolvedCount).toBe(4);
+    expect(a.schoolsSeen).toBe(6);
+    expect(a.sourceIncidentRef).toBe('SUP-1');
+  });
+
+  it('normalizeKbMatch defaults an unknown match type to related; kbMatchMeta tones', () => {
+    expect(normalizeKbMatch({ id: 'x' }).matchType).toBe('related');
+    expect(kbMatchMeta('exact').status).toBe('success');
+    expect(kbMatchMeta('semantic').status).toBe('info');
   });
 });

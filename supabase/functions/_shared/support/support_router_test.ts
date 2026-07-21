@@ -96,3 +96,23 @@ Deno.test("platform queue wrong method => 405", async () => {
   const res = await routeSupport(req("DELETE", p), CFG, "DELETE", p);
   assertEquals(res?.status, 405);
 });
+
+// ── /support/platform/kb (ASIP-8 knowledge base) ─────────────────────────────
+
+Deno.test("platform kb list requires auth => 401", async () => {
+  const p = "/support/platform/kb";
+  const res = await routeSupport(req("GET", p), CFG, "GET", p);
+  assertEquals(res?.status, 401);
+});
+
+Deno.test("platform kb article requires auth => 401", async () => {
+  const p = `/support/platform/kb/${UUID}`;
+  const res = await routeSupport(req("GET", p), CFG, "GET", p);
+  assertEquals(res?.status, 401);
+});
+
+Deno.test("platform kb article with a bad uuid => 422 (before auth)", async () => {
+  const p = "/support/platform/kb/not-a-uuid";
+  const res = await routeSupport(req("GET", p), CFG, "GET", p);
+  assertEquals(res?.status, 422);
+});

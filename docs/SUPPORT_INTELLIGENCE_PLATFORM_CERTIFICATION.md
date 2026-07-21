@@ -58,3 +58,17 @@ This covers all 9 owner production-smoke items: school issue reporting · automa
 2. **Gateway transaction isolation** — the model-gateway call ran inside the analysis write-transaction; a gateway-side DB error aborted the transaction and failed `insertAnalysis`. Now the gateway runs in its own nested transaction. (`fix(asip): isolate the model-gateway call in its own transaction`.)
 
 Both were caught **live** (not by unit tests) and fixed before production — exactly why the Constitution requires evidence-based live certification.
+
+---
+
+## ASIP-8 addendum (2026-07-21) — Continuous Learning (KB): engineering-complete, live-run owner-gated
+
+The last open ASIP roadmap item was built on the certified head. **Resolving an incident/cluster distils the resolution into a `support_kb_article`** keyed by the same deterministic cluster fingerprint (`category|module|error-signature`), so a future incident with the same signature **recalls the prior resolution** — surfaced proactively in the workspace ("Similar resolved issues") and folded into the AI diagnosis (an exact match leads with the proven fix and raises the confidence floor to 80). The KB lives inside the mirror domain (PLATFORM_ORG-walled, identical RLS); learn and recall both run under a support session, so **no new `SECURITY DEFINER` bridge was introduced — the org wall is untouched**. Deterministic recall needs no embeddings; an **optional** pgvector `support_kb_embedding` layer is created only behind a `pg_available_extensions` guard and reached only when `AI_EMBEDDINGS_API_KEY` is set — **dormant otherwise**.
+
+- **Migration:** `20260920000060_support_kb.sql` (additive; `support_kb_article` + defensive `support_kb_embedding`).
+- **Backend:** `_shared/support/support_kb_repository.ts` + `support_kb_service.ts`; wired into resolve (learn), investigate + incident-detail (recall), and `GET /support/platform/kb[?q=]` / `/kb/:id`.
+- **Web (B1 scoped unfreeze):** `/support-console/kb` browser + a "Similar resolved issues" recall panel + prior-resolutions in the AI-diagnosis card.
+- **Verification (offline, green):** **65 deno support tests** + `deno check` clean · **152 web tests** + `tsc` + `vite build` clean.
+- **Live cert:** `scripts/qa/live_cert_asip_vps.sh` extended from 18 → **23 checks** — `kb:learned-on-resolve`, `kb:list-endpoint`, `rbac:reporter-cannot-see-kb`, `kb:second-incident-created`, `kb:recall-exact-on-new-incident` — and made **hermetic** (a cert-unique failing path so the cert's signature/cluster/KB article can never collide with real tenant data and are fully removed at cleanup).
+
+**Status: engineering-complete; "PRODUCTION CERTIFIED" for ASIP-8 awaits the owner-gated deploy of migration `…060` + the live 23/23 run** — the same gate that governed the rest of Phase 2.

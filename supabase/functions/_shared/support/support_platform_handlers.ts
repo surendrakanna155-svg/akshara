@@ -30,6 +30,13 @@ import {
   buildEngineeringHandoff,
   investigate,
 } from "./support_platform_service.ts";
+import { getKbArticle, listKbArticles } from "./support_kb_repository.ts";
+import {
+  augmentRecallSemantic,
+  embedArticleBestEffort,
+  learnFromResolution,
+  recallForIncident,
+} from "./support_kb_service.ts";
 
 const SUPPORT_STATUS_ORDER = ["queue", "investigating", "awaiting_engineering", "resolved"];
 
@@ -84,7 +91,10 @@ export async function handlePlatformIncident(
     }
     const notes = await listPlatformNotes(db, incidentId);
     const cluster = incident.cluster_id ? await getCluster(db, incident.cluster_id) : null;
-    return { incident, evidence, notes, cluster };
+    // ASIP-8: proactively surface prior resolutions for this signature
+    // (deterministic recall — cheap, no network on the detail path).
+    const kbMatches = await recallForIncident(db, incident, evidence);
+    return { incident, evidence, notes, cluster, kbMatches };
   });
   if ("notFound" in loaded) return errorEnvelope("NOT_FOUND", "Incident not found", 404);
   return jsonResponse(envelope(loaded));
@@ -207,16 +217,27 @@ export async function handlePlatformInvestigate(
     const clusterSize = incident.cluster_id
       ? (await listClusterIncidentIds(db, incident.cluster_id)).length
       : 1;
-    return { incident, evidence, clusterSize };
+    // ASIP-8: deterministic recall of prior resolutions (in-tx, no network).
+    const kb = await recallForIncident(db, incident, evidence);
+    return { incident, evidence, clusterSize, kb };
   });
   if ("notFound" in loaded) return errorEnvelope("NOT_FOUND", "Incident not found", 404);
-  // The model call runs in its own transaction (inside investigate).
+  // Optional semantic augmentation runs in its own tx (best-effort, dormant
+  // without embeddings/pgvector); then the model call runs in its own tx too.
+  const priorResolutions = await augmentRecallSemantic(
+    config,
+    a.claims,
+    loaded.incident,
+    loaded.evidence,
+    loaded.kb,
+  );
   const investigation = await investigate(
     config,
     a.claims,
     loaded.incident,
     loaded.evidence,
     loaded.clusterSize,
+    priorResolutions,
   );
   return jsonResponse(envelope(investigation));
 }
@@ -259,6 +280,9 @@ export async function handlePlatformResolve(
     const incident = await getPlatformIncident(db, incidentId);
     if (!incident) return { notFound: true as const };
 
+    // Capture the cluster's root cause BEFORE setClusterResolution overwrites it.
+    const priorCluster = incident.cluster_id ? await getCluster(db, incident.cluster_id) : null;
+
     const targets = body?.resolveCluster && incident.cluster_id
       ? await listClusterIncidentIds(db, incident.cluster_id)
       : [incidentId];
@@ -273,17 +297,37 @@ export async function handlePlatformResolve(
     if (body?.resolveCluster && incident.cluster_id) {
       await setClusterResolution(db, incident.cluster_id, "resolved", "", resolution);
     }
+
+    // ASIP-8 continuous learning: distil this resolution into a KB article keyed
+    // by the incident's signature (deterministic, in-tx). A future incident with
+    // the same signature recalls it. Never blocks the resolution itself.
+    const evidence = await listPlatformEvidence(db, incidentId);
+    const article = await learnFromResolution(db, a.claims, {
+      incident,
+      evidence,
+      resolution,
+      clusterRootCause: priorCluster?.root_cause ?? "",
+      schoolsSeen: targets.length,
+    });
+
     await recordServerAuditEvent(db, a.claims, {
       eventType: "supportPlatformResolved",
       category: "support",
       entityType: "support_platform_incident",
       entityId: incidentId,
-      metadata: { resolvedCount: targets.length, cluster: body?.resolveCluster === true },
+      metadata: {
+        resolvedCount: targets.length,
+        cluster: body?.resolveCluster === true,
+        kbLearned: !!article,
+      },
       correlationId: correlationIdFromRequest(req),
     }, req);
-    return { resolvedCount: targets.length };
+    return { resolvedCount: targets.length, article };
   });
   if ("notFound" in result) return errorEnvelope("NOT_FOUND", "Incident not found", 404);
+  // Best-effort semantic index of the new article (own tx; dormant without
+  // embeddings/pgvector; never affects the response).
+  if (result.article) await embedArticleBestEffort(config, a.claims, result.article);
   return jsonResponse(envelope({ resolved: true, count: result.resolvedCount }));
 }
 
@@ -315,4 +359,32 @@ export async function handlePlatformCluster(
   });
   if ("notFound" in result) return errorEnvelope("NOT_FOUND", "Cluster not found", 404);
   return jsonResponse(envelope(result));
+}
+
+// ─── ASIP-8: knowledge base (learned resolutions) ──────────────────────────────
+
+/** Browse/search the KB the support team has learned from resolutions. */
+export async function handlePlatformKbList(req: Request, config: AppConfig): Promise<Response> {
+  const a = await auth(req, config);
+  if (!a.ok) return a.response;
+  const url = new URL(req.url);
+  const result = await withTenantContext(config, a.claims, (db) =>
+    listKbArticles(db, {
+      q: url.searchParams.get("q") ?? undefined,
+      page: Number(url.searchParams.get("page") ?? "1") || 1,
+      pageSize: Number(url.searchParams.get("pageSize") ?? "20") || 20,
+    }));
+  return jsonResponse(envelope(result));
+}
+
+export async function handlePlatformKbArticle(
+  req: Request,
+  config: AppConfig,
+  articleId: string,
+): Promise<Response> {
+  const a = await auth(req, config);
+  if (!a.ok) return a.response;
+  const article = await withTenantContext(config, a.claims, (db) => getKbArticle(db, articleId));
+  if (!article) return errorEnvelope("NOT_FOUND", "Article not found", 404);
+  return jsonResponse(envelope(article));
 }

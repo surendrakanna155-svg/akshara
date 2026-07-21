@@ -25,6 +25,8 @@ import {
   handlePlatformHandoff,
   handlePlatformIncident,
   handlePlatformInvestigate,
+  handlePlatformKbArticle,
+  handlePlatformKbList,
   handlePlatformNote,
   handlePlatformQueue,
   handlePlatformResolve,
@@ -146,6 +148,16 @@ async function routeSupportPlatform(
       const id = segs[3];
       if (!UUID_RE.test(id)) return errorEnvelope("VALIDATION", "invalid cluster id", 422);
       if (method === "GET") return await handlePlatformCluster(req, config, id);
+    }
+  }
+
+  // /support/platform/kb… — ASIP-8 knowledge base (learned resolutions)
+  if (segs[2] === "kb") {
+    if (segs.length === 3 && method === "GET") return await handlePlatformKbList(req, config);
+    if (segs.length === 4) {
+      const id = segs[3];
+      if (!UUID_RE.test(id)) return errorEnvelope("VALIDATION", "invalid article id", 422);
+      if (method === "GET") return await handlePlatformKbArticle(req, config, id);
     }
   }
 

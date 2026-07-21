@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # ASIP live cert/smoke — runs ON the VPS against a chosen edge+DB. Full mission
 # flow: report -> auto-evidence -> AI package -> mirror -> console -> investigate
-# -> handoff -> cluster -> resolve (propagate back + notify) -> cleanup.
+# -> handoff -> cluster -> resolve (propagate back + notify) -> LEARN (KB) ->
+# RECALL on a new incident (ASIP-8) -> cleanup.
+# Non-destructive by construction: the cert incident uses a cert-unique failing
+# path (/cert-asip-vps/marks) so its signature/cluster/KB article can never
+# collide with real tenant data and are fully removed at cleanup.
 # Usage: cert_asip_vps.sh <EDGE_CONTAINER> <DB> <BASE_URL>
 set -u
 EDGE="${1:?edge container}"; DB="${2:?db}"; BASE="${3:?base url}"
@@ -65,8 +69,10 @@ MGRTOK=$(mint "$ORG" school "$SCHOOL" "$REPORTER" schoolAdmin '["viewSupport","m
 PLATTOK=$(mint "$PLATORG" organization null "$SUPPORT_USER" aksharaSupport '["platformSupport"]' "$SPLAT" "$PLATVER")
 [ "$(echo "$REPTOK" | grep -c '\.')" -ge 1 ] && [ -n "$PLATTOK" ] || { echo "ABORT: mint failed"; exit 1; }
 
-# 1. School reports an issue (403 signal -> permission_rbac)
-BODY='{"title":"'$MARKER' cannot open marks","description":"tap Marks nothing happens","context":{"appVersion":"1.4.0","platform":"android","deviceModel":"Pixel 7","osVersion":"14","sessionId":"cert","screenRoute":"/sis/marks","moduleKey":"sis","correlationIds":["ak-cert-x"],"recentApiCalls":[{"method":"GET","path":"/sis/marks","statusCode":403,"correlationId":"ak-cert-x"}]}}'
+# 1. School reports an issue (403 signal -> permission_rbac). Cert-unique failing
+#    path so the signature/cluster/KB article are hermetic (safe to delete).
+CERTPATH="/cert-asip-vps/marks"
+BODY='{"title":"'$MARKER' cannot open marks","description":"tap Marks nothing happens","context":{"appVersion":"1.4.0","platform":"android","deviceModel":"Pixel 7","osVersion":"14","sessionId":"cert","screenRoute":"'$CERTPATH'","moduleKey":"sis","correlationIds":["ak-cert-x"],"recentApiCalls":[{"method":"GET","path":"'$CERTPATH'","statusCode":403,"correlationId":"ak-cert-x"}]}}'
 code=$(req POST /support/incidents "$REPTOK" "$BODY")
 IID=$(field id); REF=$(field public_ref); CAT=$(field category)
 [ "$code" = "201" ] && [ -n "$IID" ] && case "$REF" in SUP-*) true;; *) false;; esac && rec P "report:create ($REF)" || rec F "report:create" "HTTP $code id=$IID ref=$REF"
@@ -119,9 +125,30 @@ SST=$(db "select status from support_incident where id='$IID'")
 NOTE=$(db "select count(*) from notification_deliveries where recipient_user_id='$REPORTER' and category='support' and rendered_body like '%resolved%'")
 [ "${NOTE:-0}" -ge 1 ] && rec P "resolve:school-notified" || rec F "resolve:notify" "notifications=$NOTE"
 
-# 9. cleanup (non-destructive)
-db "delete from support_platform_incident where id='$IID'" >/dev/null
+# 9. ASIP-8 Continuous Learning: the resolution was distilled into a KB article
+KBA=$(db "select count(*) from support_kb_article where source_incident_ref='$REF'")
+[ "${KBA:-0}" -ge 1 ] && rec P "kb:learned-on-resolve" || rec F "kb:learned" "articles=$KBA"
+# KB browse endpoint sees it; a plain reporter is denied (RBAC)
+code=$(req GET /support/platform/kb "$PLATTOK")
+KBN=$(python3 -c "import json;d=json.load(open('/tmp/asip_body'));print(len(d['data']['items']))" 2>/dev/null)
+[ "$code" = "200" ] && [ "${KBN:-0}" -ge 1 ] && rec P "kb:list-endpoint ($KBN)" || rec F "kb:list" "HTTP $code n=$KBN"
+code=$(req GET /support/platform/kb "$REPTOK"); [ "$code" = "403" ] && rec P "rbac:reporter-cannot-see-kb" || rec F "rbac:reporter-kb" "HTTP $code"
+
+# 10. RECALL: a NEW incident with the SAME signature recalls the prior resolution
+BODY2='{"title":"'$MARKER' cannot open marks again","description":"tap Marks nothing happens","context":{"appVersion":"1.4.0","platform":"android","deviceModel":"Pixel 7","osVersion":"14","sessionId":"cert","screenRoute":"'$CERTPATH'","moduleKey":"sis","correlationIds":["ak-cert-y"],"recentApiCalls":[{"method":"GET","path":"'$CERTPATH'","statusCode":403,"correlationId":"ak-cert-y"}]}}'
+code=$(req POST /support/incidents "$REPTOK" "$BODY2")
+IID2=$(field id)
+[ "$code" = "201" ] && [ -n "$IID2" ] && rec P "kb:second-incident-created" || rec F "kb:second-incident" "HTTP $code"
+# platform detail deterministically recalls the exact prior resolution ("we've seen this")
+code=$(req GET /support/platform/incidents/$IID2 "$PLATTOK")
+KBM=$(python3 -c "import json;d=json.load(open('/tmp/asip_body'));ms=d['data'].get('kbMatches') or [];print(sum(1 for m in ms if m.get('matchType')=='exact'))" 2>/dev/null)
+[ "$code" = "200" ] && [ "${KBM:-0}" -ge 1 ] && rec P "kb:recall-exact-on-new-incident" || rec F "kb:recall" "HTTP $code exact=$KBM"
+
+# 11. cleanup (non-destructive; cert-unique signature ⇒ 0 residue incl. KB + cluster)
+db "delete from support_platform_incident where id in ('$IID','$IID2')" >/dev/null
 db "delete from support_incident where title like '$MARKER%'" >/dev/null
+db "delete from support_kb_article where source_incident_ref='$REF'" >/dev/null
+db "delete from support_cluster where cluster_key='permission_rbac|sis|403,$CERTPATH'" >/dev/null
 db "delete from notification_deliveries where recipient_user_id='$REPORTER' and category='support'" >/dev/null
 db "delete from sessions where id in ('$SREP','$SPLAT')" >/dev/null
 rec P "cleanup:non-destructive"

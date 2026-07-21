@@ -232,6 +232,7 @@ import {
   SupportIncidentPage,
   SupportClustersPage,
   SupportClusterDetailPage,
+  SupportKbPage,
 } from '@/pages/support-console';
 import { ModuleScaffold } from '@/components/system/ModuleScaffold';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -563,6 +564,7 @@ export const router = createBrowserRouter([
           { path: 'incidents/:id', element: <SupportIncidentPage /> },
           { path: 'clusters', element: <SupportClustersPage /> },
           { path: 'clusters/:id', element: <SupportClusterDetailPage /> },
+          { path: 'kb', element: <SupportKbPage /> },
         ],
       },
       // Parametric detail routes (deep-linkable record views)

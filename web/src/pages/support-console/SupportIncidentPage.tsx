@@ -18,8 +18,10 @@ import {
 import { Icon } from '@/components/Icon';
 import { formatDateTime, humanize } from '@/lib/utils/format';
 import {
+  kbMatchMeta,
   SUPPORT_STATUS_ORDER,
   supportStatusMeta,
+  type KbMatch,
   type SupportCluster,
   type SupportIncident,
   type SupportIncidentDetail,
@@ -75,11 +77,12 @@ function IncidentWorkspace({
   detail: SupportIncidentDetail;
   onRefetch: () => void;
 }) {
-  const { incident, evidence, notes, cluster } = detail;
+  const { incident, evidence, notes, cluster, kbMatches } = detail;
   return (
     <div className="grid grid-cols-1 gap-s6 xl:grid-cols-3">
       <div className="space-y-s6 xl:col-span-2">
         <HeaderCard incident={incident} cluster={cluster} />
+        <SimilarResolvedPanel matches={kbMatches} />
         <ActionsCard id={id} incident={incident} cluster={cluster} onRefetch={onRefetch} />
         <EvidencePanel evidence={evidence} />
         <AiDiagnosisPanel id={id} />
@@ -254,6 +257,64 @@ function ActionsCard({
   );
 }
 
+/**
+ * ASIP-8: proactively surfaces prior resolutions the KB recalled for this
+ * incident's signature ("we've seen this before"). Deterministic — shown before
+ * the engineer even runs an investigation. Nothing is applied automatically.
+ */
+function SimilarResolvedPanel({ matches }: { matches: KbMatch[] }) {
+  if (!matches || matches.length === 0) return null;
+  const exact = matches.some((m) => m.matchType === 'exact');
+  return (
+    <Card>
+      <CardHeader
+        title="Similar resolved issues"
+        subtitle={
+          exact
+            ? "This exact signature has been resolved before — the proven fix is below"
+            : "Related resolutions the knowledge base recalled for this incident"
+        }
+        icon="history_edu"
+      />
+      <div className="space-y-s3">
+        {matches.map((m) => (
+          <PriorResolutionCard key={m.id} match={m} />
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function PriorResolutionCard({ match }: { match: KbMatch }) {
+  const meta = kbMatchMeta(match.matchType);
+  return (
+    <div className="rounded-md border border-outline-variant/60 bg-surface-low p-s4">
+      <div className="mb-s2 flex flex-wrap items-center gap-s2">
+        <StatusChip status={meta.status} icon={meta.icon} label={meta.label} />
+        <Text variant="label-lg" className="min-w-0 flex-1 truncate text-on-surface">
+          {match.title || humanize(match.category)}
+        </Text>
+        <Badge tone="success">Resolved {match.resolvedCount}×</Badge>
+        <Badge tone="neutral">
+          {match.schoolsSeen} school{match.schoolsSeen === 1 ? '' : 's'}
+        </Badge>
+      </div>
+      {match.rootCause && (
+        <Text variant="body-sm" className="text-on-surface-variant">
+          <span className="font-medium text-on-surface">Root cause: </span>
+          {match.rootCause}
+        </Text>
+      )}
+      {match.resolution && (
+        <Text variant="body-md" className="mt-s1 whitespace-pre-wrap text-on-surface">
+          <span className="font-medium">Resolution: </span>
+          {match.resolution}
+        </Text>
+      )}
+    </div>
+  );
+}
+
 function EvidencePanel({ evidence }: { evidence: SupportIncidentDetail['evidence'] }) {
   return (
     <Card>
@@ -332,6 +393,21 @@ function AiDiagnosisPanel({ id }: { id: string }) {
           <AiField icon="summarize" label="Summary" value={result.summary} />
           <AiField icon="troubleshoot" label="Likely root cause" value={result.likelyRootCause} />
           <AiField icon="build" label="Recommended fix" value={result.recommendedFix} />
+          {result.priorResolutions.length > 0 && (
+            <div>
+              <div className="mb-s2 flex items-center gap-s2">
+                <Icon name="history_edu" size={18} className="text-on-surface-variant" />
+                <Text variant="label-lg" className="text-on-surface-variant">
+                  Prior resolutions used
+                </Text>
+              </div>
+              <div className="space-y-s3">
+                {result.priorResolutions.map((m) => (
+                  <PriorResolutionCard key={m.id} match={m} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </Card>

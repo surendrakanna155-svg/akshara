@@ -78,12 +78,50 @@ export interface SupportNote {
   createdAt: string;
 }
 
+/** ASIP-8: a prior resolution the KB recalled for a live incident's signature. */
+export type KbMatchType = 'exact' | 'related' | 'semantic' | string;
+
+export interface KbMatch {
+  id: string;
+  fingerprint: string;
+  category: string;
+  moduleKey: string;
+  title: string;
+  rootCause: string;
+  resolution: string;
+  resolvedCount: number;
+  schoolsSeen: number;
+  matchType: KbMatchType;
+  distance: number | null;
+  updatedAt: string;
+}
+
+/** GET /support/platform/kb, GET /support/platform/kb/:id — a learned article. */
+export interface SupportKbArticle {
+  id: string;
+  fingerprint: string;
+  category: string;
+  moduleKey: string;
+  errorSignature: string;
+  title: string;
+  rootCause: string;
+  resolution: string;
+  sourceIncidentRef: string;
+  resolvedCount: number;
+  schoolsSeen: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /** GET /support/platform/incidents/:id */
 export interface SupportIncidentDetail {
   incident: SupportIncident;
   evidence: SupportEvidence[];
   notes: SupportNote[];
   cluster: SupportCluster | null;
+  /** ASIP-8: prior resolutions recalled for this signature (may be empty). */
+  kbMatches: KbMatch[];
 }
 
 /** POST /support/platform/incidents/:id/investigate — AI-assisted DRAFT (human decides). */
@@ -95,6 +133,8 @@ export interface SupportInvestigation {
   method: 'deterministic' | 'ai_enriched' | string;
   model: string;
   clusterSize: number;
+  /** ASIP-8: prior resolutions the KB fed into this diagnosis (may be empty). */
+  priorResolutions: KbMatch[];
 }
 
 /** GET /support/platform/incidents/:id/handoff — the engineering package. */
@@ -224,19 +264,69 @@ export function normalizeNote(raw: unknown): SupportNote {
   };
 }
 
+function numOrNull(src: Raw, ...keys: string[]): number | null {
+  for (const k of keys) {
+    const v = src[k];
+    if (typeof v === 'number') return v;
+    if (typeof v === 'string' && v.trim() !== '' && !Number.isNaN(Number(v))) return Number(v);
+  }
+  return null;
+}
+
+export function normalizeKbMatch(raw: unknown): KbMatch {
+  const s = asRecord(raw);
+  return {
+    id: str(s, 'id'),
+    fingerprint: str(s, 'fingerprint'),
+    category: str(s, 'category'),
+    moduleKey: str(s, 'module_key', 'moduleKey'),
+    title: str(s, 'title'),
+    rootCause: str(s, 'root_cause', 'rootCause'),
+    resolution: str(s, 'resolution'),
+    resolvedCount: num(s, 'resolved_count', 'resolvedCount'),
+    schoolsSeen: num(s, 'schools_seen', 'schoolsSeen'),
+    matchType: (str(s, 'match_type', 'matchType') || 'related') as KbMatchType,
+    distance: numOrNull(s, 'distance'),
+    updatedAt: str(s, 'updated_at', 'updatedAt'),
+  };
+}
+
+export function normalizeKbArticle(raw: unknown): SupportKbArticle {
+  const s = asRecord(raw);
+  return {
+    id: str(s, 'id'),
+    fingerprint: str(s, 'fingerprint'),
+    category: str(s, 'category'),
+    moduleKey: str(s, 'module_key', 'moduleKey'),
+    errorSignature: str(s, 'error_signature', 'errorSignature'),
+    title: str(s, 'title'),
+    rootCause: str(s, 'root_cause', 'rootCause'),
+    resolution: str(s, 'resolution'),
+    sourceIncidentRef: str(s, 'source_incident_ref', 'sourceIncidentRef'),
+    resolvedCount: num(s, 'resolved_count', 'resolvedCount'),
+    schoolsSeen: num(s, 'schools_seen', 'schoolsSeen'),
+    status: str(s, 'status') || 'active',
+    createdAt: str(s, 'created_at', 'createdAt'),
+    updatedAt: str(s, 'updated_at', 'updatedAt'),
+  };
+}
+
 export function normalizeIncidentDetail(raw: unknown): SupportIncidentDetail {
   const s = asRecord(raw);
   const clusterRaw = s.cluster;
+  const matches = s.kbMatches ?? s.kb_matches;
   return {
     incident: normalizeIncident(s.incident ?? s),
     evidence: Array.isArray(s.evidence) ? s.evidence.map(normalizeEvidence) : [],
     notes: Array.isArray(s.notes) ? s.notes.map(normalizeNote) : [],
     cluster: clusterRaw ? normalizeCluster(clusterRaw) : null,
+    kbMatches: Array.isArray(matches) ? matches.map(normalizeKbMatch) : [],
   };
 }
 
 export function normalizeInvestigation(raw: unknown): SupportInvestigation {
   const s = asRecord(raw);
+  const prior = s.priorResolutions ?? s.prior_resolutions;
   return {
     summary: str(s, 'summary'),
     likelyRootCause: str(s, 'likelyRootCause', 'likely_root_cause'),
@@ -245,6 +335,7 @@ export function normalizeInvestigation(raw: unknown): SupportInvestigation {
     method: (str(s, 'method') || 'deterministic') as SupportInvestigation['method'],
     model: str(s, 'model'),
     clusterSize: num(s, 'clusterSize', 'cluster_size'),
+    priorResolutions: Array.isArray(prior) ? prior.map(normalizeKbMatch) : [],
   };
 }
 
@@ -296,6 +387,20 @@ export const SUPPORT_STATUS_ORDER: SupportStatus[] = ['queue', 'investigating', 
 
 export function supportStatusMeta(status: string): { label: string; status: SemanticStatus; icon: string } {
   return SUPPORT_STATUS_META[status as SupportStatus] ?? { label: status || 'Unknown', status: 'neutral', icon: 'help' };
+}
+
+/** KB recall match-type → tone + label + icon (for the "similar resolved" chips). */
+export function kbMatchMeta(type: string): { label: string; status: SemanticStatus; icon: string } {
+  switch (type) {
+    case 'exact':
+      return { label: 'Exact match', status: 'success', icon: 'verified' };
+    case 'semantic':
+      return { label: 'Similar (AI)', status: 'info', icon: 'auto_awesome' };
+    case 'related':
+      return { label: 'Related', status: 'neutral', icon: 'lightbulb' };
+    default:
+      return { label: type || 'Match', status: 'neutral', icon: 'lightbulb' };
+  }
 }
 
 /** sev1..sev4 → semantic tone + human label. */

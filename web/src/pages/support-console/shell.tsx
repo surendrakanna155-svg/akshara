@@ -54,6 +54,7 @@ export function SupportSectionNav() {
   const tabs: { to: string; label: string; icon: string; end?: boolean }[] = [
     { to: '/support-console', label: 'Incident queue', icon: 'inbox', end: true },
     { to: '/support-console/clusters', label: 'Clusters', icon: 'hub' },
+    { to: '/support-console/kb', label: 'Knowledge base', icon: 'menu_book' },
   ];
   return (
     <div className="flex items-center gap-s1 overflow-x-auto border-b border-outline-variant/65">

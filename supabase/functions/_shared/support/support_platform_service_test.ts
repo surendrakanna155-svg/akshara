@@ -1,5 +1,6 @@
-import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import { assert, assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import {
+  applyPriorResolutions,
   buildEngineeringHandoff,
   clusterFingerprint,
   clusterTitle,
@@ -13,6 +14,7 @@ import type {
   PlatformIncidentRow,
   PlatformNoteRow,
 } from "./support_platform_repository.ts";
+import type { KbMatch } from "./support_kb_service.ts";
 
 function diag(over: Partial<MirrorDiagnostics> = {}): MirrorDiagnostics {
   return {
@@ -120,4 +122,52 @@ Deno.test("buildEngineeringHandoff produces a complete deterministic package", (
   assertEquals(h.cluster?.affectedIncidents, 3);
   assertEquals(h.supportNotes.length, 1);
   assertEquals(Object.keys(h.evidence).sort(), ["client_context", "diagnostics"]);
+});
+
+// ─── ASIP-8: prior-resolution folding ──────────────────────────────────────────
+
+function kbMatch(over: Partial<KbMatch> = {}): KbMatch {
+  return {
+    id: "a1",
+    fingerprint: "permission_rbac|sis|403,/sis/marks",
+    category: "permission_rbac",
+    moduleKey: "sis",
+    title: "permission/rbac in sis (403)",
+    rootCause: "The role was missing the marks-view grant",
+    resolution: "granted viewMarks to the class-teacher role",
+    resolvedCount: 3,
+    schoolsSeen: 5,
+    matchType: "exact",
+    distance: null,
+    updatedAt: "t",
+    ...over,
+  };
+}
+
+Deno.test("applyPriorResolutions: an EXACT match leads with the proven fix and raises confidence to the floor", () => {
+  const base = { summary: "s", likelyRootCause: "generic", recommendedFix: "reproduce it", confidence: 55 };
+  const out = applyPriorResolutions(base, [kbMatch()]);
+  assert(out.recommendedFix.startsWith("Known issue — previously resolved:"));
+  assert(out.recommendedFix.includes("granted viewMarks"));
+  assertEquals(out.likelyRootCause, "The role was missing the marks-view grant");
+  assertEquals(out.confidence, 80, "confidence floor of 80 for a known signature");
+});
+
+Deno.test("applyPriorResolutions: a high base confidence is preserved (capped at 95), never lowered", () => {
+  const base = { summary: "s", likelyRootCause: "rc", recommendedFix: "f", confidence: 92 };
+  assertEquals(applyPriorResolutions(base, [kbMatch()]).confidence, 92);
+  const hi = applyPriorResolutions({ ...base, confidence: 99 }, [kbMatch()]);
+  assertEquals(hi.confidence, 95, "capped at 95");
+});
+
+Deno.test("applyPriorResolutions: related/semantic-only matches never override the base narrative", () => {
+  const base = { summary: "s", likelyRootCause: "rc", recommendedFix: "f", confidence: 50 };
+  const out = applyPriorResolutions(base, [kbMatch({ matchType: "related" }), kbMatch({ matchType: "semantic" })]);
+  assertEquals(out.recommendedFix, "f");
+  assertEquals(out.confidence, 50);
+});
+
+Deno.test("applyPriorResolutions: no matches → base unchanged", () => {
+  const base = { summary: "s", likelyRootCause: "rc", recommendedFix: "f", confidence: 50 };
+  assertEquals(applyPriorResolutions(base, []), base);
 });

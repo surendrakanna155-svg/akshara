@@ -16,11 +16,13 @@ import {
   normalizeIncidentDetail,
   normalizeInvestigation,
   normalizeHandoff,
+  normalizeKbArticle,
   type SupportCluster,
   type SupportHandoff,
   type SupportIncident,
   type SupportIncidentDetail,
   type SupportInvestigation,
+  type SupportKbArticle,
   type SupportListResult,
   type SupportStatus,
 } from '@/lib/contracts/support';
@@ -32,6 +34,8 @@ export const supportKeys = {
   clusters: (filters: ClusterFilters): unknown[] => ['support', 'platform', 'clusters', filters],
   cluster: (id: string): unknown[] => ['support', 'platform', 'cluster', id],
   handoff: (id: string): unknown[] => ['support', 'platform', 'handoff', id],
+  kb: (filters: KbFilters): unknown[] => ['support', 'platform', 'kb', filters],
+  kbArticle: (id: string): unknown[] => ['support', 'platform', 'kb', 'article', id],
 };
 
 export interface IncidentFilters {
@@ -43,6 +47,12 @@ export interface IncidentFilters {
 
 export interface ClusterFilters {
   status?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface KbFilters {
+  q?: string;
   page?: number;
   pageSize?: number;
 }
@@ -107,6 +117,24 @@ export function useClusterDetail(id: string) {
           incidents: Array.isArray(obj.incidents) ? obj.incidents.map(normalizeIncident) : [],
         };
       }),
+    { enabled: !!id },
+  );
+}
+
+/** ASIP-8: browse/search the knowledge base of learned resolutions. */
+export function useKbArticles(filters: KbFilters) {
+  const { q, page = 1, pageSize = 100 } = filters;
+  return useModuleQuery<SupportListResult<SupportKbArticle>>(supportKeys.kb(filters), () =>
+    apiFetch<unknown>('/support/platform/kb', {
+      query: { q: q || undefined, page, pageSize },
+    }).then((raw) => toListResult(raw, normalizeKbArticle)),
+  );
+}
+
+export function useKbArticle(id: string) {
+  return useModuleQuery<SupportKbArticle>(
+    supportKeys.kbArticle(id),
+    () => apiFetch<unknown>(`/support/platform/kb/${id}`).then(normalizeKbArticle),
     { enabled: !!id },
   );
 }

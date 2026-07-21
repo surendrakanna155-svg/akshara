@@ -8,3 +8,4 @@ export { SupportQueuePage } from './SupportQueuePage';
 export { SupportIncidentPage } from './SupportIncidentPage';
 export { SupportClustersPage } from './SupportClustersPage';
 export { SupportClusterDetailPage } from './SupportClusterDetailPage';
+export { SupportKbPage } from './SupportKbPage';
