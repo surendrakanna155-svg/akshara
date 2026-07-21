@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Akshara KIE/QIE estate backup — daily LaunchAgent (remediation R0-1).
+     INSTALL (owner, once):
+       1. Fill in the __PLACEHOLDERS__ below.
+       2. cp this file to ~/Library/LaunchAgents/com.akshara.kie-backup.plist
+       3. launchctl load ~/Library/LaunchAgents/com.akshara.kie-backup.plist
+     It runs backup_estate.sh daily at 02:30 local. Logs to the paths below. -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.akshara.kie-backup</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>__REPO_ROOT__/curriculum/scripts/intelligence/kie/backup/backup_estate.sh</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>AKSHARA_BACKUP_PASSPHRASE_FILE</key>
+        <string>__HOME__/.akshara/kie_backup.key</string>
+        <!-- Point this at an OFF-MACHINE target (external volume / owner store): -->
+        <key>AKSHARA_BACKUP_DEST</key>
+        <string>__OFF_MACHINE_DEST__</string>
+        <key>AKSHARA_BACKUP_KEEP</key>
+        <string>7</string>
+    </dict>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key><integer>2</integer>
+        <key>Minute</key><integer>30</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>__HOME__/.akshara/kie-backup.log</string>
+    <key>StandardErrorPath</key>
+    <string>__HOME__/.akshara/kie-backup.err</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>
