@@ -11,9 +11,17 @@
 - **G2 (P0)** — AI FAB raised clear of the center bottom-nav tab (was intercepting the center primary destination). Re-baselined 4 persona_shell goldens.
 - **D2** — surfaced Exams in the schoolAdministration workspace (workspace.dart omitted AdminModule.exams). Re-baselined dark_admin_hub.
 - **G6** — More sheet now applies SchoolBuildScope.isRouteHidden (parent PTM tile no longer → Access Denied).
+- **E6** `80ad96ed` (F-163/F-164/F-128) — teacher dead taps: risk-banner Review (`student_risk_` prefix now routed to teacherStudentRisk), profile avatar → teacherProfile (was Home), notifications bell → new `/teacher/notifications` (was the parent route). analyze clean; teacher+router tests +71; golden +70 unchanged.
+- **J6** `c990bbe3` (F-032) — pull-to-refresh on 10 high-value parent/student/teacher list/detail screens (RefreshIndicator + AlwaysScrollableScrollPhysics + invalidate the real provider). Deferred admin-scaffold surfaces. analyze clean; touched tests +337; golden +70 unchanged.
+- **D8** `3c51cab7` (F-080) — bulk attendance All-present/All-absent now confirm-on-overwrite (only when marks exist) + snackbar Undo that restores the prior roster and re-arms autosave so the wiped state can't win the draft. analyze clean; attendance+cert +37; golden +70.
+- **D5** `5a606e05` (F-077) — Publish-results now shows a summary confirm (class·subject·N students·M absent AB/ML/DB·K unmarked; K>0 prominent, never blocks) before the irreversible publish. Revocation window = backend-dependent (out of scope). analyze clean; exam_admin +47; golden +70.
+- **J5** `a7e48fc6` (F-029) — restored push animations + iOS back-swipe: 245 drill-in routes NoTransitionPage→builder (default MaterialPage); 42 tab destinations kept instant (persona shell roots + primary bottom-nav tabs + admin module-landings). analyze clean; full flutter test 4131/0/1-skip; golden +70 unchanged.
 
-## NEXT (Bucket-A, client-only, approved, independent)
-E6 (dead taps/mis-wired chrome) · J6 (pull-to-refresh adoption) · D8 (bulk all-present/absent confirm+undo) · D5 (publish-results confirmation) · J5 (page transitions + iOS back-swipe, replace 287 NoTransitionPage) · **J1+J7** (honor Appearance setting + re-baseline goldens — highest churn, do last). Fast-follow: I3/I4 contrast · E1 AksharaDateField · G7/G8/G9 IA · J8/I6/D9 P2 polish · J4 tablet · G1 Communication nav-reachability.
+## ⏸ OWNER-GATED (surfaced) — J1 + J7
+**J1+J7** (F-002/F-008 — honor the Appearance setting + re-baseline goldens to production theming) is **entangled with the owner-gated OD3 "brand/theme authority" decision** (roadmap §5.6 UXR-OD3): making the toggle work requires designing the missing light/dark persona palettes, which the roadmap reserves for the owner (single identity vs. keep Stitch personas with added light/dark variants vs. persona-hue-over-M15). Surfaced to the owner as a genuine decision — NOT implemented autonomously (would be a unilateral brand call). Theming-related fast-follow (I3/I4 contrast, J8/I6 appearance polish) likely depends on the same decision.
+
+## NEXT (fast-follow, client-only, mostly non-gated)
+E1 AksharaDateField · G7/G8/G9 IA · J4 tablet · G1 Communication nav-reachability · D9 P2 polish. (I3/I4 contrast + J8/I6 appearance → hold for the OD3 theming decision.) Route honesty items B2/B3/B5/B7 → systemic UXR-B9 CI guard.
 
 ## NEVER-CHANGE (board-protected)
 persona-nav ≤4-primary+More · AB/ML/DB exam semantics · amber-queued money ceremony · token pipeline · honest-state · 48dp touch floors · parent-OTP login · hide-first.
