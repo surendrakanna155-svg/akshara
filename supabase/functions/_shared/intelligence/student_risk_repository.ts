@@ -1,6 +1,7 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
 import { attendancePercentSql } from "../attendance/attendance_percentage.ts";
-import { computeStudentRisk } from "./student_risk_engine.ts";
+import { computeStudentRisk, riskLevelFromScore } from "./student_risk_engine.ts";
+import type { RiskReason } from "./student_risk_engine.ts";
 import type { StudentRiskSnapshotRow, StudentSignalRow } from "./intelligence_types.ts";
 
 export const INTEL_RISK_PROBE_SCHOOL_A = "f0500000-0000-4000-8000-000000000001";
@@ -15,12 +16,41 @@ export const INTEL_RISK_API_PROBE_SQL = `
     AND school_id = app_current_school_id()
 `;
 
+// ── SAFEGUARDING data-provenance (ICA-H4) ───────────────────────────────────
+// How much of the two daily-engagement monitoring signals (attendance,
+// homework) is actually MEASURED for a student, vs. simply absent.
+export type MonitoringCompleteness = "full" | "partial" | "none";
+
+// loadStudentSignals return row. Extends the shared StudentSignalRow with
+// explicit data-provenance flags so downstream consumers can tell a real
+// measurement apart from an ABSENCE of monitoring data. The old code coerced a
+// missing attendance/homework into an optimistic constant (92 / 85), which
+// scored a newly-enrolled or unmonitored student as low-risk and hid exactly
+// the students no one is watching. These flags replace that fail-UNSAFE guess.
+export interface StudentSignalRowWithMonitoring extends StudentSignalRow {
+  // true when >= 1 attendance day is marked (attendance_percent is not NULL).
+  attendance_has_data: boolean;
+  // true when >= 1 homework submission row exists (hw_total > 0).
+  homework_has_data: boolean;
+  data_completeness: MonitoringCompleteness;
+  // true when the DOMINANT monitoring signal (attendance) has NO data, so a low
+  // computed score is not trustworthy. Such a student is stored as a "needs
+  // review" band — never low-risk-by-default (see computeAndStoreRiskSnapshots).
+  unmonitored: boolean;
+}
+
+// Stored-band floor for an UNMONITORED student. Equals the medium threshold in
+// riskLevelFromScore() (score >= 40 -> "medium"), so an unmonitored student can
+// never be persisted as "low" and never sinks to the bottom of a score-ordered
+// early-warning list.
+const UNMONITORED_REVIEW_SCORE = 40;
+
 export async function loadStudentSignals(
   client: TenantQueryClient,
   organizationId: string,
   schoolId: string,
   academicYearLabel?: string,
-): Promise<StudentSignalRow[]> {
+): Promise<StudentSignalRowWithMonitoring[]> {
   const rows = await client.queryObject<{
     student_id: string;
     student_name: string;
@@ -136,15 +166,32 @@ export async function loadStudentSignals(
   );
 
   return rows.map((row) => {
-    // CANONICAL — attendance_percent is NULL from SQL only when nothing is
-    // marked yet (or every marked day was excused). The risk engine treats
-    // attendance_percent as a plain number, so this falls back to 92 — the
-    // same "no records" default the old total_attendance===0 branch used —
-    // rather than shifting risk scores for students with no/no-usable data.
-    const attendancePercent = row.attendance_percent ?? 92;
-    const homeworkCompletionRate = row.hw_total > 0
+    // ── SAFEGUARDING (ICA-H4) ──────────────────────────────────────────────
+    // attendance_percent is SQL NULL only when nothing is marked yet (or every
+    // marked day was excused); hw_total is 0 when no homework rows exist. Both
+    // are ABSENCES OF MONITORING DATA — not evidence of good standing. The old
+    // code coerced them into optimistic constants (92 / 85), scoring a newly-
+    // enrolled or unmonitored student as low-risk and silently hiding exactly
+    // the students no one is watching (fail-UNSAFE). Instead we record explicit
+    // data-provenance flags and EXCLUDE an unmeasured dimension from the risk
+    // arithmetic (feed a gap-0 placeholder of 100 -> contributes nothing rather
+    // than inventing an optimistic score). The `unmonitored` flag then forces
+    // the stored band off "low" downstream (see computeAndStoreRiskSnapshots).
+    const attendanceHasData = row.attendance_percent !== null;
+    const homeworkHasData = row.hw_total > 0;
+    const attendancePercent = attendanceHasData ? row.attendance_percent! : 100;
+    const homeworkCompletionRate = homeworkHasData
       ? Math.round((row.hw_submitted / row.hw_total) * 100)
-      : 85;
+      : 100;
+    const dataCompleteness: MonitoringCompleteness =
+      attendanceHasData && homeworkHasData
+        ? "full"
+        : (!attendanceHasData && !homeworkHasData ? "none" : "partial");
+    // Attendance is the dominant daily-engagement / safeguarding signal
+    // (weight 0.25 in the engine). When it is absent, a low computed score is
+    // not trustworthy -> the student is UNMONITORED (needs review), never
+    // low-risk-by-default.
+    const unmonitored = !attendanceHasData;
     return {
       student_id: row.student_id,
       student_name: row.student_name.trim(),
@@ -169,6 +216,13 @@ export async function loadStudentSignals(
       // open account or is fully paid up).
       fee_outstanding_amount: Number(row.fee_outstanding) || 0,
       fee_overdue_days: Number(row.fee_overdue_days) || 0,
+      // SAFEGUARDING (ICA-H4): explicit data provenance. Persisted in the
+      // snapshot `inputs` jsonb so the UI can distinguish "measured" from
+      // "no data yet" and show the unmonitored caveat.
+      attendance_has_data: attendanceHasData,
+      homework_has_data: homeworkHasData,
+      data_completeness: dataCompleteness,
+      unmonitored,
     };
   });
 }
@@ -205,6 +259,48 @@ export async function computeAndStoreRiskSnapshots(
       feeOverdueDays: signal.fee_overdue_days,
     });
 
+    // ── SAFEGUARDING (ICA-H4) ──────────────────────────────────────────────
+    // An UNMONITORED student (no attendance data) had the dominant signal
+    // excluded from the score, so a "low" verdict is not trustworthy. Floor the
+    // stored band to a "needs review" state (never below medium), keep any
+    // higher engine band, and replace the misleading "Stable profile" reason
+    // with an explicit no-monitoring-data caveat the UI can surface. A student
+    // with only PARTIAL data keeps its honest engine band but carries a caveat.
+    // NOTE: risk_level is a DB-constrained enum (low|medium|high|critical), so a
+    // first-class "unmonitored" band + engine-level weight re-normalisation is a
+    // tracked follow-up (needs a migration + student_risk_engine.ts change); the
+    // `unmonitored` / *_has_data flags are already persisted in `inputs` for it.
+    let riskScore = computed.riskScore;
+    let riskLevel = computed.riskLevel;
+    let reasons: RiskReason[] = computed.reasons;
+    if (signal.unmonitored) {
+      riskScore = Math.max(computed.riskScore, UNMONITORED_REVIEW_SCORE);
+      riskLevel = riskLevelFromScore(riskScore); // >= "medium", never "low"
+      reasons = [
+        {
+          code: "no_monitoring_data",
+          label: "No monitoring data",
+          severity: "medium",
+          detail:
+            "No attendance has been marked for this student, so risk cannot be assessed from monitoring data. Flagged for review — not confirmed low-risk.",
+        },
+        ...computed.reasons.filter((r) => r.code !== "stable"),
+      ];
+    } else if (signal.data_completeness === "partial") {
+      // attendance present, homework absent (the only non-unmonitored partial
+      // case): the score already excludes the unmeasured homework dimension.
+      reasons = [
+        ...computed.reasons,
+        {
+          code: "partial_monitoring_data",
+          label: "Partial monitoring data",
+          severity: "low",
+          detail:
+            "No homework data yet; score reflects the available signals only.",
+        },
+      ];
+    }
+
     const rows = await client.queryObject<StudentRiskSnapshotRow>(
       `INSERT INTO intel_student_risk_snapshots (
          organization_id, school_id, student_id, academic_year_label,
@@ -219,9 +315,9 @@ export async function computeAndStoreRiskSnapshots(
         academicYearLabel,
         signal.class_name,
         signal.section_name,
-        computed.riskScore,
-        computed.riskLevel,
-        JSON.stringify(computed.reasons),
+        riskScore,
+        riskLevel,
+        JSON.stringify(reasons),
         JSON.stringify(computed.interventions),
         JSON.stringify(computed.teacherActions),
         JSON.stringify(computed.parentNotifications),
