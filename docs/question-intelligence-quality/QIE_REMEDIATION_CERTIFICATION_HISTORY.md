@@ -108,3 +108,16 @@ RI-6 + RI-9 hold. FTS5 + `chunks(doc_id,ordinal)` index deferred (would mutate t
 `qie.db` lane — OWNER decision), R4-2 (automated model-execution layer — needs an API layer, external
 dependency), R5-3 (ERP promotion — owner-gated), R6 (owner must unfreeze Tier-1). Re-certifying the 22 + 15
 + 14 + 7 quarantined artifacts is downstream of R4-2's actors.
+
+---
+
+## Action — R0-2 quarantine recall EXECUTED (owner-approved) · 2026-07-21
+
+Owner approved R0-2. Ran `quarantine_audited_estate.py --apply`: the **22** audit-flagged factory questions
+(qpl_question_bank.db) + **7** mis-provenanced QDI patterns (qdi.db) were flipped `certified → quarantined`
+via guarded transitions (per-row `AND status='certified'`, rowcount==1), each writing a `status_audit` row
+(reason='audit-2026-07-21', prior state preserved). Both stores now hold **0 certified** in the recalled
+scope. This is the explicit recall the audit verdict required — belt-and-suspenders atop the R2/R3
+recall-by-construction (they were already product-invisible). RI-5.6 test updated to the post-recall reality
+(no mis-provenanced pattern is certified; the recalled patterns still fail the provenance invariant). Full
+suite 957 green.

@@ -49,7 +49,7 @@ Legend: ✅ done (committed) · 🔵 in progress · ⏸ owner-gated (prepared, n
 | Item | State | Commit | Notes |
 |---|---|---|---|
 | R0-1 Off-machine backup | ✅ / ⏳ owner tail | `00508275` | Encrypted, restore-verified backup tooling built + proven (fingerprint EXACT MATCH `e3a146f3…`). 3 previously-unbacked DBs now copied into the archive. **Owner/external tail:** provide an off-machine `AKSHARA_BACKUP_DEST` + passphrase and install the LaunchAgent (README). |
-| R0-2 Quarantine 22 + 7 | ⏸ owner-gated | — | Guarded quarantine script prepared + dry-run-verified; **execution is an explicit OWNER decision** (roadmap tags it so). Not flipped. |
+| R0-2 Quarantine 22 + 7 | ✅ EXECUTED (owner-approved 2026-07-21) | `quarantine_audited_estate.py --apply` | **Recall done:** 22 factory questions + 7 QDI patterns flipped certified→quarantined via guarded transitions; 29 `status_audit` rows (reason='audit-2026-07-21', prior state preserved). certified now 0 in both stores. |
 | R0-3 Halt cert runs | ✅ | (this doc) | Halt recorded above + handoff banner. |
 | R0-4 Directory hygiene | ✅ | `d45a03f9` | Stray qie.db deleted; backups relocated + chmod a-w; wal/shm gitignored; `assert_under_kie_home()` added. |
 

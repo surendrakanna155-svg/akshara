@@ -252,22 +252,30 @@ class HistoricalRegression(unittest.TestCase):
 
     @unittest.skipUnless((config.KIE_HOME / "qdi.db").exists() and (config.KIE_HOME / "kie.db").exists(),
                          "live qdi.db / kie.db not present (gitignored / local only)")
-    def test_live_certified_patterns_all_fail_invariant_read_only(self):
-        # READ-ONLY: never route the live qdi.db through open_qdi (no schema migration, no mutation).
+    def test_recalled_patterns_still_fail_invariant_and_none_certified(self):
+        # POST-R0-2 recall: the 7 historical mis-provenanced patterns were flipped certified->quarantined
+        # (audit rows reason='audit-2026-07-21'). Their false provenance is unchanged, so they must STILL fail
+        # the invariant — and NO mis-provenanced pattern may be 'certified' any longer. READ-ONLY (never route
+        # the live qdi.db through open_qdi).
         qdb = sqlite3.connect(f"file:{config.KIE_HOME / 'qdi.db'}?mode=ro", uri=True)
         qdb.row_factory = sqlite3.Row
         kdb = sqlite3.connect(f"file:{config.KIE_HOME / 'kie.db'}?mode=ro", uri=True)
         kdb.row_factory = sqlite3.Row
         try:
-            rows = qdb.execute("SELECT pattern_id, exam, subject, evidence_refs FROM qdi_pattern "
-                               "WHERE status='certified'").fetchall()
-            self.assertTrue(rows, "expected the 7 historical certified patterns to still be present")
-            for r in rows:
+            # the recall completed: no QDI pattern is 'certified' in the live store
+            self.assertEqual(qdb.execute("SELECT COUNT(*) FROM qdi_pattern WHERE status='certified'")
+                             .fetchone()[0], 0, "a mis-provenanced pattern is still certified — recall incomplete")
+            # the audit-recalled patterns are present (now quarantined) and STILL fail the provenance invariant
+            recalled = qdb.execute(
+                "SELECT p.pattern_id, p.exam, p.subject, p.evidence_refs FROM qdi_pattern p "
+                "JOIN status_audit a ON a.entity_id = p.pattern_id "
+                "WHERE a.reason='audit-2026-07-21' AND a.to_status='quarantined'").fetchall()
+            self.assertTrue(recalled, "expected the audit-recalled patterns to be present (now quarantined)")
+            for r in recalled:
                 why = QDI.assert_provenance(kdb, {"exam": r["exam"], "subject": r["subject"],
                                                   "evidence_refs": r["evidence_refs"]})
                 self.assertIsNotNone(
-                    why, f"live certified pattern {r['pattern_id']} unexpectedly PASSED the provenance "
-                         f"invariant — a mis-provenanced pattern must be recalled")
+                    why, f"recalled pattern {r['pattern_id']} unexpectedly PASSED the provenance invariant")
         finally:
             qdb.close()
             kdb.close()
