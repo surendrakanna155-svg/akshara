@@ -24,7 +24,10 @@ import {
   handleRecordMaintenance,
   handleUpdateAsset,
 } from "./inventory_write_handlers.ts";
-import { routeInventoryFinanceWrite } from "../inventory_finance/inventory_finance_router.ts";
+// ICA-F6: the procurement + stock surface (/inventory/{vendors/catalog,
+// procurement/*, stock/*}) is no longer delegated from here — it moved to the
+// unified `routeInventoryFinance`, registered directly in api/app.ts (before this
+// router) so it owns the whole inventory_finance domain from one place.
 
 function matchInventoryIntelligenceRoute(
   method: string,
@@ -53,8 +56,8 @@ function matchInventoryIntelligenceRoute(
 
 // PRA-P1-39: the inventory register's write surface (create/update asset,
 // create category, allocate asset, record maintenance). Kept separate from the
-// GET table below (which hard-rejects every non-GET method) and delegated from
-// routeInventory before the base match, mirroring routeInventoryFinanceWrite.
+// GET table below (which hard-rejects every non-GET method) and dispatched from
+// routeInventory before the base match.
 function matchInventoryWriteRoute(
   method: string,
   path: string,
@@ -102,9 +105,6 @@ export async function routeInventory(
 ): Promise<Response | null> {
   if (!path.startsWith("/inventory")) return null;
 
-  const writeResponse = await routeInventoryFinanceWrite(req, config, method, path);
-  if (writeResponse) return writeResponse;
-
   const intelligenceMatch = matchInventoryIntelligenceRoute(method, path);
   if (intelligenceMatch) {
     return await intelligenceMatch.handler(req, config, ...intelligenceMatch.args);
@@ -112,8 +112,9 @@ export async function routeInventory(
 
   // PRA-P1-39: the register's own POST/PUT writes, before the GET-only base
   // table (which 404s every non-GET). These collide with none of the routes
-  // above (finance-write owns /inventory/procurement|vendors/catalog|stock/*,
-  // intelligence owns /inventory/intelligence/*).
+  // here (intelligence owns /inventory/intelligence/*), nor with the
+  // inventory_finance surface (/inventory/procurement|vendors/catalog|stock/*),
+  // which `routeInventoryFinance` matches earlier in the api/app.ts scan.
   const writeMatch = matchInventoryWriteRoute(method, path);
   if (writeMatch) {
     return await writeMatch.handler(req, config);

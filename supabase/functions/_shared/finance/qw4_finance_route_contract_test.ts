@@ -14,8 +14,9 @@
 // The permission slug for each route was read directly from the handler's
 // `requirePermission(claims, "…")` call (never guessed). Read routes gate on
 // viewFinance, write routes on manageFinance, refund approve/reject on
-// approveRefunds, intelligence on viewFinanceIntelligence / executive, and
-// inventory-reconciliation on viewFinance.
+// approveRefunds, intelligence on viewFinanceIntelligence / executive.
+// (ICA-F6: the inventory-reconciliation reads moved to routeInventoryFinance;
+// their contract now lives in the inventory_finance route-contract test.)
 //
 // What this does NOT prove (live/RLS remainder, covered by the live cert):
 // real 200 payloads, persisted rows, and per-tenant row isolation.
@@ -94,13 +95,12 @@ const routes: RouteCase[] = [
   { method: "GET", path: "/finance/intelligence/executive", holder: ["viewFinanceIntelligence"], other: ["viewFinance"] },
   // FIN-9: head-wise dues analytics (read → viewFinance)
   { method: "GET", path: "/finance/analytics/head-wise-dues", holder: ["viewFinance"], other: ["viewInventory"] },
-  // inventory-reconciliation (gate: viewFinance)
-  { method: "GET", path: "/finance/inventory-reconciliation/dashboard", holder: ["viewFinance"], other: ["viewInventory"] },
-  { method: "GET", path: "/finance/inventory-reconciliation/timeline", holder: ["viewFinance"], other: ["viewInventory"] },
-  { method: "GET", path: "/finance/inventory-reconciliation/goods-receipts", holder: ["viewFinance"], other: ["viewInventory"] },
-  { method: "GET", path: "/finance/inventory-reconciliation/postings", holder: ["viewFinance"], other: ["viewInventory"] },
-  { method: "GET", path: `/finance/inventory-reconciliation/goods-receipts/${ID}`, holder: ["viewFinance"], other: ["viewInventory"] },
-  { method: "GET", path: `/finance/inventory-reconciliation/vendors/${ID}/transactions`, holder: ["viewFinance"], other: ["viewInventory"] },
+  // ICA-F6: the /finance/inventory-reconciliation/* reads moved out of routeFinance
+  // into the unified inventory_finance router; their route/RBAC contract now lives
+  // in inventory_finance/inventory_finance_route_contract_test.ts (dispatched
+  // through routeInventoryFinance). routeFinance no longer owns them (it now 404s
+  // them in isolation — they resolve in production because routeInventoryFinance is
+  // matched before routeFinance in the api/app.ts scan).
   // fee structures
   { method: "GET", path: "/finance/fee-structures", holder: ["viewFinance"], other: ["viewInventory"] },
   { method: "POST", path: "/finance/fee-structures", holder: ["manageFinance"], other: ["viewFinance"] },

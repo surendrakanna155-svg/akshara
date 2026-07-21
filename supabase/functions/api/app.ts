@@ -16,6 +16,7 @@ import {
 import { handleTenantAccessHealth, handleOperationsHealth, handleStorageHealth, handleProviderHealth, handleBackupHealth } from "../_shared/tenant_handlers.ts";
 import { routeAdmissions } from "../_shared/admissions/admissions_router.ts";
 import { routeFinance } from "../_shared/finance/finance_router.ts";
+import { routeInventoryFinance } from "../_shared/inventory_finance/inventory_finance_router.ts";
 import { routeSis } from "../_shared/sis/sis_router.ts";
 import { routeExamAdministration } from "../_shared/academics/exam_administration/exam_administration_router.ts";
 import { routeAttendance } from "../_shared/attendance/attendance_router.ts";
@@ -106,6 +107,16 @@ export async function routeModuleRequest(
     routeLegal,
     routeApproval,
     routeAdmissions,
+    // ICA-F6: the inventory_finance domain owns ONE router, registered ONCE here.
+    // It owns two disjoint prefixes — /finance/inventory-reconciliation/* (reads)
+    // and /inventory/{vendors/catalog,procurement/*,stock/*} (procurement+stock) —
+    // and MUST precede BOTH the finance and inventory routers below, because each
+    // of those greedily owns its prefix and returns its own 404 (never null) for an
+    // unmatched sub-path. Placed here it wins those specific sub-paths first, then
+    // returns null for everything else so the finance/inventory routers still own
+    // the rest of their prefixes. Self-enforces module.inventory on its /inventory/*
+    // surface (see the router header), so it is intentionally NOT withEntitlement-wrapped.
+    routeInventoryFinance,
     routeFinance,
     routeSis,
     // --- PRC-A Batch 2 (caps 101–127, 136–148) ---

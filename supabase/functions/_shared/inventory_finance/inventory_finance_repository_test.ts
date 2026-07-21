@@ -137,9 +137,11 @@ Deno.test("INV-5: listGoodsReceipts scopes to org+school and joins PO + vendor",
   assertEquals(q.sql.includes("gr.organization_id = $1 AND gr.school_id = $2"), true);
 });
 
-Deno.test("finance router exposes inventory reconciliation dashboard", async () => {
-  const { matchFinanceRoute } = await import("../finance/finance_router.ts");
-  const match = matchFinanceRoute(
+// ICA-F6: the reconciliation dashboard read moved from finance_router.ts to the
+// unified inventory_finance router — assert it resolves there now.
+Deno.test("inventory_finance router exposes inventory reconciliation dashboard", async () => {
+  const { matchInventoryFinanceRoute } = await import("./inventory_finance_router.ts");
+  const match = matchInventoryFinanceRoute(
     "GET",
     "/finance/inventory-reconciliation/dashboard",
   );

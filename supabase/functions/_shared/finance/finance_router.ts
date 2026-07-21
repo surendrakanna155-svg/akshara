@@ -49,14 +49,8 @@ import {
 } from "./finance_intelligence_handlers.ts";
 import { handleListInvoiceInstallments } from "./finance_installments_handlers.ts";
 import { handleHeadWiseDues } from "./finance_analytics_handlers.ts";
-import {
-  handleGetGoodsReceipt,
-  handleInventoryFinanceTimeline,
-  handleListGoodsReceipts,
-  handleListInventoryFinancePostings,
-  handleReconciliationDashboard,
-  handleVendorTransactions,
-} from "../inventory_finance/inventory_finance_reconciliation_handlers.ts";
+// ICA-F6: the /finance/inventory-reconciliation/* reads moved to the unified
+// inventory_finance router (routeInventoryFinance, registered in api/app.ts).
 import {
   handleApproveRefund,
   handleCreateRefund,
@@ -137,32 +131,9 @@ export function matchFinanceRoute(
     return { handler: handleHeadWiseDues, args: [] };
   }
 
-  if (path === "/finance/inventory-reconciliation/dashboard" && method === "GET") {
-    return { handler: handleReconciliationDashboard, args: [] };
-  }
-  if (path === "/finance/inventory-reconciliation/timeline" && method === "GET") {
-    return { handler: handleInventoryFinanceTimeline, args: [] };
-  }
-  if (path === "/finance/inventory-reconciliation/goods-receipts" && method === "GET") {
-    return { handler: handleListGoodsReceipts, args: [] };
-  }
-  if (path === "/finance/inventory-reconciliation/postings" && method === "GET") {
-    return { handler: handleListInventoryFinancePostings, args: [] };
-  }
-
-  const goodsReceiptMatch = path.match(
-    /^\/finance\/inventory-reconciliation\/goods-receipts\/([^/]+)$/,
-  );
-  if (goodsReceiptMatch && method === "GET") {
-    return { handler: handleGetGoodsReceipt, args: [goodsReceiptMatch[1]!] };
-  }
-
-  const vendorTxMatch = path.match(
-    /^\/finance\/inventory-reconciliation\/vendors\/([^/]+)\/transactions$/,
-  );
-  if (vendorTxMatch && method === "GET") {
-    return { handler: handleVendorTransactions, args: [vendorTxMatch[1]!] };
-  }
+  // ICA-F6: /finance/inventory-reconciliation/* reads are now owned by the unified
+  // inventory_finance router (routeInventoryFinance), matched BEFORE routeFinance
+  // in api/app.ts so they resolve there rather than falling through to this 404.
 
   if (path === "/finance/fee-structures" && method === "GET") {
     return { handler: handleListFeeStructures, args: [] };
