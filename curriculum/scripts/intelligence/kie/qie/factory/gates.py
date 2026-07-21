@@ -611,6 +611,12 @@ def run_gates(cand: dict, ctx: dict, stage: str = "candidate") -> List[dict]:
         #     declared given (constants + grammatical counts allowlisted so it does not cry wolf).
         _stem_binding_gate(add, stem, structure)
 
+        # 9c. EXAM-NOVELTY (R2-5, ADVISORY): a stem that PRINTS its own method — the declared formula, or a
+        #     "using the formula…" lead-in — is a solved example / plug-in drill, not an exam-novel item. It can
+        #     still be a correct PRACTICE item, so this never blocks certification; it labels the item
+        #     practice-tier (not exam-novel) so difficulty/novelty are surfaced honestly.
+        _method_leak_gate(add, stem, structure)
+
     # 10. DEPTH EARNED BY EXECUTING THE DAG (R2-4) — no longer a walk over an unexecuted DAG. replay_steps runs
     #     each step through sympy and reports the length of the longest chain that ACTUALLY ran; run_gates then
     #     checks the executed chain reproduces the keyed answer. depth_agreement is now BLOCKING (QUARANTINE):
@@ -821,6 +827,32 @@ def _close(a, b, rel: float = 1e-3) -> bool:
     if b == 0:
         return abs(a) < 1e-9
     return abs(a - b) / abs(b) <= rel
+
+
+_METHOD_LEAD = re.compile(
+    r"\b(using|apply|applying|substitut\w*|plug\w*\s+in(to)?|by the (formula|equation|relation)|"
+    r"from the (formula|equation|relation))\b", re.I)
+
+
+def _method_leak_gate(add, stem: str, structure: dict) -> None:
+    """R2-5 exam-novelty (ADVISORY): flag a stem that telegraphs its own method — either the declared relation's
+    formula printed in the prose, or an explicit 'using the formula…' lead-in. Such an item is a solved
+    example / plug-in drill (practice-tier), not exam-novel. Never blocks certification (a practice item can be
+    perfectly correct); it exists so downstream can label novelty honestly and never sell a drill as exam-grade.
+    """
+    rel = (structure or {}).get("relation") or ""
+    s_compact = re.sub(r"\s+", "", (stem or ""))
+    leaked = []
+    rhs = rel.split("=", 1)[1].strip() if "=" in rel else ""
+    rhs_compact = re.sub(r"\s+", "", rhs)
+    if len(rhs_compact) >= 3 and rhs_compact in s_compact:      # the formula RHS printed verbatim in the prose
+        leaked.append(f"formula {rel!r} printed in the stem")
+    mo = _METHOD_LEAD.search(stem or "")
+    if mo:
+        leaked.append(f"method lead-in {mo.group(0)!r}")
+    add("method_leak", not leaked, ADVISORY,
+        f"stem telegraphs the method (practice-tier, not exam-novel): {leaked}" if leaked
+        else "stem does not print its method")
 
 
 def _stem_binding_gate(add, stem: str, structure: dict) -> None:

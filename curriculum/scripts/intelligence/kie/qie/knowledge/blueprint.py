@@ -78,6 +78,11 @@ def build_blueprint(slot: dict, run_id: str, chapter_weight: float, concept_weig
                              + ("" if slot["difficulty_target_met"]
                                 else f"; target {slot['target_difficulty']!r} unreachable for archetype "
                                      f"-> realized {slot['difficulty']!r}")),
+        # R2-5 (honest labeling): the difficulty is a bounded-driver-model PREDICTION with fixed weights —
+        # NOT PYQ/pilot-calibrated. It must be surfaced as predicted-uncalibrated everywhere product-facing so
+        # it is never presented as a measured exam difficulty. Flips to 'calibrated' only when R5-4 (measured
+        # Exam DNA v2) + R5-5 (psychometric calibration) provide empirical difficulty.
+        "difficulty_calibration": "predicted_uncalibrated",
         "learning_objective": learning_objective(kc["canonical_name"], slot["archetype"]),
         "expected_solving_path": None,       # certified QDI solution_structure -> Phase 4
         "misconceptions_to_evaluate": [],    # certified QDI misconceptions   -> Phase 4

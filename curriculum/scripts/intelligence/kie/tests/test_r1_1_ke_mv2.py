@@ -193,5 +193,26 @@ class StemStructureBinding(unittest.TestCase):
         self.assertAlmostEqual(nums[1], 2.0, places=12)
 
 
+class MethodLeakExamNovelty(unittest.TestCase):
+    """R2-5 (honest labeling, ADVISORY): a stem that prints its own formula or a 'using the formula…' lead-in is
+    a plug-in drill (practice-tier), not exam-novel. The gate flags it but never BLOCKS — a practice item can be
+    perfectly correct; the flag exists so novelty is surfaced honestly, never sold as exam-grade."""
+
+    def test_clean_prose_stem_does_not_leak(self):
+        by = _by(_MOMENTUM, _ctx())
+        self.assertTrue(by["method_leak"]["ok"], "a prose stem that names no formula must not be flagged")
+        self.assertEqual(by["method_leak"]["severity"], G.ADVISORY, "method_leak must never block certification")
+
+    def test_formula_and_lead_in_are_flagged_but_advisory(self):
+        cand = copy.deepcopy(_MOMENTUM)
+        cand["stem"] = "Using the formula p = m*v, find p for m = 3 kg and v = 4 m/s."
+        by = _by(cand, _ctx())
+        self.assertFalse(by["method_leak"]["ok"], "a stem printing its formula + 'using the formula' must flag")
+        self.assertEqual(by["method_leak"]["severity"], G.ADVISORY)
+        # advisory => it does not change the lifecycle verdict on its own
+        status, _ = G.verdict([g for g in G.run_gates(cand, _ctx())])
+        self.assertNotEqual(status, "rejected", "method_leak is advisory — it must not reject a correct item")
+
+
 if __name__ == "__main__":
     unittest.main()
