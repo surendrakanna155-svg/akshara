@@ -116,9 +116,22 @@ crying-wolf boundary + prose section-regex leak fixed + regression-locked).
 15→trial_certified, 456→expired_unjudged); concept_codes_all backfilled live (bank 24/0-unresolved; corpus
 1000 rewritten/99 honest-null). Full suite **957 green**. RI-6 + RI-9 hold.
 
-**Next = the owner/external gates (PAUSED here):** R4-1 (adopt/mine/retire the hidden `qie.db` lane — OWNER),
-R4-2 (automated model-execution layer — needs an API layer / external dep), R5-3 (ERP promotion — owner-gated),
-R6 (owner must unfreeze Tier-1). R4-3/R4-4/R5-*/others are buildable but gated behind or dependent on these.
+### Phase R4 (partial: owner-approved R4-1 + R4-2 + R0-2) — ✅
+
+| Item | State | Commit | Notes |
+|---|---|---|---|
+| R0-2 recall | ✅ EXECUTED | `da446fe7` | 22 questions + 7 QDI patterns certified→quarantined (audit-preserved) |
+| R4-1 adopt qie.db [BS-1/5/6] | ✅ | `5ff82c37` | 7-method verifier battery + relation certifier → `kie/qie/verifiers/`; `unified_inventory.db` (4250 assets, dedup + KC_ crosswalk + provenance); qie.db registered evidence-only; **promotable-to-product now = 0** (honest — pilot items lack R2 evidence); model-agreement structurally cannot certify |
+| R4-2 model execution layer [C11] | ✅ | `1a729d6d` | provider-agnostic `kie/qie/execution/`: queue/retry/crash-resume, cache + **family-scoped** judge cache, deterministic replay, R2-3 provenance, telemetry + cost + budget, OpenAI adapter (stdlib). Verifier REFUTED an independence-laundering hole → fixed + locked |
+
+Full suite **1022 green**. RI-6 preserved.
+
+**Follow-ons surfaced:** qp_bridge RI-6 re-point (route qie.db facts/relations through the manifest — `promote.ri6_followon()`);
+R4-2 live tail = `OPENAI_API_KEY` (external); re-certification of recalled/held assets now has the layer + verifiers (needs a key + R4-3).
+
+**Still open (roadmap):** R4-3 (qualitative certification lane — buildable on the adopted qie.db/KVS substrate),
+R4-4 (deferred audit passes), R5-1/R5-2 (prereq edge table + KC_ convergence — buildable), R5-3 (ERP promotion — **owner-gated**),
+R5-4/R5-6 (need PYQ corpus), R6 (Tier-1 freeze — **owner unfreeze**).
 
 **Deferred-but-enforced across R2** (machinery fail-closed NOW; the ACTORS need an API layer — roadmap R4-2):
 a real cross-family/human judge yielding `independent=1` (today's path is provisional-only), an Opus

@@ -121,3 +121,43 @@ scope. This is the explicit recall the audit verdict required — belt-and-suspe
 recall-by-construction (they were already product-invisible). RI-5.6 test updated to the post-recall reality
 (no mis-provenanced pattern is certified; the recalled patterns still fail the provenance invariant). Full
 suite 957 green.
+
+---
+
+## Checkpoint — Phase R4 (partial: R4-1 + R4-2, owner-approved) · 2026-07-21 · `EOS: CONDITIONAL PASS`
+
+Owner approved R4-1 (adopt, not retire), R4-2 (build the execution layer), R0-2 (execute the recall).
+
+- **R0-2 recall EXECUTED** — 22 questions + 7 QDI patterns `certified → quarantined` (see the action entry above). — `da446fe7`
+- **R4-1** adopt qie.db as an EVIDENCE source: ported the 7-method verifier battery + the 5-gate relation
+  certifier into a reusable `kie/qie/verifiers/` library (model agreement structurally excluded — reject-only);
+  built `unified_inventory.db` (4250 assets, deterministic fingerprint) reconciling qie.db + both factory stores
+  + the certified index with dedup + KC_ crosswalk + provenance; registered qie.db `role='evidence_source'`,
+  `product_visible='0'`. **Promotion is independent-verification-gated:** 41 governed_relations promotable
+  (source_proven), 1434 pilot items practice-tier-eligible, 190 held_qualitative (→ R4-3), 77 KVS eligible;
+  **promotable-to-product-bank now = 0** (the honest result — pilot items lack the R2 evidence chain). — `5ff82c37`
+- **R4-2** the provider-agnostic model execution layer (`kie/qie/execution/`): queue + retry + crash-resume,
+  response cache + family-scoped judge cache, deterministic record→replay, R2-3 provenance bundles, telemetry +
+  cost accounting + budget cap, OpenAI adapter (stdlib, injectable transport). Wired into run_generation as the
+  canonical generation/judge path; proven to drive `certify_run(require_telemetry=True)` end-to-end with a fake
+  provider. — `1a729d6d`
+
+**Adversarial verification:** verify-R4-2 returned **REFUTED** — the item_hash judge cache was content-only,
+so a same-family (non-independent) verdict could be laundered into a cross-family certification, and cache hits
+left no telemetry. Both fixed + regression-locked (cache keyed by (item_hash, family, model); cache_hit
+breadcrumb). R4-1 was reviewed (36 tests; model-agreement structurally cannot certify; 0 forced promotions).
+
+**Live outcome:** `unified_inventory.db` built (evidence manifest, NOT a product bank); qie.db registered
+evidence-only; recall applied. Full suite **1022 green**. **RI-6 preserved** (qpl_question_bank remains the sole
+product bank; qie.db can never satisfy a product read).
+
+**Open follow-ons surfaced (not owner-gated blocks, but flagged):**
+- **qp_bridge RI-6 re-point** — qp_bridge reads governed_fact/relation directly from qie.db (a de-facto 2nd
+  product surface); route it through the unified manifest. Tracked by `promote.ri6_followon()`.
+- **R4-2 live tail (external):** set `OPENAI_API_KEY`; keep the PRICE_TABLE current. No live model call made yet.
+- **Re-certification** of the recalled/held assets now has its execution layer (R4-2) + verifier library (R4-1);
+  it needs a live provider key + the qualitative lane (R4-3).
+
+**Still open in the roadmap:** R4-3 (qualitative certification lane — buildable on the qie.db evidence + KVS
+substrate now adopted), R4-4 (deferred audit passes), R5-1/R5-2 (prereq edge table + KC_ namespace convergence —
+buildable), R5-3 (ERP promotion — owner-gated), R5-4/R5-6 (need PYQ corpus), R6 (Tier-1 freeze — owner unfreeze).
