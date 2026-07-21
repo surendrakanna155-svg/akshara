@@ -21,4 +21,6 @@ pytesseract==0.3.13      # OCR wrapper for scanned PDFs (needs system `tesseract
 Pillow==12.3.0           # image handling for the OCR pipeline
 
 # --- Phases 5-8: analysis / generation (staged) -------------------------------
+sympy==1.14.0            # deterministic re-derivation: the QIE/QPL certification gates (independent_solve,
+                         #   dimensional analysis, distractor mis_relation, step replay) all execute via sympy
 # numpy>=2                 # vector/statistics for question-intelligence

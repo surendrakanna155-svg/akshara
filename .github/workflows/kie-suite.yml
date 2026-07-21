@@ -1,0 +1,43 @@
+name: KIE/QIE Suite
+
+# Remediation R3-3: the audit found NO CI ran the KIE/QIE certification test suite, and skipUnless(DB-exists)
+# guards let it pass vacuously on any machine without the (gitignored, local-only) knowledge/question DBs.
+# This job runs the suite on every change to the intelligence lane. The gitignored DBs are legitimately absent
+# in CI, so DB/PDF-input tests self-skip (KIE_CANONICAL is unset); only real failures/errors fail the run.
+# The fixtures-only tests — the deterministic certification gates (sympy re-derivation, append-only records,
+# provenance/freeze invariants) — always run and are what this gate protects.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "curriculum/scripts/intelligence/**"
+      - ".github/workflows/kie-suite.yml"
+  pull_request:
+    paths:
+      - "curriculum/scripts/intelligence/**"
+      - ".github/workflows/kie-suite.yml"
+
+jobs:
+  kie-suite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.14
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install dependencies (binary wheels only)
+        run: |
+          python -m pip install --upgrade pip
+          pip install --only-binary=:all: -r curriculum/scripts/intelligence/requirements.txt
+
+      - name: Tesseract (OCR-dependent tests self-skip without input PDFs, but keep the binary available)
+        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr
+
+      - name: Run the KIE/QIE suite (DB/PDF tests self-skip; loud skip summary)
+        working-directory: curriculum/scripts/intelligence
+        run: python -m kie.tests.run_kie_suite
