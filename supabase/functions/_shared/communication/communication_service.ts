@@ -34,12 +34,71 @@ import { enqueueNotificationRequested, processDeliveryQueue } from "./notificati
 import { validateEscalationChain } from "./communication_escalation.ts";
 
 /**
- * PERF-1: hard cap on the recipients fanned out in a single broadcast so a
- * runaway audience can't blow the request/transaction budget. Anything beyond
- * the cap is dropped from this broadcast (and surfaced in the audit metadata);
- * the bound is generous enough to cover a whole school.
+ * PERF-1 / ICA-C6: per-statement batch size for broadcast fan-out. Recipients are
+ * written to `comm_recipients` and `notification_deliveries` in multi-row INSERTs
+ * of at most this many rows, so a single statement's parameter count stays well
+ * inside Postgres' 65,535-parameter ceiling (9 fixed + 1/recipient for the
+ * delivery INSERT). This is a per-INSERT chunk size, NOT a cap on the audience: a
+ * cohort larger than one batch is fanned out over SUCCESSIVE batches — every
+ * recipient is enqueued, never truncated (see {@link fanOutBroadcastDeliveries}).
  */
-const MAX_BROADCAST_RECIPIENTS = 5000;
+const BROADCAST_DELIVERY_BATCH_SIZE = 5000;
+
+/**
+ * ICA-C6 (P1): enqueue EVERY recipient of a broadcast, in bounded multi-row-INSERT
+ * batches. Previously the cohort was `slice(0, cap)`-truncated, silently DROPPING
+ * recipients past the cap with no error or continuation. Now the full cohort is
+ * chunked into successive batches of {@link BROADCAST_DELIVERY_BATCH_SIZE}, so a
+ * larger-than-a-batch audience reaches EVERYONE while each INSERT stays bounded
+ * (preserving the per-statement efficiency PERF-1 introduced — still one multi-row
+ * INSERT per chunk, never one query per recipient). For each chunk we write the
+ * `comm_recipients` ledger rows (COM-1, idempotent via ON CONFLICT DO NOTHING) and
+ * then one delivery batch per channel; the acknowledgement flag rides the `push`
+ * copy only (COM-D1). Tenant/school scoping is threaded through unchanged. Returns
+ * the number of recipients enqueued (== the resolved cohort size).
+ */
+async function fanOutBroadcastDeliveries(
+  db: TenantQueryClient,
+  input: {
+    broadcastId: string;
+    organizationId: string;
+    schoolId: string | null;
+    recipients: string[];
+    channels: string[];
+    renderedSubject: string;
+    renderedBody: string;
+    requiresAck: boolean;
+  },
+): Promise<number> {
+  const { recipients } = input;
+  for (
+    let start = 0;
+    start < recipients.length;
+    start += BROADCAST_DELIVERY_BATCH_SIZE
+  ) {
+    const chunk = recipients.slice(start, start + BROADCAST_DELIVERY_BATCH_SIZE);
+    await insertBroadcastRecipientsBatch(
+      db,
+      input.broadcastId,
+      input.organizationId,
+      chunk,
+    );
+    for (const channel of input.channels) {
+      await enqueueDeliveriesBatch(db, {
+        organizationId: input.organizationId,
+        schoolId: input.schoolId ?? "a2000000-0000-4000-8000-000000000001",
+        recipientUserIds: chunk,
+        channel,
+        category: "announcement",
+        renderedSubject: input.renderedSubject,
+        renderedBody: input.renderedBody,
+        broadcastId: input.broadcastId, // COM-1: tie the delivery ledger to this broadcast
+        requiresAck: input.requiresAck && channel === "push", // COM-D1: ack on push only
+      });
+    }
+  }
+  return recipients.length;
+}
 
 export class CommunicationValidationError extends Error {
   constructor(message: string) {
@@ -361,32 +420,25 @@ export async function sendBroadcastMessage(
     audience,
     { className: audienceClass, sectionName: audienceSection },
   );
-  // PERF-1: bound the cohort, then write recipients + push deliveries in two
-  // multi-row INSERTs instead of 2 round-trips per recipient. The actual
-  // per-recipient send is NOT done here — deliveries are queued ('pending') and
-  // drained out of the request/response cycle (see handleCreateBroadcast), so a
-  // large-cohort broadcast can never block or time out the HTTP request.
-  const recipients = resolved.slice(0, MAX_BROADCAST_RECIPIENTS);
-  const dropped = resolved.length - recipients.length;
-
-  await insertBroadcastRecipientsBatch(db, broadcast.id, claims.tenant_id, recipients);
-  // PRA-P1-45: fan out to each opted-in channel (default push-only). `requiresAck`
-  // is attached to the push batch ONLY — acknowledgement is an in-app affordance,
-  // so counting it on an sms/email copy would double-count the ack total.
+  // ICA-C6 / PERF-1: fan the FULL cohort out over successive bounded multi-row
+  // INSERTs — no recipient past a batch boundary is dropped. `requiresAck` rides
+  // the push copy ONLY (PRA-P1-45 / COM-D1): acknowledgement is an in-app
+  // affordance, so counting it on an sms/email copy would double-count the ack
+  // total. The actual per-recipient send is NOT done here — deliveries are queued
+  // ('pending') and drained out of the request/response cycle (see
+  // handleCreateBroadcast), so a large-cohort broadcast can never block or time
+  // out the HTTP request.
   const channels = normalizeBroadcastChannels(input.channels);
-  for (const channel of channels) {
-    await enqueueDeliveriesBatch(db, {
-      organizationId: claims.tenant_id,
-      schoolId: schoolId ?? "a2000000-0000-4000-8000-000000000001",
-      recipientUserIds: recipients,
-      channel,
-      category: "announcement",
-      renderedSubject: input.title,
-      renderedBody: input.body,
-      broadcastId: broadcast.id, // COM-1: tie the delivery ledger to this broadcast
-      requiresAck: requiresAck && channel === "push", // COM-D1: ack on push only
-    });
-  }
+  const recipientCount = await fanOutBroadcastDeliveries(db, {
+    broadcastId: broadcast.id,
+    organizationId: claims.tenant_id,
+    schoolId: schoolId ?? null,
+    recipients: resolved,
+    channels,
+    renderedSubject: input.title,
+    renderedBody: input.body,
+    requiresAck,
+  });
   await finalizeBroadcast(db, broadcast.id);
 
   await recordMutationAudit(
@@ -403,9 +455,11 @@ export async function sendBroadcastMessage(
         audienceSection,
         requiresAck,
         channels,
-        recipientCount: recipients.length,
+        recipientCount,
         resolvedCount: resolved.length,
-        droppedOverCap: dropped,
+        // ICA-C6: the cohort is fully fanned out (chunked), so nothing is ever
+        // dropped over a cap. Field retained for back-compat / cert parity.
+        droppedOverCap: 0,
       },
       correlationId: req ? correlationIdFromRequest(req) : undefined,
     },
@@ -426,8 +480,8 @@ export async function sendBroadcastMessage(
     requiresAck: broadcast.requires_ack,
     channels,
     title: broadcast.title,
-    recipientCount: recipients.length,
-    droppedOverCap: dropped,
+    recipientCount,
+    droppedOverCap: 0,
     status: "queued",
   };
 }
@@ -557,26 +611,24 @@ async function fanOutExistingBroadcast(
     broadcast.audience,
     { className: broadcast.audience_class, sectionName: broadcast.audience_section },
   );
-  const recipients = resolved.slice(0, MAX_BROADCAST_RECIPIENTS);
-  const dropped = resolved.length - recipients.length;
-
-  await insertBroadcastRecipientsBatch(db, broadcast.id, claims.tenant_id, recipients);
-  await enqueueDeliveriesBatch(db, {
+  // ICA-C6: fan the FULL cohort out over successive bounded batches (never
+  // truncated), same as the immediate path. Scheduled dispatch is push-only.
+  const recipientCount = await fanOutBroadcastDeliveries(db, {
+    broadcastId: broadcast.id,
     organizationId: claims.tenant_id,
-    schoolId: schoolId ?? "a2000000-0000-4000-8000-000000000001",
-    recipientUserIds: recipients,
-    channel: "push",
-    category: "announcement",
+    schoolId,
+    recipients: resolved,
+    channels: ["push"],
     renderedSubject: broadcast.title,
     renderedBody: broadcast.body,
-    broadcastId: broadcast.id, // COM-1: tie the delivery ledger to this broadcast
     requiresAck: broadcast.requires_ack === true, // COM-D1: carry the ack flag
   });
   await finalizeBroadcast(db, broadcast.id);
 
   return {
-    recipientCount: recipients.length,
-    droppedOverCap: dropped,
+    recipientCount,
+    // ICA-C6: full fan-out — nothing dropped over a cap. Retained for shape parity.
+    droppedOverCap: 0,
     resolvedCount: resolved.length,
   };
 }
