@@ -1,3 +1,4 @@
+import 'package:akshara_erp/core/config/exam_approval_config.dart';
 import 'package:akshara_erp/core/exams/exam_administration_store.dart';
 import 'package:akshara_erp/core/exams/exam_remark.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
@@ -24,7 +25,10 @@ void main() {
     testPrefs = await resetExamAdministrationForTest();
   });
 
-  Widget buildTestApp({ErpRole role = ErpRole.principal}) {
+  Widget buildTestApp({
+    ErpRole role = ErpRole.principal,
+    bool approvalRequired = true,
+  }) {
     return ProviderScope(
       overrides: [
         sharedPreferencesTestOverride(testPrefs),
@@ -32,6 +36,10 @@ void main() {
         userPermissionsProvider.overrideWithValue(
           UserPermissions.forRole(role),
         ),
+        // UXR-D5 — the direct "Publish results" button only appears when
+        // principal approval is NOT required; override so the direct-publish
+        // confirmation path is exercisable.
+        examApprovalRequiredProvider.overrideWithValue(approvalRequired),
       ],
       child: MaterialApp(
         theme: AksharaAppTheme.light(),
@@ -185,6 +193,98 @@ void main() {
             .marksObtained,
         41,
       );
+    });
+
+    // UXR-D5 — publishing results to parents (the most consequential Exams
+    // action) must show a summary confirmation, not fire on a single tap.
+    testWidgets(
+        'UXR-D5: "Publish results" shows a summary confirmation (N/M/K); '
+        'Cancel does not publish, Confirm does', (tester) async {
+      // approvalRequired:false surfaces the direct-publish button.
+      await tester.pumpWidget(buildTestApp(approvalRequired: false));
+      await tester.pumpAndSettle();
+
+      final store = ExamAdministrationStore.instance;
+      // Seeded 8-A roster: 5 students, all Present, roll 06 has no mark entered.
+      //   N (total)    = 5
+      //   M (absent)   = 0  (none carry AB/ML/DB)
+      //   K (unmarked) = 1  (roll 06 is Present with a null mark)
+      expect(
+        store.examById('exam_math_8a')!.phase,
+        ExamLifecyclePhase.marksEntry,
+      );
+      expect(store.marksForExam('exam_math_8a'), hasLength(5));
+      expect(store.markById('exam_math_8a_06')!.marksObtained, isNull);
+
+      final publishButton =
+          find.byKey(QaTestKeys.examAdminPublishResultsButton);
+      await tester.ensureVisible(publishButton);
+      await tester.tap(publishButton);
+      await tester.pumpAndSettle();
+
+      // A confirmation dialog appears — no immediate publish on the first tap.
+      final dialog = find.byKey(QaTestKeys.examAdminPublishConfirmDialog);
+      expect(dialog, findsOneWidget);
+      expect(find.textContaining('Published'), findsNothing);
+
+      // Summary reflects the REAL roster: class · subject, N=5, M=0 absent,
+      // and K=1 unmarked surfaced prominently as a warning.
+      expect(
+        find.descendant(
+          of: dialog,
+          matching: find.textContaining('8-A · Mathematics'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: dialog, matching: find.text('5')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: dialog, matching: find.textContaining('Absent')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: dialog, matching: find.text('0')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: dialog,
+          matching: find.textContaining('1 student has no marks entered'),
+        ),
+        findsOneWidget,
+      );
+
+      // Cancel = no-op: dialog closes and nothing is published.
+      await tester.tap(
+        find.descendant(
+          of: dialog,
+          matching: find.widgetWithText(TextButton, 'Cancel'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(QaTestKeys.examAdminPublishConfirmDialog),
+        findsNothing,
+      );
+      expect(
+        store.examById('exam_math_8a')!.phase,
+        ExamLifecyclePhase.marksEntry,
+      );
+      expect(find.textContaining('Published'), findsNothing);
+
+      // Re-open, Confirm = the existing publish runs and keeps the snackbar.
+      await tester.tap(publishButton);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(QaTestKeys.examAdminPublishConfirmButton));
+      await tester.pumpAndSettle();
+
+      expect(
+        store.examById('exam_math_8a')!.phase,
+        ExamLifecyclePhase.published,
+      );
+      expect(find.textContaining('Published'), findsWidgets);
     });
   });
 }

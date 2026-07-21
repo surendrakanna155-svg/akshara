@@ -277,6 +277,13 @@ abstract final class QaTestKeys {
   // EXM-1 — fast bulk marks entry: Save-all button on the marks grid.
   static const examAdminMarksSaveAllButton =
       ValueKey<String>('exam_admin_marks_save_all_button');
+  // UXR-D5 — direct "Publish results" button + its pre-publish confirmation.
+  static const examAdminPublishResultsButton =
+      ValueKey<String>('exam_admin_publish_results_button');
+  static const examAdminPublishConfirmDialog =
+      ValueKey<String>('exam_admin_publish_confirm_dialog');
+  static const examAdminPublishConfirmButton =
+      ValueKey<String>('exam_admin_publish_confirm_button');
   // EXM-2 — marks-entry progress board.
   static const examMarksProgressButton =
       ValueKey<String>('exam_marks_progress_button');

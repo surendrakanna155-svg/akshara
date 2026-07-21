@@ -516,7 +516,11 @@ class _MarksEntryBodyState extends ConsumerState<_MarksEntryBody>
                 AksharaViewAction(
                   permission: Permission.publishExamResults,
                   child: FilledButton(
-                    onPressed: () => _publishDirect(context, ref),
+                    key: QaTestKeys.examAdminPublishResultsButton,
+                    // UXR-D5 — the most consequential action in Exams (results
+                    // become parent-visible) now routes through a summary
+                    // confirmation instead of publishing on a single tap.
+                    onPressed: () => _confirmAndPublish(context, ref),
                     child: const Text('Publish results'),
                   ),
                 ),
@@ -578,6 +582,91 @@ class _MarksEntryBodyState extends ConsumerState<_MarksEntryBody>
         SnackBar(content: Text(aksharaErrorMessage(error))),
       );
     }
+  }
+
+  /// UXR-D5 — publishing results makes them parent-visible; the flagship Exams
+  /// action must not fire on a single tap. Show a SUMMARY the coordinator can
+  /// sanity-check (class · subject · N students · M absent · K unmarked) BEFORE
+  /// the irreversible publish. Cancel is a no-op; Confirm runs the unchanged
+  /// [_publishDirect]. Counts come straight from the live roster [marks]:
+  ///  * N total     = every student on the roster (marks.length).
+  ///  * M absent     = students carrying an AB/ML/DB status (!status.isPresent),
+  ///                   who publish as NULL and are excluded from totals/avg/rank.
+  ///  * K unmarked   = PRESENT students with no numeric mark entered at all
+  ///                   (status.isPresent && marksObtained == null) — these would
+  ///                   go out to parents with no result, so K is made prominent.
+  /// TODO(UXR-D5): a post-publish revocation / un-publish window is
+  /// backend-dependent and out of scope for this client-only confirmation.
+  Future<void> _confirmAndPublish(BuildContext context, WidgetRef ref) async {
+    final total = marks.length;
+    final absent = marks.where((m) => !m.status.isPresent).length;
+    final unmarked = marks
+        .where((m) => m.status.isPresent && m.marksObtained == null)
+        .length;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        final text = dialogContext.aksharaText;
+        final scheme = Theme.of(dialogContext).colorScheme;
+        return AlertDialog(
+          key: QaTestKeys.examAdminPublishConfirmDialog,
+          title: const Text('Publish results to parents?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Results for ${exam.classLabel} · ${exam.subject} become '
+                'visible to students and parents once published.',
+                style: text.bodyMedium,
+              ),
+              const SizedBox(height: AksharaSpacing.s3),
+              _PublishSummaryRow(
+                label: 'Students',
+                value: '$total',
+              ),
+              _PublishSummaryRow(
+                label: 'Absent (AB / ML / DB)',
+                value: '$absent',
+              ),
+              const SizedBox(height: AksharaSpacing.s1),
+              // K unmarked > 0 is the risky case — those students publish with no
+              // result — so it is surfaced prominently. It never BLOCKS: the
+              // coordinator decides whether to proceed.
+              if (unmarked > 0)
+                AksharaWarningBanner(
+                  message: '$unmarked student${unmarked == 1 ? '' : 's'} '
+                      '${unmarked == 1 ? 'has' : 'have'} no marks entered and '
+                      'will not receive a result.',
+                )
+              else
+                const _PublishSummaryRow(
+                  label: 'Unmarked',
+                  value: '0',
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              key: QaTestKeys.examAdminPublishConfirmButton,
+              style: unmarked > 0
+                  ? FilledButton.styleFrom(backgroundColor: scheme.error)
+                  : null,
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Publish'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true) return;
+    if (!context.mounted) return;
+    await _publishDirect(context, ref);
   }
 
   Future<void> _publishDirect(BuildContext context, WidgetRef ref) async {
@@ -979,6 +1068,32 @@ class _MarkEntryRowState extends ConsumerState<_MarkEntryRow> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// UXR-D5 — a label/value line in the publish-confirmation summary.
+class _PublishSummaryRow extends StatelessWidget {
+  const _PublishSummaryRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.aksharaText;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AksharaSpacing.s1),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: text.bodyMedium),
+          Text(
+            value,
+            style: text.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+          ),
+        ],
       ),
     );
   }
