@@ -20,10 +20,17 @@ import {
   authenticateRequest,
   organizationIdFromClaims,
 } from "../permission_middleware.ts";
-import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
+import {
+  TenantDbNotConfiguredError,
+  type TenantQueryClient,
+  withTenantContext,
+} from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { resolveSubscription } from "./entitlement_service.ts";
-import { entitlementEnforcementEnabled } from "./entitlement_enforcement.ts";
+import {
+  entitlementEnforcementEnabled,
+  isEntitlementEnforcedForOrg,
+} from "./entitlement_enforcement.ts";
 import { CAPABILITY_ENTITLEMENTS } from "./entitlement_resolver.ts";
 
 /**
@@ -115,6 +122,43 @@ export function gateSubscriptionStatus(status: string): Response | null {
 }
 
 /**
+ * The complete entitlement decision for ONE already-open tenant connection.
+ *
+ * ICA-G2 — the per-org rollout gate runs FIRST: when enforcement is not active
+ * for this org (master mode "off", or "allowlist" with the org's flag unset) this
+ * returns null immediately, so the request proceeds exactly as it does today.
+ * Only when the org IS enforced does it resolve the subscription and apply the
+ * suspended-subscription block (PRC-A cap 57) then the plan/capability gate.
+ *
+ * Extracted from `enforceEntitlement` so the ON path can be exercised end-to-end
+ * against a fake TenantQueryClient (seeded org + seeded plan) with no live
+ * Postgres — `enforceEntitlement` is now just auth + withTenantContext wrapped
+ * around this function, which is the identical code that runs in production.
+ *
+ * Returns a Response to deny (402 plan-gate / 402 suspended / 403 module-disabled)
+ * or null to allow.
+ */
+export async function resolveEntitlementDecision(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string | null,
+  slug: string,
+): Promise<Response | null> {
+  // ICA-G2 phased rollout: is enforcement active for THIS org right now?
+  if (!(await isEntitlementEnforcedForOrg(orgId, db))) return null;
+
+  const resolved = await resolveSubscription(db, orgId, schoolId);
+  // PRC-A cap 57 — subscription state first: a suspended org is blocked from
+  // every entitled module before the plan/capability gates are even consulted.
+  const suspended = gateSubscriptionStatus(resolved.status);
+  if (suspended) return suspended;
+  // G3 — plan ceiling (402) first, then school-disabled enforcement (403):
+  // the plan may allow the optional module while the school has switched it
+  // off in its own config, in which case the backend must not be callable.
+  return gateModuleAccess(resolved.entitlements, resolved.capabilities, slug);
+}
+
+/**
  * Resolves the caller org's plan-allowed entitlements and enforces `slug`.
  * Returns a Response to short-circuit (401/402/500) or null to proceed.
  */
@@ -129,19 +173,11 @@ export async function enforceEntitlement(
   const orgId = organizationIdFromClaims(auth.claims);
   const schoolId = auth.claims.school_id ?? null;
   try {
-    const resolved = await withTenantContext(
+    return await withTenantContext(
       config,
       auth.claims,
-      (db) => resolveSubscription(db, orgId, schoolId),
+      (db) => resolveEntitlementDecision(db, orgId, schoolId, slug),
     );
-    // PRC-A cap 57 — subscription state first: a suspended org is blocked from
-    // every entitled module before the plan/capability gates are even consulted.
-    const suspended = gateSubscriptionStatus(resolved.status);
-    if (suspended) return suspended;
-    // G3 — plan ceiling (402) first, then school-disabled enforcement (403):
-    // the plan may allow the optional module while the school has switched it
-    // off in its own config, in which case the backend must not be callable.
-    return gateModuleAccess(resolved.entitlements, resolved.capabilities, slug);
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
       return tenantDbNotConfiguredResponse(error);

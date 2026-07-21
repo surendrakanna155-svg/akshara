@@ -14,7 +14,10 @@ import type { AccessTokenClaims } from "../jwt.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 import { resolveSubscription } from "./entitlement_service.ts";
-import { entitlementEnforcementEnabled } from "./entitlement_enforcement.ts";
+import {
+  entitlementEnforcementEnabled,
+  isEntitlementEnforcedForOrg,
+} from "./entitlement_enforcement.ts";
 
 /**
  * True when adding ONE more item keeps the org within `limit` plus the grace
@@ -63,6 +66,10 @@ async function enforceLimit(
   if (!entitlementEnforcementEnabled()) return null;
   try {
     return await withTenantContext(config, claims, async (db) => {
+      // ICA-G2 phased rollout: honor the per-org dial — a limit is enforced only
+      // when enforcement is active for THIS org (mode "all", or "allowlist" with
+      // the org's flag set). Not enforced → no cap applies.
+      if (!(await isEntitlementEnforcedForOrg(claims.tenant_id, db))) return null;
       const sub = await resolveSubscription(
         db,
         claims.tenant_id,
@@ -194,6 +201,8 @@ export async function enforceSmsQuota(
   if (!entitlementEnforcementEnabled()) return null;
   try {
     return await withTenantContext(config, claims, async (db) => {
+      // ICA-G2 phased rollout: honor the per-org dial (same as the slab limits).
+      if (!(await isEntitlementEnforcedForOrg(claims.tenant_id, db))) return null;
       const sub = await resolveSubscription(
         db,
         claims.tenant_id,
