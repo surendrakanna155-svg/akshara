@@ -43,8 +43,32 @@
 
 ---
 
-## Validation (trunk, this batch)
-`deno check` all changed source → exit 0 · payment dir **38/0** · finance dir **307/0** · shared guards + trunk-integrity + money invariant **11/0**.
+---
+
+## Batch 2 — Domain Correctness + Data Integrity (feeds W4/W5/W3 · absorption map §5.6)
+
+| ICA | Title | Class | Verify verdict | EOS | Commit |
+|---|---|---|---|---|---|
+| **H1** | Term tabulation drops same-subject exams | Data-Model/Product P1 | STILL-PRESENT (defect also in `loadReportCards`) | CONDITIONAL PASS | `75bc8e2e` |
+| **H4** | Student-risk fabricates optimistic low-risk defaults | Product/Safeguarding P1 | STILL-PRESENT (fail-UNSAFE) | CONDITIONAL PASS | `0a231743` |
+| **H4-ext** | Same defect on `predictions_service` + `student_success_service` | Product/Safeguarding P1 | present (success) / test-red (predictions) | PASS | `943ce2d5` |
+| **H3** | Management attendance returns 0% (not null) on zero denom | Implementation P2 | STILL-PRESENT (secondary "drags avg" claim REFUTED — pooled ratio) | PASS | `db78adac` |
+| **E1** | No DB single-current-enrollment guarantee | Data-Model P1 | STILL-PRESENT | CONDITIONAL PASS | `fa26ded0` |
+
+- **H1** `75bc8e2e` — tabulation + report cards now key on the assessment slot `(subject, exam_type)`: distinct exam_types in a term are summed; a same-slot supplementary still replaces (PRA-P1-12 preserved); AB/ML/DB NULL rule intact. Dir 174/0. **Tracked P2:** two *distinct* exams of the *same* exam_type need an explicit `supersedes` marker (Option B, future migration).
+- **H4** `0a231743` + **H4-ext** `943ce2d5` — removed the 92%/85% fabrication; a no-data student is now floored to needs-review (never 'low'/'low-concern'), carries a `no_monitoring_data` caveat + provenance flags, and stays visible on score-ordered early-warning lists — across all three surfaces (`student_risk_repository`, `predictions_service`, `student_success_service`). H4-ext also repaired a predictions-dir test regression the H4 commit introduced (H4 was validated only against `intelligence/`). Intelligence 177/0, predictions 5/0. **Tracked P2:** export the mirrored `UNMONITORED_REVIEW_SCORE` (now in 3 files); first-class `unmonitored` band via CHECK migration + engine re-normalization; UI caveat.
+- **H3** `db78adac` — per-class attendance returns null (not 0%) on zero denominator; the school-wide pooled ratio already excludes zero-denom classes (no change needed). Dir 18/0. **Tracked (client):** all-null school scalar stays 0 until `management_payload_builders.ts` is null-tolerant.
+- **E1** `fa26ded0` — migration `…090` self-heal dedup + partial UNIQUE index `WHERE is_current=true`; repository maps 23505 → 409 conflict (no handler edit). Dir 203/0. **Tracked to deploy:** two-session concurrency live-cert.
+
+---
+
+## Validation
+Batch 1: payment **38/0** · finance **307/0** · guards+trunk-integrity+money-invariant **11/0**.
+Batch 2: combined 4 dirs + trunk-integrity **572/0**; intelligence **177/0**; predictions **5/0**.
+**Full backend suite (all batches together): `deno test supabase/functions/` → 4022 passed · 0 failed · 3 ignored** (the 3 ignored = the env-gated real-DB isolation tests, i.e. the ICA-D4 CI gap — a separate backlog item). `deno check` on every changed source → exit 0.
+
+## Migration slots consumed on the trunk (for cross-lane fold-in coordination)
+`20260920000060` (A1 recovery backfill) · `20260920000062` (A6 payment NUMERIC) · `20260920000070` (A2 offline guard) · `20260920000080` (B1 guardian RLS) · `20260920000090` (E1 single-current). **⚠ ASIP fold-in note:** the ASIP KB migration `…060` already collides with A1's `…060` (tracked as ASIP P1-D); its planned renumber target `…090` is now *also* taken by E1 — the ASIP fold-in must pick `…100`+ (next free slot above this trunk's max `…090`). Not actioned here (ASIP is a separate lane).
 
 ## Deploy-gated tail (owner-gated — NOT auto-run here)
 These complete the "live certification" lifecycle step and run at the **owner-gated trunk→pilot redeploy** (deploy authority is owner-held; the shared VPS is production):
