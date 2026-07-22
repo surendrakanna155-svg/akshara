@@ -108,3 +108,68 @@ coupling surface between parallel workstreams:
 
 Enums/column-names are normative; nothing weakens a gate, adds request-path AI, or alters the solver.
 **Next:** fan out WP-A ∥ WP-B ∥ WP-D against this freeze (worktree-isolated), then merge B→A→C→D→E→F→G.
+
+### Phase 2 — PARALLEL FAN-OUT (WP-A ∥ WP-B ∥ WP-D)  ✅ DONE
+
+Three worktree-isolated agents built against the freeze; each caught the isolation layer's stale-baseline
+seeding (`a806ee2c`) and self-corrected to `b3c17e10` (or its files were self-contained). Merged as clean
+file cherry-picks, each re-gated on-branch:
+
+- **WP-D** `3351bc13` — `education_near_dup.ts` (M4.3 request-time: cosine ≥0.82 over precomputed vectors,
+  fingerprint fallback, no model call) + `education_certified_ranking.ts` (M4.4: explainable weighted rank,
+  trace sums to score, tie-break by id). 23 tests; deterministic/offline verified.
+- **WP-B** `8474732a` — migrations `20260878` platform bank (+M2.1 calibration, `numerical` widening,
+  tombstone status, content_hash UNIQUE) + `edu_school_adopted_items`; `20260879` `edu_bank_items_union`
+  view (`security_invoker=true`, 31-col QuestionBankItemRow projection, tombstone drops out); `20260880`
+  `edu_program_d_settings` (flags default to current behaviour). 27 validation tests. **APPLY owner-gated.**
+- **WP-A** `02c46b4a` — `erp_promote.py` (M1.2 fail-closed admission + enum map + M2.2 marks/Bloom derivation),
+  `manifest.py` (freeze fingerprints), `embeddings.py` (M4.3 offline `hashvec-128-v1`). 28 tests; FULL KIE
+  suite **1318 green** (no regression); byte-identical artifact + read-only proof.
+
+### Phase 3 — WP-C importer  ✅ DONE (`02d4cc0f`)
+
+`education_platform_import.ts` (service-role, idempotent by content_hash, fail-closed on fingerprint/
+row_count/malformed/duplicate, recall=tombstone) + the golden `export_artifact.json`. 7 tests; education
+deno suite 210 green.
+
+### Phase 4 — WP-E integration spine  ✅ DONE (solver UNCHANGED throughout)
+
+- **E1** `30f50e5b` — M1.4 union read helper (`bankSource`), M3.1 certified pool feed, M3.2 `aiCandidateRate`
+  telemetry, M3.3 `hard_off` gap-fill flag (honest shortfall, never a live-AI expansion). Live-handler
+  wiring **deferred to cut-over** (reading dormant settings on the request path before the migration is
+  applied would break prod). 4 tests; education 214 green.
+- **E2a** `55d3fab7` — M4.1 exposure write-path (`recordItemExposures`, idempotent, platform no-op),
+  M4.2 prefer-unseen (dormant rotation helper wired, byte-identical when no exposure). 5 tests; education 219 green.
+- **E2b** `10c16fce` — M4.3/M4.4 integration (`education_certified_pool.ts` composes near-dup + ranking;
+  `getNearDupVectors` fetches precomputed vectors; gated, order-preserving). 6 tests; education 225 green.
+
+### Phase 6 — END-TO-END + verdict  ✅ (`4c721557`)
+
+Fixture e2e (`education_program_d_e2e_test.ts`): golden artifact → importer → union → `generateQuestionPaper`
+fills from certified content (`bankReuseCount>0`), 0 request-path AI, byte-identical on replay, recall drops
+the item. FULL education deno suite **227 green**; FULL KIE suite **1318 green**.
+
+---
+
+## ✅ ENGINEERING-COMPLETE ON FIXTURES — verdict + honest owner/data gates
+
+**Built + verified (additive · dormant-first · flag-gated · reversible · solver byte-identical):** M0.1,
+M0.2, M1.1–M1.4, M2.1, M2.2, M3.1, M3.2, M3.3 (mechanism), M4.1–M4.4, plus the end-to-end proof. Every
+milestone: no request-path AI introduced, no certification gate weakened, the authoritative
+`education_blueprint_solver.ts` unchanged. 13 commits on `feature/program-d-knowledge-bank-integration`
+(NOT pushed).
+
+**EOS gate: CONDITIONAL PASS** — engineering-complete on fixtures; **operational acceptance is owner/data-
+gated, not an engineering defect.** Remaining = genuine gates only:
+1. **Migration APPLY** (`20260877`–`20260880`) — owner authorization + VPS `akshara_tenant_test` RLS validation.
+2. **M3.3 end-state policy flip** (`hard_off`) — owner ratification (CONSISTENCY-1). The flag is built + defaults to current behaviour.
+3. **M2.3 measured difficulty** — pilot response signal (not backfillable).
+4. **M5.1 UI wiring** — best done AT cut-over (needs the live backend + certified content to surface); the
+   backend now EXPOSES `aiCandidateRate`/`bankSource`. Deferred with the handler wiring.
+5. **M5.2/M5.3 acceptance + cut-over** — the **#1 blocker: an empty certified bank**. Buildable/tested on
+   fixtures; not operationally acceptable until an owner-approved certified-content run fills the bank.
+
+**Cut-over recipe (all owner-gated, config-not-code where possible):** apply `20260877`–`20260880` → run the
+QIE exporter → invoke the importer (service role) → wire the handler to `getProgramDSettings` + pass
+`programD` → flip `edu_program_d_settings.certified_pool_enabled` per pilot tenant → measure `aiCandidateRate`
+→ flip `gap_fill_policy=hard_off` when coverage suffices. Cut-back = flip the flags off (config, no redeploy).
