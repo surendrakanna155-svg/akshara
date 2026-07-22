@@ -88,3 +88,23 @@ After M0.2, the owner issued an **Autonomous Execution Directive**: pause serial
 **multi-agent parallel-execution Master Coordination Plan** (documentation only). M0.1 + M0.2 (order-1
 foundation) stand as the **committed clean baseline** all parallel worktrees branch from. See
 `docs/roadmap/PROGRAM_D_PARALLEL_EXECUTION_COORDINATION_PLAN.md`. Implementation resumes on owner go-ahead.
+
+---
+
+## ▶ PARALLEL EXECUTION — owner approved Option 1 (4+1 fleet)
+
+### Phase 1 — CONTRACT FREEZE  ✅ DONE (coordinator)
+
+**Deliverable:** `docs/roadmap/PROGRAM_D_CONTRACTS.md` — the two frozen cross-lane contracts, the entire
+coupling surface between parallel workstreams:
+- **Contract-1 (export artifact):** the versioned `{manifest, rows[]}` JSON WP-A emits / WP-C ingests —
+  content-hash id, enum map (`MCQ`→`mcq`, `moderate`→`medium`), KC→UUID (unmapped ⇒ row omitted, honest-null),
+  calibration label, Bloom/marks, and the **deterministic offline near-dup vector** (`hashvec-128-v1`,
+  request-time = cosine ≥ 0.82, no request-time model).
+- **Contract-2 (platform bank + union):** `edu_platform_question_bank` (content_hash UNIQUE idempotency key,
+  `numerical`-widened CHECK, calibration column, tombstone status), `edu_school_adopted_items` (adopt by
+  reference), `edu_bank_items_union` view (output columns = `QuestionBankItemRow`), and the per-tenant flag
+  store `edu_program_d_settings` (defaults reproduce **exact current behaviour** — dark until owner flips).
+
+Enums/column-names are normative; nothing weakens a gate, adds request-path AI, or alters the solver.
+**Next:** fan out WP-A ∥ WP-B ∥ WP-D against this freeze (worktree-isolated), then merge B→A→C→D→E→F→G.
