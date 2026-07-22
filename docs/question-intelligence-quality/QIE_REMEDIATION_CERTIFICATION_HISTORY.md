@@ -365,3 +365,15 @@ re-mining · C live re-certification · D Tier-1 unfreeze) — is
 exam-DNA, R5-3 implementation, R6) are genuinely owner/external/re-mining gated and tracked, not skipped. No new
 certification is claimed for the product bank (0 product-certified rows by construction — the honest state).
 Program halts at the engineering-complete boundary pending the next owner decision.
+
+---
+
+## 🔒 OWNER ACCEPTANCE — baseline frozen · 2026-07-22
+
+The owner **accepted** the Engineering Completion checkpoint. The QIE/QDI Remediation Program is officially
+**COMPLETE for every cleanly-buildable roadmap item**, and `feature/qie-question-planning-layer` is now the
+**frozen certified engineering baseline** (code baseline `42c93454`). Remediation scope is closed: none of the
+four next programs (A ERP promotion · B PYQ re-mining · C live re-certification · D Tier-1 unfreeze) was started
+— each is a NEW, independent program to be authorized in a NEW session. The branch was **not pushed** (awaiting
+explicit owner push authorization). This entry is the immutable freeze marker; nothing further is appended to
+this history under the remediation program.

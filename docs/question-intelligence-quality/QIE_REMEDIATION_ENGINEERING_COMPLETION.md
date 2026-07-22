@@ -177,4 +177,6 @@ Deterministic checks certify (model agreement may reject, never certify) · hone
 freeze-as-versioning (frozen index + kie.db never mutated — MD5 byte-identical) · no gate weakened for yield ·
 quarantine/held is a first-class state · RI-6 (one product-visible bank) preserved end-to-end.
 
-**Engineering-complete checkpoint reached. Awaiting the next owner decision (Program A/B/C/D).**
+**Engineering-complete checkpoint reached — OWNER ACCEPTED (2026-07-22).** Branch frozen at the certified
+engineering baseline (`42c93454`); no next program (A/B/C/D) started; scope closed; not pushed. The next
+program begins in a new session under explicit owner authorization.

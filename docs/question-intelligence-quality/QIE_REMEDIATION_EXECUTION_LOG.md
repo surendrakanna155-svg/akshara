@@ -285,3 +285,26 @@ external dependency, or a substantial re-mining/unfreeze effort:
    LaunchAgent. Tooling built + restore-verified.
 7. **R3-4 FTS5 + `chunks(doc_id,ordinal)` index** *(freeze hatch)* — a sanctioned kie.db rebuild under
    `KIE_ALLOW_FROZEN_WRITE` at the next version boundary (mutates the frozen v1.5 substrate).
+
+---
+
+## Owner acceptance — Engineering Completion ACCEPTED; branch frozen at the certified baseline · 2026-07-22
+
+The owner **accepted** the Engineering Completion checkpoint. The QIE/QDI Remediation Program is officially
+**COMPLETE for every cleanly-buildable roadmap item**. This branch (`feature/qie-question-planning-layer`) is
+**frozen at the certified engineering baseline** (code baseline `42c93454`; this docs-only acceptance record is
+the freeze marker). Final suite 1109, OK (skipped=1).
+
+- **No further remediation scope** was opened. The remaining boundary (queue above — R5-4 re-mining, R5-3 impl,
+  R5-5 pilot, R6 unfreeze, R4-2 live key, R0-1 backup, R3-4 freeze-hatch) is unchanged and untouched.
+- **Programs A/B/C/D were NOT started.** Each is a NEW, independent engineering program that will begin in a
+  NEW session under explicit owner authorization. My recommendation this session was **Program B (PYQ
+  re-attribution / re-mining)** as the only buildable-and-unblocked path; the owner elected to close the
+  session instead and defer the next-program decision.
+- **Not pushed.** The branch stays local, awaiting explicit owner push authorization.
+
+Standing laws held to the last commit: deterministic gates certify (model agreement rejects, never certifies) ·
+honest-null / never-guess · freeze-as-versioning · no gate weakened for yield · RI-6 (one product-visible bank)
+preserved · product bank intentionally holds 0 product-certified rows (honest state).
+
+**Session closed. The QIE Remediation Program is complete. Next work = a new program, new session, awaiting owner authorization.**
