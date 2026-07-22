@@ -18,7 +18,8 @@ class TeacherLeaveScreen extends ConsumerWidget {
   final VoidCallback? onNotificationsTap;
 
   static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
-  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
+  static const double _tabletMaxContentWidth =
+      AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -31,7 +32,7 @@ class TeacherLeaveScreen extends ConsumerWidget {
     final teaching = ref.watch(resolvedTeacherTeachingContextProvider);
 
     return Scaffold(
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'Leave',
         subtitle: teaching.teacherName,
@@ -39,86 +40,95 @@ class TeacherLeaveScreen extends ConsumerWidget {
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,
       ),
-      body: isLoading
-          ? const AksharaLoadingState()
-          : hasError
-              ? AksharaErrorState(
-                  message: 'Unable to load leave data.',
-                  onRetry: () =>
-                      ref.read(teacherLeaveErrorProvider.notifier).state = false,
-                )
-              : LayoutBuilder(
-                  builder: (context, constraints) {
-                    final isTablet =
-                        constraints.maxWidth >= _tabletBreakpoint;
-                    final pad = isTablet
-                        ? AksharaSpacing.tabletMargin
-                        : AksharaSpacing.mobileMargin;
+      // DS V2 P4 — premium persona canvas behind the leave balance/history
+      // (day-count balances, not a %, so no ring).
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: isLoading
+            ? const AksharaLoadingState()
+            : hasError
+                ? AksharaErrorState(
+                    message: 'Unable to load leave data.',
+                    onRetry: () => ref
+                        .read(teacherLeaveErrorProvider.notifier)
+                        .state = false,
+                  )
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isTablet =
+                          constraints.maxWidth >= _tabletBreakpoint;
+                      final pad = isTablet
+                          ? AksharaSpacing.tabletMargin
+                          : AksharaSpacing.mobileMargin;
 
-                    return Align(
-                      alignment: Alignment.topCenter,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxWidth: isTablet
-                              ? _tabletMaxContentWidth
-                              : double.infinity,
-                        ),
-                        child: SingleChildScrollView(
-                          padding: EdgeInsets.fromLTRB(
-                            pad,
-                            AksharaSpacing.s4,
-                            pad,
-                            AksharaSpacing.s6,
+                      return Align(
+                        alignment: Alignment.topCenter,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: isTablet
+                                ? _tabletMaxContentWidth
+                                : double.infinity,
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              _BalanceRow(balance: balance),
-                              const SizedBox(height: AksharaSpacing.s4),
-                              SegmentedButton<TeacherLeaveSection>(
-                                segments: const [
-                                  ButtonSegment(
-                                    value: TeacherLeaveSection.history,
-                                    label: Text('History'),
-                                  ),
-                                  ButtonSegment(
-                                    value: TeacherLeaveSection.apply,
-                                    label: Text('Apply leave'),
-                                  ),
-                                ],
-                                selected: {section},
-                                showSelectedIcon: false,
-                                onSelectionChanged: (v) => ref
-                                    .read(teacherLeaveSectionProvider.notifier)
-                                    .state = v.first,
-                              ),
-                              const SizedBox(height: AksharaSpacing.s4),
-                              if (section == TeacherLeaveSection.apply)
-                                _ApplyForm(draft: draft)
-                              else if (history.isEmpty)
-                                const AksharaEmptyState(
-                                  message: 'No leave requests yet.',
-                                  compact: true,
-                                )
-                              else
-                                Column(
-                                  children: [
-                                    for (var i = 0; i < history.length; i++) ...[
-                                      _LeaveCard(request: history[i]),
-                                      if (i < history.length - 1)
-                                        const SizedBox(
-                                          height: AksharaSpacing.s3,
-                                        ),
-                                    ],
+                          child: SingleChildScrollView(
+                            padding: EdgeInsets.fromLTRB(
+                              pad,
+                              AksharaSpacing.s4,
+                              pad,
+                              AksharaSpacing.s6,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _BalanceRow(balance: balance),
+                                const SizedBox(height: AksharaSpacing.s4),
+                                SegmentedButton<TeacherLeaveSection>(
+                                  segments: const [
+                                    ButtonSegment(
+                                      value: TeacherLeaveSection.history,
+                                      label: Text('History'),
+                                    ),
+                                    ButtonSegment(
+                                      value: TeacherLeaveSection.apply,
+                                      label: Text('Apply leave'),
+                                    ),
                                   ],
+                                  selected: {section},
+                                  showSelectedIcon: false,
+                                  onSelectionChanged: (v) => ref
+                                      .read(
+                                          teacherLeaveSectionProvider.notifier)
+                                      .state = v.first,
                                 ),
-                            ],
+                                const SizedBox(height: AksharaSpacing.s4),
+                                if (section == TeacherLeaveSection.apply)
+                                  _ApplyForm(draft: draft)
+                                else if (history.isEmpty)
+                                  const AksharaEmptyState(
+                                    message: 'No leave requests yet.',
+                                    compact: true,
+                                  )
+                                else
+                                  Column(
+                                    children: [
+                                      for (var i = 0;
+                                          i < history.length;
+                                          i++) ...[
+                                        _LeaveCard(request: history[i]),
+                                        if (i < history.length - 1)
+                                          const SizedBox(
+                                            height: AksharaSpacing.s3,
+                                          ),
+                                      ],
+                                    ],
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  },
-                ),
+                      );
+                    },
+                  ),
+      ),
     );
   }
 }
@@ -179,9 +189,11 @@ class _ApplyForm extends ConsumerWidget {
             border: OutlineInputBorder(),
           ),
           items: const [
-            DropdownMenuItem(value: 'Casual leave', child: Text('Casual leave')),
+            DropdownMenuItem(
+                value: 'Casual leave', child: Text('Casual leave')),
             DropdownMenuItem(value: 'Sick leave', child: Text('Sick leave')),
-            DropdownMenuItem(value: 'Earned leave', child: Text('Earned leave')),
+            DropdownMenuItem(
+                value: 'Earned leave', child: Text('Earned leave')),
           ],
           onChanged: (v) {
             if (v != null) {

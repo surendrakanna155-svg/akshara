@@ -7,6 +7,8 @@ import 'package:akshara_erp/features/teacher/exams/teacher_exams_screen.dart';
 import 'package:akshara_erp/features/teacher/homework/teacher_homework_create_screen.dart';
 import 'package:akshara_erp/features/teacher/homework/teacher_homework_history_screen.dart';
 import 'package:akshara_erp/features/teacher/homework/teacher_homework_screen.dart';
+import 'package:akshara_erp/features/teacher/leave/teacher_leave_screen.dart';
+import 'package:akshara_erp/features/teacher/leave_approvals/teacher_leave_approvals_screen.dart';
 import 'package:akshara_erp/features/teacher/timetable/teacher_timetable_screen.dart';
 import 'package:akshara_erp/features/teacher/timetable/teacher_today_screen.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
@@ -173,6 +175,37 @@ void main() {
         matchesGoldenFile(
           goldenFileName(
               'ds_v2_flagship_teacher_today_${mode.label}', '390x1280'),
+        ),
+      );
+    });
+
+    testWidgets('teacher leave · ${mode.label}', (tester) async {
+      await pump(
+        tester,
+        screen: const TeacherLeaveScreen(),
+        dark: mode.dark,
+      );
+      await expectLater(
+        find.byType(TeacherLeaveScreen),
+        matchesGoldenFile(
+          goldenFileName(
+              'ds_v2_flagship_teacher_leave_${mode.label}', '390x1280'),
+        ),
+      );
+    });
+
+    testWidgets('teacher leave approvals · ${mode.label}', (tester) async {
+      await pump(
+        tester,
+        screen: const TeacherLeaveApprovalsScreen(),
+        dark: mode.dark,
+      );
+      await expectLater(
+        find.byType(TeacherLeaveApprovalsScreen),
+        matchesGoldenFile(
+          goldenFileName(
+              'ds_v2_flagship_teacher_leave_approvals_${mode.label}',
+              '390x1280'),
         ),
       );
     });
