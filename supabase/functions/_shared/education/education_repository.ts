@@ -231,6 +231,57 @@ export async function getProgramDSettings(
   };
 }
 
+/**
+ * Program D · M4.1 — exposure write-path. Wires the DORMANT exposure seam: logs one
+ * `edu_item_exposures` row per placed bank item and increments `times_used` / `last_used_at`
+ * on the school's own bank. Idempotent per (exam_id, bank_item_id): re-publishing the same
+ * exam does NOT double-log or double-increment. The own-bank counter UPDATE naturally no-ops
+ * for a certified-platform item id (it is not in edu_question_bank_items) — platform exposure
+ * is per-school in edu_item_exposures, never a write to the shared platform row.
+ */
+export interface RecordExposureOptions {
+  items: Array<{ bankItemId: string }>;
+  examId?: string;
+  sectionId?: string;
+}
+
+export async function recordItemExposures(
+  client: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  opts: RecordExposureOptions,
+): Promise<{ logged: number; incremented: number }> {
+  let logged = 0;
+  let incremented = 0;
+  for (const it of opts.items) {
+    if (!it.bankItemId) continue;
+    // Idempotency guard (only meaningful with an exam id): skip an exposure already logged.
+    if (opts.examId) {
+      const existing = await client.queryCount(
+        `SELECT count(*)::text AS count FROM edu_item_exposures
+          WHERE organization_id = $1 AND school_id = $2 AND exam_id = $3 AND bank_item_id = $4::uuid`,
+        [orgId, schoolId, opts.examId, it.bankItemId],
+      );
+      if (existing > 0) continue;
+    }
+    await client.queryObject(
+      `INSERT INTO edu_item_exposures (organization_id, school_id, bank_item_id, section_id, exam_id, used_at)
+       VALUES ($1, $2, $3::uuid, $4::uuid, $5, timezone('utc', now()))`,
+      [orgId, schoolId, it.bankItemId, opts.sectionId ?? null, opts.examId ?? null],
+    );
+    logged += 1;
+    const updated = await client.queryObject<{ id: string }>(
+      `UPDATE edu_question_bank_items
+          SET times_used = times_used + 1, last_used_at = timezone('utc', now())
+        WHERE id = $1::uuid
+        RETURNING id`,
+      [it.bankItemId],
+    );
+    if (updated.length > 0) incremented += 1;
+  }
+  return { logged, incremented };
+}
+
 export async function createQuestionBankItem(
   client: TenantQueryClient,
   organizationId: string,

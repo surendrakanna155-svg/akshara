@@ -125,3 +125,45 @@ Deno.test("M3.2: aiCandidateRate is aiCandidateCount / total slots", async () =>
   assertEquals(res.aiCandidateRate, 0);
   assert(Number.isFinite(res.aiCandidateRate));
 });
+
+Deno.test("M4.2: preferUnseen with NO exposure data reproduces the canonical order (byte-identical)", async () => {
+  // Same fresh bank (times_used unset ⇒ 0), same request: with and without preferUnseen the selected
+  // items must be identical — the rotation helper's byte-identity guarantee (invariant I1).
+  const rows = () => [mkRow(1, "Whole Numbers"), mkRow(2, "Whole Numbers"), mkRow(3, "Whole Numbers")];
+  const baseline = await generateQuestionPaper(
+    new FakeClient(rows()) as unknown as TenantQueryClient,
+    BASE_INPUT,
+  );
+  const rotated = await generateQuestionPaper(
+    new FakeClient(rows()) as unknown as TenantQueryClient,
+    BASE_INPUT,
+    undefined,
+    undefined,
+    undefined,
+    { preferUnseen: true },
+  );
+  assertEquals(
+    rotated.items.map((i) => i.bankItemId),
+    baseline.items.map((i) => i.bankItemId),
+  );
+});
+
+Deno.test("M4.2: preferUnseen deprioritises a recently-used item", async () => {
+  // row-1 heavily used; row-2 unused. Prefer-unseen must order row-2 (unseen) ahead of row-1.
+  const used = mkRow(1, "Whole Numbers");
+  (used as unknown as { times_used: number }).times_used = 9;
+  (used as unknown as { last_used_at: string }).last_used_at = "2026-07-22T00:00:00Z";
+  const fresh = mkRow(2, "Whole Numbers");
+  const client = new FakeClient([used, fresh]);
+  const res = await generateQuestionPaper(
+    client as unknown as TenantQueryClient,
+    { ...BASE_INPUT, totalMarks: 1 },
+    undefined,
+    undefined,
+    undefined,
+    { preferUnseen: true, referenceAt: "2026-07-23T00:00:00Z" },
+  );
+  // The first placed item should be the never-used one.
+  assert(res.items.length >= 1);
+  assertEquals(res.items[0].bankItemId, "row-2");
+});

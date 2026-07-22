@@ -22,6 +22,7 @@ import {
   validateProfileCompatibility,
 } from "./education_exam_profile.ts";
 import { generateAiCandidatesForGaps } from "./education_ai_question_gapfill.ts";
+import { orderBankForRotation, type RotationPolicy } from "./education_item_rotation.ts";
 import { aiApiKey, aiProvider, claudeModel } from "../ai/anthropic_client.ts";
 import type { Governance } from "../ai/model_gateway.ts";
 import type { AiRuntimeConfig } from "../ai/ai_settings.ts";
@@ -109,6 +110,17 @@ export interface ProgramDPaperConfig {
    * live-AI expansion). Owner-flipped per tenant; Program D adds no new AI path.
    */
   gapFillPolicy?: "marked_unpublishable" | "hard_off";
+  /**
+   * M4.2: prefer-unseen selection. When true, the pool is ordered by the deterministic
+   * rotation helper (least-used / least-recently-used first) before the UNCHANGED solver
+   * walks it. With no exposure data + no cooldown, this collapses to the canonical order —
+   * byte-identical to today (invariant I1). Default off.
+   */
+  preferUnseen?: boolean;
+  /** Optional rotation policy (cooldown/cap). Empty policy ⇒ soft prefer-unseen only. */
+  rotationPolicy?: RotationPolicy;
+  /** Explicit reference instant (ISO) for cooldown math — passed in so selection stays pure. */
+  referenceAt?: string;
 }
 
 export type RegeneratePaperItemResult =
@@ -236,6 +248,17 @@ export async function generateQuestionPaper(
       bank,
     );
     solveBank = orderBankForProfile(profile, bank);
+  }
+
+  // Program D · M4.2: prefer-unseen ordering (deterministic; the solver is unchanged, only the pool
+  // ORDER changes). Off by default; with no exposure data + no cooldown it reproduces the canonical
+  // order exactly (rotation helper's byte-identity guarantee), so the certified path stays intact.
+  if (programD?.preferUnseen) {
+    solveBank = orderBankForRotation(
+      programD.rotationPolicy ?? {},
+      solveBank,
+      { referenceAt: programD.referenceAt },
+    );
   }
 
   const solution = solveBlueprint(
