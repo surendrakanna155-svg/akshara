@@ -7,6 +7,8 @@ import 'package:akshara_erp/features/teacher/exams/teacher_exams_screen.dart';
 import 'package:akshara_erp/features/teacher/homework/teacher_homework_create_screen.dart';
 import 'package:akshara_erp/features/teacher/homework/teacher_homework_history_screen.dart';
 import 'package:akshara_erp/features/teacher/homework/teacher_homework_screen.dart';
+import 'package:akshara_erp/features/teacher/timetable/teacher_timetable_screen.dart';
+import 'package:akshara_erp/features/teacher/timetable/teacher_today_screen.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:akshara_erp/theme/persona_accents.dart';
 import 'package:flutter/material.dart';
@@ -141,6 +143,36 @@ void main() {
         matchesGoldenFile(
           goldenFileName(
               'ds_v2_flagship_teacher_exams_${mode.label}', '390x1280'),
+        ),
+      );
+    });
+
+    testWidgets('teacher timetable · ${mode.label}', (tester) async {
+      await pump(
+        tester,
+        screen: const TeacherTimetableScreen(),
+        dark: mode.dark,
+      );
+      await expectLater(
+        find.byType(TeacherTimetableScreen),
+        matchesGoldenFile(
+          goldenFileName(
+              'ds_v2_flagship_teacher_timetable_${mode.label}', '390x1280'),
+        ),
+      );
+    });
+
+    testWidgets('teacher today · ${mode.label}', (tester) async {
+      await pump(
+        tester,
+        screen: const TeacherTodayScreen(),
+        dark: mode.dark,
+      );
+      await expectLater(
+        find.byType(TeacherTodayScreen),
+        matchesGoldenFile(
+          goldenFileName(
+              'ds_v2_flagship_teacher_today_${mode.label}', '390x1280'),
         ),
       );
     });

@@ -5,7 +5,6 @@ import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
-import '../../../theme/theme_extensions.dart';
 import '../../parent/timetable/timetable_models.dart';
 import '../../parent/timetable/widgets/day_selector_strip.dart';
 import '../reports/teacher_report_exporters.dart';
@@ -21,7 +20,8 @@ class TeacherTimetableScreen extends ConsumerWidget {
   final VoidCallback? onNotificationsTap;
 
   static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
-  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
+  static const double _tabletMaxContentWidth =
+      AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -31,7 +31,7 @@ class TeacherTimetableScreen extends ConsumerWidget {
     final selectedDay = data.selectedDay;
 
     return Scaffold(
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'Timetable',
         subtitle: data.weekRangeLabel,
@@ -60,103 +60,111 @@ class TeacherTimetableScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: isLoading
-          ? const AksharaLoadingState()
-          : hasError
-              ? AksharaErrorState(
-                  message: 'Unable to load timetable.',
-                  onRetry: () => ref
-                      .read(teacherTimetableErrorProvider.notifier)
-                      .state = false,
-                )
-              : data.days.isEmpty
-                  ? const AksharaEmptyState(
-                      message: 'No timetable available.',
-                      icon: Icons.calendar_view_week_outlined,
-                    )
-                  : LayoutBuilder(
-                      builder: (context, constraints) {
-                        final isTablet =
-                            constraints.maxWidth >= _tabletBreakpoint;
-                        final pad = isTablet
-                            ? AksharaSpacing.tabletMargin
-                            : AksharaSpacing.mobileMargin;
+      // DS V2 P4 — premium persona canvas behind the weekly periods (period
+      // counts, not a %, so no ring).
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: isLoading
+            ? const AksharaLoadingState()
+            : hasError
+                ? AksharaErrorState(
+                    message: 'Unable to load timetable.',
+                    onRetry: () => ref
+                        .read(teacherTimetableErrorProvider.notifier)
+                        .state = false,
+                  )
+                : data.days.isEmpty
+                    ? const AksharaEmptyState(
+                        message: 'No timetable available.',
+                        icon: Icons.calendar_view_week_outlined,
+                      )
+                    : LayoutBuilder(
+                        builder: (context, constraints) {
+                          final isTablet =
+                              constraints.maxWidth >= _tabletBreakpoint;
+                          final pad = isTablet
+                              ? AksharaSpacing.tabletMargin
+                              : AksharaSpacing.mobileMargin;
 
-                        return Align(
-                          alignment: Alignment.topCenter,
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxWidth: isTablet
-                                  ? _tabletMaxContentWidth
-                                  : double.infinity,
-                            ),
-                            child: SingleChildScrollView(
-                              padding: EdgeInsets.fromLTRB(
-                                pad,
-                                AksharaSpacing.s4,
-                                pad,
-                                AksharaSpacing.s6,
+                          return Align(
+                            alignment: Alignment.topCenter,
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth: isTablet
+                                    ? _tabletMaxContentWidth
+                                    : double.infinity,
                               ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  DaySelectorStrip(
-                                    days: data.days
-                                        .map(
-                                          (d) => TimetableDay(
-                                            id: d.id,
-                                            shortLabel: d.shortLabel,
-                                            fullLabel: d.fullLabel,
-                                            date: _dateForDayId(d.id),
-                                            periods: const [],
-                                            isSelected: d.isSelected,
-                                            isToday: d.isToday,
-                                          ),
-                                        )
-                                        .toList(),
-                                    onDayTap: (id) => ref
-                                        .read(
-                                          teacherTimetableDayProvider.notifier,
-                                        )
-                                        .state = id,
-                                  ),
-                                  const SizedBox(height: AksharaSpacing.s4),
-                                  AksharaSectionHeader(
-                                    title: selectedDay == null
-                                        ? 'Periods'
-                                        : '${selectedDay.fullLabel} Periods',
-                                    fixedHeight: false,
-                                  ),
-                                  const SizedBox(height: AksharaSpacing.s3),
-                                  if (selectedDay == null ||
-                                      selectedDay.periods.isEmpty)
-                                    const AksharaEmptyState(
-                                      message: 'No periods scheduled.',
-                                      compact: true,
-                                    )
-                                  else
-                                    Column(
-                                      children: [
-                                        for (var i = 0;
-                                            i < selectedDay.periods.length;
-                                            i++) ...[
-                                          TimetablePeriodRow(
-                                            period: selectedDay.periods[i],
-                                          ),
-                                          if (i < selectedDay.periods.length - 1)
-                                            const SizedBox(
-                                              height: AksharaSpacing.s3,
+                              child: SingleChildScrollView(
+                                padding: EdgeInsets.fromLTRB(
+                                  pad,
+                                  AksharaSpacing.s4,
+                                  pad,
+                                  AksharaSpacing.s6,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    DaySelectorStrip(
+                                      days: data.days
+                                          .map(
+                                            (d) => TimetableDay(
+                                              id: d.id,
+                                              shortLabel: d.shortLabel,
+                                              fullLabel: d.fullLabel,
+                                              date: _dateForDayId(d.id),
+                                              periods: const [],
+                                              isSelected: d.isSelected,
+                                              isToday: d.isToday,
                                             ),
-                                        ],
-                                      ],
+                                          )
+                                          .toList(),
+                                      onDayTap: (id) => ref
+                                          .read(
+                                            teacherTimetableDayProvider
+                                                .notifier,
+                                          )
+                                          .state = id,
                                     ),
-                                ],
+                                    const SizedBox(height: AksharaSpacing.s4),
+                                    AksharaSectionHeader(
+                                      title: selectedDay == null
+                                          ? 'Periods'
+                                          : '${selectedDay.fullLabel} Periods',
+                                      fixedHeight: false,
+                                    ),
+                                    const SizedBox(height: AksharaSpacing.s3),
+                                    if (selectedDay == null ||
+                                        selectedDay.periods.isEmpty)
+                                      const AksharaEmptyState(
+                                        message: 'No periods scheduled.',
+                                        compact: true,
+                                      )
+                                    else
+                                      Column(
+                                        children: [
+                                          for (var i = 0;
+                                              i < selectedDay.periods.length;
+                                              i++) ...[
+                                            TimetablePeriodRow(
+                                              period: selectedDay.periods[i],
+                                            ),
+                                            if (i <
+                                                selectedDay.periods.length - 1)
+                                              const SizedBox(
+                                                height: AksharaSpacing.s3,
+                                              ),
+                                          ],
+                                        ],
+                                      ),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
+                          );
+                        },
+                      ),
+      ),
     );
   }
 }
