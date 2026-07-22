@@ -1,8 +1,21 @@
 # Program C — Re-certification Runner: Replay Certification Report
 
 **Date:** 2026-07-22 · **Branch:** `feature/program-c-live-recertification` · **Status:** 🟢 **REPLAY-CERTIFIED
-(green) — PAUSED before any live call, awaiting explicit owner GO.** No live OpenAI/OpenRouter request has been
+— OWNER-ACCEPTED (Option 3) — PAUSED (engineering-complete).** No live OpenAI/OpenRouter request has been
 made; no spend has occurred.
+
+> ## ✅ OWNER DECISION (2026-07-22) — Option 3 accepted
+> The owner **accepts the replay findings** and selects **Option 3**:
+> - The **22 recalled factory questions shall remain permanently quarantined.** They are correctly rejected by the
+>   current deterministic gates; there is **no live run** against this cohort (it deterministically fails before
+>   the judge — $0, 0 requests, 0 certifications).
+> - **No certification gate may be weakened or bypassed to exercise a live API call.** Ever.
+> - **Program C replay certification is accepted as successful.**
+> - **Recorded as evidence:** the hardened certification pipeline (post-R1/R2) **correctly rejects content that was
+>   previously admitted under historical bypasses.** The recalled 22 passing the *old* bypassable guards and
+>   failing the *current* gates is positive proof the remediation closed the hole — not a defect in Program C.
+> - **Program C is paused and considered engineering-complete + replay-certified.** The first live execution will be
+>   scheduled later against a **newly approved gate-passing cohort**, under explicit owner approval.
 
 This report certifies the Program C held-estate **re-certification runner** against Fake/Replay providers only,
 per the owner's autonomous directive (Phases 1–4). It records an **important honest finding** about the recalled
