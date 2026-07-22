@@ -82,4 +82,36 @@ CREATE INDEX IF NOT EXISTS idx_item_subject ON pyq_item(subject);
 CREATE INDEX IF NOT EXISTS idx_item_type    ON pyq_item(question_type);
 CREATE INDEX IF NOT EXISTS idx_item_concept ON pyq_item(concept_kc);
 
+-- ── B4 — structural difficulty (OD-3: STRUCTURAL only; NEVER a measured student-difficulty claim) ─────────
+-- A deterministic complexity PROXY from a question's own structure (question TYPE + span LENGTH only — coarse
+-- by design). `difficulty_basis` is ALWAYS 'structural_proxy' — measured (pilot p-value) difficulty
+-- stays honest-null until the ERP response spine has pilot data (roadmap R5-5). B5 surfaces this as a labelled
+-- structural distribution, distinct from any measured one.
+CREATE TABLE IF NOT EXISTS pyq_item_difficulty (
+  item_id          TEXT PRIMARY KEY,   -- FK → pyq_item.item_id
+  difficulty_label TEXT NOT NULL,      -- easy | moderate | hard
+  difficulty_basis TEXT NOT NULL,      -- structural_proxy (never 'measured' / 'pilot')
+  complexity_score INTEGER NOT NULL,
+  signals          TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_diff_label ON pyq_item_difficulty(difficulty_label);
+
+-- ── B4 — marking scheme (OD-6: parsed-from-paper where stated; published fallback; else honest-null) ──────
+-- A row per (exam, question_type) where a scheme can be established. Marks a paper STATES are `parsed_from_paper`;
+-- a stable, well-known official scheme fills a gap as `published`; anything variable/unknown (e.g. JEE Advanced's
+-- section-dependent partial marking, JEE Main numerical negative-marking that changed by year) is honest-null —
+-- never fabricated. B5 gates any "exam-representative marks" claim on this.
+CREATE TABLE IF NOT EXISTS marking_scheme (
+  exam             TEXT NOT NULL,
+  question_type    TEXT NOT NULL,      -- mcq | numerical | assertion_reason | match | any
+  marks_correct    INTEGER,            -- NULL honest-null
+  marks_incorrect  INTEGER,            -- NULL honest-null (e.g. no negative marking); 0 = explicitly no penalty
+  partial_rule     TEXT,               -- e.g. 'none' | 'partial_jee_adv' | honest-null
+  provenance_class TEXT NOT NULL,      -- parsed_from_paper | published | honest_null
+  source_doc_id    TEXT,               -- when parsed_from_paper
+  n_docs_evidence  INTEGER,            -- how many eligible docs stated a consistent scheme (parsed)
+  note             TEXT,
+  PRIMARY KEY (exam, question_type)
+);
+
 CREATE TABLE IF NOT EXISTS pyq_meta (key TEXT PRIMARY KEY, value TEXT);

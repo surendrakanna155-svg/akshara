@@ -11,7 +11,7 @@ from kie import config
 from kie.qie import store_open as SO
 
 SCHEMA_PATH = Path(__file__).resolve().parent / "schema.sql"
-SCHEMA_VERSION = "pyq-b3.2"
+SCHEMA_VERSION = "pyq-b4"
 PYQ_DB_PATH = config.KIE_HOME / "pyq_corpus.db"
 
 

@@ -62,6 +62,7 @@ Legend: ✅ done (committed) · 🔵 in progress · ⏸ owner-gated · ⏳ block
 | **B2** | Subject attribution (OD-4, `pyq_chunk_subject`) + subject-scoped concept resolver (D3 fix) | ✅ verified (2 rounds) · EOS PASS |
 | **B3** | Question re-mining (`pyq_item`, provenance chain OD-2) — 15,803 instances / 108 docs | ✅ verified (3 rounds) · EOS CONDITIONAL PASS |
 | **OCR** | OCR Recovery Lane (parallel, non-blocking) — deterministic re-OCR + verified-improvement gate | ✅ verified · EOS PASS · `822d95cf` |
+| **B4** | Structural difficulty (OD-3, `structural_proxy`) + marking-scheme extraction (OD-6) | ✅ verified (CONFIRMED, P2 fixed) · EOS PASS |
 | **B3** | Question re-mining with deterministic provenance chain + OCR fail-safe | ⬜ |
 | **B4** | Structural difficulty (labelled) + marking-scheme extraction | ⬜ |
 | **B5** | `exam_dna_v2` measured layer (N≥30 floor, v1 preserved) | ⬜ |
@@ -156,7 +157,31 @@ live anti-phantom/provenance/span-cap/determinism). Full KIE suite **1210 green*
   regional / non-MCQ papers are honest-null. subject ~6% / concept ~1% (NEET) → chapter-level DNA at B5 will be
   sparse / `insufficient_evidence`. The **OCR Recovery Lane** (parallel) works to lift the OCR floor over time.
 
-## B1 — Corpus role classification (`pyq_source_class`) · 2026-07-22
+## B4 — Structural difficulty (OD-3) + marking-scheme extraction (OD-6) · 2026-07-22
+
+**Scope:** attribute a STRUCTURAL difficulty to every question (OD-3: never a measured student-difficulty claim)
+and establish the marking scheme per exam (OD-6: parsed / published / honest-null — never fabricated).
+
+**What landed:**
+- `difficulty.py` → `pyq_item_difficulty` — a deterministic complexity PROXY from `(question_type, span_len)`,
+  labelled `difficulty_basis='structural_proxy'` on **every** item. Measured (pilot p-value) difficulty is
+  **honest-null** until the ERP response spine has pilot data (R5-5). Coarse by design + labelled as such.
+- `marking.py` → `marking_scheme` — per (exam, question_type): NEET mcq **+4/−1** (`parsed_from_paper`, 18/105
+  papers state it in a marking context), JEE Main mcq **+4/−1** (`published` — stable), JEE Main numerical +
+  JEE Advanced **`honest_null`** (genuinely variable by section/year — NEVER fabricated).
+
+**Live:** difficulty easy 12,869 / moderate 1,768 / hard 1,166 (structural_proxy — NEET is mostly short single
+MCQs). Marking: 1 parsed / 1 published / 2 honest-null. Frozen kie.db + index + **examdna v1 byte-identical**.
+
+**Adversarial verification → CONFIRMED** (both hard owner rules hold: `difficulty_basis` is `structural_proxy`
+on 15,803/15,803 rows — no measured claim; 0 honest-null schemes carry a mark — no fabrication; deterministic;
+v1 untouched). It found a **P2 provenance-honesty defect** — the marking detector fired on bare token
+co-occurrence (`+4 μC … −1 m`), so `parsed_from_paper` was an overclaim (JEE Advanced false-fired 26/52).
+**Fixed:** the detector is now **context-aware** (the number must sit with `marks`/`awarded`/`deducted`/`correct`)
+— false-positives eliminated, JEE Advanced drops to 4/52, NEET rises to a genuine 18/105, JEE Main correctly
+falls to `published`. P3s (schema-comment overstated signals; parsed branch hardcoded values) also fixed.
+
+**EOS gate: PASS.** Tests: `kie/tests/test_program_b_b4.py` (11). Full KIE suite **1221 green**.
 
 **Scope:** classify every `kie.db :: source_documents` row (1,241) into a fail-closed role + reconstructed
 exam/year/authority, so downstream milestones consume only genuine PYQ with honest provenance (OD-1, OD-2).
