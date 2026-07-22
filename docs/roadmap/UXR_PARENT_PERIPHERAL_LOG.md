@@ -32,9 +32,9 @@ with the coordinator (`main`).
 | `events/parent_events_screen.dart` | ✅ wrapped (batch 1) |
 | `notices/parent_notices_screen.dart` | ✅ wrapped (batch 1) |
 | `ptm/parent_ptm_screen.dart` | ✅ wrapped (batch 1) |
-| `leave/parent_leave_screen.dart` | ⏳ pending |
-| `transport/parent_transport_screen.dart` | ⏳ pending |
-| `profile/parent_profile_screen.dart` | ⏳ pending |
+| `leave/parent_leave_screen.dart` | ✅ wrapped (batch 2) |
+| `transport/parent_transport_screen.dart` | ✅ wrapped (batch 2) |
+| `profile/parent_profile_screen.dart` | ✅ wrapped (batch 2) |
 | `actions/parent_action_inbox_screen.dart` | ⏳ pending |
 | `family/parent_family_view_screen.dart` | ⏳ pending |
 | `experience/parent_experience_hub_screen.dart` | ⏳ pending (no `backgroundColor` line + no `widgets.dart` import — needs both added) |
@@ -59,3 +59,16 @@ default test providers.
   `mobile_screen_responsiveness_test.dart` — +30 passed.
 - Goldens: parent events / notices / ptm (Light + Dark), 6 PNGs generated and
   visually confirmed (canvas visible, no overflow); golden test +6 passed.
+
+### Batch 2 — leave + transport + profile
+- **Commit:** (see git log — `feat(dsv2-p4-parent-peripheral-2)`)
+- Wrapped: leave (`isLoading ? ...` ternary; draft-autosave form + timeline
+  preserved), transport (`ErpAsyncBody`; keeps `QaTestKeys.parentTransportScreen`),
+  profile (`isLoading ? ...` ternary; hero + contact/children/legal/logout preserved,
+  `QaTestKeys.logoutButton` untouched).
+- analyze: clean. dart format: applied.
+- Tests green: `parent_fees_flow_screens_test.dart` (leave),
+  `transport/qw5_parent_transport_view_test.dart` (transport),
+  `parent_more_screens_test.dart` (profile), cert + responsiveness — +30 passed.
+- Goldens: parent leave / transport / profile (Light + Dark), 6 PNGs generated and
+  visually confirmed (canvas visible, no overflow); full peripheral golden +12 passed.

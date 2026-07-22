@@ -2,8 +2,11 @@
 library;
 
 import 'package:akshara_erp/features/parent/events/parent_events_screen.dart';
+import 'package:akshara_erp/features/parent/leave/parent_leave_screen.dart';
 import 'package:akshara_erp/features/parent/notices/parent_notices_screen.dart';
+import 'package:akshara_erp/features/parent/profile/parent_profile_screen.dart';
 import 'package:akshara_erp/features/parent/ptm/parent_ptm_screen.dart';
+import 'package:akshara_erp/features/parent/transport/parent_transport_screen.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:akshara_erp/theme/persona_accents.dart';
 import 'package:flutter/material.dart';
@@ -95,6 +98,51 @@ void main() {
         matchesGoldenFile(
           goldenFileName(
               'ds_v2_flagship_parent_ptm_${mode.label}', '390x1280'),
+        ),
+      );
+    });
+
+    testWidgets('parent leave · ${mode.label}', (tester) async {
+      await pump(
+        tester,
+        screen: const ParentLeaveScreen(),
+        dark: mode.dark,
+      );
+      await expectLater(
+        find.byType(ParentLeaveScreen),
+        matchesGoldenFile(
+          goldenFileName(
+              'ds_v2_flagship_parent_leave_${mode.label}', '390x1280'),
+        ),
+      );
+    });
+
+    testWidgets('parent transport · ${mode.label}', (tester) async {
+      await pump(
+        tester,
+        screen: const ParentTransportScreen(),
+        dark: mode.dark,
+      );
+      await expectLater(
+        find.byType(ParentTransportScreen),
+        matchesGoldenFile(
+          goldenFileName(
+              'ds_v2_flagship_parent_transport_${mode.label}', '390x1280'),
+        ),
+      );
+    });
+
+    testWidgets('parent profile · ${mode.label}', (tester) async {
+      await pump(
+        tester,
+        screen: const ParentProfileScreen(),
+        dark: mode.dark,
+      );
+      await expectLater(
+        find.byType(ParentProfileScreen),
+        matchesGoldenFile(
+          goldenFileName(
+              'ds_v2_flagship_parent_profile_${mode.label}', '390x1280'),
         ),
       );
     });

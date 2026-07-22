@@ -102,70 +102,75 @@ class _ParentLeaveScreenState extends ConsumerState<ParentLeaveScreen>
         trailingPadding: true,
         onNotificationsTap: widget.onNotificationsTap,
       ),
-      body: isLoading
-          ? const AksharaLoadingState(semanticLabel: 'Loading leave requests')
-          : hasError
-              ? AksharaErrorState(
-                  message: 'Unable to load leave requests right now.',
-                  onRetry: () =>
-                      ref.read(parentLeaveErrorProvider.notifier).state = false,
-                )
-              : LayoutBuilder(
-                  builder: (context, constraints) {
-                    final isTablet =
-                        constraints.maxWidth >= _tabletBreakpoint;
-                    final horizontalPadding = isTablet
-                        ? AksharaSpacing.tabletMargin
-                        : AksharaSpacing.mobileMargin;
+      // DS V2 P4 — premium persona canvas behind the leave content.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: isLoading
+            ? const AksharaLoadingState(semanticLabel: 'Loading leave requests')
+            : hasError
+                ? AksharaErrorState(
+                    message: 'Unable to load leave requests right now.',
+                    onRetry: () => ref
+                        .read(parentLeaveErrorProvider.notifier)
+                        .state = false,
+                  )
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isTablet =
+                          constraints.maxWidth >= _tabletBreakpoint;
+                      final horizontalPadding = isTablet
+                          ? AksharaSpacing.tabletMargin
+                          : AksharaSpacing.mobileMargin;
 
-                    return Align(
-                      alignment: Alignment.topCenter,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxWidth: isTablet
-                              ? _tabletMaxContentWidth
-                              : double.infinity,
-                        ),
-                        child: SingleChildScrollView(
-                          padding: EdgeInsets.fromLTRB(
-                            horizontalPadding,
-                            AksharaSpacing.s4,
-                            horizontalPadding,
-                            AksharaSpacing.s6,
+                      return Align(
+                        alignment: Alignment.topCenter,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: isTablet
+                                ? _tabletMaxContentWidth
+                                : double.infinity,
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              if (hasDraft) ...[
-                                const Align(
-                                  alignment: Alignment.centerRight,
-                                  child: AksharaDraftChip(),
+                          child: SingleChildScrollView(
+                            padding: EdgeInsets.fromLTRB(
+                              horizontalPadding,
+                              AksharaSpacing.s4,
+                              horizontalPadding,
+                              AksharaSpacing.s6,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (hasDraft) ...[
+                                  const Align(
+                                    alignment: Alignment.centerRight,
+                                    child: AksharaDraftChip(),
+                                  ),
+                                  const SizedBox(height: AksharaSpacing.s2),
+                                ],
+                                _LeaveKpiRow(data: data),
+                                const SizedBox(height: AksharaSpacing.s4),
+                                _LeaveSectionControl(
+                                  selected: section,
+                                  onChanged: (value) => ref
+                                      .read(parentLeaveSectionProvider.notifier)
+                                      .state = value,
                                 ),
-                                const SizedBox(height: AksharaSpacing.s2),
+                                const SizedBox(height: AksharaSpacing.s4),
+                                if (section == LeaveScreenSection.history)
+                                  _LeaveHistorySection(history: data.history)
+                                else
+                                  LeaveApplyForm(
+                                    isSubmitting: isSubmitting,
+                                    onSubmit: _onSubmit,
+                                  ),
                               ],
-                              _LeaveKpiRow(data: data),
-                              const SizedBox(height: AksharaSpacing.s4),
-                              _LeaveSectionControl(
-                                selected: section,
-                                onChanged: (value) => ref
-                                    .read(parentLeaveSectionProvider.notifier)
-                                    .state = value,
-                              ),
-                              const SizedBox(height: AksharaSpacing.s4),
-                              if (section == LeaveScreenSection.history)
-                                _LeaveHistorySection(history: data.history)
-                              else
-                                LeaveApplyForm(
-                                  isSubmitting: isSubmitting,
-                                  onSubmit: _onSubmit,
-                                ),
-                            ],
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  },
-                ),
+                      );
+                    },
+                  ),
+      ),
     );
   }
 }
@@ -272,8 +277,7 @@ class _LeaveHistorySection extends StatelessWidget {
             request: history[i],
             initiallyExpanded: i == 0,
           ),
-          if (i < history.length - 1)
-            const SizedBox(height: AksharaSpacing.s3),
+          if (i < history.length - 1) const SizedBox(height: AksharaSpacing.s3),
         ],
       ],
     );
