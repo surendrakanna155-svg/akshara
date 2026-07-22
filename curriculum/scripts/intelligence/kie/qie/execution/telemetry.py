@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import sqlite3
 from datetime import datetime, timezone
-from typing import Dict, Optional, Tuple
+from typing import Callable, Dict, Optional, Tuple
 
 from kie.qie.execution.provider import LLMRequest, LLMResponse
 
@@ -39,6 +39,14 @@ PRICE_TABLE: Dict[str, Tuple[float, float]] = {
     "o3":              (0.0020, 0.008),
     "o3-mini":         (0.0011, 0.0044),
     "o4-mini":         (0.0011, 0.0044),
+    # Anthropic Claude via OpenRouter (Program C judge family). Keyed on the OpenRouter model id — the id the
+    # gateway echoes back and the telemetry/provenance records — so judge cost accounting and the Budget cap are
+    # correct. Values are OpenRouter's published list prices read from its catalog `pricing` field (2026-07-22),
+    # converted to $ per 1,000 tokens. MAINTAINED CONFIG (re-check against the catalog if OpenRouter reprices).
+    "anthropic/claude-sonnet-4":    (0.003, 0.015),
+    "anthropic/claude-sonnet-4.5":  (0.003, 0.015),
+    "anthropic/claude-sonnet-4.6":  (0.003, 0.015),
+    "anthropic/claude-sonnet-5":    (0.002, 0.010),
     # deterministic test/replay models — priced so cost accounting is exercised without a live call.
     "fake-model":      (0.001, 0.002),
     "fake-generator":  (0.001, 0.002),
@@ -63,17 +71,33 @@ class Budget:
     """A running spend with an optional hard cap. `check()` (called before each model call) raises BudgetExceeded
     once spent >= cap; `add()` accrues a completed call's cost. The queue calls check() BEFORE starting a new
     call, so once the cap is hit no further calls are STARTED — completed work is already cached, so a later
-    re-run resumes it for free (idempotent). A None cap is unlimited (accounting only)."""
+    re-run resumes it for free (idempotent). A None cap is unlimited (accounting only).
 
-    def __init__(self, cap_usd: Optional[float] = None, spent_usd: float = 0.0):
+    An optional SOFT alert (`soft_usd`, additive; default None = off, so the hard-cap-only behaviour is unchanged)
+    is an ADVISORY threshold below the hard cap: when accrued spend first crosses it, `on_soft(spent)` fires once
+    (if given) and `soft_exceeded()` reads True. Unlike the hard cap it NEVER blocks a call — it is a heads-up,
+    not a gate. The hard cap remains the only fail-closed enforcement."""
+
+    def __init__(self, cap_usd: Optional[float] = None, spent_usd: float = 0.0, *,
+                 soft_usd: Optional[float] = None, on_soft: Optional[Callable[[float], None]] = None):
         self.cap_usd = cap_usd
         self.spent_usd = float(spent_usd or 0.0)
+        self.soft_usd = soft_usd
+        self._on_soft = on_soft
+        self._soft_fired = bool(soft_usd is not None and self.spent_usd >= soft_usd)
 
     def add(self, cost: float) -> None:
         self.spent_usd += float(cost or 0.0)
+        if self.soft_usd is not None and not self._soft_fired and self.spent_usd >= self.soft_usd:
+            self._soft_fired = True
+            if self._on_soft is not None:
+                self._on_soft(self.spent_usd)   # advisory only — never raises, never blocks
 
     def exceeded(self) -> bool:
         return self.cap_usd is not None and self.spent_usd >= self.cap_usd
+
+    def soft_exceeded(self) -> bool:
+        return self.soft_usd is not None and self.spent_usd >= self.soft_usd
 
     def remaining(self) -> Optional[float]:
         return None if self.cap_usd is None else max(0.0, self.cap_usd - self.spent_usd)
@@ -85,11 +109,13 @@ class Budget:
                 f"calls fail-closed; completed calls are cached, re-run to resume")
 
     @classmethod
-    def from_telemetry(cls, conn: sqlite3.Connection, run_id: str, cap_usd: Optional[float] = None) -> "Budget":
+    def from_telemetry(cls, conn: sqlite3.Connection, run_id: str, cap_usd: Optional[float] = None, *,
+                       soft_usd: Optional[float] = None,
+                       on_soft: Optional[Callable[[float], None]] = None) -> "Budget":
         """Reconstruct the running spend for a run from the telemetry ledger (crash-resume keeps its total)."""
         row = conn.execute("SELECT COALESCE(SUM(cost_usd), 0.0) FROM exec_telemetry WHERE run_id=?",
                            (run_id,)).fetchone()
-        return cls(cap_usd=cap_usd, spent_usd=float(row[0] or 0.0))
+        return cls(cap_usd=cap_usd, spent_usd=float(row[0] or 0.0), soft_usd=soft_usd, on_soft=on_soft)
 
 
 def _now() -> str:

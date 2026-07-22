@@ -24,9 +24,13 @@ from kie.qie.execution.provider import (
     ReplayMiss, TransientError, request_sha256,
 )
 from kie.qie.execution.providers import (
-    FakeProvider, OpenAIProvider, RecordingProvider, ReplayLog, ReplayProvider,
+    FakeProvider, OpenAIProvider, OpenRouterProvider, RateLimitedProvider, RecordingProvider, ReplayLog,
+    ReplayProvider, underlying_family,
 )
 from kie.qie.execution.queue import ExecutionQueue
+from kie.qie.execution.routing import (
+    CrossFamilyViolation, build_generator, build_generator_judge_pair, build_judge,
+)
 from kie.qie.execution.store import EXECUTION_DB_PATH, open_execution_store
 from kie.qie.execution.telemetry import PRICE_TABLE, Budget, BudgetExceeded, Telemetry, cost_usd
 
@@ -35,7 +39,9 @@ __all__ = [
     "Provider", "LLMRequest", "LLMResponse", "request_sha256",
     "ProviderError", "TransientError", "PermanentError", "ReplayMiss",
     "GENERATION", "JUDGE",
-    "OpenAIProvider", "FakeProvider", "RecordingProvider", "ReplayProvider", "ReplayLog",
+    "OpenAIProvider", "OpenRouterProvider", "underlying_family", "RateLimitedProvider",
+    "FakeProvider", "RecordingProvider", "ReplayProvider", "ReplayLog",
+    "build_generator", "build_judge", "build_generator_judge_pair", "CrossFamilyViolation",
     "ResponseCache", "JudgeCache", "ExecutionQueue",
     "Budget", "BudgetExceeded", "Telemetry", "cost_usd", "PRICE_TABLE",
     "generation_provenance", "judge_provenance",
