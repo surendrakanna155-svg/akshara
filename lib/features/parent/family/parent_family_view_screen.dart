@@ -44,32 +44,36 @@ class ParentFamilyViewScreen extends ConsumerWidget {
         subtitle: 'Family overview',
         showAi: false,
       ),
-      body: children.isEmpty
-          ? const AksharaEmptyState(
-              message: 'No children are linked to your account yet.',
-              icon: Icons.family_restroom_outlined,
-            )
-          : ListView(
-              padding: const EdgeInsets.all(AksharaSpacing.s4),
-              children: [
-                _FamilyTotals(childCount: children.length),
-                const SizedBox(height: AksharaSpacing.s4),
-                for (final child in children) ...[
-                  _ChildSnapshotCard(
-                    child: child,
-                    isActive: child.id == activeChild?.id,
-                    actionCount: child.id == activeChild?.id
-                        ? activeActions.length
-                        : null,
-                    onTap: () async {
-                      await selectParentActiveChild(ref, child);
-                      onChildSelected?.call();
-                    },
-                  ),
-                  const SizedBox(height: AksharaSpacing.s3),
+      // DS V2 P4 — premium persona canvas behind the family view content.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: children.isEmpty
+            ? const AksharaEmptyState(
+                message: 'No children are linked to your account yet.',
+                icon: Icons.family_restroom_outlined,
+              )
+            : ListView(
+                padding: const EdgeInsets.all(AksharaSpacing.s4),
+                children: [
+                  _FamilyTotals(childCount: children.length),
+                  const SizedBox(height: AksharaSpacing.s4),
+                  for (final child in children) ...[
+                    _ChildSnapshotCard(
+                      child: child,
+                      isActive: child.id == activeChild?.id,
+                      actionCount: child.id == activeChild?.id
+                          ? activeActions.length
+                          : null,
+                      onTap: () async {
+                        await selectParentActiveChild(ref, child);
+                        onChildSelected?.call();
+                      },
+                    ),
+                    const SizedBox(height: AksharaSpacing.s3),
+                  ],
                 ],
-              ],
-            ),
+              ),
+      ),
     );
   }
 }
@@ -120,7 +124,8 @@ class _ChildSnapshotCard extends StatelessWidget {
             backgroundColor: colors.primaryContainer,
             child: Text(
               child.name.isEmpty ? '?' : child.name.characters.first,
-              style: text.titleMedium.copyWith(color: colors.onPrimaryContainer),
+              style:
+                  text.titleMedium.copyWith(color: colors.onPrimaryContainer),
             ),
           ),
           const SizedBox(width: AksharaSpacing.s3),

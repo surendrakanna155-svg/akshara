@@ -35,9 +35,9 @@ with the coordinator (`main`).
 | `leave/parent_leave_screen.dart` | ✅ wrapped (batch 2) |
 | `transport/parent_transport_screen.dart` | ✅ wrapped (batch 2) |
 | `profile/parent_profile_screen.dart` | ✅ wrapped (batch 2) |
-| `actions/parent_action_inbox_screen.dart` | ⏳ pending |
-| `family/parent_family_view_screen.dart` | ⏳ pending |
-| `experience/parent_experience_hub_screen.dart` | ⏳ pending (no `backgroundColor` line + no `widgets.dart` import — needs both added) |
+| `actions/parent_action_inbox_screen.dart` | ✅ wrapped (batch 3) |
+| `family/parent_family_view_screen.dart` | ✅ wrapped (batch 3) |
+| `experience/parent_experience_hub_screen.dart` | ✅ wrapped (batch 3) — added `backgroundColor: Colors.transparent` + a direct `premium/akshara_premium_background.dart` import (the `widgets.dart` barrel would make its existing direct `akshara_empty_state` import redundant); TabBarView body wrapped |
 | `evolution/parent_insights_screen.dart` | ⛔ SKIPPED — does not exist. No `evolution/` dir and no `*insight*`/`*evolution*` Scaffold screen anywhere under `lib/features/parent`. Confirmed with coordinator: "Parent Insights" is a dashboard link, not a standalone Scaffold. Nothing to migrate. |
 
 ## Golden coverage
@@ -72,3 +72,32 @@ default test providers.
   `parent_more_screens_test.dart` (profile), cert + responsiveness — +30 passed.
 - Goldens: parent leave / transport / profile (Light + Dark), 6 PNGs generated and
   visually confirmed (canvas visible, no overflow); full peripheral golden +12 passed.
+
+### Batch 3 — action inbox + family view + experience hub
+- **Commit:** (see git log — `feat(dsv2-p4-parent-peripheral-3)`)
+- Wrapped: action inbox (`actions.isEmpty ? ...` ternary; keeps
+  `QaTestKeys.parentActionInboxScreen`), family view (`children.isEmpty ? ...`
+  ternary; keeps `QaTestKeys.parentFamilyViewScreen`), experience hub (plain
+  Material `AppBar` + `TabBar`/`TabBarView`; needed `backgroundColor:
+  Colors.transparent` added after `return Scaffold(` and a direct import of
+  `shared/widgets/premium/akshara_premium_background.dart` — it does not import the
+  `widgets.dart` barrel, and adding the barrel would make its existing direct
+  `akshara_empty_state.dart` import redundant).
+- `AksharaPremiumBackground` is a loose `Stack` (child sizes it, bounded maxHeight
+  preserved), so the experience hub's `TabBarView` body lays out correctly.
+- analyze: clean. dart format: applied.
+- Tests green: `par_client_widget_test.dart` (actions PAR-D4 + family PAR-D2),
+  cert + responsiveness — +24 passed. Experience hub has no widget test in the repo;
+  it is covered by the new golden + analyze.
+- Goldens: parent action inbox / family view / experience hub (Light + Dark), 6 PNGs
+  generated and visually confirmed (canvas visible, no overflow; experience hub
+  renders real Overview-tab data). Full peripheral golden +18 passed.
+
+## Result
+
+All 9 existing peripheral parent screens wrapped in the persona premium canvas
+across 3 committed batches. The 10th named target (`evolution/parent_insights_screen`)
+does not exist and was skipped. No navigation / provider / business-logic /
+honest-state / QaTestKeys / semantics / touch-target changes — presentation only.
+New golden file `test/golden/ds_v2_flagship_parent_peripheral_golden_test.dart`
+(18 goldens, Light + Dark) all green.
