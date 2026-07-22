@@ -226,6 +226,76 @@ class AksharaPremiumTokens extends ThemeExtension<AksharaPremiumTokens> {
     );
   }
 
+  /// DS V2 — re-tones every accent-dependent premium surface (hero gradient, AI
+  /// bar, canvas, brand, line-art, colored card shadow) to a single persona
+  /// [accent]. This is what makes a blue persona get a blue hero instead of the
+  /// fixed indigo→violet brand. The neutral parts (premiumSurface, premiumBorder,
+  /// onHero) stay mode-driven, so the hero stays a pale tint in light / deep tint
+  /// in dark and the on-hero foreground keeps its contrast either way.
+  AksharaPremiumTokens forAccent(Color accent) {
+    final end = Color.lerp(accent, Colors.white, isDark ? 0.18 : 0.24)!;
+
+    final List<Color> hero;
+    final List<Color> canvas;
+    if (isDark) {
+      // Deep accent tints layered over the obsidian hero/canvas bases.
+      hero = [
+        Color.alphaBlend(accent.withValues(alpha: 0.22), heroGradient.first),
+        Color.alphaBlend(accent.withValues(alpha: 0.12), heroGradient[1]),
+        Color.alphaBlend(accent.withValues(alpha: 0.16), heroGradient.last),
+      ];
+      canvas = [
+        for (final c in canvasGradient)
+          Color.alphaBlend(accent.withValues(alpha: 0.05), c),
+      ];
+    } else {
+      // Soft accent washes over white — stays pale so dark on-hero text holds.
+      hero = [
+        Color.alphaBlend(accent.withValues(alpha: 0.12), const Color(0xFFFFFFFF)),
+        Color.alphaBlend(accent.withValues(alpha: 0.06), const Color(0xFFFFFFFF)),
+        Color.alphaBlend(accent.withValues(alpha: 0.11), const Color(0xFFFFFFFF)),
+      ];
+      canvas = [
+        for (final c in canvasGradient)
+          Color.alphaBlend(accent.withValues(alpha: 0.04), c),
+      ];
+    }
+
+    return copyWith(
+      brandStart: accent,
+      brandEnd: end,
+      heroGradient: hero,
+      canvasGradient: canvas,
+      aiBarGradient: [accent, Color.lerp(accent, end, 0.5)!, end],
+      lineArtStroke: isDark ? lineArtStroke : accent,
+      // Light: a soft accent-tinted glow under the hero card (cohesive colored
+      // shadow). Dark: keep the neutral near-black drop.
+      softShadow: isDark
+          ? softShadow
+          : [
+              BoxShadow(
+                color: accent.withValues(alpha: 0.10),
+                blurRadius: 40,
+                offset: const Offset(0, 14),
+              ),
+              const BoxShadow(
+                color: Color(0x0A1E1B3A),
+                blurRadius: 6,
+                offset: Offset(0, 2),
+              ),
+            ],
+      liftedShadow: isDark
+          ? liftedShadow
+          : [
+              BoxShadow(
+                color: accent.withValues(alpha: 0.20),
+                blurRadius: 60,
+                offset: const Offset(0, 24),
+              ),
+            ],
+    );
+  }
+
   @override
   AksharaPremiumTokens lerp(
     covariant ThemeExtension<AksharaPremiumTokens>? other,

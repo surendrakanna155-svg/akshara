@@ -31,6 +31,7 @@ abstract final class AksharaAppTheme {
       tokens: tokens,
       brightness: Brightness.light,
       locale: locale,
+      accent: whiteLabel?.primary,
     );
   }
 
@@ -46,6 +47,7 @@ abstract final class AksharaAppTheme {
       tokens: tokens,
       brightness: Brightness.dark,
       locale: locale,
+      accent: whiteLabel?.primary,
     );
   }
 
@@ -79,13 +81,19 @@ abstract final class AksharaAppTheme {
     final tokens = brightness == Brightness.dark
         ? AksharaColorTokens.dark(primaryOverride: primary)
         : AksharaColorTokens.light(primaryOverride: primary);
-    return _build(tokens: tokens, brightness: brightness, locale: locale);
+    return _build(
+      tokens: tokens,
+      brightness: brightness,
+      locale: locale,
+      accent: primary,
+    );
   }
 
   static ThemeData _build({
     required AksharaColorTokens tokens,
     required Brightness brightness,
     Locale? locale,
+    Color? accent,
   }) {
     final colorScheme = tokens.toColorScheme(brightness: brightness);
     final aksharaExtension = AksharaThemeExtension.fromTokens(
@@ -113,9 +121,7 @@ abstract final class AksharaAppTheme {
       extensions: <ThemeExtension<dynamic>>[
         aksharaExtension,
         aksharaText,
-        brightness == Brightness.dark
-            ? AksharaPremiumTokens.dark()
-            : AksharaPremiumTokens.light(),
+        _premiumTokens(brightness, accent),
       ],
       appBarTheme: _appBarTheme(colorScheme, aksharaText),
       navigationBarTheme: _navigationBarTheme(colorScheme, aksharaText),
@@ -335,6 +341,20 @@ abstract final class AksharaAppTheme {
         },
       ),
     );
+  }
+
+  /// The premium visual-system tokens for this theme. When an [accent] is known
+  /// (a persona or white-label brand), the hero/AI/canvas surfaces are re-toned
+  /// to it so they read cohesively with the branded chrome instead of the fixed
+  /// indigo→violet brand (DS V2 P2-4).
+  static AksharaPremiumTokens _premiumTokens(
+    Brightness brightness,
+    Color? accent,
+  ) {
+    final base = brightness == Brightness.dark
+        ? AksharaPremiumTokens.dark()
+        : AksharaPremiumTokens.light();
+    return accent == null ? base : base.forAccent(accent);
   }
 
   static AppBarTheme _appBarTheme(
