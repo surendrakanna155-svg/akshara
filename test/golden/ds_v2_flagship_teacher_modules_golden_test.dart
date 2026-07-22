@@ -3,12 +3,14 @@ library;
 
 import 'package:akshara_erp/features/teacher/attendance/teacher_attendance_screen.dart';
 import 'package:akshara_erp/features/teacher/attendance/teacher_my_attendance_screen.dart';
+import 'package:akshara_erp/features/teacher/communication/teacher_parent_communication_screen.dart';
 import 'package:akshara_erp/features/teacher/exams/teacher_exams_screen.dart';
 import 'package:akshara_erp/features/teacher/homework/teacher_homework_create_screen.dart';
 import 'package:akshara_erp/features/teacher/homework/teacher_homework_history_screen.dart';
 import 'package:akshara_erp/features/teacher/homework/teacher_homework_screen.dart';
 import 'package:akshara_erp/features/teacher/leave/teacher_leave_screen.dart';
 import 'package:akshara_erp/features/teacher/leave_approvals/teacher_leave_approvals_screen.dart';
+import 'package:akshara_erp/features/teacher/messages/teacher_messages_screen.dart';
 import 'package:akshara_erp/features/teacher/timetable/teacher_timetable_screen.dart';
 import 'package:akshara_erp/features/teacher/timetable/teacher_today_screen.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
@@ -206,6 +208,36 @@ void main() {
           goldenFileName(
               'ds_v2_flagship_teacher_leave_approvals_${mode.label}',
               '390x1280'),
+        ),
+      );
+    });
+
+    testWidgets('teacher parent communication · ${mode.label}', (tester) async {
+      await pump(
+        tester,
+        screen: const TeacherParentCommunicationScreen(),
+        dark: mode.dark,
+      );
+      await expectLater(
+        find.byType(TeacherParentCommunicationScreen),
+        matchesGoldenFile(
+          goldenFileName(
+              'ds_v2_flagship_teacher_communication_${mode.label}', '390x1280'),
+        ),
+      );
+    });
+
+    testWidgets('teacher messages · ${mode.label}', (tester) async {
+      await pump(
+        tester,
+        screen: const TeacherMessagesScreen(),
+        dark: mode.dark,
+      );
+      await expectLater(
+        find.byType(TeacherMessagesScreen),
+        matchesGoldenFile(
+          goldenFileName(
+              'ds_v2_flagship_teacher_messages_${mode.label}', '390x1280'),
         ),
       );
     });
