@@ -32,7 +32,8 @@ worktree branch onto the correct uxr tip (`19c47710`) with `git reset --hard`
 | # | Screen(s) | Change | Ring? | Verification | Commit |
 |---|-----------|--------|-------|--------------|--------|
 | 1 | Attendance marking (TA-02) + My Attendance (TCH-9) | Premium canvas on all states of both; My Attendance gains a signature month attendance-rate ring above the count chips | Marking: **No** (live present/absent/late are counts). My Attendance: **Yes** — monthly rate (present+late over working days) | analyze clean; attendance suite + tch_client_wiring + class-scope + module-screens **+55**; goldens 4 | `c0c4e9ce` |
-| 2 | Homework Review (TA-04) + Create (HWK) + History (HWK-5) | Premium canvas on all states of the review queue, the create form, and the history list | **No** — review KPIs are honest counts (Pending review / Submissions); create is a form; history is a list | analyze clean; homework suite + homework_review_loop + module-screens **+22**; goldens 6 | `<pending>` |
+| 2 | Homework Review (TA-04) + Create (HWK) + History (HWK-5) | Premium canvas on all states of the review queue, the create form, and the history list | **No** — review KPIs are honest counts (Pending review / Submissions); create is a form; history is a list | analyze clean; homework suite + homework_review_loop + module-screens **+22**; goldens 6 | `72eef45f` |
+| 3 | Exams (TA-05) | Premium canvas + the three-up KPI strip restructured into a premium `_ExamsSummaryCard` — class-average % ring with Upcoming + Pending-marks adjacent stats (same three metrics) | **Yes** — class-average % (mirrors the student exams card) | analyze clean; exams suite + marks-submit + exam-admin-chain + module-screens **+41**; goldens 2 | `<pending>` |
 
 ## Ring decisions (honest-state)
 - **My Attendance** monthly rate → ring. Derived only from data already loaded

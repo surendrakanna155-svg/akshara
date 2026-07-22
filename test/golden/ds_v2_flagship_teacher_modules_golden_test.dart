@@ -3,6 +3,7 @@ library;
 
 import 'package:akshara_erp/features/teacher/attendance/teacher_attendance_screen.dart';
 import 'package:akshara_erp/features/teacher/attendance/teacher_my_attendance_screen.dart';
+import 'package:akshara_erp/features/teacher/exams/teacher_exams_screen.dart';
 import 'package:akshara_erp/features/teacher/homework/teacher_homework_create_screen.dart';
 import 'package:akshara_erp/features/teacher/homework/teacher_homework_history_screen.dart';
 import 'package:akshara_erp/features/teacher/homework/teacher_homework_screen.dart';
@@ -125,6 +126,21 @@ void main() {
           goldenFileName(
               'ds_v2_flagship_teacher_homework_history_${mode.label}',
               '390x1280'),
+        ),
+      );
+    });
+
+    testWidgets('teacher exams · ${mode.label}', (tester) async {
+      await pump(
+        tester,
+        screen: const TeacherExamsScreen(),
+        dark: mode.dark,
+      );
+      await expectLater(
+        find.byType(TeacherExamsScreen),
+        matchesGoldenFile(
+          goldenFileName(
+              'ds_v2_flagship_teacher_exams_${mode.label}', '390x1280'),
         ),
       );
     });
