@@ -14,7 +14,6 @@ import '../parent_active_child_provider.dart';
 import '../widgets/parent_child_switcher_sheet.dart';
 import '../academics/parent_academic_models.dart';
 import '../academics/parent_academic_provider.dart';
-import '../../../shared/widgets/akshara_progress_ring.dart';
 import '../../../theme/premium_tokens.dart';
 import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
