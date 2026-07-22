@@ -82,7 +82,7 @@ class _TeacherAttendanceScreenState
     final teaching = ref.watch(resolvedTeacherTeachingContextProvider);
 
     return Scaffold(
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'Mark Attendance',
         subtitle: teaching.appBarSubtitle,
@@ -111,21 +111,27 @@ class _TeacherAttendanceScreenState
           ),
         ],
       ),
-      body: isLoading
-          ? const AksharaLoadingState(semanticLabel: 'Loading attendance')
-          : hasError
-              ? AksharaErrorState(
-                  message: 'Unable to load attendance roster.',
-                  onRetry: () => ref
-                      .read(teacherAttendanceErrorProvider.notifier)
-                      .state = false,
-                )
-              : data.classes.isEmpty
-                  ? const AksharaEmptyState(
-                      message: 'No classes scheduled for attendance.',
-                      icon: Icons.class_outlined,
-                    )
-                  : _AttendanceBody(data: data),
+      // DS V2 P4 — premium persona canvas behind the marking roster (live
+      // present/absent/late are counts, not a %, so no ring — canvas cohesion
+      // only).
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: isLoading
+            ? const AksharaLoadingState(semanticLabel: 'Loading attendance')
+            : hasError
+                ? AksharaErrorState(
+                    message: 'Unable to load attendance roster.',
+                    onRetry: () => ref
+                        .read(teacherAttendanceErrorProvider.notifier)
+                        .state = false,
+                  )
+                : data.classes.isEmpty
+                    ? const AksharaEmptyState(
+                        message: 'No classes scheduled for attendance.',
+                        icon: Icons.class_outlined,
+                      )
+                    : _AttendanceBody(data: data),
+      ),
     );
   }
 }

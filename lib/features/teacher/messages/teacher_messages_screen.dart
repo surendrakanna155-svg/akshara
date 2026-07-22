@@ -37,7 +37,7 @@ class TeacherMessagesScreen extends ConsumerWidget {
     final teaching = ref.watch(resolvedTeacherTeachingContextProvider);
 
     return Scaffold(
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'Messages',
         subtitle: teaching.teacherName,
@@ -45,99 +45,109 @@ class TeacherMessagesScreen extends ConsumerWidget {
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,
       ),
-      body: isLoading
-          ? const AksharaLoadingState()
-          : hasError
-              ? AksharaErrorState(
-                  message: 'Unable to load messages.',
-                  onRetry: () => ref
-                      .read(teacherMessagesErrorProvider.notifier)
-                      .state = false,
-                )
-              : LayoutBuilder(
-                  builder: (context, constraints) {
-                    final isTablet = constraints.maxWidth >= _tabletBreakpoint;
-                    final pad = isTablet
-                        ? AksharaSpacing.tabletMargin
-                        : AksharaSpacing.mobileMargin;
+      // DS V2 P4 — premium persona canvas behind the messages inbox/compose
+      // (the conversation/chat screen stays plain — a canvas hurts pale
+      // chat-bubble contrast).
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: isLoading
+            ? const AksharaLoadingState()
+            : hasError
+                ? AksharaErrorState(
+                    message: 'Unable to load messages.',
+                    onRetry: () => ref
+                        .read(teacherMessagesErrorProvider.notifier)
+                        .state = false,
+                  )
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isTablet =
+                          constraints.maxWidth >= _tabletBreakpoint;
+                      final pad = isTablet
+                          ? AksharaSpacing.tabletMargin
+                          : AksharaSpacing.mobileMargin;
 
-                    return MobileDashboardLayout.boundedShellBody(
-                      constraints: constraints,
-                      maxContentWidth: isTablet ? _tabletMaxContentWidth : null,
-                      child: Column(
-                        children: [
-                          Padding(
-                            padding: EdgeInsets.fromLTRB(
-                              pad,
-                              AksharaSpacing.s4,
-                              pad,
-                              AksharaSpacing.s3,
-                            ),
-                            child: Semantics(
-                              label: 'Mailbox selector',
-                              child: SegmentedButton<MessageMailbox>(
-                                segments: [
-                                  for (final m in MessageMailbox.values)
-                                    ButtonSegment(
-                                      value: m,
-                                      label: Text(m.label),
-                                    ),
-                                ],
-                                selected: {mailbox},
-                                showSelectedIcon: false,
-                                onSelectionChanged: (v) => ref
-                                    .read(
-                                      teacherMessageMailboxProvider.notifier,
-                                    )
-                                    .state = v.first,
+                      return MobileDashboardLayout.boundedShellBody(
+                        constraints: constraints,
+                        maxContentWidth:
+                            isTablet ? _tabletMaxContentWidth : null,
+                        child: Column(
+                          children: [
+                            Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                pad,
+                                AksharaSpacing.s4,
+                                pad,
+                                AksharaSpacing.s3,
+                              ),
+                              child: Semantics(
+                                label: 'Mailbox selector',
+                                child: SegmentedButton<MessageMailbox>(
+                                  segments: [
+                                    for (final m in MessageMailbox.values)
+                                      ButtonSegment(
+                                        value: m,
+                                        label: Text(m.label),
+                                      ),
+                                  ],
+                                  selected: {mailbox},
+                                  showSelectedIcon: false,
+                                  onSelectionChanged: (v) => ref
+                                      .read(
+                                        teacherMessageMailboxProvider.notifier,
+                                      )
+                                      .state = v.first,
+                                ),
                               ),
                             ),
-                          ),
-                          Expanded(
-                            child: switch (mailbox) {
-                              MessageMailbox.compose => _ComposePane(
-                                  draft: draft,
-                                  pad: pad,
-                                ),
-                              MessageMailbox.inbox ||
-                              MessageMailbox.sent =>
-                                threads.isEmpty
-                                    ? const AksharaEmptyState(
-                                        message: 'No messages yet.',
-                                        icon: Icons.forum_outlined,
-                                      )
-                                    : RefreshIndicator(
-                                        onRefresh: () async => ref.invalidate(
-                                            teacherMessageThreadsFutureProvider),
-                                        child: ListView.separated(
-                                          physics:
-                                              const AlwaysScrollableScrollPhysics(),
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: pad,
+                            Expanded(
+                              child: switch (mailbox) {
+                                MessageMailbox.compose => _ComposePane(
+                                    draft: draft,
+                                    pad: pad,
+                                  ),
+                                MessageMailbox.inbox ||
+                                MessageMailbox.sent =>
+                                  threads.isEmpty
+                                      ? const AksharaEmptyState(
+                                          message: 'No messages yet.',
+                                          icon: Icons.forum_outlined,
+                                        )
+                                      : RefreshIndicator(
+                                          onRefresh: () async => ref.invalidate(
+                                              teacherMessageThreadsFutureProvider),
+                                          child: ListView.separated(
+                                            physics:
+                                                const AlwaysScrollableScrollPhysics(),
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: pad,
+                                            ),
+                                            itemCount: threads.length,
+                                            separatorBuilder: (_, __) =>
+                                                Divider(
+                                              color:
+                                                  context.colors.outlineVariant,
+                                            ),
+                                            itemBuilder: (context, index) {
+                                              final thread = threads[index];
+                                              return _ThreadRow(
+                                                thread: thread,
+                                                onTap: onThreadTap == null
+                                                    ? null
+                                                    : () =>
+                                                        onThreadTap!(thread),
+                                              );
+                                            },
                                           ),
-                                          itemCount: threads.length,
-                                          separatorBuilder: (_, __) => Divider(
-                                            color:
-                                                context.colors.outlineVariant,
-                                          ),
-                                          itemBuilder: (context, index) {
-                                            final thread = threads[index];
-                                            return _ThreadRow(
-                                              thread: thread,
-                                              onTap: onThreadTap == null
-                                                  ? null
-                                                  : () => onThreadTap!(thread),
-                                            );
-                                          },
                                         ),
-                                      ),
-                            },
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+      ),
     );
   }
 }

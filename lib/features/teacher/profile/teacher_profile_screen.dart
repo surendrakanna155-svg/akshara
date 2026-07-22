@@ -42,141 +42,146 @@ class TeacherProfileScreen extends ConsumerWidget {
 
     return Scaffold(
       key: QaTestKeys.teacherProfileScreen,
-      backgroundColor: colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: const AksharaAppBar(
         titleText: 'My Profile',
         subtitle: 'Your teaching identity',
         trailingPadding: true,
       ),
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 560),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(
-              AksharaSpacing.mobileMargin,
-              AksharaSpacing.s4,
-              AksharaSpacing.mobileMargin,
-              AksharaSpacing.s6,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Identity header.
-                Material(
-                  color: colors.surface,
-                  elevation: 1,
-                  shadowColor: colors.onSurface.withValues(alpha: 0.08),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: AksharaRadius.card,
-                    side: BorderSide(color: colors.outlineVariant),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(AksharaSpacing.s4),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 32,
-                          backgroundColor: colors.primaryContainer,
-                          child: Text(
-                            initials,
-                            style: text.titleLarge.copyWith(
-                              color: colors.onPrimaryContainer,
-                              fontWeight: FontWeight.w600,
+      // DS V2 P4 — premium persona canvas behind the identity/detail view.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(
+                AksharaSpacing.mobileMargin,
+                AksharaSpacing.s4,
+                AksharaSpacing.mobileMargin,
+                AksharaSpacing.s6,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Identity header.
+                  Material(
+                    color: colors.surface,
+                    elevation: 1,
+                    shadowColor: colors.onSurface.withValues(alpha: 0.08),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AksharaRadius.card,
+                      side: BorderSide(color: colors.outlineVariant),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(AksharaSpacing.s4),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 32,
+                            backgroundColor: colors.primaryContainer,
+                            child: Text(
+                              initials,
+                              style: text.titleLarge.copyWith(
+                                color: colors.onPrimaryContainer,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: AksharaSpacing.s4),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                name,
-                                style: text.titleLarge
-                                    .copyWith(fontWeight: FontWeight.w600),
-                              ),
-                              const SizedBox(height: AksharaSpacing.s1),
-                              Text(
-                                '$roleLabel · ${teaching.primarySubject}',
-                                style: text.bodyMedium
-                                    .copyWith(color: colors.onSurfaceVariant),
-                              ),
-                            ],
+                          const SizedBox(width: AksharaSpacing.s4),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  name,
+                                  style: text.titleLarge
+                                      .copyWith(fontWeight: FontWeight.w600),
+                                ),
+                                const SizedBox(height: AksharaSpacing.s1),
+                                Text(
+                                  '$roleLabel · ${teaching.primarySubject}',
+                                  style: text.bodyMedium
+                                      .copyWith(color: colors.onSurfaceVariant),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: AksharaSpacing.s4),
-                const AksharaSectionHeader(
-                  title: 'Teaching details',
-                  fixedHeight: false,
-                  spacingBelow: AksharaSpacing.s3,
-                ),
-                ProfileInfoRow(
-                  icon: Icons.badge_outlined,
-                  label: 'Teacher ID',
-                  value: teaching.teacherId,
-                ),
-                const SizedBox(height: AksharaSpacing.s2),
-                ProfileInfoRow(
-                  icon: Icons.menu_book_outlined,
-                  label: 'Primary subject',
-                  value: teaching.primarySubject,
-                ),
-                if (classTeacherOf != null) ...[
+                  const SizedBox(height: AksharaSpacing.s4),
+                  const AksharaSectionHeader(
+                    title: 'Teaching details',
+                    fixedHeight: false,
+                    spacingBelow: AksharaSpacing.s3,
+                  ),
+                  ProfileInfoRow(
+                    icon: Icons.badge_outlined,
+                    label: 'Teacher ID',
+                    value: teaching.teacherId,
+                  ),
                   const SizedBox(height: AksharaSpacing.s2),
                   ProfileInfoRow(
-                    icon: Icons.groups_outlined,
-                    label: 'Class teacher of',
-                    value: 'Class $classTeacherOf',
+                    icon: Icons.menu_book_outlined,
+                    label: 'Primary subject',
+                    value: teaching.primarySubject,
                   ),
-                ],
-                const SizedBox(height: AksharaSpacing.s2),
-                ProfileInfoRow(
-                  icon: Icons.class_outlined,
-                  label: 'Classes taught',
-                  value: classesTaught,
-                ),
-                if (auth.phoneNumber != null &&
-                    auth.phoneNumber!.isNotEmpty) ...[
+                  if (classTeacherOf != null) ...[
+                    const SizedBox(height: AksharaSpacing.s2),
+                    ProfileInfoRow(
+                      icon: Icons.groups_outlined,
+                      label: 'Class teacher of',
+                      value: 'Class $classTeacherOf',
+                    ),
+                  ],
                   const SizedBox(height: AksharaSpacing.s2),
                   ProfileInfoRow(
-                    icon: Icons.phone_outlined,
-                    label: 'Phone',
-                    value: auth.phoneNumber!,
+                    icon: Icons.class_outlined,
+                    label: 'Classes taught',
+                    value: classesTaught,
+                  ),
+                  if (auth.phoneNumber != null &&
+                      auth.phoneNumber!.isNotEmpty) ...[
+                    const SizedBox(height: AksharaSpacing.s2),
+                    ProfileInfoRow(
+                      icon: Icons.phone_outlined,
+                      label: 'Phone',
+                      value: auth.phoneNumber!,
+                    ),
+                  ],
+                  const SizedBox(height: AksharaSpacing.s4),
+                  const AksharaSectionHeader(
+                    title: 'Account',
+                    fixedHeight: false,
+                    spacingBelow: AksharaSpacing.s3,
+                  ),
+                  ProfileInfoRow(
+                    key: QaTestKeys.teacherProfileSettingsLink,
+                    icon: Icons.settings_outlined,
+                    label: 'Settings',
+                    value: 'Appearance, AI Assistant',
+                    onTap: () => context.push(RouteNames.teacherSettings),
+                  ),
+                  const SizedBox(height: AksharaSpacing.s2),
+                  ProfileInfoRow(
+                    icon: Icons.gavel_outlined,
+                    label: 'Terms & Policies',
+                    value: 'Review the terms you accepted',
+                    onTap: () => context.push(RouteNames.legalAcceptance),
+                  ),
+                  const SizedBox(height: AksharaSpacing.s3),
+                  Text(
+                    'More profile details (designation, qualifications, '
+                    'emergency contact) will appear here once HR records are '
+                    'connected.',
+                    style:
+                        text.bodySmall.copyWith(color: colors.onSurfaceVariant),
                   ),
                 ],
-                const SizedBox(height: AksharaSpacing.s4),
-                const AksharaSectionHeader(
-                  title: 'Account',
-                  fixedHeight: false,
-                  spacingBelow: AksharaSpacing.s3,
-                ),
-                ProfileInfoRow(
-                  key: QaTestKeys.teacherProfileSettingsLink,
-                  icon: Icons.settings_outlined,
-                  label: 'Settings',
-                  value: 'Appearance, AI Assistant',
-                  onTap: () => context.push(RouteNames.teacherSettings),
-                ),
-                const SizedBox(height: AksharaSpacing.s2),
-                ProfileInfoRow(
-                  icon: Icons.gavel_outlined,
-                  label: 'Terms & Policies',
-                  value: 'Review the terms you accepted',
-                  onTap: () => context.push(RouteNames.legalAcceptance),
-                ),
-                const SizedBox(height: AksharaSpacing.s3),
-                Text(
-                  'More profile details (designation, qualifications, '
-                  'emergency contact) will appear here once HR records are '
-                  'connected.',
-                  style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
-                ),
-              ],
+              ),
             ),
           ),
         ),

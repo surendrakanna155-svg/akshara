@@ -9,9 +9,11 @@ import '../reports/teacher_report_exporters.dart';
 import '../reports/teacher_report_share_sheet.dart';
 import '../../../shared/marks_grid/marks_grid.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../../theme/premium_tokens.dart';
 import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
+import '../../../theme/typography.dart';
 import 'exam_models.dart';
 import 'teacher_exams_provider.dart';
 import '../communication/teacher_teaching_context_provider.dart';
@@ -38,7 +40,7 @@ class TeacherExamsScreen extends ConsumerWidget {
     final teaching = ref.watch(resolvedTeacherTeachingContextProvider);
 
     return Scaffold(
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'Exams',
         subtitle: teaching.appBarSubtitle,
@@ -68,115 +70,233 @@ class TeacherExamsScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: isLoading
-          ? const AksharaLoadingState()
-          : hasError
-              ? AksharaErrorState(
-                  message: 'Unable to load exam data.',
-                  onRetry: () => ref
-                      .read(teacherExamsErrorProvider.notifier)
-                      .state = false,
-                )
-              : LayoutBuilder(
-                  builder: (context, constraints) {
-                    final isTablet = constraints.maxWidth >= _tabletBreakpoint;
-                    final pad = isTablet
-                        ? AksharaSpacing.tabletMargin
-                        : AksharaSpacing.mobileMargin;
+      // DS V2 P4 — premium persona canvas behind the exams content.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: isLoading
+            ? const AksharaLoadingState()
+            : hasError
+                ? AksharaErrorState(
+                    message: 'Unable to load exam data.',
+                    onRetry: () => ref
+                        .read(teacherExamsErrorProvider.notifier)
+                        .state = false,
+                  )
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isTablet =
+                          constraints.maxWidth >= _tabletBreakpoint;
+                      final pad = isTablet
+                          ? AksharaSpacing.tabletMargin
+                          : AksharaSpacing.mobileMargin;
 
-                    return Align(
-                      alignment: Alignment.topCenter,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxWidth: isTablet
-                              ? _tabletMaxContentWidth
-                              : double.infinity,
-                        ),
-                        child: RefreshIndicator(
-                          onRefresh: () async => ref
-                              .invalidate(teacherUpcomingExamsFutureProvider),
-                          child: SingleChildScrollView(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: EdgeInsets.fromLTRB(
-                              pad,
-                              AksharaSpacing.s4,
-                              pad,
-                              AksharaSpacing.s6,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                SizedBox(
-                                  height: 88,
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      Expanded(
-                                        child: AksharaKpiCard(
-                                          value: '${data.upcomingExams.length}',
-                                          subtitle: 'Upcoming',
-                                          accent: KpiAccent.primary,
-                                        ),
-                                      ),
-                                      const SizedBox(width: AksharaSpacing.s2),
-                                      Expanded(
-                                        child: AksharaKpiCard(
-                                          value: '${data.classAveragePercent}%',
-                                          subtitle: 'Class avg',
-                                          accent: KpiAccent.success,
-                                        ),
-                                      ),
-                                      const SizedBox(width: AksharaSpacing.s2),
-                                      Expanded(
-                                        child: AksharaKpiCard(
-                                          value:
-                                              '${data.markEntries.where((m) => m.marksObtained == null).length}',
-                                          subtitle: 'Pending marks',
-                                          accent: KpiAccent.warning,
-                                        ),
-                                      ),
-                                    ],
+                      return Align(
+                        alignment: Alignment.topCenter,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: isTablet
+                                ? _tabletMaxContentWidth
+                                : double.infinity,
+                          ),
+                          child: RefreshIndicator(
+                            onRefresh: () async => ref
+                                .invalidate(teacherUpcomingExamsFutureProvider),
+                            child: SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: EdgeInsets.fromLTRB(
+                                pad,
+                                AksharaSpacing.s4,
+                                pad,
+                                AksharaSpacing.s6,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  _ExamsSummaryCard(
+                                    classAveragePercent:
+                                        data.classAveragePercent,
+                                    upcomingCount: data.upcomingExams.length,
+                                    pendingMarksCount: data.markEntries
+                                        .where((m) => m.marksObtained == null)
+                                        .length,
                                   ),
-                                ),
-                                const SizedBox(height: AksharaSpacing.s4),
-                                Semantics(
-                                  label: 'Exam section selector',
-                                  child: SegmentedButton<TeacherExamSection>(
-                                    segments: [
-                                      for (final s in TeacherExamSection.values)
-                                        ButtonSegment(
-                                          value: s,
-                                          label: Text(s.label),
-                                        ),
-                                    ],
-                                    selected: {section},
-                                    showSelectedIcon: false,
-                                    onSelectionChanged: (v) => ref
-                                        .read(
-                                            teacherExamSectionProvider.notifier)
-                                        .state = v.first,
-                                  ),
-                                ),
-                                const SizedBox(height: AksharaSpacing.s4),
-                                switch (section) {
-                                  TeacherExamSection.upcoming =>
-                                    _UpcomingList(exams: data.upcomingExams),
-                                  TeacherExamSection.marksEntry =>
-                                    _MarksEntryPanel(entries: data.markEntries),
-                                  TeacherExamSection.results => _ResultsPanel(
-                                      classAveragePercent:
-                                          data.classAveragePercent,
+                                  const SizedBox(height: AksharaSpacing.s4),
+                                  Semantics(
+                                    label: 'Exam section selector',
+                                    child: SegmentedButton<TeacherExamSection>(
+                                      segments: [
+                                        for (final s
+                                            in TeacherExamSection.values)
+                                          ButtonSegment(
+                                            value: s,
+                                            label: Text(s.label),
+                                          ),
+                                      ],
+                                      selected: {section},
+                                      showSelectedIcon: false,
+                                      onSelectionChanged: (v) => ref
+                                          .read(teacherExamSectionProvider
+                                              .notifier)
+                                          .state = v.first,
                                     ),
-                                },
-                              ],
+                                  ),
+                                  const SizedBox(height: AksharaSpacing.s4),
+                                  switch (section) {
+                                    TeacherExamSection.upcoming =>
+                                      _UpcomingList(exams: data.upcomingExams),
+                                    TeacherExamSection.marksEntry =>
+                                      _MarksEntryPanel(
+                                          entries: data.markEntries),
+                                    TeacherExamSection.results => _ResultsPanel(
+                                        classAveragePercent:
+                                            data.classAveragePercent,
+                                      ),
+                                  },
+                                ],
+                              ),
                             ),
                           ),
                         ),
+                      );
+                    },
+                  ),
+      ),
+    );
+  }
+}
+
+/// TA-05 exams summary — DS V2 Phase 4 flagship: the class-average % as a
+/// signature persona-accent progress **ring**, with upcoming-exam and pending-
+/// marks counts as adjacent stats. Same three metrics as the old three-up KPI
+/// strip.
+class _ExamsSummaryCard extends StatelessWidget {
+  const _ExamsSummaryCard({
+    required this.classAveragePercent,
+    required this.upcomingCount,
+    required this.pendingMarksCount,
+  });
+
+  final int classAveragePercent;
+  final int upcomingCount;
+  final int pendingMarksCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final premium = context.premium;
+    final text = context.aksharaText;
+    final colors = context.colors;
+    final ext = context.akshara;
+
+    return Semantics(
+      container: true,
+      label: 'Class average $classAveragePercent percent, '
+          '$upcomingCount upcoming exams, $pendingMarksCount pending marks',
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: premium.premiumSurface,
+          borderRadius: BorderRadius.circular(AksharaRadius.xl),
+          border: Border.all(color: premium.premiumBorder),
+          boxShadow: premium.softShadow,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AksharaSpacing.s5),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              AksharaProgressRing(
+                value: classAveragePercent / 100.0,
+                size: 92,
+                strokeWidth: 9,
+                color: premium.brandStart,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '$classAveragePercent%',
+                      style: text.titleMedium.copyWith(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
+                        height: 1.0,
                       ),
-                    );
-                  },
+                    ),
+                    Text(
+                      'Class avg',
+                      style: text.labelSmall.copyWith(
+                        color: colors.onSurfaceVariant,
+                        fontSize: 10,
+                        height: 1.1,
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+              const SizedBox(width: AksharaSpacing.s5),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _Stat(
+                      value: '$upcomingCount',
+                      label: 'Upcoming',
+                      color: colors.primary,
+                    ),
+                    const SizedBox(height: AksharaSpacing.s3),
+                    _Stat(
+                      value: '$pendingMarksCount',
+                      label: 'Pending marks',
+                      color: ext.warning,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Stat extends StatelessWidget {
+  const _Stat({
+    required this.value,
+    required this.label,
+    required this.color,
+  });
+
+  final String value;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.aksharaText;
+    final colors = context.colors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          value,
+          style: text.titleLarge
+              .copyWith(
+                color: color,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.3,
+                height: 1.05,
+              )
+              .tabularFigures,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        Text(
+          label,
+          style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
     );
   }
 }

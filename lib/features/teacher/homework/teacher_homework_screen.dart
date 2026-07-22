@@ -64,7 +64,7 @@ class _TeacherHomeworkScreenState extends ConsumerState<TeacherHomeworkScreen> {
     final teaching = ref.watch(resolvedTeacherTeachingContextProvider);
 
     return Scaffold(
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'Homework Review',
         subtitle: teaching.appBarSubtitle,
@@ -79,22 +79,27 @@ class _TeacherHomeworkScreenState extends ConsumerState<TeacherHomeworkScreen> {
           ),
         ],
       ),
-      body: isLoading
-          ? const AksharaLoadingState()
-          : hasError
-              ? AksharaErrorState(
-                  message: 'Unable to load homework submissions.',
-                  onRetry: () => ref
-                      .read(teacherHomeworkErrorProvider.notifier)
-                      .state = false,
-                )
-              : assignments.isEmpty || selected == null
-                  ? const AksharaEmptyState(
-                      message: 'No homework assignments to review.',
-                      icon: Icons.assignment_outlined,
-                    )
-                  : _HomeworkBody(
-                      assignment: selected, assignments: assignments),
+      // DS V2 P4 — premium persona canvas behind the review queue (KPI tiles are
+      // honest counts: pending review / submissions — no ring).
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: isLoading
+            ? const AksharaLoadingState()
+            : hasError
+                ? AksharaErrorState(
+                    message: 'Unable to load homework submissions.',
+                    onRetry: () => ref
+                        .read(teacherHomeworkErrorProvider.notifier)
+                        .state = false,
+                  )
+                : assignments.isEmpty || selected == null
+                    ? const AksharaEmptyState(
+                        message: 'No homework assignments to review.',
+                        icon: Icons.assignment_outlined,
+                      )
+                    : _HomeworkBody(
+                        assignment: selected, assignments: assignments),
+      ),
     );
   }
 }

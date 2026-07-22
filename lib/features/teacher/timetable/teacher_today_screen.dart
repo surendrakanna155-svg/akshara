@@ -23,70 +23,74 @@ class TeacherTodayScreen extends ConsumerWidget {
     final text = context.aksharaText;
 
     return Scaffold(
-      backgroundColor: colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(title: const Text("Today's classes")),
-      body: periods.isEmpty && cover.valueOrNull?.isEmpty != false
-          ? const AksharaEmptyState(
-              icon: Icons.event_available_outlined,
-              message: 'No classes scheduled for you today.',
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.all(AksharaSpacing.s4),
-              itemCount: periods.length + 1,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: AksharaSpacing.s3),
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  return _CoverBanner(cover: cover);
-                }
-                final i = index - 1;
-                final p = periods[i];
-                return Material(
-                  color: colors.surface,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: AksharaRadius.card,
-                    side: BorderSide(color: colors.outlineVariant),
-                  ),
-                  child: InkWell(
-                    // TCH-1 — tapping a period jumps to attendance marking with
-                    // this class pre-selected.
-                    borderRadius: AksharaRadius.card,
-                    onTap: () => context.go(
-                      '${RouteNames.teacherAttendance}'
-                      '?class=${Uri.encodeQueryComponent(p.classLabel)}',
+      // DS V2 P4 — premium persona canvas behind today's classes.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: periods.isEmpty && cover.valueOrNull?.isEmpty != false
+            ? const AksharaEmptyState(
+                icon: Icons.event_available_outlined,
+                message: 'No classes scheduled for you today.',
+              )
+            : ListView.separated(
+                padding: const EdgeInsets.all(AksharaSpacing.s4),
+                itemCount: periods.length + 1,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: AksharaSpacing.s3),
+                itemBuilder: (context, index) {
+                  if (index == 0) {
+                    return _CoverBanner(cover: cover);
+                  }
+                  final i = index - 1;
+                  final p = periods[i];
+                  return Material(
+                    color: colors.surface,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AksharaRadius.card,
+                      side: BorderSide(color: colors.outlineVariant),
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(AksharaSpacing.s3),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('${p.periodLabel} · ${p.classLabel}',
-                                    style: text.titleSmall),
-                                const SizedBox(height: 2),
-                                Text(p.subject,
-                                    style: text.bodySmall.copyWith(
-                                        color: colors.onSurfaceVariant)),
-                              ],
+                    child: InkWell(
+                      // TCH-1 — tapping a period jumps to attendance marking with
+                      // this class pre-selected.
+                      borderRadius: AksharaRadius.card,
+                      onTap: () => context.go(
+                        '${RouteNames.teacherAttendance}'
+                        '?class=${Uri.encodeQueryComponent(p.classLabel)}',
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(AksharaSpacing.s3),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('${p.periodLabel} · ${p.classLabel}',
+                                      style: text.titleSmall),
+                                  const SizedBox(height: 2),
+                                  Text(p.subject,
+                                      style: text.bodySmall.copyWith(
+                                          color: colors.onSurfaceVariant)),
+                                ],
+                              ),
                             ),
-                          ),
-                          if (p.isSubstitute)
-                            AksharaStatusChip(
-                              label: 'Covering ${p.originalTeacherName}',
-                              tone: KpiAccent.warning,
-                            ),
-                          const SizedBox(width: AksharaSpacing.s2),
-                          Icon(Icons.chevron_right,
-                              color: colors.onSurfaceVariant),
-                        ],
+                            if (p.isSubstitute)
+                              AksharaStatusChip(
+                                label: 'Covering ${p.originalTeacherName}',
+                                tone: KpiAccent.warning,
+                              ),
+                            const SizedBox(width: AksharaSpacing.s2),
+                            Icon(Icons.chevron_right,
+                                color: colors.onSurfaceVariant),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                );
-              },
-            ),
+                  );
+                },
+              ),
+      ),
     );
   }
 }
@@ -134,8 +138,8 @@ class _CoverBanner extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 2),
                   child: Text(
                     _coverLine(s),
-                    style: text.bodySmall
-                        .copyWith(color: colors.onSurfaceVariant),
+                    style:
+                        text.bodySmall.copyWith(color: colors.onSurfaceVariant),
                   ),
                 ),
             ],
