@@ -6,6 +6,7 @@ import '../../../core/security/rbac_service.dart';
 import '../../../core/tenant/tenant_provider.dart';
 import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/akshara_empty_state.dart';
+import '../../../shared/widgets/premium/akshara_premium_background.dart';
 import '../../../theme/spacing.dart';
 import 'school_calendar_models.dart';
 import 'school_calendar_providers.dart';
@@ -27,12 +28,16 @@ class SchoolCalendarScreen extends ConsumerWidget {
 
     if (!canView) {
       return Scaffold(
+        backgroundColor: Colors.transparent,
         appBar: AppBar(title: const Text('School calendar')),
-        body: const AksharaEmptyState(
-          message:
-              'You do not have permission to view the school calendar. Ask an '
-              'administrator for the "View school calendar" permission.',
-          icon: Icons.lock_outline,
+        body: const AksharaPremiumBackground(
+          showMotif: false,
+          child: AksharaEmptyState(
+            message:
+                'You do not have permission to view the school calendar. Ask an '
+                'administrator for the "View school calendar" permission.',
+            icon: Icons.lock_outline,
+          ),
         ),
       );
     }
@@ -41,6 +46,7 @@ class SchoolCalendarScreen extends ConsumerWidget {
     final filter = ref.watch(schoolCalendarFilterProvider);
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('School calendar'),
         actions: [
@@ -58,46 +64,51 @@ class SchoolCalendarScreen extends ConsumerWidget {
               label: const Text('Add event'),
             )
           : null,
-      body: Column(
-        children: [
-          _FilterBar(
-            selected: filter,
-            onChanged: (value) =>
-                ref.read(schoolCalendarFilterProvider.notifier).state = value,
-          ),
-          const Divider(height: 1),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async =>
-                  ref.invalidate(schoolCalendarEventsProvider),
-              child: ErpAsyncBody<List<SchoolCalendarEvent>>(
-                state: resolveErpAsync(
-                  eventsAsync,
-                  isDataEmpty: (data) => data.isEmpty,
-                ),
-                loadingLabel: 'Loading calendar',
-                emptyMessage: filter == null
-                    ? 'No calendar events yet. Add holidays and events so '
-                        'attendance and HR can honour them.'
-                    : 'No ${filter.label.toLowerCase()} events. Change the '
-                        'filter or add one.',
-                emptyIcon: Icons.event_busy_outlined,
-                onRetry: () => ref.invalidate(schoolCalendarEventsProvider),
-                builder: (events) => ListView.separated(
-                  padding: const EdgeInsets.all(AksharaSpacing.s4),
-                  itemCount: events.length,
-                  separatorBuilder: (_, __) =>
-                      const SizedBox(height: AksharaSpacing.s2),
-                  itemBuilder: (context, index) => _EventTile(
-                    event: events[index],
-                    canManage: canManage,
-                    onDelete: () => _confirmDelete(context, ref, events[index]),
+      // DS V2 P4 — persona (admin/indigo) premium canvas behind the calendar.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: Column(
+          children: [
+            _FilterBar(
+              selected: filter,
+              onChanged: (value) =>
+                  ref.read(schoolCalendarFilterProvider.notifier).state = value,
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () async =>
+                    ref.invalidate(schoolCalendarEventsProvider),
+                child: ErpAsyncBody<List<SchoolCalendarEvent>>(
+                  state: resolveErpAsync(
+                    eventsAsync,
+                    isDataEmpty: (data) => data.isEmpty,
+                  ),
+                  loadingLabel: 'Loading calendar',
+                  emptyMessage: filter == null
+                      ? 'No calendar events yet. Add holidays and events so '
+                          'attendance and HR can honour them.'
+                      : 'No ${filter.label.toLowerCase()} events. Change the '
+                          'filter or add one.',
+                  emptyIcon: Icons.event_busy_outlined,
+                  onRetry: () => ref.invalidate(schoolCalendarEventsProvider),
+                  builder: (events) => ListView.separated(
+                    padding: const EdgeInsets.all(AksharaSpacing.s4),
+                    itemCount: events.length,
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: AksharaSpacing.s2),
+                    itemBuilder: (context, index) => _EventTile(
+                      event: events[index],
+                      canManage: canManage,
+                      onDelete: () =>
+                          _confirmDelete(context, ref, events[index]),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -245,8 +256,7 @@ class _EventTile extends StatelessWidget {
               ? dateLabel
               : '$dateLabel\n${event.description}',
         ),
-        isThreeLine:
-            event.description != null && event.description!.isNotEmpty,
+        isThreeLine: event.description != null && event.description!.isNotEmpty,
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -403,8 +413,9 @@ class _AddEventSheetState extends State<_AddEventSheet> {
                       label: 'End date (optional)',
                       value: _endDate,
                       onTap: () => _pickDate(isEnd: true),
-                      onClear:
-                          _endDate == null ? null : () => setState(() => _endDate = null),
+                      onClear: _endDate == null
+                          ? null
+                          : () => setState(() => _endDate = null),
                     ),
                   ),
                 ],
