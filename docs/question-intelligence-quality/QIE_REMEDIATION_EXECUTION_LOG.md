@@ -7,9 +7,11 @@
 closed; this log records execution only, it never re-plans). **Certification checkpoints:**
 [`QIE_REMEDIATION_CERTIFICATION_HISTORY.md`](QIE_REMEDIATION_CERTIFICATION_HISTORY.md).
 
-**Phase status:** ✅ R0 · ✅ R1 · ✅ R2 · ✅ R3 · ✅ R4-1 · ✅ R4-2 · ✅ R0-2 recall · ✅ RI-6 re-point ·
-✅ R4-3 · ✅ R4-4 · ✅ R5-1 · ✅ R5-2 · ✅ R5-3 DESIGN · ✅ R5-6 · 🔵 R5-5 cross-class-revisits fragment (next) ·
-⛔ R5-3 impl / R5-4 / R5-5 calibration (PYQ+pilot) / R6 / live-key owner/external-gated.
+**Phase status — ENGINEERING COMPLETE (buildable scope):** ✅ R0 · R1 · R2 · R3 · R4-1 · R4-2 · R0-2 recall ·
+RI-6 re-point · R4-3 · R4-4 · R5-1 · R5-2 · R5-3 DESIGN · R5-5 cross-class fragment · R5-6. ⛔ Owner/external/
+re-mining boundary: R5-3 impl · R5-4 (re-mine) · R5-5 calibration (pilot+PYQ) · R6 (unfreeze) · R4-2 live-key ·
+R0-1 backup · R3-4 FTS5 (freeze-hatch). See the **Engineering Completion checkpoint** below + the owner queue.
+Final certification: [`QIE_REMEDIATION_ENGINEERING_COMPLETION.md`](QIE_REMEDIATION_ENGINEERING_COMPLETION.md).
 
 **R5-3 design (doc-only):** `docs/question-intelligence-quality/R5-3_ERP_PROMOTION_CONTRACT_DESIGN.md` — the ERP
 promotion contract (D1 platform bank + RLS · D2 KC_↔UUID map · D3 enum alignment · D4 freeze-pinned export

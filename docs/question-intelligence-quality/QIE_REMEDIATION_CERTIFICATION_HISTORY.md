@@ -340,3 +340,28 @@ mangled advisory now also fires on near prose-free number soup. New `kie/tests/t
 **Standing laws honored:** freeze untouched (frozen kie.db + index mode=ro, MD5 byte-identical); no content loss
 (data numbers preserved — only sparse page numbers stripped); honest advisory flag; RI-6 (design keeps
 qpl_question_bank the sole exporter source).
+
+---
+
+## 🏁 ENGINEERING COMPLETION CHECKPOINT · 2026-07-22 · `EOS: CONDITIONAL PASS`
+
+All cleanly-buildable QIE/QDI remediation scope is **engineering-complete**. This session landed 8 buildable
+items (RI-6 re-point, R4-3, R4-4, R5-1, R5-2, R5-3-design, R5-5-fragment, R5-6) on
+`feature/qie-question-planning-layer`; the full suite is **1109 green** (skipped=1). Roadmap completeness was
+independently verified: every item + all 17 defect clusters + 6 blind spots have a disposition (implemented /
+verified / intentionally deferred / owner-external gated) — no buildable item is unaddressed.
+
+**Verification rigor:** each substantive item ran an independent adversarial verifier. **6 rounds returned
+REFUTED** (R4-3 ×2, R5-2, R5-6) — every one found a *real* defect (e.g. the qualitative independence bar counted
+the fact's own source document; R5-6's page-number regex deleted 93 real figure values from a math chunk) — all
+fixed + regression-locked + self-verified. RI-6 and R5-1 returned CONFIRMED.
+
+**The full Engineering Completion record — completed items, owner-gated vs external vs future-program boundary,
+production blockers, honest limitations, and the four prepared next workstreams (A ERP promotion · B PYQ
+re-mining · C live re-certification · D Tier-1 unfreeze) — is
+[`QIE_REMEDIATION_ENGINEERING_COMPLETION.md`](QIE_REMEDIATION_ENGINEERING_COMPLETION.md).**
+
+**CONDITIONAL PASS rationale:** all buildable work is landed + verified; the remaining P1s (R5-4 measured
+exam-DNA, R5-3 implementation, R6) are genuinely owner/external/re-mining gated and tracked, not skipped. No new
+certification is claimed for the product bank (0 product-certified rows by construction — the honest state).
+Program halts at the engineering-complete boundary pending the next owner decision.
