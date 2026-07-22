@@ -32,56 +32,61 @@ class ParentTransportScreen extends ConsumerWidget {
         showAi: false,
         onNotificationsTap: onNotificationsTap,
       ),
-      body: ErpAsyncBody(
-        state: resolveErpAsync(allocationAsync, isDataEmpty: (_) => false),
-        loadingLabel: 'Loading',
-        emptyMessage: 'No transport allocation on file for this student.',
-        emptyIcon: Icons.directions_bus_outlined,
-        onRetry: () => ref.invalidate(parentTransportAllocationProvider),
-        builder: (allocationOrNull) {
-          final allocation = allocationOrNull!;
-          return ListView(
-            padding: const EdgeInsets.all(AksharaSpacing.s4),
-            children: [
-              AksharaSurfaceCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Route', style: context.aksharaText.titleMedium),
-                    const SizedBox(height: AksharaSpacing.s2),
-                    Text(allocation.routeName),
-                    const SizedBox(height: AksharaSpacing.s3),
-                    Text('Bus', style: context.aksharaText.titleMedium),
-                    const SizedBox(height: AksharaSpacing.s2),
-                    Text(allocation.busNumber),
-                  ],
+      // DS V2 P4 — premium persona canvas behind the transport content.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: ErpAsyncBody(
+          state: resolveErpAsync(allocationAsync, isDataEmpty: (_) => false),
+          loadingLabel: 'Loading',
+          emptyMessage: 'No transport allocation on file for this student.',
+          emptyIcon: Icons.directions_bus_outlined,
+          onRetry: () => ref.invalidate(parentTransportAllocationProvider),
+          builder: (allocationOrNull) {
+            final allocation = allocationOrNull!;
+            return ListView(
+              padding: const EdgeInsets.all(AksharaSpacing.s4),
+              children: [
+                AksharaSurfaceCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Route', style: context.aksharaText.titleMedium),
+                      const SizedBox(height: AksharaSpacing.s2),
+                      Text(allocation.routeName),
+                      const SizedBox(height: AksharaSpacing.s3),
+                      Text('Bus', style: context.aksharaText.titleMedium),
+                      const SizedBox(height: AksharaSpacing.s2),
+                      Text(allocation.busNumber),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: AksharaSpacing.s4),
-              AksharaSurfaceCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Pickup & drop', style: context.aksharaText.titleMedium),
-                    const SizedBox(height: AksharaSpacing.s2),
-                    Text('Pickup: ${allocation.pickupStop}'),
-                    const SizedBox(height: AksharaSpacing.s2),
-                    Text('Drop: ${allocation.dropStop}'),
-                  ],
+                const SizedBox(height: AksharaSpacing.s4),
+                AksharaSurfaceCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Pickup & drop',
+                          style: context.aksharaText.titleMedium),
+                      const SizedBox(height: AksharaSpacing.s2),
+                      Text('Pickup: ${allocation.pickupStop}'),
+                      const SizedBox(height: AksharaSpacing.s2),
+                      Text('Drop: ${allocation.dropStop}'),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: AksharaSpacing.s4),
-              const AksharaInsightCard(
-                message:
-                    'Bus is approximately 8 minutes away (telemetry preview). '
-                    'Live map integration is not enabled in this build.',
-                actionLabel: 'Refresh ETA',
-                icon: Icons.sensors_outlined,
-                semanticLabelPrefix: 'Transport ETA',
-              ),
-            ],
-          );
-        },
+                const SizedBox(height: AksharaSpacing.s4),
+                const AksharaInsightCard(
+                  message:
+                      'Bus is approximately 8 minutes away (telemetry preview). '
+                      'Live map integration is not enabled in this build.',
+                  actionLabel: 'Refresh ETA',
+                  icon: Icons.sensors_outlined,
+                  semanticLabelPrefix: 'Transport ETA',
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

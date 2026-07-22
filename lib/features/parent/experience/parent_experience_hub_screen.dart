@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/akshara_empty_state.dart';
+import '../../../shared/widgets/premium/akshara_premium_background.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../phase5/phase5_models.dart';
 import '../../phase5/phase5_providers.dart';
@@ -13,16 +14,19 @@ import '../../../theme/spacing.dart';
 
 /// Parent Experience Hub — production polish (v10.4).
 class ParentExperienceHubScreen extends ConsumerStatefulWidget {
-  const ParentExperienceHubScreen({super.key, this.studentId, this.initialTab = 0});
+  const ParentExperienceHubScreen(
+      {super.key, this.studentId, this.initialTab = 0});
 
   final String? studentId;
   final int initialTab;
 
   @override
-  ConsumerState<ParentExperienceHubScreen> createState() => _ParentExperienceHubScreenState();
+  ConsumerState<ParentExperienceHubScreen> createState() =>
+      _ParentExperienceHubScreenState();
 }
 
-class _ParentExperienceHubScreenState extends ConsumerState<ParentExperienceHubScreen>
+class _ParentExperienceHubScreenState
+    extends ConsumerState<ParentExperienceHubScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabs;
   bool _ackInFlight = false;
@@ -30,7 +34,8 @@ class _ParentExperienceHubScreenState extends ConsumerState<ParentExperienceHubS
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 6, vsync: this, initialIndex: widget.initialTab);
+    _tabs =
+        TabController(length: 6, vsync: this, initialIndex: widget.initialTab);
   }
 
   @override
@@ -80,6 +85,7 @@ class _ParentExperienceHubScreenState extends ConsumerState<ParentExperienceHubS
     final hub = ref.watch(parentExperienceHubProvider(_studentId));
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Parent Experience'),
         actions: [
@@ -102,25 +108,30 @@ class _ParentExperienceHubScreenState extends ConsumerState<ParentExperienceHubS
           ],
         ),
       ),
-      body: ErpAsyncBody(
-        state: resolveErpAsync(hub, isDataEmpty: (_) => false),
-        loadingLabel: 'Loading',
-        emptyMessage: 'No experience hub data available.',
-        onRetry: () => ref.invalidate(parentExperienceHubProvider(_studentId)),
-        builder: (h) => TabBarView(
-          controller: _tabs,
-          children: [
-            _OverviewTab(h: h, onOpenInventory: () => _tabs.animateTo(3)),
-            _AcademicsTab(h: h),
-            _AttendanceTab(h: h),
-            _InventoryTab(
-              h: h,
-              ackInFlight: _ackInFlight,
-              onAck: _ackItem,
-            ),
-            _CommunicationTab(h: h),
-            _GuidanceTab(h: h),
-          ],
+      // DS V2 P4 — premium persona canvas behind the experience hub content.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: ErpAsyncBody(
+          state: resolveErpAsync(hub, isDataEmpty: (_) => false),
+          loadingLabel: 'Loading',
+          emptyMessage: 'No experience hub data available.',
+          onRetry: () =>
+              ref.invalidate(parentExperienceHubProvider(_studentId)),
+          builder: (h) => TabBarView(
+            controller: _tabs,
+            children: [
+              _OverviewTab(h: h, onOpenInventory: () => _tabs.animateTo(3)),
+              _AcademicsTab(h: h),
+              _AttendanceTab(h: h),
+              _InventoryTab(
+                h: h,
+                ackInFlight: _ackInFlight,
+                onAck: _ackItem,
+              ),
+              _CommunicationTab(h: h),
+              _GuidanceTab(h: h),
+            ],
+          ),
         ),
       ),
     );
@@ -149,8 +160,10 @@ class _OverviewTab extends StatelessWidget {
           Card(
             color: Theme.of(context).colorScheme.errorContainer,
             child: ListTile(
-              title: Text('${o.pendingInventoryAcks} items awaiting acknowledgement'),
-              trailing: TextButton(onPressed: onOpenInventory, child: const Text('Review')),
+              title: Text(
+                  '${o.pendingInventoryAcks} items awaiting acknowledgement'),
+              trailing: TextButton(
+                  onPressed: onOpenInventory, child: const Text('Review')),
             ),
           ),
         if (o.pendingPaymentRequests > 0)
@@ -192,10 +205,12 @@ class _AcademicsTab extends StatelessWidget {
         ),
         const Divider(),
         Text('Suggested revision', style: context.aksharaText.titleMedium),
-        ...h.homeworkIntelligence.suggestedRevision.map((s) => ListTile(title: Text(s))),
+        ...h.homeworkIntelligence.suggestedRevision
+            .map((s) => ListTile(title: Text(s))),
         const Divider(),
         Text('Teacher recommendations', style: context.aksharaText.titleMedium),
-        ...h.homeworkIntelligence.teacherRecommendations.map((r) => ListTile(title: Text(r))),
+        ...h.homeworkIntelligence.teacherRecommendations
+            .map((r) => ListTile(title: Text(r))),
         const Divider(),
         ...h.academics.recentExams.map(
           (e) => ListTile(title: Text(e.title), trailing: Text('${e.avgPct}%')),
@@ -217,7 +232,8 @@ class _AttendanceTab extends StatelessWidget {
       children: [
         ListTile(title: const Text('Present'), trailing: Text('${a.present}')),
         ListTile(title: const Text('Absent'), trailing: Text('${a.absent}')),
-        ListTile(title: const Text('Attendance %'), trailing: Text('${a.pct}%')),
+        ListTile(
+            title: const Text('Attendance %'), trailing: Text('${a.pct}%')),
       ],
     );
   }
@@ -239,13 +255,21 @@ class _InventoryTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
-        ListTile(title: const Text('Issued'), trailing: Text('${h.inventory.issued}')),
-        ListTile(title: const Text('Pending ack'), trailing: Text('${h.inventory.pending}')),
+        ListTile(
+            title: const Text('Issued'),
+            trailing: Text('${h.inventory.issued}')),
+        ListTile(
+            title: const Text('Pending ack'),
+            trailing: Text('${h.inventory.pending}')),
         const Divider(),
         ...h.inventory.items.map((i) {
           final needsAck = i.status == 'distributed';
-          final canReplace = ['distributed', 'parent_acknowledged', 'missing', 'damaged']
-              .contains(i.status);
+          final canReplace = [
+            'distributed',
+            'parent_acknowledged',
+            'missing',
+            'damaged'
+          ].contains(i.status);
           return Card(
             child: Padding(
               padding: const EdgeInsets.all(AksharaSpacing.s2),
@@ -263,19 +287,23 @@ class _InventoryTab extends StatelessWidget {
                       children: [
                         if (needsAck)
                           FilledButton(
-                            onPressed: ackInFlight ? null : () => onAck(i, 'received'),
+                            onPressed:
+                                ackInFlight ? null : () => onAck(i, 'received'),
                             child: const Text('Item received'),
                           ),
                         if (canReplace)
                           OutlinedButton(
-                            onPressed: ackInFlight ? null : () => onAck(i, 'replacement_requested'),
+                            onPressed: ackInFlight
+                                ? null
+                                : () => onAck(i, 'replacement_requested'),
                             child: const Text('Request replacement'),
                           ),
                       ],
                     ),
                   if (i.status == 'payment_pending')
                     const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: AksharaSpacing.s4),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: AksharaSpacing.s4),
                       child: Text('Payment request pending for replacement'),
                     ),
                 ],
@@ -318,7 +346,8 @@ class _GuidanceTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!h.guidance.available && h.guidance.reports.isEmpty) {
-      return const AksharaEmptyState(message: 'No guidance reports available yet');
+      return const AksharaEmptyState(
+          message: 'No guidance reports available yet');
     }
     return ListView(
       padding: const EdgeInsets.all(AksharaSpacing.s4),
@@ -336,7 +365,9 @@ class _GuidanceTab extends StatelessWidget {
             child: ListTile(
               title: Text(_modeLabel(r.mode)),
               subtitle: Text(r.summary),
-              trailing: Text(r.createdAt.length >= 10 ? r.createdAt.substring(0, 10) : r.createdAt),
+              trailing: Text(r.createdAt.length >= 10
+                  ? r.createdAt.substring(0, 10)
+                  : r.createdAt),
             ),
           ),
         ),

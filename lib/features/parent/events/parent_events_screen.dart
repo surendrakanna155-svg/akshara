@@ -21,7 +21,8 @@ class ParentEventsScreen extends ConsumerWidget {
   final void Function(ParentEvent event)? onEventTap;
 
   static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
-  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
+  static const double _tabletMaxContentWidth =
+      AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -44,108 +45,113 @@ class ParentEventsScreen extends ConsumerWidget {
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,
       ),
-      body: isLoading
-          ? const AksharaLoadingState(semanticLabel: 'Loading events')
-          : hasError
-              ? AksharaErrorState(
-                  message: 'Unable to load school events right now.',
-                  onRetry: () => ref
-                      .read(parentEventsErrorProvider.notifier)
-                      .state = false,
-                )
-              : LayoutBuilder(
-                  builder: (context, constraints) {
-                    final isTablet =
-                        constraints.maxWidth >= _tabletBreakpoint;
-                    final horizontalPadding = isTablet
-                        ? AksharaSpacing.tabletMargin
-                        : AksharaSpacing.mobileMargin;
+      // DS V2 P4 — premium persona canvas behind the events content.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: isLoading
+            ? const AksharaLoadingState(semanticLabel: 'Loading events')
+            : hasError
+                ? AksharaErrorState(
+                    message: 'Unable to load school events right now.',
+                    onRetry: () => ref
+                        .read(parentEventsErrorProvider.notifier)
+                        .state = false,
+                  )
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isTablet =
+                          constraints.maxWidth >= _tabletBreakpoint;
+                      final horizontalPadding = isTablet
+                          ? AksharaSpacing.tabletMargin
+                          : AksharaSpacing.mobileMargin;
 
-                    return Align(
-                      alignment: Alignment.topCenter,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxWidth: isTablet
-                              ? _tabletMaxContentWidth
-                              : double.infinity,
-                        ),
-                        child: SingleChildScrollView(
-                          padding: EdgeInsets.fromLTRB(
-                            horizontalPadding,
-                            AksharaSpacing.s4,
-                            horizontalPadding,
-                            AksharaSpacing.s6,
+                      return Align(
+                        alignment: Alignment.topCenter,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: isTablet
+                                ? _tabletMaxContentWidth
+                                : double.infinity,
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              _EventsKpiRow(data: data),
-                              const SizedBox(height: AksharaSpacing.s4),
-                              _EventSectionControl(
-                                selected: section,
-                                onChanged: (value) => ref
-                                    .read(parentEventSectionProvider.notifier)
-                                    .state = value,
-                              ),
-                              const SizedBox(height: AksharaSpacing.s4),
-                              if (sectionEvents.isEmpty)
-                                AksharaEmptyState(
-                                  message: section == EventSection.upcoming
-                                      ? 'No upcoming events scheduled.'
-                                      : 'No past events to show.',
-                                  icon: Icons.event_busy_outlined,
-                                  actionLabel: section == EventSection.upcoming
-                                      ? 'View past events'
-                                      : 'View upcoming events',
-                                  onAction: () {
-                                    ref
-                                        .read(
-                                          parentEventSectionProvider.notifier,
-                                        )
-                                        .state = section ==
-                                            EventSection.upcoming
-                                        ? EventSection.past
-                                        : EventSection.upcoming;
-                                  },
-                                  compact: true,
-                                )
-                              else
-                                Material(
-                                  color: context.colors.surface,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                      AksharaSpacing.s2,
-                                    ),
-                                    side: BorderSide(
-                                      color: context.colors.outlineVariant,
-                                    ),
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      for (var i = 0;
-                                          i < sectionEvents.length;
-                                          i++)
-                                        EventCard(
-                                          event: sectionEvents[i]
-                                              .toDashboardEvent(),
-                                          showDivider:
-                                              i < sectionEvents.length - 1,
-                                          onTap: onEventTap == null
-                                              ? null
-                                              : () => onEventTap!(
-                                                    sectionEvents[i],
-                                                  ),
-                                        ),
-                                    ],
-                                  ),
+                          child: SingleChildScrollView(
+                            padding: EdgeInsets.fromLTRB(
+                              horizontalPadding,
+                              AksharaSpacing.s4,
+                              horizontalPadding,
+                              AksharaSpacing.s6,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _EventsKpiRow(data: data),
+                                const SizedBox(height: AksharaSpacing.s4),
+                                _EventSectionControl(
+                                  selected: section,
+                                  onChanged: (value) => ref
+                                      .read(parentEventSectionProvider.notifier)
+                                      .state = value,
                                 ),
-                            ],
+                                const SizedBox(height: AksharaSpacing.s4),
+                                if (sectionEvents.isEmpty)
+                                  AksharaEmptyState(
+                                    message: section == EventSection.upcoming
+                                        ? 'No upcoming events scheduled.'
+                                        : 'No past events to show.',
+                                    icon: Icons.event_busy_outlined,
+                                    actionLabel:
+                                        section == EventSection.upcoming
+                                            ? 'View past events'
+                                            : 'View upcoming events',
+                                    onAction: () {
+                                      ref
+                                          .read(
+                                            parentEventSectionProvider.notifier,
+                                          )
+                                          .state = section ==
+                                              EventSection.upcoming
+                                          ? EventSection.past
+                                          : EventSection.upcoming;
+                                    },
+                                    compact: true,
+                                  )
+                                else
+                                  Material(
+                                    color: context.colors.surface,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(
+                                        AksharaSpacing.s2,
+                                      ),
+                                      side: BorderSide(
+                                        color: context.colors.outlineVariant,
+                                      ),
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        for (var i = 0;
+                                            i < sectionEvents.length;
+                                            i++)
+                                          EventCard(
+                                            event: sectionEvents[i]
+                                                .toDashboardEvent(),
+                                            showDivider:
+                                                i < sectionEvents.length - 1,
+                                            onTap: onEventTap == null
+                                                ? null
+                                                : () => onEventTap!(
+                                                      sectionEvents[i],
+                                                    ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  },
-                ),
+                      );
+                    },
+                  ),
+      ),
     );
   }
 }

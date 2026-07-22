@@ -35,7 +35,8 @@ class ParentProfileScreen extends ConsumerWidget {
   final VoidCallback? onLeaveTap;
 
   static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
-  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
+  static const double _tabletMaxContentWidth =
+      AksharaBreakpoints.compactContentMaxWidth;
 
   Future<void> _openPrivacyPolicy(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
@@ -64,200 +65,216 @@ class ParentProfileScreen extends ConsumerWidget {
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,
       ),
-      body: isLoading
-          ? const AksharaLoadingState(semanticLabel: 'Loading profile')
-          : hasError
-              ? AksharaErrorState(
-                  message: 'Unable to load your profile right now.',
-                  onRetry: () => ref
-                      .read(parentProfileErrorProvider.notifier)
-                      .state = false,
-                )
-              : LayoutBuilder(
-                  builder: (context, constraints) {
-                    final isTablet =
-                        constraints.maxWidth >= _tabletBreakpoint;
-                    final horizontalPadding = isTablet
-                        ? AksharaSpacing.tabletMargin
-                        : AksharaSpacing.mobileMargin;
+      // DS V2 P4 — premium persona canvas behind the profile content.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: isLoading
+            ? const AksharaLoadingState(semanticLabel: 'Loading profile')
+            : hasError
+                ? AksharaErrorState(
+                    message: 'Unable to load your profile right now.',
+                    onRetry: () => ref
+                        .read(parentProfileErrorProvider.notifier)
+                        .state = false,
+                  )
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isTablet =
+                          constraints.maxWidth >= _tabletBreakpoint;
+                      final horizontalPadding = isTablet
+                          ? AksharaSpacing.tabletMargin
+                          : AksharaSpacing.mobileMargin;
 
-                    return Align(
-                      alignment: Alignment.topCenter,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxWidth: isTablet
-                              ? _tabletMaxContentWidth
-                              : double.infinity,
-                        ),
-                        child: SingleChildScrollView(
-                          padding: EdgeInsets.fromLTRB(
-                            horizontalPadding,
-                            AksharaSpacing.s4,
-                            horizontalPadding,
-                            AksharaSpacing.s6,
+                      return Align(
+                        alignment: Alignment.topCenter,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: isTablet
+                                ? _tabletMaxContentWidth
+                                : double.infinity,
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              _ProfileHeroCard(data: data),
-                              const SizedBox(height: AksharaSpacing.s4),
-                              const AksharaSectionHeader(
-                                title: 'Contact',
-                                fixedHeight: false,
-                                spacingBelow: AksharaSpacing.s3,
-                              ),
-                              ProfileInfoRow(
-                                icon: Icons.phone_outlined,
-                                label: 'Phone',
-                                value: data.phoneLabel,
-                              ),
-                              const SizedBox(height: AksharaSpacing.s2),
-                              ProfileInfoRow(
-                                icon: Icons.email_outlined,
-                                label: 'Email',
-                                value: data.email,
-                              ),
-                              const SizedBox(height: AksharaSpacing.s4),
-                              AksharaSectionHeader(
-                                title: 'Children',
-                                trailingLabel: '${data.childrenCount} linked',
-                                fixedHeight: false,
-                                spacingBelow: AksharaSpacing.s3,
-                              ),
-                              Column(
-                                children: [
-                                  for (var i = 0; i < data.children.length; i++) ...[
-                                    ProfileChildRow(
-                                      child: data.children[i],
-                                      onTap: () async {
-                                        final profileId = data.children[i].id;
-                                        final authId =
-                                            kProfileChildToAuthId[profileId] ?? profileId;
-                                        final linked = ref
-                                            .read(authProvider)
-                                            .linkedChildren
-                                            .where((c) => c.id == authId)
-                                            .firstOrNull;
-                                        if (linked != null) {
-                                          await selectParentActiveChild(ref, linked);
-                                        }
-                                        ref.read(parentProfileActiveChildProvider.notifier).state =
-                                            profileId;
-                                        ref.invalidate(parentProfileFutureProvider);
-                                      },
-                                    ),
-                                    if (i < data.children.length - 1)
-                                      const SizedBox(height: AksharaSpacing.s2),
+                          child: SingleChildScrollView(
+                            padding: EdgeInsets.fromLTRB(
+                              horizontalPadding,
+                              AksharaSpacing.s4,
+                              horizontalPadding,
+                              AksharaSpacing.s6,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _ProfileHeroCard(data: data),
+                                const SizedBox(height: AksharaSpacing.s4),
+                                const AksharaSectionHeader(
+                                  title: 'Contact',
+                                  fixedHeight: false,
+                                  spacingBelow: AksharaSpacing.s3,
+                                ),
+                                ProfileInfoRow(
+                                  icon: Icons.phone_outlined,
+                                  label: 'Phone',
+                                  value: data.phoneLabel,
+                                ),
+                                const SizedBox(height: AksharaSpacing.s2),
+                                ProfileInfoRow(
+                                  icon: Icons.email_outlined,
+                                  label: 'Email',
+                                  value: data.email,
+                                ),
+                                const SizedBox(height: AksharaSpacing.s4),
+                                AksharaSectionHeader(
+                                  title: 'Children',
+                                  trailingLabel: '${data.childrenCount} linked',
+                                  fixedHeight: false,
+                                  spacingBelow: AksharaSpacing.s3,
+                                ),
+                                Column(
+                                  children: [
+                                    for (var i = 0;
+                                        i < data.children.length;
+                                        i++) ...[
+                                      ProfileChildRow(
+                                        child: data.children[i],
+                                        onTap: () async {
+                                          final profileId = data.children[i].id;
+                                          final authId = kProfileChildToAuthId[
+                                                  profileId] ??
+                                              profileId;
+                                          final linked = ref
+                                              .read(authProvider)
+                                              .linkedChildren
+                                              .where((c) => c.id == authId)
+                                              .firstOrNull;
+                                          if (linked != null) {
+                                            await selectParentActiveChild(
+                                                ref, linked);
+                                          }
+                                          ref
+                                              .read(
+                                                  parentProfileActiveChildProvider
+                                                      .notifier)
+                                              .state = profileId;
+                                          ref.invalidate(
+                                              parentProfileFutureProvider);
+                                        },
+                                      ),
+                                      if (i < data.children.length - 1)
+                                        const SizedBox(
+                                            height: AksharaSpacing.s2),
+                                    ],
                                   ],
-                                ],
-                              ),
-                              const SizedBox(height: AksharaSpacing.s4),
-                              const AksharaSectionHeader(
-                                title: 'School',
-                                fixedHeight: false,
-                                spacingBelow: AksharaSpacing.s3,
-                              ),
-                              ProfileInfoRow(
-                                icon: Icons.school_outlined,
-                                label: 'Institution',
-                                value: data.schoolName,
-                              ),
-                              const SizedBox(height: AksharaSpacing.s4),
-                              const AksharaSectionHeader(
-                                title: 'Family services',
-                                fixedHeight: false,
-                                spacingBelow: AksharaSpacing.s3,
-                              ),
-                              ProfileInfoRow(
-                                icon: Icons.receipt_long_outlined,
-                                label: 'Fee receipts',
-                                value: 'View and download payment receipts',
-                                onTap: onReceiptsTap,
-                              ),
-                              const SizedBox(height: AksharaSpacing.s2),
-                              ProfileInfoRow(
-                                icon: Icons.beach_access_outlined,
-                                label: 'Leave requests',
-                                value: 'Apply leave and track approvals',
-                                onTap: onLeaveTap,
-                              ),
-                              const SizedBox(height: AksharaSpacing.s4),
-                              ProfileInfoRow(
-                                key: QaTestKeys.aiAssistantSettingsLink,
-                                icon: Icons.psychology_outlined,
-                                label: 'AI Assistant',
-                                value: 'Choose how AI appears in the app',
-                                onTap: () => context.push(RouteNames.aiAssistantSettings),
-                              ),
-                              const SizedBox(height: AksharaSpacing.s2),
-                              ProfileInfoRow(
-                                key: QaTestKeys.appearanceSettingsLink,
-                                icon: Icons.brightness_6_outlined,
-                                label: 'Appearance',
-                                value: 'Light, dark, or match your device',
-                                onTap: () => context.push(RouteNames.appearanceSettings),
-                              ),
-                              const SizedBox(height: AksharaSpacing.s4),
-                              const AksharaSectionHeader(
-                                title: 'Legal',
-                                fixedHeight: false,
-                                spacingBelow: AksharaSpacing.s3,
-                              ),
-                              ProfileInfoRow(
-                                icon: Icons.privacy_tip_outlined,
-                                label: 'Privacy Policy',
-                                value: 'How we handle your family\'s data',
-                                onTap: () => _openPrivacyPolicy(context),
-                              ),
-                              const SizedBox(height: AksharaSpacing.s2),
-                              ProfileInfoRow(
-                                icon: Icons.gavel_outlined,
-                                label: 'Terms & Policies',
-                                value: 'Review the terms you accepted',
-                                onTap: () =>
-                                    context.push(RouteNames.legalAcceptance),
-                              ),
-                              const SizedBox(height: AksharaSpacing.s4),
-                              AksharaInsightCard(
-                                message:
-                                    'Manage notification preferences and app security from settings.',
-                                actionLabel: 'Open settings',
-                                onAction: onSettingsTap,
-                              ),
-                              const SizedBox(height: AksharaSpacing.s6),
-                              OutlinedButton.icon(
-                                key: QaTestKeys.logoutButton,
-                                onPressed: () => confirmAndLogout(context, ref),
-                                icon: Icon(
-                                  Icons.logout,
-                                  color: context.colors.error,
                                 ),
-                                label: Text(
-                                  'Log out',
-                                  style: TextStyle(
+                                const SizedBox(height: AksharaSpacing.s4),
+                                const AksharaSectionHeader(
+                                  title: 'School',
+                                  fixedHeight: false,
+                                  spacingBelow: AksharaSpacing.s3,
+                                ),
+                                ProfileInfoRow(
+                                  icon: Icons.school_outlined,
+                                  label: 'Institution',
+                                  value: data.schoolName,
+                                ),
+                                const SizedBox(height: AksharaSpacing.s4),
+                                const AksharaSectionHeader(
+                                  title: 'Family services',
+                                  fixedHeight: false,
+                                  spacingBelow: AksharaSpacing.s3,
+                                ),
+                                ProfileInfoRow(
+                                  icon: Icons.receipt_long_outlined,
+                                  label: 'Fee receipts',
+                                  value: 'View and download payment receipts',
+                                  onTap: onReceiptsTap,
+                                ),
+                                const SizedBox(height: AksharaSpacing.s2),
+                                ProfileInfoRow(
+                                  icon: Icons.beach_access_outlined,
+                                  label: 'Leave requests',
+                                  value: 'Apply leave and track approvals',
+                                  onTap: onLeaveTap,
+                                ),
+                                const SizedBox(height: AksharaSpacing.s4),
+                                ProfileInfoRow(
+                                  key: QaTestKeys.aiAssistantSettingsLink,
+                                  icon: Icons.psychology_outlined,
+                                  label: 'AI Assistant',
+                                  value: 'Choose how AI appears in the app',
+                                  onTap: () => context
+                                      .push(RouteNames.aiAssistantSettings),
+                                ),
+                                const SizedBox(height: AksharaSpacing.s2),
+                                ProfileInfoRow(
+                                  key: QaTestKeys.appearanceSettingsLink,
+                                  icon: Icons.brightness_6_outlined,
+                                  label: 'Appearance',
+                                  value: 'Light, dark, or match your device',
+                                  onTap: () => context
+                                      .push(RouteNames.appearanceSettings),
+                                ),
+                                const SizedBox(height: AksharaSpacing.s4),
+                                const AksharaSectionHeader(
+                                  title: 'Legal',
+                                  fixedHeight: false,
+                                  spacingBelow: AksharaSpacing.s3,
+                                ),
+                                ProfileInfoRow(
+                                  icon: Icons.privacy_tip_outlined,
+                                  label: 'Privacy Policy',
+                                  value: 'How we handle your family\'s data',
+                                  onTap: () => _openPrivacyPolicy(context),
+                                ),
+                                const SizedBox(height: AksharaSpacing.s2),
+                                ProfileInfoRow(
+                                  icon: Icons.gavel_outlined,
+                                  label: 'Terms & Policies',
+                                  value: 'Review the terms you accepted',
+                                  onTap: () =>
+                                      context.push(RouteNames.legalAcceptance),
+                                ),
+                                const SizedBox(height: AksharaSpacing.s4),
+                                AksharaInsightCard(
+                                  message:
+                                      'Manage notification preferences and app security from settings.',
+                                  actionLabel: 'Open settings',
+                                  onAction: onSettingsTap,
+                                ),
+                                const SizedBox(height: AksharaSpacing.s6),
+                                OutlinedButton.icon(
+                                  key: QaTestKeys.logoutButton,
+                                  onPressed: () =>
+                                      confirmAndLogout(context, ref),
+                                  icon: Icon(
+                                    Icons.logout,
                                     color: context.colors.error,
-                                    fontWeight: FontWeight.w600,
                                   ),
-                                ),
-                                style: OutlinedButton.styleFrom(
-                                  minimumSize: const Size.fromHeight(48),
-                                  side: BorderSide(
-                                    color: context.colors.error.withValues(
-                                      alpha: 0.5,
+                                  label: Text(
+                                    'Log out',
+                                    style: TextStyle(
+                                      color: context.colors.error,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: AksharaRadius.button,
+                                  style: OutlinedButton.styleFrom(
+                                    minimumSize: const Size.fromHeight(48),
+                                    side: BorderSide(
+                                      color: context.colors.error.withValues(
+                                        alpha: 0.5,
+                                      ),
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: AksharaRadius.button,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  },
-                ),
+                      );
+                    },
+                  ),
+      ),
     );
   }
 }

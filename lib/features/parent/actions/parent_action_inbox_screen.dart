@@ -39,25 +39,28 @@ class ParentActionInboxScreen extends ConsumerWidget {
         showAi: false,
         onNotificationsTap: onNotificationsTap,
       ),
-      body: actions.isEmpty
-          ? const AksharaEmptyState(
-              message: 'You are all caught up. Nothing needs your action.',
-              icon: Icons.task_alt_outlined,
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.all(AksharaSpacing.s4),
-              itemCount: actions.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: AksharaSpacing.s3),
-              itemBuilder: (context, index) {
-                final action = actions[index];
-                return _ActionInboxRow(
-                  action: action,
-                  onTap: () =>
-                      onActionTap(action.kind.navigationActionId),
-                );
-              },
-            ),
+      // DS V2 P4 — premium persona canvas behind the action inbox content.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: actions.isEmpty
+            ? const AksharaEmptyState(
+                message: 'You are all caught up. Nothing needs your action.',
+                icon: Icons.task_alt_outlined,
+              )
+            : ListView.separated(
+                padding: const EdgeInsets.all(AksharaSpacing.s4),
+                itemCount: actions.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: AksharaSpacing.s3),
+                itemBuilder: (context, index) {
+                  final action = actions[index];
+                  return _ActionInboxRow(
+                    action: action,
+                    onTap: () => onActionTap(action.kind.navigationActionId),
+                  );
+                },
+              ),
+      ),
     );
   }
 }
@@ -102,8 +105,8 @@ class _ActionInboxRow extends StatelessWidget {
                 if (action.detail != null)
                   Text(
                     action.detail!,
-                    style: text.bodySmall
-                        .copyWith(color: colors.onSurfaceVariant),
+                    style:
+                        text.bodySmall.copyWith(color: colors.onSurfaceVariant),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
