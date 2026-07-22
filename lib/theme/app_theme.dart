@@ -327,10 +327,14 @@ abstract final class AksharaAppTheme {
       surfaceTintColor: Colors.transparent,
       elevation: 8,
       shadowColor: scheme.shadow.withValues(alpha: 0.12),
-      indicatorColor: scheme.primaryContainer,
-      indicatorShape: RoundedRectangleBorder(
-        borderRadius: AksharaRadius.chip,
-      ),
+      // DS V2 P2-1 — branded persona chrome: a crisp accent-tinted stadium pill
+      // (primary @ 16%) with a full-strength accent icon + label. Reads clearly
+      // as the persona hue in BOTH light and dark (unlike the old washed M3
+      // `primaryContainer` pill + dark `onPrimaryContainer` icon, which looked
+      // near-identical across personas). Contrast holds: a 16% tint keeps the
+      // pill pale enough that the full-strength `primary` icon clears 3:1.
+      indicatorColor: scheme.primary.withValues(alpha: 0.16),
+      indicatorShape: const StadiumBorder(),
       labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       labelTextStyle: WidgetStateProperty.resolveWith((states) {
         final selected = states.contains(WidgetState.selected);
@@ -341,11 +345,8 @@ abstract final class AksharaAppTheme {
       }),
       iconTheme: WidgetStateProperty.resolveWith((states) {
         final selected = states.contains(WidgetState.selected);
-        // Selected icon sits INSIDE the primaryContainer indicator pill, so it
-        // must use onPrimaryContainer for contrast (primary-on-primaryContainer
-        // was the washed-out highlight bug). Matches the drawer theme below.
         return IconThemeData(
-          color: selected ? scheme.onPrimaryContainer : scheme.onSurfaceVariant,
+          color: selected ? scheme.primary : scheme.onSurfaceVariant,
           size: 24,
         );
       }),
@@ -355,7 +356,9 @@ abstract final class AksharaAppTheme {
   static NavigationRailThemeData _navigationRailTheme(ColorScheme scheme) {
     return NavigationRailThemeData(
       backgroundColor: scheme.surface,
-      indicatorColor: scheme.primaryContainer,
+      // DS V2 P2-1 — same branded accent pill as the bottom nav.
+      indicatorColor: scheme.primary.withValues(alpha: 0.14),
+      indicatorShape: const StadiumBorder(),
       selectedIconTheme: IconThemeData(color: scheme.primary, size: 24),
       unselectedIconTheme: IconThemeData(
         color: scheme.onSurfaceVariant,
@@ -377,18 +380,20 @@ abstract final class AksharaAppTheme {
     return NavigationDrawerThemeData(
       backgroundColor: scheme.surface,
       surfaceTintColor: Colors.transparent,
-      indicatorColor: scheme.primaryContainer,
+      // DS V2 P2-1 — branded accent pill; selected row reads in the persona hue.
+      indicatorColor: scheme.primary.withValues(alpha: 0.12),
+      indicatorShape: const StadiumBorder(),
       iconTheme: WidgetStateProperty.resolveWith((states) {
         final selected = states.contains(WidgetState.selected);
         return IconThemeData(
-          color: selected ? scheme.onPrimaryContainer : scheme.onSurfaceVariant,
+          color: selected ? scheme.primary : scheme.onSurfaceVariant,
         );
       }),
       labelTextStyle: WidgetStateProperty.resolveWith((states) {
         final selected = states.contains(WidgetState.selected);
         return TextStyle(
-          color: selected ? scheme.onPrimaryContainer : scheme.onSurface,
-          fontWeight: selected ? FontWeight.w500 : FontWeight.w400,
+          color: selected ? scheme.primary : scheme.onSurface,
+          fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
         );
       }),
     );

@@ -45,3 +45,8 @@ Navigation architecture · workflow · business logic · certified UX behavior �
 4. **Phase 4 — Screens:** per persona/module, incrementally; re-baseline intended golden changes and eyeball each.
 
 **Owner priority: product quality > engineering effort.** When choosing, pick the more premium, maintainable, polished implementation.
+
+## 7. Phase 2 execution log (branded, premium)
+Each slice: `flutter analyze` clean → touched tests green → golden re-baselined (intended) + eyeballed → independently committed. Full list in `docs/roadmap/UXR_FLUTTER_LANE_LOG.md`.
+
+- **P2-1 — Branded persona nav chrome ✅** — the selected item in the bottom nav / rail / drawer now reads in the **persona accent**: a full-strength `primary` icon + label on a crisp accent-tinted **stadium** pill (`primary` @ 16% bottom nav / 14% rail / 12% drawer). Replaces the washed M3 `primaryContainer` pill + dark `onPrimaryContainer` icon that made all personas look alike. Contrast holds (16% tint keeps the pill pale enough that the full-strength icon clears 3:1 — asserted in `navigation_bar_highlight_test.dart`). Parent=blue, Student=emerald, Teacher/Admin=indigo now read distinctly in the nav. 4 persona-shell goldens re-baselined.

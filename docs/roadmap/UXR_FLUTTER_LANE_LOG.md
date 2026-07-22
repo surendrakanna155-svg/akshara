@@ -17,7 +17,11 @@
 - **D5** `5a606e05` (F-077) — Publish-results now shows a summary confirm (class·subject·N students·M absent AB/ML/DB·K unmarked; K>0 prominent, never blocks) before the irreversible publish. Revocation window = backend-dependent (out of scope). analyze clean; exam_admin +47; golden +70.
 - **J5** `a7e48fc6` (F-029) — restored push animations + iOS back-swipe: 245 drill-in routes NoTransitionPage→builder (default MaterialPage); 42 tab destinations kept instant (persona shell roots + primary bottom-nav tabs + admin module-landings). analyze clean; full flutter test 4131/0/1-skip; golden +70 unchanged.
 
-## ⏸ OWNER-GATED (surfaced) — J1 + J7
+## DESIGN SYSTEM V2 — Phase 2 (branded premium pass; SSOT `docs/design/DESIGN_SYSTEM_V2.md`)
+J1+J7 are RESOLVED by DS V2 (owner escalated to a full unified design system, 2026-07-21). Phase 1 (unified persona theming that honors Appearance) committed `b912e308`. Phase 2 = strengthen persona identity across the chrome + premium component pass. Objective is no longer "make Light/Dark work" — it's "premium, modern, enterprise, cohesive" while preserving every certified flow.
+- **P2-1 — Branded persona nav chrome** (DS V2 §7) — selected bottom-nav / rail / drawer item now reads in the **persona accent**: full-strength `primary` icon + label on a crisp accent-tinted **stadium** pill (16% bottom nav / 14% rail / 12% drawer), replacing the washed M3 `primaryContainer` pill + dark `onPrimaryContainer` icon that made personas look alike. Contrast asserted (3:1) in `navigation_bar_highlight_test.dart`. analyze clean; theme+nav+widget tests 164/0; golden re-baselined 4 persona shells, full suite 70/70.
+
+## ⏸ OWNER-GATED (surfaced) — J1 + J7 (SUPERSEDED by DS V2 above)
 **J1+J7** (F-002/F-008 — honor the Appearance setting + re-baseline goldens to production theming) is **entangled with the owner-gated OD3 "brand/theme authority" decision** (roadmap §5.6 UXR-OD3): making the toggle work requires designing the missing light/dark persona palettes, which the roadmap reserves for the owner (single identity vs. keep Stitch personas with added light/dark variants vs. persona-hue-over-M15). Surfaced to the owner as a genuine decision — NOT implemented autonomously (would be a unilateral brand call). Theming-related fast-follow (I3/I4 contrast, J8/I6 appearance polish) likely depends on the same decision.
 
 ## NEXT (fast-follow, client-only, mostly non-gated)
