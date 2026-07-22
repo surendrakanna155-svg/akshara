@@ -11,6 +11,7 @@ import 'package:akshara_erp/features/teacher/homework/teacher_homework_screen.da
 import 'package:akshara_erp/features/teacher/leave/teacher_leave_screen.dart';
 import 'package:akshara_erp/features/teacher/leave_approvals/teacher_leave_approvals_screen.dart';
 import 'package:akshara_erp/features/teacher/messages/teacher_messages_screen.dart';
+import 'package:akshara_erp/features/teacher/student_risk/teacher_student_risk_screen.dart';
 import 'package:akshara_erp/features/teacher/timetable/teacher_timetable_screen.dart';
 import 'package:akshara_erp/features/teacher/timetable/teacher_today_screen.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
@@ -238,6 +239,21 @@ void main() {
         matchesGoldenFile(
           goldenFileName(
               'ds_v2_flagship_teacher_messages_${mode.label}', '390x1280'),
+        ),
+      );
+    });
+
+    testWidgets('teacher student risk · ${mode.label}', (tester) async {
+      await pump(
+        tester,
+        screen: const TeacherStudentRiskScreen(sisStudentId: 'SIS-STU-10421'),
+        dark: mode.dark,
+      );
+      await expectLater(
+        find.byType(TeacherStudentRiskScreen),
+        matchesGoldenFile(
+          goldenFileName(
+              'ds_v2_flagship_teacher_student_risk_${mode.label}', '390x1280'),
         ),
       );
     });

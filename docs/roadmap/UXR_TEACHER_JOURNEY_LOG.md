@@ -36,7 +36,8 @@ worktree branch onto the correct uxr tip (`19c47710`) with `git reset --hard`
 | 3 | Exams (TA-05) | Premium canvas + the three-up KPI strip restructured into a premium `_ExamsSummaryCard` — class-average % ring with Upcoming + Pending-marks adjacent stats (same three metrics) | **Yes** — class-average % (mirrors the student exams card) | analyze clean; exams suite + marks-submit + exam-admin-chain + module-screens **+41**; goldens 2 | `185629a2` |
 | 4 | Weekly Timetable (TA-03) + Today's classes (TCH-1/TCH-4) | Premium canvas on all states of both (dropped a now-unused import on the timetable screen) | **No** — period lists / counts, no headline % | analyze clean; timetable suite + today-schedule + tch1/3/4 + module-screens **+18**; goldens 4 | `0cfaae00` |
 | 5 | My Leave (TA-07) + Student Leave Approvals | Premium canvas on all states of the leave balance/history and the class-teacher approval list | **No** — leave balances are day counts (Casual/Sick/Earned); approvals is a list | analyze clean; leave suite + leave-approvals + module-screens **+22**; goldens 4 | `18502c45` |
-| 6 | Parent Communication (workflow) + Messages inbox (TA-06) | Premium canvas on the communication workflow and the messages inbox/compose. **Conversation/chat left plain** (canvas hurts pale chat-bubble contrast). Also fixed a latent 6px horizontal overflow on the "Select student" dropdown (`isExpanded` + item ellipsis, matching the homework dropdown) surfaced by the golden | **No** — form / list, no headline % | analyze clean; communication + messages suites + governance + module-screens **+30**; goldens 4 | `<pending>` |
+| 6 | Parent Communication (workflow) + Messages inbox (TA-06) | Premium canvas on the communication workflow and the messages inbox/compose. **Conversation/chat left plain** (canvas hurts pale chat-bubble contrast). Also fixed a latent 6px horizontal overflow on the "Select student" dropdown (`isExpanded` + item ellipsis, matching the homework dropdown) surfaced by the golden | **No** — form / list, no headline % | analyze clean; communication + messages suites + governance + module-screens **+30**; goldens 4 | `b944922e` |
+| 7 | Student Risk 360 | Premium canvas behind the risk 360 detail | **No** — see ring decision below | analyze clean; qw5 intervention authz **+3**; goldens 2 (`SIS-STU-10421`) | `<pending>` |
 
 ## Ring decisions (honest-state)
 - **My Attendance** monthly rate → ring. Derived only from data already loaded
@@ -50,6 +51,17 @@ worktree branch onto the correct uxr tip (`19c47710`) with `git reset --hard`
   counts). Canvas cohesion only; the submit gate / summary bar / bulk-mark / fill-
   remaining / search / correction flows and every `QaTestKeys.teacherAttendance*`
   are preserved.
+- **Exams** class-average % → ring (mirrors the student exams card). Reads a real
+  non-zero class average in the demo (marks settle), and the arc is honest.
+- **Student Risk 360** → **no ring**. The screen's headline is a **categorical
+  risk LEVEL** (low/medium/high — `riskLevel.name`), not a percentage; a progress
+  ring encodes a 0..1 value, so forcing one onto a category would misread. The
+  attendance-% and homework-completion-% are secondary detail *rows*, not a single
+  headline metric — so the honest call is canvas cohesion only, no ring.
+- **Homework / Timetable / Today / Leave / Communication / Messages / Profile /
+  Settings / Class-teacher dashboard** — honest counts, lists, forms, or
+  navigation overviews with no headline %; canvas cohesion only, per the
+  "don't force a ring" rule.
 
 ## Preserved (presentation-only)
 Navigation, workflows, providers, honest-state messaging, `QaTestKeys`,
