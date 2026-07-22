@@ -200,6 +200,48 @@ abstract final class AksharaAppTheme {
           borderRadius: AksharaRadius.card,
         ),
       ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        // DS V2 P2-3 — the un-themed M3 SegmentedButton was raw default Material
+        // (pale secondaryContainer selected segment). Brand it like the rest of
+        // the chrome: an accent-tinted selected segment (primary @ 14%) with a
+        // full-strength accent label + checkmark, on a hairline outline.
+        style: ButtonStyle(
+          textStyle: WidgetStatePropertyAll(
+            aksharaText.labelLarge.copyWith(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return colorScheme.onSurface.withValues(alpha: 0.04);
+            }
+            if (states.contains(WidgetState.selected)) {
+              return colorScheme.primary.withValues(alpha: 0.14);
+            }
+            return Colors.transparent;
+          }),
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return colorScheme.onSurface.withValues(alpha: 0.38);
+            }
+            if (states.contains(WidgetState.selected)) {
+              return colorScheme.primary;
+            }
+            return colorScheme.onSurfaceVariant;
+          }),
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.pressed)) {
+              return colorScheme.primary.withValues(alpha: 0.10);
+            }
+            if (states.contains(WidgetState.hovered)) {
+              return colorScheme.primary.withValues(alpha: 0.06);
+            }
+            return null;
+          }),
+          side: WidgetStatePropertyAll(
+            BorderSide(color: colorScheme.outlineVariant),
+          ),
+          minimumSize: const WidgetStatePropertyAll(Size(0, 44)),
+        ),
+      ),
       tabBarTheme: TabBarThemeData(
         labelColor: colorScheme.primary,
         unselectedLabelColor: colorScheme.onSurfaceVariant,
