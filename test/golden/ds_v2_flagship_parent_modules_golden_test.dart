@@ -1,6 +1,7 @@
 @TestOn('mac-os')
 library;
 
+import 'package:akshara_erp/features/parent/attendance/parent_attendance_screen.dart';
 import 'package:akshara_erp/features/parent/fees/fees_provider.dart';
 import 'package:akshara_erp/features/parent/fees/parent_fees_screen.dart';
 import 'package:akshara_erp/features/parent/receipts/parent_receipts_screen.dart';
@@ -78,6 +79,21 @@ void main() {
         matchesGoldenFile(
           goldenFileName(
               'ds_v2_flagship_parent_receipts_${mode.label}', '390x1280'),
+        ),
+      );
+    });
+
+    testWidgets('parent attendance · ${mode.label}', (tester) async {
+      await pump(
+        tester,
+        screen: const ParentAttendanceScreen(),
+        dark: mode.dark,
+      );
+      await expectLater(
+        find.byType(ParentAttendanceScreen),
+        matchesGoldenFile(
+          goldenFileName(
+              'ds_v2_flagship_parent_attendance_${mode.label}', '390x1280'),
         ),
       );
     });
