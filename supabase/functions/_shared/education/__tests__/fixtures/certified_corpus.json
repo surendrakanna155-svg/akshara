@@ -1,0 +1,926 @@
+[
+  {
+    "answer_label": "A",
+    "answer_value": "63",
+    "archetype": "numeric_sum",
+    "bloom": "understand",
+    "board": "CBSE",
+    "candidate_id": "CAND_9e17a3f9e58417ff",
+    "certification_class": "certified",
+    "claimed": {
+      "archetype": "numeric_sum",
+      "composition": "single",
+      "concepts": [
+        "Addition of whole numbers"
+      ],
+      "depth": 1,
+      "difficulty": "easy"
+    },
+    "class_level": 8,
+    "composition": "single",
+    "computed_archetype": "numeric_sum",
+    "concept_code": "KC_b1ee53ae85f7f0",
+    "concept_codes_all": "[\"KC_b1ee53ae85f7f0\"]",
+    "concept_title": "Addition of whole numbers",
+    "distractor_rationale": {
+      "A": "correct answer",
+      "B": "classic arithmetic slip (off-by-one / magnitude)",
+      "C": "classic arithmetic slip (off-by-one / magnitude)",
+      "D": "classic arithmetic slip (off-by-one / magnitude)"
+    },
+    "earned_depth": 1,
+    "evidence_class": "sympy_rederived",
+    "exam_profile": "SCHOOL",
+    "generator_family": "program-d-fixture-family",
+    "generator_model": "fixture-structured-numeric-v1",
+    "intended_depth": 1,
+    "intended_difficulty": "easy",
+    "item_hash": "IH_f2e5d4f9589b683efa69",
+    "lane": "STRUCTURED_NUMERIC",
+    "marks": 1,
+    "options": {
+      "A": "63",
+      "B": "64",
+      "C": "62",
+      "D": "73"
+    },
+    "provenance": {
+      "actor": "program-d-fixture-harness",
+      "contract_version": "program-d-fixture-contract-1",
+      "model": "fixture-structured-numeric-v1",
+      "model_version": "fixture-1.0.0",
+      "prompt_sha256": "08aeee224821b8ef2d9fafa5713cd88d5ef460ea80f858033d7e3d7236de214f"
+    },
+    "question_type": "MCQ",
+    "run_id": "pd_fixture_run_0",
+    "solution": {
+      "final": 63,
+      "steps": [
+        "49 + 14 = 63"
+      ]
+    },
+    "spec_id": "pd_fixture_spec_0_0",
+    "stem": "A crate holds 49 apples, and 14 more apples are packed in. How many apples are there in total?",
+    "stem_norm_hash": "NH_6e11649db6b61d7e09f6",
+    "structure": {
+      "givens": {
+        "noun": "apple"
+      },
+      "relation": "total = start + added",
+      "solve_for": "total",
+      "steps": [
+        "49 + 14 = 63"
+      ]
+    },
+    "subject": "Mathematics",
+    "visual_required": 0,
+    "visual_spec": null
+  },
+  {
+    "answer_label": "B",
+    "answer_value": "84",
+    "archetype": "numeric_diff",
+    "bloom": "understand",
+    "board": "CBSE",
+    "candidate_id": "CAND_a9b7a1602355957f",
+    "certification_class": "certified",
+    "claimed": {
+      "archetype": "numeric_diff",
+      "composition": "single",
+      "concepts": [
+        "Subtraction of whole numbers"
+      ],
+      "depth": 2,
+      "difficulty": "moderate"
+    },
+    "class_level": 8,
+    "composition": "single",
+    "computed_archetype": "numeric_diff",
+    "concept_code": "KC_31c80530a19d41",
+    "concept_codes_all": "[\"KC_31c80530a19d41\"]",
+    "concept_title": "Subtraction of whole numbers",
+    "distractor_rationale": {
+      "A": "classic arithmetic slip (off-by-one / magnitude)",
+      "B": "correct answer",
+      "C": "classic arithmetic slip (off-by-one / magnitude)",
+      "D": "classic arithmetic slip (off-by-one / magnitude)"
+    },
+    "earned_depth": 2,
+    "evidence_class": "sympy_rederived",
+    "exam_profile": "SCHOOL",
+    "generator_family": "program-d-fixture-family",
+    "generator_model": "fixture-structured-numeric-v1",
+    "intended_depth": 2,
+    "intended_difficulty": "moderate",
+    "item_hash": "IH_2b4e183efad96288ad6e",
+    "lane": "STRUCTURED_NUMERIC",
+    "marks": 1,
+    "options": {
+      "A": "85",
+      "B": "84",
+      "C": "83",
+      "D": "94"
+    },
+    "provenance": {
+      "actor": "program-d-fixture-harness",
+      "contract_version": "program-d-fixture-contract-1",
+      "model": "fixture-structured-numeric-v1",
+      "model_version": "fixture-1.0.0",
+      "prompt_sha256": "18ba87a6fe72b7178fa14818295235435b675184e85b4c6fd6eba220323c8192"
+    },
+    "question_type": "MCQ",
+    "run_id": "pd_fixture_run_0",
+    "solution": {
+      "final": 84,
+      "steps": [
+        "91 - 7 = 84"
+      ]
+    },
+    "spec_id": "pd_fixture_spec_0_1",
+    "stem": "A vendor started the day with 91 pencils and sold 7 of them. How many pencils are left unsold?",
+    "stem_norm_hash": "NH_dcad5e892681bb6da2ec",
+    "structure": {
+      "givens": {
+        "noun": "pencil"
+      },
+      "relation": "remaining = start - sold",
+      "solve_for": "remaining",
+      "steps": [
+        "91 - 7 = 84"
+      ]
+    },
+    "subject": "Mathematics",
+    "visual_required": 0,
+    "visual_spec": null
+  },
+  {
+    "answer_label": "C",
+    "answer_value": "18",
+    "archetype": "numeric_product",
+    "bloom": "apply",
+    "board": "CBSE",
+    "candidate_id": "CAND_f2e2df5e8ca00de7",
+    "certification_class": "certified",
+    "claimed": {
+      "archetype": "numeric_product",
+      "composition": "single",
+      "concepts": [
+        "Multiplication as repeated addition"
+      ],
+      "depth": 2,
+      "difficulty": "hard"
+    },
+    "class_level": 8,
+    "composition": "single",
+    "computed_archetype": "numeric_product",
+    "concept_code": "KC_1dbb3dc980ddff",
+    "concept_codes_all": "[\"KC_1dbb3dc980ddff\"]",
+    "concept_title": "Multiplication as repeated addition",
+    "distractor_rationale": {
+      "A": "classic arithmetic slip (off-by-one / magnitude)",
+      "B": "classic arithmetic slip (off-by-one / magnitude)",
+      "C": "correct answer",
+      "D": "classic arithmetic slip (off-by-one / magnitude)"
+    },
+    "earned_depth": 2,
+    "evidence_class": "sympy_rederived",
+    "exam_profile": "SCHOOL",
+    "generator_family": "program-d-fixture-family",
+    "generator_model": "fixture-structured-numeric-v1",
+    "intended_depth": 2,
+    "intended_difficulty": "hard",
+    "item_hash": "IH_63bfe6753759c5e11e6f",
+    "lane": "STRUCTURED_NUMERIC",
+    "marks": 1,
+    "options": {
+      "A": "19",
+      "B": "17",
+      "C": "18",
+      "D": "28"
+    },
+    "provenance": {
+      "actor": "program-d-fixture-harness",
+      "contract_version": "program-d-fixture-contract-1",
+      "model": "fixture-structured-numeric-v1",
+      "model_version": "fixture-1.0.0",
+      "prompt_sha256": "83b67ae7d319893dde0d79bb5b1ce15482ebb6c80559b1deff9d7a3396adbd6a"
+    },
+    "question_type": "MCQ",
+    "run_id": "pd_fixture_run_0",
+    "solution": {
+      "final": 18,
+      "steps": [
+        "3 x 6 = 18"
+      ]
+    },
+    "spec_id": "pd_fixture_spec_0_2",
+    "stem": "Each carton contains 6 books. If a warehouse has 3 such cartons, how many books are stored in all?",
+    "stem_norm_hash": "NH_ee4bbd31dc90260ef41e",
+    "structure": {
+      "givens": {
+        "noun": "book"
+      },
+      "relation": "total = cartons x per_carton",
+      "solve_for": "total",
+      "steps": [
+        "3 x 6 = 18"
+      ]
+    },
+    "subject": "Mathematics",
+    "visual_required": 0,
+    "visual_spec": null
+  },
+  {
+    "answer_label": "D",
+    "answer_value": "6",
+    "archetype": "numeric_division",
+    "bloom": "apply",
+    "board": "CBSE",
+    "candidate_id": "CAND_521384ffed43fc75",
+    "certification_class": "certified",
+    "claimed": {
+      "archetype": "numeric_division",
+      "composition": "single",
+      "concepts": [
+        "Division as equal sharing"
+      ],
+      "depth": 3,
+      "difficulty": "easy"
+    },
+    "class_level": 8,
+    "composition": "single",
+    "computed_archetype": "numeric_division",
+    "concept_code": "KC_dafc4b1675b215",
+    "concept_codes_all": "[\"KC_dafc4b1675b215\"]",
+    "concept_title": "Division as equal sharing",
+    "distractor_rationale": {
+      "A": "classic arithmetic slip (off-by-one / magnitude)",
+      "B": "classic arithmetic slip (off-by-one / magnitude)",
+      "C": "classic arithmetic slip (off-by-one / magnitude)",
+      "D": "correct answer"
+    },
+    "earned_depth": 3,
+    "evidence_class": "sympy_rederived",
+    "exam_profile": "SCHOOL",
+    "generator_family": "program-d-fixture-family",
+    "generator_model": "fixture-structured-numeric-v1",
+    "intended_depth": 3,
+    "intended_difficulty": "easy",
+    "item_hash": "IH_3afa80079205b24c51e1",
+    "lane": "STRUCTURED_NUMERIC",
+    "marks": 1,
+    "options": {
+      "A": "7",
+      "B": "5",
+      "C": "16",
+      "D": "6"
+    },
+    "provenance": {
+      "actor": "program-d-fixture-harness",
+      "contract_version": "program-d-fixture-contract-1",
+      "model": "fixture-structured-numeric-v1",
+      "model_version": "fixture-1.0.0",
+      "prompt_sha256": "4d31f6e79bfcf1d1f913b31e7f08af66dc4d908e53f63b98c3cba9da6897fafe"
+    },
+    "question_type": "MCQ",
+    "run_id": "pd_fixture_run_0",
+    "solution": {
+      "final": 6,
+      "steps": [
+        "42 / 7 = 6"
+      ]
+    },
+    "spec_id": "pd_fixture_spec_0_3",
+    "stem": "42 marbles are shared equally among 7 groups. How many marbles does each group receive?",
+    "stem_norm_hash": "NH_67e8cf816f8a6724862e",
+    "structure": {
+      "givens": {
+        "noun": "marble"
+      },
+      "relation": "per_group = total / groups",
+      "solve_for": "per_group",
+      "steps": [
+        "42 / 7 = 6"
+      ]
+    },
+    "subject": "Mathematics",
+    "visual_required": 0,
+    "visual_spec": null
+  },
+  {
+    "answer_label": "A",
+    "answer_value": "27",
+    "archetype": "linear_solve",
+    "bloom": "analyze",
+    "board": "CBSE",
+    "candidate_id": "CAND_3fd8cdbf8f3865d0",
+    "certification_class": "certified",
+    "claimed": {
+      "archetype": "linear_solve",
+      "composition": "single",
+      "concepts": [
+        "Linear equations in one variable"
+      ],
+      "depth": 3,
+      "difficulty": "moderate"
+    },
+    "class_level": 8,
+    "composition": "single",
+    "computed_archetype": "linear_solve",
+    "concept_code": "KC_fec9dd048cb42e",
+    "concept_codes_all": "[\"KC_fec9dd048cb42e\"]",
+    "concept_title": "Linear equations in one variable",
+    "distractor_rationale": {
+      "A": "correct answer",
+      "B": "classic arithmetic slip (off-by-one / magnitude)",
+      "C": "classic arithmetic slip (off-by-one / magnitude)",
+      "D": "classic arithmetic slip (off-by-one / magnitude)"
+    },
+    "earned_depth": 3,
+    "evidence_class": "sympy_rederived",
+    "exam_profile": "SCHOOL",
+    "generator_family": "program-d-fixture-family",
+    "generator_model": "fixture-structured-numeric-v1",
+    "intended_depth": 3,
+    "intended_difficulty": "moderate",
+    "item_hash": "IH_c37625fb352e3e78a3a5",
+    "lane": "STRUCTURED_NUMERIC",
+    "marks": 1,
+    "options": {
+      "A": "27",
+      "B": "28",
+      "C": "26",
+      "D": "37"
+    },
+    "provenance": {
+      "actor": "program-d-fixture-harness",
+      "contract_version": "program-d-fixture-contract-1",
+      "model": "fixture-structured-numeric-v1",
+      "model_version": "fixture-1.0.0",
+      "prompt_sha256": "4584bba42e3e6c42fd714c6debaf3ee7305e008499a2ec268ba88c82c6204eb6"
+    },
+    "question_type": "MCQ",
+    "run_id": "pd_fixture_run_0",
+    "solution": {
+      "final": 27,
+      "steps": [
+        "48 - 21 = 27"
+      ]
+    },
+    "spec_id": "pd_fixture_spec_0_4",
+    "stem": "After 21 more coins were added to a box, it held 48 coins in all. How many coins were in the box to begin with?",
+    "stem_norm_hash": "NH_6fc300ea739325f01849",
+    "structure": {
+      "givens": {
+        "noun": "coin"
+      },
+      "relation": "start = final - added",
+      "solve_for": "start",
+      "steps": [
+        "48 - 21 = 27"
+      ]
+    },
+    "subject": "Mathematics",
+    "visual_required": 0,
+    "visual_spec": null
+  },
+  {
+    "answer_label": "B",
+    "answer_value": "20",
+    "archetype": "numeric_compare",
+    "bloom": "analyze",
+    "board": "CBSE",
+    "candidate_id": "CAND_5f5fb172a313dd2d",
+    "certification_class": "certified",
+    "claimed": {
+      "archetype": "numeric_compare",
+      "composition": "single",
+      "concepts": [
+        "Comparing and ordering numbers"
+      ],
+      "depth": 2,
+      "difficulty": "hard"
+    },
+    "class_level": 8,
+    "composition": "single",
+    "computed_archetype": "numeric_compare",
+    "concept_code": "KC_e97ca1b3ca88ba",
+    "concept_codes_all": "[\"KC_e97ca1b3ca88ba\"]",
+    "concept_title": "Comparing and ordering numbers",
+    "distractor_rationale": {
+      "A": "classic arithmetic slip (off-by-one / magnitude)",
+      "B": "correct answer",
+      "C": "classic arithmetic slip (off-by-one / magnitude)",
+      "D": "classic arithmetic slip (off-by-one / magnitude)"
+    },
+    "earned_depth": 2,
+    "evidence_class": "sympy_rederived",
+    "exam_profile": "SCHOOL",
+    "generator_family": "program-d-fixture-family",
+    "generator_model": "fixture-structured-numeric-v1",
+    "intended_depth": 2,
+    "intended_difficulty": "hard",
+    "item_hash": "IH_9dd6da1a7adbb214c7d1",
+    "lane": "STRUCTURED_NUMERIC",
+    "marks": 1,
+    "options": {
+      "A": "21",
+      "B": "20",
+      "C": "19",
+      "D": "30"
+    },
+    "provenance": {
+      "actor": "program-d-fixture-harness",
+      "contract_version": "program-d-fixture-contract-1",
+      "model": "fixture-structured-numeric-v1",
+      "model_version": "fixture-1.0.0",
+      "prompt_sha256": "8f6d37caccf18b0ffdf841bd21b437c27d49227aa336a6a4eaeef99725380225"
+    },
+    "question_type": "MCQ",
+    "run_id": "pd_fixture_run_0",
+    "solution": {
+      "final": 20,
+      "steps": [
+        "max(24, 44) - min(24, 44) = 20"
+      ]
+    },
+    "spec_id": "pd_fixture_spec_0_5",
+    "stem": "Shelf P has 24 ribbons and shelf Q has 44 ribbons. How many more ribbons does the fuller shelf hold?",
+    "stem_norm_hash": "NH_ae3da58be2abaf7e7993",
+    "structure": {
+      "givens": {
+        "noun": "ribbon"
+      },
+      "relation": "difference = larger - smaller",
+      "solve_for": "difference",
+      "steps": [
+        "max(24, 44) - min(24, 44) = 20"
+      ]
+    },
+    "subject": "Mathematics",
+    "visual_required": 0,
+    "visual_spec": null
+  },
+  {
+    "answer_label": "C",
+    "answer_value": "104",
+    "archetype": "numeric_sum",
+    "bloom": "understand",
+    "board": "CBSE",
+    "candidate_id": "CAND_1251aa5a27cd8a4e",
+    "certification_class": "certified",
+    "claimed": {
+      "archetype": "numeric_sum",
+      "composition": "single",
+      "concepts": [
+        "Addition of whole numbers"
+      ],
+      "depth": 1,
+      "difficulty": "easy"
+    },
+    "class_level": 8,
+    "composition": "single",
+    "computed_archetype": "numeric_sum",
+    "concept_code": "KC_b1ee53ae85f7f0",
+    "concept_codes_all": "[\"KC_b1ee53ae85f7f0\"]",
+    "concept_title": "Addition of whole numbers",
+    "distractor_rationale": {
+      "A": "classic arithmetic slip (off-by-one / magnitude)",
+      "B": "classic arithmetic slip (off-by-one / magnitude)",
+      "C": "correct answer",
+      "D": "classic arithmetic slip (off-by-one / magnitude)"
+    },
+    "earned_depth": 1,
+    "evidence_class": "sympy_rederived",
+    "exam_profile": "SCHOOL",
+    "generator_family": "program-d-fixture-family",
+    "generator_model": "fixture-structured-numeric-v1",
+    "intended_depth": 1,
+    "intended_difficulty": "easy",
+    "item_hash": "IH_c8e724ab9fc4b52dd19a",
+    "lane": "STRUCTURED_NUMERIC",
+    "marks": 1,
+    "options": {
+      "A": "105",
+      "B": "103",
+      "C": "104",
+      "D": "114"
+    },
+    "provenance": {
+      "actor": "program-d-fixture-harness",
+      "contract_version": "program-d-fixture-contract-1",
+      "model": "fixture-structured-numeric-v1",
+      "model_version": "fixture-1.0.0",
+      "prompt_sha256": "3556cb141ebd27638ff7fe7530203fe33b87e5bd5436d7dd3fa5b49a318fb8f4"
+    },
+    "question_type": "MCQ",
+    "run_id": "pd_fixture_run_0",
+    "solution": {
+      "final": 104,
+      "steps": [
+        "91 + 13 = 104"
+      ]
+    },
+    "spec_id": "pd_fixture_spec_0_6",
+    "stem": "A crate holds 91 stamps, and 13 more stamps are packed in. How many stamps are there in total?",
+    "stem_norm_hash": "NH_bd28682ba0b32442b0e4",
+    "structure": {
+      "givens": {
+        "noun": "stamp"
+      },
+      "relation": "total = start + added",
+      "solve_for": "total",
+      "steps": [
+        "91 + 13 = 104"
+      ]
+    },
+    "subject": "Mathematics",
+    "visual_required": 0,
+    "visual_spec": null
+  },
+  {
+    "answer_label": "D",
+    "answer_value": "67",
+    "archetype": "numeric_diff",
+    "bloom": "understand",
+    "board": "CBSE",
+    "candidate_id": "CAND_d8afd367431457c7",
+    "certification_class": "certified",
+    "claimed": {
+      "archetype": "numeric_diff",
+      "composition": "single",
+      "concepts": [
+        "Subtraction of whole numbers"
+      ],
+      "depth": 2,
+      "difficulty": "moderate"
+    },
+    "class_level": 8,
+    "composition": "single",
+    "computed_archetype": "numeric_diff",
+    "concept_code": "KC_31c80530a19d41",
+    "concept_codes_all": "[\"KC_31c80530a19d41\"]",
+    "concept_title": "Subtraction of whole numbers",
+    "distractor_rationale": {
+      "A": "classic arithmetic slip (off-by-one / magnitude)",
+      "B": "classic arithmetic slip (off-by-one / magnitude)",
+      "C": "classic arithmetic slip (off-by-one / magnitude)",
+      "D": "correct answer"
+    },
+    "earned_depth": 2,
+    "evidence_class": "sympy_rederived",
+    "exam_profile": "SCHOOL",
+    "generator_family": "program-d-fixture-family",
+    "generator_model": "fixture-structured-numeric-v1",
+    "intended_depth": 2,
+    "intended_difficulty": "moderate",
+    "item_hash": "IH_7b5ec208268312d66a7d",
+    "lane": "STRUCTURED_NUMERIC",
+    "marks": 1,
+    "options": {
+      "A": "68",
+      "B": "66",
+      "C": "77",
+      "D": "67"
+    },
+    "provenance": {
+      "actor": "program-d-fixture-harness",
+      "contract_version": "program-d-fixture-contract-1",
+      "model": "fixture-structured-numeric-v1",
+      "model_version": "fixture-1.0.0",
+      "prompt_sha256": "01c0918c62f38e48abc665310734be362b0ff4156092ce5d73f08617ceae8db0"
+    },
+    "question_type": "MCQ",
+    "run_id": "pd_fixture_run_0",
+    "solution": {
+      "final": 67,
+      "steps": [
+        "89 - 22 = 67"
+      ]
+    },
+    "spec_id": "pd_fixture_spec_0_7",
+    "stem": "A vendor started the day with 89 bricks and sold 22 of them. How many bricks are left unsold?",
+    "stem_norm_hash": "NH_1ee8bf60c8b9b3ffbfbf",
+    "structure": {
+      "givens": {
+        "noun": "brick"
+      },
+      "relation": "remaining = start - sold",
+      "solve_for": "remaining",
+      "steps": [
+        "89 - 22 = 67"
+      ]
+    },
+    "subject": "Mathematics",
+    "visual_required": 0,
+    "visual_spec": null
+  },
+  {
+    "answer_label": "A",
+    "answer_value": "32",
+    "archetype": "numeric_product",
+    "bloom": "apply",
+    "board": "CBSE",
+    "candidate_id": "CAND_888441900e7730c9",
+    "certification_class": "certified",
+    "claimed": {
+      "archetype": "numeric_product",
+      "composition": "single",
+      "concepts": [
+        "Multiplication as repeated addition"
+      ],
+      "depth": 2,
+      "difficulty": "hard"
+    },
+    "class_level": 8,
+    "composition": "single",
+    "computed_archetype": "numeric_product",
+    "concept_code": "KC_1dbb3dc980ddff",
+    "concept_codes_all": "[\"KC_1dbb3dc980ddff\"]",
+    "concept_title": "Multiplication as repeated addition",
+    "distractor_rationale": {
+      "A": "correct answer",
+      "B": "classic arithmetic slip (off-by-one / magnitude)",
+      "C": "classic arithmetic slip (off-by-one / magnitude)",
+      "D": "classic arithmetic slip (off-by-one / magnitude)"
+    },
+    "earned_depth": 2,
+    "evidence_class": "sympy_rederived",
+    "exam_profile": "SCHOOL",
+    "generator_family": "program-d-fixture-family",
+    "generator_model": "fixture-structured-numeric-v1",
+    "intended_depth": 2,
+    "intended_difficulty": "hard",
+    "item_hash": "IH_1cbc48111c9fbf0625a2",
+    "lane": "STRUCTURED_NUMERIC",
+    "marks": 1,
+    "options": {
+      "A": "32",
+      "B": "33",
+      "C": "31",
+      "D": "42"
+    },
+    "provenance": {
+      "actor": "program-d-fixture-harness",
+      "contract_version": "program-d-fixture-contract-1",
+      "model": "fixture-structured-numeric-v1",
+      "model_version": "fixture-1.0.0",
+      "prompt_sha256": "7333f3049d7f29c1a0256c9880a3974b8ead3bb392563a6309dc6a581e099ba2"
+    },
+    "question_type": "MCQ",
+    "run_id": "pd_fixture_run_0",
+    "solution": {
+      "final": 32,
+      "steps": [
+        "4 x 8 = 32"
+      ]
+    },
+    "spec_id": "pd_fixture_spec_0_8",
+    "stem": "Each carton contains 8 candles. If a warehouse has 4 such cartons, how many candles are stored in all?",
+    "stem_norm_hash": "NH_bcd12a743b82bcc25efd",
+    "structure": {
+      "givens": {
+        "noun": "candle"
+      },
+      "relation": "total = cartons x per_carton",
+      "solve_for": "total",
+      "steps": [
+        "4 x 8 = 32"
+      ]
+    },
+    "subject": "Mathematics",
+    "visual_required": 0,
+    "visual_spec": null
+  },
+  {
+    "answer_label": "B",
+    "answer_value": "4",
+    "archetype": "numeric_division",
+    "bloom": "apply",
+    "board": "CBSE",
+    "candidate_id": "CAND_9bb35d265ff95918",
+    "certification_class": "certified",
+    "claimed": {
+      "archetype": "numeric_division",
+      "composition": "single",
+      "concepts": [
+        "Division as equal sharing"
+      ],
+      "depth": 3,
+      "difficulty": "easy"
+    },
+    "class_level": 8,
+    "composition": "single",
+    "computed_archetype": "numeric_division",
+    "concept_code": "KC_dafc4b1675b215",
+    "concept_codes_all": "[\"KC_dafc4b1675b215\"]",
+    "concept_title": "Division as equal sharing",
+    "distractor_rationale": {
+      "A": "classic arithmetic slip (off-by-one / magnitude)",
+      "B": "correct answer",
+      "C": "classic arithmetic slip (off-by-one / magnitude)",
+      "D": "classic arithmetic slip (off-by-one / magnitude)"
+    },
+    "earned_depth": 3,
+    "evidence_class": "sympy_rederived",
+    "exam_profile": "SCHOOL",
+    "generator_family": "program-d-fixture-family",
+    "generator_model": "fixture-structured-numeric-v1",
+    "intended_depth": 3,
+    "intended_difficulty": "easy",
+    "item_hash": "IH_f2792393736849b4fe9b",
+    "lane": "STRUCTURED_NUMERIC",
+    "marks": 1,
+    "options": {
+      "A": "5",
+      "B": "4",
+      "C": "3",
+      "D": "14"
+    },
+    "provenance": {
+      "actor": "program-d-fixture-harness",
+      "contract_version": "program-d-fixture-contract-1",
+      "model": "fixture-structured-numeric-v1",
+      "model_version": "fixture-1.0.0",
+      "prompt_sha256": "20dce80ecaf2400e5e08cbbcca791f036e4d8a91378eefcf1b23fb53e9ecb7db"
+    },
+    "question_type": "MCQ",
+    "run_id": "pd_fixture_run_0",
+    "solution": {
+      "final": 4,
+      "steps": [
+        "28 / 7 = 4"
+      ]
+    },
+    "spec_id": "pd_fixture_spec_0_9",
+    "stem": "28 tickets are shared equally among 7 groups. How many tickets does each group receive?",
+    "stem_norm_hash": "NH_8a4592446ec523f06708",
+    "structure": {
+      "givens": {
+        "noun": "ticket"
+      },
+      "relation": "per_group = total / groups",
+      "solve_for": "per_group",
+      "steps": [
+        "28 / 7 = 4"
+      ]
+    },
+    "subject": "Mathematics",
+    "visual_required": 0,
+    "visual_spec": null
+  },
+  {
+    "answer_label": "C",
+    "answer_value": "50",
+    "archetype": "linear_solve",
+    "bloom": "analyze",
+    "board": "CBSE",
+    "candidate_id": "CAND_3d15f629a65bc165",
+    "certification_class": "certified",
+    "claimed": {
+      "archetype": "linear_solve",
+      "composition": "single",
+      "concepts": [
+        "Linear equations in one variable"
+      ],
+      "depth": 3,
+      "difficulty": "moderate"
+    },
+    "class_level": 8,
+    "composition": "single",
+    "computed_archetype": "linear_solve",
+    "concept_code": "KC_fec9dd048cb42e",
+    "concept_codes_all": "[\"KC_fec9dd048cb42e\"]",
+    "concept_title": "Linear equations in one variable",
+    "distractor_rationale": {
+      "A": "classic arithmetic slip (off-by-one / magnitude)",
+      "B": "classic arithmetic slip (off-by-one / magnitude)",
+      "C": "correct answer",
+      "D": "classic arithmetic slip (off-by-one / magnitude)"
+    },
+    "earned_depth": 3,
+    "evidence_class": "sympy_rederived",
+    "exam_profile": "SCHOOL",
+    "generator_family": "program-d-fixture-family",
+    "generator_model": "fixture-structured-numeric-v1",
+    "intended_depth": 3,
+    "intended_difficulty": "moderate",
+    "item_hash": "IH_ee1c06ce52825e425bd8",
+    "lane": "STRUCTURED_NUMERIC",
+    "marks": 1,
+    "options": {
+      "A": "51",
+      "B": "49",
+      "C": "50",
+      "D": "60"
+    },
+    "provenance": {
+      "actor": "program-d-fixture-harness",
+      "contract_version": "program-d-fixture-contract-1",
+      "model": "fixture-structured-numeric-v1",
+      "model_version": "fixture-1.0.0",
+      "prompt_sha256": "638e08999af1073ceb435f781caab5853364bac455796029482f6064b2adc273"
+    },
+    "question_type": "MCQ",
+    "run_id": "pd_fixture_run_0",
+    "solution": {
+      "final": 50,
+      "steps": [
+        "67 - 17 = 50"
+      ]
+    },
+    "spec_id": "pd_fixture_spec_0_10",
+    "stem": "After 17 more beads were added to a box, it held 67 beads in all. How many beads were in the box to begin with?",
+    "stem_norm_hash": "NH_e3589cb2cf3c0c5962df",
+    "structure": {
+      "givens": {
+        "noun": "bead"
+      },
+      "relation": "start = final - added",
+      "solve_for": "start",
+      "steps": [
+        "67 - 17 = 50"
+      ]
+    },
+    "subject": "Mathematics",
+    "visual_required": 0,
+    "visual_spec": null
+  },
+  {
+    "answer_label": "D",
+    "answer_value": "1",
+    "archetype": "numeric_compare",
+    "bloom": "analyze",
+    "board": "CBSE",
+    "candidate_id": "CAND_5c62330fffac5697",
+    "certification_class": "certified",
+    "claimed": {
+      "archetype": "numeric_compare",
+      "composition": "single",
+      "concepts": [
+        "Comparing and ordering numbers"
+      ],
+      "depth": 2,
+      "difficulty": "hard"
+    },
+    "class_level": 8,
+    "composition": "single",
+    "computed_archetype": "numeric_compare",
+    "concept_code": "KC_e97ca1b3ca88ba",
+    "concept_codes_all": "[\"KC_e97ca1b3ca88ba\"]",
+    "concept_title": "Comparing and ordering numbers",
+    "distractor_rationale": {
+      "A": "classic arithmetic slip (off-by-one / magnitude)",
+      "B": "classic arithmetic slip (off-by-one / magnitude)",
+      "C": "classic arithmetic slip (off-by-one / magnitude)",
+      "D": "correct answer"
+    },
+    "earned_depth": 2,
+    "evidence_class": "sympy_rederived",
+    "exam_profile": "SCHOOL",
+    "generator_family": "program-d-fixture-family",
+    "generator_model": "fixture-structured-numeric-v1",
+    "intended_depth": 2,
+    "intended_difficulty": "hard",
+    "item_hash": "IH_fb8dbc9bc5dd5f273407",
+    "lane": "STRUCTURED_NUMERIC",
+    "marks": 1,
+    "options": {
+      "A": "2",
+      "B": "0",
+      "C": "11",
+      "D": "1"
+    },
+    "provenance": {
+      "actor": "program-d-fixture-harness",
+      "contract_version": "program-d-fixture-contract-1",
+      "model": "fixture-structured-numeric-v1",
+      "model_version": "fixture-1.0.0",
+      "prompt_sha256": "f218c9d52c49b3385be5c74b7341d75429ce0ccb675c927af2c380361c116451"
+    },
+    "question_type": "MCQ",
+    "run_id": "pd_fixture_run_0",
+    "solution": {
+      "final": 1,
+      "steps": [
+        "max(38, 37) - min(38, 37) = 1"
+      ]
+    },
+    "spec_id": "pd_fixture_spec_0_11",
+    "stem": "Shelf P has 38 tiles and shelf Q has 37 tiles. How many more tiles does the fuller shelf hold?",
+    "stem_norm_hash": "NH_72d6067572a96090ec5b",
+    "structure": {
+      "givens": {
+        "noun": "tile"
+      },
+      "relation": "difference = larger - smaller",
+      "solve_for": "difference",
+      "steps": [
+        "max(38, 37) - min(38, 37) = 1"
+      ]
+    },
+    "subject": "Mathematics",
+    "visual_required": 0,
+    "visual_spec": null
+  }
+]
