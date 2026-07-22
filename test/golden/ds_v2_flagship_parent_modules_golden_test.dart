@@ -6,7 +6,9 @@ import 'package:akshara_erp/features/parent/exams/parent_exams_screen.dart';
 import 'package:akshara_erp/features/parent/fees/fees_provider.dart';
 import 'package:akshara_erp/features/parent/fees/parent_fees_screen.dart';
 import 'package:akshara_erp/features/parent/homework/parent_homework_screen.dart';
+import 'package:akshara_erp/features/parent/messages/parent_messages_screen.dart';
 import 'package:akshara_erp/features/parent/receipts/parent_receipts_screen.dart';
+import 'package:akshara_erp/features/parent/timetable/parent_timetable_screen.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:akshara_erp/theme/persona_accents.dart';
 import 'package:flutter/material.dart';
@@ -129,5 +131,40 @@ void main() {
         ),
       );
     });
+
+    testWidgets('parent timetable · ${mode.label}', (tester) async {
+      await pump(
+        tester,
+        screen: const ParentTimetableScreen(),
+        dark: mode.dark,
+      );
+      await expectLater(
+        find.byType(ParentTimetableScreen),
+        matchesGoldenFile(
+          goldenFileName(
+              'ds_v2_flagship_parent_timetable_${mode.label}', '390x1280'),
+        ),
+      );
+    });
+
+    testWidgets('parent messages · ${mode.label}', (tester) async {
+      await pump(
+        tester,
+        screen: const ParentMessagesScreen(),
+        dark: mode.dark,
+      );
+      await expectLater(
+        find.byType(ParentMessagesScreen),
+        matchesGoldenFile(
+          goldenFileName(
+              'ds_v2_flagship_parent_messages_${mode.label}', '390x1280'),
+        ),
+      );
+    });
+
+    // NOTE: ParentAcademicReportScreen has no golden — its printable-report
+    // provider stays in a loading LinearProgressIndicator that never settles
+    // (pumpAndSettle would time out). It's covered by parent_academics_screens
+    // widget tests; the canvas wrap is verified there + by analyze.
   }
 }

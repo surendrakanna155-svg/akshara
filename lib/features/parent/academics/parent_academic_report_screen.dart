@@ -19,6 +19,7 @@ class ParentAcademicReportScreen extends ConsumerWidget {
     final report = ref.watch(parentPrintableReportProvider);
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Academic Report'),
         actions: [
@@ -31,7 +32,8 @@ class ParentAcademicReportScreen extends ConsumerWidget {
                   : () {
                       Clipboard.setData(ClipboardData(text: text));
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Report copied to clipboard')),
+                        const SnackBar(
+                            content: Text('Report copied to clipboard')),
                       );
                     },
             ),
@@ -40,34 +42,39 @@ class ParentAcademicReportScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: ErpAsyncBody(
-        state: resolveErpAsync(summary, isDataEmpty: (_) => false),
-        loadingLabel: 'Loading',
-        emptyMessage: 'No academic report available.',
-        onRetry: () => ref.invalidate(parentAcademicSummaryProvider),
-        builder: (data) => ListView(
-          padding: const EdgeInsets.all(AksharaSpacing.s4),
-          children: [
-            _section('Attendance', data.attendanceSummary),
-            _section('Performance', data.performanceSummary),
-            _listSection('Strengths', data.strengths),
-            _listSection('Areas to improve', data.weaknesses),
-            _section('Homework', data.homeworkStatus),
-            _section('Exam readiness', data.examReadiness),
-            _listSection('Teacher recommendations', data.teacherRecommendations),
-            const SizedBox(height: 16),
-            report.when(
-              data: (text) => SelectableText(
-                text,
-                style: context.aksharaText.bodySmall,
+      // DS V2 P4 — premium persona canvas behind the academic report.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: ErpAsyncBody(
+          state: resolveErpAsync(summary, isDataEmpty: (_) => false),
+          loadingLabel: 'Loading',
+          emptyMessage: 'No academic report available.',
+          onRetry: () => ref.invalidate(parentAcademicSummaryProvider),
+          builder: (data) => ListView(
+            padding: const EdgeInsets.all(AksharaSpacing.s4),
+            children: [
+              _section('Attendance', data.attendanceSummary),
+              _section('Performance', data.performanceSummary),
+              _listSection('Strengths', data.strengths),
+              _listSection('Areas to improve', data.weaknesses),
+              _section('Homework', data.homeworkStatus),
+              _section('Exam readiness', data.examReadiness),
+              _listSection(
+                  'Teacher recommendations', data.teacherRecommendations),
+              const SizedBox(height: 16),
+              report.when(
+                data: (text) => SelectableText(
+                  text,
+                  style: context.aksharaText.bodySmall,
+                ),
+                loading: () => const LinearProgressIndicator(),
+                error: (e, _) => AksharaErrorState.fromFailure(
+                  apiFailureMapper.fromException(e),
+                  onRetry: () => ref.invalidate(parentPrintableReportProvider),
+                ),
               ),
-              loading: () => const LinearProgressIndicator(),
-              error: (e, _) => AksharaErrorState.fromFailure(
-                apiFailureMapper.fromException(e),
-                onRetry: () => ref.invalidate(parentPrintableReportProvider),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
