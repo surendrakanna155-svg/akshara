@@ -1,0 +1,57 @@
+# UXR — Teacher Journey Log (Design System V2, Phase 4 module migration)
+
+Presentation-only migration of the **teacher module screens**
+(`lib/features/teacher/**`) to the DS V2 flagship look: the persona **premium
+canvas** (`AksharaPremiumBackground`, teacher **indigo** accent `#6366F1`) behind
+every screen, and the signature **`AksharaProgressRing`** wherever a screen has a
+natural headline **percentage** metric. One screen (or tight cluster) per
+independently certified commit. The teacher **dashboard** was already migrated in
+Phase 3 (present-rate ring) and is out of scope here; the **conversation** (chat)
+screen intentionally stays plain (a canvas hurts pale chat-bubble contrast — the
+same call the parent/student lanes made).
+
+Branch: `worktree-agent-abc831d856fcfc205` (branched from the tip of
+`feature/uxr-flutter-remediation` — see base-correction note below).
+
+Goldens: all teacher module goldens live in the single new file
+`test/golden/ds_v2_flagship_teacher_modules_golden_test.dart` (teacher persona
+theme, Light + Dark, tall `390x1280`). Each PNG was visually confirmed premium and
+overflow-free before locking.
+
+## Base-correction note
+The isolation worktree was initially branched from the wrong lineage — the Jul-20
+backend/ICA freeze commit `a806ee2c`, which lacks every DS V2 prerequisite
+(`akshara_progress_ring.dart`, the premium-background barrel export,
+`persona_accents.dart`). Caught **before any commits, tree clean**; re-pointed the
+worktree branch onto the correct uxr tip (`19c47710`) with `git reset --hard`
+(own branch only — no switch/merge). All slices below sit on that correct lineage;
+`19c47710` is the current uxr tip, so they merge cleanly.
+
+## Slices
+
+| # | Screen(s) | Change | Ring? | Verification | Commit |
+|---|-----------|--------|-------|--------------|--------|
+| 1 | Attendance marking (TA-02) + My Attendance (TCH-9) | Premium canvas on all states of both; My Attendance gains a signature month attendance-rate ring above the count chips | Marking: **No** (live present/absent/late are counts). My Attendance: **Yes** — monthly rate (present+late over working days) | analyze clean; attendance suite + tch_client_wiring + class-scope + module-screens **+55**; goldens 4 | `<pending>` |
+
+## Ring decisions (honest-state)
+- **My Attendance** monthly rate → ring. Derived only from data already loaded
+  (`presentDays + lateDays` over `workingDaysInMonth`); reads a healthy ~85–90% in
+  the demo month. The four count chips (Present / Late / Absent / Avg hours) are
+  kept **unchanged** below the ring as the raw breakdown — so `find.text('Avg
+  hours')` / `'Present'` assertions stay green and no info is lost. The ring
+  contextualises the rate; it does not duplicate the chips.
+- **Attendance marking** headline is the live **counts** tally
+  ("N present · M absent · K late") — not a %, so no ring (rule: counts stay
+  counts). Canvas cohesion only; the submit gate / summary bar / bulk-mark / fill-
+  remaining / search / correction flows and every `QaTestKeys.teacherAttendance*`
+  are preserved.
+
+## Preserved (presentation-only)
+Navigation, workflows, providers, honest-state messaging, `QaTestKeys`,
+semantics/a11y, 48dp targets, responsive behavior, and every asserted widget
+type/text. No parent (`lib/features/parent/**`), student (`lib/features/student_app/**`),
+management, theme, or shared widget file was touched.
+
+## Shared-file changes needed (deliberately NOT made)
+None so far. Rings/canvas reuse the existing shared primitives
+(`AksharaProgressRing`, `AksharaPremiumBackground`, `AksharaPersonaAccent.teacher`).
