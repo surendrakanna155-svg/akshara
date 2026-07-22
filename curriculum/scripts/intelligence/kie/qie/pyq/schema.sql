@@ -29,4 +29,22 @@ CREATE INDEX IF NOT EXISTS idx_psc_role     ON pyq_source_class(source_role);
 CREATE INDEX IF NOT EXISTS idx_psc_exam     ON pyq_source_class(exam_resolved);
 CREATE INDEX IF NOT EXISTS idx_psc_eligible ON pyq_source_class(eligible_for_dna);
 
+-- ── B2 — subject attribution (per minable chunk of an eligible genuine_pyq doc) ──────────────────────────
+-- OD-4: subject is determined from the SOURCE DOCUMENT's own structure (its subject-section headers), BEFORE
+-- any concept resolution, and NEVER from a legacy concept-code prefix. A subject-section header ("PART I :
+-- PHYSICS", "Physics : Section-A", "BOTANY SECTION") sets the CURRENT subject for the chunks that follow, in
+-- document order, until the next header. Chunks before the first header (or in a doc with no header) are
+-- honest-null (subject NULL) — never guessed. B3 inherits each extracted question's subject from its chunk.
+CREATE TABLE IF NOT EXISTS pyq_chunk_subject (
+  doc_id        TEXT NOT NULL,
+  ordinal       INTEGER NOT NULL,
+  subject       TEXT,              -- Physics | Chemistry | Mathematics | Biology | NULL (honest-null)
+  subject_method TEXT NOT NULL,    -- section_path | text_header | continuation | inherited_from_header | mixed_boundary | honest_null
+                                    --   (continuation: a deep header repeating the CURRENT subject — a sub-section/per-question tag, not a boundary)
+                                    --   (mixed_boundary: chunk straddles a subject boundary → honest-null, no single subject is correct)
+  is_header     INTEGER NOT NULL DEFAULT 0,   -- 1 = this chunk IS the subject-section header that set the subject
+  PRIMARY KEY (doc_id, ordinal)
+);
+CREATE INDEX IF NOT EXISTS idx_pcs_subject ON pyq_chunk_subject(subject);
+
 CREATE TABLE IF NOT EXISTS pyq_meta (key TEXT PRIMARY KEY, value TEXT);

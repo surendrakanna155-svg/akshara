@@ -59,7 +59,7 @@ Legend: ✅ done (committed) · 🔵 in progress · ⏸ owner-gated · ⏳ block
 |---|---|---|
 | **B0** | Owner approval recorded · execution log · plan committed · baseline established | ✅ `0117e2bd` |
 | **B1** | Corpus role classification (`pyq_source_class`) — 225 genuine PYQ (NEET 105/JEE_MAIN 68/JEE_ADV 52) | ✅ verified (2 rounds) · EOS PASS |
-| **B2** | Exam + subject + concept re-attribution | ⬜ |
+| **B2** | Subject attribution (OD-4, `pyq_chunk_subject`) + subject-scoped concept resolver (D3 fix) | ✅ verified (2 rounds) · EOS PASS |
 | **B3** | Question re-mining with deterministic provenance chain + OCR fail-safe | ⬜ |
 | **B4** | Structural difficulty (labelled) + marking-scheme extraction | ⬜ |
 | **B5** | `exam_dna_v2` measured layer (N≥30 floor, v1 preserved) | ⬜ |
@@ -139,6 +139,74 @@ never promoted to genuine_pyq. Confirmed: all dodging spellings caught, all 6 ke
 **Deferred to B3 (recorded, not lost):** a *content-based* answer-key detector (a QNO→ANS table with no question
 stems) — B3's question extraction is self-correcting here (a pure answer table yields 0 question stems → 0
 mined items → contributes nothing to DNA), but B3 will add an explicit skip so such docs are never counted.
+
+## B2 — Subject attribution (OD-4) + subject-scoped concept resolution (D3 fix) · 2026-07-22
+
+**Scope:** implement OD-4 (subject from the source document, BEFORE concept resolution, never from a legacy
+prefix) and the structural fix for defect D3 (mislabelled concept prefixes like `BIO_MOTION`).
+
+**What landed** (new modules in `kie/qie/pyq/`, read-only over the frozen kie.db + index):
+- `subject_seg.py` — walks each **DNA-eligible** paper's chunks **in document order** and attributes a subject to
+  each chunk: a `section_path` naming one subject (the parser's structural heading, authoritative) → that
+  subject; else an **in-text header** (a subject ADJACENT to a PART/SECTION cue, exactly one subject — so a
+  multi-subject cover line or an incidental mention is NOT a header) → that subject, which (re)sets the current
+  subject for following chunks; else **inherit** the current subject; else **honest-null**. Output table
+  `pyq_chunk_subject`. B3 inherits each extracted question's subject from its chunk.
+- `concept_attr.py` — the **subject-scoped, strict** concept resolver: `resolve(index, subject, *names)` returns a
+  KC_ concept only on a **unique in-subject** name match; **0 matches, within-subject ambiguity, or no subject →
+  honest-null**; **never cross-subject, never the prefix**. This makes the D3 fix structural: a "Motion" question
+  in a Physics section resolves to the Physics concept (or null) and can never land on Biology. Plus
+  `mislabel_report()` — live D3 evidence measured against the **independent frozen index** (not the
+  co-mislabelled `concepts.subject_domain`).
+
+**Live outcome (measured, honest):**
+- `pyq_chunk_subject`: 14,575 chunks over the 225 eligible docs. **Subject doc-coverage = 40.4%** (91/225 docs
+  have a detectable subject-section header): Physics/Chemistry/Mathematics/Biology attributed; the remaining
+  **~60% is honest-null at subject level** (no detectable header — those papers still contribute to *exam*-level
+  DNA, just not *subject*-level). Coverage is reported, never inflated.
+- **D3 evidence (independent):** of the old prefixed concept codes checkable against the frozen index, **51.7%
+  (164/317) have a prefix that DISAGREES with the index's subject** (e.g. `BIO_ACIDS_AND_BASES`→Science,
+  `BIO_APPLICATIONS`→Chemistry, `BIO_NEWTON_S_*_LAW`→Physics) — proof the prefix is unusable and why subject must
+  come from the document. (Measured against `ki_concept.subject`, *not* the co-mislabelled `concepts.subject_domain`
+  — that agrees with the bad prefix and would have hidden the defect.)
+
+**Safety + determinism:** frozen `kie.db` + `knowledge_index.db` + `examdna.db` v1 **byte-identical**; rebuild
+deterministic; every NULL subject is labelled `honest_null` (no silent default); resolver strictly subject-scoped.
+
+**Tests:** `kie/tests/test_program_b_b2_attribution.py` — 15 tests (hermetic header-detection + segmentation +
+concept-resolution controls on a synthetic index + live coverage/honest-null/freeze/determinism/mislabel-evidence).
+Full KIE suite **1144 green** (0 failures/errors/db-skips, KIE_CANONICAL=1).
+
+**Adversarial verification (independent, refute-first):** **Round 1 → REFUTED** — the verifier found a real
+**P0 boundary defect**: subject was attributed at whole-chunk granularity, so a chunk holding a Physics question
+followed by a mid-chunk `PART-II CHEMISTRY` header was stamped Chemistry entirely (proven on `c93299dddc` ord 6
+Physics→Chemistry, ord 9 Chemistry→Mathematics; ~61 question-bearing boundary chunks across 13 docs). Also: two-
+header chunks silently inherited the wrong prior subject (P1); the 51.7% mislabel headline was inflated by the
+coarse `Science` bucket (P2); the header regex matched `part` inside `particle`/`department` and prose "part of
+physics" (P2/P3); a schema comment drifted (P3). **All fixed + regression-locked:** attribution is now
+**offset-aware** — a chunk that straddles a boundary (header deeper than 50 chars, or ≥2 subject headers) is
+**honest-null `mixed_boundary`** (never a single wrong subject) while the current subject still advances so the
+next chunk inherits correctly; the header regex is `\b`-anchored with a numeral/single-letter-only label gap
+(rejects prose); the mislabel report now reports the broad rate AND the clean cross-subject-swap rate separately
+(51.7% / 6.3% — both honest); schema corrected. Live: `c93299dddc` ord 6/9 → `mixed_boundary`; 1061 straddling
+chunks now honest-null instead of mislabelled. **Round 2 → B2 HOLDS** — the P0 is genuinely closed (0
+single-subject-stamped chunk still straddles a boundary; both repros NULL; all 47 two-header chunks
+`mixed_boundary`). Round 2 found the fix opened a **P2 over-nulling** in the *safe* direction: 863 clean
+single-subject *continuation* chunks (a deep header repeating the subject already in force — a per-question tag /
+sub-section, not a boundary) were nulled. **Fixed:** a deep header whose subject **equals** the current subject
+is now a `continuation` (attributed), only a **different** subject is a boundary — recovering 863 chunks (subject
+-attributed chunks 4,716 → 5,579) with **zero false-subject risk**, and the summary stat now separates
+`(mixed_boundary)` from `(honest_null)`. `mixed_boundary` fell 1,061 → 198 (genuine boundaries only). Residual
+P3s (two prose-regex forms with no numeral anchor; a <50-char boundary tail) are **latent — 0 occurrences in the
+live corpus** — documented, not fixed. Locked by 21 tests.
+
+**EOS gate: PASS.**
+
+**Honest limitation (stated):** subject coverage is **40.4%** by construction — only papers whose own structure
+exposes a subject header can be subject-attributed; the rest (incl. boundary-straddling chunks) are honest-null
+(never guessed via number-range heuristics or the concept prefix). This bounds *subject-level* DNA granularity at
+B5; *exam-level* DNA is unaffected. Improving it needs richer section parsing or acquired structured papers
+(evidence acquisition, OD-8).
 
 **Honest limitations (stated):** subject is deliberately NOT pinned at the doc level for full papers
 (`multi_subject_defer`) — it is resolved per-question from section headers at B2/B3 (OD-4). Practice/mock exams
