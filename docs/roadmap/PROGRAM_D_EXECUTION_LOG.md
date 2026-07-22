@@ -52,3 +52,39 @@ corpus, so the entire pipeline is buildable/testable before any real certified c
 
 **Rollback:** delete the test artifacts (no prod surface touched).
 **EOS gate: PASS** (additive · test-only · no prod path · no request-path AI · no gate weakened).
+
+---
+
+## M0.2 — KC_ ↔ UUID vocabulary map  ✅ DONE (migration authored + validated; APPLY owner-gated)
+
+**Objective (blueprint §2):** the `edu_concept_vocabulary` bridge so a certified item's KC_ concept
+resolves to exactly one ERP UUID — or is explicitly unmapped (honest-null, never a guessed UUID).
+
+**Delivered:**
+- `supabase/migrations/20260877000000_edu_concept_vocabulary.sql` — DORMANT additive table, platform-read
+  catalogue governance (FORCE RLS + `_school_scope` + `_platform_read` + no-DELETE grant + COALESCE
+  identity index). **Written + locally validated; APPLY is owner-gated** (band `20260877000000`, next free).
+- `curriculum/scripts/intelligence/kie/qie/export/vocabulary.py` — `mint_uuid` (deterministic uuid5),
+  `Vocabulary.from_concepts/resolve/rows`, `load_certified_concepts` (frozen-index seed, self-skips if absent).
+- `kie/tests/test_concept_vocabulary.py` (9 tests) + `edu_concept_vocabulary_migration_validation_test.ts` (7 tests).
+
+**Design decision (honest, evidence-backed):** `canonical_concepts` is **empty/dormant**, so there is no
+pre-existing UUID to match against. A KC_ id's ERP handle is therefore a **deterministic `uuid5(namespace,
+kc_id)`** — a stable identity, not a guess at another concept. Honest-null still bites: only KC_ ids present
+in the certified source (frozen `ki_concept`, or declared fixture concepts) enter the vocabulary; anything
+else resolves `None`. `concept_uuid` is a **loose reference (no FK)** since canonical_concepts is empty.
+
+**Verification:** Python 9/9 (mint determinism/uuid5, round-trip, honest-null, dedup, partial-coverage
+exclusion, real frozen-index seed); Deno 7/7 (governance shape, platform-read sentinel, loose-ref, dormancy).
+
+**Rollback (owner-gated DOWN):** `DROP TABLE IF EXISTS edu_concept_vocabulary;` (dormant — nothing reads it).
+**EOS gate: PASS** (additive · dormant · APPLY owner-gated · no request-path AI · no gate weakened).
+
+---
+
+## ⏸ COORDINATION PIVOT (owner directive)
+
+After M0.2, the owner issued an **Autonomous Execution Directive**: pause serial implementation and produce a
+**multi-agent parallel-execution Master Coordination Plan** (documentation only). M0.1 + M0.2 (order-1
+foundation) stand as the **committed clean baseline** all parallel worktrees branch from. See
+`docs/roadmap/PROGRAM_D_PARALLEL_EXECUTION_COORDINATION_PLAN.md`. Implementation resumes on owner go-ahead.
