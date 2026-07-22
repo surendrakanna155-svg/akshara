@@ -31,7 +31,7 @@ class ParentHomeworkScreen extends ConsumerWidget {
     final hasError = ref.watch(parentHomeworkErrorProvider);
 
     return Scaffold(
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'Homework',
         subtitle: '${data.childName} · ${data.childClass}',
@@ -40,7 +40,10 @@ class ParentHomeworkScreen extends ConsumerWidget {
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,
       ),
-      body: isLoading
+      // DS V2 P4 — premium persona canvas behind the homework content.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: isLoading
           ? const AksharaLoadingState()
           : hasError
               ? AksharaErrorState(
@@ -128,6 +131,7 @@ class ParentHomeworkScreen extends ConsumerWidget {
                     );
                   },
                 ),
+      ),
     );
   }
 

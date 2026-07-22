@@ -2,8 +2,10 @@
 library;
 
 import 'package:akshara_erp/features/parent/attendance/parent_attendance_screen.dart';
+import 'package:akshara_erp/features/parent/exams/parent_exams_screen.dart';
 import 'package:akshara_erp/features/parent/fees/fees_provider.dart';
 import 'package:akshara_erp/features/parent/fees/parent_fees_screen.dart';
+import 'package:akshara_erp/features/parent/homework/parent_homework_screen.dart';
 import 'package:akshara_erp/features/parent/receipts/parent_receipts_screen.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:akshara_erp/theme/persona_accents.dart';
@@ -94,6 +96,36 @@ void main() {
         matchesGoldenFile(
           goldenFileName(
               'ds_v2_flagship_parent_attendance_${mode.label}', '390x1280'),
+        ),
+      );
+    });
+
+    testWidgets('parent homework · ${mode.label}', (tester) async {
+      await pump(
+        tester,
+        screen: const ParentHomeworkScreen(),
+        dark: mode.dark,
+      );
+      await expectLater(
+        find.byType(ParentHomeworkScreen),
+        matchesGoldenFile(
+          goldenFileName(
+              'ds_v2_flagship_parent_homework_${mode.label}', '390x1280'),
+        ),
+      );
+    });
+
+    testWidgets('parent exams · ${mode.label}', (tester) async {
+      await pump(
+        tester,
+        screen: const ParentExamsScreen(),
+        dark: mode.dark,
+      );
+      await expectLater(
+        find.byType(ParentExamsScreen),
+        matchesGoldenFile(
+          goldenFileName(
+              'ds_v2_flagship_parent_exams_${mode.label}', '390x1280'),
         ),
       );
     });

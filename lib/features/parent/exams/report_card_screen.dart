@@ -6,7 +6,6 @@ import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
-import '../../../theme/theme_extensions.dart';
 import 'widgets/report_card_view.dart';
 
 /// Neutral fallback when the real per-tenant school name is momentarily
@@ -32,7 +31,7 @@ class ReportCardScreen extends ConsumerWidget {
         schoolName.isNotEmpty ? schoolName : _reportCardSchoolNameFallback;
 
     return Scaffold(
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Report card'),
         actions: [
@@ -50,20 +49,24 @@ class ReportCardScreen extends ConsumerWidget {
             ),
         ],
       ),
-      body: card == null
-          ? const AksharaEmptyState(
-              icon: Icons.assignment_outlined,
-              message: 'No published results yet for a report card.',
-            )
-          : SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(
-                AksharaSpacing.s4,
-                AksharaSpacing.s4,
-                AksharaSpacing.s4,
-                AksharaSpacing.s6,
+      // DS V2 P4 — premium persona canvas behind the report card.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: card == null
+            ? const AksharaEmptyState(
+                icon: Icons.assignment_outlined,
+                message: 'No published results yet for a report card.',
+              )
+            : SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(
+                  AksharaSpacing.s4,
+                  AksharaSpacing.s4,
+                  AksharaSpacing.s4,
+                  AksharaSpacing.s6,
+                ),
+                child: ReportCardView(card: card),
               ),
-              child: ReportCardView(card: card),
-            ),
+      ),
     );
   }
 }
