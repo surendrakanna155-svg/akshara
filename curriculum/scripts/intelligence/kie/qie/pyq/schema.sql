@@ -47,4 +47,39 @@ CREATE TABLE IF NOT EXISTS pyq_chunk_subject (
 );
 CREATE INDEX IF NOT EXISTS idx_pcs_subject ON pyq_chunk_subject(subject);
 
+-- ── B3 — re-mined question INSTANCES with a DETERMINISTIC PROVENANCE CHAIN (OD-2) ─────────────────────────
+-- Each row is ONE question INSTANCE, reconstructable end-to-end: item → chunk_ids → doc_id → (exam, year via B1)
+-- → (subject via B2). A row exists ONLY with that chain; anything unreconstructable is not a row (never a
+-- phantom). A marker becomes a question only if its BOUNDED span has real question STRUCTURE (≥3 MCQ options, or
+-- numerical/assertion/match), is READABLE (rejects OCR garble / non-English papers), and is not an instruction
+-- block (rejects exam instructions, NTA notices, syllabus/experiment lists). NOTE: one PDF may hold several
+-- BOOKLET CODES / a solutions restatement of the same paper → the same question yields several INSTANCES; exact
+-- + content-fingerprint (`stem_fp`) within-doc dedup collapses what it safely can, and B5 dedups corpus-wide by
+-- `stem_fp` + counts DISTINCT DOCS for the OD-5 N≥30 floor + normalizes per-doc, so instance duplication never
+-- distorts a measured distribution.
+CREATE TABLE IF NOT EXISTS pyq_item (
+  item_id        TEXT PRIMARY KEY,   -- content-addressed: sha256(doc_id|qnum|span_sha)[:16]
+  doc_id         TEXT NOT NULL,
+  exam           TEXT NOT NULL,      -- from B1 (eligible ⇒ resolved)
+  year           INTEGER,            -- from B1 (honest-null)
+  subject        TEXT,               -- from B2 pyq_chunk_subject of the marker's chunk (honest-null)
+  question_number INTEGER,
+  question_type  TEXT NOT NULL,      -- mcq | numerical | assertion_reason | match | short_answer | unknown
+  type_method    TEXT NOT NULL,
+  concept_kc     TEXT,               -- subject-scoped resolution (honest-null unless a certified name is present verbatim)
+  concept_method TEXT NOT NULL,
+  chunk_ids      TEXT NOT NULL,      -- json ["<doc_id>#<ordinal>", …] — the chunk(s) this question spans (provenance)
+  chunk_sha256   TEXT NOT NULL,      -- json of the spanned chunks' sha256 (content-addressed, RI-2 style)
+  span_len       INTEGER NOT NULL,
+  stem_fp        TEXT,               -- OCR-tolerant content fingerprint (longest words) for corpus-wide dedup at B5
+  ocr_flagged    INTEGER NOT NULL DEFAULT 0,  -- reserved; kept items are readable-by-construction (0)
+  extraction_confidence TEXT NOT NULL,        -- high | medium | low (per-doc: kept questions / candidate markers)
+  created_at     TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_item_stemfp ON pyq_item(stem_fp);
+CREATE INDEX IF NOT EXISTS idx_item_exam    ON pyq_item(exam);
+CREATE INDEX IF NOT EXISTS idx_item_subject ON pyq_item(subject);
+CREATE INDEX IF NOT EXISTS idx_item_type    ON pyq_item(question_type);
+CREATE INDEX IF NOT EXISTS idx_item_concept ON pyq_item(concept_kc);
+
 CREATE TABLE IF NOT EXISTS pyq_meta (key TEXT PRIMARY KEY, value TEXT);

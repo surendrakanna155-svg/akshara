@@ -60,6 +60,8 @@ Legend: ✅ done (committed) · 🔵 in progress · ⏸ owner-gated · ⏳ block
 | **B0** | Owner approval recorded · execution log · plan committed · baseline established | ✅ `0117e2bd` |
 | **B1** | Corpus role classification (`pyq_source_class`) — 225 genuine PYQ (NEET 105/JEE_MAIN 68/JEE_ADV 52) | ✅ verified (2 rounds) · EOS PASS |
 | **B2** | Subject attribution (OD-4, `pyq_chunk_subject`) + subject-scoped concept resolver (D3 fix) | ✅ verified (2 rounds) · EOS PASS |
+| **B3** | Question re-mining (`pyq_item`, provenance chain OD-2) — 15,803 instances / 108 docs | ✅ verified (3 rounds) · EOS CONDITIONAL PASS |
+| **OCR** | OCR Recovery Lane (parallel, non-blocking) — deterministic re-OCR + verified-improvement gate | ✅ verified · EOS PASS · `822d95cf` |
 | **B3** | Question re-mining with deterministic provenance chain + OCR fail-safe | ⬜ |
 | **B4** | Structural difficulty (labelled) + marking-scheme extraction | ⬜ |
 | **B5** | `exam_dna_v2` measured layer (N≥30 floor, v1 preserved) | ⬜ |
@@ -68,6 +70,91 @@ Legend: ✅ done (committed) · 🔵 in progress · ⏸ owner-gated · ⏳ block
 ---
 
 <!-- Milestone entries are appended below as each is executed. -->
+
+## B3 — Question re-mining with a deterministic provenance chain (OD-2) · 2026-07-22
+
+**Scope:** re-mine individual questions from the eligible papers into `pyq_item`, each reconstructable end-to-end
+(Question → Chunk → Source Document → Exam → Year → Subject), **without fabricating questions from OCR noise**.
+
+**What landed** — `kie/qie/pyq/mining.py` (read-only over frozen kie.db; consumes B1 + B2):
+- **OCR-robust marker** `_markers`: `32.A` (number-dot-Capital) or `Q.2`. Bare spaced numbers (`11 12 13 14` —
+  OMR answer-grid bubbles) are **not** markers (no dot-capital) so they can never become questions.
+- **Sequence validation** `_valid_runs`: markers are kept only where they extend a coherent increasing run; a
+  backward jump or a large forward jump is dropped as noise. A doc with no coherent run yields **NO items**
+  (honest-null, never guessed).
+- **Full provenance** per item: `doc_id`, `exam`/`year` (from B1), `subject` (from B2's `pyq_chunk_subject` of the
+  marker's chunk — honest-null if that chunk was null/boundary), `chunk_ids` + `chunk_sha256` (content-addressed,
+  RI-2 style), content-addressed `item_id`. An item is created ONLY with this chain.
+- **Question type** `_question_type` (assertion_reason / match / numerical / mcq / short_answer / unknown),
+  specific types before mcq. **OCR fail-safe:** a near-prose-free span is `ocr_flagged` → type/concept honest-null
+  (a mangled span never becomes a typed, concept-bearing question). **Conservative concept resolution:** only a
+  certified concept name (≥2 words) present VERBATIM in the stem, resolved subject-scoped (B2) — else honest-null.
+
+**Adversarial verification (independent, refute-first) — Round 1 → REFUTED (major, valuable).** The first
+extractor ("any coherent increasing numbered run = questions") produced real **P0 phantom data**: exam
+instructions, an NTA notice, a syllabus/experiment list, and physics variables (`Q1`,`Q2`,`x=0.The`) were stored
+as questions; instruction bullets numbered `1..K` pushed the *real* questions (restarting at 1) out as backward
+jumps; the last marker's span swallowed up to **349,560 chars** as one "question"; the two-space `1.␣␣Capital`
+form was missed; and letter-DENSE Hindi garble passed the OCR fail-safe. **The extractor was redesigned around a
+per-item question-STRUCTURE gate** (below) and the whole class of defects closed.
+
+**What the redesign does** (`kie/qie/pyq/mining.py`):
+- **Marker:** `Q.2` (dot REQUIRED — `Q1` variable rejected) or `12.` + ≤3 spaces + Capital/paren (catches the
+  born-digital `1.␣␣At`), num≥1 (rejects `x=0.The`), not mid-word. Over-matching is fine — the gate decides.
+- **The gate `_is_question`:** a marker's **bounded, capped** span (≤3000 chars — no tail-swallow) becomes a
+  question ONLY if it is **readable** (mean-token-length + a ≥2 common-English-word check — rejects OCR garble
+  and non-English papers), carries real **structure** (≥3 MCQ options, or numerical/assertion/match), and is
+  **not an instruction block** (rejects exam instructions, NTA notices, experiment/syllabus lists).
+- **De-duplication:** a non-English/regional paper (a duplicate of the English version) is skipped; the text is
+  truncated at the solutions-section header (no re-mining restated solutions); the same question repeated across
+  booklet codes collapses via an **OCR-tolerant content fingerprint** (`stem_fp`, the set of longest words).
+- **Provenance (OD-2):** every item still carries the full chain (doc/exam/year/subject/chunk_ids/sha256),
+  content-addressed id (now position-bound so a repeated page yields distinct rows).
+
+**Live outcome (measured, honest):**
+- **11,598 question INSTANCES from 109 docs** (≈10,599 distinct by content fingerprint): NEET 10,184 ·
+  JEE_ADVANCED 1,033 · JEE_MAIN 381. Types: mcq 10,029 · match 1,138 · assertion_reason 244 · numerical 178.
+- The verifier's phantom docs (NTA notice, experiment list, Hindi garble) now yield **0 items**; no span exceeds
+  the 3000-char cap; every item has a full provenance chain.
+- **Honest instance model:** one PDF may hold several booklet codes / a solutions restatement → repeat instances.
+  B5 counts **distinct DOCS** for the OD-5 N≥30 floor and **normalizes per-doc**, so instance duplication can
+  never distort a measured distribution; `stem_fp` enables corpus-wide dedup at B5.
+- subject_rate ~8% / concept_rate ~1% (much of NEET is honest-null at subject/chapter level) — honest-null, never
+  guessed.
+
+**Adversarial verification took THREE rounds** (this is the hardest milestone — extracting questions from OCR'd
+papers): **R1 REFUTED** (P0 phantom flood — instructions/notice/experiment-list/variables mined; 349k-char
+tail-swallow) → redesigned around the per-item structure gate. **R2 REFUTED at P1** — instruction/section-header
+text still slipped in via the NEXT question's options bleeding into the span; `stem_fp` false-merged 210 distinct
+questions; the readability floor dropped 132 real chemistry questions → **fixed:** stem-scoped the gate (reject a
+section/instruction leading stem), exact-content dedup (no false-merge), relaxed the readability floor. **R3 →
+CONDITIONAL PASS** — the P1s are closed (false-merge 0; chemistry recovered; section/instruction rejected;
+provenance/determinism/freeze **flawless**); a **P2 residual** of JEE answer-key lines (`Q.26:(A),(C)` — answer
+letter as the first paren → tiny stem) → **fixed:** the stem must carry ≥12 letters of real question prose, plus
+a paper-furniture guard.
+
+**Final live outcome:** **15,803 question instances / 108 docs** (NEET 14,432 · JEE_ADVANCED 987 · JEE_MAIN 384;
+mcq 14,047 · match ~1,700 · assertion 273 · numerical ~180). Phantom docs 0; spans capped at 3000; **0
+false-merge**; every item fully provenance'd; frozen kie.db + index + examdna v1 **byte-identical**; deterministic.
+
+**Tests:** `kie/tests/test_program_b_b3_mining.py` — 25 tests (markers, the structure gate incl.
+instruction/section/answer-key/furniture rejection + chemistry recall, dedup no-false-merge, full-chain synthetic,
+live anti-phantom/provenance/span-cap/determinism). Full KIE suite **1210 green** (incl. the OCR lane's 35 tests).
+
+**EOS gate: CONDITIONAL PASS.**
+
+**Honest limitations + tracked residual (stated):**
+- **Instance duplication:** a paper's booklet codes (OCR'd differently) yield repeat INSTANCES that exact dedup
+  cannot safely collapse (a coarser fingerprint would false-merge distinct questions). NEET is ~5× (14,432
+  instances vs ~200/paper). **This is handled at B5, not B3:** B5 counts DISTINCT DOCS for the OD-5 N≥30 floor and
+  NORMALIZES per-doc, so instance duplication cannot distort a distribution; `stem_fp` + repeated `question_number`
+  let B5 estimate the multiversion factor. **B3 must not be read as a unique-question count.**
+- **Residual P2/P3 (tracked, ~0.1%):** a handful of JEE-Advanced option-only OCR fragments still pass; a few real
+  long/passage questions (options >900 chars out) are honest-null-dropped (missing > wrong). Both are tiny and
+  JEE-Advanced-concentrated; B5's per-doc normalization further dilutes the wrong-data impact.
+- **Coverage:** 108/225 docs — per-question extraction needs a structured, readable, English paper; OCR-scrambled /
+  regional / non-MCQ papers are honest-null. subject ~6% / concept ~1% (NEET) → chapter-level DNA at B5 will be
+  sparse / `insufficient_evidence`. The **OCR Recovery Lane** (parallel) works to lift the OCR floor over time.
 
 ## B1 — Corpus role classification (`pyq_source_class`) · 2026-07-22
 
