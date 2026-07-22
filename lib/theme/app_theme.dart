@@ -301,7 +301,11 @@ abstract final class AksharaAppTheme {
   ) {
     return AppBarTheme(
       elevation: 0,
-      scrolledUnderElevation: 0,
+      // DS V2 P2-2 — flat at rest, but a soft shadow appears once content scrolls
+      // beneath so the bar detaches cleanly from the page (premium structure).
+      // No color change at rest; surfaceTint stays off.
+      scrolledUnderElevation: 3,
+      shadowColor: scheme.shadow.withValues(alpha: 0.10),
       centerTitle: false,
       backgroundColor: scheme.surface,
       foregroundColor: scheme.onSurface,

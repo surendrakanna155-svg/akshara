@@ -357,7 +357,11 @@ class AksharaColorTokens {
       onSurfaceVariant: onSurfaceVariant,
       outline: outlineVariant,
       outlineVariant: outlineVariant,
-      shadow: onSurface,
+      // DS V2 P2-2 — a true shadow color per mode. Light uses the deep slate
+      // `onSurface` (a soft cool-grey cast). Dark must use near-black: the old
+      // `shadow: onSurface` painted a *light* halo on dark surfaces (an inverted
+      // shadow), so card elevation glowed instead of dropping.
+      shadow: isLight ? onSurface : const Color(0xFF000000),
       scrim: scrim,
       inverseSurface: onSurface,
       onInverseSurface: surface,
