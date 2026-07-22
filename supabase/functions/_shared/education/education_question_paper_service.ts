@@ -74,6 +74,14 @@ export interface PaperGenerationResult {
   /** Count of AI moderation candidates (also surfaced as aiGeneratedCount). */
   aiCandidateCount: number;
   aiGeneratedCount: number;
+  /**
+   * Program D · M3.2 — the measured request-path AI rate: aiCandidateCount / total blueprint
+   * slots (0 when there are no slots). This is the "≈0% live-AI at request time" METRIC —
+   * observable per generation, trending down as certified coverage grows. Not an assertion.
+   */
+  aiCandidateRate: number;
+  /** Program D · M3.1 — which bank the pool was read from ('own_bank' | 'certified_union'). */
+  bankSource: "own_bank" | "certified_union";
   /** Blueprint slots left unfilled (bank empty + AI off/declined). */
   unfilledGapCount: number;
   gaps: PaperGap[];
@@ -83,6 +91,24 @@ export interface PaperGenerationResult {
    * ("never silently downgrade"). Absent (undefined key) on the certified path.
    */
   profileCompatibility?: ProfileCompatibilityResult;
+}
+
+/**
+ * Program D per-generation config (M3.1 / M3.3). ABSENT ⇒ exact current behaviour
+ * (own-bank pool, marked-unpublishable gap-fill). Resolved from `edu_program_d_settings`
+ * by the handler; the pure solver is never touched — only its input pool + the pre-existing
+ * gap-fill gate change.
+ */
+export interface ProgramDPaperConfig {
+  /** M3.1: read the certified/adopted union pool instead of own-bank-only. Default 'own_bank'. */
+  bankSource?: "own_bank" | "certified_union";
+  /**
+   * M3.3: request-path gap-fill policy for the PRE-EXISTING constrained-AI gap-fill.
+   * 'marked_unpublishable' (default) = today's behaviour (ai_candidate/pending, unpublishable);
+   * 'hard_off' = no AI candidates at all — an under-fill becomes an HONEST shortfall (never a
+   * live-AI expansion). Owner-flipped per tenant; Program D adds no new AI path.
+   */
+  gapFillPolicy?: "marked_unpublishable" | "hard_off";
 }
 
 export type RegeneratePaperItemResult =
@@ -171,8 +197,13 @@ export async function generateQuestionPaper(
   ai?: AiRuntimeConfig,
   profile?: ExamProfile,
   governance?: Governance,
+  programD?: ProgramDPaperConfig,
 ): Promise<PaperGenerationResult> {
   const programTrack: EduProgramTrack = input.programTrack ?? "board";
+
+  // Program D · M3.1: source the pool from the certified/adopted union when enabled, else the
+  // school's own bank (default — byte-identical to today). The solver is unchanged either way.
+  const bankSource: "own_bank" | "certified_union" = programD?.bankSource ?? "own_bank";
 
   const filters: QuestionBankListFilters = {
     subjectName: input.subjectName,
@@ -181,6 +212,7 @@ export async function generateQuestionPaper(
     status: "active",
     reviewStatus: "approved",
     programTrack,
+    bankSource,
     page: 1,
     pageSize: 100,
   };
@@ -233,7 +265,10 @@ export async function generateQuestionPaper(
   }
 
   let aiCandidateCount = 0;
-  const allowAi = input.allowAiGapFill !== false;
+  // Program D · M3.3: 'hard_off' disables the PRE-EXISTING request-path gap-fill entirely, so an
+  // under-fill becomes an honest shortfall — never a live-AI expansion. Default keeps today's flow.
+  const gapFillPolicy = programD?.gapFillPolicy ?? "marked_unpublishable";
+  const allowAi = input.allowAiGapFill !== false && gapFillPolicy !== "hard_off";
   // Admin-saved panel config (provider/model/key) wins; else env fallback.
   const aiConfig: AiRuntimeConfig = ai ??
     { provider: aiProvider(), model: claudeModel(), apiKey: aiApiKey(), source: "env" };
@@ -321,6 +356,9 @@ export async function generateQuestionPaper(
     bankReuseCount: solution.selected.length,
     aiCandidateCount,
     aiGeneratedCount: aiCandidateCount,
+    // M3.2: the measured request-path AI rate (0 when no slots). Trends to ≈0 as coverage grows.
+    aiCandidateRate: solution.slots.length > 0 ? aiCandidateCount / solution.slots.length : 0,
+    bankSource,
     unfilledGapCount: gaps.length,
     gaps,
     // Only attach when a profile was supplied; the certified shape is otherwise

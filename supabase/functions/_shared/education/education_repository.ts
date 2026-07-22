@@ -65,6 +65,14 @@ export interface QuestionBankListFilters {
   search?: string;
   page?: number;
   pageSize?: number;
+  /**
+   * Program D · M1.4 / M3.1 — which bank to read. Defaults to the school's own bank
+   * (`edu_question_bank_items`, EXACT current behaviour). `certified_union` reads the
+   * RLS-safe `edu_bank_items_union` view (own items ∪ adopted certified platform items),
+   * so the deterministic solver's input pool grows to certified content. Same
+   * `QuestionBankItemRow` column shape either way; the solver is untouched.
+   */
+  bankSource?: "own_bank" | "certified_union";
 }
 
 export interface CreateQuestionBankInput {
@@ -103,6 +111,12 @@ export async function listQuestionBankItems(
   const page = Math.max(1, filters.page ?? 1);
   const pageSize = clampPageSize(filters.pageSize ?? 20);
   const offset = (page - 1) * pageSize;
+
+  // Program D · M1.4/M3.1: the source table. Default = own bank (byte-identical to today);
+  // `certified_union` = the RLS-safe union view. Both expose the QuestionBankItemRow columns.
+  const table = filters.bankSource === "certified_union"
+    ? "edu_bank_items_union"
+    : "edu_question_bank_items";
 
   const conditions = ["status = $1"];
   const params: unknown[] = [filters.status ?? "active"];
@@ -163,12 +177,12 @@ export async function listQuestionBankItems(
 
   const where = conditions.join(" AND ");
   const total = await client.queryCount(
-    `SELECT count(*)::text AS count FROM edu_question_bank_items WHERE ${where}`,
+    `SELECT count(*)::text AS count FROM ${table} WHERE ${where}`,
     params,
   );
 
   const items = await client.queryObject<QuestionBankItemRow>(
-    `SELECT * FROM edu_question_bank_items
+    `SELECT * FROM ${table}
      WHERE ${where}
      ORDER BY updated_at DESC
      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
@@ -176,6 +190,45 @@ export async function listQuestionBankItems(
   );
 
   return { items, total, page, pageSize };
+}
+
+/**
+ * Program D · M3.1 / M3.3 — per-tenant Program-D settings. Reads `edu_program_d_settings`
+ * for the current tenant (RLS-scoped). DEFAULTS reproduce EXACT current behaviour: certified
+ * pool OFF, gap-fill = today's marked-unpublishable candidate flow. Program D stays dark until
+ * an owner flips a flag. Safe while the (owner-gated) migration is unapplied: the query is only
+ * issued when a caller opts in.
+ */
+export interface ProgramDSettings {
+  certifiedPoolEnabled: boolean;
+  gapFillPolicy: "marked_unpublishable" | "hard_off";
+}
+
+export const PROGRAM_D_DEFAULT_SETTINGS: ProgramDSettings = {
+  certifiedPoolEnabled: false,
+  gapFillPolicy: "marked_unpublishable",
+};
+
+export async function getProgramDSettings(
+  client: TenantQueryClient,
+): Promise<ProgramDSettings> {
+  const rows = await client.queryObject<{
+    certified_pool_enabled: boolean;
+    gap_fill_policy: string;
+  }>(
+    `SELECT certified_pool_enabled, gap_fill_policy
+       FROM edu_program_d_settings
+      WHERE organization_id = app_current_tenant_id()
+        AND school_id = app_current_school_id()
+      LIMIT 1`,
+    [],
+  );
+  const row = rows[0];
+  if (!row) return { ...PROGRAM_D_DEFAULT_SETTINGS };
+  return {
+    certifiedPoolEnabled: row.certified_pool_enabled === true,
+    gapFillPolicy: row.gap_fill_policy === "hard_off" ? "hard_off" : "marked_unpublishable",
+  };
 }
 
 export async function createQuestionBankItem(
