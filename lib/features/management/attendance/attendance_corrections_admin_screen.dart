@@ -9,6 +9,7 @@ import '../../../core/tenant/tenant_provider.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/akshara_empty_state.dart';
+import '../../../shared/widgets/premium/akshara_premium_background.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 
@@ -29,12 +30,14 @@ class AttendanceCorrectionsAdminScreen extends ConsumerWidget {
     final sync = MockAttendanceSyncStore.instance;
 
     return Scaffold(
+      // DS V2 P4 — persona (admin/indigo) premium canvas behind the corrections
+      // approval workspace.
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Attendance corrections'),
         actions: [
           TextButton.icon(
-            onPressed: () =>
-                context.go(RouteNames.managementOfficeAttendance),
+            onPressed: () => context.go(RouteNames.managementOfficeAttendance),
             icon: const Icon(Icons.fact_check_outlined),
             label: const Text('Office attendance'),
           ),
@@ -45,45 +48,49 @@ class AttendanceCorrectionsAdminScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: ErpAsyncBody(
-        state: resolveErpAsync(requestsAsync, isDataEmpty: (_) => false),
-        loadingLabel: 'Loading',
-        emptyMessage: 'No attendance correction requests.',
-        onRetry: () => ref.invalidate(attendanceCorrectionsAdminProvider),
-        builder: (requests) => ListView(
-        padding: const EdgeInsets.all(AksharaSpacing.s4),
-        children: [
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.lock_clock_outlined),
-              title: Text(
-                sync.hasTeacherSubmission
-                    ? 'Teacher attendance submitted'
-                    : 'No teacher submission yet',
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: ErpAsyncBody(
+          state: resolveErpAsync(requestsAsync, isDataEmpty: (_) => false),
+          loadingLabel: 'Loading',
+          emptyMessage: 'No attendance correction requests.',
+          onRetry: () => ref.invalidate(attendanceCorrectionsAdminProvider),
+          builder: (requests) => ListView(
+            padding: const EdgeInsets.all(AksharaSpacing.s4),
+            children: [
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.lock_clock_outlined),
+                  title: Text(
+                    sync.hasTeacherSubmission
+                        ? 'Teacher attendance submitted'
+                        : 'No teacher submission yet',
+                  ),
+                  subtitle: sync.hasTeacherSubmission
+                      ? Text(
+                          'Present ${sync.presentCount} · Absent ${sync.absentCount} · Late ${sync.lateCount}',
+                        )
+                      : const Text(
+                          'Marks unlock after first class submission.'),
+                ),
               ),
-              subtitle: sync.hasTeacherSubmission
-                  ? Text(
-                      'Present ${sync.presentCount} · Absent ${sync.absentCount} · Late ${sync.lateCount}',
-                    )
-                  : const Text('Marks unlock after first class submission.'),
-            ),
+              const SizedBox(height: AksharaSpacing.s4),
+              Text(
+                'Correction requests',
+                style: context.aksharaText.titleMedium,
+              ),
+              const SizedBox(height: AksharaSpacing.s2),
+              if (requests.isEmpty)
+                const AksharaEmptyState(
+                  message:
+                      'No attendance correction requests. Teachers and parents submit corrections for principal approval.',
+                  icon: Icons.edit_calendar_outlined,
+                )
+              else
+                ...requests.map((request) => _CorrectionTile(request: request)),
+            ],
           ),
-          const SizedBox(height: AksharaSpacing.s4),
-          Text(
-            'Correction requests',
-            style: context.aksharaText.titleMedium,
-          ),
-          const SizedBox(height: AksharaSpacing.s2),
-          if (requests.isEmpty)
-            const AksharaEmptyState(
-              message:
-                  'No attendance correction requests. Teachers and parents submit corrections for principal approval.',
-              icon: Icons.edit_calendar_outlined,
-            )
-          else
-            ...requests.map((request) => _CorrectionTile(request: request)),
-        ],
-      ),
+        ),
       ),
     );
   }
@@ -98,7 +105,8 @@ class _CorrectionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: ListTile(
-        title: Text('${request.studentName} · ${request.classLabel}-${request.section}'),
+        title: Text(
+            '${request.studentName} · ${request.classLabel}-${request.section}'),
         subtitle: Text(
           '${request.dateLabel}: ${request.fromMark} → ${request.toMark}\n'
           '${request.reason}\n'
