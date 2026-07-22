@@ -37,30 +37,35 @@ class ParentPtmScreen extends ConsumerWidget {
         showAi: false,
         onNotificationsTap: onNotificationsTap,
       ),
-      body: ErpAsyncBody(
-        state: resolveErpAsync(
-          meetingsAsync,
-          isDataEmpty: (meetings) => meetings.isEmpty,
+      // DS V2 P4 — premium persona canvas behind the PTM content.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: ErpAsyncBody(
+          state: resolveErpAsync(
+            meetingsAsync,
+            isDataEmpty: (meetings) => meetings.isEmpty,
+          ),
+          loadingLabel: 'Loading',
+          emptyMessage:
+              'No scheduled meetings. Check school notices for PTM dates.',
+          emptyIcon: Icons.groups_outlined,
+          onRetry: () => ref.invalidate(parentChildMeetingsProvider),
+          builder: (meetings) {
+            return ListView(
+              padding: const EdgeInsets.all(AksharaSpacing.s4),
+              children: [
+                if (nextMeeting != null) ...[
+                  _NextPtmHero(meeting: nextMeeting),
+                  const SizedBox(height: AksharaSpacing.s4),
+                ],
+                for (final meeting in meetings) ...[
+                  _MeetingCard(key: ValueKey(meeting.id), meeting: meeting),
+                  const SizedBox(height: AksharaSpacing.s3),
+                ],
+              ],
+            );
+          },
         ),
-        loadingLabel: 'Loading',
-        emptyMessage: 'No scheduled meetings. Check school notices for PTM dates.',
-        emptyIcon: Icons.groups_outlined,
-        onRetry: () => ref.invalidate(parentChildMeetingsProvider),
-        builder: (meetings) {
-          return ListView(
-            padding: const EdgeInsets.all(AksharaSpacing.s4),
-            children: [
-              if (nextMeeting != null) ...[
-                _NextPtmHero(meeting: nextMeeting),
-                const SizedBox(height: AksharaSpacing.s4),
-              ],
-              for (final meeting in meetings) ...[
-                _MeetingCard(key: ValueKey(meeting.id), meeting: meeting),
-                const SizedBox(height: AksharaSpacing.s3),
-              ],
-            ],
-          );
-        },
       ),
     );
   }
@@ -169,8 +174,7 @@ class _MeetingCardState extends ConsumerState<_MeetingCard> {
               style: text.labelLarge.copyWith(color: colors.onSurface),
             ),
             const SizedBox(height: AksharaSpacing.s1),
-            for (final item in meeting.actionItems)
-              _ActionItemRow(item: item),
+            for (final item in meeting.actionItems) _ActionItemRow(item: item),
           ],
 
           // PAR-6 — follow-ups.
@@ -342,8 +346,18 @@ class _ActionItemRow extends StatelessWidget {
 String _friendlyDateTime(DateTime dt) {
   final local = dt.toLocal();
   const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
   final hour = local.hour % 12 == 0 ? 12 : local.hour % 12;
   final minute = local.minute.toString().padLeft(2, '0');
