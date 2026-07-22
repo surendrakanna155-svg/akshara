@@ -3,6 +3,7 @@ library;
 
 import 'package:akshara_erp/features/parent/dashboard/parent_dashboard_screen.dart';
 import 'package:akshara_erp/features/student_app/dashboard/student_dashboard_screen.dart';
+import 'package:akshara_erp/features/teacher/dashboard/teacher_dashboard_screen.dart';
 import 'package:akshara_erp/theme/persona_accents.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,6 +28,11 @@ void main() {
       name: 'student',
       screen: const StudentDashboardScreen(),
       accent: AksharaPersonaAccent.student,
+    ),
+    (
+      name: 'teacher',
+      screen: const TeacherDashboardScreen(),
+      accent: AksharaPersonaAccent.teacher,
     ),
   ];
 
