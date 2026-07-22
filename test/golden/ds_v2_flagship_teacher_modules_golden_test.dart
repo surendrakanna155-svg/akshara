@@ -11,6 +11,8 @@ import 'package:akshara_erp/features/teacher/homework/teacher_homework_screen.da
 import 'package:akshara_erp/features/teacher/leave/teacher_leave_screen.dart';
 import 'package:akshara_erp/features/teacher/leave_approvals/teacher_leave_approvals_screen.dart';
 import 'package:akshara_erp/features/teacher/messages/teacher_messages_screen.dart';
+import 'package:akshara_erp/features/teacher/profile/teacher_profile_screen.dart';
+import 'package:akshara_erp/features/teacher/settings/teacher_settings_screen.dart';
 import 'package:akshara_erp/features/teacher/student_risk/teacher_student_risk_screen.dart';
 import 'package:akshara_erp/features/teacher/timetable/teacher_timetable_screen.dart';
 import 'package:akshara_erp/features/teacher/timetable/teacher_today_screen.dart';
@@ -254,6 +256,36 @@ void main() {
         matchesGoldenFile(
           goldenFileName(
               'ds_v2_flagship_teacher_student_risk_${mode.label}', '390x1280'),
+        ),
+      );
+    });
+
+    testWidgets('teacher profile · ${mode.label}', (tester) async {
+      await pump(
+        tester,
+        screen: const TeacherProfileScreen(),
+        dark: mode.dark,
+      );
+      await expectLater(
+        find.byType(TeacherProfileScreen),
+        matchesGoldenFile(
+          goldenFileName(
+              'ds_v2_flagship_teacher_profile_${mode.label}', '390x1280'),
+        ),
+      );
+    });
+
+    testWidgets('teacher settings · ${mode.label}', (tester) async {
+      await pump(
+        tester,
+        screen: const TeacherSettingsScreen(),
+        dark: mode.dark,
+      );
+      await expectLater(
+        find.byType(TeacherSettingsScreen),
+        matchesGoldenFile(
+          goldenFileName(
+              'ds_v2_flagship_teacher_settings_${mode.label}', '390x1280'),
         ),
       );
     });
