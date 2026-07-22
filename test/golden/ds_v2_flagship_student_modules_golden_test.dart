@@ -2,6 +2,7 @@
 library;
 
 import 'package:akshara_erp/features/student_app/attendance/student_attendance_screen.dart';
+import 'package:akshara_erp/features/student_app/homework/student_homework_screen.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:akshara_erp/theme/persona_accents.dart';
 import 'package:flutter/material.dart';
@@ -59,6 +60,21 @@ void main() {
         matchesGoldenFile(
           goldenFileName(
               'ds_v2_flagship_student_attendance_${mode.label}', '390x1280'),
+        ),
+      );
+    });
+
+    testWidgets('student homework · ${mode.label}', (tester) async {
+      await pump(
+        tester,
+        screen: const StudentHomeworkScreen(),
+        dark: mode.dark,
+      );
+      await expectLater(
+        find.byType(StudentHomeworkScreen),
+        matchesGoldenFile(
+          goldenFileName(
+              'ds_v2_flagship_student_homework_${mode.label}', '390x1280'),
         ),
       );
     });
