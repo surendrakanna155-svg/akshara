@@ -17,16 +17,21 @@ import 'golden_test_helpers.dart';
 /// brand. Proves the hero reads cohesively with the branded chrome.
 
 class _PersonaHero extends StatelessWidget {
-  const _PersonaHero({required this.accent, required this.title});
+  const _PersonaHero({
+    required this.accent,
+    required this.title,
+    this.brightness = Brightness.light,
+  });
 
   final Color accent;
   final String title;
+  final Brightness brightness;
 
   @override
   Widget build(BuildContext context) {
     return Theme(
       data: AksharaAppTheme.persona(
-        brightness: Brightness.light,
+        brightness: brightness,
         accent: accent,
       ),
       child: Builder(
@@ -52,34 +57,53 @@ class _PersonaHero extends StatelessWidget {
 void main() {
   const viewport = Size(390, 760);
 
-  testWidgets('DS V2 persona heroes · light', (tester) async {
-    suppressGoldenOverflowErrors();
-    useGoldenViewport(tester, viewport);
+  for (final mode in const [
+    (label: 'light', brightness: Brightness.light),
+    (label: 'dark', brightness: Brightness.dark),
+  ]) {
+    testWidgets('DS V2 persona heroes · ${mode.label}', (tester) async {
+      suppressGoldenOverflowErrors();
+      useGoldenViewport(tester, viewport);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AksharaAppTheme.light(),
-        debugShowCheckedModeBanner: false,
-        home: const Scaffold(
-          body: SafeArea(
-            child: Column(
-              children: [
-                _PersonaHero(accent: AksharaPersonaAccent.parent, title: 'PARENT'),
-                _PersonaHero(
-                    accent: AksharaPersonaAccent.student, title: 'STUDENT'),
-                _PersonaHero(
-                    accent: AksharaPersonaAccent.teacher, title: 'TEACHER'),
-              ],
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: mode.brightness == Brightness.dark
+              ? AksharaAppTheme.dark()
+              : AksharaAppTheme.light(),
+          debugShowCheckedModeBanner: false,
+          home: Scaffold(
+            body: SafeArea(
+              child: Column(
+                children: [
+                  _PersonaHero(
+                    accent: AksharaPersonaAccent.parent,
+                    title: 'PARENT',
+                    brightness: mode.brightness,
+                  ),
+                  _PersonaHero(
+                    accent: AksharaPersonaAccent.student,
+                    title: 'STUDENT',
+                    brightness: mode.brightness,
+                  ),
+                  _PersonaHero(
+                    accent: AksharaPersonaAccent.teacher,
+                    title: 'TEACHER',
+                    brightness: mode.brightness,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    await expectLater(
-      find.byType(MaterialApp),
-      matchesGoldenFile(goldenFileName('ds_v2_persona_heroes', '390x760')),
-    );
-  });
+      await expectLater(
+        find.byType(MaterialApp),
+        matchesGoldenFile(
+          goldenFileName('ds_v2_persona_heroes_${mode.label}', '390x760'),
+        ),
+      );
+    });
+  }
 }

@@ -38,22 +38,33 @@ void main() {
   ];
 
   group('DS V2 · persona-themed dashboards', () {
-    for (final persona in personas) {
-      testWidgets('${persona.name} dashboard (persona theme)', (tester) async {
-        await pumpGoldenDashboard(
-          tester,
-          screen: persona.screen,
-          viewport: viewport,
-          personaAccent: persona.accent,
-        );
+    for (final mode in const [
+      (label: 'light', dark: false),
+      (label: 'dark', dark: true),
+    ]) {
+      for (final persona in personas) {
+        testWidgets('${persona.name} dashboard · ${mode.label} (persona theme)',
+            (tester) async {
+          await pumpGoldenDashboard(
+            tester,
+            screen: persona.screen,
+            viewport: viewport,
+            personaAccent: persona.accent,
+            dark: mode.dark,
+          );
 
-        await expectLater(
-          find.byType(MaterialApp),
-          matchesGoldenFile(
-            goldenFileName('ds_v2_persona_dashboard_${persona.name}', '390x844'),
-          ),
-        );
-      });
+          final suffix = mode.dark ? '_dark' : '';
+          await expectLater(
+            find.byType(MaterialApp),
+            matchesGoldenFile(
+              goldenFileName(
+                'ds_v2_persona_dashboard_${persona.name}$suffix',
+                '390x844',
+              ),
+            ),
+          );
+        });
+      }
     }
   });
 }
