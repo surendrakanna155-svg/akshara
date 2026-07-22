@@ -28,7 +28,8 @@ class ParentPaymentScreen extends ConsumerStatefulWidget {
   final VoidCallback? onBackToFees;
 
   static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
-  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
+  static const double _tabletMaxContentWidth =
+      AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   ConsumerState<ParentPaymentScreen> createState() =>
@@ -64,7 +65,7 @@ class _ParentPaymentScreenState extends ConsumerState<ParentPaymentScreen> {
     }
 
     return Scaffold(
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'Pay Fee',
         subtitle: summary == null
@@ -74,16 +75,23 @@ class _ParentPaymentScreenState extends ConsumerState<ParentPaymentScreen> {
         trailingPadding: true,
         onNotificationsTap: widget.onNotificationsTap,
       ),
-      body: isLoading
-          ? const AksharaLoadingState(semanticLabel: 'Loading payment details')
-          : hasError
-              ? AksharaErrorState(
-                  message: 'Unable to load payment details.',
-                  onRetry: () => ref
-                      .read(parentPaymentErrorProvider.notifier)
-                      .state = false,
-                )
-              : _buildPhaseBody(context, ref, phase, summary),
+      // DS V2 P4 — premium persona canvas behind the pay flow. The payment
+      // summary, honest fail-closed "not charged" state, and the success
+      // ceremony below are unchanged.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: isLoading
+            ? const AksharaLoadingState(
+                semanticLabel: 'Loading payment details')
+            : hasError
+                ? AksharaErrorState(
+                    message: 'Unable to load payment details.',
+                    onRetry: () => ref
+                        .read(parentPaymentErrorProvider.notifier)
+                        .state = false,
+                  )
+                : _buildPhaseBody(context, ref, phase, summary),
+      ),
     );
   }
 
@@ -147,8 +155,8 @@ class _PaymentSummaryView extends ConsumerWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isTablet = constraints.maxWidth >=
-            ParentPaymentScreen._tabletBreakpoint;
+        final isTablet =
+            constraints.maxWidth >= ParentPaymentScreen._tabletBreakpoint;
         final horizontalPadding = isTablet
             ? AksharaSpacing.tabletMargin
             : AksharaSpacing.mobileMargin;

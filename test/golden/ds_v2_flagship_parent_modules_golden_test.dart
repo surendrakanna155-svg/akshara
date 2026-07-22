@@ -3,6 +3,7 @@ library;
 
 import 'package:akshara_erp/features/parent/fees/fees_provider.dart';
 import 'package:akshara_erp/features/parent/fees/parent_fees_screen.dart';
+import 'package:akshara_erp/features/parent/receipts/parent_receipts_screen.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:akshara_erp/theme/persona_accents.dart';
 import 'package:flutter/material.dart';
@@ -62,6 +63,21 @@ void main() {
         find.byType(ParentFeesScreen),
         matchesGoldenFile(
           goldenFileName('ds_v2_flagship_parent_fees_${mode.label}', '390x1280'),
+        ),
+      );
+    });
+
+    testWidgets('parent receipts · ${mode.label}', (tester) async {
+      await pump(
+        tester,
+        screen: const ParentReceiptsScreen(),
+        dark: mode.dark,
+      );
+      await expectLater(
+        find.byType(ParentReceiptsScreen),
+        matchesGoldenFile(
+          goldenFileName(
+              'ds_v2_flagship_parent_receipts_${mode.label}', '390x1280'),
         ),
       );
     });
