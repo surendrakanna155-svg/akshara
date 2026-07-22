@@ -63,10 +63,8 @@ Legend: ✅ done (committed) · 🔵 in progress · ⏸ owner-gated · ⏳ block
 | **B3** | Question re-mining (`pyq_item`, provenance chain OD-2) — 15,803 instances / 108 docs | ✅ verified (3 rounds) · EOS CONDITIONAL PASS |
 | **OCR** | OCR Recovery Lane (parallel, non-blocking) — deterministic re-OCR + verified-improvement gate | ✅ verified · EOS PASS · `822d95cf` |
 | **B4** | Structural difficulty (OD-3, `structural_proxy`) + marking-scheme extraction (OD-6) | ✅ verified (CONFIRMED, P2 fixed) · EOS PASS |
-| **B3** | Question re-mining with deterministic provenance chain + OCR fail-safe | ⬜ |
-| **B4** | Structural difficulty (labelled) + marking-scheme extraction | ⬜ |
-| **B5** | `exam_dna_v2` measured layer (N≥30 floor, v1 preserved) | ⬜ |
-| **B6** | Integration (blueprints surface provenance_class; exam-representative gates on v2) + final EOS | ⬜ |
+| **B5** | `exam_dna_v2` measured layer — floor on INDEPENDENT SITTINGS; all exams insufficient_evidence (honest); v1 byte-identical | ✅ verified (CONFIRMED, P2 independence fix) · EOS PASS |
+| **B6** | DNA v2 consumer contract — provenance surfaced + fail-closed exam-representative gate | ✅ EOS PASS |
 
 ---
 
@@ -182,6 +180,62 @@ co-occurrence (`+4 μC … −1 m`), so `parsed_from_paper` was an overclaim (JE
 falls to `published`. P3s (schema-comment overstated signals; parsed branch hardcoded values) also fixed.
 
 **EOS gate: PASS.** Tests: `kie/tests/test_program_b_b4.py` (11). Full KIE suite **1221 green**.
+
+## B5 — Measured Exam DNA v2 (R5-4) · 2026-07-22
+
+**Scope:** the program's headline deliverable — a MEASURED exam-DNA derived from the re-mined PYQ corpus, honest
+about what the ~188-doc corpus can and cannot support, with `examdna.db` v1 preserved byte-identical (OD-6).
+
+**What landed** — `dna_v2.py` → `exam_dna_v2` + `exam_dna_v2_delta` in Program B's own `pyq_corpus.db`:
+- **Per-doc-NORMALIZED** distributions: each contributing paper is weighted equally (a doc's internal bucket
+  proportions count once), so the booklet-instance duplication B3 leaves in place **cannot distort** a
+  distribution. This is where B3's "instances, not unique questions" is neutralized.
+- **OD-5 floor of 30 mined docs** per cell: at/above → measured (`pyq_measured` for observed question-type;
+  `structural_proxy` for B4's difficulty — never "measured student difficulty", OD-3); below → **honest-null
+  `insufficient_evidence`** (probability NULL, never fabricated).
+- **Subject weight = `published`** (the exam mandates its subject split — truer than thin OCR attribution).
+- A **measured-vs-v1 delta** report (structural proxy vs v1's authored `curated_prior`).
+
+**Adversarial verification → CONFIRMED, then a load-bearing HONESTY fix.** The verifier confirmed every measured
+claim by independent recomputation (per-doc normalization exact to the digit; 0 fabrication; floor-gated; v1
+byte-identical). But it caught a decisive **P2**: the floor keyed on distinct **docs**, and NEET's "74 mined
+papers" are really only **~10 distinct exam years** (2020 = 23 docs, 2023 = 19 — booklet/shift PDFs of the SAME
+sitting, which are NOT independent). Counting 74 duplicated docs as 74 independent PYQs would inflate the sample
+— exactly the statistic-fabrication OD-5 ("30 **independent** PYQs") + the standing law forbid. **Fixed:** the
+floor + normalization now key on distinct **independent sittings** `(exam, year)`; a distribution is averaged
+sitting→doc→item, so neither within-doc booklet instances nor cross-doc booklet PDFs of one sitting can distort
+it. (Also fixed a P3 doc-drift: the B3 schema's "B5 dedups by stem_fp" comment corrected.)
+
+**Live outcome (the honest truth of the owned corpus):**
+- **Under the independent-sitting floor, NO exam qualifies:** NEET **10** sittings, JEE_ADVANCED **14**, JEE_MAIN
+  **6** — all < 30 → **every measured distribution is `insufficient_evidence`** (honest-null, never fabricated).
+  The owned ~188-doc corpus is really ~10–14 exam sittings per exam; it does not meet the owner's 30-independent
+  -PYQ bar. This is the honest measurement of the evidence gap — not a machinery failure.
+- What v2 DOES publish: **`published` subject weights** (mandated NEET 25/25/50, JEE thirds). Measured
+  question-type + structural difficulty are honest-null pending ≥30 independent sittings (acquisition, OD-8 — the
+  machinery is proven + scalable and will emit measured DNA the moment the evidence exists).
+- **`examdna.db` v1 BYTE-IDENTICAL** (OD-6); build deterministic; every `insufficient_evidence` cell records its
+  `n_sittings` + `n_docs` honestly.
+
+**Tests:** `kie/tests/test_program_b_b5.py` (13, incl. per-sitting normalization + booklet-collapse + all-exams-
+insufficient). Full KIE suite **1238 green**.
+
+## B6 — Exam DNA v2 consumer contract (integration) · 2026-07-22
+
+**Scope:** the roadmap's "blueprints surface DNA `provenance_class`; any exam-representative claim gates on v2."
+
+**What landed** — `dna_access.py`:
+- `exam_dna(exam[, dimension])` — returns every v2 cell **with `provenance_class` (and `basis`) surfaced**; an
+  `insufficient_evidence` cell is returned with `probability=None` (a consumer must handle honest-null, never a
+  fabricated 0).
+- `assert_exam_representative(exam, dimension)` — **FAIL-CLOSED**: raises `ExamDnaV2InsufficientEvidence` unless
+  that dimension is genuinely `pyq_measured`. On the current corpus **every** exam-representative claim is refused
+  (no exam clears the independent-sitting floor) — the gate never lets an under-evidenced claim through, and it
+  will allow one the moment ≥30 independent sittings make a dimension measured. `published` (mandated) and
+  `structural_proxy` are also not "exam-representative" measurements — only `pyq_measured` is.
+- `coverage()` — the per-(exam, dimension) provenance map a consumer consults before trusting any cell.
+
+**EOS gate: PASS.** Tests: `kie/tests/test_program_b_b6.py` (5). Full KIE suite **1238 green**.
 
 **Scope:** classify every `kie.db :: source_documents` row (1,241) into a fail-closed role + reconstructed
 exam/year/authority, so downstream milestones consume only genuine PYQ with honest provenance (OD-1, OD-2).

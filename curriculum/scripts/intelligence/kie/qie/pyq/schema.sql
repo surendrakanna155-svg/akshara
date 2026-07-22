@@ -54,9 +54,9 @@ CREATE INDEX IF NOT EXISTS idx_pcs_subject ON pyq_chunk_subject(subject);
 -- numerical/assertion/match), is READABLE (rejects OCR garble / non-English papers), and is not an instruction
 -- block (rejects exam instructions, NTA notices, syllabus/experiment lists). NOTE: one PDF may hold several
 -- BOOKLET CODES / a solutions restatement of the same paper → the same question yields several INSTANCES; exact
--- + content-fingerprint (`stem_fp`) within-doc dedup collapses what it safely can, and B5 dedups corpus-wide by
--- `stem_fp` + counts DISTINCT DOCS for the OD-5 N≥30 floor + normalizes per-doc, so instance duplication never
--- distorts a measured distribution.
+-- exact-content (`stem_fp`) within-doc dedup collapses byte-identical copies. B5 then gates the OD-5 N≥30 floor on
+-- distinct INDEPENDENT SITTINGS (exam,year) — NOT raw docs — and normalizes per sitting, so neither within-doc
+-- booklet instances nor cross-doc booklet/shift PDFs of the same sitting can distort a measured distribution.
 CREATE TABLE IF NOT EXISTS pyq_item (
   item_id        TEXT PRIMARY KEY,   -- content-addressed: sha256(doc_id|qnum|span_sha)[:16]
   doc_id         TEXT NOT NULL,
@@ -112,6 +112,45 @@ CREATE TABLE IF NOT EXISTS marking_scheme (
   n_docs_evidence  INTEGER,            -- how many eligible docs stated a consistent scheme (parsed)
   note             TEXT,
   PRIMARY KEY (exam, question_type)
+);
+
+-- ── B5 — measured Exam DNA v2 (roadmap R5-4) ─────────────────────────────────────────────────────────────
+-- The MEASURED layer, in Program B's OWN store (examdna.db v1 is left BYTE-IDENTICAL — OD-6). Each cell is a
+-- per-doc-NORMALIZED distribution (each contributing paper weighted equally, so booklet-instance duplication
+-- cannot distort it) gated on the OD-5 floor: a dimension is `pyq_measured` / `structural_proxy` ONLY when the
+-- exam has ≥30 mined docs; below the floor it is `insufficient_evidence` (probabilities NULL — never fabricated).
+-- Subject weight stays `published` (the exam MANDATES it — truer than thin OCR attribution). Measured student
+-- difficulty stays honest-null (no pilot data — R5-5). `version` is in every PK: a new mining pass = a new version.
+CREATE TABLE IF NOT EXISTS exam_dna_v2 (
+  version          TEXT NOT NULL,      -- e.g. 'v2-2026-07-22'
+  exam             TEXT NOT NULL,      -- NEET | JEE_MAIN | JEE_ADVANCED
+  subject          TEXT NOT NULL,      -- '' for exam-wide
+  dimension        TEXT NOT NULL,      -- subject_weight | question_type | structural_difficulty
+  bucket           TEXT NOT NULL,      -- subject name | mcq/numerical/… | easy/moderate/hard
+  probability      REAL,               -- NULL when insufficient_evidence (honest-null)
+  provenance_class TEXT NOT NULL,      -- pyq_measured | structural_proxy | published | insufficient_evidence
+  n_sittings       INTEGER,            -- distinct INDEPENDENT sittings (exam,year) — the OD-5 "30 independent PYQs" unit
+  n_docs           INTEGER,            -- raw mined booklet/shift PDFs (>= n_sittings; NOT the independence count)
+  n_items          INTEGER,
+  basis            TEXT NOT NULL,      -- honest one-line provenance, citing the measured N
+  created_at       TEXT NOT NULL,
+  PRIMARY KEY (version, exam, subject, dimension, bucket)
+);
+CREATE INDEX IF NOT EXISTS idx_dna2_exam ON exam_dna_v2(version, exam, dimension);
+
+-- measured-vs-v1 delta (the "measured vs opinion" report): where v2 measures something v1 only estimated.
+CREATE TABLE IF NOT EXISTS exam_dna_v2_delta (
+  version        TEXT NOT NULL,
+  exam           TEXT NOT NULL,
+  dimension      TEXT NOT NULL,
+  bucket         TEXT NOT NULL,
+  v1_probability REAL,                 -- v1 curated_prior / evidence_proportional value (NULL if v1 had none)
+  v1_provenance  TEXT,
+  v2_probability REAL,                 -- v2 measured / structural (NULL if insufficient)
+  v2_provenance  TEXT,
+  delta          REAL,                 -- v2 - v1 (NULL if either side null)
+  note           TEXT,
+  PRIMARY KEY (version, exam, dimension, bucket)
 );
 
 CREATE TABLE IF NOT EXISTS pyq_meta (key TEXT PRIMARY KEY, value TEXT);
