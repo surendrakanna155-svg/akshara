@@ -39,7 +39,14 @@ worktree branch onto the correct uxr tip (`19c47710`) with `git reset --hard`
 | 6 | Parent Communication (workflow) + Messages inbox (TA-06) | Premium canvas on the communication workflow and the messages inbox/compose. **Conversation/chat left plain** (canvas hurts pale chat-bubble contrast). Also fixed a latent 6px horizontal overflow on the "Select student" dropdown (`isExpanded` + item ellipsis, matching the homework dropdown) surfaced by the golden | **No** — form / list, no headline % | analyze clean; communication + messages suites + governance + module-screens **+30**; goldens 4 | `b944922e` |
 | 7 | Student Risk 360 | Premium canvas behind the risk 360 detail | **No** — see ring decision below | analyze clean; qw5 intervention authz **+3**; goldens 2 (`SIS-STU-10421`) | `eb42a520` |
 | 8 | Profile + Settings | Premium canvas behind the identity/detail profile and the preferences list (dropped a now-unused import on settings) | **No** — identity / preferences, no headline % | analyze clean; profile + settings screen tests **+5**; goldens 4 | `46d55f15` |
-| 9 | Class-teacher Dashboard (TA-01 variant) | Premium canvas (with the book motif, matching the main teacher dashboard) behind the class-teacher overview; added a `SingleChildScrollView` so the canvas fills + the dashboard is overflow-safe (dropped a now-unused import) | **No** — a navigation/quick-actions overview, no headline % (the main teacher dashboard already carries the present-rate ring, Phase 3) | analyze clean; navigation-pilot + persona-nav-map **+71**; goldens 2 | `<pending>` |
+| 9 | Class-teacher Dashboard (TA-01 variant) | Premium canvas (with the book motif, matching the main teacher dashboard) behind the class-teacher overview; added a `SingleChildScrollView` so the canvas fills + the dashboard is overflow-safe (dropped a now-unused import) | **No** — a navigation/quick-actions overview, no headline % (the main teacher dashboard already carries the present-rate ring, Phase 3) | analyze clean; navigation-pilot + persona-nav-map **+71**; goldens 2 | `ac9184b0` |
+
+## Final verification (whole journey)
+`flutter analyze lib test` → **clean (0 issues)**. Full teacher golden file
+**32/32**; full `test/features/teacher` dir + responsiveness + dashboard-stress +
+a11y (semantics + dense-grid text-scale) → **244/0**; qa_c_003 teacher cert +
+qa_c_009 workflow cert + qa_r_006/qa_x_024 large-list perf + homework-review-loop
+→ **18/0**. No overflow in any of the 32 goldens (each Read-verified).
 
 **Total: 16 screens migrated** across 9 certified slices — attendance marking,
 my-attendance (ring), homework review/create/history, exams (ring), timetable,
