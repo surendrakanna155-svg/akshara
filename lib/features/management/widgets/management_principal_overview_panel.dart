@@ -239,20 +239,22 @@ class _HealthScoreCard extends StatelessWidget {
     return AksharaSurfaceCard(
       child: Row(
         children: [
-          SizedBox(
-            width: 72,
-            height: 72,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                CircularProgressIndicator(
-                  value: score / 100,
-                  strokeWidth: 6,
-                  color: tone,
-                  backgroundColor: colors.surfaceContainerHighest,
-                ),
-                Text('$score', style: context.aksharaText.kpiValue),
-              ],
+          // DS V2 Phase 3 flagship — the school health score as a premium
+          // progress ring (rounded arc, health-toned) replacing the raw Material
+          // CircularProgressIndicator.
+          AksharaProgressRing(
+            value: score / 100,
+            size: 76,
+            strokeWidth: 8,
+            color: tone,
+            semanticLabel: 'School health score $score of 100',
+            child: Text(
+              '$score',
+              style: context.aksharaText.titleLarge.copyWith(
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.3,
+                height: 1.0,
+              ),
             ),
           ),
           const SizedBox(width: AksharaSpacing.s4),
