@@ -14,6 +14,7 @@ import '../parent_active_child_provider.dart';
 import '../widgets/parent_child_switcher_sheet.dart';
 import '../academics/parent_academic_models.dart';
 import '../academics/parent_academic_provider.dart';
+import '../../../shared/widgets/akshara_progress_ring.dart';
 import '../../../theme/premium_tokens.dart';
 import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
@@ -124,6 +125,7 @@ class ParentDashboardScreen extends ConsumerWidget {
                           title: 'Action Needed',
                           subtitle:
                               'Fees, meetings, forms & homework that need you',
+                          accent: KpiAccent.primary,
                           onTap: () => _navigate('action_inbox'),
                         ),
                         // PAR-D2 — family view (multi-child parents only).
@@ -134,6 +136,7 @@ class ParentDashboardScreen extends ConsumerWidget {
                             title: 'My Children',
                             subtitle:
                                 'A snapshot of all your children in one place',
+                            accent: KpiAccent.indigo,
                             onTap: () => _navigate('family_view'),
                           ),
                         ],
@@ -157,6 +160,7 @@ class ParentDashboardScreen extends ConsumerWidget {
                           title: 'Parent Experience Hub',
                           subtitle:
                               'Homework status, exam readiness & structured insights',
+                          accent: KpiAccent.tertiary,
                           onTap: () => _navigate('experience_hub'),
                         ),
                         const SizedBox(height: AksharaSpacing.s3),
@@ -165,6 +169,7 @@ class ParentDashboardScreen extends ConsumerWidget {
                           title: 'Parent Insights',
                           subtitle:
                               'AI summaries of your child\'s progress, in your language',
+                          accent: KpiAccent.indigo,
                           onTap: () => _navigate('parent_insights'),
                         ),
                         if (data.aiInsight.message.isNotEmpty) ...[
@@ -371,6 +376,7 @@ class _AcademicHeroCard extends StatelessWidget {
     final grade = summary.performanceSummary['overallGrade'] ?? '—';
     final homework = summary.homeworkStatus['completionRate'] ?? '—';
     final homeworkFraction = (double.tryParse('$homework') ?? 0) / 100.0;
+    final attendanceFraction = (double.tryParse('$attendance') ?? 0) / 100.0;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -401,21 +407,66 @@ class _AcademicHeroCard extends StatelessWidget {
             ),
             const SizedBox(height: AksharaSpacing.s4),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Expanded(child: _stat(context, 'Attendance', '$attendance%')),
-                Expanded(child: _stat(context, 'Grade', '$grade')),
-                Expanded(child: _stat(context, 'Homework', '$homework%')),
+                // Signature data-viz: the headline attendance metric as a
+                // premium progress ring in the persona accent.
+                AksharaProgressRing(
+                  value: attendanceFraction,
+                  size: 92,
+                  strokeWidth: 9,
+                  color: premium.brandStart,
+                  semanticLabel: 'Attendance $attendance percent',
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '$attendance%',
+                        style: text.titleMedium.copyWith(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.3,
+                          height: 1.0,
+                        ),
+                      ),
+                      Text(
+                        'Present',
+                        style: text.labelSmall.copyWith(
+                          color: colors.onSurfaceVariant,
+                          fontSize: 10,
+                          height: 1.1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AksharaSpacing.s5),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(child: _stat(context, 'Grade', '$grade')),
+                          Expanded(
+                            child: _stat(context, 'Homework', '$homework%'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AksharaSpacing.s3),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(AksharaRadius.xs),
+                        child: LinearProgressIndicator(
+                          value: homeworkFraction.clamp(0.0, 1.0),
+                          minHeight: 8,
+                          backgroundColor: colors.surfaceContainerHighest,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(premium.brandStart),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
-            ),
-            const SizedBox(height: AksharaSpacing.s4),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(AksharaRadius.xs),
-              child: LinearProgressIndicator(
-                value: homeworkFraction.clamp(0.0, 1.0),
-                minHeight: 9,
-                backgroundColor: colors.surfaceContainerHighest,
-                valueColor: AlwaysStoppedAnimation<Color>(premium.brandStart),
-              ),
             ),
             if (summary.strengths.isNotEmpty) ...[
               const SizedBox(height: AksharaSpacing.s3),
