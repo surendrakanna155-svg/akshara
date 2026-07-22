@@ -25,34 +25,41 @@ class StudentProfileScreen extends ConsumerWidget {
   final VoidCallback? onSettingsTap;
 
   static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
-  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
+  static const double _tabletMaxContentWidth =
+      AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(studentProfileFutureProvider);
     final isLoading =
         ref.watch(studentProfileLoadingProvider) || async.isLoading;
-    final hasError =
-        ref.watch(studentProfileErrorProvider) || async.hasError;
+    final hasError = ref.watch(studentProfileErrorProvider) || async.hasError;
 
     if (isLoading) {
       return Scaffold(
-        backgroundColor: context.colors.surfaceContainerLow,
+        backgroundColor: Colors.transparent,
         appBar: _buildAppBar(context, schoolName: null),
-        body: const AksharaLoadingState(semanticLabel: 'Loading profile'),
+        // DS V2 P4 — premium persona canvas, cohesive with the dashboards.
+        body: const AksharaPremiumBackground(
+          showMotif: false,
+          child: AksharaLoadingState(semanticLabel: 'Loading profile'),
+        ),
       );
     }
 
     if (hasError) {
       return Scaffold(
-        backgroundColor: context.colors.surfaceContainerLow,
+        backgroundColor: Colors.transparent,
         appBar: _buildAppBar(context, schoolName: null),
-        body: AksharaErrorState(
-          message: 'Unable to load your profile right now.',
-          onRetry: () {
-            ref.read(studentProfileErrorProvider.notifier).state = false;
-            ref.invalidate(studentProfileFutureProvider);
-          },
+        body: AksharaPremiumBackground(
+          showMotif: false,
+          child: AksharaErrorState(
+            message: 'Unable to load your profile right now.',
+            onRetry: () {
+              ref.read(studentProfileErrorProvider.notifier).state = false;
+              ref.invalidate(studentProfileFutureProvider);
+            },
+          ),
         ),
       );
     }
@@ -60,144 +67,149 @@ class StudentProfileScreen extends ConsumerWidget {
     final data = ref.watch(studentProfileProvider);
 
     return Scaffold(
-      backgroundColor: context.colors.surfaceContainerLow,
-      appBar: _buildAppBar(context, schoolName: data.schoolName, unread: data.unreadNotifications),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final isTablet = constraints.maxWidth >= _tabletBreakpoint;
-          final horizontalPadding = isTablet
-              ? AksharaSpacing.tabletMargin
-              : AksharaSpacing.mobileMargin;
+      backgroundColor: Colors.transparent,
+      appBar: _buildAppBar(context,
+          schoolName: data.schoolName, unread: data.unreadNotifications),
+      // DS V2 P4 — premium persona canvas behind the profile content.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isTablet = constraints.maxWidth >= _tabletBreakpoint;
+            final horizontalPadding = isTablet
+                ? AksharaSpacing.tabletMargin
+                : AksharaSpacing.mobileMargin;
 
-          return Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth:
-                    isTablet ? _tabletMaxContentWidth : double.infinity,
-              ),
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(
-                  horizontalPadding,
-                  AksharaSpacing.s4,
-                  horizontalPadding,
-                  AksharaSpacing.s6,
+            return Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: isTablet ? _tabletMaxContentWidth : double.infinity,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _ProfileHeroCard(data: data),
-                    const SizedBox(height: AksharaSpacing.s4),
-                    const AksharaSectionHeader(
-                      title: 'Student details',
-                      fixedHeight: false,
-                      spacingBelow: AksharaSpacing.s3,
-                    ),
-                    ProfileInfoRow(
-                      icon: Icons.badge_outlined,
-                      label: 'Roll number',
-                      value: data.rollNo,
-                    ),
-                    const SizedBox(height: AksharaSpacing.s2),
-                    ProfileInfoRow(
-                      icon: Icons.numbers_outlined,
-                      label: 'Admission no.',
-                      value: data.admissionNo,
-                    ),
-                    const SizedBox(height: AksharaSpacing.s2),
-                    ProfileInfoRow(
-                      icon: Icons.cake_outlined,
-                      label: 'Date of birth',
-                      value: data.dateOfBirth,
-                    ),
-                    const SizedBox(height: AksharaSpacing.s2),
-                    ProfileInfoRow(
-                      icon: Icons.bloodtype_outlined,
-                      label: 'Blood group',
-                      value: data.bloodGroup,
-                    ),
-                    const SizedBox(height: AksharaSpacing.s4),
-                    const AksharaSectionHeader(
-                      title: 'Parent details',
-                      fixedHeight: false,
-                      spacingBelow: AksharaSpacing.s3,
-                    ),
-                    for (var i = 0; i < data.parentContacts.length; i++) ...[
-                      _ParentContactCard(contact: data.parentContacts[i]),
-                      if (i < data.parentContacts.length - 1)
-                        const SizedBox(height: AksharaSpacing.s2),
-                    ],
-                    const SizedBox(height: AksharaSpacing.s4),
-                    const AksharaSectionHeader(
-                      title: 'Academic summary',
-                      fixedHeight: false,
-                      spacingBelow: AksharaSpacing.s3,
-                    ),
-                    for (var i = 0; i < data.academicSummary.length; i++) ...[
-                      ProfileInfoRow(
-                        icon: Icons.school_outlined,
-                        label: data.academicSummary[i].label,
-                        value: data.academicSummary[i].value,
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(
+                    horizontalPadding,
+                    AksharaSpacing.s4,
+                    horizontalPadding,
+                    AksharaSpacing.s6,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _ProfileHeroCard(data: data),
+                      const SizedBox(height: AksharaSpacing.s4),
+                      const AksharaSectionHeader(
+                        title: 'Student details',
+                        fixedHeight: false,
+                        spacingBelow: AksharaSpacing.s3,
                       ),
-                      if (i < data.academicSummary.length - 1)
-                        const SizedBox(height: AksharaSpacing.s2),
-                    ],
-                    const SizedBox(height: AksharaSpacing.s4),
-                    const AksharaSectionHeader(
-                      title: 'Settings',
-                      fixedHeight: false,
-                      spacingBelow: AksharaSpacing.s3,
-                    ),
-                    ProfileInfoRow(
-                      key: QaTestKeys.appearanceSettingsLink,
-                      icon: Icons.brightness_6_outlined,
-                      label: 'Appearance',
-                      value: 'Light, dark, or match your device',
-                      onTap: () => context.push(RouteNames.appearanceSettings),
-                    ),
-                    const SizedBox(height: AksharaSpacing.s2),
-                    Semantics(
-                      button: onSettingsTap != null,
-                      label: onSettingsTap != null
-                          ? 'App settings'
-                          : 'App settings, coming soon',
-                      child: ListTile(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: AksharaRadius.card,
-                          side: BorderSide(
-                            color: context.colors.outlineVariant,
+                      ProfileInfoRow(
+                        icon: Icons.badge_outlined,
+                        label: 'Roll number',
+                        value: data.rollNo,
+                      ),
+                      const SizedBox(height: AksharaSpacing.s2),
+                      ProfileInfoRow(
+                        icon: Icons.numbers_outlined,
+                        label: 'Admission no.',
+                        value: data.admissionNo,
+                      ),
+                      const SizedBox(height: AksharaSpacing.s2),
+                      ProfileInfoRow(
+                        icon: Icons.cake_outlined,
+                        label: 'Date of birth',
+                        value: data.dateOfBirth,
+                      ),
+                      const SizedBox(height: AksharaSpacing.s2),
+                      ProfileInfoRow(
+                        icon: Icons.bloodtype_outlined,
+                        label: 'Blood group',
+                        value: data.bloodGroup,
+                      ),
+                      const SizedBox(height: AksharaSpacing.s4),
+                      const AksharaSectionHeader(
+                        title: 'Parent details',
+                        fixedHeight: false,
+                        spacingBelow: AksharaSpacing.s3,
+                      ),
+                      for (var i = 0; i < data.parentContacts.length; i++) ...[
+                        _ParentContactCard(contact: data.parentContacts[i]),
+                        if (i < data.parentContacts.length - 1)
+                          const SizedBox(height: AksharaSpacing.s2),
+                      ],
+                      const SizedBox(height: AksharaSpacing.s4),
+                      const AksharaSectionHeader(
+                        title: 'Academic summary',
+                        fixedHeight: false,
+                        spacingBelow: AksharaSpacing.s3,
+                      ),
+                      for (var i = 0; i < data.academicSummary.length; i++) ...[
+                        ProfileInfoRow(
+                          icon: Icons.school_outlined,
+                          label: data.academicSummary[i].label,
+                          value: data.academicSummary[i].value,
+                        ),
+                        if (i < data.academicSummary.length - 1)
+                          const SizedBox(height: AksharaSpacing.s2),
+                      ],
+                      const SizedBox(height: AksharaSpacing.s4),
+                      const AksharaSectionHeader(
+                        title: 'Settings',
+                        fixedHeight: false,
+                        spacingBelow: AksharaSpacing.s3,
+                      ),
+                      ProfileInfoRow(
+                        key: QaTestKeys.appearanceSettingsLink,
+                        icon: Icons.brightness_6_outlined,
+                        label: 'Appearance',
+                        value: 'Light, dark, or match your device',
+                        onTap: () =>
+                            context.push(RouteNames.appearanceSettings),
+                      ),
+                      const SizedBox(height: AksharaSpacing.s2),
+                      Semantics(
+                        button: onSettingsTap != null,
+                        label: onSettingsTap != null
+                            ? 'App settings'
+                            : 'App settings, coming soon',
+                        child: ListTile(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: AksharaRadius.card,
+                            side: BorderSide(
+                              color: context.colors.outlineVariant,
+                            ),
                           ),
-                        ),
-                        tileColor: context.colors.surface,
-                        leading: Icon(
-                          Icons.settings_outlined,
-                          color: context.colors.onSurfaceVariant,
-                        ),
-                        title: Text(
-                          'App settings',
-                          style: context.aksharaText.bodyLarge,
-                        ),
-                        subtitle: Text(
-                          'Notifications, language, and privacy — coming soon',
-                          style: context.aksharaText.bodySmall.copyWith(
+                          tileColor: context.colors.surface,
+                          leading: Icon(
+                            Icons.settings_outlined,
                             color: context.colors.onSurfaceVariant,
                           ),
+                          title: Text(
+                            'App settings',
+                            style: context.aksharaText.bodyLarge,
+                          ),
+                          subtitle: Text(
+                            'Notifications, language, and privacy — coming soon',
+                            style: context.aksharaText.bodySmall.copyWith(
+                              color: context.colors.onSurfaceVariant,
+                            ),
+                          ),
+                          trailing: onSettingsTap == null
+                              ? null
+                              : Icon(
+                                  Icons.chevron_right,
+                                  color: context.colors.onSurfaceVariant,
+                                ),
+                          onTap: onSettingsTap,
                         ),
-                        trailing: onSettingsTap == null
-                            ? null
-                            : Icon(
-                                Icons.chevron_right,
-                                color: context.colors.onSurfaceVariant,
-                              ),
-                        onTap: onSettingsTap,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

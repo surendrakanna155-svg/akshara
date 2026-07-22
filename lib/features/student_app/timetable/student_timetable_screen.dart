@@ -16,7 +16,8 @@ class StudentTimetableScreen extends ConsumerWidget {
   final VoidCallback? onNotificationsTap;
 
   static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
-  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
+  static const double _tabletMaxContentWidth =
+      AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -24,143 +25,149 @@ class StudentTimetableScreen extends ConsumerWidget {
     final data = ref.watch(studentTimetableProvider);
     final isLoading =
         ref.watch(studentTimetableLoadingProvider) || async.isLoading;
-    final hasError =
-        ref.watch(studentTimetableErrorProvider) || async.hasError;
+    final hasError = ref.watch(studentTimetableErrorProvider) || async.hasError;
     final isEmpty = ref.watch(studentTimetableEmptyProvider);
     final selectedDay = data.selectedDay;
 
     return Scaffold(
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'Timetable',
-        subtitle: async.hasValue
-            ? '${data.childName} · ${data.childClass}'
-            : null,
+        subtitle:
+            async.hasValue ? '${data.childName} · ${data.childClass}' : null,
         unreadNotifications: async.hasValue ? data.unreadNotifications : 0,
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,
       ),
-      body: switch ((isLoading, hasError, isEmpty)) {
-        (true, _, _) =>
-          const AksharaLoadingState(semanticLabel: 'Loading timetable'),
-        (_, true, _) => AksharaErrorState(
-            message: 'Unable to load timetable. Please try again.',
-            onRetry: () {
-              ref.read(studentTimetableErrorProvider.notifier).state = false;
-              ref.invalidate(studentTimetableFutureProvider);
-            },
-          ),
-        (_, _, true) => const AksharaEmptyState(
-            message: 'No timetable is available for this week.',
-            icon: Icons.calendar_today_outlined,
-          ),
-        _ => LayoutBuilder(
-            builder: (context, constraints) {
-              final isTablet = constraints.maxWidth >= _tabletBreakpoint;
-              final horizontalPadding = isTablet
-                  ? AksharaSpacing.tabletMargin
-                  : AksharaSpacing.mobileMargin;
+      // DS V2 P4 — premium persona canvas behind the timetable content. The KPI
+      // tiles are honest counts (no headline %), so this is a canvas-cohesion
+      // pass — presentation only.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: switch ((isLoading, hasError, isEmpty)) {
+          (true, _, _) =>
+            const AksharaLoadingState(semanticLabel: 'Loading timetable'),
+          (_, true, _) => AksharaErrorState(
+              message: 'Unable to load timetable. Please try again.',
+              onRetry: () {
+                ref.read(studentTimetableErrorProvider.notifier).state = false;
+                ref.invalidate(studentTimetableFutureProvider);
+              },
+            ),
+          (_, _, true) => const AksharaEmptyState(
+              message: 'No timetable is available for this week.',
+              icon: Icons.calendar_today_outlined,
+            ),
+          _ => LayoutBuilder(
+              builder: (context, constraints) {
+                final isTablet = constraints.maxWidth >= _tabletBreakpoint;
+                final horizontalPadding = isTablet
+                    ? AksharaSpacing.tabletMargin
+                    : AksharaSpacing.mobileMargin;
 
-              return Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth:
-                        isTablet ? _tabletMaxContentWidth : double.infinity,
-                  ),
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.fromLTRB(
-                      horizontalPadding,
-                      AksharaSpacing.s4,
-                      horizontalPadding,
-                      AksharaSpacing.s6,
+                return Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth:
+                          isTablet ? _tabletMaxContentWidth : double.infinity,
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Semantics(
-                          container: true,
-                          label: 'Week ${data.weekRangeLabel}',
-                          child: Text(
-                            data.weekRangeLabel,
-                            style: context.aksharaText.labelLarge.copyWith(
-                              color: context.colors.onSurfaceVariant,
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.fromLTRB(
+                        horizontalPadding,
+                        AksharaSpacing.s4,
+                        horizontalPadding,
+                        AksharaSpacing.s6,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Semantics(
+                            container: true,
+                            label: 'Week ${data.weekRangeLabel}',
+                            child: Text(
+                              data.weekRangeLabel,
+                              style: context.aksharaText.labelLarge.copyWith(
+                                color: context.colors.onSurfaceVariant,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: AksharaSpacing.s3),
-                        SizedBox(
-                          height: 88,
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Expanded(
-                                child: AksharaKpiCard(
-                                  value: '${data.totalPeriodsThisWeek}',
-                                  subtitle: 'Periods this week',
-                                  accent: KpiAccent.primary,
-                                ),
-                              ),
-                              const SizedBox(width: AksharaSpacing.s2),
-                              Expanded(
-                                child: AksharaKpiCard(
-                                  value: '${data.upcomingPeriodsToday}',
-                                  subtitle: 'Upcoming today',
-                                  accent: KpiAccent.warning,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (data.scheduleChangeMessage != null) ...[
                           const SizedBox(height: AksharaSpacing.s3),
-                          AksharaWarningBanner(
-                            message: data.scheduleChangeMessage!,
-                          ),
-                        ],
-                        const SizedBox(height: AksharaSpacing.s4),
-                        DaySelectorStrip(
-                          days: data.days,
-                          onDayTap: (dayId) => ref
-                              .read(studentTimetableSelectedDayProvider.notifier)
-                              .state = dayId,
-                        ),
-                        const SizedBox(height: AksharaSpacing.s4),
-                        AksharaSectionHeader(
-                          title: selectedDay?.fullLabel ?? 'Schedule',
-                          fixedHeight: false,
-                          spacingBelow: AksharaSpacing.s3,
-                        ),
-                        if (selectedDay == null || selectedDay.periods.isEmpty)
-                          const AksharaEmptyState(
-                            message: 'No classes scheduled for this day.',
-                            icon: Icons.event_available_outlined,
-                            compact: true,
-                          )
-                        else
-                          Column(
-                            children: [
-                              for (var i = 0;
-                                  i < selectedDay.periods.length;
-                                  i++) ...[
-                                TimetablePeriodRow(
-                                  period: selectedDay.periods[i],
-                                ),
-                                if (i < selectedDay.periods.length - 1)
-                                  const SizedBox(
-                                    height: AksharaSpacing.s3,
+                          SizedBox(
+                            height: 88,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  child: AksharaKpiCard(
+                                    value: '${data.totalPeriodsThisWeek}',
+                                    subtitle: 'Periods this week',
+                                    accent: KpiAccent.primary,
                                   ),
+                                ),
+                                const SizedBox(width: AksharaSpacing.s2),
+                                Expanded(
+                                  child: AksharaKpiCard(
+                                    value: '${data.upcomingPeriodsToday}',
+                                    subtitle: 'Upcoming today',
+                                    accent: KpiAccent.warning,
+                                  ),
+                                ),
                               ],
-                            ],
+                            ),
                           ),
-                      ],
+                          if (data.scheduleChangeMessage != null) ...[
+                            const SizedBox(height: AksharaSpacing.s3),
+                            AksharaWarningBanner(
+                              message: data.scheduleChangeMessage!,
+                            ),
+                          ],
+                          const SizedBox(height: AksharaSpacing.s4),
+                          DaySelectorStrip(
+                            days: data.days,
+                            onDayTap: (dayId) => ref
+                                .read(studentTimetableSelectedDayProvider
+                                    .notifier)
+                                .state = dayId,
+                          ),
+                          const SizedBox(height: AksharaSpacing.s4),
+                          AksharaSectionHeader(
+                            title: selectedDay?.fullLabel ?? 'Schedule',
+                            fixedHeight: false,
+                            spacingBelow: AksharaSpacing.s3,
+                          ),
+                          if (selectedDay == null ||
+                              selectedDay.periods.isEmpty)
+                            const AksharaEmptyState(
+                              message: 'No classes scheduled for this day.',
+                              icon: Icons.event_available_outlined,
+                              compact: true,
+                            )
+                          else
+                            Column(
+                              children: [
+                                for (var i = 0;
+                                    i < selectedDay.periods.length;
+                                    i++) ...[
+                                  TimetablePeriodRow(
+                                    period: selectedDay.periods[i],
+                                  ),
+                                  if (i < selectedDay.periods.length - 1)
+                                    const SizedBox(
+                                      height: AksharaSpacing.s3,
+                                    ),
+                                ],
+                              ],
+                            ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              );
-            },
-          ),
-      },
+                );
+              },
+            ),
+        },
+      ),
     );
   }
 }

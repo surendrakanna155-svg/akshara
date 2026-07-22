@@ -32,7 +32,7 @@ class StudentReportCardScreen extends ConsumerWidget {
 
     return Scaffold(
       key: QaTestKeys.studentReportCardScreen,
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'Report Card',
         subtitle: '${data.studentName} · ${data.classLabel}',
@@ -54,39 +54,45 @@ class StudentReportCardScreen extends ConsumerWidget {
             ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(AksharaSpacing.s4),
-        children: [
-          AksharaSurfaceCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Term summary', style: context.aksharaText.titleLarge),
-                const SizedBox(height: AksharaSpacing.s2),
-                Text(
-                  'Average: ${data.averagePercent.toStringAsFixed(1)}%',
-                  style: context.aksharaText.kpiValue,
-                ),
-              ],
+      // DS V2 P4 — premium persona canvas behind the report-card content. The
+      // term-average % stays in its summary card (no ring — it is honestly 0
+      // until results publish); presentation only.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: ListView(
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
+          children: [
+            AksharaSurfaceCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Term summary', style: context.aksharaText.titleLarge),
+                  const SizedBox(height: AksharaSpacing.s2),
+                  Text(
+                    'Average: ${data.averagePercent.toStringAsFixed(1)}%',
+                    style: context.aksharaText.kpiValue,
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: AksharaSpacing.s4),
-          const AksharaSectionHeader(title: 'Subject scores'),
-          const SizedBox(height: AksharaSpacing.s3),
-          for (final score in data.subjectScores)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
-              child: SubjectScoreRow(score: score),
-            ),
-          const SizedBox(height: AksharaSpacing.s4),
-          const AksharaSectionHeader(title: 'Recent results'),
-          const SizedBox(height: AksharaSpacing.s3),
-          for (final result in data.examResults)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
-              child: ExamResultRow(result: result),
-            ),
-        ],
+            const SizedBox(height: AksharaSpacing.s4),
+            const AksharaSectionHeader(title: 'Subject scores'),
+            const SizedBox(height: AksharaSpacing.s3),
+            for (final score in data.subjectScores)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
+                child: SubjectScoreRow(score: score),
+              ),
+            const SizedBox(height: AksharaSpacing.s4),
+            const AksharaSectionHeader(title: 'Recent results'),
+            const SizedBox(height: AksharaSpacing.s3),
+            for (final result in data.examResults)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
+                child: ExamResultRow(result: result),
+              ),
+          ],
+        ),
       ),
     );
   }
