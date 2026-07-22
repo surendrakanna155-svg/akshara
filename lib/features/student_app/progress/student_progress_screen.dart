@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
-import '../../../theme/theme_extensions.dart';
 import '../exams/student_exams_provider.dart';
 import '../exams/widgets/subject_score_row.dart';
 
@@ -29,7 +28,7 @@ class StudentProgressScreen extends ConsumerWidget {
 
     return Scaffold(
       key: QaTestKeys.studentProgressScreen,
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'My Progress',
         subtitle: '${data.studentName} · ${data.classLabel}',
@@ -37,27 +36,32 @@ class StudentProgressScreen extends ConsumerWidget {
         onAiTap: onAiTap,
         onNotificationsTap: onNotificationsTap,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(AksharaSpacing.s4),
-        children: [
-          AksharaInsightCard(
-            message: weakSubjects.isEmpty
-                ? 'Strong performance across subjects — keep your revision streak.'
-                : 'Focus revision on ${weakSubjects.join(', ')} this week.',
-            actionLabel: 'Ask AI tutor',
-            icon: Icons.auto_stories_outlined,
-            semanticLabelPrefix: 'AI study guidance',
-            onAction: onAiTap,
-          ),
-          const SizedBox(height: AksharaSpacing.s4),
-          const AksharaSectionHeader(title: 'Subject progress'),
-          const SizedBox(height: AksharaSpacing.s3),
-          for (final score in data.subjectScores)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
-              child: SubjectScoreRow(score: score),
+      // DS V2 P4 — premium persona canvas behind the progress content. The
+      // per-subject scores stay as-is (no single headline %); presentation only.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: ListView(
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
+          children: [
+            AksharaInsightCard(
+              message: weakSubjects.isEmpty
+                  ? 'Strong performance across subjects — keep your revision streak.'
+                  : 'Focus revision on ${weakSubjects.join(', ')} this week.',
+              actionLabel: 'Ask AI tutor',
+              icon: Icons.auto_stories_outlined,
+              semanticLabelPrefix: 'AI study guidance',
+              onAction: onAiTap,
             ),
-        ],
+            const SizedBox(height: AksharaSpacing.s4),
+            const AksharaSectionHeader(title: 'Subject progress'),
+            const SizedBox(height: AksharaSpacing.s3),
+            for (final score in data.subjectScores)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
+                child: SubjectScoreRow(score: score),
+              ),
+          ],
+        ),
       ),
     );
   }
