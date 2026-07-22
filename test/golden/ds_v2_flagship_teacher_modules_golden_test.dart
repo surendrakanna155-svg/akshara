@@ -3,6 +3,9 @@ library;
 
 import 'package:akshara_erp/features/teacher/attendance/teacher_attendance_screen.dart';
 import 'package:akshara_erp/features/teacher/attendance/teacher_my_attendance_screen.dart';
+import 'package:akshara_erp/features/teacher/homework/teacher_homework_create_screen.dart';
+import 'package:akshara_erp/features/teacher/homework/teacher_homework_history_screen.dart';
+import 'package:akshara_erp/features/teacher/homework/teacher_homework_screen.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:akshara_erp/theme/persona_accents.dart';
 import 'package:flutter/material.dart';
@@ -75,6 +78,53 @@ void main() {
         matchesGoldenFile(
           goldenFileName(
               'ds_v2_flagship_teacher_my_attendance_${mode.label}', '390x1280'),
+        ),
+      );
+    });
+
+    testWidgets('teacher homework review · ${mode.label}', (tester) async {
+      await pump(
+        tester,
+        screen: const TeacherHomeworkScreen(),
+        dark: mode.dark,
+      );
+      await expectLater(
+        find.byType(TeacherHomeworkScreen),
+        matchesGoldenFile(
+          goldenFileName(
+              'ds_v2_flagship_teacher_homework_${mode.label}', '390x1280'),
+        ),
+      );
+    });
+
+    testWidgets('teacher homework create · ${mode.label}', (tester) async {
+      await pump(
+        tester,
+        screen: const TeacherHomeworkCreateScreen(),
+        dark: mode.dark,
+      );
+      await expectLater(
+        find.byType(TeacherHomeworkCreateScreen),
+        matchesGoldenFile(
+          goldenFileName(
+              'ds_v2_flagship_teacher_homework_create_${mode.label}',
+              '390x1280'),
+        ),
+      );
+    });
+
+    testWidgets('teacher homework history · ${mode.label}', (tester) async {
+      await pump(
+        tester,
+        screen: const TeacherHomeworkHistoryScreen(),
+        dark: mode.dark,
+      );
+      await expectLater(
+        find.byType(TeacherHomeworkHistoryScreen),
+        matchesGoldenFile(
+          goldenFileName(
+              'ds_v2_flagship_teacher_homework_history_${mode.label}',
+              '390x1280'),
         ),
       );
     });

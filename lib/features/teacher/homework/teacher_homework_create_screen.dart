@@ -92,8 +92,18 @@ class _TeacherHomeworkCreateScreenState
   /// Human "08 Jul 2026" label shown in the field and derived alongside the ISO.
   String _formatDue(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     final d = date.day.toString().padLeft(2, '0');
     return '$d ${months[date.month - 1]} ${date.year}';
@@ -118,7 +128,7 @@ class _TeacherHomeworkCreateScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'Create Homework',
         showAi: true,
@@ -130,210 +140,215 @@ class _TeacherHomeworkCreateScreenState
         // F-164 — the profile avatar opens the teacher profile, not Home.
         onProfileTap: () => context.go(RouteNames.teacherProfile),
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              Text(
-                'Assignment is delivered to parent and student in their preferred language.',
-                style: context.aksharaText.bodyMedium,
-              ),
-              const SizedBox(height: AksharaSpacing.s4),
-              // HWK-3 — multi-section: add one or more class-sections.
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      key: QaTestKeys.teacherHomeworkClassChipsField,
-                      controller: _classController,
-                      textInputAction: TextInputAction.done,
-                      onFieldSubmitted: (_) => _addClassLabel(),
-                      decoration: const InputDecoration(
-                        labelText: 'Class label',
-                        hintText: 'e.g. 8-A',
-                        border: OutlineInputBorder(),
-                      ),
-                      // Only required when no chips have been added yet.
-                      validator: (v) => (_classLabels.isEmpty &&
-                              (v == null || v.trim().isEmpty))
-                          ? 'Add at least one class'
-                          : null,
-                    ),
-                  ),
-                  const SizedBox(width: AksharaSpacing.s2),
-                  IconButton.filledTonal(
-                    key: QaTestKeys.teacherHomeworkAddClassButton,
-                    onPressed: _addClassLabel,
-                    icon: const Icon(Icons.add),
-                    tooltip: 'Add class',
-                  ),
-                ],
-              ),
-              if (_classLabels.isNotEmpty) ...[
-                const SizedBox(height: AksharaSpacing.s2),
-                Wrap(
-                  spacing: AksharaSpacing.s2,
-                  runSpacing: AksharaSpacing.s1,
+      // DS V2 P4 — premium persona canvas behind the create form.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              children: [
+                Text(
+                  'Assignment is delivered to parent and student in their preferred language.',
+                  style: context.aksharaText.bodyMedium,
+                ),
+                const SizedBox(height: AksharaSpacing.s4),
+                // HWK-3 — multi-section: add one or more class-sections.
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (final label in _classLabels)
-                      InputChip(
-                        label: Text(label),
-                        onDeleted: () =>
-                            setState(() => _classLabels.remove(label)),
+                    Expanded(
+                      child: TextFormField(
+                        key: QaTestKeys.teacherHomeworkClassChipsField,
+                        controller: _classController,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => _addClassLabel(),
+                        decoration: const InputDecoration(
+                          labelText: 'Class label',
+                          hintText: 'e.g. 8-A',
+                          border: OutlineInputBorder(),
+                        ),
+                        // Only required when no chips have been added yet.
+                        validator: (v) => (_classLabels.isEmpty &&
+                                (v == null || v.trim().isEmpty))
+                            ? 'Add at least one class'
+                            : null,
                       ),
+                    ),
+                    const SizedBox(width: AksharaSpacing.s2),
+                    IconButton.filledTonal(
+                      key: QaTestKeys.teacherHomeworkAddClassButton,
+                      onPressed: _addClassLabel,
+                      icon: const Icon(Icons.add),
+                      tooltip: 'Add class',
+                    ),
                   ],
                 ),
-              ],
-              const SizedBox(height: AksharaSpacing.s3),
-              TextFormField(
-                controller: _subjectController,
-                decoration: const InputDecoration(
-                  labelText: 'Subject',
-                  border: OutlineInputBorder(),
+                if (_classLabels.isNotEmpty) ...[
+                  const SizedBox(height: AksharaSpacing.s2),
+                  Wrap(
+                    spacing: AksharaSpacing.s2,
+                    runSpacing: AksharaSpacing.s1,
+                    children: [
+                      for (final label in _classLabels)
+                        InputChip(
+                          label: Text(label),
+                          onDeleted: () =>
+                              setState(() => _classLabels.remove(label)),
+                        ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: AksharaSpacing.s3),
+                TextFormField(
+                  controller: _subjectController,
+                  decoration: const InputDecoration(
+                    labelText: 'Subject',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Required' : null,
-              ),
-              const SizedBox(height: AksharaSpacing.s3),
-              TextFormField(
-                controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Assignment title (English)',
-                  hintText: 'e.g. Algebra practice worksheet',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: AksharaSpacing.s3),
+                TextFormField(
+                  controller: _titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Assignment title (English)',
+                    hintText: 'e.g. Algebra practice worksheet',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Required' : null,
-              ),
-              const SizedBox(height: AksharaSpacing.s3),
-              FormField<DateTime>(
-                validator: (_) =>
-                    _dueDate == null ? 'Pick a due date' : null,
-                builder: (field) {
-                  return InkWell(
-                    key: QaTestKeys.teacherHomeworkDueDateField,
-                    onTap: () async {
-                      await _pickDueDate();
-                      field.didChange(_dueDate);
-                    },
-                    child: InputDecorator(
-                      decoration: InputDecoration(
-                        labelText: 'Due date',
-                        border: const OutlineInputBorder(),
-                        errorText: field.errorText,
-                        suffixIcon: const Icon(Icons.calendar_today_outlined),
+                const SizedBox(height: AksharaSpacing.s3),
+                FormField<DateTime>(
+                  validator: (_) => _dueDate == null ? 'Pick a due date' : null,
+                  builder: (field) {
+                    return InkWell(
+                      key: QaTestKeys.teacherHomeworkDueDateField,
+                      onTap: () async {
+                        await _pickDueDate();
+                        field.didChange(_dueDate);
+                      },
+                      child: InputDecorator(
+                        decoration: InputDecoration(
+                          labelText: 'Due date',
+                          border: const OutlineInputBorder(),
+                          errorText: field.errorText,
+                          suffixIcon: const Icon(Icons.calendar_today_outlined),
+                        ),
+                        child: Text(
+                          _dueDate == null
+                              ? 'Select a due date'
+                              : _formatDue(_dueDate!),
+                          style: context.aksharaText.bodyLarge,
+                        ),
                       ),
-                      child: Text(
-                        _dueDate == null
-                            ? 'Select a due date'
-                            : _formatDue(_dueDate!),
-                        style: context.aksharaText.bodyLarge,
-                      ),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: AksharaSpacing.s3),
-              TextFormField(
-                controller: _studentController,
-                decoration: const InputDecoration(
-                  labelText: 'Student name (blank = whole class)',
-                  border: OutlineInputBorder(),
+                    );
+                  },
                 ),
-              ),
-              const SizedBox(height: AksharaSpacing.s3),
-              // HWK-4 — optional teacher attachment (reference/label, not a real
-              // file upload: paste a name + an optional link/reference).
-              TextFormField(
-                key: QaTestKeys.teacherHomeworkAttachmentNameField,
-                controller: _attachmentNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Attachment name (optional)',
-                  hintText: 'e.g. worksheet.pdf',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: AksharaSpacing.s3),
+                TextFormField(
+                  controller: _studentController,
+                  decoration: const InputDecoration(
+                    labelText: 'Student name (blank = whole class)',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-              const SizedBox(height: AksharaSpacing.s3),
-              TextFormField(
-                key: QaTestKeys.teacherHomeworkAttachmentRefField,
-                controller: _attachmentRefController,
-                decoration: const InputDecoration(
-                  labelText: 'Attachment reference / link (optional)',
-                  hintText: 'e.g. shared drive link',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: AksharaSpacing.s3),
+                // HWK-4 — optional teacher attachment (reference/label, not a real
+                // file upload: paste a name + an optional link/reference).
+                TextFormField(
+                  key: QaTestKeys.teacherHomeworkAttachmentNameField,
+                  controller: _attachmentNameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Attachment name (optional)',
+                    hintText: 'e.g. worksheet.pdf',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-              const SizedBox(height: AksharaSpacing.s5),
-              FilledButton(
-                key: QaTestKeys.teacherHomeworkCreateButton,
-                onPressed: () async {
-                  // HWK-3 — fold any typed-but-not-added class into the list so
-                  // a teacher who types a class and taps Create isn't dropped.
-                  final typed = _classController.text.trim();
-                  if (typed.isNotEmpty && !_classLabels.contains(typed)) {
-                    setState(() => _classLabels.add(typed));
-                    _classController.clear();
-                  }
-                  if (!(_formKey.currentState?.validate() ?? false)) return;
-                  if (_classLabels.isEmpty) return;
-                  final dueIso = _dueDateIso;
-                  if (dueIso == null) return;
+                const SizedBox(height: AksharaSpacing.s3),
+                TextFormField(
+                  key: QaTestKeys.teacherHomeworkAttachmentRefField,
+                  controller: _attachmentRefController,
+                  decoration: const InputDecoration(
+                    labelText: 'Attachment reference / link (optional)',
+                    hintText: 'e.g. shared drive link',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: AksharaSpacing.s5),
+                FilledButton(
+                  key: QaTestKeys.teacherHomeworkCreateButton,
+                  onPressed: () async {
+                    // HWK-3 — fold any typed-but-not-added class into the list so
+                    // a teacher who types a class and taps Create isn't dropped.
+                    final typed = _classController.text.trim();
+                    if (typed.isNotEmpty && !_classLabels.contains(typed)) {
+                      setState(() => _classLabels.add(typed));
+                      _classController.clear();
+                    }
+                    if (!(_formKey.currentState?.validate() ?? false)) return;
+                    if (_classLabels.isEmpty) return;
+                    final dueIso = _dueDateIso;
+                    if (dueIso == null) return;
 
-                  final messenger = ScaffoldMessenger.of(context);
-                  final router = GoRouter.of(context);
-                  final studentName = _studentController.text.trim();
-                  final attachmentName = _attachmentNameController.text.trim();
-                  final attachmentRef = _attachmentRefController.text.trim();
+                    final messenger = ScaffoldMessenger.of(context);
+                    final router = GoRouter.of(context);
+                    final studentName = _studentController.text.trim();
+                    final attachmentName =
+                        _attachmentNameController.text.trim();
+                    final attachmentRef = _attachmentRefController.text.trim();
 
-                  try {
-                    await ref
-                        .read(createTeacherHomeworkProvider.notifier)
-                        .execute(
-                          TeacherHomeworkCreateRequest(
-                            classLabel: _classLabels.first,
-                            classLabels: List<String>.from(_classLabels),
-                            subject: _subjectController.text.trim(),
-                            title: _titleController.text.trim(),
-                            dueDate: dueIso,
-                            dueLabel: _formatDue(_dueDate!),
-                            studentName:
-                                studentName.isEmpty ? null : studentName,
-                            attachmentName:
-                                attachmentName.isEmpty ? null : attachmentName,
-                            attachmentRef:
-                                attachmentRef.isEmpty ? null : attachmentRef,
+                    try {
+                      await ref
+                          .read(createTeacherHomeworkProvider.notifier)
+                          .execute(
+                            TeacherHomeworkCreateRequest(
+                              classLabel: _classLabels.first,
+                              classLabels: List<String>.from(_classLabels),
+                              subject: _subjectController.text.trim(),
+                              title: _titleController.text.trim(),
+                              dueDate: dueIso,
+                              dueLabel: _formatDue(_dueDate!),
+                              studentName:
+                                  studentName.isEmpty ? null : studentName,
+                              attachmentName: attachmentName.isEmpty
+                                  ? null
+                                  : attachmentName,
+                              attachmentRef:
+                                  attachmentRef.isEmpty ? null : attachmentRef,
+                            ),
+                          );
+
+                      final error =
+                          ref.read(createTeacherHomeworkProvider).error;
+                      if (error != null) {
+                        messenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('Could not create homework.'),
                           ),
                         );
+                        return;
+                      }
 
-                    final error =
-                        ref.read(createTeacherHomeworkProvider).error;
-                    if (error != null) {
+                      messenger.showSnackBar(
+                        const SnackBar(content: Text('Homework created.')),
+                      );
+                      router.go(RouteNames.teacherHomework);
+                    } catch (_) {
                       messenger.showSnackBar(
                         const SnackBar(
                           content: Text('Could not create homework.'),
                         ),
                       );
-                      return;
                     }
-
-                    messenger.showSnackBar(
-                      const SnackBar(content: Text('Homework created.')),
-                    );
-                    router.go(RouteNames.teacherHomework);
-                  } catch (_) {
-                    messenger.showSnackBar(
-                      const SnackBar(
-                        content: Text('Could not create homework.'),
-                      ),
-                    );
-                  }
-                },
-                child: const Text('Create'),
-              ),
-            ],
+                  },
+                  child: const Text('Create'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
