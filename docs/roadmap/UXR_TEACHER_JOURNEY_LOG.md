@@ -38,7 +38,16 @@ worktree branch onto the correct uxr tip (`19c47710`) with `git reset --hard`
 | 5 | My Leave (TA-07) + Student Leave Approvals | Premium canvas on all states of the leave balance/history and the class-teacher approval list | **No** — leave balances are day counts (Casual/Sick/Earned); approvals is a list | analyze clean; leave suite + leave-approvals + module-screens **+22**; goldens 4 | `18502c45` |
 | 6 | Parent Communication (workflow) + Messages inbox (TA-06) | Premium canvas on the communication workflow and the messages inbox/compose. **Conversation/chat left plain** (canvas hurts pale chat-bubble contrast). Also fixed a latent 6px horizontal overflow on the "Select student" dropdown (`isExpanded` + item ellipsis, matching the homework dropdown) surfaced by the golden | **No** — form / list, no headline % | analyze clean; communication + messages suites + governance + module-screens **+30**; goldens 4 | `b944922e` |
 | 7 | Student Risk 360 | Premium canvas behind the risk 360 detail | **No** — see ring decision below | analyze clean; qw5 intervention authz **+3**; goldens 2 (`SIS-STU-10421`) | `eb42a520` |
-| 8 | Profile + Settings | Premium canvas behind the identity/detail profile and the preferences list (dropped a now-unused import on settings) | **No** — identity / preferences, no headline % | analyze clean; profile + settings screen tests **+5**; goldens 4 | `<pending>` |
+| 8 | Profile + Settings | Premium canvas behind the identity/detail profile and the preferences list (dropped a now-unused import on settings) | **No** — identity / preferences, no headline % | analyze clean; profile + settings screen tests **+5**; goldens 4 | `46d55f15` |
+| 9 | Class-teacher Dashboard (TA-01 variant) | Premium canvas (with the book motif, matching the main teacher dashboard) behind the class-teacher overview; added a `SingleChildScrollView` so the canvas fills + the dashboard is overflow-safe (dropped a now-unused import) | **No** — a navigation/quick-actions overview, no headline % (the main teacher dashboard already carries the present-rate ring, Phase 3) | analyze clean; navigation-pilot + persona-nav-map **+71**; goldens 2 | `<pending>` |
+
+**Total: 16 screens migrated** across 9 certified slices — attendance marking,
+my-attendance (ring), homework review/create/history, exams (ring), timetable,
+today, my-leave, leave-approvals, parent-communication, messages inbox, student
+risk, profile, settings, class-teacher dashboard. **2 signature rings** added
+(my-attendance rate + exams class-average). The **conversation/chat** screen was
+deliberately left plain, and the **teacher dashboard** was already done in Phase 3.
+Golden file: **32 goldens** (16 screens × Light+Dark).
 
 ## Ring decisions (honest-state)
 - **My Attendance** monthly rate → ring. Derived only from data already loaded
@@ -71,5 +80,9 @@ type/text. No parent (`lib/features/parent/**`), student (`lib/features/student_
 management, theme, or shared widget file was touched.
 
 ## Shared-file changes needed (deliberately NOT made)
-None so far. Rings/canvas reuse the existing shared primitives
-(`AksharaProgressRing`, `AksharaPremiumBackground`, `AksharaPersonaAccent.teacher`).
+None. Every ring/canvas reuses the existing shared primitives
+(`AksharaProgressRing`, `AksharaPremiumBackground`, `AksharaPersonaAccent.teacher`) —
+no `lib/shared/**`, theme, `lib/features/parent/**`, `lib/features/student_app/**`,
+or `lib/features/management/**` file was touched. The two small latent-bug fixes
+(the communication dropdown overflow, and the class-teacher dashboard scroll/
+overflow-safety) live entirely inside teacher-owned files.

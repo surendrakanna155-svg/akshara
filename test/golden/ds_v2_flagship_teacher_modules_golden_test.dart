@@ -3,6 +3,7 @@ library;
 
 import 'package:akshara_erp/features/teacher/attendance/teacher_attendance_screen.dart';
 import 'package:akshara_erp/features/teacher/attendance/teacher_my_attendance_screen.dart';
+import 'package:akshara_erp/features/teacher/dashboard/teacher_class_teacher_dashboard_screen.dart';
 import 'package:akshara_erp/features/teacher/communication/teacher_parent_communication_screen.dart';
 import 'package:akshara_erp/features/teacher/exams/teacher_exams_screen.dart';
 import 'package:akshara_erp/features/teacher/homework/teacher_homework_create_screen.dart';
@@ -286,6 +287,23 @@ void main() {
         matchesGoldenFile(
           goldenFileName(
               'ds_v2_flagship_teacher_settings_${mode.label}', '390x1280'),
+        ),
+      );
+    });
+
+    testWidgets('teacher class-teacher dashboard · ${mode.label}',
+        (tester) async {
+      await pump(
+        tester,
+        screen: const TeacherClassTeacherDashboardScreen(),
+        dark: mode.dark,
+      );
+      await expectLater(
+        find.byType(TeacherClassTeacherDashboardScreen),
+        matchesGoldenFile(
+          goldenFileName(
+              'ds_v2_flagship_teacher_class_teacher_dashboard_${mode.label}',
+              '390x1280'),
         ),
       );
     });
