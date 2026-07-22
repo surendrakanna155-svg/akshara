@@ -44,7 +44,7 @@ class ParentFeesScreen extends ConsumerWidget {
     final hasError = ref.watch(parentFeesErrorProvider);
 
     return Scaffold(
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'Fees',
         unreadNotifications: data.unreadNotifications,
@@ -59,115 +59,127 @@ class ParentFeesScreen extends ConsumerWidget {
         },
         onNotificationsTap: onNotificationsTap,
       ),
-      body: isLoading
-          ? const AksharaLoadingState()
-          : hasError
-              ? AksharaErrorState(
-                  message: 'Unable to load fees right now.',
-                  onRetry: () =>
-                      ref.read(parentFeesErrorProvider.notifier).state = false,
-                )
-              : LayoutBuilder(
-                  builder: (context, constraints) {
-                    final isTablet = constraints.maxWidth >= _tabletBreakpoint;
-                    final horizontalPadding = isTablet
-                        ? AksharaSpacing.tabletMargin
-                        : AksharaSpacing.mobileMargin;
-                    final showStickyCta = !isTablet && data.hasPending;
+      // DS V2 Phase 3 — premium persona canvas behind the fees content, cohesive
+      // with the dashboards. Money display + pay flow below are unchanged.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: isLoading
+            ? const AksharaLoadingState()
+            : hasError
+                ? AksharaErrorState(
+                    message: 'Unable to load fees right now.',
+                    onRetry: () => ref
+                        .read(parentFeesErrorProvider.notifier)
+                        .state = false,
+                  )
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isTablet =
+                          constraints.maxWidth >= _tabletBreakpoint;
+                      final horizontalPadding = isTablet
+                          ? AksharaSpacing.tabletMargin
+                          : AksharaSpacing.mobileMargin;
+                      final showStickyCta = !isTablet && data.hasPending;
 
-                    return Align(
-                      alignment: Alignment.topCenter,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxWidth: isTablet
-                              ? _tabletMaxContentWidth
-                              : double.infinity,
-                        ),
-                        child: Column(
-                          children: [
-                            Expanded(
-                              child: RefreshIndicator(
-                                onRefresh: () async =>
-                                    ref.invalidate(parentFeesFutureProvider),
-                                child: SingleChildScrollView(
-                                  physics:
-                                      const AlwaysScrollableScrollPhysics(),
-                                  padding: EdgeInsets.fromLTRB(
-                                    horizontalPadding,
-                                    AksharaSpacing.s4,
-                                    horizontalPadding,
-                                    showStickyCta ? 88 : AksharaSpacing.s6,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      FeeSummaryHero(
-                                        pendingAmount: data.pendingAmount,
-                                        isOverdue: data.isOverdue,
-                                        dueLabel: data.dueLabel,
-                                        paidAmount: data.paidAmount,
-                                        annualAmount: data.annualAmount,
-                                        showInlinePayButton: isTablet,
-                                        onPayNow: data.hasPending
-                                            ? () => _handlePayNow(
-                                                installmentId: 'term_2')
-                                            : null,
-                                      ),
-                                      const SizedBox(height: AksharaSpacing.s4),
-                                      FeeCollectionProgress(
-                                        percent: data.progressPercent,
-                                      ),
-                                      const SizedBox(height: AksharaSpacing.s4),
-                                      InstallmentTimeline(
-                                        installments: data.installments,
-                                        onPayInstallment: (installment) =>
-                                            _handlePayNow(
-                                          installmentId: installment.id,
+                      return Align(
+                        alignment: Alignment.topCenter,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: isTablet
+                                ? _tabletMaxContentWidth
+                                : double.infinity,
+                          ),
+                          child: Column(
+                            children: [
+                              Expanded(
+                                child: RefreshIndicator(
+                                  onRefresh: () async =>
+                                      ref.invalidate(parentFeesFutureProvider),
+                                  child: SingleChildScrollView(
+                                    physics:
+                                        const AlwaysScrollableScrollPhysics(),
+                                    padding: EdgeInsets.fromLTRB(
+                                      horizontalPadding,
+                                      AksharaSpacing.s4,
+                                      horizontalPadding,
+                                      showStickyCta ? 88 : AksharaSpacing.s6,
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        FeeSummaryHero(
+                                          pendingAmount: data.pendingAmount,
+                                          isOverdue: data.isOverdue,
+                                          dueLabel: data.dueLabel,
+                                          paidAmount: data.paidAmount,
+                                          annualAmount: data.annualAmount,
+                                          showInlinePayButton: isTablet,
+                                          onPayNow: data.hasPending
+                                              ? () => _handlePayNow(
+                                                  installmentId: 'term_2')
+                                              : null,
                                         ),
-                                        onReceiptTap: (installment) =>
-                                            onViewReceipt?.call(installment.id),
-                                      ),
-                                      const SizedBox(height: AksharaSpacing.s4),
-                                      FeeBreakdownCard(
-                                        categories: data.breakdown,
-                                      ),
-                                      const SizedBox(height: AksharaSpacing.s3),
-                                      SizedBox(
-                                        height: 48,
-                                        child: Center(
-                                          child: TextButton(
-                                            onPressed: () =>
-                                                _showPaymentHistory(
-                                                    context, data),
-                                            child: Text(
-                                              'View payment history',
-                                              style: context
-                                                  .aksharaText.labelLarge
-                                                  .copyWith(
-                                                color: context.colors.primary,
+                                        const SizedBox(
+                                            height: AksharaSpacing.s4),
+                                        FeeCollectionProgress(
+                                          percent: data.progressPercent,
+                                        ),
+                                        const SizedBox(
+                                            height: AksharaSpacing.s4),
+                                        InstallmentTimeline(
+                                          installments: data.installments,
+                                          onPayInstallment: (installment) =>
+                                              _handlePayNow(
+                                            installmentId: installment.id,
+                                          ),
+                                          onReceiptTap: (installment) =>
+                                              onViewReceipt
+                                                  ?.call(installment.id),
+                                        ),
+                                        const SizedBox(
+                                            height: AksharaSpacing.s4),
+                                        FeeBreakdownCard(
+                                          categories: data.breakdown,
+                                        ),
+                                        const SizedBox(
+                                            height: AksharaSpacing.s3),
+                                        SizedBox(
+                                          height: 48,
+                                          child: Center(
+                                            child: TextButton(
+                                              onPressed: () =>
+                                                  _showPaymentHistory(
+                                                      context, data),
+                                              child: Text(
+                                                'View payment history',
+                                                style: context
+                                                    .aksharaText.labelLarge
+                                                    .copyWith(
+                                                  color: context.colors.primary,
+                                                ),
                                               ),
                                             ),
                                           ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                            if (showStickyCta)
-                              PayNowBottomBar(
-                                amountDue: data.pendingAmount,
-                                onPayNow: () =>
-                                    _handlePayNow(installmentId: 'term_2'),
-                              ),
-                          ],
+                              if (showStickyCta)
+                                PayNowBottomBar(
+                                  amountDue: data.pendingAmount,
+                                  onPayNow: () =>
+                                      _handlePayNow(installmentId: 'term_2'),
+                                ),
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
+                      );
+                    },
+                  ),
+      ),
     );
   }
 

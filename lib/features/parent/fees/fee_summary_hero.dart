@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/akshara_progress_ring.dart';
 import '../../../shared/widgets/akshara_status_chip.dart';
 import '../../../theme/elevation.dart';
 import '../../../theme/radius.dart';
@@ -44,8 +45,11 @@ class FeeSummaryHero extends StatelessWidget {
       child: Card(
         elevation: AksharaElevation.level2,
         margin: EdgeInsets.zero,
-        child: SizedBox(
-          height: height,
+        // DS V2 P4 — size to content (was a fixed 160 that overflowed when the
+        // due label / amount wrapped or text scaled up). The money display,
+        // colours, and semantics are unchanged.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: height),
           child: Padding(
             padding: const EdgeInsets.all(AksharaSpacing.s5),
             child: Column(
@@ -88,15 +92,18 @@ class FeeSummaryHero extends StatelessWidget {
                     color: colors.onSurfaceVariant,
                   ),
                 ),
-                const Spacer(),
-                Row(
+                const SizedBox(height: AksharaSpacing.s4),
+                // Wrap (not Row) so long INR amounts reflow instead of
+                // overflowing the card width.
+                Wrap(
+                  spacing: AksharaSpacing.s4,
+                  runSpacing: AksharaSpacing.s1,
                   children: [
                     _MetaItem(
                       label: 'Paid: ${formatInr(paidAmount)}',
                       color: ext.success,
                       textStyle: text.bodySmall,
                     ),
-                    const SizedBox(width: AksharaSpacing.s4),
                     _MetaItem(
                       label: 'Annual: ${formatInr(annualAmount)}',
                       color: colors.onSurfaceVariant,
@@ -133,7 +140,9 @@ class _MetaItem extends StatelessWidget {
   }
 }
 
-/// PA-03 collection progress card (358×72).
+/// PA-03 collection progress — DS V2 Phase 3 flagship: the fees-collected
+/// percentage as a premium success-toned progress **ring** (was a linear bar),
+/// with a supporting bar for the exact fill. Same data, richer presentation.
 class FeeCollectionProgress extends StatelessWidget {
   const FeeCollectionProgress({
     super.key,
@@ -141,8 +150,6 @@ class FeeCollectionProgress extends StatelessWidget {
   });
 
   final int percent;
-
-  static const double height = 72;
 
   @override
   Widget build(BuildContext context) {
@@ -153,42 +160,64 @@ class FeeCollectionProgress extends StatelessWidget {
 
     return Card(
       margin: EdgeInsets.zero,
-      child: SizedBox(
-        height: height,
-        child: Padding(
-          padding: const EdgeInsets.all(AksharaSpacing.s4),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
+      child: Padding(
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
+        child: Row(
+          children: [
+            AksharaProgressRing(
+              value: clamped / 100,
+              size: 60,
+              strokeWidth: 7,
+              color: ext.success,
+              semanticLabel: 'Collection progress $clamped percent',
+              child: Text(
+                '$clamped%',
+                style: text.labelLarge.copyWith(
+                  color: colors.onSurface,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.2,
+                  height: 1.0,
+                ),
+              ),
+            ),
+            const SizedBox(width: AksharaSpacing.s4),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     'Collection progress',
                     style: text.bodyMedium.copyWith(
                       color: colors.onSurface,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(height: AksharaSpacing.s1),
                   Text(
-                    '$clamped%',
-                    style: text.titleMedium.copyWith(color: ext.success),
+                    'of your annual fees paid so far',
+                    style: text.bodySmall.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: AksharaSpacing.s2),
+                  ClipRRect(
+                    borderRadius: AksharaRadius.chip,
+                    child: SizedBox(
+                      height: 6,
+                      child: LinearProgressIndicator(
+                        value: clamped / 100,
+                        backgroundColor: colors.surfaceContainerHighest,
+                        color: ext.success,
+                      ),
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: AksharaSpacing.s2),
-              ClipRRect(
-                borderRadius: AksharaRadius.chip,
-                child: SizedBox(
-                  height: 8,
-                  child: LinearProgressIndicator(
-                    value: clamped / 100,
-                    backgroundColor: colors.surfaceContainerHighest,
-                    color: ext.success,
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
