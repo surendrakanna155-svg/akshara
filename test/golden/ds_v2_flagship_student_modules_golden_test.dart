@@ -4,6 +4,8 @@ library;
 import 'package:akshara_erp/features/student_app/attendance/student_attendance_screen.dart';
 import 'package:akshara_erp/features/student_app/exams/student_exams_screen.dart';
 import 'package:akshara_erp/features/student_app/homework/student_homework_screen.dart';
+import 'package:akshara_erp/features/student_app/notices/student_notices_screen.dart';
+import 'package:akshara_erp/features/student_app/profile/student_profile_screen.dart';
 import 'package:akshara_erp/features/student_app/timetable/student_timetable_screen.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:akshara_erp/theme/persona_accents.dart';
@@ -107,6 +109,36 @@ void main() {
         matchesGoldenFile(
           goldenFileName(
               'ds_v2_flagship_student_timetable_${mode.label}', '390x1280'),
+        ),
+      );
+    });
+
+    testWidgets('student notices · ${mode.label}', (tester) async {
+      await pump(
+        tester,
+        screen: const StudentNoticesScreen(),
+        dark: mode.dark,
+      );
+      await expectLater(
+        find.byType(StudentNoticesScreen),
+        matchesGoldenFile(
+          goldenFileName(
+              'ds_v2_flagship_student_notices_${mode.label}', '390x1280'),
+        ),
+      );
+    });
+
+    testWidgets('student profile · ${mode.label}', (tester) async {
+      await pump(
+        tester,
+        screen: const StudentProfileScreen(),
+        dark: mode.dark,
+      );
+      await expectLater(
+        find.byType(StudentProfileScreen),
+        matchesGoldenFile(
+          goldenFileName(
+              'ds_v2_flagship_student_profile_${mode.label}', '390x1280'),
         ),
       );
     });
