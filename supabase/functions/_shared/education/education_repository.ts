@@ -282,6 +282,30 @@ export async function recordItemExposures(
   return { logged, incremented };
 }
 
+/**
+ * Program D · M4.3 — fetch PRECOMPUTED near-dup vectors for a set of content hashes (a certified item's
+ * `fingerprint` = its content_hash in the union view). Read-only; only certified-platform rows carry a
+ * vector, so own-authored items are simply absent from the map (near-dup then falls back to exact
+ * fingerprint). NEVER computes an embedding at request time — vectors are produced offline at export.
+ */
+export async function getNearDupVectors(
+  client: TenantQueryClient,
+  fingerprints: string[],
+): Promise<Map<string, number[]>> {
+  const out = new Map<string, number[]>();
+  if (fingerprints.length === 0) return out;
+  const rows = await client.queryObject<{ content_hash: string; near_dup_embedding: number[] | null }>(
+    `SELECT content_hash, near_dup_embedding
+       FROM edu_platform_question_bank
+      WHERE content_hash = ANY($1::text[]) AND near_dup_embedding IS NOT NULL`,
+    [fingerprints],
+  );
+  for (const r of rows) {
+    if (Array.isArray(r.near_dup_embedding)) out.set(r.content_hash, r.near_dup_embedding);
+  }
+  return out;
+}
+
 export async function createQuestionBankItem(
   client: TenantQueryClient,
   organizationId: string,

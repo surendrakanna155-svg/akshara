@@ -23,11 +23,13 @@ import {
 } from "./education_exam_profile.ts";
 import { generateAiCandidatesForGaps } from "./education_ai_question_gapfill.ts";
 import { orderBankForRotation, type RotationPolicy } from "./education_item_rotation.ts";
+import { buildCertifiedPool } from "./education_certified_pool.ts";
 import { aiApiKey, aiProvider, claudeModel } from "../ai/anthropic_client.ts";
 import type { Governance } from "../ai/model_gateway.ts";
 import type { AiRuntimeConfig } from "../ai/ai_settings.ts";
 import {
   applyRegeneratedPaperItem,
+  getNearDupVectors,
   getPaperItem,
   listQuestionBankItems,
   type QuestionBankListFilters,
@@ -121,6 +123,10 @@ export interface ProgramDPaperConfig {
   rotationPolicy?: RotationPolicy;
   /** Explicit reference instant (ISO) for cooldown math — passed in so selection stays pure. */
   referenceAt?: string;
+  /** M4.3: remove paraphrase/semantic clones from the pool (deterministic, offline vectors). Default off. */
+  nearDupFilter?: boolean;
+  /** M4.4: reorder the pool by the deterministic explainable ranking. Default off. */
+  rankPool?: boolean;
 }
 
 export type RegeneratePaperItemResult =
@@ -259,6 +265,24 @@ export async function generateQuestionPaper(
       solveBank,
       { referenceAt: programD.referenceAt },
     );
+  }
+
+  // Program D · M4.3/M4.4: near-dup FILTER + explainable RANKING over the pool (deterministic, offline —
+  // vectors are precomputed at export; no request-time model call). Off by default; only then is the
+  // extra vector fetch issued. Near-dup only REMOVES clones (order preserved); ranking reorders. The
+  // solver is unchanged — only the shape/order of its input pool.
+  if (programD?.nearDupFilter || programD?.rankPool) {
+    const fingerprints = solveBank
+      .map((r) => r.fingerprint)
+      .filter((f): f is string => typeof f === "string" && f.length > 0);
+    const vectors = await getNearDupVectors(client, fingerprints);
+    const parsedNow = programD.referenceAt ? Date.parse(programD.referenceAt) : Number.NaN;
+    const built = buildCertifiedPool(solveBank, vectors, {
+      nearDupFilter: programD.nearDupFilter,
+      rank: programD.rankPool,
+      nowMs: Number.isNaN(parsedNow) ? undefined : parsedNow,
+    });
+    solveBank = built.pool;
   }
 
   const solution = solveBlueprint(
