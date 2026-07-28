@@ -1,0 +1,61 @@
+{
+  "generatedBy": "scripts/legal/build_legal_site.js",
+  "source": "docs/legal/*.md",
+  "status": "PUBLISH_BLOCKED",
+  "blockingPlaceholders": {
+    "/privacy": [
+      "[GRIEVANCE EMAIL]",
+      "[GRIEVANCE OFFICER DESIGNATION]",
+      "[GRIEVANCE OFFICER NAME]",
+      "[PRIVACY EMAIL]",
+      "[REGISTERED ADDRESS]",
+      "[SUPPORT EMAIL]"
+    ],
+    "/terms/user": [
+      "[GRIEVANCE EMAIL]",
+      "[PRIVACY EMAIL]",
+      "[SECURITY EMAIL]",
+      "[SUPPORT EMAIL]"
+    ],
+    "/terms/acceptable-use": [
+      "[GRIEVANCE EMAIL]",
+      "[SECURITY EMAIL]"
+    ],
+    "/terms/institution": [
+      "[GOVERNING LAW CITY]",
+      "[GOVERNING LAW STATE]",
+      "[REGISTERED ADDRESS]"
+    ],
+    "/terms": [
+      "[GOVERNING LAW CITY]",
+      "[GOVERNING LAW STATE]",
+      "[GRIEVANCE EMAIL]",
+      "[GRIEVANCE OFFICER DESIGNATION]",
+      "[GRIEVANCE OFFICER NAME]",
+      "[PRIVACY EMAIL]",
+      "[REGISTERED ADDRESS]",
+      "[SUPPORT EMAIL]"
+    ],
+    "/children-data": [
+      "[GRIEVANCE EMAIL]",
+      "[GRIEVANCE OFFICER NAME]",
+      "[PRIVACY EMAIL]"
+    ],
+    "/data-retention": [
+      "[PRIVACY EMAIL]"
+    ],
+    "/subprocessors": [
+      "[PRIVACY EMAIL]"
+    ],
+    "/security": [
+      "[GRIEVANCE EMAIL]",
+      "[GRIEVANCE OFFICER NAME]",
+      "[PRIVACY EMAIL]",
+      "[SECURITY EMAIL]"
+    ],
+    "/ai-usage": [
+      "[PRIVACY EMAIL]"
+    ]
+  },
+  "note": "Unfilled owner placeholders remain. Fill them in docs/legal/*.md (see docs/legal/PLACEHOLDERS.md), re-run this generator, and only then publish. Google Play requires a working privacy contact and the DPDP Act requires a named Grievance Officer."
+}
