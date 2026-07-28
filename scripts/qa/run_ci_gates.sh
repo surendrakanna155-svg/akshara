@@ -17,7 +17,13 @@ log "Gate 2: module coverage report generation"
 python3 scripts/qa/generate_module_coverage_report.py
 
 log "Gate 3: QA keys + route protection"
-flutter test test/core/testing/ test/router/route_protection_inventory_test.dart
+# Runs the WHOLE test/router/ directory, not a named file. Naming one file is how
+# the route-gating hole shipped: route_protection_inventory_test.dart only
+# spot-checks routes already present in BOTH the gating list and the permission
+# map, so five routes missing from the gating list (and therefore failing OPEN —
+# no auth check, no RBAC check) were invisible to it. Any future route test now
+# joins this gate by existing, rather than by someone remembering to add it here.
+flutter test test/core/testing/ test/router/
 
 log "Gate 4: Phase 1 completion (workflows + screens + integration)"
 flutter test \
