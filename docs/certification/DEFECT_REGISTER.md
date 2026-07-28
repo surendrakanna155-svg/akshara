@@ -22,9 +22,9 @@ Root cause (if known) · Recommended fix · Dependencies · Risk · Evidence`
 
 | Total | P0 | P1 | P2 | P3 |
 |---|---|---|---|---|
-| 43 | 11 | 25 | 7 | 0 |
+| 45 | 11 | 27 | 7 | 0 |
 
-By workstream: **XMOD** 39 (10 P0 · 22 P1 · 7 P2) · **CERT** 4 (1 P0 · 3 P1).
+By workstream: **CERT** 6 (1 P0 · 5 P1) · **XMOD** 39 (10 P0 · 22 P1 · 7 P2).
 
 *(Certification in progress.)*
 
@@ -1038,3 +1038,61 @@ so the capability is not counted as delivered.
   `2211-2229` (`isPersonaOwnedRoute`); `lib/router/student_navigation.dart:36-37`;
   `lib/router/route_names.dart:66-69` (the teacher precedent);
   `supabase/functions/_shared/route_registry.ts:218-226`.
+
+### CERT-005 · **P1** · Support (ASIP) · No user can reach "Report an issue"
+
+- **Repro steps:** Sign in as any persona (parent, student, teacher, or any staff role).
+  Look for a "Report an issue" / "Help & Support" affordance in Profile, Settings, the
+  More sheet, the Admin Hub tile grid, the side rail, or the bottom nav. There is none.
+  The only way in is to type `/support` as a deep link.
+- **Expected:** A support entry point in at least one persona-reachable place — this is
+  the school's only channel to the Akshara Support Team.
+- **Actual:** `RouteNames.support` is referenced in exactly two places in `lib/`:
+  its registration (`lib/router/app_router.dart:301`) and the permission map
+  (`lib/router/route_guards.dart:66`). No widget anywhere calls `go`/`push` to it.
+  `/support/new` and `/support/:id` are pushed only from inside
+  `my_reported_issues_screen.dart` and `report_issue_screen.dart` — i.e. from the
+  unreachable cluster itself, so they are second-order orphans.
+- **Root cause:** The route was registered top-level and auth-gated
+  (`_isSharedSettingsRoute`) so every persona *could* reach it, but no navigation
+  affordance was ever added to any shell, profile screen or hub tile registry
+  (`kAllAdminNavDestinations` in `lib/features/admin/admin_navigation_provider.dart:17-270`
+  has no support entry).
+- **Recommended fix:** Add a "Report an issue" entry to the shared settings/profile
+  surface used by all four personas (alongside `/settings/appearance`, which is
+  correctly reachable from parent/teacher/student profile and management settings),
+  and an Admin Hub / side-rail entry for staff.
+- **Dependencies:** none.
+- **Risk of fixing:** low — the screens and the live backend already work.
+- **Evidence:** `lib/router/app_router.dart:301-322`; `lib/router/route_guards.dart:66`;
+  `lib/router/app_router.dart:2196-2208` (`_isSharedSettingsRoute` admits it for all
+  personas); `lib/features/support/my_reported_issues_screen.dart:50,77,155`;
+  `lib/features/support/report_issue_screen.dart:192`;
+  `lib/features/admin/admin_navigation_provider.dart:17-270` (no support tile).
+- **Note:** this is the reachability half of the RC-phase support finding. The data
+  half (mock repository fabricating a `SUP-xxxx` reference) was fixed by adding
+  `SUPPORT_API_ENABLED` to `config/live_release.json`; the surface is still
+  unreachable, so the fix currently benefits nobody.
+
+### CERT-006 · **P1** · HR · Reports screen shows a fabricated headline metric
+
+- **Repro steps:** Sign in with `viewHr`. Open **HR → Reports** (`/hr/reports`) on a
+  tenant whose `GET /hr/dashboard` response omits either the `total_employees` or the
+  `avg_attendance` KPI (new school, partial data, or a failed KPI computation).
+- **Expected:** No headline, or an honest "not available yet".
+- **Actual:** The screen renders the hard-coded string
+  `'142 active staff · 96.2% attendance MTD'` as if it were this school's data.
+- **Root cause:** `lib/features/hr/reports/hr_reports_provider.dart:34` —
+  `final headline = (activeStaff != null && attendance != null) ? '…' : HrReportsData.mock().headlineMetric;`
+  with the constant at `lib/features/hr/hr_models.dart:628`.
+- **Recommended fix:** Return a nullable headline and render an honest empty state when
+  the KPIs are absent. (The report **catalog** on line 38 is also always the mock value,
+  but that is a static list of report *types* — titles/descriptions/icons — which is
+  legitimate configuration, not fabricated data.)
+- **Dependencies:** none.
+- **Risk of fixing:** low.
+- **Evidence:** `lib/features/hr/reports/hr_reports_provider.dart:18-40`;
+  `lib/features/hr/hr_models.dart:618-657`.
+- **Severity note:** this meets the letter of the register's **P0** clause ("a false
+  claim shown to a user"). Graded P1 because it is a single decorative headline rather
+  than the report content or a money figure — flagging the judgement rather than hiding it.
