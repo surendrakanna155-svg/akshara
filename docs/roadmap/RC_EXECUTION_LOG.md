@@ -209,3 +209,25 @@ because they are the argument for keeping a device in the loop:
 Buy the domain · register the company · name a Grievance Officer · Play Console
 account + identity verification · keystore password (see risk table above) ·
 Razorpay merchant onboarding · production secrets · live VPS deploy.
+
+## Late finding — raised AI button collides with screen action bars (OWNER DECISION)
+
+`CopilotBottomNavAiSlot` (`lib/features/copilot/widgets/copilot_bottom_nav_ai_slot.dart:42-45`)
+is positioned `top: -diameter` so its bottom edge rests on the bottom nav's top
+edge. That placement is **deliberate** — the file records it as the UXR-G2 (P0)
+fix for an earlier version that dipped into the bar.
+
+On a real device it overlaps any screen-level bottom action bar. Seen on **Mark
+Attendance**, where it covers part of the "Save draft / N unmarked" submit row —
+the primary action on the app's most-used data-entry flow, with a real mistap
+hazard (AI panel instead of submit).
+
+Deliberately NOT changed here: it is a previously-ratified affordance, the fix
+direction is a product call rather than an obvious bug, and altering it late in
+an RC would churn a large number of goldens. Two clean options:
+
+  a) the AI slot yields (hides or shifts) on screens that own a bottom action bar;
+  b) those screens reserve bottom padding equal to the slot's radius.
+
+Reproduce: teacher persona → Home → "Mark now" on the attendance nudge.
+Evidence: `docs/release/screenshots/03-mark-attendance.png`.

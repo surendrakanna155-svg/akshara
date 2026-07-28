@@ -1,6 +1,6 @@
 # Play Store screenshots — NIKSHA OS
 
-**Status: INCOMPLETE — 1 of the 2 minimum Play requires.** Read §3 before publishing.
+**Status: 3 captured — above Play's minimum of 2, below the recommended 8.** Read §3 before publishing.
 
 ## 1. How these were produced
 
@@ -37,12 +37,23 @@ the same screens with no QA chrome.
 
 | File | Screen | Notes |
 |---|---|---|
-| `01-admin-hub.png` | Admin Hub — School Administration workspace | Signed in as Principal. Shows the workspace header (students / staff / attendance) and the authorised-module list. |
+| `01-admin-hub.png` | Admin Hub — School Administration workspace | Signed in as Principal. Workspace header (students / staff / attendance) + authorised-module list. |
+| `02-teacher-dashboard.png` | Teacher home | Check-in state (Geo+Face verified), an actionable "attendance not marked" nudge, 89% present ring, today's classes. |
+| `03-mark-attendance.png` | Mark Attendance — exception-first | P/A/L badges, All-present / All-absent / Fill-remaining shortcuts, live "1 present · 1 absent · 1 late" tally. **See the known issue below before using this one in the listing.** |
 
 ## 3. What is still needed — and why it stopped here
 
-Play requires **a minimum of 2** phone screenshots and allows up to 8. Only one
-store-quality capture was taken, so **this set cannot be submitted as-is.**
+Play requires **a minimum of 2** phone screenshots and allows up to 8. Three are
+captured, so the set is *submittable* — but thin, and missing Student 360, which
+is the single strongest screen the product has.
+
+**Known issue affecting `03-mark-attendance.png`:** the raised centre AI button
+(`CopilotBottomNavAiSlot`, docked above the bottom nav by design — see UXR-G2)
+overlaps the screen's own "Save draft / N unmarked" action bar. It is real, not a
+capture artifact, and it is an owner decision rather than an obvious bug: either
+the AI affordance yields on screens with a bottom action bar, or those screens
+reserve space for it. Until that is decided, prefer screens without a bottom
+action bar for the listing.
 
 The remaining shots need UI navigation that is best done by hand — driving them
 blind through `adb shell input tap` produces mid-animation frames (a drawer
@@ -50,9 +61,10 @@ caught half-open was discarded rather than shipped). The order below is the one
 recommended in `../PLAY_STORE_LISTING_V1.md` §5, chosen to tell the buying story:
 
 1. ✅ Admin Hub *(captured)*
-2. ⬜ **Student 360** — the differentiator; the whole reason a principal buys
-3. ⬜ Teacher attendance — exception-first marking
-4. ⬜ Marks entry — the speed story
+2. ✅ Teacher dashboard *(captured)*
+3. ✅ Teacher attendance — exception-first marking *(captured)*
+4. ⬜ **Student 360** — the differentiator; the whole reason a principal buys
+5. ⬜ Marks entry — the speed story
 5. ⬜ Parent — marks / report card
 6. ⬜ Parent — fees and receipt
 7. ⬜ Ask-anything search (DAI)
