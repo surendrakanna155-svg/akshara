@@ -1,11 +1,11 @@
-# Akshara ERP — Terms & Conditions
+# NIKSHA OS — Terms & Conditions
 
 **Document version:** 1.0
 **Status:** Draft for owner sign-off (see [PLACEHOLDERS.md](PLACEHOLDERS.md))
-**Provider:** **[LEGAL ENTITY NAME]**, **[ENTITY TYPE]**, registered at
-**[REGISTERED ADDRESS]** ("Akshara", "we", "us", "our").
+**Provider:** **NIKSHA Technologies Pvt. Ltd.**, **Private Limited Company**, registered at
+**[REGISTERED ADDRESS]** ("NIKSHA OS", "we", "us", "our").
 
-> These Terms & Conditions ("Terms") govern access to and use of the Akshara ERP
+> These Terms & Conditions ("Terms") govern access to and use of the NIKSHA OS
 > mobile application and related services (the "Service"). They are the umbrella
 > agreement that the more specific documents sit under:
 > the [Institution Agreement](INSTITUTION_AGREEMENT.md) (for schools),
@@ -30,7 +30,7 @@ agree to them. If you do not agree, do not use the Service.
 
 ## 2. The Service
 
-Akshara is a school-management platform. Features may include admissions,
+NIKSHA OS is a school-management platform. Features may include admissions,
 attendance, examinations and results, fees and receipts, transport, hostel,
 library, HR, communication/notifications, dashboards, optional AI assistance, and
 related modules. We may add, change, or remove features over time.
@@ -59,7 +59,7 @@ protect users — especially in matters of child safety.
 ## 5. Your content and data
 
 - **Institution data** (student, staff, academic, financial and related records)
-  belongs to the Institution. Akshara processes it as a **Data Processor** on the
+  belongs to the Institution. NIKSHA OS processes it as a **Data Processor** on the
   Institution's instructions (see the
   [Institution Agreement](INSTITUTION_AGREEMENT.md) and
   [Privacy Policy](PRIVACY_POLICY.md)).
@@ -70,13 +70,13 @@ protect users — especially in matters of child safety.
 ## 6. Payments (where enabled)
 
 - Where online fee payment is enabled, payments are processed by a third-party
-  payment provider (see [Sub-processors](SUBPROCESSORS.md)). Akshara does **not**
+  payment provider (see [Sub-processors](SUBPROCESSORS.md)). NIKSHA OS does **not**
   store full card details.
 - Fees, fee structures and refunds are set and managed by the **Institution**.
-  Akshara records transactions but is **not** a party to the fee arrangement between
+  NIKSHA OS records transactions but is **not** a party to the fee arrangement between
   a parent and the Institution. Refund and dispute requests about school fees go to
   the **Institution**.
-- Any subscription/licence fees payable by an Institution to Akshara are governed by
+- Any subscription/licence fees payable by an Institution to NIKSHA OS are governed by
   the [Institution Agreement](INSTITUTION_AGREEMENT.md).
 
 ## 7. AI features
@@ -88,7 +88,7 @@ human and must not be relied on as authoritative. See the
 ## 8. Intellectual property
 
 The Service, including its software, design, and trademarks (including the name
-**"Akshara"**), is owned by **[LEGAL ENTITY NAME]** or its licensors and is protected
+**"NIKSHA OS"**), is owned by **NIKSHA Technologies Pvt. Ltd.** or its licensors and is protected
 by law. We grant you a limited, non-exclusive, non-transferable, revocable licence to
 use the Service for its intended purpose. You may not copy, modify, reverse-engineer,
 resell, or create derivative works except as the law expressly permits.
@@ -115,7 +115,7 @@ our control, beyond our obligations as described in our policies.
 To the maximum extent permitted by law, the Service is provided **"as is" and "as
 available"** without warranties of any kind (express or implied), including fitness
 for a particular purpose, accuracy of AI output, or uninterrupted operation. We do
-not warrant that the Service will be error-free. **Akshara is a tool that supports
+not warrant that the Service will be error-free. **NIKSHA OS is a tool that supports
 the Institution; it does not replace the Institution's professional judgement or
 legal responsibilities.**
 
@@ -138,7 +138,7 @@ the Service.
 
 ## 13. Indemnity
 
-You agree to indemnify **[LEGAL ENTITY NAME]** against claims, losses and reasonable
+You agree to indemnify **NIKSHA Technologies Pvt. Ltd.** against claims, losses and reasonable
 costs arising from your misuse of the Service, your breach of these Terms or the
 [Acceptable Use Policy](ACCEPTABLE_USE_POLICY.md), or your unlawful handling of data,
 to the extent caused by you. (An Institution's indemnity is set out in the
@@ -174,7 +174,7 @@ In accordance with applicable Indian law, our Grievance Officer is:
 
 - **[GRIEVANCE OFFICER NAME]**, **[GRIEVANCE OFFICER DESIGNATION]**
 - Email: **[GRIEVANCE EMAIL]**
-- Operator: **[LEGAL ENTITY NAME]**, **[REGISTERED ADDRESS]**
+- Operator: **NIKSHA Technologies Pvt. Ltd.**, **[REGISTERED ADDRESS]**
 - Support: **[SUPPORT EMAIL]** · Privacy: **[PRIVACY EMAIL]**
 
 We aim to acknowledge grievances promptly and resolve them within the timelines

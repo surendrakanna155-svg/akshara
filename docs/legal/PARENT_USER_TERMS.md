@@ -1,14 +1,14 @@
-# Akshara ERP — Parent & User Terms
+# NIKSHA OS — Parent & User Terms
 
 **Document version:** 1.0
 **Status:** Draft for owner sign-off (see [PLACEHOLDERS.md](PLACEHOLDERS.md))
-**Operator:** **[LEGAL ENTITY NAME]** ("Akshara", "we", "us").
+**Operator:** **NIKSHA Technologies Pvt. Ltd.** ("NIKSHA OS", "we", "us").
 
-> These are the plain-language terms for **individual users** of the Akshara app —
+> These are the plain-language terms for **individual users** of the NIKSHA OS app —
 > parents/guardians, teachers, staff and students. They sit under the
 > [Terms & Conditions](TERMS_AND_CONDITIONS.md) and the
 > [Acceptable Use Policy](ACCEPTABLE_USE_POLICY.md). Your school is the organisation
-> that runs Akshara for you.
+> that runs NIKSHA OS for you.
 
 ---
 
@@ -24,14 +24,14 @@
 
 ## 2. What you can use the app for
 
-Use Akshara for genuine school purposes — checking attendance, results, fees,
+Use NIKSHA OS for genuine school purposes — checking attendance, results, fees,
 timetable, notices, communicating with the school, and the features your role
 provides. Please follow the [Acceptable Use Policy](ACCEPTABLE_USE_POLICY.md). Misuse
 can lead to your access being suspended.
 
 ## 3. Your child's information (for parents)
 
-- The information about your child is held by Akshara **on behalf of your school**.
+- The information about your child is held by NIKSHA OS **on behalf of your school**.
   Your **school** decides what is recorded and is the first point of contact for
   questions, corrections, or removal.
 - You can **review your child's information** in the app and ask the school to
@@ -48,10 +48,10 @@ device or app settings at any time. We don't send marketing spam.
 ## 5. Payments (if your school enables online fees)
 
 - If you pay fees in the app, the payment is handled by a secure **payment provider**
-  (see [Sub-processors](SUBPROCESSORS.md)). Akshara does **not** store your full card
+  (see [Sub-processors](SUBPROCESSORS.md)). NIKSHA OS does **not** store your full card
   details.
 - **Your school sets the fees, due dates and refund rules.** Questions or disputes
-  about a fee, a charge, or a refund go to your **school**, not to Akshara.
+  about a fee, a charge, or a refund go to your **school**, not to NIKSHA OS.
 
 ## 6. AI features
 
@@ -91,7 +91,7 @@ section.
 
 - The app is provided **"as is"**; we work to keep it reliable but can't promise it's
   perfect or always available.
-- To the extent the law allows, Akshara isn't liable for indirect losses, and our
+- To the extent the law allows, NIKSHA OS isn't liable for indirect losses, and our
   responsibility is limited as set out in the
   [Terms & Conditions](TERMS_AND_CONDITIONS.md) §12. Nothing here removes rights you
   have under law that can't be removed.

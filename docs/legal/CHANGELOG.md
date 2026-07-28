@@ -1,6 +1,6 @@
-# Akshara ERP — Legal & Policy Change Log
+# NIKSHA OS — Legal & Policy Change Log
 
-This is the **single, authoritative history** of changes to Akshara's legal and
+This is the **single, authoritative history** of changes to NIKSHA OS's legal and
 policy documents. Every material change to any document in `docs/legal/` is recorded
 here, newest first. The app reads policy **version** identifiers; bumping a version
 here (and in the document header and the in-app policy catalog) is what triggers
@@ -21,7 +21,7 @@ re-acceptance in the app.
 
 ## 2026-06-27 — Initial legal & compliance suite (v1)
 
-**Summary:** First complete legal & compliance layer for Akshara ERP, tailored to the
+**Summary:** First complete legal & compliance layer for NIKSHA OS, tailored to the
 product's actual functionality and aligned to the DPDP Act 2023 / DPDP Rules 2025.
 
 | Document | Version | Change |

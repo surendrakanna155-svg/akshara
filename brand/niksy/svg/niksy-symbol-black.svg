@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="NIKSY symbol">
+  <title>NIKSY — symbol</title>
+  <desc>An N monogram inside an open orbit ring, with a rising bar series at its base. Pure vector geometry; no raster data.</desc>
+
+  
+
+  <!-- ─── Orbit ring ────────────────────────────────────────────────────────
+       An OPEN circle, not a closed one: the gap at the top-right is where the
+       progress node sits, so the ring reads as an arc still being completed
+       rather than a finished loop. r=186 about the exact centre (256,256). -->
+  <circle cx="256" cy="256" r="186" fill="none" stroke="#000000" stroke-width="26"
+          stroke-linecap="round" stroke-dasharray="1010 158" transform="rotate(-52 256 256)"/>
+
+  <!-- Progress node, seated exactly on the ring's radius at -38°:
+       cx = 256 + 186·cos(-38°) ≈ 402.6, cy = 256 + 186·sin(-38°) ≈ 141.5 -->
+  <circle cx="402.6" cy="141.5" r="30" fill="#000000"/>
+
+  <!-- ─── N monogram ────────────────────────────────────────────────────────
+       The family skeleton again, scaled into the ring. Baseline y=340,
+       cap y=176. -->
+  <g fill="#000000">
+    <path d="M168 176 H206 V340 H168 Z"/>
+    <path d="M206 176 H244 L306 268 V340 H278 L206 250 Z"/>
+    <path d="M306 176 H344 V340 H306 Z"/>
+  </g>
+
+  <!-- NOTE: an earlier revision placed a three-bar "rising series" at the
+       monogram's foot. It was removed after rendering: the bars sat in the same
+       colour directly behind the N's stems and diagonal, so at any real size
+       they merged into an unreadable blob rather than reading as growth. The
+       open ring already carries the progress idea, and the mark is stronger
+       minimal. Do not reinstate the bars without solving the collision. -->
+</svg>

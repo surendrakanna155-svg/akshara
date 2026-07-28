@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="NIKSHA OS symbol">
+  <title>NIKSHA OS — symbol</title>
+  <desc>An N monogram rising from an open book, with a summit flag and ascending data squares. Recreated as vector geometry; contains no raster data.</desc>
+
+  
+
+  <!-- ─── Ascending data squares ────────────────────────────────────────────
+       Three squares on a 45° rise, each step half the area of the last. Reads
+       as data lifting off the page; also gives the mark asymmetric energy so it
+       is recognisable at 24px where the fine detail disappears. -->
+  <g fill="#000000">
+    <rect x="300" y="150" width="30" height="30" rx="7"/>
+    <rect x="346" y="112" width="22" height="22" rx="5" opacity="0.78"/>
+    <rect x="382" y="82" width="15" height="15" rx="3.5" opacity="0.52"/>
+  </g>
+
+  <!-- ─── Summit flag ───────────────────────────────────────────────────────
+       Achievement, planted at the top of the monogram's rising stroke. -->
+  <g>
+    <rect x="392" y="120" width="9" height="118" rx="4.5" fill="#000000"/>
+    <path d="M401 128 L461 150 L401 172 Z" fill="#000000"/>
+    <circle cx="396.5" cy="112" r="13" fill="#000000"/>
+  </g>
+
+  <!-- ─── N monogram ────────────────────────────────────────────────────────
+       Built from three straight prisms on a shared baseline (y=344) and shared
+       cap (y=150): left stem, descending diagonal, right stem. Every vertex is
+       on a whole pixel so the mark stays crisp when rasterised to icon sizes. -->
+  <g fill="#000000">
+    <path d="M112 150 H164 V344 H112 Z"/>
+    <path d="M164 150 H216 L300 292 V344 H268 L164 226 Z"/>
+    <path d="M300 150 H352 V344 H300 Z"/>
+  </g>
+
+  <!-- ─── Open book ─────────────────────────────────────────────────────────
+       The monogram stands ON knowledge. Two symmetric pages meeting at a spine
+       at x=256, drawn with matching control points so the halves mirror
+       exactly. -->
+  <g>
+    <path d="M256 352 C214 330 150 324 84 330 L84 404 C150 398 214 404 256 426 Z" fill="#000000"/>
+    <path d="M256 352 C298 330 362 324 428 330 L428 404 C362 398 298 404 256 426 Z" fill="#000000" opacity="0.86"/>
+    <!-- Leading edge in the growth accent — the one green note in the mark. -->
+    <path d="M256 426 C214 404 150 398 84 404 L84 424 C150 418 214 424 256 446 Z" fill="#000000"/>
+    <path d="M256 426 C298 404 362 398 428 404 L428 424 C362 418 298 424 256 446 Z" fill="#000000" opacity="0.86"/>
+  </g>
+</svg>

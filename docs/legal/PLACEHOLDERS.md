@@ -1,8 +1,8 @@
-# Akshara ERP — Legal Placeholders (Owner Action Required)
+# NIKSHA OS — Legal Placeholders (Owner Action Required)
 
 > This file is the **single source of truth** for every owner-supplied value used
 > across the documents in `docs/legal/`. Each value appears in the policies as a
-> bracketed token like `[LEGAL ENTITY NAME]`. Before the legal documents are
+> bracketed token like `NIKSHA Technologies Pvt. Ltd.`. Before the legal documents are
 > published or the app is submitted for production release, the owner must fill in
 > every row below and replace the matching tokens in the policy files.
 >
@@ -11,12 +11,27 @@
 > grep -rn "\[LEGAL ENTITY NAME\]" docs/legal/
 > ```
 
-**Status:** ⚠️ NOT YET COMPLETED — all values below are placeholders.
+**Status (2026-07-28):** 🟡 **PARTIALLY COMPLETE.** Everything that could be decided
+without the domain and company registration has been filled in and removed from the
+policies. **Every token still listed below is blocked on one of exactly two owner
+actions — buying the domain, or completing company registration.** Nothing else in the
+legal pack is waiting on engineering.
+
+| Decided | Value |
+|---|---|
+| Product name | **NIKSHA OS** |
+| Legal entity | **NIKSHA Technologies Pvt. Ltd.** |
+| Entity type | Private Limited Company |
+| Copyright year | 2026 |
+
+⚠️ **Governing law city/state are deliberately still blank.** They must match the
+registered office in the incorporation certificate — guessing "Hyderabad / Telangana"
+from the demo data would put an unverified jurisdiction into a binding contract.
 
 | Token | Meaning | Example | Value (owner to fill) |
 |---|---|---|---|
-| `[LEGAL ENTITY NAME]` | Registered legal entity that operates Akshara ERP | "Akshara Technologies Private Limited" | `TODO` |
-| `[ENTITY TYPE]` | Company / LLP / proprietorship / partnership | "Private Limited Company" | `TODO` |
+| `NIKSHA Technologies Pvt. Ltd.` | Registered legal entity that operates NIKSHA OS | "NIKSHA Technologies Pvt. Ltd." | `TODO` |
+| `Private Limited Company` | Company / LLP / proprietorship / partnership | "Private Limited Company" | `TODO` |
 | `[CIN / REG NO]` | Company / LLP registration number (CIN, etc.) | "U72900TS2025PTC000000" | `TODO` |
 | `[REGISTERED ADDRESS]` | Full registered office address | "Plot 1, Hitech City, Hyderabad, Telangana 500081, India" | `TODO` |
 | `[SUPPORT EMAIL]` | General product / customer support | "support@akshara.app" | `TODO` |
@@ -29,7 +44,7 @@
 | `[POLICY HOST BASE URL]` | Public HTTPS base where policies are hosted | "https://akshara.veloraunisexsalon.com" | `https://akshara.veloraunisexsalon.com` (current) |
 | `[GOVERNING LAW CITY]` | City whose courts have jurisdiction | "Hyderabad" | `TODO` |
 | `[GOVERNING LAW STATE]` | State for governing law | "Telangana" | `TODO` |
-| `[COPYRIGHT YEAR]` | Year(s) for the copyright notice | "2026" | `2026` |
+| `2026` | Year(s) for the copyright notice | "2026" | `2026` |
 | `[PHONE / SUPPORT NUMBER]` | Optional support phone number | "+91 ..." | `TODO (optional)` |
 
 ## Notes for the owner
@@ -42,8 +57,8 @@
 2. **Grievance Officer** is a legal requirement for an intermediary/data
    fiduciary operating in India. Name a real person and a monitored inbox.
 3. **Data Protection Officer (DPO).** Only a *Significant* Data Fiduciary must
-   appoint a DPO. Akshara is unlikely to be classified as one initially, so a
+   appoint a DPO. NIKSHA OS is unlikely to be classified as one initially, so a
    Grievance/Privacy contact is sufficient — but revisit if the Data Protection
-   Board notifies Akshara as an SDF.
-4. The brand name **"Akshara" / "Akshara ERP"** is fixed and is **not** a
+   Board notifies NIKSHA OS as an SDF.
+4. The brand name **"NIKSHA OS" / "NIKSHA OS"** is fixed and is **not** a
    placeholder. Only the *legal entity* behind it needs to be filled in.

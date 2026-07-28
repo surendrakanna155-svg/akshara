@@ -1,12 +1,12 @@
-# Akshara ERP — Data Retention & Deletion Policy
+# NIKSHA OS — Data Retention & Deletion Policy
 
 **Document version:** 1.0
 **Status:** Draft for owner sign-off (see [PLACEHOLDERS.md](PLACEHOLDERS.md))
-**Operator:** **[LEGAL ENTITY NAME]** ("Akshara", "we", "us").
+**Operator:** **NIKSHA Technologies Pvt. Ltd.** ("NIKSHA OS", "we", "us").
 
-> This policy explains how long Akshara keeps personal data and how it is deleted.
+> This policy explains how long NIKSHA OS keeps personal data and how it is deleted.
 > Because the **Institution (school) is usually the Data Fiduciary**, the school
-> decides retention for its records; Akshara retains data **on the school's behalf**
+> decides retention for its records; NIKSHA OS retains data **on the school's behalf**
 > and to the extent needed to run the service. Read together with the
 > [Privacy Policy](PRIVACY_POLICY.md).
 
@@ -46,13 +46,13 @@ subject to law.
 
 - **Individuals** (parents, staff) should direct requests to **their school**, which
   is the Data Fiduciary. The school can correct or remove records, and can instruct
-  Akshara to do so.
+  NIKSHA OS to do so.
 - **Schools** can request deletion or return of their data at any time, subject to
   records the law requires to be retained.
-- Akshara will assist the school in fulfilling valid access, correction and erasure
+- NIKSHA OS will assist the school in fulfilling valid access, correction and erasure
   requests, and will action them within a reasonable period (and within statutory
   timelines where they apply).
-- To raise a request directly with Akshara: **[PRIVACY EMAIL]**.
+- To raise a request directly with NIKSHA OS: **[PRIVACY EMAIL]**.
 
 ## 4. Account closure (off-boarding a school)
 
@@ -60,7 +60,7 @@ When an Institution leaves the service:
 
 1. Access is disabled.
 2. The school may request an **export** of its data within an agreed window.
-3. After that window, Akshara **deletes or anonymises** the school's personal data
+3. After that window, NIKSHA OS **deletes or anonymises** the school's personal data
    from active systems within a reasonable period, except records that must be
    retained by law (e.g. certain financial records) or that are already
    de-identified.
