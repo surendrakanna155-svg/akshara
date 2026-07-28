@@ -140,10 +140,19 @@ void main() {
         RouteNames.examAdministration,
         RouteNames.financeDefaulters,
         RouteNames.sisStudents,
-        RouteNames.teacherAttendance,
-        RouteNames.teacherTimetable,
+        RouteNames.managementAnalytics,
+        RouteNames.substituteManager,
         RouteNames.hrEmployees,
       };
+      // NOTE on what this test does and does NOT prove. It asserts every
+      // actionRoute equals some RouteNames constant. It does NOT prove the
+      // route is registered in the router, nor that the persona reading the
+      // brief can actually reach it — and it passed while two routes sent a
+      // principal to teacher-shell paths the router would bounce. The set below
+      // is hand-maintained, so it is a spelling check, not a reachability
+      // check. Before this composer is ever surfaced, replace this with an
+      // assertion against the real route table plus the reading persona's
+      // permissions.
       final used = lines
           .map((l) => l.actionRoute)
           .whereType<String>()

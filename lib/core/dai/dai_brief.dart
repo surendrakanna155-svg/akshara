@@ -1,3 +1,55 @@
+// ============================================================================
+// STATUS: NOT WIRED. This composer has ZERO production call sites and is
+//         deliberately NOT rendered in the v1.0 release. Do not "just hook it
+//         up" — read the four gaps below first.
+// ============================================================================
+//
+// The composition logic in this file is sound and proven: it is pure (no
+// imports beyond route constants, no clock, no randomness, no I/O), so the same
+// facts always compose the same brief, and that is pinned by a repeat-
+// invocation test. What is missing is everything AROUND it.
+//
+// ## Why it is not surfaced in v1.0
+//
+// The principal already has a live, backend-scored surface that does this job:
+// `AdaptivePriorityFeedSection` plus the priorities list in
+// `lib/features/management/widgets/management_principal_overview_panel.dart`.
+// Rendering this brief beside it would show pending approvals a THIRD time on
+// one screen (priorities list · alert banner · brief). Two competing "what
+// matters today" surfaces is worse than one that works.
+//
+// ## What must exist before it can be surfaced
+//
+// 1. A FACTS PRODUCER. `DaiBriefFacts` is 11 bare scalars and nothing computes
+//    it. `ManagementDashboardData` can supply at most 5 (approvals count, the
+//    three fee figures, admissions). The other 6 —`attendancePercentToday`,
+//    `staffAbsentToday`, `atRiskStudents`, `unsubmittedMarksClasses`,
+//    `expiringStaffDocuments` — live in attendance, HR, exams and intelligence,
+//    each needing its own provider, RBAC scope and loading/error state. Until
+//    then a rendered brief would silently omit most of its lines.
+//
+// 2. APPROVAL-STATE FILTERING. The stated requirement is that the brief must
+//    not re-surface what the principal already acted on. `pendingApprovals` is
+//    a bare `int` with no link to `ApprovalStatus` or
+//    `ApprovalCenterService.listPending` (`lib/core/approvals/`). As written,
+//    the brief would keep counting items that were approved minutes ago.
+//
+// 3. EXCEPTION-FIRST SEVERITY ORDERING. The design intent is exception-first,
+//    but roughly half the current output is EVENTS, not exceptions: healthy
+//    attendance, staff absence, admissions joined, and a "no defaulters" line
+//    that fires precisely when nothing is wrong. A real severity rank — and a
+//    decision on which of these earn a line at all — is still owed.
+//
+// 4. ROUTE REACHABILITY. Fixed here (see below), but the class of bug must stay
+//    fixed: a principal is `UserRole.staff` WITHOUT `ErpRole.teacher`, so any
+//    `/teacher/*` route bounces them to `/admin`. Every action route must be an
+//    admin-ERP route; `dai_brief_test.dart` now asserts exactly that.
+//
+// Items 1–3 are feature work, not release hardening. See
+// `docs/roadmap/RC_EXECUTION_LOG.md` for the RC decision and its rationale.
+
+import '../../router/route_names.dart';
+
 /// A single line in the principal's morning brief.
 class DaiBriefLine {
   const DaiBriefLine({
@@ -54,6 +106,9 @@ class DaiBriefFacts {
 }
 
 /// Composes the Principal's Morning Brief — deterministically.
+///
+/// **NOT WIRED IN v1.0 — no production caller. See the STATUS block at the top
+/// of this file for the four gaps that must close before this is rendered.**
 ///
 /// This is what an "AI briefing" should be in a school ERP: the system already
 /// knows the numbers, so the intelligence is in **choosing what is worth saying
@@ -153,7 +208,12 @@ abstract final class DaiBriefComposer {
                 ? DaiBriefTone.warning
                 : DaiBriefTone.critical,
         actionLabel: attendance >= 90 ? null : 'Open attendance',
-        actionRoute: attendance >= 90 ? null : '/teacher/attendance',
+        // NOT `/teacher/attendance`: that is a teacher-persona route, and a
+        // principal is `UserRole.staff` without `ErpRole.teacher`, so the router
+        // would bounce them to `/admin` (app_router.dart `_canAccessRoute`).
+        // School-wide attendance for a principal lives in management analytics —
+        // the same destination the live overview panel's Attendance tile uses.
+        actionRoute: attendance >= 90 ? null : RouteNames.managementAnalytics,
       ));
     }
 
@@ -165,11 +225,18 @@ abstract final class DaiBriefComposer {
             ? '1 staff member is absent today.'
             : '$absent staff members are absent today.',
         tone: absent >= 5 ? DaiBriefTone.warning : DaiBriefTone.neutral,
-        // Substitutions has no top-level route of its own — it lives inside the
-        // timetable hub — so send the principal to the hub rather than a link
-        // that would 404. Verified against route_names, not assumed.
-        actionLabel: 'Open timetable',
-        actionRoute: '/teacher/timetable',
+        // Substitutions DOES have a top-level route — RouteNames.substituteManager
+        // (`/school/timetables/substitute`), registered via
+        // substituteManagerRouteBuilder. The previous comment here claimed
+        // otherwise and said it had been "verified against route_names, not
+        // assumed"; it had not been, and it sent the principal to
+        // `/teacher/timetable` instead. That is a teacher-shell route, and a
+        // principal is UserRole.staff without ErpRole.teacher, so the router
+        // would have silently bounced them to /admin — an action link that
+        // quietly does nothing. Route to the surface that actually answers
+        // "who is covering these periods?".
+        actionLabel: 'Open substitutions',
+        actionRoute: RouteNames.substituteManager,
       ));
     }
 
