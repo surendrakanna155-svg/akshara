@@ -13,8 +13,10 @@
 #      below. android/key.properties is git-ignored and must never be committed.
 #
 #   3. Run `flutter build appbundle --release` — Gradle will pick up the
-#      release signing config automatically. If key.properties is absent the
-#      build falls back to debug signing (fine for local dev, NOT for Play).
+#      release signing config automatically. If key.properties is ABSENT the
+#      release build FAILS with an explicit error (SEC-2 fail-closed). It does
+#      NOT silently fall back to debug signing — a debug-signed release can
+#      never be produced. Build a debug variant for local dev instead.
 #
 # When uploading the very first build to the Play Console, enrol in Play App
 # Signing so Google manages the final app-signing key and this stays the
