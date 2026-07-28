@@ -231,3 +231,85 @@ an RC would churn a large number of goldens. Two clean options:
 
 Reproduce: teacher persona → Home → "Mark now" on the attendance nudge.
 Evidence: `docs/release/screenshots/03-mark-attendance.png`.
+
+---
+
+# RC CLOSURE WAVE (2026-07-28) — 2 of 7 closed, 4 open
+
+## Closed
+
+- **P0-3 Morning Brief** — decided (A) intentionally unfinished. Marked NOT WIRED
+  in-file with the four gaps that must close first; fixed a comment that claimed
+  a verification which had not happened, and the `/teacher/timetable` route that
+  would have silently bounced a principal to `/admin`. `bebef722`
+- **P0-4 Event architecture claims** — corrected `Rollout-Checklist.md` (the drain
+  is still worth scheduling because it is the only caller of the Signal Refinery,
+  but it delivers nothing to subscribers, and its backlog counter can never go
+  red), and `BackendArchitecture.md` §10 (two propagation claims that are false
+  today). `29b91b40`
+
+## Open — the parallel wave died on infrastructure, not on the work
+
+Five agents failed: two on `API Error: Connection closed mid-response`, three on
+`no progress for 600s`. This was not a task failure — two had produced good work
+before dying.
+
+**Partial edits were assessed and handled, not left on disk:**
+- The support work had introduced a well-designed `SupportDeliveryFailure` type
+  and a mock doc-comment stating "every write throws" — **but `createIncident`
+  still fabricated `SUP-$_seq`**. A comment claiming behaviour the code does not
+  have is the same class of defect as the one being fixed, so it was **reverted
+  to HEAD** rather than committed half-done.
+- The Morning Brief work was coherent and was finished and committed.
+
+### P0-1 Support pipeline — STILL OPEN, still shipping a fake ticket id
+`SUPPORT_API_ENABLED` is absent from `config/live_release.json`, so
+`supportRepositoryProvider` returns `MockSupportRepository`, whose
+`createIncident` fabricates a plausible `SUP-N` and returns it. The user is told
+their report was filed. Nothing is sent or stored.
+
+The reverted design was right and should be redone:
+1. A `SupportDeliveryFailure` exception (reasons: `notConfigured`, `notDelivered`).
+2. The mock **throws** it on every write instead of fabricating — a mock may
+   stand in for reading data it lacks, never for *delivering* something.
+3. The UI catches it: no reference number, an honest message, a retry.
+4. Decide `SUPPORT_API_ENABLED` — verify the support routes are actually
+   registered in the edge router first.
+⚠️ Making the mock throw **will** break tests that currently rely on a
+successful mock write. Budget for that; it is the point.
+
+### P0-2 Audit retention — STILL OPEN (compliance)
+`AUDIT_RETENTION_DAYS` is parsed and never consumed; no purge job; no `pg_cron`.
+The published policy promises 3-year audit / 24-month comms / 12-month diagnostic
+retention and deletion "within a reasonable period". Code and policy disagree and
+the policy is what the customer relies on.
+Recommended: correct the document to what the system actually does, wire
+`countAuditEventsBeyondRetention` to a permission-gated route so an operator can
+SIZE a purge, and ship an explicitly-invoked purge script with a `--force` guard
+(mirror `akshara-restore.sh`). Do **not** automate destructive deletion against an
+append-only legal record without an operator in the loop.
+
+### P1-5 AuditUploadQueue — STILL OPEN
+Unbounded; entries past `maxRetries` are never removed (guaranteed on
+parent/student devices, which get a permanent 403 from a staff-scope-only
+ingest); `markUploading`/`markUploaded` rewrite the whole queue per entry; no
+throttle on `FlutterError.onError`, so a per-frame exception storms the log.
+A dropped audit entry must itself be observable — silent loss of audit data is
+its own defect.
+
+### P1-6 / P1-7 Backend logging + attendance audit — STILL OPEN
+`logRequest` carries no user/school/tenant id, so the only durable diagnostic
+cannot be narrowed to a complainant — take them from **verified JWT claims**, not
+client headers, and IDs only (DPDP).
+`_shared/attendance/attendance_handlers.ts` has **zero** audit calls: student
+attendance marking is unaudited, and `PATCH /attendance/corrections/:id/status`
+approves/rejects a parent's request with no audit row. And
+`qa_r_008_audit_completeness_test.ts:143-144` exempts attendance on a premise
+that is false for that route — **fix the exemption too**, a green test asserting
+a false premise converts an open question into a settled one.
+`attendance_corrections` already stores `from_mark`/`to_mark`, so real
+before/after is available.
+
+## Gate state at close of this wave
+`analyze --fatal-infos` clean · full suite 4383 passed / 1 skipped / 0 failed ·
+goldens 178/178 · working tree clean.
