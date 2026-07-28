@@ -142,3 +142,70 @@ Severity as reported by the audit; ✅ = remediated this session.
 | RPO ≈ 24h, no WAL/PITR | MEDIUM | Accepted for pilot. `DeploymentArchitecture.md` still claims 5-min RPO; now labelled stale. |
 | Shared VPS | MEDIUM | Also runs unrelated production workloads. Never run host-wide docker/package commands. |
 | Concurrent-agent compile races | LOW | Several transient red runs during parallel remediation resolved on retry. Treat any single red run in a multi-agent tree with suspicion; re-run before believing it. |
+
+---
+
+# SESSION OUTCOME (2026-07-28)
+
+## Final verified gates — merged tree, measured not inherited
+
+| Gate | Result |
+|---|---|
+| `flutter analyze --fatal-infos` (CI Gate 1's real bar) | **No issues found** |
+| Full suite | **4375 passed · 1 skipped · 0 failed** (baseline 4316; waves added 59) |
+| Goldens | **178 / 178** |
+| Release AAB | **builds** (132.2 MB; real arm64 download **57.9 MB**) |
+| Release signing fail-closed | **verified both ways** — signs with a keystore, REFUSES without one |
+| App on device | **boots, signs in, navigates** — Android 16 / API 36 |
+
+## Commits
+
+`357f465b` analyzer gate + legal site generator · `f0fcd707` startup perf ·
+`3a75e8c5` VPS runbook + env-var fixes + PLACEHOLDERS repair · `389cd437` store
+listing + feature graphic · `48c21e3f` changelog · `7ce99473` brand completion ·
+`83eee524` docs index · `b1d7811a` CI gate widened · `bae87080` six remediation
+lanes · `02aabd53` reliability durability fix · `30cfd7a1` admin-hub layout
+
+## Found ONLY by running the app on a device
+
+Neither of these could be caught by any test in the suite. Both are recorded
+because they are the argument for keeping a device in the loop:
+
+1. **Undecryptable reliability store → permanent silent loss of durability.**
+   The encrypted drafts/outbox DB could not be decrypted, so the app fell back
+   to in-memory — and because the bad file stays on disk, it did so on EVERY
+   subsequent launch. Reachable in production via Android auto-backup (app data
+   restores; keystore keys deliberately do not). Fixed by rebuilding the store
+   when — and only when — this launch had to mint a new key, plus
+   `allowBackup="false"` to stop it at the source.
+2. **Admin Hub wasted ~46% of the principal's home screen.** Module cards were a
+   hardcoded 220dp inside a Wrap; at ~411dp phone width two never fit, so every
+   row held one card beside a dead gutter. No golden caught it because the
+   admin-hub goldens render at 834dp, where three fit and it looks deliberate.
+
+## Remaining engineering work (not owner-blocked)
+
+1. **7 more store screenshots.** One captured; Play needs ≥2. Procedure and the
+   recommended order are in `docs/release/screenshots/README.md`. Stopped rather
+   than ship a mid-animation frame.
+2. **Admin Hub card interior is sparse** now that cards are full-width — the
+   icon/label/Open column leaves the right half empty. Correct, not broken; a
+   horizontal layout for the one-column case would finish it.
+3. **`MoreNavSheet` filters only on hidden-route scope, never role/permission**
+   (`lib/shared/navigation/persona_nav.dart:212-213`). The two specific dead
+   tiles are fixed; the class of bug is not.
+4. **`TeacherExamsData.classAveragePercent` / `ParentFeesData` money fields**
+   remain non-nullable in their models, so absence and a measured zero are
+   indistinguishable at that layer. The UI compensates. Consequence worth
+   knowing: a genuine zero-fee student reads as "not published".
+5. **`web/` React brand drift** — owner-frozen lane, ships to nobody. Enumerated
+   but deliberately untouched.
+6. **Simulated AI pipeline** labels locally-synthesised text "Live inference" on
+   secondary surfaces. The main Copilot is unaffected (verified:
+   `AI_COPILOT_ENABLED=true` routes it to the real backend).
+
+## Owner-blocked — the true stop line
+
+Buy the domain · register the company · name a Grievance Officer · Play Console
+account + identity verification · keystore password (see risk table above) ·
+Razorpay merchant onboarding · production secrets · live VPS deploy.
