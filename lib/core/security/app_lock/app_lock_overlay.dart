@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../theme/theme_extensions.dart';
 import '../../../theme/typography.dart';
+import '../../constants/app_constants.dart';
 import 'app_lock_providers.dart';
 
 /// P1-SEC-1 — the full-screen App Lock overlay. Rendered ON TOP of the app
@@ -129,7 +130,7 @@ class _AppLockOverlayState extends ConsumerState<AppLockOverlay> {
       children: [
         Icon(Icons.lock_outline, size: 48, color: scheme.primary),
         const SizedBox(height: 16),
-        Text('Akshara is locked', style: text.titleMedium),
+        Text('${AppConstants.appName} is locked', style: text.titleMedium),
         const SizedBox(height: 8),
         Text(
           'Unlock with your biometric to continue.',

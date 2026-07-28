@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_constants.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../theme/breakpoints.dart';
 import '../../theme/motion.dart';
@@ -50,7 +51,7 @@ class AksharaNavBrandHeader extends StatelessWidget {
                 const SizedBox(width: AksharaSpacing.s3),
                 Expanded(
                   child: Text(
-                    'Akshara ERP',
+                    AppConstants.appName,
                     style: text.titleSmall.copyWith(
                       color: colors.primary,
                       fontWeight: FontWeight.w700,

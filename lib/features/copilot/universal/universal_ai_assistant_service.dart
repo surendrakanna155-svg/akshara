@@ -118,7 +118,7 @@ class UniversalAiAssistantService {
     final focus = profile.persona.intelligenceFocus.join(', ');
     final screen = screenContext?.screen ?? 'AI Assistant';
     final module = screenContext?.module ?? 'general';
-    return 'You are Akshara ERP Universal AI Assistant for ${profile.persona.label}. '
+    return 'You are the NIKSHA OS Universal AI Assistant for ${profile.persona.label}. '
         '${profile.systemPromptSpecialization} '
         'Current screen: $screen. '
         'Module: $module. '

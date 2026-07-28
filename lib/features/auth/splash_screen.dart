@@ -105,6 +105,17 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                   ),
                   textAlign: TextAlign.center,
                 ),
+                const SizedBox(height: AksharaSpacing.s1),
+                // The positioning line. On a school's first cold start this is
+                // the one moment the product gets to say what it is, before any
+                // dashboard has loaded.
+                Text(
+                  AppConstants.appTagline,
+                  style: text.bodySmall.copyWith(
+                    color: colors.onPrimary.withValues(alpha: 0.70),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: AksharaSpacing.s8),
                 SizedBox(
                   width: 28,

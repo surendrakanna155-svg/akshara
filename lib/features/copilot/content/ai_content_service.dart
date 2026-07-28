@@ -15,7 +15,7 @@ class AiContentService {
           prompt: _buildPrompt(request),
           taskType: aiTaskTypeName(AiInferenceTaskType.contentGeneration),
           systemPrompt:
-              'You are Akshara ERP assistant. Generate school-safe formal content.',
+              'You are the NIKSHA OS assistant. Generate school-safe formal content.',
           context: {
             'module': 'ai_content',
             'type': request.type.name,
