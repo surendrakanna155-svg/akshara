@@ -1,6 +1,7 @@
 import 'package:akshara_erp/features/teacher/communication/teacher_parent_communication_provider.dart';
 import 'package:akshara_erp/features/teacher/communication/teacher_parent_communication_screen.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -156,6 +157,56 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('Sent to'), findsOneWidget);
+    });
+
+    testWidgets(
+        'a failed delivery-status read is NOT reported as "no messages sent"',
+        (tester) async {
+      await _pump(
+        tester,
+        overrides: [
+          teacherCommunicationSelectedStudentProvider
+              .overrideWith((ref) => _student8aId),
+          studentCommunicationTimelineProvider.overrideWith(
+            (ref, studentId) async => throw DioException(
+              requestOptions: RequestOptions(
+                path: '/functions/v1/teacher-parent-communications',
+                baseUrl: 'https://internal-db.akshara.invalid',
+              ),
+              type: DioExceptionType.connectionError,
+              message: 'SocketException: Failed host lookup',
+            ),
+          ),
+        ],
+      );
+
+      await _scrollTo(tester, find.text('Delivery status'));
+
+      // The false "nothing was ever sent" claim — which invites a duplicate
+      // contact on the parent channel — must not appear on a failed read.
+      expect(find.text('No messages sent to this parent yet.'), findsNothing);
+      expect(
+        find.textContaining("Couldn't load delivery status"),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('Unable to reach the server'),
+        findsOneWidget,
+      );
+      expect(find.widgetWithText(TextButton, 'Try again'), findsOneWidget);
+
+      for (final leak in const [
+        'DioException',
+        'internal-db.akshara.invalid',
+        'teacher-parent-communications',
+        'SocketException',
+      ]) {
+        expect(
+          find.textContaining(leak),
+          findsNothing,
+          reason: 'raw exception detail "$leak" reached the UI',
+        );
+      }
     });
   });
 }

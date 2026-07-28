@@ -10,7 +10,13 @@ void main() {
 
       expect(tokens.primary, const Color(0xFF1A56DB));
       expect(tokens.secondary, const Color(0xFF334155));
-      expect(tokens.tertiary, const Color(0xFF0D9488));
+      // A11y-P0: teal-700, NOT teal-600 (#0D9488). Same hue, one step darker.
+      // #0D9488 on tertiaryContainer (#CCFBF1) is 3.32:1; an AksharaStatusChip
+      // paints 11px `labelSmall`, which WCAG 2.1 classes as normal text and so
+      // requires 4.5:1. #0F766E is 4.86:1. Do NOT restore #0D9488 — it is not
+      // "the brand teal", it is a failing foreground. See
+      // test/theme/rendered_contrast_audit_test.dart.
+      expect(tokens.tertiary, const Color(0xFF0F766E));
       expect(tokens.indigo, const Color(0xFF4F46E5));
     });
 
@@ -36,7 +42,8 @@ void main() {
       final scheme = AksharaColorTokens.light().toColorScheme();
 
       expect(scheme.secondary, const Color(0xFF334155));
-      expect(scheme.tertiary, const Color(0xFF0D9488));
+      // A11y-P0 — see the token test above; teal-700, not teal-600.
+      expect(scheme.tertiary, const Color(0xFF0F766E));
       expect(scheme.surfaceTint, Colors.transparent);
     });
 
@@ -55,8 +62,14 @@ void main() {
       final tokens = AksharaColorTokens.light();
 
       expect(tokens.success, const Color(0xFF15803D));
-      expect(tokens.warning, const Color(0xFFD97706));
-      expect(tokens.error, const Color(0xFFDC2626));
+      // A11y-P0: the semantic FOREGROUNDS are 700-level, not 600. On their
+      // 50-level containers the 600 steps read 3.07:1 (amber) and 4.41:1 (red)
+      // — both below the 4.5:1 WCAG AA normal-text floor that the 11px
+      // `labelSmall` of a compact AksharaStatusChip requires ("Paid" /
+      // "Overdue" on 141 call sites). amber-700 is 4.84:1, red-700 is 5.92:1.
+      // Hue is unchanged; do not restore #D97706 / #DC2626.
+      expect(tokens.warning, const Color(0xFFB45309));
+      expect(tokens.error, const Color(0xFFB91C1C));
     });
 
     test('M15 design system version is set', () {

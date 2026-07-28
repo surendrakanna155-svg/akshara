@@ -39,8 +39,12 @@ class AttendanceCalendar extends StatelessWidget {
         padding: const EdgeInsets.all(AksharaSpacing.s3),
         child: Column(
           children: [
-            SizedBox(
-              height: 24,
+            // A11y-P1: minimum height, not a hard height — a hard 24px clipped
+            // the weekday labels once the system font scale grew the
+            // `labelSmall` line box past it. At 1.0× the row is still exactly
+            // 24px.
+            ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 24),
               child: Row(
                 children: [
                   for (final label in _weekdays)
@@ -231,8 +235,11 @@ class _AttendanceLegend extends StatelessWidget {
     final colors = context.colors;
     final ext = context.akshara;
 
-    return SizedBox(
-      height: 32,
+    // A11y-P1: minimum height, not a hard height — a hard 32px clipped the
+    // `bodySmall` legend labels at a large system font scale. At 1.0× the strip
+    // is still exactly 32px.
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 32),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(

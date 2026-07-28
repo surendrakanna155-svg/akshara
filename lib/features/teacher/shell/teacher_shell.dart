@@ -68,13 +68,22 @@ class TeacherShell extends ConsumerWidget {
       // P1 fix — the syllabus daily-capture UI (Lesson Logs) and the teacher's
       // own coverage dashboard (Academic Progress) had routes + real screens
       // but NO inbound navigation for the teacher persona; un-buried here.
+      //
+      // P1-4 (2026-07-28): these pointed at RouteNames.lessonLogs
+      // (`/school/lesson-logs`) and RouteNames.academicProgress
+      // (`/school/academic/progress`) — ADMIN-shell routes gated on
+      // `canAccessAdminErpShell` (auth.role == UserRole.staff). A teacher is
+      // UserRole.teacher, so both tiles silently redirected to the dashboard
+      // with no message: dead tiles. The teacher already holds viewLessonLogs /
+      // viewAcademicProgress — it was the SHELL wall, not the permission. They
+      // now point at teacher-shell siblings rendering the same screens.
       MoreNavDestination(
-        route: RouteNames.lessonLogs,
+        route: RouteNames.teacherLessonLogs,
         label: 'Lesson Logs',
         icon: Icons.history_edu_outlined,
       ),
       MoreNavDestination(
-        route: RouteNames.academicProgress,
+        route: RouteNames.teacherSyllabusProgress,
         label: 'Syllabus Progress',
         icon: Icons.track_changes_outlined,
       ),

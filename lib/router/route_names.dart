@@ -68,6 +68,19 @@ abstract final class RouteNames {
   // so the teacher bell no longer borrows the parent persona's route.
   static const String teacherNotifications = '/teacher/notifications';
 
+  // SEC/NAV fix (2026-07-28) — teacher-shell entry points for the syllabus
+  // daily-capture (Lesson Logs) and coverage (Syllabus Progress) surfaces.
+  //
+  // The teacher "More" sheet used to point straight at the ADMIN-shell routes
+  // `/school/lesson-logs` and `/school/academic/progress`. Those require
+  // `canAccessAdminErpShell` (auth.role == UserRole.staff); a teacher is
+  // UserRole.teacher, so both tiles silently bounced back to the dashboard even
+  // though the teacher DOES hold viewLessonLogs / viewAcademicProgress.
+  // Registering teacher-owned siblings inside TeacherShell keeps the admin wall
+  // intact (no role widened, no permission weakened) while making the tiles work.
+  static const String teacherLessonLogs = '/teacher/lesson-logs';
+  static const String teacherSyllabusProgress = '/teacher/syllabus-progress';
+
   static String teacherConversation(String threadId) =>
       '$teacherMessages/$threadId';
 
@@ -608,6 +621,16 @@ abstract final class RouteNames {
   ];
 
   /// All module groups wrapped by [AdminShell].
+  ///
+  /// ⚠ SECURITY-CRITICAL — this is the ONLY list both route gates key off:
+  ///   • `_isProtectedRoute` (app_router.dart) — the AUTHENTICATION gate, and
+  ///   • `canAccessErpRoute` (route_guards.dart) — the RBAC gate, which starts
+  ///     `if (!isAdminErpRoute(location)) return true;`.
+  /// A route that declares a [Permission] in `kErpRouteViewPermissions` but is
+  /// missing here therefore gets NEITHER gate — it fails OPEN, admitting an
+  /// unauthenticated caller straight into the admin console. Keep this list and
+  /// `kErpRouteViewPermissions` in lock-step; the invariant is enforced by
+  /// `test/router/route_gate_invariants_test.dart`.
   static const List<String> adminErpRoutes = [
     admin,
     planEntitlements,
@@ -619,6 +642,12 @@ abstract final class RouteNames {
     examIntelligence,
     homeworkIntelligence,
     student360,
+    // SEC P0-2 (2026-07-28) — `/staff-360/:employeeId` renders an employee's
+    // full dossier (employment, contact, leave). It declared viewHr in
+    // kErpRouteViewPermissions but was absent here, so BOTH gates were skipped:
+    // any authenticated parent/student/teacher could deep-link to any
+    // employee's record inside the admin chrome.
+    staff360,
     employees,
     inventoryDistribution,
     inventoryReplacements,
@@ -671,6 +700,19 @@ abstract final class RouteNames {
     library,
     inventory,
     alumni,
+    // SEC P0-1 / P0-2 (2026-07-28) — the four PRC-A Batch 2 staff desks. Each
+    // already declared its permission in kErpRouteViewPermissions but was never
+    // listed here, so neither gate ran.
+    //   • the three request desks were reachable UNAUTHENTICATED;
+    //   • `/student-health` additionally matched `_isProtectedRoute` by
+    //     accident through the bare `startsWith('/student')` prefix, and the
+    //     student arm of `_canAccessRoute` was the same bare prefix — handing a
+    //     logged-in STUDENT the whole-school Infirmary console, while staff who
+    //     legitimately hold viewStudentHealthRecord were bounced to /admin.
+    certificateRequests,
+    gatePasses,
+    complaints,
+    studentHealth,
     controlCenter,
     director,
     parentMeetings,

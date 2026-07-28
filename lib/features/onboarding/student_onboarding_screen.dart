@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/errors/error_text.dart';
 import '../../core/reports/akshara_report_export_service.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../core/tenant/tenant_provider.dart';
@@ -226,7 +227,10 @@ class _StructureStepState extends ConsumerState<_StructureStep> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not generate placeholders: $e')),
+        SnackBar(
+          content: Text('Could not generate placeholders: '
+              '${aksharaErrorMessage(e)}'),
+        ),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -503,7 +507,7 @@ class _UploadStepState extends ConsumerState<_UploadStep> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Preview failed: $e')),
+        SnackBar(content: Text('Preview failed: ${aksharaErrorMessage(e)}')),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -529,7 +533,7 @@ class _UploadStepState extends ConsumerState<_UploadStep> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Commit failed: $e')),
+        SnackBar(content: Text('Commit failed: ${aksharaErrorMessage(e)}')),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -737,7 +741,7 @@ class _AddOneFormState extends ConsumerState<_AddOneForm> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not add: $e')),
+        SnackBar(content: Text('Could not add: ${aksharaErrorMessage(e)}')),
       );
     } finally {
       if (mounted) setState(() => _busy = false);

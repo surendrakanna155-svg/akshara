@@ -40,7 +40,12 @@ class TeacherClassTeacherDashboardScreen extends ConsumerWidget {
         unreadNotifications: data.unreadNotifications,
         showAi: true,
         showProfile: true,
-        onAiTap: () => context.go(RouteNames.aiAssistant),
+        // P1-5 (2026-07-28) — MUST be push, not go. `/ai-assistant` is a
+        // top-level route outside every shell, so `go` collapses the stack;
+        // CopilotPersonaShellScreen's back arrow then calls `context.pop()`
+        // with nothing to pop (it throws), and the screen has no bottom nav —
+        // force-quit was the only exit. Every other caller uses push.
+        onAiTap: () => context.push(RouteNames.aiAssistant),
         // F-128 — teacher-scoped notifications inbox (not the parent route).
         onNotificationsTap: () => context.push(RouteNames.teacherNotifications),
         // F-164 — the profile avatar opens the teacher profile, not Home.

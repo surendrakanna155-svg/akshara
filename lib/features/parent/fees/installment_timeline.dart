@@ -28,7 +28,15 @@ class InstallmentTimeline extends StatelessWidget {
           fixedHeight: false,
           spacingBelow: AksharaSpacing.s3,
         ),
-        Padding(
+        // Honest state — a heading over dead space says nothing. With no
+        // schedule published, say exactly that.
+        if (installments.isEmpty)
+          const AksharaSectionEmpty(
+            message: 'No installment schedule published yet.',
+            icon: Icons.event_note_outlined,
+          )
+        else
+          Padding(
           padding: const EdgeInsets.only(left: AksharaSpacing.s2),
           child: Column(
             children: [

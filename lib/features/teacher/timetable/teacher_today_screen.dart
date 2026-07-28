@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
+import '../../academics/timetable/substitutions/daily_substitutions_provider.dart';
 import '../../academics/timetable/timetable_models.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/radius.dart';
@@ -28,7 +29,12 @@ class TeacherTodayScreen extends ConsumerWidget {
       // DS V2 P4 — premium persona canvas behind today's classes.
       body: AksharaPremiumBackground(
         showMotif: false,
-        child: periods.isEmpty && cover.valueOrNull?.isEmpty != false
+        // A FAILED cover read is not "nothing scheduled" — falling through to
+        // the empty state would hide an assigned substitution entirely, so the
+        // error is carried into the list where the banner can surface it.
+        child: periods.isEmpty &&
+                !cover.hasError &&
+                cover.valueOrNull?.isEmpty != false
             ? const AksharaEmptyState(
                 icon: Icons.event_available_outlined,
                 message: 'No classes scheduled for you today.',
@@ -40,7 +46,10 @@ class TeacherTodayScreen extends ConsumerWidget {
                     const SizedBox(height: AksharaSpacing.s3),
                 itemBuilder: (context, index) {
                   if (index == 0) {
-                    return _CoverBanner(cover: cover);
+                    return _CoverBanner(
+                      cover: cover,
+                      onRetry: () => ref.invalidate(dailySubstitutionsProvider),
+                    );
                   }
                   final i = index - 1;
                   final p = periods[i];
@@ -97,11 +106,13 @@ class TeacherTodayScreen extends ConsumerWidget {
 
 /// TCH-4 — "Today's cover" banner: the real, server-resolved substitutions the
 /// logged-in teacher is covering for the selected date. Renders nothing when the
-/// teacher has no cover assigned.
+/// teacher has no cover assigned — but a FAILED read is surfaced, never hidden:
+/// silently dropping it lets a teacher miss a class they were assigned to cover.
 class _CoverBanner extends StatelessWidget {
-  const _CoverBanner({required this.cover});
+  const _CoverBanner({required this.cover, this.onRetry});
 
   final AsyncValue<List<TimetableSubstitution>> cover;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -110,7 +121,17 @@ class _CoverBanner extends StatelessWidget {
 
     return cover.when(
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, __) => AksharaWarningBanner(
+        key: const Key('teacher_today_cover_error'),
+        height: 72,
+        compactMessage: true,
+        message: "Couldn't check today's cover. If you have been assigned a "
+            'substitution it will not be listed.',
+        actionLabel: onRetry == null ? null : 'Retry',
+        onAction: onRetry,
+        semanticLabel: "Couldn't check today's cover. If you have been "
+            'assigned a substitution it will not be listed.',
+      ),
       data: (subs) {
         if (subs.isEmpty) return const SizedBox.shrink();
         return Container(

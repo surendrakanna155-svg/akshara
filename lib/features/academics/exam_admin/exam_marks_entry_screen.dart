@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -158,6 +159,10 @@ class _MarksEntryBodyState extends ConsumerState<_MarksEntryBody>
   final Map<String, FocusNode> _focusNodes = {};
   bool _savingAll = false;
 
+  /// Owned by the roster [ListView] so `_focusNextRow` can bring an unbuilt row
+  /// into the built range before focusing it.
+  final ScrollController _listController = ScrollController();
+
   // REL-3 — draft values recovered from a prior interrupted session, keyed by
   // mark id. Applied when a row's controller is (re)created so an off-screen row
   // scrolled into view rehydrates its typed-but-unsaved mark, not the persisted
@@ -246,6 +251,7 @@ class _MarksEntryBodyState extends ConsumerState<_MarksEntryBody>
     for (final f in _focusNodes.values) {
       f.dispose();
     }
+    _listController.dispose();
     super.dispose();
   }
 
@@ -254,14 +260,57 @@ class _MarksEntryBodyState extends ConsumerState<_MarksEntryBody>
   void _focusNextRow(int fromIndex) {
     for (var i = fromIndex + 1; i < marks.length; i++) {
       final next = marks[i];
-      if (next.status.isPresent && !next.published && _canEdit) {
-        _focusFor(next.id).requestFocus();
+      if (!(next.status.isPresent && !next.published && _canEdit)) continue;
+
+      final node = _focusFor(next.id);
+      if (node.context != null) {
+        node.requestFocus();
         return;
       }
+
+      // UX-P1: the node exists in `_focusNodes` but is DETACHED — the row is
+      // outside the range `ListView.separated` has built, so no `Focus` widget
+      // owns the node and `requestFocus()` is a silent no-op. (Reachable
+      // whenever enough consecutive non-editable rows — absent / published
+      // students — follow the current one to push the next editable row past
+      // the viewport + cacheExtent.) Scroll until the row is built, then focus
+      // it.
+      _revealThenFocus(node);
+      return;
     }
     // Last editable row: drop focus so the keyboard closes.
     FocusScope.of(context).unfocus();
   }
+
+  /// Scrolls the roster forward a frame at a time until [node] is attached to a
+  /// built row, then focuses it.
+  ///
+  /// Steps by viewport rather than by an assumed row height, so it makes no
+  /// assumption about row extent, and is bounded so it can never spin: it stops
+  /// at the end of the list or after [_revealFocusMaxFrames] frames.
+  void _revealThenFocus(FocusNode node, {int frame = 0}) {
+    if (!mounted) return;
+    if (node.context != null) {
+      node.requestFocus();
+      return;
+    }
+    if (frame >= _revealFocusMaxFrames || !_listController.hasClients) return;
+
+    final position = _listController.position;
+    if (position.pixels >= position.maxScrollExtent) return;
+
+    _listController.jumpTo(
+      math.min(
+        position.pixels + position.viewportDimension * 0.8,
+        position.maxScrollExtent,
+      ),
+    );
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _revealThenFocus(node, frame: frame + 1),
+    );
+  }
+
+  static const int _revealFocusMaxFrames = 8;
 
   /// EXM-1 — collect every dirty present row (field differs from persisted marks)
   /// and POST them as one batch, then show "N saved, M failed" and refresh.
@@ -431,6 +480,7 @@ class _MarksEntryBodyState extends ConsumerState<_MarksEntryBody>
         ),
         Expanded(
           child: ListView.separated(
+            controller: _listController,
             padding: const EdgeInsets.symmetric(horizontal: AksharaSpacing.s4),
             itemCount: marks.length,
             separatorBuilder: (_, __) =>
@@ -1029,11 +1079,34 @@ class _MarkEntryRowState extends ConsumerState<_MarkEntryRow> {
                         isDense: true,
                         suffixText: '/${widget.exam.maxMarks}',
                       ),
-                      // Persist this row, then jump focus to the next one so a
-                      // teacher can key straight down the roster.
-                      onSubmitted: (_) async {
-                        await _save();
+                      // UX-P1 (keyboard thrash on the app's most speed-critical
+                      // flow). This used to be `onSubmitted: (_) async { await
+                      // _save(); widget.onSubmitted(); }` with NO
+                      // `onEditingComplete`. Two things went wrong on every
+                      // Enter:
+                      //  1. With `onEditingComplete` null, EditableText runs its
+                      //     default for `TextInputAction.next` —
+                      //     `focusNode.nextFocus()` — SYNCHRONOUSLY, before
+                      //     `onSubmitted`. Traversal order put the row's Save
+                      //     IconButton next, so focus left the text field and
+                      //     the soft keyboard closed.
+                      //  2. `onSubmitted` was async and awaited a network write
+                      //     before advancing, so the real focus move landed one
+                      //     round-trip later — keyboard closes, teacher waits,
+                      //     keyboard reopens, and keystrokes typed in the gap
+                      //     are lost.
+                      // The advance now happens in `onEditingComplete`, which
+                      // REPLACES the default `nextFocus()` and runs in the same
+                      // frame as the Enter, exactly like the teacher grid
+                      // (lib/features/teacher/exams/teacher_exams_screen.dart).
+                      // The save is started afterwards and deliberately NOT
+                      // awaited, so it can never block the focus move.
+                      onEditingComplete: () {
+                        _controller.clearComposing();
                         widget.onSubmitted();
+                      },
+                      onSubmitted: (_) {
+                        unawaited(_save());
                       },
                     )
                   // Non-present: field is locked; show the display code instead.

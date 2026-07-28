@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/widgets/akshara_section_empty.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -27,24 +28,32 @@ class FeeBreakdownCard extends ConsumerWidget {
           fixedHeight: false,
           spacingBelow: AksharaSpacing.s2,
         ),
-        Card(
-          margin: EdgeInsets.zero,
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: [
-              for (var i = 0; i < categories.length; i++)
-                _BreakdownPanel(
-                  category: categories[i],
-                  isExpanded: expandedIndex == i,
-                  isLast: i == categories.length - 1,
-                  onTap: () {
-                    ref.read(feesAccordionExpandedProvider.notifier).state =
-                        expandedIndex == i ? null : i;
-                  },
-                ),
-            ],
+        // Honest state — an empty Card under the heading is dead space; with no
+        // published breakdown, say exactly that.
+        if (categories.isEmpty)
+          const AksharaSectionEmpty(
+            message: 'No fee breakdown published yet.',
+            icon: Icons.receipt_long_outlined,
+          )
+        else
+          Card(
+            margin: EdgeInsets.zero,
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: [
+                for (var i = 0; i < categories.length; i++)
+                  _BreakdownPanel(
+                    category: categories[i],
+                    isExpanded: expandedIndex == i,
+                    isLast: i == categories.length - 1,
+                    onTap: () {
+                      ref.read(feesAccordionExpandedProvider.notifier).state =
+                          expandedIndex == i ? null : i;
+                    },
+                  ),
+              ],
+            ),
           ),
-        ),
       ],
     );
   }

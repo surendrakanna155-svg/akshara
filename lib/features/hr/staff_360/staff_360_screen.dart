@@ -286,11 +286,16 @@ class _StaffMetrics extends StatelessWidget {
           label: 'Recent present',
           accent: present == total ? KpiAccent.success : KpiAccent.warning,
         ),
-      _Metric(
-        value: '$leaveAvailable',
-        label: 'Leave days left',
-        accent: KpiAccent.primary,
-      ),
+      // Honest state: with no leave policy configured there is no balance to
+      // report. A "0 Leave days left" would read as "this employee has used up
+      // their leave" AND contradict the "No leave balances recorded." line
+      // further down this very screen. Gated like its two siblings.
+      if (detail.leaveBalances.isNotEmpty)
+        _Metric(
+          value: '$leaveAvailable',
+          label: 'Leave days left',
+          accent: KpiAccent.primary,
+        ),
       if (detail.documents.isNotEmpty)
         _Metric(
           value: '$expiring',

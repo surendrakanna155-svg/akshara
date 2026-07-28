@@ -411,13 +411,27 @@ class _AttendanceBodyState extends ConsumerState<_AttendanceBody>
                 ),
                 Expanded(
                   child: visibleStudents.isEmpty
-                      ? const Center(
+                      // Day one, a newly created class has an empty roster and
+                      // the teacher has typed nothing. Telling them their
+                      // search matched nothing is a lie — separate "no roster
+                      // yet" from "your search matched nothing", the same way
+                      // `data.classes.isEmpty` is handled one level up.
+                      ? Center(
                           child: SingleChildScrollView(
-                            child: AksharaEmptyState(
-                              message: 'No students match your search.',
-                              icon: Icons.search_off_outlined,
-                              compact: true,
-                            ),
+                            child: data.students.isEmpty
+                                ? const AksharaEmptyState(
+                                    message:
+                                        'No students are enrolled in this class '
+                                        'yet. They appear here as soon as the '
+                                        'office enrolls them.',
+                                    icon: Icons.groups_outlined,
+                                    compact: true,
+                                  )
+                                : const AksharaEmptyState(
+                                    message: 'No students match your search.',
+                                    icon: Icons.search_off_outlined,
+                                    compact: true,
+                                  ),
                           ),
                         )
                       // P2-UX-2 §2.1 — exception-first: a dense grid so the class

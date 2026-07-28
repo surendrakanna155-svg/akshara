@@ -65,6 +65,9 @@ class _StaffLoginScreenState extends ConsumerState<StaffLoginScreen> {
         title: const Text('Staff Portal'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
+          // A11y-P2: without a label this icon-only button announces as just
+          // "button". The tooltip becomes the accessible name.
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
           onPressed: () => context.go(RouteNames.login),
         ),
       ),

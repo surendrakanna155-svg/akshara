@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/communication/parent_communication_models.dart';
 import '../../../core/communication/teacher_parent_templates.dart';
+import '../../../core/errors/error_text.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -204,7 +205,7 @@ class TeacherParentCommunicationScreen extends ConsumerWidget {
                 const SizedBox(height: AksharaSpacing.s4),
                 const AksharaSectionHeader(title: 'Delivery status'),
                 const SizedBox(height: AksharaSpacing.s2),
-                ..._timelineTiles(ref, selectedId),
+                ..._timelineTiles(context, ref, selectedId),
               ],
             ] else ...[
               const AksharaSectionHeader(title: 'Subject observation'),
@@ -251,31 +252,63 @@ class TeacherParentCommunicationScreen extends ConsumerWidget {
     );
   }
 
-  List<Widget> _timelineTiles(WidgetRef ref, String selectedId) {
-    // PRA-P0-17 (S0/T2-F): provider is now async (live endpoint); an empty list
-    // while loading/on error preserves the existing empty-state behaviour.
-    final timeline = ref
-            .watch(studentCommunicationTimelineProvider(selectedId))
-            .valueOrNull ??
-        const [];
-    if (timeline.isEmpty) {
-      return [
-        const Text('No messages sent to this parent yet.'),
-      ];
-    }
-    return [
-      for (final record in timeline)
-        Card(
-          child: ListTile(
-            title: Text(record.reason.label),
-            subtitle: Text(record.deliveryStatusLabel),
-            trailing: Text(
-              record.channelsLabel,
-              style: const TextStyle(fontSize: 12),
+  List<Widget> _timelineTiles(
+    BuildContext context,
+    WidgetRef ref,
+    String selectedId,
+  ) {
+    // PRA-P0-17 (S0/T2-F): the delivery timeline is a live async read. Loading
+    // and error must stay DISTINCT from a genuinely empty timeline — telling a
+    // teacher "no messages sent yet" on a failed read invites a duplicate
+    // contact on the parent channel.
+    final text = context.aksharaText;
+    final colors = context.colors;
+    return ref.watch(studentCommunicationTimelineProvider(selectedId)).when(
+          loading: () => [
+            Text(
+              'Checking delivery status…',
+              style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
             ),
-          ),
-        ),
-    ];
+            const SizedBox(height: AksharaSpacing.s2),
+            const LinearProgressIndicator(),
+          ],
+          error: (error, _) => [
+            Text(
+              "Couldn't load delivery status. Earlier messages to this parent "
+              'may not be listed — check before sending again.',
+              style: text.bodyMedium.copyWith(color: colors.error),
+            ),
+            const SizedBox(height: AksharaSpacing.s1),
+            Text(
+              aksharaErrorMessage(error),
+              style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: () => ref.invalidate(
+                  studentCommunicationTimelineProvider(selectedId),
+                ),
+                child: const Text('Try again'),
+              ),
+            ),
+          ],
+          data: (timeline) => timeline.isEmpty
+              ? [const Text('No messages sent to this parent yet.')]
+              : [
+                  for (final record in timeline)
+                    Card(
+                      child: ListTile(
+                        title: Text(record.reason.label),
+                        subtitle: Text(record.deliveryStatusLabel),
+                        trailing: Text(
+                          record.channelsLabel,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ),
+                ],
+        );
   }
 
   void _toggleChannel(

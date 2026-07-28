@@ -825,7 +825,9 @@ class _Timeline extends StatelessWidget {
     return timeline.when(
       data: (rawEvents) {
         final events = (rawEvents as List).cast<StudentTimelineEvent>();
-        if (events.isEmpty) return const SizedBox.shrink();
+        if (events.isEmpty) {
+          return const _TimelineNote('No activity recorded for this student yet.');
+        }
         return AksharaSurfaceCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -862,7 +864,40 @@ class _Timeline extends StatelessWidget {
         );
       },
       loading: () => const AksharaLoadingState(semanticLabel: 'Loading timeline'),
-      error: (e, _) => const SizedBox.shrink(),
+      // Honest state: vanishing on error let a principal read "failed to load"
+      // as "nothing has happened with this child". Every other section on this
+      // screen says what it knows — so does this one.
+      error: (e, _) => const _TimelineNote(
+        'Recent activity could not be loaded. Reopen this profile to try again.',
+      ),
+    );
+  }
+}
+
+/// The "Recent activity" card with a single honest line instead of events —
+/// used for both "nothing recorded" and "could not load", which must never be
+/// confused with each other or with the section not existing.
+class _TimelineNote extends StatelessWidget {
+  const _TimelineNote(this.message);
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return AksharaSurfaceCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _SectionTitle(icon: Icons.history, title: 'Recent activity'),
+          const SizedBox(height: AksharaSpacing.s2),
+          Text(
+            message,
+            style: context.aksharaText.bodySmall.copyWith(
+              color: context.colors.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

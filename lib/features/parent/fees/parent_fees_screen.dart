@@ -122,8 +122,13 @@ class ParentFeesScreen extends ConsumerWidget {
                                         ),
                                         const SizedBox(
                                             height: AksharaSpacing.s4),
+                                        // `annualAmount` is the denominator of
+                                        // the collection %, passed so the ring
+                                        // can stay silent when it is unknown
+                                        // (undefined ≠ 0%).
                                         FeeCollectionProgress(
                                           percent: data.progressPercent,
+                                          annualAmount: data.annualAmount,
                                         ),
                                         const SizedBox(
                                             height: AksharaSpacing.s4),

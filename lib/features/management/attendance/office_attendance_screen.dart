@@ -7,6 +7,7 @@ import '../../../core/repositories/repository_providers.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../core/tenant/tenant_provider.dart';
 import '../../../shared/async/erp_async_state.dart';
+import '../../../theme/accessibility.dart';
 import '../../../shared/widgets/akshara_freshness_chip.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/premium/akshara_premium_background.dart';
@@ -379,8 +380,14 @@ class _StatChip extends StatelessWidget {
     return Chip(
       avatar: CircleAvatar(
         backgroundColor: color,
+        // A11y-P2: a hardcoded `Colors.white` failed WCAG AA on these Material
+        // palette fills (white on Colors.orange is 2.16:1, on green 2.78:1, on
+        // red 3.68:1). The design system already solves this —
+        // `AksharaAccessibility.onColorFor` picks black or white by luminance —
+        // and this screen was bypassing it.
         child: Text('$value',
-            style: const TextStyle(fontSize: 11, color: Colors.white)),
+            style: TextStyle(
+                fontSize: 11, color: AksharaAccessibility.onColorFor(color))),
       ),
       label: Text(label),
     );
@@ -861,9 +868,16 @@ class _ShortAttendanceSection extends ConsumerWidget {
                     child: ListTile(
                       leading: CircleAvatar(
                         backgroundColor: _tierColor(r.percentPresent),
+                        // A11y-P2: was a hardcoded `Colors.white`, which fails
+                        // WCAG AA on every tier fill (2.16:1 on orange,
+                        // 2.78:1 on green, 3.68:1 on red).
+                        // `AksharaAccessibility.onColorFor` picks the
+                        // higher-contrast of black / white for the fill.
                         child: Text('${r.percentPresent}',
-                            style: const TextStyle(
-                                fontSize: 12, color: Colors.white)),
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: AksharaAccessibility.onColorFor(
+                                    _tierColor(r.percentPresent)))),
                       ),
                       title: Text(r.name),
                       subtitle: Text(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/errors/error_text.dart';
 import '../../core/repositories/academic/academic_catalog_provider.dart';
 import '../../core/repositories/academic/academic_models.dart';
 import '../../core/repositories/repository_providers.dart';
@@ -46,7 +47,11 @@ Future<void> showLogLessonDialog(BuildContext context, WidgetRef ref) async {
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
       ..showSnackBar(
-      SnackBar(content: Text('Could not load classes/subjects: $error')),
+      SnackBar(
+        content: Text(
+          'Could not load classes/subjects: ${aksharaErrorMessage(error)}',
+        ),
+      ),
     );
     return;
   }
@@ -192,7 +197,9 @@ Future<void> showLogLessonDialog(BuildContext context, WidgetRef ref) async {
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
       ..showSnackBar(
-      SnackBar(content: Text('Could not log lesson: $error')),
+      SnackBar(
+        content: Text('Could not log lesson: ${aksharaErrorMessage(error)}'),
+      ),
     );
   }
 }
@@ -234,7 +241,11 @@ Future<void> showLinkSyllabusTopicDialog(
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
       ..showSnackBar(
-      SnackBar(content: Text('Could not load syllabus topics: $error')),
+      SnackBar(
+        content: Text(
+          'Could not load syllabus topics: ${aksharaErrorMessage(error)}',
+        ),
+      ),
     );
     return;
   }
@@ -319,7 +330,9 @@ Future<void> showLinkSyllabusTopicDialog(
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
       ..showSnackBar(
-      SnackBar(content: Text('Could not complete topic: $error')),
+      SnackBar(
+        content: Text('Could not complete topic: ${aksharaErrorMessage(error)}'),
+      ),
     );
   }
 }

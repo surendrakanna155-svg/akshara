@@ -26,16 +26,31 @@ abstract final class AksharaColorPrimitives {
   static const Color indigo600 = Color(0xFF4F46E5);
   static const Color indigo100 = Color(0xFFE0E7FF);
 
-  // Professional teal accent
+  // Professional teal accent.
+  //
+  // A11y-P0: `teal700` is the light-scheme tertiary *foreground* (4.86:1 on
+  // teal100 — teal600 was only 3.32:1). `teal400` is the dark-scheme tertiary
+  // foreground (6.47:1 on the deep tertiaryContainer — teal600 was 3.21:1),
+  // matching the 400-level step the dark scheme already uses for
+  // success/warning/error/indigo. `teal600` remains the chart-series tone.
+  static const Color teal700 = Color(0xFF0F766E);
   static const Color teal600 = Color(0xFF0D9488);
+  static const Color teal400 = Color(0xFF2DD4BF);
   static const Color teal100 = Color(0xFFCCFBF1);
 
-  // Semantic — refined, not oversaturated
-  static const Color red600 = Color(0xFFDC2626);
+  // Semantic — refined, not oversaturated.
+  //
+  // A11y-P0 (status-chip contrast): the *foreground* steps are 700-level, not
+  // 600. `AksharaStatusChip` defaults to `AksharaStatusChipSize.compact` →
+  // `labelSmall` = 11px, which is NORMAL text under WCAG 2.1 (large = ≥24px
+  // regular / ≥18.66px bold), so tone-foreground-on-tone-container must clear
+  // 4.5:1 — NOT the 3.0:1 large-text floor. The 600 steps only reached
+  // 3.07–4.41:1 on their 50-level containers. Do not lighten these back.
+  static const Color red700 = Color(0xFFB91C1C); // 5.92:1 on red50
   static const Color red50 = Color(0xFFFEF2F2);
-  static const Color green700 = Color(0xFF15803D);
+  static const Color green700 = Color(0xFF15803D); // 4.79:1 on green50
   static const Color green50 = Color(0xFFF0FDF4);
-  static const Color amber600 = Color(0xFFD97706);
+  static const Color amber700 = Color(0xFFB45309); // 4.84:1 on amber50
   static const Color amber50 = Color(0xFFFFFBEB);
 
   // Obsidian dark surfaces (not pure black)
@@ -62,7 +77,7 @@ abstract final class AksharaColorPrimitives {
   static const Color neutral200 = slate200;
   static const Color neutral500 = slate500;
   static const Color neutral900 = slate900;
-  static const Color red500 = red600;
+  static const Color red500 = red700;
   static const Color green600 = green700;
 }
 
@@ -152,7 +167,7 @@ class AksharaColorTokens {
       onSecondary: AksharaColorPrimitives.neutral0,
       secondaryContainer: AksharaColorPrimitives.slate100,
       onSecondaryContainer: AksharaColorPrimitives.slate900,
-      tertiary: AksharaColorPrimitives.teal600,
+      tertiary: AksharaColorPrimitives.teal700,
       onTertiary: AksharaColorPrimitives.neutral0,
       tertiaryContainer: AksharaColorPrimitives.teal100,
       onTertiaryContainer: Color(0xFF115E59),
@@ -164,11 +179,11 @@ class AksharaColorTokens {
       onSurface: AksharaColorPrimitives.slate900,
       onSurfaceVariant: AksharaColorPrimitives.slate500,
       outlineVariant: AksharaColorPrimitives.slate200,
-      error: AksharaColorPrimitives.red600,
+      error: AksharaColorPrimitives.red700,
       errorContainer: AksharaColorPrimitives.red50,
       success: AksharaColorPrimitives.green700,
       successContainer: AksharaColorPrimitives.green50,
-      warning: AksharaColorPrimitives.amber600,
+      warning: AksharaColorPrimitives.amber700,
       warningContainer: AksharaColorPrimitives.amber50,
       scrim: AksharaColorPrimitives.scrim,
       indigo: AksharaColorPrimitives.indigo600,
@@ -204,12 +219,19 @@ class AksharaColorTokens {
       onSecondary: AksharaColorPrimitives.obsidian900,
       secondaryContainer: AksharaColorPrimitives.obsidian700,
       onSecondaryContainer: AksharaColorPrimitives.slate100,
-      tertiary: AksharaColorPrimitives.teal600,
-      onTertiary: AksharaColorPrimitives.neutral0,
-      // P2-UX-5 dark contrast fix: darkened from #134E4A to #0F3D38 so the
-      // `tertiary` tone reads >= 3.0:1 on its container (was ~2.53:1; now
-      // ~3.21:1). Deepening the fill also lifts onSurface / onSurfaceVariant /
-      // onTertiaryContainer contrast on it. See
+      // A11y-P0: the dark tertiary tone is a 400-level teal, like every other
+      // dark semantic tone (success #4ADE80 / warning #FBBF24 / error #F87171 /
+      // indigo). teal600 read only 3.21:1 on the container below — fine for the
+      // 3.0 large-text floor but NOT for the 11px `labelSmall` an
+      // `AksharaStatusChip` actually paints, which is normal text (4.5:1).
+      // teal400 on the same container is 6.47:1.
+      tertiary: AksharaColorPrimitives.teal400,
+      // The tone is now a light fill, so a white glyph on it would be ~1.86:1.
+      // Match `onSecondary` and use the deep obsidian.
+      onTertiary: AksharaColorPrimitives.obsidian900,
+      // P2-UX-5 dark contrast fix: darkened from #134E4A to #0F3D38. Deepening
+      // the fill lifts onSurface / onSurfaceVariant / onTertiaryContainer
+      // contrast on it as well. See
       // test/theme/rendered_contrast_audit_test.dart.
       tertiaryContainer: const Color(0xFF0F3D38),
       onTertiaryContainer: AksharaColorPrimitives.teal100,
@@ -228,7 +250,10 @@ class AksharaColorTokens {
       warning: const Color(0xFFFBBF24),
       warningContainer: const Color(0xFF5C3D0A),
       scrim: AksharaColorPrimitives.scrim,
-      indigo: const Color(0xFF818CF8),
+      // A11y-P0: indigo-300, not indigo-400. #818CF8 on the indigo-900
+      // container is 3.83:1 — below the 4.5:1 an 11px chip label needs.
+      // #A5B4FC on the same container is 5.73:1.
+      indigo: const Color(0xFFA5B4FC),
       indigoContainer: const Color(0xFF312E81),
       chart1: AksharaColorPrimitives.chart2,
       chart2: AksharaColorPrimitives.chart3,

@@ -159,6 +159,11 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
+          // A11y-P2: an icon-only button with no label announces as just
+          // "button" to TalkBack. The tooltip IS the accessible name (IconButton
+          // wraps it in a Tooltip, which contributes a Semantics label), and
+          // MaterialLocalizations supplies the localized string.
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
           onPressed: _returnToLogin,
         ),
       ),

@@ -551,6 +551,26 @@ GoRouter createAppRouter({
               ),
             ],
           ),
+          // P1-4 (2026-07-28) — teacher-shell entry points for Lesson Logs and
+          // Syllabus Progress. The "More" tiles used to jump straight to the
+          // ADMIN-shell routes `/school/lesson-logs` and
+          // `/school/academic/progress`, which require
+          // canAccessAdminErpShell (auth.role == UserRole.staff). A teacher is
+          // UserRole.teacher, so both tiles silently bounced home — even though
+          // the teacher DOES hold viewLessonLogs / viewAcademicProgress. These
+          // siblings render the SAME screens inside TeacherShell; the admin
+          // wall is untouched and no permission was widened.
+          GoRoute(
+            path: RouteNames.teacherLessonLogs,
+            name: 'teacherLessonLogs',
+            builder: (context, state) => lessonLogsRouteBuilder(context, state),
+          ),
+          GoRoute(
+            path: RouteNames.teacherSyllabusProgress,
+            name: 'teacherSyllabusProgress',
+            builder: (context, state) =>
+                academicProgressRouteBuilder(context, state),
+          ),
         ],
       ),
       GoRoute(
@@ -1994,13 +2014,69 @@ GoRouter createAppRouter({
         ],
       ),
     ],
-    errorBuilder: (context, state) => Scaffold(
-      appBar: AppBar(title: const Text('Page not found')),
-      body: Center(
-        child: Text('No route for: ${state.uri}'),
-      ),
-    ),
+    // SEC P2-8 (2026-07-28): the error page used to be a raw
+    // `Text('No route for: ${state.uri}')` with no back arrow and no home
+    // action. Because a bad deep-link arrives via `go()` (which REPLACES the
+    // stack) the user was stranded with force-quit as the only exit — and the
+    // unsanitised server-supplied URL was echoed to screen. Now: no raw URL,
+    // and always a way home for whoever is signed in.
+    errorBuilder: (context, state) => _RouteNotFoundScreen(readAuth: readAuth),
   );
+}
+
+/// Fallback for an unmatched location. Always offers a route home.
+class _RouteNotFoundScreen extends StatelessWidget {
+  const _RouteNotFoundScreen({required this.readAuth});
+
+  final AuthState Function() readAuth;
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = readAuth();
+    final home =
+        auth.isAuthenticated ? homeRouteForAuth(auth) : RouteNames.login;
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Page not found'),
+        automaticallyImplyLeading: false,
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.explore_off_outlined, size: 48),
+              const SizedBox(height: 16),
+              const Text(
+                "We couldn't open that link.",
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'It may have moved, or it may no longer be available.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go(home);
+                  }
+                },
+                icon: const Icon(Icons.home_outlined),
+                label: Text(
+                  context.canPop() ? 'Go back' : 'Go to home',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 String? _authRedirect(AuthState auth, String location, String entryRoute) {
@@ -2027,9 +2103,9 @@ String? _authRedirect(AuthState auth, String location, String entryRoute) {
   }
 
   final isAuthenticated = auth.isAuthenticated;
-  final isProtectedRoute = _isProtectedRoute(location);
+  final isProtected = isProtectedRoute(location);
 
-  if (!isAuthenticated && isProtectedRoute) {
+  if (!isAuthenticated && isProtected) {
     return entryRoute;
   }
 
@@ -2046,7 +2122,7 @@ String? _authRedirect(AuthState auth, String location, String entryRoute) {
     return RouteNames.splash;
   }
 
-  if (isAuthenticated && isProtectedRoute && !_canAccessRoute(auth, location)) {
+  if (isAuthenticated && isProtected && !_canAccessRoute(auth, location)) {
     return homeRouteForRole(auth.role);
   }
 
@@ -2072,6 +2148,43 @@ String? legalGateRedirect(AuthState auth, bool blocked, String location) {
   return null;
 }
 
+/// Whether [route] is a location this app can actually serve.
+///
+/// SEC P2-8 (2026-07-28): push payloads carry a SERVER-SUPPLIED `data.route`
+/// that was previously validated only by `startsWith('/')` and handed straight
+/// to `go()`. `go()` REPLACES the navigation stack, so one stale or malformed
+/// payload dropped the user on the error page with no way back. This validates
+/// the payload against the router's REAL route table (a single source of truth
+/// that cannot drift from the registered routes), so an unknown deep link is
+/// dropped instead of navigated to.
+///
+/// Only the shape of the link is checked here — authentication and RBAC are
+/// still enforced by the router redirect once navigation proceeds.
+bool isKnownAppRoute(GoRouter router, String route) {
+  if (!route.startsWith('/')) return false;
+  // Reject dot-segment traversal on the RAW string — `Uri.parse` (and GoRouter)
+  // silently canonicalise `..` away, so `/teacher/../admin` would resolve to
+  // `/admin`. A payload must state its destination plainly, not disguise it.
+  // Checked before parsing precisely because parsing destroys the evidence.
+  final segments = route.split('/');
+  if (segments.contains('..') || segments.contains('.')) return false;
+  final Uri uri;
+  try {
+    uri = Uri.parse(route);
+  } on FormatException {
+    return false;
+  }
+  // Reject absolute/scheme-bearing or host-bearing links: a push payload must
+  // address THIS app's route table, never an external destination.
+  if (uri.hasScheme || uri.hasAuthority) return false;
+  try {
+    return !router.configuration.findMatch(uri).isError;
+  } catch (_) {
+    // A malformed location must never crash the notification handler.
+    return false;
+  }
+}
+
 bool _isAiAssistantRoute(String location) {
   return location == RouteNames.aiAssistant ||
       location == RouteNames.aiAssistantSettings ||
@@ -2086,8 +2199,41 @@ bool _isSharedSettingsRoute(String location) {
       // ASIP: "Report an issue" is a shared, persona-agnostic surface — every
       // authenticated school user may reach it (auth-gated, no RBAC permission).
       location == RouteNames.support ||
-      location.startsWith('${RouteNames.support}/');
+      location.startsWith('${RouteNames.support}/') ||
+      // SEC P0-2 (2026-07-28): `/sync-center` had NO gate at all — an
+      // unauthenticated caller could open the offline queue screen. It is
+      // legitimately persona-agnostic (the app-wide SyncBanner in app.dart
+      // pushes it for parent/student/teacher/staff alike), so the correct gate
+      // is authentication, NOT the staff-only admin ERP shell.
+      location == RouteNames.syncCenter;
 }
+
+/// Whether [location] is a route the given persona [role] owns.
+///
+/// SEC P0-1 (2026-07-28): this used to be a bare `location.startsWith('/student')`
+/// (and the parent/teacher equivalents). String-prefix matching is NOT path
+/// ownership: `/student-health` (the whole-school Infirmary console) and
+/// `/student-360` (a full student dossier) both begin with `/student`, so the
+/// student arm granted them to any logged-in student. Ownership is a path
+/// SEGMENT fact — `/student` itself, or anything under `/student/`. Any future
+/// `/student*`, `/parent*` or `/teacher*` admin route is now safe by default.
+bool isPersonaOwnedRoute(UserRole? role, String location) {
+  final String? prefix = switch (role) {
+    UserRole.parent => RouteNames.parent,
+    UserRole.teacher => RouteNames.teacher,
+    UserRole.student => RouteNames.student,
+    UserRole.staff => null,
+    null => null,
+  };
+  if (prefix == null) return false;
+  return _isUnderPathSegment(location, prefix);
+}
+
+/// True when [location] is exactly [prefix] or a descendant path of it.
+/// Never a bare `startsWith`, which would also match a sibling such as
+/// `/student-health` for the prefix `/student`.
+bool _isUnderPathSegment(String location, String prefix) =>
+    location == prefix || location.startsWith('$prefix/');
 
 /// The standalone staff Face ID capture/enrolment routes (audit R3): they are
 /// pushed from the HR attendance screen (admin ERP shell) but registered as
@@ -2099,10 +2245,16 @@ bool _isStaffAttendanceDeviceRoute(String location) {
       location == RouteNames.staffFaceEnrollment;
 }
 
-bool _isProtectedRoute(String location) {
-  return location.startsWith('/parent') ||
-      location.startsWith('/teacher') ||
-      location.startsWith('/student') ||
+/// Whether [location] requires an authenticated session.
+///
+/// Public (not `_`-private) so `test/router/route_gate_invariants_test.dart` can
+/// assert the auth gate actually covers every permissioned route — the drift
+/// that let `/certificate-requests`, `/gate-passes`, `/complaints`,
+/// `/staff-360/:id` and `/sync-center` ship with no auth gate at all.
+bool isProtectedRoute(String location) {
+  return _isUnderPathSegment(location, RouteNames.parent) ||
+      _isUnderPathSegment(location, RouteNames.teacher) ||
+      _isUnderPathSegment(location, RouteNames.student) ||
       _isAiAssistantRoute(location) ||
       _isSharedSettingsRoute(location) ||
       _isStaffAttendanceDeviceRoute(location) ||
@@ -2122,16 +2274,18 @@ bool _canAccessRoute(AuthState auth, String location) {
     return canAccessAdminErpShell(auth);
   }
 
+  // SEC P0-1: segment-precise persona ownership — see [isPersonaOwnedRoute].
   return switch (auth.role) {
-    UserRole.parent => location.startsWith('/parent'),
-    UserRole.teacher => location.startsWith('/teacher'),
-    UserRole.student => location.startsWith('/student'),
+    UserRole.parent ||
+    UserRole.teacher ||
+    UserRole.student =>
+      isPersonaOwnedRoute(auth.role, location),
     // Cross-shell fix (UX Batch 1, Step 5): admin ERP routes are already handled
     // above. Here (non-admin routes) a staff user may enter /teacher ONLY if they
     // actually hold the teacher role (a multi-hat user such as Teacher +
     // Inventory Manager). A non-teaching staff member (e.g. a librarian) — and
     // staff in general — can no longer reach teacher/parent/student shells.
-    UserRole.staff => location.startsWith('/teacher') &&
+    UserRole.staff => isPersonaOwnedRoute(UserRole.teacher, location) &&
         (auth.claims?.hasRole(ErpRole.teacher) ?? false),
     null => false,
   };

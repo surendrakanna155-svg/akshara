@@ -17,8 +17,8 @@ final _priyaContext = teacherTeachingContextOverrideProvider.overrideWith(
   ),
 );
 
-ProviderContainer _container() =>
-    createMobileProviderTestContainer(overrides: [_priyaContext]);
+ProviderContainer _container({List<Override> extra = const []}) =>
+    createMobileProviderTestContainer(overrides: [_priyaContext, ...extra]);
 
 Future<void> _awaitTeacherExams(ProviderContainer container) async {
   await container.read(teacherUpcomingExamsFutureProvider.future);
@@ -40,6 +40,11 @@ void main() {
       expect(data.upcomingExams, hasLength(1));
       expect(data.upcomingExams.single.subject, 'Mathematics');
       expect(data.markEntries, isNotEmpty);
+      // Marks ARE scored here, so the honest average is a real measurement.
+      expect(
+        container.read(teacherClassAveragePercentProvider),
+        greaterThan(0),
+      );
       expect(data.classAveragePercent, greaterThan(0));
     });
 
@@ -63,7 +68,46 @@ void main() {
 
       expect(data.upcomingExams, isEmpty);
       expect(data.markEntries, isEmpty);
-      expect(data.classAveragePercent, 0);
+      // HONEST STATE: with no data there is no MEASURED class average. This
+      // used to assert `data.classAveragePercent == 0` — a measured zero the
+      // school never earned, which the UI then rendered as a filled "0%" ring.
+      // The value the UI reads is now nullable and must be null here.
+      expect(container.read(teacherClassAveragePercentProvider), isNull);
+    });
+
+    test('class average is null (unknown), not 0, when nothing is scored',
+        () async {
+      final container = _container();
+      addTearDown(container.dispose);
+
+      await _awaitTeacherExams(container);
+      // Replace the roster with a fully UNSCORED one: students exist, but not
+      // one mark has been entered.
+      final unscored = [
+        for (final entry in container.read(teacherExamsProvider).markEntries)
+          ExamMarkEntry(
+            id: entry.id,
+            sisStudentId: entry.sisStudentId,
+            studentName: entry.studentName,
+            rollNo: entry.rollNo,
+            marksObtained: null,
+            maxMarks: entry.maxMarks,
+          ),
+      ];
+      expect(unscored, isNotEmpty);
+
+      final scoped = _container(
+        extra: [
+          teacherExamMarksForActiveProvider.overrideWith((ref) async => unscored),
+          teacherExamMarksFutureProvider.overrideWith((ref) async => unscored),
+        ],
+      );
+      addTearDown(scoped.dispose);
+      await scoped.read(teacherExamMarksForActiveProvider.future);
+      await scoped.read(teacherExamMarksFutureProvider.future);
+
+      expect(scoped.read(teacherExamsProvider).markEntries, hasLength(unscored.length));
+      expect(scoped.read(teacherClassAveragePercentProvider), isNull);
     });
 
     test('mark entries include pending marks for entry', () async {

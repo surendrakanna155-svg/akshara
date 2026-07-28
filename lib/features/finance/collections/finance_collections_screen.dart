@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/errors/error_text.dart';
 import '../../../core/repositories/paginated_result.dart';
 import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../core/security/permissions.dart';
@@ -438,9 +439,25 @@ class _DayCloseControl extends ConsumerWidget {
       }
     }
 
-    final statusLabel = latestClosed == null
-        ? 'No day closed yet'
-        : 'Last closed day: ${latestClosed.closeDate}';
+    // Money surface: never state the day is open while the real lock state is
+    // unknown. Only a RESOLVED read may say "No day closed yet"; the error and
+    // loading reads say so plainly instead of collapsing into that claim.
+    final readError = entriesAsync.error;
+    final String statusLabel;
+    final bool statusIsError;
+    if (readError != null) {
+      statusIsError = true;
+      statusLabel = 'Day-close status unavailable — '
+          '${aksharaErrorMessage(readError)}';
+    } else if (entriesAsync.hasValue) {
+      statusIsError = false;
+      statusLabel = latestClosed == null
+          ? 'No day closed yet'
+          : 'Last closed day: ${latestClosed.closeDate}';
+    } else {
+      statusIsError = false;
+      statusLabel = 'Checking day-close status…';
+    }
 
     return Card(
       elevation: 0,
@@ -460,7 +477,12 @@ class _DayCloseControl extends ConsumerWidget {
                 children: [
                   Text('Day-close lock', style: text.titleSmall),
                   const SizedBox(height: AksharaSpacing.s1),
-                  Text(statusLabel, style: text.bodySmall),
+                  Text(
+                    statusLabel,
+                    style: statusIsError
+                        ? text.bodySmall.copyWith(color: colors.error)
+                        : text.bodySmall,
+                  ),
                 ],
               ),
             ),

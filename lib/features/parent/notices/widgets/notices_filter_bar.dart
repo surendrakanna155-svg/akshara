@@ -42,8 +42,13 @@ class NoticesFilterBar extends StatelessWidget {
                 selectedColor: colors.primaryContainer,
                 backgroundColor: colors.surface,
                 side: BorderSide(color: colors.outlineVariant),
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                visualDensity: const VisualDensity(horizontal: -1, vertical: -2),
+                // A11y-P1 tap target: `shrinkWrap` + a vertical density of -2
+                // gave roughly a 24dp target. The theme's `padded` default now
+                // wraps the chip in a >=48dp redirecting hit target; the
+                // vertical density had to go with it because `padded` subtracts
+                // the density adjustment from that 48dp minimum. Horizontal
+                // compaction kept.
+                visualDensity: const VisualDensity(horizontal: -1),
               ),
               if (category != NoticeCategory.values.last)
                 const SizedBox(width: AksharaSpacing.s2),

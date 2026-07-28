@@ -73,6 +73,13 @@ void main() {
       ProviderScope(
         overrides: erpWidgetTestOverrides([
           notificationsProvider.overrideWith(() => refreshSpy),
+          // SEC P2-8 (2026-07-28): the server-supplied `data.route` is now
+          // validated against the router's REAL route table before it is
+          // offered as a "View" action, so this test must bind the same
+          // fixture router that declares `/fees` — exactly as the deep-link
+          // tap test below does. Previously ANY string starting with `/` was
+          // accepted and `go()`n, stranding the user on the error page.
+          goRouterProvider.overrideWithValue(_recordingRouter()),
         ]),
         child: Consumer(
           builder: (context, ref, _) {

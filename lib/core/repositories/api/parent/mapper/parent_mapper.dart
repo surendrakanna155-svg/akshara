@@ -101,6 +101,16 @@ class ParentMapper {
     );
   }
 
+  /// Honest-state contract for money fields.
+  ///
+  /// [ParentFeesData] carries non-nullable `int`s, so an ABSENT amount (no fee
+  /// structure published for this student yet) is indistinguishable from a
+  /// measured zero at this layer — both arrive as `0`. The presentation layer
+  /// therefore treats `annualAmount <= 0` as "no published fee structure" and
+  /// suppresses the derived collection percentage (a percentage against a zero
+  /// denominator is undefined, not 0%) — see `FeeSummaryHero` /
+  /// `FeeCollectionProgress`. Do NOT synthesize a `progressPercent` here from
+  /// paid/annual: the backend owns that arithmetic.
   ParentFeesData toFees(ParentFeesResponseDto dto) {
     final raw = dto.raw;
     return ParentFeesData(

@@ -88,5 +88,44 @@ void main() {
       await tester.pump();
       expect(submitted, isTrue);
     });
+
+    // P2-UX-4 (Polish §7) — the dense-cell text-scale cap. Pinned because the
+    // cell now reads the SCOPED `MediaQuery.textScalerOf` accessor (so a
+    // keyboard-animation `viewInsets` change no longer rebuilds every cell in
+    // the grid); the clamping behaviour itself must be unchanged.
+    Widget hostAtScale(double scale, Widget child) => MaterialApp(
+          theme: AksharaAppTheme.light(),
+          home: Builder(
+            builder: (context) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: TextScaler.linear(scale)),
+              child: Scaffold(body: Center(child: child)),
+            ),
+          ),
+        );
+
+    double effectiveScale(WidgetTester tester) => MediaQuery.textScalerOf(
+          tester.element(find.byType(TextField)),
+        ).scale(1);
+
+    testWidgets('caps a very large system text scale at 1.3x', (tester) async {
+      final controller = TextEditingController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(hostAtScale(
+        2.0,
+        MarksEntryField(controller: controller, maxMarks: 50),
+      ));
+      expect(effectiveScale(tester), closeTo(1.3, 0.0001));
+    });
+
+    testWidgets('leaves a scale within the cap untouched', (tester) async {
+      final controller = TextEditingController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(hostAtScale(
+        1.2,
+        MarksEntryField(controller: controller, maxMarks: 50),
+      ));
+      expect(effectiveScale(tester), closeTo(1.2, 0.0001));
+    });
   });
 }

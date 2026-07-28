@@ -24,7 +24,19 @@ class StudentReportCardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Honest state — the exams snapshot is asynchronous, so loading and error
+    // are first-class here exactly as on the sibling ST-05 exams screen. A
+    // failed fetch must NEVER render as a populated-looking report card.
+    final async = ref.watch(studentExamsFutureProvider);
     final data = ref.watch(studentExamsProvider);
+    final isLoading = ref.watch(studentExamsLoadingProvider) || async.isLoading;
+    final hasError = ref.watch(studentExamsErrorProvider) || async.hasError;
+
+    // The term average is DERIVED from published results. With nothing
+    // published it is unknown, not 0.0% — so it is not rendered at all.
+    final hasPublishedResults =
+        data.examResults.isNotEmpty || data.subjectScores.isNotEmpty;
+
     // QA-J-011 — student-side report-card download. Reuses the SAME shared
     // [AksharaReportExportService.shareReportCardPdf] the parent app uses; the
     // action only appears once a published report card exists for the student.
@@ -35,7 +47,8 @@ class StudentReportCardScreen extends ConsumerWidget {
       backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'Report Card',
-        subtitle: '${data.studentName} · ${data.classLabel}',
+        subtitle:
+            async.hasValue ? '${data.studentName} · ${data.classLabel}' : null,
         onNotificationsTap: onNotificationsTap,
         additionalActions: [
           if (reportCard != null)
@@ -54,45 +67,81 @@ class StudentReportCardScreen extends ConsumerWidget {
             ),
         ],
       ),
-      // DS V2 P4 — premium persona canvas behind the report-card content. The
-      // term-average % stays in its summary card (no ring — it is honestly 0
-      // until results publish); presentation only.
+      // DS V2 P4 — premium persona canvas behind the report-card content.
       body: AksharaPremiumBackground(
         showMotif: false,
-        child: ListView(
-          padding: const EdgeInsets.all(AksharaSpacing.s4),
-          children: [
-            AksharaSurfaceCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Term summary', style: context.aksharaText.titleLarge),
-                  const SizedBox(height: AksharaSpacing.s2),
-                  Text(
-                    'Average: ${data.averagePercent.toStringAsFixed(1)}%',
-                    style: context.aksharaText.kpiValue,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AksharaSpacing.s4),
-            const AksharaSectionHeader(title: 'Subject scores'),
-            const SizedBox(height: AksharaSpacing.s3),
-            for (final score in data.subjectScores)
-              Padding(
-                padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
-                child: SubjectScoreRow(score: score),
-              ),
-            const SizedBox(height: AksharaSpacing.s4),
-            const AksharaSectionHeader(title: 'Recent results'),
-            const SizedBox(height: AksharaSpacing.s3),
-            for (final result in data.examResults)
-              Padding(
-                padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
-                child: ExamResultRow(result: result),
-              ),
-          ],
-        ),
+        child: isLoading
+            ? const AksharaLoadingState(semanticLabel: 'Loading report card')
+            : hasError
+                ? AksharaErrorState(
+                    message: 'Unable to load your report card right now.',
+                    onRetry: () {
+                      ref.read(studentExamsErrorProvider.notifier).state =
+                          false;
+                      ref.invalidate(studentExamsFutureProvider);
+                    },
+                  )
+                : !hasPublishedResults
+                    // Nothing measured → no average, no scores, no praise.
+                    ? const AksharaEmptyState(
+                        message: 'No exam results published yet. Your term '
+                            'average appears once your school publishes marks.',
+                        icon: Icons.grading_outlined,
+                      )
+                    : ListView(
+                        padding: const EdgeInsets.all(AksharaSpacing.s4),
+                        children: [
+                          AksharaSurfaceCard(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Term summary',
+                                  style: context.aksharaText.titleLarge,
+                                ),
+                                const SizedBox(height: AksharaSpacing.s2),
+                                Text(
+                                  'Average: '
+                                  '${data.averagePercent.toStringAsFixed(1)}%',
+                                  style: context.aksharaText.kpiValue,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: AksharaSpacing.s4),
+                          const AksharaSectionHeader(title: 'Subject scores'),
+                          const SizedBox(height: AksharaSpacing.s3),
+                          if (data.subjectScores.isEmpty)
+                            const AksharaSectionEmpty(
+                              message: 'No subject scores published yet.',
+                              icon: Icons.insights_outlined,
+                            )
+                          else
+                            for (final score in data.subjectScores)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: AksharaSpacing.s2,
+                                ),
+                                child: SubjectScoreRow(score: score),
+                              ),
+                          const SizedBox(height: AksharaSpacing.s4),
+                          const AksharaSectionHeader(title: 'Recent results'),
+                          const SizedBox(height: AksharaSpacing.s3),
+                          if (data.examResults.isEmpty)
+                            const AksharaSectionEmpty(
+                              message: 'No exam results published yet.',
+                              icon: Icons.grading_outlined,
+                            )
+                          else
+                            for (final result in data.examResults)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: AksharaSpacing.s2,
+                                ),
+                                child: ExamResultRow(result: result),
+                              ),
+                        ],
+                      ),
       ),
     );
   }

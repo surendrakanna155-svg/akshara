@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/widgets/akshara_progress_ring.dart';
+import '../../../shared/widgets/akshara_section_empty.dart';
 import '../../../shared/widgets/akshara_status_chip.dart';
 import '../../../theme/elevation.dart';
 import '../../../theme/radius.dart';
@@ -31,12 +32,27 @@ class FeeSummaryHero extends StatelessWidget {
 
   static const double height = 160;
 
+  /// A fee structure exists for this student only once the school has published
+  /// an annual payable. Until then `pendingAmount` / `paidAmount` /
+  /// `annualAmount` are all *unknown*, not measured zeros — the transport for
+  /// these fields is a non-nullable `int`, so absence arrives as 0 and the
+  /// annual payable is the only field that can distinguish the two cases.
+  /// Honest-state rule: unknown is never rendered as ₹0 or as 0% collected.
+  bool get hasPublishedFeeStructure => annualAmount > 0;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     final ext = context.akshara;
     final text = context.aksharaText;
     final amountColor = isOverdue ? colors.error : colors.onSurface;
+
+    if (!hasPublishedFeeStructure) {
+      return const AksharaSectionEmpty(
+        message: 'No fee structure published for this student yet.',
+        icon: Icons.receipt_long_outlined,
+      );
+    }
 
     return Semantics(
       container: true,
@@ -147,9 +163,16 @@ class FeeCollectionProgress extends StatelessWidget {
   const FeeCollectionProgress({
     super.key,
     required this.percent,
+    required this.annualAmount,
   });
 
   final int percent;
+
+  /// Denominator of the collection percentage. A percentage against a zero
+  /// denominator is UNDEFINED, not 0% — so with no published annual payable
+  /// the success-toned ring is suppressed entirely rather than reading
+  /// "0% of your annual fees paid so far".
+  final int annualAmount;
 
   @override
   Widget build(BuildContext context) {
@@ -157,6 +180,14 @@ class FeeCollectionProgress extends StatelessWidget {
     final ext = context.akshara;
     final text = context.aksharaText;
     final clamped = percent.clamp(0, 100);
+
+    if (annualAmount <= 0) {
+      return const AksharaSectionEmpty(
+        message: 'Collection progress appears once a fee structure is '
+            'published.',
+        icon: Icons.donut_large_outlined,
+      );
+    }
 
     return Card(
       margin: EdgeInsets.zero,

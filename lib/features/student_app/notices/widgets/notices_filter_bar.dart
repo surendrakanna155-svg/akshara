@@ -42,7 +42,11 @@ class NoticesFilterBar extends StatelessWidget {
                 selectedColor: colors.primaryContainer,
                 backgroundColor: colors.surface,
                 side: BorderSide(color: colors.outlineVariant),
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                // A11y-P1 tap target: the local
+                // `MaterialTapTargetSize.shrinkWrap` cancelled the theme's 48dp
+                // floor, leaving Flutter's bare 32dp `_kChipHeight`. Removed —
+                // `padded` wraps the chip in a >=48dp redirecting hit target
+                // while the painted pill stays the same size.
               ),
               if (scope != StudentNoticeScope.values.last)
                 const SizedBox(width: AksharaSpacing.s2),
