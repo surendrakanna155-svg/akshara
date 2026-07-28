@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../features/school_completion/school_branding_theme_provider.dart';
@@ -8,6 +9,7 @@ import '../../auth/qa_visual_switcher.dart';
 import '../../../theme/app_theme.dart';
 import '../../../theme/persona_accents.dart';
 import '../../../theme/theme_mode_provider.dart';
+import '../../copilot/widgets/bottom_nav_ai_scope.dart';
 
 /// Teacher mobile shell with bottom navigation (Home · Classes · Teach · Messages).
 class TeacherShell extends ConsumerWidget {
@@ -116,15 +118,21 @@ class TeacherShell extends ConsumerWidget {
         accent: AksharaPersonaAccent.teacher,
         whiteLabel: whiteLabel,
       ),
-      child: Scaffold(
-      body: Column(
-        children: [
-          const QaPersonaSwitcherBar(),
-          Expanded(child: child),
-        ],
+      // Marks everything below as living under a bottom nav that carries the
+      // raised centre AI button, so a screen with its own fixed action bar can
+      // reserve that band instead of being painted over by it.
+      child: BottomNavAiScope(
+        reservedHeight: BottomNavAiScope.resolveHeight(context, ref),
+        child: Scaffold(
+          body: Column(
+            children: [
+              const QaPersonaSwitcherBar(),
+              Expanded(child: child),
+            ],
+          ),
+          bottomNavigationBar: const PersonaBottomNav(spec: navSpec),
+        ),
       ),
-      bottomNavigationBar: const PersonaBottomNav(spec: navSpec),
-    ),
     );
   }
 }

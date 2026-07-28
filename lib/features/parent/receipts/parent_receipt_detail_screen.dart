@@ -11,6 +11,7 @@ import '../fees/fees_provider.dart';
 import 'parent_receipts_provider.dart';
 import 'receipt_models.dart';
 import '../../../theme/breakpoints.dart';
+import '../../copilot/widgets/bottom_nav_ai_scope.dart';
 
 /// PA-11 receipt detail with download and share actions.
 class ParentReceiptDetailScreen extends ConsumerWidget {
@@ -209,11 +210,12 @@ class _ReceiptDetailBody extends StatelessWidget {
                 SafeArea(
                   top: false,
                   child: Padding(
+                    // Reserve the raised centre AI button's band.
                     padding: EdgeInsets.fromLTRB(
                       horizontalPadding,
                       AksharaSpacing.s3,
                       horizontalPadding,
-                      AksharaSpacing.s3,
+                      AksharaSpacing.s3 + BottomNavAiScope.reservedHeightOf(context),
                     ),
                     child: Row(
                       children: [

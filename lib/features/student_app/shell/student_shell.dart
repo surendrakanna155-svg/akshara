@@ -8,6 +8,7 @@ import '../../auth/qa_visual_switcher.dart';
 import '../../../theme/app_theme.dart';
 import '../../../theme/persona_accents.dart';
 import '../../../theme/theme_mode_provider.dart';
+import '../../copilot/widgets/bottom_nav_ai_scope.dart';
 
 /// Student mobile shell with bottom navigation (Home · Learn · Schedule · Results).
 class StudentShell extends ConsumerWidget {
@@ -88,15 +89,20 @@ class StudentShell extends ConsumerWidget {
         accent: AksharaPersonaAccent.student,
         whiteLabel: whiteLabel,
       ),
-      child: Scaffold(
-      body: Column(
-        children: [
-          const QaPersonaSwitcherBar(),
-          Expanded(child: child),
-        ],
+      // See BottomNavAiScope: lets a screen with a fixed bottom action bar
+      // reserve the band the raised centre AI button occupies.
+      child: BottomNavAiScope(
+        reservedHeight: BottomNavAiScope.resolveHeight(context, ref),
+        child: Scaffold(
+          body: Column(
+            children: [
+              const QaPersonaSwitcherBar(),
+              Expanded(child: child),
+            ],
+          ),
+          bottomNavigationBar: const PersonaBottomNav(spec: navSpec),
+        ),
       ),
-      bottomNavigationBar: const PersonaBottomNav(spec: navSpec),
-    ),
     );
   }
 }

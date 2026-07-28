@@ -11,6 +11,7 @@ import 'payment_models.dart';
 import 'widgets/payment_breakdown_card.dart';
 import 'widgets/payment_method_selector.dart';
 import '../../../theme/breakpoints.dart';
+import '../../copilot/widgets/bottom_nav_ai_scope.dart';
 
 /// Parent fee payment flow — PA-10.
 class ParentPaymentScreen extends ConsumerStatefulWidget {
@@ -288,11 +289,13 @@ class _PayNowBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Container(
+          // Reserve the raised centre AI button's band — this bar carries the
+          // pay CTA and must never be partly covered.
           padding: EdgeInsets.fromLTRB(
             horizontalPadding,
             AksharaSpacing.s3,
             horizontalPadding,
-            AksharaSpacing.s3,
+            AksharaSpacing.s3 + BottomNavAiScope.reservedHeightOf(context),
           ),
           decoration: BoxDecoration(
             border: Border(top: BorderSide(color: colors.outlineVariant)),

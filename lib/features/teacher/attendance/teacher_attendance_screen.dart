@@ -20,6 +20,7 @@ import 'teacher_attendance_workflow.dart';
 import 'widgets/class_selector_strip.dart';
 import 'widgets/attendance_exception_grid.dart';
 import '../../../theme/breakpoints.dart';
+import '../../copilot/widgets/bottom_nav_ai_scope.dart';
 
 /// Teacher attendance marking — TA-02.
 class TeacherAttendanceScreen extends ConsumerStatefulWidget {
@@ -517,11 +518,15 @@ class _AttendanceActionBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
+          // Reserve the band occupied by the raised centre AI button in the
+          // bottom nav. Without this it is painted on top of the Submit row —
+          // a mistap hazard on the app's most-used data-entry screen. Resolves
+          // to 0 when no such button is drawn, so it costs nothing then.
           padding: EdgeInsets.fromLTRB(
             horizontalPadding,
             AksharaSpacing.s3,
             horizontalPadding,
-            AksharaSpacing.s3,
+            AksharaSpacing.s3 + BottomNavAiScope.reservedHeightOf(context),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,

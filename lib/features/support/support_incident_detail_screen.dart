@@ -8,6 +8,7 @@ import '../../theme/theme_extensions.dart';
 import 'domain/support_models.dart';
 import 'support_providers.dart';
 import 'support_ui.dart';
+import '../copilot/widgets/bottom_nav_ai_scope.dart';
 
 /// ASIP Phase 1 screen (c) — one reported issue: header + status, the
 /// auto-collected timeline (lite), attachments, and the conversation with
@@ -417,7 +418,14 @@ class _ReplyBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.all(AksharaSpacing.s3),
+          // Reserve the raised centre AI button's band so the reply
+          // composer is never painted over.
+          padding: EdgeInsets.fromLTRB(
+            AksharaSpacing.s3,
+            AksharaSpacing.s3,
+            AksharaSpacing.s3,
+            AksharaSpacing.s3 + BottomNavAiScope.reservedHeightOf(context),
+          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [

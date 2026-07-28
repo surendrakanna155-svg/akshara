@@ -11,6 +11,7 @@ import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../../theme/theme_mode_provider.dart';
+import '../../copilot/widgets/bottom_nav_ai_scope.dart';
 
 /// Parent mobile shell with bottom navigation
 /// (Home · Academics · Fees · Messages · More).
@@ -128,7 +129,11 @@ class ParentShell extends ConsumerWidget {
         accent: AksharaPersonaAccent.parent,
         whiteLabel: whiteLabel,
       ),
-      child: Scaffold(
+      // See BottomNavAiScope: lets a screen with a fixed bottom action bar
+      // reserve the band the raised centre AI button occupies.
+      child: BottomNavAiScope(
+        reservedHeight: BottomNavAiScope.resolveHeight(context, ref),
+        child: Scaffold(
       body: Column(
         children: [
           const QaPersonaSwitcherBar(),
@@ -186,6 +191,7 @@ class ParentShell extends ConsumerWidget {
         ],
       ),
       bottomNavigationBar: const PersonaBottomNav(spec: navSpec),
+    ),
     ),
     );
   }
