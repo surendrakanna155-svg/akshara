@@ -98,6 +98,22 @@ abstract final class SchoolBuildScope {
     // now, not built out. Reversible per-entry.
     RouteNames.hostelLeave,
     RouteNames.hostelVisitors,
+    // Owner scope decision (V1-SCOPE-1, 2026-07-28): the Education Suite —
+    // Question Papers + Question Bank (the QIE engine surface) — is DEFERRED to
+    // Version 2. The question-generation engine is built but still owner/data
+    // gated (the certified question bank is empty), so shipping the tab in V1
+    // would expose an incomplete feature in school demos. Hidden now, NOT
+    // deleted: V2 restores it alongside Navodaya / IIT-JEE / NEET / regular
+    // school papers and AI-assisted generation.
+    //
+    // Safe to hide: the two COMPLETE tabs behind this route (Homework, Report
+    // Remarks) are also reachable through their own persona routes
+    // (/teacher/homework, /parent/homework, /student/homework), so hiding this
+    // entry removes no working capability from any user.
+    //
+    // TO RESTORE IN V2: delete this one line. See educationRouteBuilder in
+    // lib/router/education_navigation.dart.
+    RouteNames.education,
   };
 
   /// Whether [module] is hidden from the admin navigation in this build.

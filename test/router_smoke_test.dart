@@ -333,9 +333,7 @@ void main() {
       }
     });
 
-    testWidgets('staff reaches education and inventory intelligence routes', (
-      tester,
-    ) async {
+    testWidgets('staff reaches inventory intelligence routes', (tester) async {
       tester.view.physicalSize = const Size(1440, 900);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() {
@@ -352,7 +350,6 @@ void main() {
       );
 
       const desktopRoutes = [
-        (RouteNames.education, 'Education Suite'),
         (RouteNames.inventoryCopilot, 'Stock forecast (units)'),
         (RouteNames.inventoryLifecycle, 'Assets tracked'),
       ];
@@ -365,6 +362,36 @@ void main() {
         expect(router.routeInformationProvider.value.uri.path, route);
         expect(find.text(title), findsAtLeastNWidgets(1));
       }
+    });
+
+    testWidgets(
+        'V1-SCOPE-1: even permitted staff cannot reach the Education Suite '
+        '(Question Paper / QIE deferred to V2)', (tester) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      // _staffAuth HOLDS viewEducation, so this proves the build-scope gate —
+      // not RBAC — is what closes the route. Deep-linking straight to
+      // /education must not render the Question Papers / Question Bank UI.
+      final router = createAppRouter(readAuth: () => _staffAuth);
+      await pumpAksharaRouter(
+        tester,
+        router: router,
+        authOverride: _staffAuth,
+        settleSplash: true,
+      );
+
+      router.go(RouteNames.education);
+      await settleRiverpodFutures(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Education Suite'), findsNothing);
+      expect(find.text('Question Papers'), findsNothing);
+      expect(find.text('Question Bank'), findsNothing);
     });
 
     testWidgets('blocks parent from admin ERP routes', (tester) async {

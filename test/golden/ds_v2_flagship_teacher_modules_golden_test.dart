@@ -19,6 +19,8 @@ import 'package:akshara_erp/features/teacher/timetable/teacher_timetable_screen.
 import 'package:akshara_erp/features/teacher/timetable/teacher_today_screen.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:akshara_erp/theme/persona_accents.dart';
+import 'package:akshara_erp/core/repositories/mock/mock_teacher_repository.dart';
+import 'package:akshara_erp/core/repositories/repository_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -31,6 +33,11 @@ import 'golden_test_helpers.dart';
 /// the TEACHER persona theme (indigo accent) at a tall viewport, Light + Dark,
 /// so the premium migration (persona canvas, signature rings, floating cards) is
 /// captured while every metric, list and honest-state stays intact.
+/// The date the teacher self-attendance goldens were captured (DS V2 Phase 4
+/// freeze). Any date works as long as it is FIXED — it is pinned so the
+/// generated month history is identical on every run and on every machine.
+final _goldenAsOf = DateTime(2026, 7, 22);
+
 void main() {
   const tall = Size(390, 1280);
 
@@ -83,6 +90,16 @@ void main() {
         tester,
         screen: const TeacherMyAttendanceScreen(),
         dark: mode.dark,
+        // This screen's mock self-history is generated RELATIVE TO TODAY —
+        // which day is present/late/absent, and how much of the month has
+        // elapsed. Left on the wall clock the golden only matches on the day it
+        // was recorded and fails every day after. Pin the clock to the recording
+        // date so the golden asserts the DESIGN, not the calendar.
+        overrides: [
+          teacherRepositoryProvider.overrideWithValue(
+            MockTeacherRepository(asOf: _goldenAsOf),
+          ),
+        ],
       );
       await expectLater(
         find.byType(TeacherMyAttendanceScreen),

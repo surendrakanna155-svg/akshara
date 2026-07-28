@@ -22,6 +22,20 @@ import '../../homework/school_homework_store.dart';
 import 'mock_teacher_write_store.dart';
 
 class MockTeacherRepository implements TeacherRepository {
+  /// [asOf] pins the clock this mock treats as "now".
+  ///
+  /// Defaults to the real wall clock, which is right for the running app and
+  /// for tests that only assert structure. Golden tests MUST pass a fixed date:
+  /// the self-attendance history is generated relative to today (which day is
+  /// present / late / absent, and how many days the month has so far), so a
+  /// wall-clock golden only matches on the single date it was recorded and
+  /// fails every day after — a time-bomb, not a real UI regression.
+  MockTeacherRepository({DateTime? asOf}) : _asOf = asOf;
+
+  final DateTime? _asOf;
+
+  DateTime get _now => _asOf ?? DateTime.now();
+
   MockTeacherWriteStore get _store => MockTeacherWriteStore.instance;
   @override
   Future<TeacherDashboardData> getDashboard({required RepositoryQuery query}) async =>
@@ -671,7 +685,7 @@ class MockTeacherRepository implements TeacherRepository {
     // TCH-9 — a deterministic self-history for the requested month (defaults to
     // the current month), mirroring the backend's day semantics: present/late/
     // absent on working days, Sundays are holidays, future days are omitted.
-    final now = DateTime.now();
+    final now = _now;
     final resolvedMonth = (month == null || month.isEmpty)
         ? '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}'
         : month;

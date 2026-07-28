@@ -143,5 +143,45 @@ void main() {
         );
       }
     });
+
+    group('V1-SCOPE-1 — Education Suite (Question Paper / QIE) deferred to V2',
+        () {
+      test('the /education route and every sub-route are hidden in V1', () {
+        for (final route in [
+          RouteNames.education,
+          '${RouteNames.education}/paper',
+          '${RouteNames.education}/bank',
+        ]) {
+          expect(
+            SchoolBuildScope.isRouteHidden(route),
+            isTrue,
+            reason:
+                '$route exposes the incomplete Question Paper / QIE engine and '
+                'must stay hidden until V2 ships it',
+          );
+        }
+      });
+
+      test(
+          'hiding Education removes NO working capability — homework keeps its '
+          'own persona routes', () {
+        // The Education Suite's two complete tabs (Homework, Report Remarks)
+        // are reachable per-persona, so V1-SCOPE-1 costs users nothing. If this
+        // fails, hiding /education has started removing real functionality.
+        for (final route in [
+          RouteNames.teacherHomework,
+          RouteNames.parentHomework,
+          RouteNames.studentHomework,
+        ]) {
+          expect(
+            SchoolBuildScope.isRouteHidden(route),
+            isFalse,
+            reason:
+                '$route must stay reachable — it is how homework survives the '
+                'Education Suite being hidden in V1',
+          );
+        }
+      });
+    });
   });
 }

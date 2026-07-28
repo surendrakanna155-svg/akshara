@@ -9,6 +9,7 @@ import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../../shared/widgets/akshara_view_action.dart';
+import '../../education/education_models.dart' show examTypeLabel;
 import 'exam_admin_models.dart';
 import 'exam_admin_navigation.dart';
 import 'exam_administration_provider.dart';
@@ -147,7 +148,8 @@ class _ExamSessionCard extends ConsumerWidget {
             ),
             const SizedBox(height: AksharaSpacing.s2),
             Text(
-              'Class ${exam.classLabel} · ${exam.subject} · ${exam.examType.name}',
+              'Class ${exam.classLabel} · ${exam.subject} · '
+              '${examTypeLabel(exam.examType)}',
               style: text.bodyMedium,
             ),
             Text(

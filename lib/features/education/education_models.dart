@@ -9,14 +9,50 @@ enum EduQuestionType {
   diagram,
 }
 
+/// Assessment types a school can record marks against.
+///
+/// Covers both assessment vocabularies Indian schools actually use:
+///   * the test/term ladder — unit, weekly, monthly, quarterly, half-yearly,
+///     annual;
+///   * the CCE ladder — **Formative (FA)** and **Summative (SA)** assessment,
+///     which is the mandated pattern for AP/Telangana State Board and the
+///     scheme CBSE schools continue to run internally (FA1–FA4, SA1–SA2).
+///
+/// `exam_sessions.exam_type` is free text with no CHECK constraint and the
+/// backend passes the value straight through, so adding a member here is
+/// sufficient for the whole exam-administration → marks-entry → report-card
+/// path. Use [examTypeLabel] for anything a teacher reads — never `.name`,
+/// which renders raw camelCase.
+///
+/// ⚠️ V2 NOTE: the `edu_question_papers` table (Question Paper / QIE module,
+/// hidden in V1 by V1-SCOPE-1) has a CHECK constraint listing only the six
+/// original values. Before V2 un-hides that module, extend that constraint to
+/// accept 'formative_assessment' and 'summative_assessment', or question-paper
+/// creation with an FA/SA type will be rejected by the database.
 enum EduExamType {
   unitTest,
   weeklyTest,
   monthlyTest,
+  formativeAssessment,
+  summativeAssessment,
   quarterly,
   halfYearly,
   annual,
 }
+
+/// Human-readable label for [EduExamType], shown wherever a teacher, principal
+/// or parent sees an assessment type. Abbreviations that schools say out loud
+/// (FA / SA) are kept in the label so the dropdown matches staffroom language.
+String examTypeLabel(EduExamType type) => switch (type) {
+      EduExamType.unitTest => 'Unit Test',
+      EduExamType.weeklyTest => 'Weekly Test',
+      EduExamType.monthlyTest => 'Monthly Test',
+      EduExamType.formativeAssessment => 'Formative Assessment (FA)',
+      EduExamType.summativeAssessment => 'Summative Assessment (SA)',
+      EduExamType.quarterly => 'Quarterly',
+      EduExamType.halfYearly => 'Half-Yearly',
+      EduExamType.annual => 'Annual',
+    };
 
 enum EduHomeworkType {
   homework,
