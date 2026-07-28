@@ -1373,6 +1373,9 @@ abstract final class QaTestKeys {
       ValueKey<String>('exam_submit_verification_button');
 
   /// Student 360 tab bar (Phase C).
+  /// Staff 360 one-screen dossier body.
+  static const Key staff360Body = Key('staff_360_body');
+
   static const student360TabBar = ValueKey<String>('student_360_tab_bar');
   static const student360ExportButton =
       ValueKey<String>('student_360_export_button');

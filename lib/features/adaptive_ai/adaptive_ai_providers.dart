@@ -10,6 +10,7 @@ import '../../core/security/permissions.dart';
 import '../../core/tenant/tenant_provider.dart';
 import '../../router/route_names.dart';
 import '../../router/phase4_navigation.dart';
+import '../../router/staff360_navigation.dart';
 import '../copilot/copilot_role_intelligence.dart';
 import 'adaptive_ai_models.dart';
 
@@ -102,7 +103,14 @@ String? adaptiveSearchRoute(
           ? student360Path(id)
           : RouteNames.sisStudentDetail(id);
     case 'staff':
-      return RouteNames.hrEmployeeDetail(id);
+      // Same reasoning as students: searching a colleague is a "tell me about
+      // this person" question, and Staff 360 answers it on one screen where the
+      // HR record page is an administrative editing surface. Gated on viewHr,
+      // which not every searching role holds.
+      final canViewDossier = hasPermission?.call(Permission.viewHr) ?? false;
+      return canViewDossier
+          ? staff360Path(id)
+          : RouteNames.hrEmployeeDetail(id);
     case 'admissions':
       return RouteNames.admissionsLeadDetail(id);
     case 'finance':

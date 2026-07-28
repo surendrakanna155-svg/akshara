@@ -112,6 +112,8 @@ abstract final class RouteNames {
   static const String examIntelligence = '/intelligence/exam';
   static const String homeworkIntelligence = '/homework-intelligence';
   static const String student360 = '/student-360';
+  /// Staff 360 dossier — the employee counterpart to Student 360.
+  static const String staff360 = '/staff-360';
   static const String employees = '/employees';
   static const String inventoryDistribution = '/inventory/distribution';
   static const String inventoryReplacements = '/inventory/replacements';

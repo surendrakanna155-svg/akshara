@@ -73,6 +73,9 @@ const Map<String, Permission> kErpRouteViewPermissions = {
   RouteNames.examIntelligence: Permission.viewExamIntelligence,
   RouteNames.homeworkIntelligence: Permission.viewHomeworkIntelligence,
   RouteNames.student360: Permission.viewStudent360,
+  // Staff 360 shows employment, contact and leave data — gate it on the
+  // same permission that guards the HR employee record it is built from.
+  RouteNames.staff360: Permission.viewHr,
   RouteNames.employees: Permission.viewEmployees,
   RouteNames.inventoryDistribution: Permission.viewInventoryDistribution,
   RouteNames.inventoryReplacements: Permission.viewInventoryDistribution,

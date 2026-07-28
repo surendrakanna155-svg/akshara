@@ -52,6 +52,62 @@ enum HrReviewCycle { q1, q2, q3, annual }
 
 enum HrReviewStatus { notStarted, inProgress, completed, overdue }
 
+
+/// Human-readable labels for the HR enums.
+///
+/// Screens previously rendered `.name` straight to the user, which prints raw
+/// camelCase ("onLeave", "halfDay") into a principal's dossier. These extensions
+/// are the single place those words are written.
+extension HrEmployeeStatusLabel on HrEmployeeStatus {
+  String get label => switch (this) {
+        HrEmployeeStatus.active => 'Active',
+        HrEmployeeStatus.onLeave => 'On leave',
+        HrEmployeeStatus.probation => 'Probation',
+        HrEmployeeStatus.inactive => 'Inactive',
+      };
+}
+
+extension HrDepartmentLabel on HrDepartment {
+  String get label => switch (this) {
+        HrDepartment.academics => 'Academics',
+        HrDepartment.administration => 'Administration',
+        HrDepartment.transport => 'Transport',
+        HrDepartment.finance => 'Finance',
+        HrDepartment.hr => 'HR',
+        HrDepartment.support => 'Support',
+      };
+}
+
+extension HrEmployeeRoleLabel on HrEmployeeRole {
+  String get label => switch (this) {
+        HrEmployeeRole.teacher => 'Teacher',
+        HrEmployeeRole.driver => 'Driver',
+        HrEmployeeRole.admin => 'Administrator',
+        HrEmployeeRole.principal => 'Principal',
+        HrEmployeeRole.staff => 'Staff',
+      };
+}
+
+extension HrAttendanceStatusLabel on HrAttendanceStatus {
+  String get label => switch (this) {
+        HrAttendanceStatus.present => 'Present',
+        HrAttendanceStatus.absent => 'Absent',
+        HrAttendanceStatus.late => 'Late',
+        HrAttendanceStatus.onLeave => 'On leave',
+        HrAttendanceStatus.halfDay => 'Half day',
+      };
+}
+
+extension HrLeaveTypeLabel on HrLeaveType {
+  String get label => switch (this) {
+        HrLeaveType.casual => 'Casual',
+        HrLeaveType.sick => 'Sick',
+        HrLeaveType.earned => 'Earned',
+        HrLeaveType.maternity => 'Maternity',
+        HrLeaveType.unpaid => 'Unpaid',
+      };
+}
+
 @immutable
 class HrKpi {
   const HrKpi({

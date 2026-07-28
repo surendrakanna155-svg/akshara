@@ -102,6 +102,7 @@ import 'copilot_navigation.dart';
 import 'education_navigation.dart';
 import 'intelligence_navigation.dart';
 import 'phase4_navigation.dart';
+import 'staff360_navigation.dart';
 import 'phase5_navigation.dart';
 import 'branch_navigation.dart';
 import 'franchise_navigation.dart';
@@ -636,6 +637,11 @@ GoRouter createAppRouter({
             path: '${RouteNames.student360}/:studentId',
             name: 'student360',
             builder: (context, state) => student360RouteBuilder(context, state),
+          ),
+          GoRoute(
+            path: '${RouteNames.staff360}/:employeeId',
+            name: 'staff360',
+            builder: (context, state) => staff360RouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.employees,
