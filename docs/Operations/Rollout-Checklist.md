@@ -22,6 +22,12 @@ Roll out **one pilot tenant** before multi-tenant production.
 - [ ] Production Supabase project linked
 - [ ] All v7.7 secrets configured
 - [ ] Domain events worker scheduled (`POST /domain-events/process-pending`)
+      ⚠️ **This drain currently delivers nothing to subscribers**, because every
+      event is inserted in terminal `status='published'` while the drain selects
+      `pending|failed`, and the subscriber registry is empty. Schedule it anyway:
+      it is the ONLY caller of the Signal Refinery, so without it AI cache
+      invalidation and fact-freshness never run. Do not expect cross-module
+      propagation from it. See docs/engineering/DOMAIN_EVENTS_ARCHITECTURE.md.
 
 ### Flutter web build
 
@@ -61,5 +67,7 @@ flutter build web \
 ## Phase C — Expand tenants
 
 - [ ] Enable feature flags per tenant in rollout tracker
-- [ ] Monitor audit ingestion + domain event backlog
+- [ ] Monitor audit ingestion. **Do not use the domain-event backlog as a health
+      signal** — it counts rows in `pending|failed`, which is structurally always
+      zero, so it can never go red and will be mistaken for evidence of health.
 - [ ] Weekly tenant probe job via internal health endpoint
