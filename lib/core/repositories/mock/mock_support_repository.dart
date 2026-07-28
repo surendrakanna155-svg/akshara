@@ -1,13 +1,29 @@
+import '../../../features/support/domain/support_delivery_failure.dart';
 import '../../../features/support/domain/support_models.dart';
 import '../interfaces/support_repository.dart';
 import '../paginated_result.dart';
 import '../repository_query.dart';
 
-/// In-memory [SupportRepository] for local / demo / test builds. Stateful and
-/// realistic: seeded with a spread of incidents across the lifecycle, with
-/// timelines, support replies and an attachment — so the UI exercises every
-/// state without a backend. Mutations (create / reply / upload) persist for the
-/// life of the instance.
+/// In-memory [SupportRepository] for local / demo / test builds.
+///
+/// READS are seeded and realistic: a spread of incidents across the lifecycle,
+/// with timelines, support replies and an attachment, so the UI exercises every
+/// state without a backend.
+///
+/// WRITES all throw [SupportDeliveryFailure.notConfigured]. This is deliberate
+/// and is the whole point of the class:
+///
+///   * A mock may stand in for *reading* data it does not have. It may never
+///     stand in for *delivering* something to a human being. The previous
+///     version minted `SUP-4200`-style references locally, so a user on the
+///     shipping build was shown a real-looking ticket number for a report that
+///     was never sent, never stored, and that Akshara Support never saw.
+///   * Throwing also keeps the honest-failure UI on the daily developer path —
+///     every dev run exercises it, so it cannot rot behind a flag.
+///
+/// If you are here because a write "stopped working" in a local build: that is
+/// the correct behaviour. Point the app at a real backend
+/// (`SUPPORT_API_ENABLED=true`) to actually deliver a report.
 class MockSupportRepository implements SupportRepository {
   MockSupportRepository() {
     _seed();
@@ -205,47 +221,15 @@ class MockSupportRepository implements SupportRepository {
         : [];
   }
 
+  /// Always throws — there is no support channel behind this repository, so a
+  /// report cannot be created and no reference number may be invented.
   @override
   Future<SupportIncident> createIncident({
     required RepositoryQuery query,
     required CreateSupportIncidentInput input,
   }) async {
     await _latency();
-    final id = 'inc_$_seq';
-    final ref = 'SUP-$_seq';
-    _seq += 37;
-    final now = DateTime.now();
-    final context = input.context ?? const {};
-    final incident = SupportIncident(
-      id: id,
-      publicRef: ref,
-      title: input.title,
-      description: input.description,
-      category: 'unknown',
-      status: SupportStatus.newIncident,
-      severity: SupportSeverity.sev3,
-      createdAt: now,
-      updatedAt: now,
-      reporterRole: 'schoolAdmin',
-      moduleKey: context['moduleKey'] as String?,
-      screenRoute: context['screenRoute'] as String?,
-      appVersion: context['appVersion'] as String?,
-      platform: context['platform'] as String?,
-      deviceModel: context['deviceModel'] as String?,
-      osVersion: context['osVersion'] as String?,
-      firstSeenAt: now,
-    );
-    _incidents.insert(0, incident);
-    _events[id] = [
-      SupportIncidentEvent(eventType: 'created', createdAt: now, toValue: 'new'),
-      SupportIncidentEvent(
-        eventType: 'evidence_collected',
-        createdAt: now.add(const Duration(seconds: 1)),
-      ),
-    ];
-    _messages[id] = [];
-    _attachments[id] = [];
-    return incident;
+    throw const SupportDeliveryFailure.notConfigured();
   }
 
   @override
@@ -284,6 +268,8 @@ class MockSupportRepository implements SupportRepository {
     );
   }
 
+  /// Always throws — a reply that Akshara Support will never read must not be
+  /// rendered back to the reporter as if it had been sent.
   @override
   Future<SupportMessage> postMessage({
     required RepositoryQuery query,
@@ -291,25 +277,10 @@ class MockSupportRepository implements SupportRepository {
     required String body,
   }) async {
     await _latency();
-    final now = DateTime.now();
-    final message = SupportMessage(
-      id: '${incidentId}_m${_messages[incidentId]?.length ?? 0}',
-      senderKind: SupportSenderKind.reporter,
-      visibility: 'school_visible',
-      body: body,
-      createdAt: now,
-      senderUserId: 'me',
-    );
-    (_messages[incidentId] ??= []).add(message);
-    (_events[incidentId] ??= []).add(SupportIncidentEvent(
-      eventType: 'message_posted',
-      createdAt: now,
-      actorUserId: 'me',
-    ));
-    _touch(incidentId, now);
-    return message;
+    throw const SupportDeliveryFailure.notConfigured();
   }
 
+  /// Always throws — nothing is uploaded anywhere.
   @override
   Future<SupportAttachment> uploadAttachment({
     required RepositoryQuery query,
@@ -320,44 +291,7 @@ class MockSupportRepository implements SupportRepository {
     required List<int> bytes,
   }) async {
     await _latency();
-    final now = DateTime.now();
-    final attachment = SupportAttachment(
-      id: '${incidentId}_a${_attachments[incidentId]?.length ?? 0}',
-      kind: kind,
-      fileName: fileName,
-      contentType: contentType,
-      sizeBytes: bytes.length,
-      createdAt: now,
-    );
-    (_attachments[incidentId] ??= []).add(attachment);
-    return attachment;
-  }
-
-  void _touch(String incidentId, DateTime at) {
-    final index = _incidents.indexWhere((i) => i.id == incidentId);
-    if (index < 0) return;
-    final old = _incidents[index];
-    _incidents[index] = SupportIncident(
-      id: old.id,
-      publicRef: old.publicRef,
-      title: old.title,
-      description: old.description,
-      category: old.category,
-      status: old.status,
-      severity: old.severity,
-      createdAt: old.createdAt,
-      updatedAt: at,
-      reporterRole: old.reporterRole,
-      moduleKey: old.moduleKey,
-      screenRoute: old.screenRoute,
-      appVersion: old.appVersion,
-      platform: old.platform,
-      deviceModel: old.deviceModel,
-      osVersion: old.osVersion,
-      resolvedAt: old.resolvedAt,
-      resolutionSummary: old.resolutionSummary,
-      firstSeenAt: old.firstSeenAt,
-    );
+    throw const SupportDeliveryFailure.notConfigured();
   }
 
   Future<void> _latency() =>

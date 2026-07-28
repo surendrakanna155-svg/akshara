@@ -38,6 +38,28 @@ class ReportAttachment {
   final String contentType;
 }
 
+/// The outcome of a SUCCESSFUL report submit.
+///
+/// Only ever constructed from a record the server returned — a failure throws
+/// (see `SupportDeliveryFailure`), it never comes back as a result object with a
+/// "false" flag, because a half-truthful success is exactly the bug this whole
+/// surface exists to prevent.
+@immutable
+class SupportReportResult {
+  const SupportReportResult({
+    required this.incident,
+    required this.screenshotAttached,
+  });
+
+  /// The server-created incident, carrying the server's own `public_ref`.
+  final SupportIncident incident;
+
+  /// False when the user attached a screenshot and only the screenshot failed
+  /// to upload. The report itself reached support; the screenshot did not, and
+  /// the UI says so instead of quietly dropping it.
+  final bool screenshotAttached;
+}
+
 /// Write-side actions for the support surface. Kept off the widgets so the
 /// context capture + create + upload + cache-invalidation orchestration lives in
 /// one place.
@@ -47,8 +69,12 @@ class SupportActions {
   final Ref _ref;
 
   /// Creates an incident with the auto-collected client context, then uploads an
-  /// optional screenshot. Returns the created incident (with its `public_ref`).
-  Future<SupportIncident> submitReport({
+  /// optional screenshot.
+  ///
+  /// Returns only when the server created the incident — the returned
+  /// `public_ref` is therefore always the server's. Throws
+  /// `SupportDeliveryFailure` when nothing reached support.
+  Future<SupportReportResult> submitReport({
     required String title,
     required String description,
     ReportAttachment? screenshot,
@@ -68,8 +94,10 @@ class SupportActions {
       ),
     );
 
+    var screenshotAttached = true;
     if (screenshot != null) {
-      // A failed attachment upload must not lose the already-created report.
+      // A failed attachment upload must not lose the already-created report —
+      // but it is reported back to the caller, not swallowed silently.
       try {
         await repo.uploadAttachment(
           query: query,
@@ -80,12 +108,15 @@ class SupportActions {
           bytes: screenshot.bytes,
         );
       } on Object {
-        // Swallowed: the incident exists; the screenshot can be re-attached.
+        screenshotAttached = false;
       }
     }
 
     _ref.invalidate(myReportedIncidentsProvider);
-    return incident;
+    return SupportReportResult(
+      incident: incident,
+      screenshotAttached: screenshotAttached,
+    );
   }
 
   /// Posts a school-visible reply and refreshes the detail.

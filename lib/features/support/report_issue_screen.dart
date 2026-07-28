@@ -3,12 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/reliability/drafts/draft_autosave.dart';
+import '../../core/reliability/drafts/draft_model.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../router/route_names.dart';
 import '../../shared/widgets/widgets.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
+import 'domain/support_delivery_failure.dart';
 import 'support_providers.dart';
+import 'support_ui.dart';
 
 /// ASIP Phase 1 screen (a) — "Report an issue to Akshara Support".
 ///
@@ -30,7 +34,21 @@ class ReportIssueScreen extends ConsumerStatefulWidget {
   ConsumerState<ReportIssueScreen> createState() => _ReportIssueScreenState();
 }
 
-class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
+/// Key for the honest "we did not send this" panel shown after a failed submit.
+const Key kSupportReportDeliveryFailureKey =
+    ValueKey<String>('support_report_delivery_failure');
+
+class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen>
+    with DraftAutosaveMixin {
+  /// Draft key for the half-typed report. Scoped per user + school by
+  /// [DraftController]; the same autosave contract used by the other
+  /// long-form screens (teacher_homework_create, exam_marks_entry, …).
+  ///
+  /// This screen is the one place where losing the text is worst: the user is
+  /// already having a bad day, and if the send fails we must be able to say
+  /// "your words are safe" and mean it.
+  static const String _draftKey = 'support_report_issue';
+
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _picker = ImagePicker();
@@ -38,11 +56,51 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
   ReportAttachment? _screenshot;
   bool _submitting = false;
 
+  /// Set when a submit did NOT reach Akshara Support. While this is non-null the
+  /// screen shows the failure panel, offers a retry, and — critically — shows no
+  /// reference number of any kind. `_failed` distinguishes "never tried" from
+  /// "tried and failed for a reason we could not classify" (reason == null).
+  bool _failed = false;
+  SupportDeliveryFailureReason? _failureReason;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController.addListener(scheduleDraftSave);
+    _descriptionController.addListener(scheduleDraftSave);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      offerResumeIfAny(draftKey: _draftKey, onResume: _restoreDraft);
+    });
+  }
+
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  @override
+  DraftModel? buildDraftSnapshot() {
+    final title = _titleController.text.trim();
+    final description = _descriptionController.text.trim();
+    if (title.isEmpty && description.isEmpty) return null;
+    return MapDraft(
+      _draftKey,
+      <String, dynamic>{
+        'title': _titleController.text,
+        'description': _descriptionController.text,
+      },
+      draftLabel: 'Issue report',
+    );
+  }
+
+  void _restoreDraft(Map<String, dynamic> json) {
+    setState(() {
+      _titleController.text = (json['title'] as String?) ?? '';
+      _descriptionController.text = (json['description'] as String?) ?? '';
+    });
   }
 
   bool get _canSubmit =>
@@ -97,22 +155,52 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
 
   Future<void> _submit() async {
     if (!_canSubmit) return;
-    setState(() => _submitting = true);
+    setState(() {
+      _submitting = true;
+      _failed = false;
+      _failureReason = null;
+    });
+
+    // Persist before the attempt, not after: if the send fails (or the process
+    // dies mid-send) the typed report is already on disk.
+    await flushDraftNow();
+
     try {
-      final incident = await ref.read(supportActionsProvider).submitReport(
+      final result = await ref.read(supportActionsProvider).submitReport(
             title: _titleController.text.trim(),
             description: _descriptionController.text.trim(),
             screenshot: _screenshot,
           );
+
+      // Reached only when the server created the incident, so `publicRef` is
+      // the SERVER's reference — never a locally generated one.
+      await discardDraftOnSubmit(_draftKey);
       if (!mounted) return;
-      _showSnack('Reported ${incident.publicRef}. Support will investigate.');
-      context.pushReplacement(
-        RouteNames.supportIncidentDetail(incident.id),
+      // Guard: if the server issued no reference we say nothing about one
+      // rather than printing an empty or invented value.
+      final serverRef = result.incident.publicRef.trim();
+      final sent = serverRef.isEmpty
+          ? 'Sent to Akshara Support.'
+          : 'Sent to Akshara Support. Your reference is $serverRef.';
+      _showSnack(
+        result.screenshotAttached
+            ? sent
+            : '$sent We could not attach your screenshot — you can add it in '
+                'the conversation.',
       );
-    } on Object {
+      context.pushReplacement(
+        RouteNames.supportIncidentDetail(result.incident.id),
+      );
+    } on Object catch (error) {
+      // Nothing reached Akshara Support. Say so, show no reference, keep the
+      // form (and the on-device draft) exactly as the user left it, and offer
+      // a retry.
       if (!mounted) return;
-      setState(() => _submitting = false);
-      _showSnack('Could not send your report. Please try again.');
+      setState(() {
+        _submitting = false;
+        _failed = true;
+        _failureReason = supportFailureReasonOf(error);
+      });
     }
   }
 
@@ -190,6 +278,10 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
               const _ScreenRecordingAffordance(),
               const SizedBox(height: AksharaSpacing.s4),
               _AutoDiagnosticsNote(color: colors.surfaceContainerHigh),
+              if (_failed) ...[
+                const SizedBox(height: AksharaSpacing.s5),
+                _DeliveryFailurePanel(reason: _failureReason),
+              ],
               const SizedBox(height: AksharaSpacing.s6),
               FilledButton.icon(
                 key: QaTestKeys.supportReportSubmitButton,
@@ -200,8 +292,14 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
                         height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Icon(Icons.send_rounded),
-                label: Text(_submitting ? 'Sending…' : 'Send to Akshara Support'),
+                    : Icon(_failed ? Icons.refresh : Icons.send_rounded),
+                label: Text(
+                  _submitting
+                      ? 'Sending…'
+                      : _failed
+                          ? 'Try again'
+                          : 'Send to Akshara Support',
+                ),
               ),
             ],
           ),
@@ -294,6 +392,65 @@ class _ScreenshotField extends StatelessWidget {
             icon: const Icon(Icons.close),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The honest "this did not reach Akshara Support" panel.
+///
+/// Deliberately loud and deliberately reference-free: the single worst thing
+/// this screen could do is hand the user a ticket number for a report nobody
+/// received. It states that it was not sent, that no ticket exists, and that
+/// their text is safe on the device.
+class _DeliveryFailurePanel extends StatelessWidget {
+  const _DeliveryFailurePanel({required this.reason});
+
+  final SupportDeliveryFailureReason? reason;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final text = context.aksharaText;
+    return Semantics(
+      key: kSupportReportDeliveryFailureKey,
+      container: true,
+      liveRegion: true,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
+        decoration: BoxDecoration(
+          color: colors.errorContainer,
+          borderRadius: BorderRadius.circular(AksharaSpacing.s3),
+          border: Border.all(color: colors.error),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.error_outline, size: 20, color: colors.error),
+            const SizedBox(width: AksharaSpacing.s3),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    supportReportFailureHeadline(reason),
+                    style: text.labelLarge.copyWith(
+                      color: colors.onErrorContainer,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: AksharaSpacing.s1),
+                  Text(
+                    supportReportFailureDetail(reason),
+                    style: text.bodySmall
+                        .copyWith(color: colors.onErrorContainer),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

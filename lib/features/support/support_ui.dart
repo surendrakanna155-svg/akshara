@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/theme_extensions.dart';
+import 'domain/support_delivery_failure.dart';
 import 'domain/support_models.dart';
 
 /// Presentation helpers for the support surface — status/severity tones, compact
@@ -89,3 +90,64 @@ String supportEventLabel(SupportIncidentEvent event) {
       return event.eventType.replaceAll('_', ' ');
   }
 }
+
+// ---------------------------------------------------------------------------
+// Honest-failure copy for the support WRITE path.
+//
+// One rule governs every string below: none of them may imply that Akshara
+// Support received anything, and none of them is ever accompanied by a
+// reference number. `reason == null` means the failure was not a recognised
+// [SupportDeliveryFailure] — we genuinely do not know what happened, so we say
+// exactly that rather than guessing in either direction.
+// ---------------------------------------------------------------------------
+
+/// Headline for a failed "Report an issue" submit.
+String supportReportFailureHeadline(SupportDeliveryFailureReason? reason) {
+  switch (reason) {
+    case SupportDeliveryFailureReason.notConfigured:
+      return 'Not sent — no support channel in this build';
+    case SupportDeliveryFailureReason.notDelivered:
+      return 'Not sent — we could not reach Akshara Support';
+    case null:
+      return 'Not sent — we could not confirm this reached Akshara Support';
+  }
+}
+
+/// Body copy for a failed "Report an issue" submit. Says three things, in this
+/// order: it was not sent, there is no ticket, your words are safe.
+String supportReportFailureDetail(SupportDeliveryFailureReason? reason) {
+  switch (reason) {
+    case SupportDeliveryFailureReason.notConfigured:
+      return 'This build has no live connection to Akshara Support, so your '
+          'report was not sent and no ticket was created. What you typed is '
+          'saved on this device.';
+    case SupportDeliveryFailureReason.notDelivered:
+      return 'Your report was not sent and no ticket was created. What you '
+          'typed is saved on this device — check your internet connection and '
+          'try again.';
+    case null:
+      return 'Something went wrong, so we are not showing you a reference '
+          'number we cannot stand behind. Treat this report as not sent. What '
+          'you typed is saved on this device — please try again.';
+  }
+}
+
+/// Message for a failed reply on an existing incident.
+String supportReplyFailureMessage(SupportDeliveryFailureReason? reason) {
+  switch (reason) {
+    case SupportDeliveryFailureReason.notConfigured:
+      return 'Not sent. This build has no live connection to Akshara Support, '
+          'so your message was not delivered.';
+    case SupportDeliveryFailureReason.notDelivered:
+      return 'Not sent. We could not reach Akshara Support. Your message is '
+          'still here — check your connection and try again.';
+    case null:
+      return 'Not sent. We could not confirm Akshara Support received your '
+          'message. Your message is still here — please try again.';
+  }
+}
+
+/// The reason behind [error] when it is a [SupportDeliveryFailure], else null
+/// (an unrecognised failure — see the `null` cases above).
+SupportDeliveryFailureReason? supportFailureReasonOf(Object? error) =>
+    error is SupportDeliveryFailure ? error.reason : null;

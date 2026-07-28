@@ -20,6 +20,7 @@ import { handleTenantAccessHealth, handleOperationsHealth, handleStorageHealth, 
 // canonical 404. Every module router is non-greedy (returns null, never its own route-404).
 import { isPublicModuleRoute, matchModuleRoute } from "../_shared/route_registry.ts";
 import { authenticateRequest } from "../_shared/permission_middleware.ts";
+import { bearerToken, verifyAccessToken } from "../_shared/jwt.ts";
 import { errorEnvelope, routePath } from "../_shared/http.ts";
 import { dispatchWithIdempotency } from "../_shared/idempotency_dispatch.ts";
 import {
@@ -73,11 +74,137 @@ export async function routeModuleRequest(
 }
 
 /**
+ * Who made the request — attached to every request log line so a support ticket
+ * ("my child was marked absent on Tuesday") can be narrowed to actual traffic.
+ * This log is the only durable per-request diagnostic the service produces, and
+ * without an actor it could only ever be narrowed to a path and a minute.
+ *
+ * TRUST BOUNDARY. Everything above `tokenState` is read from the SIGNED access
+ * token, verified here with the same HS256 check the auth middleware performs —
+ * so it is attributable. The client also sends `X-User-Id` / `X-School-Id` /
+ * `X-Tenant-Id`, which any caller can set to any value; those are recorded ONLY
+ * under the `header*` names and must NEVER be used to attribute an action.
+ * `headerIdentityMismatch` marks a request whose headers disagree with its
+ * token — normally a stale client, occasionally worth a second look.
+ *
+ * PRIVACY (holds the discipline documented on `logRequest`): IDs only. Fields
+ * deliberately EXCLUDED even though the verified token carries them:
+ *   • `student_id` / `child_ids` — these identify the CHILD a request concerns.
+ *     They are not needed to find a request (userId + sessionId + correlationId
+ *     already do that) and logging them would turn a diagnostic log into a
+ *     durable parent→child linkage dataset outside the RLS-protected DB.
+ *   • `role` / `permissions` — not identifiers, and recoverable from `userId`.
+ *   • everything else already excluded: bodies, tokens, query strings, names,
+ *     phone numbers, marks, OTPs, free text.
+ */
+export interface RequestLogIdentity {
+  /** Verified `sub` — the acting user. Null unless a valid token was presented. */
+  userId: string | null;
+  /** Verified `session_id` — which login/device, for "it only fails on my phone". */
+  sessionId: string | null;
+  /** Verified tenant (organization) id. */
+  tenantId: string | null;
+  /** Verified school id; null for org-scope tokens. */
+  schoolId: string | null;
+  /** Verified scope enum (school/parent/student/organization) — a role class, not a person. */
+  scope: string | null;
+  /**
+   * `verified` — signature + expiry checked, ids above are attributable.
+   * `invalid` — a token was presented but failed verification (expired/forged):
+   *             the ids are unknown, which is itself the diagnostic.
+   * `none` — no bearer at all (health, login, public webhooks).
+   * `unverifiable` — config never loaded, so no secret to verify with.
+   */
+  tokenState: "verified" | "invalid" | "none" | "unverifiable";
+  /** UNVERIFIED, client-supplied. Never attribution — only a narrowing hint. */
+  headerUserId: string | null;
+  headerSchoolId: string | null;
+  headerTenantId: string | null;
+  /** True when a supplied header contradicts the verified token. */
+  headerIdentityMismatch: boolean;
+}
+
+function trimmedHeader(req: Request, name: string): string | null {
+  const value = req.headers.get(name)?.trim();
+  return value ? value : null;
+}
+
+/**
+ * Resolves [RequestLogIdentity] for one request. Verification is a local HMAC
+ * check (no DB read, no session lookup), so it costs the same as the auth
+ * middleware's own verify and cannot fail the request: any error degrades to
+ * `tokenState: "invalid"` with null ids. `jwtSecret` is null only on the
+ * config-error path, where there is nothing to verify with.
+ */
+export async function resolveRequestIdentity(
+  req: Request,
+  jwtSecret: string | null,
+): Promise<RequestLogIdentity> {
+  const headerUserId = trimmedHeader(req, "x-user-id");
+  const headerSchoolId = trimmedHeader(req, "x-school-id");
+  const headerTenantId = trimmedHeader(req, "x-tenant-id");
+  const anonymous = {
+    userId: null,
+    sessionId: null,
+    tenantId: null,
+    schoolId: null,
+    scope: null,
+    headerUserId,
+    headerSchoolId,
+    headerTenantId,
+    headerIdentityMismatch: false,
+  };
+
+  let token: string | null = null;
+  try {
+    token = bearerToken(req);
+  } catch (_) {
+    token = null;
+  }
+  if (!token) return { ...anonymous, tokenState: "none" };
+  if (!jwtSecret) return { ...anonymous, tokenState: "unverifiable" };
+
+  let claims = null;
+  try {
+    claims = await verifyAccessToken(jwtSecret, token);
+  } catch (_) {
+    // verifyAccessToken already swallows its own failures; this is belt-and-braces
+    // so observability can never break the response path.
+    claims = null;
+  }
+  if (!claims) return { ...anonymous, tokenState: "invalid" };
+
+  return {
+    userId: claims.sub ?? null,
+    sessionId: claims.session_id ?? null,
+    tenantId: claims.tenant_id ?? null,
+    schoolId: claims.school_id ?? null,
+    scope: claims.scope ?? null,
+    tokenState: "verified",
+    headerUserId,
+    headerSchoolId,
+    headerTenantId,
+    headerIdentityMismatch: (headerUserId !== null && headerUserId !== claims.sub) ||
+      (headerTenantId !== null && headerTenantId !== claims.tenant_id) ||
+      (headerSchoolId !== null && claims.school_id !== null &&
+        headerSchoolId !== claims.school_id),
+  };
+}
+
+/**
  * One structured JSON log line per request (Batch 7 observability). Captured by
- * `docker logs akshara-edge`. Carries method/path/status/duration + a correlation
- * id for tracing. Deliberately logs NO request/response bodies, tokens, or query
- * strings, so secrets never leak into logs. Level: 50 server error, 40 client 4xx,
- * 30 ok.
+ * `docker logs akshara-edge`. Carries method/path/status/duration, a correlation
+ * id for tracing, and the actor identifiers in [RequestLogIdentity] so a ticket
+ * can be narrowed to a user/school/session. Deliberately logs NO request/response
+ * bodies, tokens, or query strings, so secrets never leak into logs — and no
+ * names, phone numbers, marks, OTPs or free text either: IDs only.
+ * Level: 50 server error, 40 client 4xx, 30 ok.
+ *
+ * `clientIp` is USUALLY NULL in production and that is expected, not a defect:
+ * it is read from `X-Forwarded-For`, and the internal gateway that fronts this
+ * function does not set that header, so there is no client address to record.
+ * It is kept because a deployment that does front the service with a proxy will
+ * populate it. Never treat a null `clientIp` as suspicious.
  */
 function logRequest(
   fields: {
@@ -87,16 +214,19 @@ function logRequest(
     durationMs: number;
     correlationId: string;
     clientIp: string | null;
+    identity: RequestLogIdentity;
     error?: string;
   },
 ): void {
   const level = fields.status >= 500 ? 50 : fields.status >= 400 ? 40 : 30;
+  const { identity, ...rest } = fields;
   console.log(JSON.stringify({
     level,
     time: new Date().toISOString(),
     type: "request",
     service: "akshara-api",
-    ...fields,
+    ...rest,
+    ...identity,
   }));
 }
 
@@ -151,6 +281,9 @@ export async function handleRequest(
       durationMs: Date.now() - startedAt,
       correlationId,
       clientIp,
+      // No config means no jwtSecret, so the token cannot be verified here —
+      // the header hints are all that can honestly be recorded.
+      identity: await resolveRequestIdentity(req, null),
       error: detail,
     });
     return withCors(
@@ -161,6 +294,9 @@ export async function handleRequest(
 
   const path = routePath(req);
   const method = req.method.toUpperCase();
+  // Resolved once, up front, so BOTH the normal and the unexpected-error log
+  // line carry the same actor. A local HMAC verify — no DB read.
+  const identity = await resolveRequestIdentity(req, config.jwtSecret ?? null);
 
   try {
     let response: Response;
@@ -223,6 +359,7 @@ export async function handleRequest(
       durationMs: Date.now() - startedAt,
       correlationId,
       clientIp,
+      identity,
     });
     return withCors(response, correlationId);
   } catch (error) {
@@ -237,6 +374,7 @@ export async function handleRequest(
       durationMs: Date.now() - startedAt,
       correlationId,
       clientIp,
+      identity,
       error: detail,
     });
     return withCors(

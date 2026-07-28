@@ -1,6 +1,10 @@
 import type { AppConfig } from "../config.ts";
 import { errorEnvelope } from "../http.ts";
-import { handleAuditBatchUpload, handleListAuditEvents } from "./audit_handlers.ts";
+import {
+  handleAuditBatchUpload,
+  handleAuditRetentionPreview,
+  handleListAuditEvents,
+} from "./audit_handlers.ts";
 import { handleProcessDomainEvents } from "./domain_events_handlers.ts";
 
 function matchAuditRoute(
@@ -14,6 +18,11 @@ function matchAuditRoute(
   // reviewable ("who changed this mark / deleted this payment").
   if (method === "GET" && path === "/audit/events") {
     return { handler: handleListAuditEvents };
+  }
+  // P0-RETENTION: read-only sizing of a prospective purge, so an operator can
+  // see the blast radius before running the destructive ops script by hand.
+  if (method === "GET" && path === "/audit/retention") {
+    return { handler: handleAuditRetentionPreview };
   }
   if (method === "POST" && path === "/domain-events/process-pending") {
     return { handler: handleProcessDomainEvents };

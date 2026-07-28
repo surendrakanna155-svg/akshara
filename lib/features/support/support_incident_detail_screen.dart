@@ -5,6 +5,7 @@ import '../../core/testing/qa_test_keys.dart';
 import '../../shared/widgets/widgets.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
+import 'domain/support_delivery_failure.dart';
 import 'domain/support_models.dart';
 import 'support_providers.dart';
 import 'support_ui.dart';
@@ -24,10 +25,20 @@ class SupportIncidentDetailScreen extends ConsumerStatefulWidget {
       _SupportIncidentDetailScreenState();
 }
 
+/// Key for the honest "your reply was not sent" strip above the composer.
+const Key kSupportReplyDeliveryFailureKey =
+    ValueKey<String>('support_reply_delivery_failure');
+
 class _SupportIncidentDetailScreenState
     extends ConsumerState<SupportIncidentDetailScreen> {
   final _replyController = TextEditingController();
   bool _sending = false;
+
+  /// Set when the last reply did NOT reach Akshara Support. The typed text is
+  /// deliberately left in the composer and the message is NOT rendered into the
+  /// conversation — an undelivered message must never look delivered.
+  bool _replyFailed = false;
+  SupportDeliveryFailureReason? _replyFailureReason;
 
   @override
   void dispose() {
@@ -38,18 +49,24 @@ class _SupportIncidentDetailScreenState
   Future<void> _sendReply() async {
     final body = _replyController.text.trim();
     if (body.isEmpty || _sending) return;
-    setState(() => _sending = true);
+    setState(() {
+      _sending = true;
+      _replyFailed = false;
+      _replyFailureReason = null;
+    });
     try {
       await ref.read(supportActionsProvider).reply(
             incidentId: widget.incidentId,
             body: body,
           );
+      // Cleared only on a confirmed server write.
       _replyController.clear();
-    } catch (_) {
+    } on Object catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not send your reply. Try again.')),
-        );
+        setState(() {
+          _replyFailed = true;
+          _replyFailureReason = supportFailureReasonOf(error);
+        });
       }
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -80,6 +97,8 @@ class _SupportIncidentDetailScreenState
           replyController: _replyController,
           sending: _sending,
           onSend: _sendReply,
+          replyFailed: _replyFailed,
+          replyFailureReason: _replyFailureReason,
         ),
       ),
     );
@@ -92,12 +111,16 @@ class _DetailBody extends StatelessWidget {
     required this.replyController,
     required this.sending,
     required this.onSend,
+    required this.replyFailed,
+    required this.replyFailureReason,
   });
 
   final SupportIncidentDetail detail;
   final TextEditingController replyController;
   final bool sending;
   final VoidCallback onSend;
+  final bool replyFailed;
+  final SupportDeliveryFailureReason? replyFailureReason;
 
   @override
   Widget build(BuildContext context) {
@@ -138,12 +161,63 @@ class _DetailBody extends StatelessWidget {
             ],
           ),
         ),
+        if (replyFailed)
+          _ReplyFailureStrip(reason: replyFailureReason, onRetry: onSend),
         _ReplyBar(
           controller: replyController,
           sending: sending,
           onSend: onSend,
         ),
       ],
+    );
+  }
+}
+
+/// Honest "not sent" strip above the composer. No optimistic bubble is added to
+/// the conversation, so the screen never shows an undelivered message as sent.
+class _ReplyFailureStrip extends StatelessWidget {
+  const _ReplyFailureStrip({required this.reason, required this.onRetry});
+
+  final SupportDeliveryFailureReason? reason;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final text = context.aksharaText;
+    return Semantics(
+      key: kSupportReplyDeliveryFailureKey,
+      container: true,
+      liveRegion: true,
+      child: Material(
+        color: colors.errorContainer,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AksharaSpacing.s4,
+            AksharaSpacing.s3,
+            AksharaSpacing.s2,
+            AksharaSpacing.s3,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 20, color: colors.error),
+              const SizedBox(width: AksharaSpacing.s3),
+              Expanded(
+                child: Text(
+                  supportReplyFailureMessage(reason),
+                  style:
+                      text.bodySmall.copyWith(color: colors.onErrorContainer),
+                ),
+              ),
+              TextButton(
+                onPressed: onRetry,
+                child: const Text('Try again'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

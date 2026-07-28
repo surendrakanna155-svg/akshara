@@ -34,6 +34,7 @@ import {
   achievementPromotionAudit,
   admissionsAudit,
   academicAudit,
+  attendanceAudit,
   educationAudit,
   employeeAudit,
   examAudit,
@@ -75,9 +76,18 @@ const CATALOGUED_MODULES = new Set<string>([
   "teacher_assistant",
   "parent_insights",
   "growth",
-  // `teacher` write routes (homework/attendance/exam-marks) flow through the
-  // education / exam / school-completion catalog specs, not a `teacher` group.
+  // `teacher` write routes audit without a `teacher` catalog group: the exam-marks
+  // route uses the `exam` specs, homework/leave use the education / school-completion
+  // specs, and the two attendance-marking routes (POST /teacher/attendance/draft
+  // and /submit, owned by `pilot/pilot_operations_handlers.ts`) emit an ad-hoc
+  // `attendanceDraftSaved` / `attendanceSubmitted` spec built inline by that
+  // module's `auditMobileWrite` helper. All are audited; only the last is not
+  // catalogued — recorded here so the wording matches the code.
   "teacher",
+  // Student-attendance CORRECTIONS (`attendanceAudit`): the parent submit, the
+  // staff submit, and the direct staff decision route each emit a spec — see the
+  // note on AUDIT_EXEMPT_MODULES below for the exemption this replaced.
+  "attendance",
   // `subscriptions` plan-assignment audits via the `entitlements` source module
   // (`subscriptionAudit.planAssigned`).
   "subscriptions",
@@ -139,9 +149,20 @@ const AUDIT_EXEMPT_MODULES: Record<string, string> = {
   // Broadcast/template sends are delivery operations; their audit is the
   // delivery-event ledger (`communication_delivery_event`), not a catalog spec.
   communication: "delivery-event ledger (communication_delivery_event)",
-  // Parent attendance corrections are submissions into the school's correction
-  // queue; the audited mutation is the staff APPROVAL, not the parent submit.
-  attendance: "parent correction submission (audited at staff approval)",
+  // ── WITHDRAWN EXEMPTION (P1 fix) ────────────────────────────────────────────
+  // `attendance` used to sit here as:
+  //     "parent correction submission (audited at staff approval)"
+  // That premise was FALSE, and a green test asserting it turned an open
+  // question into a settled one. Two things were wrong:
+  //   1. The staff decision route (PATCH /attendance/corrections/:id/status,
+  //      gated on approveAttendanceCorrection) wrote NO audit row either — so
+  //      the approval the exemption deferred to did not exist on that path. The
+  //      only decision path that did audit was the separate approvals workflow,
+  //      which writes to `approval_audit_entries`.
+  //   2. Even a real deferral would lose the submission itself: a request that
+  //      is never decided, or is rejected, leaves no trace of who asked or when.
+  // Both submits AND the direct decision route now emit `attendanceAudit` specs
+  // in the same transaction as the write, so `attendance` is CATALOGUED above.
   // Approval decisions (single + PRI-1 batch approve/reject/cancel) write to the
   // dedicated `approval_audit_entries` ledger via `insertAuditEntry` — one row per
   // decision — rather than the mutation catalog. That ledger is the audit path.
@@ -179,6 +200,7 @@ const NAMED_CATALOG_GROUPS: Record<string, Record<string, unknown>> = {
   schoolCompletionAudit,
   subscriptionAudit,
   staffAttendanceAudit,
+  attendanceAudit,
 };
 
 function mutatingRules(): RbacRouteRule[] {
@@ -206,6 +228,58 @@ Deno.test("QA-R-008: every mutating route module is catalogued, generic-audited,
       `module in CATALOGUED_MODULES or GENERIC_FACTORY_MODULES — or, if it ` +
       `genuinely must not audit, record the reason in AUDIT_EXEMPT_MODULES.`,
   );
+});
+
+// ── the withdrawn attendance exemption ───────────────────────────────────────
+//
+// Pins the correction of a false premise, so it cannot quietly come back: the
+// `attendance` module claimed exemption on the grounds that "the audited
+// mutation is the staff APPROVAL, not the parent submit". The direct staff
+// decision route audited nothing, so there was no approval audit to defer to.
+Deno.test("QA-R-008: `attendance` is catalogued, not exempt — the submit and the decision are BOTH audited", () => {
+  assertEquals(
+    Object.prototype.hasOwnProperty.call(AUDIT_EXEMPT_MODULES, "attendance"),
+    false,
+    "attendance must not claim an audit exemption: its correction routes emit audits",
+  );
+  assert(
+    CATALOGUED_MODULES.has("attendance"),
+    "attendance must be classified as catalogued (attendanceAudit)",
+  );
+
+  // The SUBMIT is audited in its own right — not deferred to a later decision.
+  const requested = attendanceAudit.correctionRequested("att_corr_p_1", {
+    sisStudentId: "sis-7",
+    studentId: "1e5f0b6a-0000-4000-8000-000000000001",
+    dateLabel: "2026-07-21",
+    markChange: { from: "absent", to: "present" },
+    reason: "was in the medical room",
+    requesterId: "parent-1",
+    requesterRole: "parent",
+    source: "POST /parent/attendance/corrections",
+  });
+  assertEquals(requested.audit.entityType, "attendance_correction");
+  assertEquals(requested.audit.metadata?.before, { mark: "absent" });
+  assertEquals(requested.audit.metadata?.after, { mark: "present" });
+  assertEquals(requested.audit.metadata?.source, "POST /parent/attendance/corrections");
+
+  // The DECISION is audited too, with the real status transition.
+  const decided = attendanceAudit.correctionDecided("att_corr_p_1", {
+    sisStudentId: "sis-7",
+    studentId: "1e5f0b6a-0000-4000-8000-000000000001",
+    dateLabel: "2026-07-21",
+    before: { status: "pending" },
+    after: { status: "rejected" },
+    markChange: { from: "absent", to: "present" },
+    requestReason: "was in the medical room",
+    requesterId: "parent-1",
+    requesterRole: "parent",
+    source: "PATCH /attendance/corrections/:id/status",
+    nonce: "2026-07-21T09:00:00.000Z",
+  });
+  assertEquals(decided.audit.metadata?.before, { status: "pending" });
+  assertEquals(decided.audit.metadata?.after, { status: "rejected" });
+  assertEquals(decided.domain.eventType, "attendance.correction.decided");
 });
 
 Deno.test("QA-R-008: the three coverage sets are disjoint (a module has exactly one classification)", () => {
@@ -270,6 +344,19 @@ Deno.test("QA-R-008: a sampled spec from each module shape carries audit + domai
     ["promotion", achievementPromotionAudit.approved("promo-1")],
     ["entitlements", subscriptionAudit.planAssigned("org-1", "growth", "active", "ev-1")],
     ["school_completion", schoolCompletionAudit.brandingUpdated("br-1")],
+    [
+      "attendance",
+      attendanceAudit.correctionRequested("att_corr_1", {
+        sisStudentId: "sis-1",
+        studentId: null,
+        dateLabel: "2026-07-21",
+        markChange: { from: "absent", to: "present" },
+        reason: "was in the medical room",
+        requesterId: "user-1",
+        requesterRole: "parent",
+        source: "POST /parent/attendance/corrections",
+      }),
+    ],
   ];
   for (const [label, spec] of samples) {
     assert(spec.audit.eventType.length > 0, `${label}: audit.eventType empty`);

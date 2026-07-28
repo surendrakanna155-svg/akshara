@@ -49,5 +49,8 @@
   "SCHOOL_CONFIG_API_ENABLED": true,
   "ORGANIZATION_BUILDER_API_ENABLED": true,
 
-  "ENTITLEMENT_API_ENABLED": true
+  "ENTITLEMENT_API_ENABLED": true,
+
+  "_comment_support": "SUPPORT_API_ENABLED was MISSING here, so every release build fell back to MockSupportRepository and 'Report an issue' silently discarded reports while showing a fabricated SUP-xxxx reference. Enabled after verifying the backend is live: /support is registered in _shared/route_registry.ts, and the deployed pilot answers GET /support/incidents/not-a-uuid with 422 'invalid incident id' - a string that exists ONLY in _shared/support/support_router.ts - vs 404 for an unknown prefix. Reporting needs no extra permission (20260920000030 gates only the triage surface). Migration APPLY on the live DB was not verifiable from the build host; if the tables are missing the client now fails honestly (no reference, retry offered, draft kept) instead of lying.",
+  "SUPPORT_API_ENABLED": true
 }

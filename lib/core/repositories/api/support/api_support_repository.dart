@@ -1,3 +1,4 @@
+import '../../../../features/support/domain/support_delivery_failure.dart';
 import '../../../../features/support/domain/support_models.dart';
 import '../../interfaces/support_repository.dart';
 import '../../paginated_result.dart';
@@ -7,6 +8,12 @@ import 'remote/support_remote_datasource.dart';
 
 /// API implementation of [SupportRepository] — enabled via
 /// [supportApiEnabledProvider].
+///
+/// Every WRITE is wrapped in [_delivered]: a transport failure, a timeout or a
+/// server refusal surfaces as [SupportDeliveryFailure.notDelivered] rather than
+/// a raw `DioException`, so the UI can say "not sent" with certainty instead of
+/// guessing. Only a response the server actually returned is mapped into a
+/// record with a reference number.
 class ApiSupportRepository implements SupportRepository {
   ApiSupportRepository({
     required SupportRemoteDataSource remote,
@@ -17,18 +24,36 @@ class ApiSupportRepository implements SupportRepository {
   final SupportRemoteDataSource _remote;
   final SupportMapper _mapper;
 
+  /// Runs a support WRITE and normalises any failure to reach/satisfy the
+  /// server into [SupportDeliveryFailure.notDelivered].
+  ///
+  /// Only the network call is wrapped — mapping the *response* stays outside,
+  /// because by then the server has already accepted the write and calling it
+  /// "not delivered" would be a lie in the opposite direction.
+  static Future<T> _delivered<T>(Future<T> Function() send) async {
+    try {
+      return await send();
+    } on SupportDeliveryFailure {
+      rethrow;
+    } on Object catch (error) {
+      throw SupportDeliveryFailure.notDelivered(cause: error);
+    }
+  }
+
   @override
   Future<SupportIncident> createIncident({
     required RepositoryQuery query,
     required CreateSupportIncidentInput input,
   }) async {
-    final dto = await _remote.createIncident(
-      query: query,
-      body: {
-        'title': input.title,
-        'description': input.description,
-        if (input.context != null) 'context': input.context,
-      },
+    final dto = await _delivered(
+      () => _remote.createIncident(
+        query: query,
+        body: {
+          'title': input.title,
+          'description': input.description,
+          if (input.context != null) 'context': input.context,
+        },
+      ),
     );
     return _mapper.toIncident(dto);
   }
@@ -66,10 +91,12 @@ class ApiSupportRepository implements SupportRepository {
     required String incidentId,
     required String body,
   }) async {
-    final dto = await _remote.postMessage(
-      query: query,
-      incidentId: incidentId,
-      body: body,
+    final dto = await _delivered(
+      () => _remote.postMessage(
+        query: query,
+        incidentId: incidentId,
+        body: body,
+      ),
     );
     return _mapper.toMessage(dto);
   }
@@ -84,28 +111,31 @@ class ApiSupportRepository implements SupportRepository {
     required List<int> bytes,
   }) async {
     // presign → PUT the bytes to the signed Storage URL → confirm the object.
-    final presign = await _remote.presignAttachment(
-      query: query,
-      incidentId: incidentId,
-      kind: kind.wire,
-      fileName: fileName,
-      contentType: contentType,
-      sizeBytes: bytes.length,
-    );
-    await _remote.putBytes(
-      signedUrl: presign.signedUrl,
-      bytes: bytes,
-      contentType: contentType,
-    );
-    final dto = await _remote.confirmAttachment(
-      query: query,
-      incidentId: incidentId,
-      kind: kind.wire,
-      storagePath: presign.storagePath,
-      fileName: fileName,
-      contentType: contentType,
-      sizeBytes: bytes.length,
-    );
+    // Any step failing means the file did not land: one delivery failure.
+    final dto = await _delivered(() async {
+      final presign = await _remote.presignAttachment(
+        query: query,
+        incidentId: incidentId,
+        kind: kind.wire,
+        fileName: fileName,
+        contentType: contentType,
+        sizeBytes: bytes.length,
+      );
+      await _remote.putBytes(
+        signedUrl: presign.signedUrl,
+        bytes: bytes,
+        contentType: contentType,
+      );
+      return _remote.confirmAttachment(
+        query: query,
+        incidentId: incidentId,
+        kind: kind.wire,
+        storagePath: presign.storagePath,
+        fileName: fileName,
+        contentType: contentType,
+        sizeBytes: bytes.length,
+      );
+    });
     return _mapper.toAttachment(dto);
   }
 }

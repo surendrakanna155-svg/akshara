@@ -438,3 +438,52 @@ export async function countAuditEventsBeyondRetention(
   );
   return Number(rows[0]?.count ?? "0");
 }
+
+/** What an operator needs in order to SIZE a purge before running one. */
+export interface AuditRetentionSizing {
+  /** Configured horizon in days (`AUDIT_RETENTION_DAYS`). */
+  retentionDays: number;
+  /** ISO instant before which events are beyond the horizon. */
+  cutoff: string;
+  /** Events in this tenant older than `cutoff` — the purge candidate set. */
+  beyondRetention: number;
+  /** All events in this tenant, so the operator sees the blast radius ratio. */
+  total: number;
+  /** Always false for this RC: nothing in the request path deletes audit rows.
+   * Purging is an explicitly-invoked ops-lane action under a privileged role
+   * (deploy/akshara-vps/backup/akshara-retention-purge.sh --force). */
+  automaticPurgeEnabled: boolean;
+}
+
+/** Read-only: size a prospective audit purge for the actor's tenant. Performs
+ * NO deletion — `audit_events` is append-only and there is deliberately no
+ * client-reachable delete path (see the DB-6 note above). This exists so an
+ * operator can answer "how many rows would a purge remove, out of how many?"
+ * BEFORE running the destructive ops script by hand. */
+export async function sizeAuditRetention(
+  db: TenantQueryClient,
+  claims: AccessTokenClaims,
+  retentionDays: number,
+  nowMs: number = Date.now(),
+): Promise<AuditRetentionSizing> {
+  const cutoff = auditRetentionCutoff(nowMs, retentionDays);
+  const beyondRetention = await countAuditEventsBeyondRetention(
+    db,
+    claims,
+    retentionDays,
+    nowMs,
+  );
+  const total = await db.queryCount(
+    `SELECT count(*)::text AS count
+       FROM audit_events
+      WHERE organization_id = $1`,
+    [claims.tenant_id],
+  );
+  return {
+    retentionDays,
+    cutoff: cutoff.toISOString(),
+    beyondRetention,
+    total,
+    automaticPurgeEnabled: false,
+  };
+}

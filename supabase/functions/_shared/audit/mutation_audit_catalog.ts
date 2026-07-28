@@ -2053,3 +2053,176 @@ export const attendanceAuthAudit = {
     },
   }),
 };
+
+// ─── Student attendance corrections ──────────────────────────────────────────
+//
+// P1 (observability): the student-attendance correction routes mutated the
+// record of a child's attendance with NO audit row at all, so the support
+// question "who changed my child's mark, when, and on whose authority?" was
+// unanswerable from the server. These specs back the three correction
+// mutations in `_shared/attendance/attendance_handlers.ts`:
+//
+//   • POST /attendance/corrections               (staff files a request)
+//   • POST /parent/attendance/corrections        (parent files a request)
+//   • PATCH /attendance/corrections/:id/status   (staff approves / rejects)
+//
+// Modelled on `examAudit.markUpdated` — the fully forensic example — so each
+// event carries a real BEFORE→AFTER, not just "something changed":
+//   actor      → bound on emit from the verified claims (user_id, user_role)
+//   timestamp  → audit_events.created_at (DB default, server clock)
+//   before/after → the mark change requested (request) / the status transition
+//                  plus the mark change it authorises (decision)
+//   source     → the API route that produced the mutation. Distinct from the
+//                `audit_events.source` COLUMN, which is always 'server' here;
+//                this is the *functional* origin, and it is what separates a
+//                parent-filed request from a staff-filed one.
+//   reason     → the requester's stated reason, where one exists.
+//
+// PRIVACY (DPDP): ids only — `student_name` is deliberately NOT copied into the
+// audit metadata (it is derivable from studentId/sisStudentId, and duplicating a
+// child's name into a second store widens the personal-data surface for no
+// forensic gain). The free-text `reason` IS kept in the audit metadata — it is
+// the whole point of the record, is already stored on `attendance_corrections`
+// in the same tenant DB under the same RLS, and cannot be reconstructed later —
+// but it is deliberately kept OUT of the `domain_events` payload, which is a
+// fan-out channel feeding subscribers/notifications rather than a governance
+// record. Downstream consumers get `hasReason` instead.
+
+/** The mark a correction moves an attendance record from → to. */
+export interface AttendanceMarkChange {
+  from: string;
+  to: string;
+}
+
+export const attendanceAudit = {
+  /**
+   * A student-attendance correction was FILED (staff or parent). This does not
+   * change the live attendance record — it opens a request — but it is the
+   * origin of the eventual change, so the trail starts here.
+   *
+   * `correctionId` is unique per row (uuid-suffixed), so it also keys the outbox.
+   */
+  correctionRequested: (
+    correctionId: string,
+    input: {
+      sisStudentId: string;
+      /** Resolved SIS uuid; null when the student could not be resolved. */
+      studentId: string | null;
+      dateLabel: string;
+      /** The mark this correction asks to change (before → after). */
+      markChange: AttendanceMarkChange;
+      reason: string;
+      requesterId: string;
+      requesterRole: string;
+      /** API route that produced the mutation, e.g. "POST /attendance/corrections". */
+      source: string;
+    },
+  ): MutationAuditSpec => ({
+    ...workflow(
+      "attendanceCorrectionRequested",
+      "attendance_correction",
+      correctionId,
+      {
+        correctionId,
+        sisStudentId: input.sisStudentId,
+        studentId: input.studentId,
+        dateLabel: input.dateLabel,
+        before: { mark: input.markChange.from },
+        after: { mark: input.markChange.to },
+        reason: input.reason,
+        requesterId: input.requesterId,
+        requesterRole: input.requesterRole,
+        source: input.source,
+        status: "pending",
+      },
+    ),
+    domain: {
+      eventType: "attendance.correction.requested",
+      payload: {
+        correctionId,
+        sisStudentId: input.sisStudentId,
+        studentId: input.studentId,
+        dateLabel: input.dateLabel,
+        before: { mark: input.markChange.from },
+        after: { mark: input.markChange.to },
+        requesterRole: input.requesterRole,
+        source: input.source,
+        hasReason: input.reason.trim().length > 0,
+      },
+      sourceModule: "attendance",
+      idempotencyKey: `attendance.correction.requested:${correctionId}`,
+    },
+  }),
+
+  /**
+   * A correction request was APPROVED / REJECTED / CANCELLED by a staff actor
+   * holding `approveAttendanceCorrection`. before/after are the correction's
+   * STATUS transition — which is what this route actually mutates. The mark
+   * change the decision authorises is carried alongside as `markChange`; the
+   * live `attendance_records` flip is performed by the approval workflow
+   * (`applyAttendanceCorrection`), which has its own trail.
+   *
+   * `nonce` keys the outbox so a legitimate re-decision of the same correction
+   * (e.g. approved → rejected → approved) is recorded rather than deduped away;
+   * pass the updated row's `updated_at`.
+   */
+  correctionDecided: (
+    correctionId: string,
+    input: {
+      sisStudentId: string;
+      studentId: string | null;
+      dateLabel: string;
+      /** Status transition actually performed by this route. */
+      before: { status: string };
+      after: { status: string };
+      /** The mark change the request asks for (unchanged by a rejection). */
+      markChange: AttendanceMarkChange;
+      /** The REQUESTER's stated reason. The decision itself carries no note —
+       * the PATCH body has no such field — so there is no decision reason to
+       * record; that gap is stated rather than faked. */
+      requestReason: string;
+      requesterId: string;
+      requesterRole: string;
+      source: string;
+      nonce: string;
+    },
+  ): MutationAuditSpec => ({
+    ...workflow(
+      "attendanceCorrectionDecided",
+      "attendance_correction",
+      correctionId,
+      {
+        correctionId,
+        sisStudentId: input.sisStudentId,
+        studentId: input.studentId,
+        dateLabel: input.dateLabel,
+        before: input.before,
+        after: input.after,
+        markChange: input.markChange,
+        requestReason: input.requestReason,
+        decisionReason: null,
+        requesterId: input.requesterId,
+        requesterRole: input.requesterRole,
+        source: input.source,
+      },
+    ),
+    domain: {
+      eventType: "attendance.correction.decided",
+      payload: {
+        correctionId,
+        sisStudentId: input.sisStudentId,
+        studentId: input.studentId,
+        dateLabel: input.dateLabel,
+        before: input.before,
+        after: input.after,
+        markChange: input.markChange,
+        requesterRole: input.requesterRole,
+        source: input.source,
+        hasReason: input.requestReason.trim().length > 0,
+      },
+      sourceModule: "attendance",
+      idempotencyKey:
+        `attendance.correction.decided:${correctionId}:${input.after.status}:${input.nonce}`,
+    },
+  }),
+};

@@ -13,6 +13,7 @@ import {
   correlationIdFromRequest,
   ingestClientAuditBatch,
   listAuditEvents,
+  sizeAuditRetention,
 } from "./audit_repository.ts";
 
 interface BatchUploadBody {
@@ -145,6 +146,48 @@ export async function handleListAuditEvents(
     }
     console.error("audit events list error:", error);
     return errorEnvelope("INTERNAL_ERROR", "Failed to list audit events", 500);
+  }
+}
+
+// P0-RETENTION — read-only retention sizing.
+//
+// `AUDIT_RETENTION_DAYS` was parsed into config and consumed by NOTHING: the
+// retention seam (`auditRetentionCutoff` / `countAuditEventsBeyondRetention`)
+// had zero callers, so the published retention policy described a horizon the
+// running system never applied. This route consumes the config and reports what
+// a purge WOULD remove. It still deletes nothing — `audit_events` is
+// append-only, and the destructive half is an explicitly-invoked ops script
+// (deploy/akshara-vps/backup/akshara-retention-purge.sh --force) run under a
+// privileged role, never a client-reachable path.
+//
+// Gated on `viewManagement`, matching the sibling GET /audit/events read: this
+// endpoint returns strictly LESS information (two counts and a cutoff) than the
+// full trail that population can already read, so it mints no new slug and
+// widens no audience. GET keeps it out of the mutating-route audit catalog
+// (QA-R-008), which is correct — it mutates nothing.
+export async function handleAuditRetentionPreview(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requirePermission(auth.claims, "viewManagement");
+  if (denied) return denied;
+
+  organizationIdFromClaims(auth.claims);
+
+  try {
+    const sizing = await withTenantContext(config, auth.claims, (db) =>
+      sizeAuditRetention(db, auth.claims, config.auditRetentionDays));
+
+    return jsonResponse(envelope(sizing));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    console.error("audit retention preview error:", error);
+    return errorEnvelope("INTERNAL_ERROR", "Failed to size audit retention", 500);
   }
 }
 

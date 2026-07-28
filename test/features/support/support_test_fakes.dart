@@ -1,6 +1,7 @@
 import 'package:akshara_erp/core/repositories/interfaces/support_repository.dart';
 import 'package:akshara_erp/core/repositories/paginated_result.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
+import 'package:akshara_erp/features/support/domain/support_delivery_failure.dart';
 import 'package:akshara_erp/features/support/domain/support_models.dart';
 
 SupportIncident sampleIncident({
@@ -45,19 +46,61 @@ SupportIncidentDetail sampleDetail() {
   );
 }
 
+/// An incident shaped like something a SERVER returned: an opaque server id and
+/// a server-issued public reference. Tests assert the UI shows exactly these —
+/// never a client-invented value.
+SupportIncident serverCreatedIncident() => SupportIncident(
+      id: 'a1b2c3d4-0000-4000-8000-00000000dead',
+      publicRef: 'SUP-SERVER-77',
+      title: 'Fee receipt PDF opens blank',
+      description: 'Blank PDF after collecting a term fee.',
+      category: 'unknown',
+      status: SupportStatus.newIncident,
+      severity: SupportSeverity.sev3,
+      createdAt: DateTime(2026, 7, 28, 9),
+      updatedAt: DateTime(2026, 7, 28, 9),
+    );
+
 /// In-memory [SupportRepository] for widget tests — no Dio, no network.
+///
+/// Writes are explicitly scriptable so tests can drive the honest-failure path:
+/// [createFailures] attempts throw [createFailure] before one succeeds.
 class FakeSupportRepository implements SupportRepository {
-  FakeSupportRepository({this.incidents = const [], this.detail});
+  FakeSupportRepository({
+    this.incidents = const [],
+    this.detail,
+    this.created,
+    this.createFailures = 0,
+    this.createFailure = const SupportDeliveryFailure.notDelivered(),
+    this.postMessageFailure,
+    this.uploadFailure,
+  });
 
   final List<SupportIncident> incidents;
   final SupportIncidentDetail? detail;
+
+  /// What the "server" returns on a successful create.
+  final SupportIncident? created;
+
+  /// How many create attempts fail before one succeeds.
+  final int createFailures;
+  final SupportDeliveryFailure createFailure;
+  final SupportDeliveryFailure? postMessageFailure;
+  final SupportDeliveryFailure? uploadFailure;
+
+  int createAttempts = 0;
+  int postMessageAttempts = 0;
 
   @override
   Future<SupportIncident> createIncident({
     required RepositoryQuery query,
     required CreateSupportIncidentInput input,
-  }) async =>
-      incidents.isNotEmpty ? incidents.first : sampleIncident();
+  }) async {
+    createAttempts++;
+    if (createAttempts <= createFailures) throw createFailure;
+    return created ??
+        (incidents.isNotEmpty ? incidents.first : sampleIncident());
+  }
 
   @override
   Future<PaginatedResult<SupportIncident>> listIncidents({
@@ -84,14 +127,18 @@ class FakeSupportRepository implements SupportRepository {
     required RepositoryQuery query,
     required String incidentId,
     required String body,
-  }) async =>
-      SupportMessage(
-        id: 'new',
-        senderKind: SupportSenderKind.reporter,
-        visibility: 'school_visible',
-        body: body,
-        createdAt: DateTime(2026, 7, 20, 11),
-      );
+  }) async {
+    postMessageAttempts++;
+    final failure = postMessageFailure;
+    if (failure != null) throw failure;
+    return SupportMessage(
+      id: 'new',
+      senderKind: SupportSenderKind.reporter,
+      visibility: 'school_visible',
+      body: body,
+      createdAt: DateTime(2026, 7, 20, 11),
+    );
+  }
 
   @override
   Future<SupportAttachment> uploadAttachment({
@@ -101,13 +148,16 @@ class FakeSupportRepository implements SupportRepository {
     required String fileName,
     required String contentType,
     required List<int> bytes,
-  }) async =>
-      SupportAttachment(
-        id: 'att1',
-        kind: kind,
-        fileName: fileName,
-        contentType: contentType,
-        sizeBytes: bytes.length,
-        createdAt: DateTime(2026, 7, 20, 10, 1),
-      );
+  }) async {
+    final failure = uploadFailure;
+    if (failure != null) throw failure;
+    return SupportAttachment(
+      id: 'att1',
+      kind: kind,
+      fileName: fileName,
+      contentType: contentType,
+      sizeBytes: bytes.length,
+      createdAt: DateTime(2026, 7, 20, 10, 1),
+    );
+  }
 }

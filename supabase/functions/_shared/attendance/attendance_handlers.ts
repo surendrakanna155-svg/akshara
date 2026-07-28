@@ -9,6 +9,11 @@ import {
 } from "../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
+// P1 (observability): every attendance-correction mutation emits a forensic
+// audit row + domain event. `emitMutationAudit` (not raw `recordMutationAudit`)
+// so the correlation id is auto-derived from the request; the `Request` is
+// ALWAYS passed so ip/user-agent are captured with the actor.
+import { attendanceAudit, emitMutationAudit } from "../audit/mutation_audit_catalog.ts";
 import {
   AttendanceCorrectionNotFoundError,
   AttendanceValidationError,
@@ -309,6 +314,28 @@ export async function handleAttendanceShortAttendance(
   });
 }
 
+// --- CORRECTIONS (the only mutations this module owns) -----------------------
+//
+// `source` on each audit event is the API route that produced the mutation —
+// what lets a support engineer tell a parent-filed request from a staff-filed
+// one, and the direct staff decision route from the approvals workflow. All
+// three land on the same `attendance_corrections` row.
+const STAFF_CORRECTION_SOURCE = "POST /attendance/corrections";
+const PARENT_CORRECTION_SOURCE = "POST /parent/attendance/corrections";
+const CORRECTION_DECISION_SOURCE = "PATCH /attendance/corrections/:id/status";
+
+/**
+ * Millisecond-precision ISO form of a row timestamp, used as the audit outbox
+ * nonce. `updated_at` arrives as a `Date` from the Postgres driver (the row type
+ * says `string`) and as a string from fixtures; `Date.toString()` would drop the
+ * milliseconds and could collide across two rapid re-decisions. Falls back to
+ * the raw value rather than throwing — an audit must never fail a mutation.
+ */
+function timestampNonce(value: unknown): string {
+  const date = value instanceof Date ? value : new Date(String(value));
+  return Number.isNaN(date.getTime()) ? String(value) : date.toISOString();
+}
+
 export async function handleListAttendanceCorrections(
   req: Request,
   config: AppConfig,
@@ -360,8 +387,8 @@ export async function handleCreateAttendanceCorrection(
     }
 
     const { organizationId, schoolId } = tenantIds(claims);
-    const row = await withTenantContext(config, claims, (db) =>
-      createAttendanceCorrection(db, organizationId, schoolId, {
+    const row = await withTenantContext(config, claims, async (db) => {
+      const created = await createAttendanceCorrection(db, organizationId, schoolId, {
         sisStudentId,
         studentName: String(body.studentName ?? body.student_name ?? ""),
         classLabel: String(body.classLabel ?? body.class_label ?? ""),
@@ -374,8 +401,27 @@ export async function handleCreateAttendanceCorrection(
         requesterName: String(body.requesterName ?? body.requester_name ?? "Requester"),
         requesterRole: String(body.requesterRole ?? body.requester_role ?? "teacher"),
         presentDelta: Number(body.presentDelta ?? body.present_delta ?? 1) || 1,
-      })
-    );
+      });
+      // Same transaction as the INSERT: the request and its audit row commit
+      // together or not at all. Values read back from the PERSISTED row, so the
+      // audit records what was actually stored (normalised marks), not the body.
+      await emitMutationAudit(
+        db,
+        claims,
+        attendanceAudit.correctionRequested(created.id, {
+          sisStudentId: created.sis_student_id,
+          studentId: created.student_id,
+          dateLabel: created.date_label,
+          markChange: { from: created.from_mark, to: created.to_mark },
+          reason: created.reason,
+          requesterId: created.requester_id,
+          requesterRole: created.requester_role,
+          source: STAFF_CORRECTION_SOURCE,
+        }),
+        req,
+      );
+      return created;
+    });
     return correctionToApi(row);
   });
 }
@@ -410,8 +456,8 @@ export async function handleParentCreateAttendanceCorrection(
 
   const { organizationId, schoolId } = tenantIds(auth.claims);
   try {
-    const row = await withTenantContext(config, auth.claims, (db) =>
-      createAttendanceCorrection(db, organizationId, schoolId, {
+    const row = await withTenantContext(config, auth.claims, async (db) => {
+      const created = await createAttendanceCorrection(db, organizationId, schoolId, {
         // Unique id — the parent-scope SELECT RLS hides staff rows, so the
         // sequential count would collide on the (org, school, id) PK.
         id: `att_corr_p_${crypto.randomUUID()}`,
@@ -428,8 +474,29 @@ export async function handleParentCreateAttendanceCorrection(
         requesterName: String(body.requesterName ?? body.requester_name ?? "Parent"),
         requesterRole: "parent",
         presentDelta: Number(body.presentDelta ?? body.present_delta ?? 1) || 1,
-      })
-    );
+      });
+      // The parent submit is audited HERE, at the submit — not (only) at the
+      // staff approval. A request that is never decided, or is silently
+      // rejected, must still show that the parent asked and when. Parent scope
+      // is permitted to INSERT into audit_events/domain_events (see
+      // 20260920000140 / 20260725000000), so this does not break the write.
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        attendanceAudit.correctionRequested(created.id, {
+          sisStudentId: created.sis_student_id,
+          studentId: created.student_id,
+          dateLabel: created.date_label,
+          markChange: { from: created.from_mark, to: created.to_mark },
+          reason: created.reason,
+          requesterId: created.requester_id,
+          requesterRole: created.requester_role,
+          source: PARENT_CORRECTION_SOURCE,
+        }),
+        req,
+      );
+      return created;
+    });
     return jsonResponse(envelope(correctionToApi(row)), { status: 201 });
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
@@ -472,15 +539,50 @@ export async function handleUpdateAttendanceCorrectionStatus(
 
   const { organizationId, schoolId } = tenantIds(auth.claims);
   try {
-    const row = await withTenantContext(config, auth.claims, (db) =>
-      updateAttendanceCorrectionStatus(
+    const row = await withTenantContext(config, auth.claims, async (db) => {
+      // Read the row BEFORE the flip, in the same transaction, so the audit
+      // carries a real before→after instead of only the post-state. It also
+      // turns an unknown id into the same clean 404 the UPDATE would raise.
+      const before = await getAttendanceCorrection(
+        db,
+        organizationId,
+        schoolId,
+        correctionId,
+      );
+      if (!before) throw new AttendanceCorrectionNotFoundError(correctionId);
+
+      const updated = await updateAttendanceCorrectionStatus(
         db,
         organizationId,
         schoolId,
         correctionId,
         status,
-      )
-    );
+      );
+
+      // The forensic answer to "who approved the change to my child's mark?".
+      // Emitted inside the same transaction as the status flip, so the decision
+      // and its trail commit together. `updated_at` is the nonce: a legitimate
+      // re-decision of the same correction is recorded, not deduped away.
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        attendanceAudit.correctionDecided(correctionId, {
+          sisStudentId: updated.sis_student_id,
+          studentId: updated.student_id,
+          dateLabel: updated.date_label,
+          before: { status: before.status },
+          after: { status: updated.status },
+          markChange: { from: updated.from_mark, to: updated.to_mark },
+          requestReason: updated.reason,
+          requesterId: updated.requester_id,
+          requesterRole: updated.requester_role,
+          source: CORRECTION_DECISION_SOURCE,
+          nonce: timestampNonce(updated.updated_at),
+        }),
+        req,
+      );
+      return updated;
+    });
     return jsonResponse(envelope(correctionToApi(row)));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
