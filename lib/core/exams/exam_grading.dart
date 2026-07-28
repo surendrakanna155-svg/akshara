@@ -82,10 +82,35 @@ class ExamGradingScale {
     ],
   );
 
+  /// AP / Telangana State Board (SSC) 10-point grading.
+  ///
+  /// The State Board ladder looks superficially like CBSE's A1–E but the
+  /// thresholds are NOT the same (A1 starts at 92 here vs 91 for CBSE, and every
+  /// band below differs), so a State-Board school publishing on the CBSE preset
+  /// would print wrong grades on real report cards. Kept as its own preset
+  /// rather than reusing [cbseScholastic].
+  ///
+  /// Bands map to grade points 10 → 4 (A1=10, A2=9, B1=8, B2=7, C1=6, C2=5,
+  /// D=4), with E as the fail band below 35.
+  static const ExamGradingScale stateBoardSsc = ExamGradingScale(
+    name: 'State Board — SSC (A1–E)',
+    bands: [
+      GradeBand(92, 'A1'),
+      GradeBand(83, 'A2'),
+      GradeBand(75, 'B1'),
+      GradeBand(67, 'B2'),
+      GradeBand(59, 'C1'),
+      GradeBand(51, 'C2'),
+      GradeBand(35, 'D'),
+      GradeBand(0, 'E'),
+    ],
+  );
+
   /// Built-in presets a school can choose from (and later customise).
   static const List<ExamGradingScale> presets = [
     standard,
     cbseScholastic,
+    stateBoardSsc,
     percentageDivision,
   ];
 }

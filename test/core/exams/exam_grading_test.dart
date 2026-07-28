@@ -36,11 +36,42 @@ void main() {
       expect(div.gradeFor(30), 'Fail');
     });
 
-    test('three presets are available to choose from', () {
-      expect(ExamGradingScale.presets, hasLength(3));
+    test('State Board SSC scale awards expected bands', () {
+      const ssc = ExamGradingScale.stateBoardSsc;
+      expect(ssc.gradeFor(95), 'A1');
+      expect(ssc.gradeFor(85), 'A2');
+      expect(ssc.gradeFor(76), 'B1');
+      expect(ssc.gradeFor(68), 'B2');
+      expect(ssc.gradeFor(60), 'C1');
+      expect(ssc.gradeFor(52), 'C2');
+      expect(ssc.gradeFor(40), 'D');
+      expect(ssc.gradeFor(30), 'E');
+    });
+
+    test('State Board and CBSE are NOT interchangeable at the boundaries', () {
+      // The two ladders share labels but not thresholds. A State-Board school
+      // publishing on the CBSE preset would print the wrong grade on real
+      // report cards, which is why they are separate presets.
+      const ssc = ExamGradingScale.stateBoardSsc;
+      const cbse = ExamGradingScale.cbseScholastic;
+      expect(cbse.gradeFor(91), 'A1');
+      expect(ssc.gradeFor(91), 'A2'); // State Board A1 starts at 92
+      expect(cbse.gradeFor(75), 'B1');
+      expect(ssc.gradeFor(75), 'B1');
+      expect(cbse.gradeFor(72), 'B1');
+      expect(ssc.gradeFor(72), 'B2'); // State Board B1 starts at 75
+    });
+
+    test('four presets are available to choose from', () {
+      expect(ExamGradingScale.presets, hasLength(4));
       expect(
         ExamGradingScale.presets.map((s) => s.name),
-        containsAll(<String>['Standard', 'CBSE (A1–E)', 'Percentage / Division']),
+        containsAll(<String>[
+          'Standard',
+          'CBSE (A1–E)',
+          'State Board — SSC (A1–E)',
+          'Percentage / Division',
+        ]),
       );
     });
   });
