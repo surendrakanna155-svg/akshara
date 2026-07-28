@@ -85,7 +85,22 @@ bus adapter can reconstruct it from a serialized message with no subscriber
 change. `db` is an in-process convenience; a subscriber needing none may declare
 `handle(event)` and still satisfy the type.
 
-## Delivery semantics — at-least-once
+## Delivery semantics — at-least-once *(of the worker; NOT of the system today)*
+
+> ⚠️ **Present tense below describes the worker's LOGIC, not production behaviour.**
+> `enqueueDomainEvent` inserts every row in terminal `status='published'`
+> (`audit_repository.ts:365`), while the drain selects `status IN ('pending','failed')`
+> (`domain_events_worker.ts:41`). The intersection is empty **by construction**, so no
+> mutation-emitted event is ever dispatched, no retry or backoff ever engages, and the
+> `failed` state is never reached. The subscriber registry is also empty
+> (`domain_event_subscribers.ts:70`), and no cron invokes the drain.
+>
+> `domain_events` is therefore a durable **log**, not a bus. The worker's logic is
+> correct and unit-tested — it simply has no input. Do not describe the system as
+> propagating via events until the drain has both a scheduler and a non-terminal
+> insert status, **in that order** (scheduler first: flipping the status literal
+> without a running cron would strand every event unpublished).
+
 
 - The drain publishes a row **only after** all matching subscribers succeed.
 - If any matching subscriber throws, the event is **not** marked published; it is

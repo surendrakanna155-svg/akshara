@@ -42,6 +42,12 @@ same token in `monitoring.env` so the watchdog can read them.
 
 ## Not included (deliberate, would need paid/external accounts)
 
-Backend Sentry/Datadog (app-side adapters already exist, wire a DSN to enable),
+Backend Sentry/Datadog. ⚠️ **Wiring a DSN does NOT enable these today.** The
+app-side adapters exist but are constructed without a transport, so they fall
+back to `NoOpVendorMonitoringTransport`, whose `send()` is empty
+(`sentry_monitoring_service.dart:9`, `vendor_monitoring_transport.dart:24-29`),
+and no vendor SDK is in `pubspec.yaml`. A DSN would buy silence. Enabling them
+needs a real transport implementation and the SDK dependency first.
+Also not included:
 Prometheus `/metrics` + Grafana, log aggregation (Loki/ELK). The watchdog +
 structured logs cover the "know when it's down" need without new vendors.
