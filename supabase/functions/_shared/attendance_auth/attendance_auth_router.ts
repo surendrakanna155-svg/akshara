@@ -41,7 +41,7 @@ export async function routeAttendanceAuth(
 
   const route = matchAttendanceAuthRoute(path);
   if (!route) {
-    return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+    return null;
   }
   const handler = route[method];
   if (!handler) {

@@ -1,6 +1,9 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
 import {
   clampPageSize,
+  keysetPageOf,
+  type KeysetParams,
+  type KeysetResult,
   offsetFor,
   type PaginationParams,
   type PaginationResult,
@@ -23,6 +26,14 @@ export interface EntityReadStore {
     entityType: string,
     pagination: PaginationParams,
   ) => Promise<PaginationResult<Record<string, unknown>>>;
+  // ICA-C7: keyset (cursor) alternative to listEntities — O(pageSize) at any depth.
+  listEntitiesKeyset: (
+    db: TenantQueryClient,
+    organizationId: string,
+    schoolId: string,
+    entityType: string,
+    params: KeysetParams,
+  ) => Promise<KeysetResult<Record<string, unknown>>>;
   getEntity: (
     db: TenantQueryClient,
     organizationId: string,
@@ -119,6 +130,40 @@ export function createEntityReadStore(
     };
   }
 
+  // ICA-C7: keyset pagination on the `id` order — seeks past `cursor` instead of
+  // scanning+discarding an offset, so deep pages stay O(pageSize). No COUNT query
+  // (fetches pageSize+1 to derive hasMore/nextCursor).
+  async function listEntitiesKeyset(
+    db: TenantQueryClient,
+    organizationId: string,
+    schoolId: string,
+    entityType: string,
+    params: KeysetParams,
+  ): Promise<KeysetResult<Record<string, unknown>>> {
+    const pageSize = clampPageSize(params.pageSize);
+    const cursor = params.cursor ?? null;
+
+    const rows = await db.queryObject<{ id: string; payload: Record<string, unknown> }>(
+      `SELECT id, payload
+       FROM ${tableName}
+       WHERE organization_id = $1
+         AND school_id = $2
+         AND entity_type = $3
+         AND ($4::text IS NULL OR id > $4)
+       ORDER BY id
+       LIMIT $5`,
+      [organizationId, schoolId, entityType, cursor, pageSize + 1],
+    );
+
+    const { rows: pageRows, nextCursor, hasMore } = keysetPageOf(rows, pageSize, (r) => r.id);
+    return {
+      items: pageRows.map((row) => row.payload),
+      pageSize,
+      nextCursor,
+      hasMore,
+    };
+  }
+
   async function getEntity(
     db: TenantQueryClient,
     organizationId: string,
@@ -171,6 +216,7 @@ export function createEntityReadStore(
     moduleLabel,
     getSnapshot,
     listEntities,
+    listEntitiesKeyset,
     getEntity,
     SnapshotNotFoundError,
     EntityNotFoundError,

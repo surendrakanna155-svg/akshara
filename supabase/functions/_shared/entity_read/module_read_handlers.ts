@@ -9,7 +9,7 @@ import {
 } from "../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
-import { listEnvelope } from "../finance/finance_mapper.ts";
+import { keysetEnvelope, listEnvelope } from "../finance/finance_mapper.ts";
 import type { EntityReadStore } from "./entity_read_store.ts";
 
 function parsePagination(url: URL): { page: number; pageSize: number } {
@@ -19,6 +19,19 @@ function parsePagination(url: URL): { page: number; pageSize: number } {
     Math.max(1, parseInt(url.searchParams.get("pageSize") ?? "20", 10) || 20),
   );
   return { page, pageSize };
+}
+
+// ICA-C7: a request opts into keyset (cursor) pagination by sending `?cursor=…` (an
+// empty `?cursor=` requests the first keyset page). Absent the param, the endpoint keeps
+// its original page/total offset behaviour, so existing clients are unchanged.
+function parseKeyset(url: URL): { cursor: string; pageSize: number } | null {
+  if (!url.searchParams.has("cursor")) return null;
+  const cursor = url.searchParams.get("cursor") ?? "";
+  const pageSize = Math.min(
+    100,
+    Math.max(1, parseInt(url.searchParams.get("pageSize") ?? "20", 10) || 20),
+  );
+  return { cursor, pageSize };
 }
 
 async function runTenant<T>(
@@ -87,11 +100,33 @@ export function createModuleReadHandlers(
     if (denied) return denied;
 
     const url = new URL(req.url);
-    const pagination = parsePagination(url);
+    const keyset = parseKeyset(url);
     const orgId = organizationIdFromClaims(auth.claims);
     const schoolId = schoolIdFromClaims(auth.claims);
 
     try {
+      // ICA-C7: keyset path (O(pageSize) at any depth) when the client sends `?cursor=`;
+      // otherwise the original page/total offset path (unchanged for existing clients).
+      if (keyset) {
+        const result = await runTenant(config, auth.claims, async (db) =>
+          await store.listEntitiesKeyset(db, orgId, schoolId, entityType, {
+            cursor: keyset.cursor === "" ? null : keyset.cursor,
+            pageSize: keyset.pageSize,
+          })
+        );
+        return jsonResponse(
+          envelope(
+            keysetEnvelope(result.items, {
+              pageSize: result.pageSize,
+              cursor: keyset.cursor === "" ? null : keyset.cursor,
+              nextCursor: result.nextCursor,
+              hasMore: result.hasMore,
+            }),
+          ),
+        );
+      }
+
+      const pagination = parsePagination(url);
       const result = await runTenant(config, auth.claims, async (db) =>
         await store.listEntities(db, orgId, schoolId, entityType, pagination)
       );

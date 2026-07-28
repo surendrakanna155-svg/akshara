@@ -16,5 +16,5 @@ export async function routeDashboard(
     return await handleDashboardOverview(req, config);
   }
 
-  return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+  return null;
 }

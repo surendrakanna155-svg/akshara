@@ -12,6 +12,15 @@ import type { TenantQueryClient } from "../tenant_db.ts";
 import { createEntityWriteStore } from "../entity_write/entity_write_store.ts";
 import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
 import { str } from "../entity_write/module_write_handlers.ts";
+import {
+  findCommunicationEntityAcrossChildren,
+  findPtmMeetingAcrossChildren,
+  insertParentEntityRow,
+  listCommunicationMessageEntities,
+  listPtmMeetingEntities,
+  selectParentEntityRow,
+  updateParentEntityRow,
+} from "./parent_write_repository.ts";
 
 /**
  * Parent-scope writes (MJ-H12 leave, MJ-C3 communication, MJ-C4 PTM). These rows
@@ -24,9 +33,6 @@ import { str } from "../entity_write/module_write_handlers.ts";
  * `student_id = $3`) would never see the new rows.
  */
 export const parentWriteStore = createEntityWriteStore("parent_entities", "Parent");
-
-/** Single source of truth for the parent entities table (from the store binding). */
-const PARENT_TABLE = parentWriteStore.tableName;
 
 /** Parent scope is the parent's RBAC here — mirrors mobile_read_handlers.ts. */
 function requireParentScope(claims: AccessTokenClaims): Response | null {
@@ -75,12 +81,14 @@ async function insertParentEntity(
   id: string,
   payload: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
-  const rows = await db.queryObject<{ payload: Record<string, unknown> }>(
-    `INSERT INTO ${PARENT_TABLE}
-       (id, organization_id, school_id, student_id, entity_type, payload)
-     VALUES ($1, $2, $3, $4, $5, $6::jsonb)
-     RETURNING payload`,
-    [id, organizationId, schoolId, studentId, entityType, JSON.stringify(payload)],
+  const rows = await insertParentEntityRow(
+    db,
+    organizationId,
+    schoolId,
+    studentId,
+    entityType,
+    id,
+    payload,
   );
   return rows[0]?.payload ?? payload;
 }
@@ -95,16 +103,14 @@ async function replaceParentEntity(
   id: string,
   payload: Record<string, unknown>,
 ): Promise<Record<string, unknown> | null> {
-  const rows = await db.queryObject<{ payload: Record<string, unknown> }>(
-    `UPDATE ${PARENT_TABLE}
-        SET payload = $6::jsonb
-      WHERE organization_id = $2
-        AND school_id = $3
-        AND student_id = $4
-        AND entity_type = $5
-        AND id = $1
-      RETURNING payload`,
-    [id, organizationId, schoolId, studentId, entityType, JSON.stringify(payload)],
+  const rows = await updateParentEntityRow(
+    db,
+    organizationId,
+    schoolId,
+    studentId,
+    entityType,
+    id,
+    payload,
   );
   return rows[0]?.payload ?? null;
 }
@@ -118,15 +124,13 @@ async function findParentEntity(
   entityType: string,
   id: string,
 ): Promise<Record<string, unknown> | null> {
-  const rows = await db.queryObject<{ payload: Record<string, unknown> }>(
-    `SELECT payload
-       FROM ${PARENT_TABLE}
-      WHERE organization_id = $1
-        AND school_id = $2
-        AND student_id = $3
-        AND entity_type = $4
-        AND id = $5`,
-    [organizationId, schoolId, studentId, entityType, id],
+  const rows = await selectParentEntityRow(
+    db,
+    organizationId,
+    schoolId,
+    studentId,
+    entityType,
+    id,
   );
   return rows[0]?.payload ?? null;
 }
@@ -254,15 +258,11 @@ export async function handleCommunicationInbox(
 
   try {
     const items = await withTenantContext(config, auth.claims, async (db) => {
-      const rows = await db.queryObject<{ payload: Record<string, unknown> }>(
-        `SELECT payload
-           FROM ${PARENT_TABLE}
-          WHERE organization_id = $1
-            AND school_id = $2
-            AND student_id = $3
-            AND entity_type = 'communication_message'
-          ORDER BY id`,
-        [organizationId, schoolId, childResult],
+      const rows = await listCommunicationMessageEntities(
+        db,
+        organizationId,
+        schoolId,
+        childResult,
       );
       return rows.map((row) => toInboxItem(row.payload));
     });
@@ -336,15 +336,12 @@ async function findOwnCommunicationEntity(
   communicationId: string,
 ): Promise<{ studentId: string; payload: Record<string, unknown> } | null> {
   if (childIds.length === 0) return null;
-  const rows = await db.queryObject<{ student_id: string; payload: Record<string, unknown> }>(
-    `SELECT student_id, payload
-       FROM ${PARENT_TABLE}
-      WHERE organization_id = $1
-        AND school_id = $2
-        AND student_id = ANY($3::uuid[])
-        AND entity_type = 'communication_message'
-        AND id = $4`,
-    [organizationId, schoolId, childIds, communicationId],
+  const rows = await findCommunicationEntityAcrossChildren(
+    db,
+    organizationId,
+    schoolId,
+    childIds,
+    communicationId,
   );
   const row = rows[0];
   return row ? { studentId: row.student_id, payload: row.payload } : null;
@@ -521,15 +518,11 @@ export async function handleListMeetings(req: Request, config: AppConfig): Promi
       return jsonResponse(envelope({ items: [] }));
     }
     const items = await withTenantContext(config, auth.claims, async (db) => {
-      const rows = await db.queryObject<{ payload: Record<string, unknown> }>(
-        `SELECT payload
-           FROM ${PARENT_TABLE}
-          WHERE organization_id = $1
-            AND school_id = $2
-            AND student_id = ANY($3::uuid[])
-            AND entity_type = 'ptm_meeting'
-          ORDER BY id`,
-        [organizationId, schoolId, childIds],
+      const rows = await listPtmMeetingEntities(
+        db,
+        organizationId,
+        schoolId,
+        childIds,
       );
       return rows.map((row) => toMeeting(row.payload));
     });
@@ -556,17 +549,12 @@ export async function handleMeetingRsvp(
     const note = str(body, "note");
 
     // The meeting belongs to one of the parent's children; find it across them.
-    const found = await db.queryObject<
-      { student_id: string; payload: Record<string, unknown> }
-    >(
-      `SELECT student_id, payload
-         FROM ${PARENT_TABLE}
-        WHERE organization_id = $1
-          AND school_id = $2
-          AND student_id = ANY($3::uuid[])
-          AND entity_type = 'ptm_meeting'
-          AND id = $4`,
-      [organizationId, schoolId, claims.child_ids, meetingId],
+    const found = await findPtmMeetingAcrossChildren(
+      db,
+      organizationId,
+      schoolId,
+      claims.child_ids,
+      meetingId,
     );
     const row = found[0];
     if (!row) {

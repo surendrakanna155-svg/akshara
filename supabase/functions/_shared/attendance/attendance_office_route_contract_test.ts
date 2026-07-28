@@ -69,9 +69,9 @@ Deno.test("office-attendance: the 5 read routes path-match handlers (not 404)", 
   }
 });
 
-Deno.test("office-attendance: unregistered path under prefix 404s; outside prefix is null", async () => {
+Deno.test("office-attendance: unregistered path under prefix returns null (central dispatcher 404s); outside prefix is null", async () => {
   const under = await callFull("GET", "/attendance/nope", ["viewSis"]);
-  assertEquals(under?.status, 404);
+  assertEquals(under, null);
   const outside = await routeAttendance(
     new Request("https://x/staff-attendance/check", { method: "POST" }),
     config,

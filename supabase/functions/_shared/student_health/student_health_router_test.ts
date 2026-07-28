@@ -1,9 +1,10 @@
 // PRC-A Batch 2 — Student Health / Infirmary: router tests.
 //
 // Pure routing tests: path -> handler + extracted args, and the two envelope
-// contracts every module router must honour (null outside the prefix, a real
-// 404 for an unmatched path inside it). No auth, no DB — that is the handler
-// tests' job (student_health_handlers_test.ts).
+// contracts every module router must honour (null outside the prefix, and null
+// for an unmatched path inside it — the central dispatcher owns the route-level
+// 404). No auth, no DB — that is the handler tests' job
+// (student_health_handlers_test.ts).
 
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import type { AppConfig } from "../config.ts";
@@ -39,27 +40,24 @@ Deno.test("routeStudentHealth: does NOT claim the unrelated /health system-readi
   assertEquals(res, null);
 });
 
-Deno.test("routeStudentHealth: an unmatched path inside the prefix is a 404 envelope, not null", async () => {
+Deno.test("routeStudentHealth: an unmatched path inside the prefix returns null (central dispatcher 404s)", async () => {
   const res = await routeStudentHealth(
     new Request("https://x/student-health/foo/bar/baz"),
     config,
     "GET",
     "/student-health/foo/bar/baz",
   );
-  assertEquals(res?.status, 404);
-  const env = await res!.json();
-  assertEquals(env.error.code, "NOT_FOUND");
-  assertEquals(env.data, null);
+  assertEquals(res, null);
 });
 
-Deno.test("routeStudentHealth: the bare prefix with nothing after it is a 404, not null", async () => {
+Deno.test("routeStudentHealth: the bare prefix with nothing after it returns null (central dispatcher 404s)", async () => {
   const res = await routeStudentHealth(
     new Request("https://x/student-health"),
     config,
     "GET",
     "/student-health",
   );
-  assertEquals(res?.status, 404);
+  assertEquals(res, null);
 });
 
 // ─── the single highest-consequence routing assertion in this module ────────

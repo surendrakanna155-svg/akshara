@@ -1,0 +1,31 @@
+export const ATTENDANCE_SESSION_PROBE_SQL = `
+  SELECT count(*)::text AS count FROM attendance_sessions WHERE id = $1::uuid
+`;
+
+export const ATTENDANCE_SESSION_PROBE_SCHOOL_A = "d3000000-0000-4000-8000-000000000001";
+export const ATTENDANCE_SESSION_PROBE_SCHOOL_B = "d3000000-0000-4000-8000-000000000002";
+export const ATTENDANCE_SESSION_PROBE_DETAIL_SQL = ATTENDANCE_SESSION_PROBE_SQL;
+
+export const TIMETABLE_SLOT_PROBE_SCHOOL_A = "d4000000-0000-4000-8000-000000000001";
+export const TIMETABLE_SLOT_PROBE_SCHOOL_B = "d4000000-0000-4000-8000-000000000002";
+export const TIMETABLE_SLOT_PROBE_DETAIL_SQL = `
+  SELECT count(*)::text AS count FROM timetable_slots WHERE id = $1::uuid
+`;
+
+export const MOBILE_LEAVE_PROBE_SCHOOL_A = "d5000000-0000-4000-8000-000000000001";
+export const MOBILE_LEAVE_PROBE_SCHOOL_B = "d5000000-0000-4000-8000-000000000002";
+export const MOBILE_LEAVE_PROBE_DETAIL_SQL = `
+  SELECT count(*)::text AS count FROM mobile_leave_requests WHERE id = $1::uuid
+`;
+
+export const HOMEWORK_SUBMISSION_PROBE_SCHOOL_A = "d6000000-0000-4000-8000-000000000001";
+export const HOMEWORK_SUBMISSION_PROBE_SCHOOL_B = "d6000000-0000-4000-8000-000000000002";
+export const HOMEWORK_SUBMISSION_PROBE_DETAIL_SQL = `
+  SELECT count(*)::text AS count FROM homework_submissions WHERE id = $1::uuid
+`;
+
+export const EXAM_MARK_PROBE_SCHOOL_A = "mark_probe_a";
+export const EXAM_MARK_PROBE_SCHOOL_B = "mark_probe_b";
+export const EXAM_MARK_PROBE_DETAIL_SQL = `
+  SELECT count(*)::text AS count FROM exam_mark_entries WHERE id = $1
+`;

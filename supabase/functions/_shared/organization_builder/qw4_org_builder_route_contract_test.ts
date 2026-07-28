@@ -67,11 +67,9 @@ Deno.test("QA-B-036: the 4 org-builder routes match the router (enforcement OFF 
   assertEquals((await call("POST", "/platform/org-builder/provision", MANAGE, { draftId: "d-1" })).status, 503);
 });
 
-Deno.test("QA-B-036: an unregistered owned path returns 404 NOT_FOUND", async () => {
-  const res = await call("GET", "/platform/org-builder/nope", VIEW);
-  assertEquals(res.status, 404);
-  const env = await res.json();
-  assertEquals(env.error.code, "NOT_FOUND");
+Deno.test("QA-B-036: an unregistered owned path returns null (central dispatcher 404s)", async () => {
+  const res = await raw("GET", "/platform/org-builder/nope", VIEW);
+  assertEquals(res, null);
 });
 
 Deno.test("QA-B-036: a non-owned path returns null (no match)", async () => {

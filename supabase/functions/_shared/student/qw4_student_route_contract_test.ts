@@ -109,7 +109,7 @@ Deno.test("QA-B-032: an unauthenticated caller is rejected on student routes (40
   }
 });
 
-Deno.test("QA-B-032: an unregistered student path returns 404 (router owns /student prefix)", async () => {
+Deno.test("QA-B-032: an unregistered student path returns null (router owns /student prefix; central dispatcher 404s)", async () => {
   const token = await signAccessToken(SECRET, studentClaims(), 900);
   const res = await routeStudent(
     get(token, "/student/does-not-exist"),
@@ -117,17 +117,17 @@ Deno.test("QA-B-032: an unregistered student path returns 404 (router owns /stud
     "GET",
     "/student/does-not-exist",
   );
-  assertEquals(res?.status, 404);
+  assertEquals(res, null);
 });
 
-Deno.test("QA-B-032: a non-GET method on a student route returns 404 (reads are GET-only)", async () => {
+Deno.test("QA-B-032: a non-GET method on a student route returns null (reads are GET-only; central dispatcher 404s)", async () => {
   const token = await signAccessToken(SECRET, studentClaims(), 900);
   const req = new Request("https://x/student/dashboard", {
     method: "POST",
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
   });
   const res = await routeStudent(req, config, "POST", "/student/dashboard");
-  assertEquals(res?.status, 404);
+  assertEquals(res, null);
 });
 
 Deno.test("QA-B-032: a non-/student path returns null (no match → dispatch 404)", async () => {

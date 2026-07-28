@@ -35,8 +35,12 @@ async function tokenReq(
 }
 
 // ── QA-B-062 — global 404 fallthrough ───────────────────────────────────────
+// ICA-F1: the central auth chokepoint authenticates BEFORE the 404 fallback, so an
+// UNAUTHENTICATED probe of an unknown route now 401s (auth-first; unauthenticated
+// callers cannot enumerate route existence). These probes are AUTHENTICATED so they
+// pass the gate and still exercise the 404 registry-fallthrough they are guarding.
 Deno.test("QA-B-062: an unregistered route falls through to a 404 NOT_FOUND envelope", async () => {
-  const res = await handleRequest(new Request("https://x/does/not/exist", { method: "POST" }), goodConfig);
+  const res = await handleRequest(await tokenReq("POST", "/does/not/exist", []), goodConfig);
   assertEquals(res.status, 404);
   const env = await res.json();
   assertEquals(env.data, null);
@@ -44,7 +48,7 @@ Deno.test("QA-B-062: an unregistered route falls through to a 404 NOT_FOUND enve
 });
 
 Deno.test("QA-B-062: an unknown method on a known prefix also 404s (no accidental match)", async () => {
-  const res = await handleRequest(new Request("https://x/finance/collections", { method: "DELETE" }), goodConfig);
+  const res = await handleRequest(await tokenReq("DELETE", "/finance/collections", []), goodConfig);
   assertEquals(res.status, 404);
   assertEquals((await res.json()).error.code, "NOT_FOUND");
 });
@@ -79,7 +83,8 @@ Deno.test("QA-B-068: OPTIONS preflight returns 200 ok with Access-Control header
 Deno.test("QA-B-068: CORS headers are present on a normal 200 AND on an error response", async () => {
   const ok = await handleRequest(new Request("https://x/health"), goodConfig);
   assertEquals(ok.headers.get("Access-Control-Allow-Origin"), "*");
-  const notFound = await handleRequest(new Request("https://x/nope", { method: "POST" }), goodConfig);
+  // ICA-F1: authenticate so the probe reaches the 404 (not the pre-dispatch 401 gate).
+  const notFound = await handleRequest(await tokenReq("POST", "/nope", []), goodConfig);
   assertEquals(notFound.status, 404);
   assertEquals(notFound.headers.get("Access-Control-Allow-Origin"), "*");
 });

@@ -61,9 +61,9 @@ Deno.test("routeStaffDuty: returns null for a non-staff-duty path (parent dispat
   assertEquals(await call("GET", "/hr/payroll/run", ["viewHr"]), null);
 });
 
-Deno.test("routeStaffDuty: an unknown /hr/staff-duties path → 404", async () => {
+Deno.test("routeStaffDuty: an unknown /hr/staff-duties path → null (central dispatcher 404s)", async () => {
   const res = await call("GET", "/hr/staff-duties/nope", ["viewHr"]);
-  assertEquals(res?.status, 404);
+  assertEquals(res, null);
 });
 
 Deno.test("matchStaffDutyRoute: every declared route resolves to a handler", () => {

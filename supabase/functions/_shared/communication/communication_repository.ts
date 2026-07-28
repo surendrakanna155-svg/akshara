@@ -1356,3 +1356,27 @@ export async function deleteAudienceSegment(
   );
   return rows[0]?.id ?? null;
 }
+
+/**
+ * v15.6 delivery webhook: set a delivery's status directly (no 'sending' claim
+ * guard — the webhook confirms an external provider's outcome, not a drain's own
+ * transition). `delivered_at` is stamped only when the new status is
+ * 'delivered'; otherwise it is left unchanged. Returns the updated id, or null
+ * when no delivery with that id exists.
+ */
+export async function updateDeliveryStatusFromWebhook(
+  db: TenantQueryClient,
+  deliveryId: string,
+  status: string,
+): Promise<string | null> {
+  const rows = await db.queryObject<{ id: string }>(
+    `UPDATE notification_deliveries
+        SET status = $2,
+            delivered_at = CASE WHEN $2 = 'delivered' THEN now() ELSE delivered_at END,
+            updated_at = now()
+      WHERE id = $1::uuid
+      RETURNING id`,
+    [deliveryId, status],
+  );
+  return rows[0]?.id ?? null;
+}

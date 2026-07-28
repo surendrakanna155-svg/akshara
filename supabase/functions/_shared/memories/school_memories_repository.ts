@@ -217,6 +217,21 @@ export async function confirmMemoryMediaUpload(
   return rows[0]!;
 }
 
+/**
+ * The storage path for a single media item, or null when the media id does
+ * not exist (or has no stored object yet).
+ */
+export async function getMediaStoragePath(
+  client: TenantQueryClient,
+  mediaId: string,
+): Promise<string | null> {
+  const rows = await client.queryObject<{ storage_path: string }>(
+    `SELECT storage_path FROM school_memory_media WHERE id = $1`,
+    [mediaId],
+  );
+  return rows[0]?.storage_path ?? null;
+}
+
 export async function getMediaByShareToken(
   client: TenantQueryClient,
   shareToken: string,

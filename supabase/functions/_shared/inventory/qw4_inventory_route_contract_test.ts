@@ -86,9 +86,9 @@ Deno.test("QA-B-025: every registered inventory route path-matches to a handler 
   }
 });
 
-Deno.test("QA-B-025: unregistered path under /inventory 404s; path outside prefix is null", async () => {
+Deno.test("QA-B-025: unregistered path under /inventory returns null (central dispatcher 404s); path outside prefix is null", async () => {
   const under = await call(routeInventory, "GET", "/inventory/not-a-route", ["viewInventory"]);
-  assertEquals(under?.status, 404);
+  assertEquals(under, null);
   const outside = await call(routeInventory, "GET", "/hostel/dashboard", ["viewInventory"]);
   assertEquals(outside, null);
 });
@@ -167,10 +167,11 @@ Deno.test("QA-B-025: GET /inventory/dashboard is 403 without viewInventory", asy
 });
 
 // ICA-F6: routeInventory no longer owns the inventory_finance surface, so a
-// procurement / stock path now falls through to routeInventory's own 404 (proving
-// the delegation was removed). The positive route/RBAC contract for those paths
-// lives in inventory_finance/inventory_finance_route_contract_test.ts.
-Deno.test("ICA-F6: procurement / stock paths are no longer owned by routeInventory (404)", async () => {
+// procurement / stock path is now an in-prefix no-match → routeInventory returns
+// null (the central dispatcher 404s), proving the delegation was removed. The
+// positive route/RBAC contract for those paths lives in
+// inventory_finance/inventory_finance_route_contract_test.ts.
+Deno.test("ICA-F6: procurement / stock paths are no longer owned by routeInventory (null)", async () => {
   const movedOut: Array<[string, string]> = [
     ["GET", "/inventory/vendors/catalog"],
     ["POST", "/inventory/procurement/orders"],
@@ -180,6 +181,6 @@ Deno.test("ICA-F6: procurement / stock paths are no longer owned by routeInvento
   ];
   for (const [method, path] of movedOut) {
     const res = await call(routeInventory, method, path, ["viewInventory", "manageInventory"]);
-    assertEquals(res?.status, 404, `${method} ${path} should 404 through routeInventory after ICA-F6`);
+    assertEquals(res, null, `${method} ${path} should return null through routeInventory after ICA-F6`);
   }
 });

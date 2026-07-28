@@ -72,9 +72,9 @@ Deno.test("QA-B-024: all 14 alumni routes path-match to a handler (not 404)", as
   }
 });
 
-Deno.test("QA-B-024: unregistered path under /alumni 404s; path outside prefix is null", async () => {
+Deno.test("QA-B-024: unregistered path under /alumni returns null (central dispatcher 404s); path outside prefix is null", async () => {
   const under = await call(routeAlumni, "GET", "/alumni/not-a-route", ["viewAlumni"]);
-  assertEquals(under?.status, 404);
+  assertEquals(under, null);
   const outside = await call(routeAlumni, "GET", "/library/dashboard", ["viewAlumni"]);
   assertEquals(outside, null);
 });

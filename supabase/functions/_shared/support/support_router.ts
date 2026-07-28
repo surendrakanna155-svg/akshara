@@ -93,7 +93,7 @@ export async function routeSupport(
     }
   }
 
-  return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+  return null;
 }
 
 // /support/platform/… — segs = ["support","platform", …]
@@ -103,7 +103,7 @@ async function routeSupportPlatform(
   method: string,
   path: string,
   segs: string[],
-): Promise<Response> {
+): Promise<Response | null> {
   // /support/platform/incidents…
   if (segs[2] === "incidents") {
     if (segs.length === 3) {
@@ -149,5 +149,5 @@ async function routeSupportPlatform(
     }
   }
 
-  return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+  return null;
 }

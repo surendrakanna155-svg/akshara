@@ -153,9 +153,9 @@ Deno.test("HR reports: literal report paths are not swallowed by id/detail match
   assertEquals(register?.status, 503);
 });
 
-Deno.test("QA-B-022: unregistered path under /hr 404s; path outside prefix is null", async () => {
+Deno.test("QA-B-022: unregistered path under /hr returns null (central dispatcher 404s); path outside prefix is null", async () => {
   const under = await call(routeHr, "GET", "/hr/not-a-route", ["viewHr"]);
-  assertEquals(under?.status, 404);
+  assertEquals(under, null);
   const outside = await call(routeHr, "GET", "/library/dashboard", ["viewHr"]);
   assertEquals(outside, null);
 });

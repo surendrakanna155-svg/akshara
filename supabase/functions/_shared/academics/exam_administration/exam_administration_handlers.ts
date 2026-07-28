@@ -50,6 +50,7 @@ import {
   listExamSessions,
   listMarksEntryProgress,
   listOverdueMarksEntry,
+  listResultsPublishedSmsTargets,
   type OverdueMarksEntryRow,
   listPublishedResultsForStudent,
   loadDatesheet,
@@ -273,18 +274,7 @@ async function notifyParentsOfResults(
   if (!isSmsConfigured(smsConfig)) return;
   try {
     const targets = await withTenantContext(config, claims, (db) =>
-      db.queryObject<{ phone: string; name: string; exam_title: string }>(
-        `SELECT u.phone AS phone, s.display_name AS name, es.title AS exam_title
-           FROM exam_mark_entries m
-           JOIN exam_sessions es ON es.id = m.exam_id
-            AND es.organization_id = m.organization_id
-            AND es.school_id = m.school_id
-           JOIN students s ON s.id = m.student_id
-           JOIN student_guardians sg ON sg.student_id = s.id
-           JOIN users u ON u.id = sg.guardian_user_id
-          WHERE m.exam_id = $1 AND m.published = true AND u.phone IS NOT NULL`,
-        [examId],
-      ));
+      listResultsPublishedSmsTargets(db, examId));
     for (const target of targets) {
       if (!target.phone) continue;
       const msg =

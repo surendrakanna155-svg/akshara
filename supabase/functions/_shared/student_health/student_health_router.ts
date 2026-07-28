@@ -98,7 +98,7 @@ export async function routeStudentHealth(
   if (!match) {
     // Inside our prefix but unmatched: a definitive 404, NOT null — returning
     // null would let another router claim a /student-health path.
-    return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+    return null;
   }
 
   return await match.handler(req, config, ...match.args);

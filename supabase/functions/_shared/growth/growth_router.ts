@@ -61,5 +61,5 @@ export async function routeGrowth(
     return handleConvertGrowthInquiry(req, config, convertMatch[1]!);
   }
 
-  return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+  return null;
 }

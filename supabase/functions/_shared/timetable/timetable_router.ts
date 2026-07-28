@@ -96,7 +96,7 @@ export async function routeTimetable(
   if (!path.startsWith("/academic/timetables")) return null;
   const match = matchTimetableRoute(method, path);
   if (!match) {
-    return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+    return null;
   }
   return await match.handler(req, config, ...match.args);
 }

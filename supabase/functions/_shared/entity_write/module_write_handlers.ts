@@ -12,6 +12,11 @@ import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { idempotencyAlreadyClaimed } from "../idempotency_dispatch.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 import type { AccessTokenClaims } from "../jwt.ts";
+import {
+  claimIdempotencyKey,
+  getIdempotencyReplay,
+  storeIdempotencyResponse,
+} from "./entity_write_repository.ts";
 
 /** Raised by a write handler to return a specific HTTP status to the client. */
 export class WriteValidationError extends Error {
@@ -62,22 +67,18 @@ async function runWithIdempotency(
   operation: () => Promise<WriteResult>,
 ): Promise<WriteResult> {
   const url = new URL(req.url);
-  const claimed = await db.queryObject<{ id: string }>(
-    `INSERT INTO request_idempotency
-       (organization_id, school_id, idempotency_key, method, path)
-     VALUES ($1, $2, $3, $4, $5)
-     ON CONFLICT (organization_id, idempotency_key) DO NOTHING
-     RETURNING id`,
-    [organizationId, schoolId, idempotencyKey, req.method, url.pathname],
+  const claimed = await claimIdempotencyKey(
+    db,
+    organizationId,
+    schoolId,
+    idempotencyKey,
+    req.method,
+    url.pathname,
   );
 
   if (claimed.length === 0) {
     // Key already used — replay the stored response.
-    const prior = await db.queryObject<{ status_code: number | null; response_payload: Record<string, unknown> | null }>(
-      `SELECT status_code, response_payload FROM request_idempotency
-       WHERE organization_id = $1 AND idempotency_key = $2`,
-      [organizationId, idempotencyKey],
-    );
+    const prior = await getIdempotencyReplay(db, organizationId, idempotencyKey);
     const row = prior[0];
     if (row && row.response_payload != null) {
       return { payload: row.response_payload, status: row.status_code ?? 201 };
@@ -93,11 +94,12 @@ async function runWithIdempotency(
   }
 
   const result = await operation();
-  await db.queryObject(
-    `UPDATE request_idempotency
-       SET status_code = $3, response_payload = $4::jsonb, completed_at = timezone('utc', now())
-     WHERE organization_id = $1 AND idempotency_key = $2`,
-    [organizationId, idempotencyKey, result.status ?? 201, JSON.stringify(result.payload)],
+  await storeIdempotencyResponse(
+    db,
+    organizationId,
+    idempotencyKey,
+    result.status ?? 201,
+    result.payload,
   );
   return result;
 }

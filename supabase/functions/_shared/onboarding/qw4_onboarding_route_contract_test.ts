@@ -84,11 +84,9 @@ Deno.test("QA-B-035: the registered onboarding routes match the router", async (
   assertEquals((await call("POST", "/onboarding/startup/ai-prefill", MANAGE, { schoolName: "X" })).status, 503);
 });
 
-Deno.test("QA-B-035: an unregistered onboarding path returns 404 NOT_FOUND", async () => {
-  const res = await call("GET", "/onboarding/nope", VIEW);
-  assertEquals(res.status, 404);
-  const env = await res.json();
-  assertEquals(env.error.code, "NOT_FOUND");
+Deno.test("QA-B-035: an unregistered onboarding path returns null (central dispatcher 404s)", async () => {
+  const res = await raw("GET", "/onboarding/nope", VIEW);
+  assertEquals(res, null);
 });
 
 Deno.test("QA-B-035: a non-/onboarding path returns null (no match)", async () => {

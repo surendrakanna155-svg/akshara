@@ -116,9 +116,9 @@ Deno.test("QA-B-004: principal-command rejects an unauthenticated caller (401)",
   assertEquals(res!.status, 401);
 });
 
-Deno.test("QA-B-004: an unregistered principal-command path returns 404", async () => {
+Deno.test("QA-B-004: an unregistered principal-command path returns null (central dispatcher 404s)", async () => {
   const res = await call("GET", "/principal-command/unknown", ["viewPrincipalCommand"]);
-  assertEquals(res!.status, 404);
+  assertEquals(res, null);
 });
 
 Deno.test("QA-B-004: a non principal-command path is not claimed (null)", async () => {

@@ -70,5 +70,5 @@ export async function routeWidgetPlatform(
     return handleRefreshWidgetData(req, config);
   }
 
-  return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+  return null;
 }

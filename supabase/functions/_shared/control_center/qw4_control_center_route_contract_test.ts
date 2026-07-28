@@ -149,12 +149,9 @@ Deno.test("QA-B-019: every registered control-center route resolves and enforces
   }
 });
 
-Deno.test("QA-B-019: an unregistered control-center path returns 404 NOT_FOUND", async () => {
+Deno.test("QA-B-019: an unregistered control-center path returns null (central dispatcher 404s)", async () => {
   const res = await call("GET", "/control-center/not-a-real-surface", ["viewControlCenter", "manageControlCenter"]);
-  assertEquals(res?.status, 404);
-  const env = await res!.json();
-  assertEquals(env.error.code, "NOT_FOUND");
-  assertEquals(env.data, null);
+  assertEquals(res, null);
 });
 
 Deno.test("QA-B-019: a non-control-center path is not owned by the router (null)", async () => {
@@ -167,9 +164,9 @@ Deno.test("QA-B-019: a non-control-center path is not owned by the router (null)
   assertEquals(res, null);
 });
 
-Deno.test("QA-B-019: a DELETE on a registered control-center path is not registered (404)", async () => {
+Deno.test("QA-B-019: a DELETE on a registered control-center path is not registered (null; central dispatcher 404s)", async () => {
   const res = await call("DELETE", "/control-center/schools", ["manageControlCenter"]);
-  assertEquals(res?.status, 404);
+  assertEquals(res, null);
 });
 
 Deno.test("QA-B-019: an unauthenticated caller is rejected with 401", async () => {

@@ -129,9 +129,9 @@ Deno.test("QA-B-001: POST employee role assign rejects missing roleCode with 422
   assertEquals(res!.status, 422);
 });
 
-Deno.test("QA-B-001: an unregistered employees path returns 404 NOT_FOUND", async () => {
+Deno.test("QA-B-001: an unregistered employees path returns null (central dispatcher 404s)", async () => {
   const res = await call("GET", "/employees/not-a-uuid/unknown", ["viewEmployees"]);
-  assertEquals(res!.status, 404);
+  assertEquals(res, null);
 });
 
 Deno.test("QA-B-001: a non-employees path is not claimed by routeEmployee (null)", async () => {

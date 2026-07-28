@@ -42,6 +42,7 @@ import {
   markNotificationRead,
   registerDeviceToken,
   unregisterDeviceToken,
+  updateDeliveryStatusFromWebhook,
 } from "./communication_repository.ts";
 import { processDeliveryQueue } from "./notification_service.ts";
 import {
@@ -1341,16 +1342,7 @@ export async function handleDeliveryWebhook(req: Request, config: AppConfig): Pr
     };
 
     const updated = await withTenantContext(config, tenantClaims, async (db) => {
-      const rows = await db.queryObject<{ id: string }>(
-        `UPDATE notification_deliveries
-            SET status = $2,
-                delivered_at = CASE WHEN $2 = 'delivered' THEN now() ELSE delivered_at END,
-                updated_at = now()
-          WHERE id = $1::uuid
-          RETURNING id`,
-        [row.id, status],
-      );
-      const id = rows[0]?.id ?? null;
+      const id = await updateDeliveryStatusFromWebhook(db, row.id, status);
       if (id) {
         await auditComm(db, tenantClaims, "deliveryConfirmed", "communication.delivery.confirmed",
           "notification_delivery", id, { status }, req);

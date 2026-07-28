@@ -45,14 +45,12 @@ Deno.test("routeGatePass: returns null for a foreign prefix (lets the next route
   assertEquals(res, null);
 });
 
-Deno.test("routeGatePass: an unmatched path inside the prefix is a 404 envelope, not null", async () => {
+Deno.test("routeGatePass: an unmatched path inside the prefix returns null (central dispatcher 404s)", async () => {
   const res = await routeGatePass(
     new Request("https://x/gate-passes/foo/bar/baz"),
     config,
     "GET",
     "/gate-passes/foo/bar/baz",
   );
-  assertEquals(res?.status, 404);
-  const env = await res!.json();
-  assertEquals(env.error.code, "NOT_FOUND");
+  assertEquals(res, null);
 });

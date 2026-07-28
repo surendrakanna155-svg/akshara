@@ -51,7 +51,7 @@ export async function routeGatePass(
 
   const match = matchGatePassRoute(method, path);
   if (!match) {
-    return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+    return null;
   }
 
   return await match.handler(req, config, ...match.args);

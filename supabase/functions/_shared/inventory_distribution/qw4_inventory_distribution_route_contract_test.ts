@@ -125,9 +125,9 @@ Deno.test("QA-B-002: router returns null for a path outside its prefix", async (
   assertEquals(res, null);
 });
 
-Deno.test("QA-B-002: unregistered path under the prefix returns 404", async () => {
+Deno.test("QA-B-002: unregistered path under the prefix returns null (central dispatcher 404s)", async () => {
   const res = await call("GET", "/inventory/distribution/nope", ["viewInventory"]);
-  assertEquals(res?.status, 404);
+  assertEquals(res, null);
 });
 
 // ─── Gap-sweep 2 · Step 4 (#2) — replacements workflow (list/approve/fulfill/reject) ───
@@ -216,11 +216,11 @@ Deno.test("gap-sweep-2/step-4: unauthenticated approve is rejected (401)", async
   assertEquals(res?.status, 401);
 });
 
-Deno.test("gap-sweep-2/step-4: non-UUID replacement id under /approve is unregistered (404)", async () => {
+Deno.test("gap-sweep-2/step-4: non-UUID replacement id under /approve is unregistered (null)", async () => {
   const res = await call("POST", "/inventory/distribution/replacements/not-a-uuid/approve", [
     "manageInventoryDistribution",
   ]);
-  assertEquals(res?.status, 404);
+  assertEquals(res, null);
 });
 
 // ─── Gap-remediation P0-3 — POST /items/:id/replacement (request-replacement) ──

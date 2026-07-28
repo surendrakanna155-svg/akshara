@@ -28,5 +28,5 @@ export async function routeLegal(
     return await handleAcceptPolicies(req, config);
   }
 
-  return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+  return null;
 }

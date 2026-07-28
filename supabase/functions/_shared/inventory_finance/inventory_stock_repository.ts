@@ -883,3 +883,26 @@ export async function recordGrnMovement(
     createdBy: input.createdBy,
   });
 }
+
+/**
+ * INV-7: existing scheduled low-stock reminder broadcast for storekeepers with
+ * the given title, if any — used to avoid piling up duplicate reminders before
+ * the runner fires. Returns the matching rows (caller checks emptiness).
+ */
+export async function findScheduledStorekeeperBroadcast(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  title: string,
+): Promise<{ id: string }[]> {
+  return await db.queryObject<{ id: string }>(
+    `SELECT id FROM comm_broadcasts
+      WHERE organization_id = $1
+        AND school_id = $2
+        AND audience = 'storekeepers'
+        AND status = 'scheduled'
+        AND title = $3
+      LIMIT 1`,
+    [organizationId, schoolId, title],
+  );
+}

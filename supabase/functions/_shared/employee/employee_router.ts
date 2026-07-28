@@ -58,7 +58,7 @@ export async function routeEmployee(
   if (!path.startsWith("/employees")) return null;
   const match = matchEmployeeRoute(method, path);
   if (!match) {
-    return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+    return null;
   }
   try {
     return await match.handler(req, config, ...match.args);

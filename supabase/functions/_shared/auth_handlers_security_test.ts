@@ -1,5 +1,9 @@
 // Auth security regression tests for the ICA auth-layer fixes.
 //
+//   ICA-B2 — production must have NO privileged OTP-in-response bypass. Neither
+//            the pilot-phone allowlist nor dev mode may cause the plaintext OTP
+//            to be returned in the /auth/login body once environment ===
+//            "production"; the normal SMS-possession flow is the ONLY path.
 //   ICA-B8 — handleRevokeSession must scope the refresh_tokens revoke to the
 //            CALLER's own tokens (a caller who knows a victim's session UUID
 //            must NOT be able to revoke the victim's refresh tokens).
@@ -15,7 +19,12 @@ import {
   assert,
   assertEquals,
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { handleMe, handleRevokeSession } from "./auth_handlers.ts";
+import {
+  canReturnOtpInResponse,
+  handleLogin,
+  handleMe,
+  handleRevokeSession,
+} from "./auth_handlers.ts";
 import { type AccessTokenClaims, signAccessToken } from "./jwt.ts";
 import type { AppConfig } from "./config.ts";
 
@@ -219,6 +228,199 @@ Deno.test("ICA-B9: handleMe returns the caller's own user (explicit id filter, n
     // ICA-B9: the inert setRequestContext call was removed — no such RPC fires.
     const rpc = captured.find((c) => c.path.includes("set_request_context"));
     assertEquals(rpc, undefined, "handleMe must not emit the inert set_request_context RPC");
+  } finally {
+    restore();
+  }
+});
+
+// ─── ICA-B2 ─────────────────────────────────────────────────────────────────
+// Remove all privileged/demo/pilot OTP bypass from the PRODUCTION path. In
+// production the plaintext OTP must NEVER be returned in the /auth/login body —
+// for any phone, allowlisted or not. The dev/pilot return path survives only in
+// non-production (dev/test) so it still avoids SMS spend there.
+
+const PILOT_PHONE = "+919550055155";
+
+/** Minimal AppConfig for canReturnOtpInResponse invariant checks. */
+function otpFlagConfig(overrides: Partial<AppConfig>): AppConfig {
+  return {
+    environment: "development",
+    otpPilotPhones: [],
+    otpDevMode: false,
+    ...overrides,
+  } as unknown as AppConfig;
+}
+
+Deno.test("ICA-B2: canReturnOtpInResponse is false in production even for an allowlisted pilot phone", () => {
+  const config = otpFlagConfig({
+    environment: "production",
+    otpPilotPhones: [PILOT_PHONE],
+    otpDevMode: true, // even with dev mode ALSO on, production must not leak.
+  });
+  assertEquals(
+    canReturnOtpInResponse(config, PILOT_PHONE),
+    false,
+    "production must never return the OTP in the response body for an allowlisted phone",
+  );
+});
+
+Deno.test("ICA-B2: canReturnOtpInResponse is false in production for ANY phone", () => {
+  const config = otpFlagConfig({
+    environment: "production",
+    otpPilotPhones: [PILOT_PHONE],
+    otpDevMode: true,
+  });
+  for (const phone of [PILOT_PHONE, "+919000000001", "+441234567890", ""]) {
+    assertEquals(
+      canReturnOtpInResponse(config, phone),
+      false,
+      `production must never return the OTP in the body (phone=${phone})`,
+    );
+  }
+});
+
+Deno.test("ICA-B2: dev convenience preserved — non-production still returns the OTP for an allowlisted phone", () => {
+  for (const env of ["development", "test", "staging"]) {
+    const config = otpFlagConfig({
+      environment: env,
+      otpPilotPhones: [PILOT_PHONE],
+    });
+    assertEquals(
+      canReturnOtpInResponse(config, PILOT_PHONE),
+      true,
+      `allowlisted pilot phone must still get the OTP in-response in non-prod (${env})`,
+    );
+    // dev mode alone (no allowlist) also works outside production.
+    const devModeConfig = otpFlagConfig({ environment: env, otpDevMode: true });
+    assertEquals(
+      canReturnOtpInResponse(devModeConfig, "+919000000009"),
+      true,
+      `dev-mode in-response OTP must still work in non-prod (${env})`,
+    );
+  }
+});
+
+/** Fuller AppConfig for the end-to-end handleLogin path. */
+function loginConfig(overrides: Partial<AppConfig>): AppConfig {
+  return {
+    environment: "development",
+    jwtSecret: TEST_SECRET,
+    supabaseUrl: SUPABASE_URL,
+    supabaseServiceRoleKey: "service-role-test-key",
+    otpTtlSeconds: 300,
+    otpMaxAttempts: 3,
+    otpDevMode: false,
+    otpPilotPhones: [],
+    otpRateWindowSeconds: 3600,
+    otpMaxRequestsPerPhone: 5,
+    otpMaxRequestsPerIp: 20,
+    otpResendCooldownSeconds: 60,
+    smsProvider: "fast2sms",
+    smsApiKey: null, // SMS intentionally NOT configured for these tests.
+    smsFast2smsRoute: "q",
+    smsFast2smsSenderId: null,
+    smsFast2smsMessageId: null,
+    ...overrides,
+  } as unknown as AppConfig;
+}
+
+/** Stub the otp_requests rate-limit SELECT (→ []) and the insert (→ 201). */
+function stubLoginDb(): { restore: () => void } {
+  const { restore } = stubFetch((r) => {
+    if (r.path.endsWith("/otp_requests")) {
+      if (r.method === "GET") {
+        return new Response("[]", {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      // POST insert (return=minimal ⇒ no body).
+      return new Response(null, { status: 201 });
+    }
+    return new Response("[]", {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  });
+  return { restore };
+}
+
+function loginRequest(identifier: string): Request {
+  return new Request(`${SUPABASE_URL}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ identifier }),
+  });
+}
+
+Deno.test("ICA-B2 (e2e): in production, /auth/login for an allowlisted pilot phone does NOT leak the OTP in the body", async () => {
+  const config = loginConfig({
+    environment: "production",
+    otpPilotPhones: [PILOT_PHONE], // allowlisted, yet must NOT bypass in prod.
+    otpDevMode: true,
+  });
+  const { restore } = stubLoginDb();
+  try {
+    const res = await handleLogin(loginRequest(PILOT_PHONE), config);
+    const body = await res.json();
+
+    // The normal SMS-possession flow is now the only path. With SMS
+    // deliberately unconfigured, the request is pushed onto the SMS branch
+    // (503) instead of ever short-circuiting to return the code — proving no
+    // privileged in-response bypass survives in production.
+    assertEquals(res.status, 503);
+    assertEquals(body.error?.code, "SMS_NOT_CONFIGURED");
+    assertEquals(
+      body.data,
+      null,
+      "production login must return no data envelope carrying an OTP",
+    );
+  } finally {
+    restore();
+  }
+});
+
+Deno.test("ICA-B2 (e2e): in production, no phone gets an OTP in the /auth/login body", async () => {
+  const config = loginConfig({
+    environment: "production",
+    otpPilotPhones: [PILOT_PHONE],
+    otpDevMode: true,
+  });
+  for (const phone of [PILOT_PHONE, "+919000000123"]) {
+    const { restore } = stubLoginDb();
+    try {
+      const res = await handleLogin(loginRequest(phone), config);
+      const raw = await res.text();
+      assert(
+        !JSON.parse(raw).data?.otp,
+        `production login body must never contain an otp (phone=${phone})`,
+      );
+      // Belt-and-suspenders: the plaintext-OTP field must not appear at all.
+      assert(
+        !/"otp"\s*:/.test(raw),
+        `production login response must not carry an "otp" field (phone=${phone})`,
+      );
+    } finally {
+      restore();
+    }
+  }
+});
+
+Deno.test("ICA-B2 (e2e): in a non-production env, the pilot phone still gets the OTP in-response (dev convenience preserved)", async () => {
+  const config = loginConfig({
+    environment: "development",
+    otpPilotPhones: [PILOT_PHONE],
+  });
+  const { restore } = stubLoginDb();
+  try {
+    const res = await handleLogin(loginRequest(PILOT_PHONE), config);
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body.error, null);
+    assert(
+      typeof body.data?.otp === "string" && /^\d{6}$/.test(body.data.otp),
+      "non-production pilot login must still return a 6-digit OTP in the body",
+    );
   } finally {
     restore();
   }

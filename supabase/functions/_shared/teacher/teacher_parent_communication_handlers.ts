@@ -12,12 +12,17 @@ import {
   requireSchoolOperationalScope,
 } from "../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
-import type { TenantQueryClient } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
 import { guardianUserIdsForStudents } from "../communication/guardian_recipients.ts";
 import { enqueueDelivery } from "../communication/communication_repository.ts";
 import { processDeliveryQueue } from "../communication/notification_service.ts";
+import {
+  findTeacherEntity,
+  insertTeacherEntity,
+  listTeacherEntities,
+  replaceTeacherEntity,
+} from "./teacher_parent_communication_repository.ts";
 
 /**
  * MJ-H13 — teacher parent-communication + subject-concern writes.
@@ -39,7 +44,6 @@ import { processDeliveryQueue } from "../communication/notification_service.ts";
  * / 20260627110000 recovery), so this never 403s a legitimate teacher, and it is
  * a write-grade grant rather than a read one (`viewTeacherAssistant`).
  */
-const TEACHER_TABLE = "teacher_entities";
 const WRITE_PERMISSION = "manageTeacherAssistant";
 const READ_PERMISSION = "viewTeacherAssistant";
 
@@ -47,93 +51,6 @@ const ENTITY_PARENT_COMM = "parent_communication_log";
 const ENTITY_SUBJECT_CONCERN = "subject_concern";
 
 const { runWrite } = createModuleWriteHandlers(WRITE_PERMISSION);
-
-/** Insert a teacher-owned JSONB entity row (binds teacher_id to satisfy RLS). */
-async function insertTeacherEntity(
-  db: TenantQueryClient,
-  organizationId: string,
-  schoolId: string,
-  teacherId: string,
-  entityType: string,
-  id: string,
-  payload: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
-  const rows = await db.queryObject<{ payload: Record<string, unknown> }>(
-    `INSERT INTO ${TEACHER_TABLE}
-       (id, organization_id, school_id, teacher_id, entity_type, payload)
-     VALUES ($1, $2, $3, $4, $5, $6::jsonb)
-     RETURNING payload`,
-    [id, organizationId, schoolId, teacherId, entityType, JSON.stringify(payload)],
-  );
-  return rows[0]?.payload ?? payload;
-}
-
-/** Read a single teacher-owned entity payload (null when absent / not owned). */
-async function findTeacherEntity(
-  db: TenantQueryClient,
-  organizationId: string,
-  schoolId: string,
-  teacherId: string,
-  entityType: string,
-  id: string,
-): Promise<Record<string, unknown> | null> {
-  const rows = await db.queryObject<{ payload: Record<string, unknown> }>(
-    `SELECT payload
-       FROM ${TEACHER_TABLE}
-      WHERE organization_id = $1
-        AND school_id = $2
-        AND teacher_id = $3
-        AND entity_type = $4
-        AND id = $5`,
-    [organizationId, schoolId, teacherId, entityType, id],
-  );
-  return rows[0]?.payload ?? null;
-}
-
-/** Replace a teacher-owned entity payload (null when no row was updated). */
-async function replaceTeacherEntity(
-  db: TenantQueryClient,
-  organizationId: string,
-  schoolId: string,
-  teacherId: string,
-  entityType: string,
-  id: string,
-  payload: Record<string, unknown>,
-): Promise<Record<string, unknown> | null> {
-  const rows = await db.queryObject<{ payload: Record<string, unknown> }>(
-    `UPDATE ${TEACHER_TABLE}
-        SET payload = $6::jsonb
-      WHERE organization_id = $1
-        AND school_id = $2
-        AND teacher_id = $3
-        AND entity_type = $4
-        AND id = $5
-      RETURNING payload`,
-    [organizationId, schoolId, teacherId, entityType, id, JSON.stringify(payload)],
-  );
-  return rows[0]?.payload ?? null;
-}
-
-/** List all teacher-owned entity payloads of a type. */
-async function listTeacherEntities(
-  db: TenantQueryClient,
-  organizationId: string,
-  schoolId: string,
-  teacherId: string,
-  entityType: string,
-): Promise<Array<Record<string, unknown>>> {
-  const rows = await db.queryObject<{ payload: Record<string, unknown> }>(
-    `SELECT payload
-       FROM ${TEACHER_TABLE}
-      WHERE organization_id = $1
-        AND school_id = $2
-        AND teacher_id = $3
-        AND entity_type = $4
-      ORDER BY id`,
-    [organizationId, schoolId, teacherId, entityType],
-  );
-  return rows.map((row) => row.payload);
-}
 
 function stringList(body: Record<string, unknown>, key: string): string[] {
   const value = body[key];

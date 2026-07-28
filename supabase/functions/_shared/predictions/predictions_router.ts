@@ -24,5 +24,5 @@ export async function routePredictions(
     const handler = GET_ROUTES[path];
     return handler ? await handler(req, config) : null;
   }
-  return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+  return null;
 }

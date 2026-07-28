@@ -103,9 +103,9 @@ Deno.test("QA-B-020: all transport routes path-match to a handler (not 404)", as
   }
 });
 
-Deno.test("QA-B-020: unregistered path under /transport 404s; path outside prefix is null", async () => {
+Deno.test("QA-B-020: unregistered path under /transport returns null (central dispatcher 404s); path outside prefix is null", async () => {
   const under = await call(routeTransport, "GET", "/transport/not-a-route", ["viewTransport"]);
-  assertEquals(under?.status, 404);
+  assertEquals(under, null);
   const outside = await call(routeTransport, "GET", "/finance/dashboard", ["viewTransport"]);
   assertEquals(outside, null);
 });

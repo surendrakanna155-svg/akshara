@@ -137,7 +137,7 @@ Deno.test("QA-B-010: router returns null for a path outside its prefix", async (
   assertEquals(res, null);
 });
 
-Deno.test("QA-B-010: unregistered path under the prefix returns 404", async () => {
+Deno.test("QA-B-010: unregistered path under the prefix returns null (central dispatcher 404s)", async () => {
   const res = await call("GET", "/growth/nope", ["viewGrowthPlatform"]);
-  assertEquals(res?.status, 404);
+  assertEquals(res, null);
 });

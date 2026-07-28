@@ -191,3 +191,68 @@ These complete the "live certification" lifecycle step and run at the **owner-ga
 - **CI-infra — validation is CI-on-push (deferred), not locally certifiable — 4:** **A7** (real-DB money-race concurrency tests) + **D5** (real-DB idempotency atomic-claim test) + **D4** (add a Postgres service to the CI gate so the isolation + money-race probes RUN and fail-not-skip) + **D7** (backend coverage gate). These make the existing perpetually-ignored env-gated tests actually execute; their green is provable only on a CI runner with Postgres.
 - **Large refactors — recommend dedicated, individually-reviewed efforts (regression risk on the certified trunk) — 5:** **F1** (auth/RBAC middleware — 656 call sites; the roadmap itself scopes this to the W10 central-chokepoint item), **F3** (god-file decomposition — 3,000-line files), **F4** (prefix→router registry — changes routing across ~66 routers), **F7** (raw SQL → repository — 25 handler files), **C7** (generic-store keyset pagination — broad blast radius on the shared list store).
 - **Infra/ops — 1:** **C5** (front tenant connections with a transaction-mode pooler / global connection ceiling — needs PgBouncer/Supavisor infra + deploy; the code-side POOL_SIZE ceiling is a partial).
+
+---
+
+## PHASE 2 — Owner decisions (all 4 approved + DONE) + standalone refactors
+
+Owner approved G1/G2/G3/B2 (2026-07-21) with specific direction; each implemented as an independent verified batch (full lifecycle), EOS PASS, committed. Backend full suite after each stayed green; final = **4126 passed / 0 failed / 3 ignored**. Trunk `01f5a46d` → `883fc572`.
+
+| Item | Owner direction | EOS | Commit | Migration |
+|---|---|---|---|---|
+| **G1** domain events | keep internal LOG; bus-ready interface; no external infra | PASS | `6ea8f208` | — |
+| **G2** entitlement | production-ready + phased/gradual rollout via flags/config | PASS | `068467f6` | `…190` |
+| **G3** custom roles | per-tenant custom roles; system roles immutable | PASS | `aef2fbab` | `…200` |
+| **B2** OTP policy | remove all privileged/pilot OTP bypass from the prod path | PASS | `67e40236` | — |
+| **F7** (refactor #1) | raw SQL → repository (standalone refactor) | PASS | `883fc572` | — |
+
+- **G1** — in-process `DomainEventSubscriber` registry seam (`domain_event_subscribers.ts`); "published" now = "dispatched to all registered subscribers" (zero today; AI Signal Refinery stays direct-invoked). Doc `DOMAIN_EVENTS_ARCHITECTURE.md`. No external messaging library.
+- **G2** — master mode `off`(default)/`allowlist`/`all` + per-org `organizations.entitlement_enforcement_enabled` + `detect_orgs_missing_entitlement_plan()` pre-flip audit + 17 ON-path tests. Default enforces nowhere (zero pilot risk).
+- **G3** — org-scoped `role_definitions`/`role_permissions` (NULL=system), global-PK slug (no shadow), RLS system-read-only + org-write, hard org-match trigger, `/identity/roles` CRUD gated on `manageManagement`. +24 tests. **P1 follow-up: client role-mgmt UI + membership-assignment write-path.**
+- **B2** — production can NEVER return an OTP in the login body for ANY phone (env short-circuit; allowlist inert in prod). +6 tests. Deploy: ship prod `AUTH_OTP_PILOT_PHONES` empty (belt-and-suspenders).
+- **F7** — all 25 handlers cleared of raw SQL (caught a `queryCount` block the audit regex missed); 47 files (12 new repos + `db_savepoint.ts` kernel that also advances ICA-D2); pure behavior-preserving moves. Suite unchanged 4126/0/3.
+
+**Migration slots added: `…190` (G2), `…200` (G3). Current trunk max = `…200`. ⚠ ASIP fold-in must renumber ≥ `…210`.**
+
+**▶ Remaining backend (sequential, independent verified projects — do NOT batch): ~~F4~~ → F3 (god-file decomposition) → F1 (auth/RBAC middleware — W10 chokepoint) → C7 (generic-store keyset).** Then owner-deferred CI-infra (A7/D4/D5/D7) + C5 pooler. Final = owner-gated production deploy (after refactors + ASIP renumber-merge + prod-readiness cert + explicit authorization).
+
+## PHASE 3 — Standalone refactors (each an independent verified project)
+
+| Item | EOS | Commit | Migration |
+|---|---|---|---|
+| **F4** — prefix→router registry (declarative routing; greedy routers return null not 404) | PASS | `0a6f2136` | — (code-only) |
+| **F3** — god-file decomposition (pilot_operations_repository.ts 3,311 LOC → barrel + 6 domain modules) | PASS | `6eba1fa4` | — (code-only) |
+| **F1** — central auth/RBAC chokepoint (no route unauthenticated by omission) | PASS | `e0e98375` | — (code-only) |
+| **C7** — generic list-store keyset pagination (opt-in, backward-compatible) | PASS | _(this commit)_ | — (code-only) |
+
+### F4 — declarative module-route registry
+- **Problem (verified on trunk):** `api/app.ts` held a hand-ordered `moduleRouters` array whose correctness depended on comments like "MUST precede routeFinance because it greedily owns its prefix and returns its own 404 (never null)". 52 routers were "greedy" — a path inside their prefix that matched no route returned their OWN `errorEnvelope("NOT_FOUND", "Route not found…", 404)` (53 sites), which shadowed any later router that owned a cross-prefix path. Two prod shadow bugs shipped exactly that way (PRA-P0-12 pilot→exam-marks; PRA-N-13 dead teacher handler→messages).
+- **Fix (two parts):**
+  1. **Flip (order-robustness):** all 53 greedy route-404 sites → `return null`; the SINGLE source of a route-level 404 is now the central dispatcher in app.ts (byte-identical envelope). `routeSupportPlatform` return type widened to `Response | null`. `deno check` clean. Because the message everywhere was the identical "Route not found", a genuinely-unmatched path is unchanged; the only behavioral delta (a later router claiming a path a greedy one used to 404) is validated by the full route-contract suite.
+  2. **Declarative registry:** new `_shared/route_registry.ts` exports the ordered `MODULE_ROUTES` table (`{name, prefixes, route, note}`) with per-router prefix ownership + the migrated rationale, plus `matchModuleRoute()`. `app.ts` now dispatches via one `matchModuleRoute` call. Order is preserved verbatim but is no longer load-bearing (ownership is disjoint).
+- **Guards:** new `route_registry_test.ts` (4 tests): (a) **static flip-lock** — scans every `_shared/**/*router*.ts` and fails if any re-introduces the greedy route-404; (b) registry shape/no-drift; (c) **single-ownership** — exactly one (correct) owner for a representative path set that STRESSES every cross-prefix overlap (`/finance` vs `/finance/inventory-reconciliation`; `/inventory` vs `/inventory/distribution` vs vendors; `/academic` vs `/academic/timetables` vs `/academics/exams`; `/parent|/teacher|/student` vs communication + pilot; `/platform` org-builder vs entitlements; `/school/*` vs `/school-config`), proving order-independence; (d) central-404. `trunk_integrity_test` "registered exactly once" updated to guard the new `route_registry.ts` (MODULE_ROUTES) + assert app.ts keeps the `matchModuleRoute` indirection (no inline `moduleRouters` array). 39 per-module route-contract tests updated from the old greedy "unmatched-in-prefix → 404 envelope" to the new "→ null" contract (405 wrong-method + 422 id-validation + dispatcher-404 assertions deliberately preserved).
+- **Validation:** full backend suite **4130 passed / 0 failed / 3 ignored** (was 4126; +4 new registry tests; the 3 ignored = the unchanged env-gated real-DB tests). Only non-router/non-test source file changed = `api/app.ts`. Code-only, no migration.
+
+### F3 — god-file decomposition (`pilot_operations_repository.ts`)
+- **Problem:** 3,311 LOC / 82 exports mixing attendance, leave, homework, parent/student snapshot overlays, teacher reads, and tenant-isolation probes in one file.
+- **Fix (pure behavior-preserving move):** split into 6 cohesive domain modules (`pilot_operations_probes.ts` 31, `pilot_attendance_repository.ts` 594, `pilot_leave_repository.ts` 409, `pilot_homework_repository.ts` 928, `pilot_snapshot_repository.ts` 866, `pilot_teacher_repository.ts` 470) + `pilot_operations_shared.ts` (27 — the only two genuinely cross-module privates, `periodTimeRange` + `listTeacherClassLabels`). `pilot_operations_repository.ts` is now an 11-line **barrel** (`export * from` the 6 domain modules; shared intentionally NOT re-exported so the public surface stays exactly the original 82 symbols). No cycles (shared imports no sub-module).
+- **Zero importer changes** — all 17 consumers keep their unchanged named imports (barrel preserves every export).
+- **Validation:** `deno check` clean on the barrel + main handlers; full backend suite **4130 / 0 / 3** (unchanged — a pure move alters no test outcome); an independent code-line multiset diff (original body vs union of new files) matched exactly (3111 == 3111). Code-only, no migration.
+
+### F1 — central auth/RBAC chokepoint (W10 structural guarantee)
+- **Problem (roadmap §W10):** auth/RBAC was enforced per-handler by convention — `authenticateRequest` at ~664 handler entry points. A handler that forgets it = an open route ("unauthenticated by omission"). No structural guarantee.
+- **Fix (registry-first, minimal blast radius — the 664 handlers are NOT touched):**
+  1. **Central gate** in `routeModuleRequest` (the F4 dispatch chokepoint every module route flows through): before dispatch, non-public routes are authenticated once; unauthenticated → 401 immediately. So no module route reaches a handler unauthenticated, even if the handler omits its own check. Fine-grained RBAC (requirePermission / scope) stays in the handlers, unchanged — the gate guarantees AUTHENTICATION, not authorization.
+  2. **Public allowlist** (`PUBLIC_MODULE_ROUTE_PREFIXES` in route_registry.ts): the ONLY non-session routes, both HMAC-signature-authed — `/webhooks/<gateway>` (payment) + `/communications/delivery/webhook` (message-provider delivery status). Found by an exhaustive scan of every `verify*Signature` usage; a guard test asserts each actually bypasses the gate (so a valid signature is processed, not rejected for lack of a JWT).
+  3. **Per-request memoization** of `authenticateRequest` (WeakMap keyed on the Request): the central gate authenticates once; the handlers' own 664 calls (and the idempotency scope resolver, which also authenticated) reuse the cached result — no extra session-validation DB read (removes a pre-existing double-auth on idempotent mutations).
+- **Behavior change (intended hardening):** an UNAUTHENTICATED request to an unknown route now returns 401 (auth-first) instead of 404 — unauthenticated callers can no longer enumerate route existence. (Authenticated, an unknown route still 404s.) Updated 5 registry-gap/CORS/audit guards to authenticate their probe (preserving intent) and added ICA-F1 tests to `eng4_5_forced_auth_test.ts` (unauth → 401 universal; both webhooks bypass the gate).
+- **Validation:** full backend suite **4132 / 0 / 3** (+2 F1 guarantee tests). `deno check` clean. Code-only, no migration.
+
+### C7 — generic list-store keyset pagination
+- **Problem:** the shared entity read stores (`entity_read_store` + `student_scoped` + `org` variants, 14 importers) paginate with `LIMIT/OFFSET` + a `count(*)` per call, so a deep page is O(offset) — poor at scale. "Broad blast radius" is why it was flagged.
+- **Fix (additive, backward-compatible — the page/total API + all 14 importers are unchanged):** added keyset (cursor) pagination alongside offset. `academic_pagination.ts` gains `KeysetParams`/`KeysetResult` + a pure `keysetPageOf` helper (splits a `LIMIT pageSize+1` fetch into page + hasMore/nextCursor, no COUNT). All 3 stores gain `listEntitiesKeyset` — `WHERE … AND (id > :cursor) ORDER BY id LIMIT pageSize+1`, seeking past the cursor so every page is O(pageSize) at any depth. Exposed opt-in through `module_read_handlers` (`?cursor=` → keyset envelope `{items, pagination:{pageSize, cursor, nextCursor, hasMore}}`; absent → the original page/total path). New `keysetEnvelope` shaper.
+- **Tests:** `c7_keyset_pagination_test.ts` (5) — full page-walk via nextCursor, exact-fit final page, empty, pageSize clamp (1..100), pageSize+1 probe (no OFFSET/COUNT), and the `keysetPageOf` helper.
+- **Validation:** full backend suite **4137 / 0 / 3** (+5 C7 tests). `deno check` clean. Code-only, no migration. **Tracked deploy optimization:** a per-read-model `(organization_id, school_id, entity_type, id)` index maximizes the seek; the read-model tables are generic/per-module, so index tuning is a deploy-time step (EXPLAIN), not this code slice. **Follow-up:** the other read handlers (management/control_center/mobile) can adopt the identical opt-in cursor pattern.
+
+## Parallel UI/UX lane (PROGRAM UXR)
+Separate branch `feature/uxr-flutter-remediation` in worktree `/Users/surendrakanna/Documents/Akshara_ERP-uxr` (off trunk `aef2fbab`). Client-only Flutter polish independent of unfinished backend. ⚠ **UXR backlog docs (roadmap §5.6 PROGRAM UXR + `UXR_FINDINGS_REGISTER.md` + the audit) are on the QPL branch in the MAIN worktree `/Users/surendrakanna/Documents/Akshara_ERP`, NOT on the trunk/uxr worktree** — read backlog there, implement code in the uxr worktree. Done: I1+B4, G2(P0), D2, G6. Web items owner-FROZEN; backend-dependent + owner-gated UXR deferred. See memory [[uxr-flutter-ui-lane]].

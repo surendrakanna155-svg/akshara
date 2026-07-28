@@ -155,9 +155,9 @@ Deno.test("QA-B-034: exam routes reject an unauthenticated caller (401)", async 
   assertEquals((await routeExamAdministration(getReq, config, "GET", "/academics/exams"))?.status, 401);
 });
 
-Deno.test("QA-B-034: an unregistered /academics/exams path returns 404", async () => {
+Deno.test("QA-B-034: an unregistered /academics/exams path returns null (central dispatcher 404s)", async () => {
   const res = await call("DELETE", "/academics/exams", ["manageExams"]);
-  assertEquals(res?.status, 404);
+  assertEquals(res, null);
 });
 
 Deno.test("QA-B-034: a non-/academics/exams path returns null (no match)", async () => {

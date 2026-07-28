@@ -13,6 +13,9 @@ const HERE = new URL(".", import.meta.url); // supabase/functions/_shared/
 const FUNCTIONS = new URL("../", HERE); // supabase/functions/
 const MIGRATIONS = new URL("../../migrations/", HERE); // supabase/migrations/
 const APP_TS = new URL("../api/app.ts", HERE);
+// ICA-F4: the module-router registration moved from app.ts into the declarative
+// route_registry.ts (MODULE_ROUTES). The registration guard now checks that file.
+const ROUTE_REGISTRY_TS = new URL("route_registry.ts", HERE);
 
 function readDirFiles(dir: URL, suffix: string): string[] {
   const names: string[] = [];
@@ -79,21 +82,34 @@ Deno.test("trunk-integrity: no table has two UNGUARDED CREATE TABLE statements",
 });
 
 Deno.test("trunk-integrity: every edge module router imported is registered exactly once", () => {
-  const src = Deno.readTextFileSync(APP_TS);
+  // ICA-F4: registration lives in the declarative route_registry.ts (MODULE_ROUTES),
+  // not app.ts. app.ts now dispatches via matchModuleRoute — assert that indirection
+  // is intact so no future edit reintroduces a hand-rolled router array in app.ts.
+  const appSrc = Deno.readTextFileSync(APP_TS);
+  assert(
+    appSrc.includes("matchModuleRoute"),
+    "app.ts must dispatch module routes via matchModuleRoute (route_registry.ts)",
+  );
+  assert(
+    !appSrc.includes("const moduleRouters = ["),
+    "app.ts must not reintroduce an inline moduleRouters array (registration belongs in route_registry.ts)",
+  );
+
+  const src = Deno.readTextFileSync(ROUTE_REGISTRY_TS);
   // route* functions imported from a *_router.ts module.
   const imported = new Set<string>();
   for (const m of src.matchAll(/import\s*\{\s*(route[A-Z]\w*)\s*\}\s*from\s*"[^"]*_router\.ts"/g)) {
     imported.add(m[1]);
   }
   assert(imported.size > 30, `expected many module routers, found ${imported.size}`);
-  // The moduleRouters array region.
-  const arrStart = src.indexOf("const moduleRouters = [");
+  // The MODULE_ROUTES array region.
+  const arrStart = src.indexOf("export const MODULE_ROUTES");
   const arrEnd = src.indexOf("] as const;", arrStart);
-  assert(arrStart >= 0 && arrEnd > arrStart, "moduleRouters array not found");
+  assert(arrStart >= 0 && arrEnd > arrStart, "MODULE_ROUTES array not found");
   const arr = src.slice(arrStart, arrEnd);
   for (const r of imported) {
     const count = (arr.match(new RegExp(`\\b${r}\\b`, "g")) ?? []).length;
-    assertEquals(count, 1, `router ${r} is registered ${count}× in moduleRouters (expected exactly 1)`);
+    assertEquals(count, 1, `router ${r} is registered ${count}× in MODULE_ROUTES (expected exactly 1)`);
   }
   // ASIP + PRA + DRP coexistence anchors.
   for (const anchor of ["routeSupport", "routeIdentity", "routeAudit", "routeFinance"]) {

@@ -88,8 +88,11 @@ Deno.test("QA-X-017: an authorized request (passes the gate) emits no denial", a
 // ── a 404 / non-403 is not a denial ──────────────────────────────────────────
 Deno.test("QA-X-017: a 404 (non-403) emits no access_denied event", async () => {
   const { events, sink } = capturingSink();
+  // ICA-F1: authenticate so the probe passes the central auth gate and reaches the
+  // 404 fallback (an unauthenticated probe would 401 before dispatch). Only a 403
+  // records an access_denied event; a 404 must not.
   const res = await handleRequest(
-    new Request("https://x/does/not/exist", { method: "POST" }),
+    await tokenReq("POST", "/does/not/exist", []),
     goodConfig,
     sink,
   );
