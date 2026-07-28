@@ -6,11 +6,10 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// One golden corpus row: what a real user types, and what NIKSHA OS must do.
 class _Case {
-  const _Case(this.query, this.kind, {this.route, this.check});
+  const _Case(this.query, this.kind, {this.route});
   final String query;
   final DaiIntentKind kind;
   final String? route;
-  final void Function(DaiIntent)? check;
 }
 
 /// The DAI golden corpus.
@@ -85,7 +84,6 @@ void main() {
         final intent = DaiResolver.resolve(c.query);
         expect(intent.kind, c.kind, reason: 'resolved: $intent');
         if (c.route != null) expect(intent.route, c.route);
-        c.check?.call(intent);
       });
     }
   });
