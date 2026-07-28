@@ -1,4 +1,4 @@
-# Akshara ERP — Active Documentation Index
+# NIKSHA OS — Active Documentation Index
 
 > **This is the authoritative entry point.** Every document listed here is current and required for day-to-day engineering. Read these — *not* `docs/archive/`.
 

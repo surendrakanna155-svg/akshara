@@ -1,4 +1,4 @@
-# Akshara ERP — app trailer
+# NIKSHA OS — app trailer
 
 > **Target length: 75 seconds.** Long enough to show the product working, short
 > enough that a principal watches to the end.
@@ -31,7 +31,7 @@ tenant only.
 
 ### 0:00–0:06 — Cold open ⚡
 **Visual:** Black. White text, one line at a time.
-**Text:** "A principal spends 40 minutes finding one student's file." → "Akshara does it in 4 seconds."
+**Text:** "A principal spends 40 minutes finding one student's file." → "NIKSHA OS does it in 4 seconds."
 **Audio:** Low ambient pad starts.
 
 > Open on the problem, not the logo. Nobody cares about the logo yet.
@@ -72,7 +72,7 @@ library, inventory, staff attendance, dark mode.
 
 ### 1:08–1:15 — Close ⚡
 **Visual:** Logo on the brand gradient.
-**Text:** "Akshara — the whole school, in one app."
+**Text:** "NIKSHA OS — the whole school, in one app."
 **Then:** "Now on Google Play."
 **Audio:** Resolve, out.
 

@@ -1,14 +1,14 @@
 # Real-School Onboarding Guide
 
 **Version:** 1.0 (v1.0-rc1)  
-**Audience:** Akshara platform ops + school leadership  
+**Audience:** NIKSHA OS platform ops + school leadership  
 **Feature freeze:** no new product work — execute only documented steps
 
 ---
 
 ## Overview
 
-Onboarding a first real school follows **seven phases**. Platform team handles Phase 0–1; school admin handles Phases 2–5 with Akshara support; parents/teachers activate in Phase 6.
+Onboarding a first real school follows **seven phases**. Platform team handles Phase 0–1; school admin handles Phases 2–5 with NIKSHA OS support; parents/teachers activate in Phase 6.
 
 | Phase | Owner | Deliverable |
 |-------|-------|-------------|

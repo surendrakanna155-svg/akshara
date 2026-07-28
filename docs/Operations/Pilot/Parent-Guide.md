@@ -1,8 +1,8 @@
-# Parent Guide — Akshara Parent App
+# Parent Guide — NIKSHA OS Parent App
 
 ## Getting started
 
-1. Install Akshara Parent app (or open web link from school)
+1. Install NIKSHA OS parent app (or open web link from school)
 2. Enter registered mobile number
 3. Enter OTP from SMS/WhatsApp (staging shows OTP in demo response)
 4. Select child if multiple children are linked

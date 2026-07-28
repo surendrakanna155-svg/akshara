@@ -1,4 +1,4 @@
-# iPhone Tester Pack — Akshara ERP Pilot
+# iPhone Tester Pack — NIKSHA OS Pilot
 
 **Build:** 16.6.0 (166) via **TestFlight**  
 **Environment:** Staging demo school  
@@ -12,7 +12,7 @@
 
 - iPhone (iOS 15+ recommended; iOS 13 minimum)
 - **TestFlight** app (App Store)
-- Invite email or public link from Akshara team
+- Invite email or public link from NIKSHA OS team
 - Wi‑Fi or mobile data
 
 ---
@@ -22,7 +22,7 @@
 1. Install **TestFlight** from the App Store (if needed).
 2. Open the **invite email** from Akshara → **View in TestFlight**.
    - Or tap the **public link** shared by coordinator.
-3. Tap **Install** on **Akshara ERP**.
+3. Tap **Install** on **NIKSHA OS**.
 4. Open the app from TestFlight or home screen.
 
 **Verify:** No DEBUG banner on launch.
@@ -107,7 +107,7 @@ Full matrix: [Device-Test-Plan.md](Device-Test-Plan.md)
 1. **Screenshot:** Volume Up + Side button.
 2. Note **iPhone model** and **iOS version** (Settings → General → About).
 3. Use [Bug-Report-Template.md](Bug-Report-Template.md).
-4. Optional: TestFlight → Akshara ERP → **Send Beta Feedback**.
+4. Optional: TestFlight → NIKSHA OS → **Send Beta Feedback**.
 5. Send to coordinator.
 
 **Severity guide:** Crash on launch = Critical; feature broken = Major; visual glitch = Minor.

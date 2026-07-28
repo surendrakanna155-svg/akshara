@@ -1,4 +1,4 @@
-# Teacher Guide — Akshara Mobile & ERP
+# Teacher Guide — NIKSHA OS Mobile & ERP
 
 ## Daily workflow
 

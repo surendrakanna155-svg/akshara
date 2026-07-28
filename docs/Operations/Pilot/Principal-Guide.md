@@ -1,4 +1,4 @@
-# Principal Guide — Akshara School OS
+# Principal Guide — NIKSHA OS
 
 ## Daily workflow
 

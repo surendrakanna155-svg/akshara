@@ -17,7 +17,7 @@ When the school imports student data, your **name** and **mobile number** are ta
 
 ## 2. First login (Parent app)
 
-1. Install/open the **Akshara Parent** app (link from school).
+1. Install/open the **NIKSHA OS** app (link from school).
 2. Enter your **mobile number** (10 digits, as registered with the school).
 3. Tap **Send OTP** — enter the code from **SMS**.
 4. Select scope **Parent** and your **school name**.

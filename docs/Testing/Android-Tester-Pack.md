@@ -1,4 +1,4 @@
-# Android Tester Pack — Akshara ERP Pilot
+# Android Tester Pack — NIKSHA OS Pilot
 
 **Build:** 16.6.0 (166) · **APK size:** ~73 MB  
 **Environment:** Staging demo school  
@@ -21,7 +21,7 @@
 2. Open the APK file.
 3. If prompted: **Settings → Allow install from this source** → enable for your file app.
 4. Tap **Install**.
-5. Open **Akshara ERP**.
+5. Open **NIKSHA OS**.
 
 **Verify:** No red DEBUG banner on launch.
 

@@ -47,4 +47,4 @@ Submit attendance **before end of school day** unless your admin says otherwise.
 
 ## 5. Need help?
 
-Contact your school office first. They can verify your number is on the teacher import list and ask Akshara support if needed.
+Contact your school office first. They can verify your number is on the teacher import list and ask NIKSHA OS support if needed.
