@@ -1,7 +1,9 @@
 import 'package:akshara_erp/core/repositories/interfaces/adaptive_ai_repository.dart';
 import 'package:akshara_erp/core/repositories/repository_providers.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
+import 'package:akshara_erp/core/security/permissions.dart';
 import 'package:akshara_erp/core/tenant/tenant_provider.dart';
+import 'package:akshara_erp/router/phase4_navigation.dart';
 import 'package:akshara_erp/features/adaptive_ai/adaptive_ai_models.dart';
 import 'package:akshara_erp/features/adaptive_ai/adaptive_ai_providers.dart';
 import 'package:akshara_erp/features/adaptive_ai/widgets/adaptive_search_results.dart';
@@ -149,10 +151,35 @@ Future<void> _pump(WidgetTester tester, {required String query, required void Fu
 void main() {
   group('adaptiveSearchRoute maps categories to record routes', () {
     test('students / staff / admissions / unknown', () {
+      // No RBAC supplied = cannot prove viewStudent360, so the safe SIS detail
+      // route wins. Never route a user into a screen they cannot open.
       expect(adaptiveSearchRoute('students', 's1'), RouteNames.sisStudentDetail('s1'));
+      expect(
+        adaptiveSearchRoute(
+          'students',
+          's1',
+          hasPermission: (p) => p != Permission.viewStudent360,
+        ),
+        RouteNames.sisStudentDetail('s1'),
+        reason: 'a role without viewStudent360 must not be sent to the dossier',
+      );
       expect(adaptiveSearchRoute('staff', 'e1'), RouteNames.hrEmployeeDetail('e1'));
       expect(adaptiveSearchRoute('admissions', 'l1'), RouteNames.admissionsLeadDetail('l1'));
       expect(adaptiveSearchRoute('unknown', 'x'), isNull);
+    });
+
+    test('a student result opens Student 360 for roles that can view it', () {
+      // Point 8/9: searching by name, ERP number or student ID and landing
+      // straight on the one-screen dossier is the principal's parent-meeting
+      // path. Before this, every search result went to the SIS record page.
+      expect(
+        adaptiveSearchRoute(
+          'students',
+          'SIS-STU-10430',
+          hasPermission: (p) => p == Permission.viewStudent360,
+        ),
+        student360Path('SIS-STU-10430'),
+      );
     });
 
     test('finance / communications / classes route to the closest existing screen', () {

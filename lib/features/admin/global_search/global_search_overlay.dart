@@ -56,7 +56,15 @@ class _GlobalSearchOverlayState extends ConsumerState<GlobalSearchOverlay> {
   /// Open an Adaptive Universal Search record (student/staff/lead) — deterministic
   /// navigation to the ERP record, no AI call (Search First → AI Later).
   void _openRecord(SearchResultItem item) {
-    final route = adaptiveSearchRoute(item.category, item.id);
+    // Pass the caller's RBAC so a student result opens the Student 360 dossier
+    // for roles that hold viewStudent360 (principal, VP, admin, management,
+    // teacher) and falls back to the SIS detail page for everyone else, instead
+    // of routing them into Access Denied.
+    final route = adaptiveSearchRoute(
+      item.category,
+      item.id,
+      hasPermission: ref.read(rbacServiceProvider).hasPermission,
+    );
     if (route == null) return;
     Navigator.of(context).pop();
     context.go(route);

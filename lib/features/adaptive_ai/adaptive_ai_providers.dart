@@ -6,8 +6,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/repositories/repository_providers.dart';
+import '../../core/security/permissions.dart';
 import '../../core/tenant/tenant_provider.dart';
 import '../../router/route_names.dart';
+import '../../router/phase4_navigation.dart';
 import '../copilot/copilot_role_intelligence.dart';
 import 'adaptive_ai_models.dart';
 
@@ -79,10 +81,26 @@ final adaptiveSearchProvider =
 /// `finance`/`communications`/`classes` have no per-record detail screen yet,
 /// so they route to the closest EXISTING list/management screen for that
 /// category rather than a dead link.
-String? adaptiveSearchRoute(String category, String id) {
+///
+/// STUDENTS resolve to **Student 360** when the caller can view it. Searching a
+/// child by name / ERP number / student ID is overwhelmingly a "tell me about
+/// this student" question — usually a principal mid parent-meeting — and
+/// Student 360 answers it on one screen, where the SIS detail page is an
+/// administrative record-editing surface. [hasPermission] is required to make
+/// that switch: `viewStudent360` is NOT held by finance, admissions, transport,
+/// hostel, library or store roles, so without the check those users would be
+/// routed straight into an Access Denied screen. They keep the SIS detail page.
+String? adaptiveSearchRoute(
+  String category,
+  String id, {
+  bool Function(Permission)? hasPermission,
+}) {
   switch (category) {
     case 'students':
-      return RouteNames.sisStudentDetail(id);
+      final canViewDossier = hasPermission?.call(Permission.viewStudent360) ?? false;
+      return canViewDossier
+          ? student360Path(id)
+          : RouteNames.sisStudentDetail(id);
     case 'staff':
       return RouteNames.hrEmployeeDetail(id);
     case 'admissions':
