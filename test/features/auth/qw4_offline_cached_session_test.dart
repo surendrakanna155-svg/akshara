@@ -172,7 +172,7 @@ Future<GoRouter> _pumpApp(WidgetTester tester, SharedPreferences prefs) async {
 /// enough — this alternates real-async draining with fake-clock advancement
 /// until the splash redirect has fired (or a generous bound is hit).
 Future<void> _drainBootstrap(WidgetTester tester) async {
-  await tester.pump(SplashScreen.splashDuration);
+  await tester.pump(kStartupSettleDuration);
   for (var i = 0; i < 20; i++) {
     await tester.runAsync(() async {
       await Future<void>.delayed(const Duration(milliseconds: 20));

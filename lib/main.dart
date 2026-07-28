@@ -33,7 +33,27 @@ Future<void> main() async {
           '(process-entry → first frame)');
     });
   }
-  final prefs = await SharedPreferences.getInstance();
+  // PERF: decoded-image budget. Flutter's default is 100MB / 1000 entries, which
+  // is far too generous for the 2GB Android Go-class phones this ships to — a
+  // single 12MP photo decodes to ~48MB of ARGB, so a handful of full-resolution
+  // images can exhaust the per-app heap before the cache ever evicts. Cap it
+  // well under a low-end heap so pressure shows up as a cache miss (a re-decode)
+  // rather than an OOM kill.
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 48 << 20; // 48MB
+  PaintingBinding.instance.imageCache.maximumSize = 200;
+
+  // These two are independent, and each is a chain of platform-channel round
+  // trips: SharedPreferences loads the prefs XML, while openReliabilityStore()
+  // touches the Android Keystore via flutter_secure_storage and then opens a
+  // SQLCipher database whose key derivation is 256,000 PBKDF2 iterations.
+  // Awaiting them in sequence serialised roughly 4-5 round trips before the
+  // first frame for no reason — they share no data, so start both and then
+  // await. (The store's result is still needed before the container is built,
+  // so this parallelises the wait rather than removing it.)
+  final prefsFuture = SharedPreferences.getInstance();
+  final reliabilityStoreFuture = openReliabilityStore();
+
+  final prefs = await prefsFuture;
   // PRA-P1-13: bind durable storage to the exam administration store at startup
   // so the per-school grading scale (and published results) SURVIVE a cold
   // restart. Previously attachPersistence was wired only in tests, so in prod
@@ -45,7 +65,7 @@ Future<void> main() async {
   // Data Reliability Platform: open the durable, encrypted on-device store for
   // drafts + the outbox once, and bind it so every write inherits offline-safe
   // queue/retry and draft persistence (Phase 0b).
-  final reliabilityStoreOpen = await openReliabilityStore();
+  final reliabilityStoreOpen = await reliabilityStoreFuture;
   final overrides = [
     sharedPreferencesProvider.overrideWithValue(prefs),
     reliabilityStoreProvider.overrideWithValue(reliabilityStoreOpen.store),
@@ -66,10 +86,6 @@ Future<void> main() async {
     observers: [AksharaErrorObserver(errorReporting)],
   );
 
-  // Initialize Firebase Cloud Messaging. Guarded so a device without Google
-  // Play services (or any init error) still launches the app normally.
-  final firebaseReady = await _initFirebase();
-
   await runGuardedZone(errorReporting, () async {
     runApp(
       UncontrolledProviderScope(
@@ -77,11 +93,20 @@ Future<void> main() async {
         child: const AksharaApp(),
       ),
     );
-    if (firebaseReady) {
-      // Start the push layer after the first frame so the router + messenger
-      // are mounted before any deep-link navigation or banner.
-      unawaited(container.read(pushMessagingServiceProvider).start());
-    }
+    // Initialize Firebase Cloud Messaging AFTER the first frame is scheduled.
+    // Nothing painted before this point needs it: `firebaseReady` exists only to
+    // gate the push layer, which already started post-frame. Awaiting
+    // Firebase.initializeApp ahead of runApp therefore bought nothing and cost a
+    // platform round trip (~100-300ms on a low-end device) on every cold start.
+    // Guarded so a device without Google Play services still launches normally.
+    unawaited(
+      _initFirebase().then((firebaseReady) async {
+        if (!firebaseReady) return;
+        // Start the push layer after the first frame so the router + messenger
+        // are mounted before any deep-link navigation or banner.
+        await container.read(pushMessagingServiceProvider).start();
+      }),
+    );
     // Start the sync engine so any writes queued while offline drain
     // automatically on reconnect (with idempotent, exactly-once replay).
     container.read(syncEngineProvider);

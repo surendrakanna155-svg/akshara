@@ -17,7 +17,22 @@ import 'auth_provider.dart';
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
-  static const Duration splashDuration = Duration(seconds: 2);
+  /// Minimum time the splash stays up.
+  ///
+  /// This is an anti-flicker floor, NOT a brand timer. `resolveSession()` reads
+  /// a persisted session from local storage and typically returns in tens of
+  /// milliseconds; without a floor the splash would appear and vanish inside a
+  /// frame or two, which reads as a glitch. 400ms is enough to register as a
+  /// deliberate transition and is below the ~1s threshold where a wait starts
+  /// to feel like waiting.
+  ///
+  /// It used to be 2 seconds, combined with `Future.wait` — which takes the
+  /// MAXIMUM of its futures, so it was a hard floor rather than a timeout. That
+  /// added a guaranteed 2000ms to every single cold start, on top of native and
+  /// Dart VM startup, on a product whose own budget is <3s cold start on a
+  /// modest phone. If a longer deliberate brand moment is ever wanted it should
+  /// be first-launch-only, not a tax on every launch.
+  static const Duration splashDuration = Duration(milliseconds: 400);
 
   @override
   ConsumerState<SplashScreen> createState() => _SplashScreenState();

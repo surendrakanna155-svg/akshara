@@ -176,7 +176,7 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
       // Drain the 2s bootstrap delay + redirect so no Timer leaks past the test.
-      await tester.pump(SplashScreen.splashDuration);
+      await tester.pump(kStartupSettleDuration);
       await tester.pumpAndSettle();
       expect(find.byType(SplashScreen), findsNothing);
     });
