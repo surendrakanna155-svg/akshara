@@ -7,20 +7,51 @@
 // exported for the SLICE 2 check-in verification chain (geofence -> anti-mock ->
 // liveness -> THIS match -> check-in); that chain is NOT wired here.
 
-/** Cosine similarity is only ever meaningful below this floor (a school could
- * otherwise be configured to accept a near-random match) and above this
- * ceiling (would reject all legitimate re-captures — lighting/angle noise is
- * real) — the env override is clamped into this band so a misconfiguration can
- * never disable matching (0) or demand impossible exactness (1). */
-export const MIN_SIMILARITY_THRESHOLD = 0.5;
+/** The embedding space these thresholds are calibrated for.
+ *
+ * Thresholds are NOT portable across embedding spaces — a cosine value means
+ * something different in each. Changing the model REQUIRES revisiting the three
+ * constants below, so the space is named here rather than left implicit. The
+ * server refuses to compare embeddings across differing model tags
+ * (FACE_EMBEDDING_MISMATCH), which is what stops a stale enrolment being
+ * scored against a threshold meant for a different model. */
+export const FACE_MATCH_EMBEDDING_SPACE = "auraface-v1";
+
+/** Clamp band for the env override.
+ *
+ * The floor stops a deployment being configured to accept a near-random match;
+ * the ceiling stops it demanding impossible exactness, which would reject every
+ * legitimate re-capture (lighting and angle noise are real).
+ *
+ * ⚠️ These were `[0.5, 0.99]`, calibrated for the retired 192-d MobileFaceNet
+ * space. ArcFace-family 512-d embeddings — which AuraFace is — operate FAR
+ * lower: impostor pairs cluster near 0.0-0.15 and genuine pairs sit around
+ * 0.4-0.7. A 0.5 floor made the correct operating point unreachable by
+ * configuration, and the old 0.82 default would have rejected essentially every
+ * genuine staff member.
+ *
+ * 0.25 is deliberately just above the impostor cluster: low enough to permit
+ * field tuning if the false-reject rate proves too high, high enough that no
+ * configuration can accept a stranger. */
+export const MIN_SIMILARITY_THRESHOLD = 0.25;
 export const MAX_SIMILARITY_THRESHOLD = 0.99;
 
-/** Conservative default acceptance threshold (cosine similarity). Tunable per
- * deployment via FACE_MATCH_MIN_SIMILARITY, always clamped to
- * [MIN_SIMILARITY_THRESHOLD, MAX_SIMILARITY_THRESHOLD]. 0.82 preserves the
- * value the live check-in chain (B4) has enforced since 20260820 — SLICE 2
- * unified both stacks on this module rather than keeping two constants. */
-export const DEFAULT_FACE_MATCH_THRESHOLD = 0.82;
+/** Default acceptance threshold (cosine similarity) for the space named in
+ * {@link FACE_MATCH_EMBEDDING_SPACE}. Tunable per deployment via
+ * FACE_MATCH_MIN_SIMILARITY, always clamped into the band above.
+ *
+ * 0.40 is chosen conservatively for 1:1 staff attendance. Reference points:
+ * OpenCV's SFace ships 0.363, and ArcFace-family verification thresholds are
+ * commonly quoted at 0.3-0.4. Sitting at the top of that range biases towards
+ * FALSE REJECT over FALSE ACCEPT, which is the correct direction here — a false
+ * accept is one staff member checking in as another, i.e. payroll fraud, while
+ * a false reject sends them to the audited manual-attendance request with
+ * maker-checker approval. The geofence, anti-mock and liveness checks have
+ * already gated the attempt before this decision is reached.
+ *
+ * This value must be re-tuned against real enrolment pairs before wide rollout;
+ * it is a defensible starting point, not a measured operating point. */
+export const DEFAULT_FACE_MATCH_THRESHOLD = 0.40;
 
 /**
  * Cosine similarity of two equal-length vectors, in [-1, 1] for well-formed
@@ -55,8 +86,9 @@ export function cosineSimilarity(a: number[], b: number[]): number {
 
 /**
  * Resolves the live acceptance threshold: FACE_MATCH_MIN_SIMILARITY when set to
- * a finite number, clamped into [0.5, 0.99]; otherwise the conservative default
- * (0.82). Never throws.
+ * a finite number, clamped into
+ * [{@link MIN_SIMILARITY_THRESHOLD}, {@link MAX_SIMILARITY_THRESHOLD}];
+ * otherwise {@link DEFAULT_FACE_MATCH_THRESHOLD}. Never throws.
  */
 export function faceMatchThreshold(): number {
   const envVal = Deno.env.get("FACE_MATCH_MIN_SIMILARITY");

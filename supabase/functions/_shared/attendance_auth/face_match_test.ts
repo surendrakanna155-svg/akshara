@@ -48,22 +48,26 @@ Deno.test("cosineSimilarity: scale-invariant (same direction, different magnitud
   assertAlmostEquals(cosineSimilarity([1, 1, 1], [2, 2, 2]), 1, 1e-12);
 });
 
-Deno.test("faceMatchThreshold: no env → conservative default (0.82, the live B4 chain value)", () => {
+Deno.test("faceMatchThreshold: no env → the AuraFace-calibrated default (0.40)", () => {
+  // Was 0.82, calibrated for the retired 192-d MobileFaceNet space. ArcFace-
+  // family 512-d embeddings operate far lower, so 0.82 would have rejected
+  // essentially every genuine staff member. Pinned as a literal, not just
+  // against the constant, so a silent re-drift is caught.
   Deno.env.delete("FACE_MATCH_MIN_SIMILARITY");
   assertEquals(faceMatchThreshold(), DEFAULT_FACE_MATCH_THRESHOLD);
-  assertEquals(faceMatchThreshold(), 0.82);
+  assertEquals(faceMatchThreshold(), 0.40);
 });
 
 Deno.test("faceMatchThreshold: a valid in-band override is honoured", () => {
-  Deno.env.set("FACE_MATCH_MIN_SIMILARITY", "0.9");
+  Deno.env.set("FACE_MATCH_MIN_SIMILARITY", "0.45");
   try {
-    assertEquals(faceMatchThreshold(), 0.9);
+    assertEquals(faceMatchThreshold(), 0.45);
   } finally {
     Deno.env.delete("FACE_MATCH_MIN_SIMILARITY");
   }
 });
 
-Deno.test("faceMatchThreshold: an out-of-band override is clamped into [0.5, 0.99]", () => {
+Deno.test("faceMatchThreshold: an out-of-band override is clamped into [0.25, 0.99]", () => {
   Deno.env.set("FACE_MATCH_MIN_SIMILARITY", "0.01");
   try {
     assertEquals(faceMatchThreshold(), MIN_SIMILARITY_THRESHOLD);
