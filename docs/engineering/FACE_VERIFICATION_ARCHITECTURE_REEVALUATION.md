@@ -309,3 +309,145 @@ client already produces today.
 Ordered work: (1) confirm the AuraFace pack-provenance item in §5, (2) widen the
 threshold band and re-tune on real pairs, (3) stand up the inference service,
 (4) switch the client to send the crop, (5) bump the model tag to `auraface-v1`.
+
+---
+
+## 9. Final model selection and capacity plan
+
+Scoped strictly to **1:1 verification**: the staff identity is already
+established by the authenticated session, so each check-in is exactly **one
+forward pass plus one dot product** against that person's enrolled reference.
+
+### 9.1 Is anything smaller and commercially usable? Yes — but only behind a paywall
+
+| Option | Size | Licence | Verdict |
+|---|---|---|---|
+| **AuraFace `glintr100` int8** | **63 MB** | Apache-2.0, commercially sourced data | ✅ Free, clean, measured |
+| id3 Technologies edge SDK | **<1 MB**, sub-100 ms on Cortex-M55 | Commercial, quote-based | Smaller, but paid |
+| InsightFace `buffalo_s` / `buffalo_sc` | few MB | Commercial licence required | Smaller, but paid |
+| Innovatrics SmartFace Embedded / Cognitec FaceVACS | small | Commercial, quote-based | Smaller, but paid |
+| Any free small model (MobileFaceNet, EdgeFace, SFace, GhostFaceNets) | 5–40 MB | **Research-only training data** | ❌ Not usable |
+
+**So "smaller" is available — for money — and buying it would optimise the one
+resource we are not short of.** Server-side, 63 MB of disk and 222 MB of RAM sit
+on a box with 33 GB free and gigabytes of headroom. Paying a per-device or
+per-seat licence to recover 62 MB of *server* disk is spending to solve a
+non-problem.
+
+Those <1 MB models exist for **microcontrollers and access-control terminals**,
+where a 63 MB model genuinely cannot fit. That is a different product. If NIKSHA
+ever ships a physical attendance kiosk, this table should be revisited — the
+answer would likely change.
+
+### 9.2 Why AuraFace remains the right choice despite being a ResNet100
+
+Not because it benchmarks well, but because the size objection dissolves under
+scrutiny while every alternative's objection does not:
+
+1. **The 261 MB figure was a mobile-bundle concern.** Server-side it is
+   irrelevant, and quantisation cuts it to 63 MB with **0.9941 embedding
+   fidelity** — so the number that made it look disqualifying no longer applies.
+2. **It is not slow.** 12.1 faces/s on a single core, measured. Peak demand at
+   100 schools is a few requests per second (§9.4).
+3. **Accuracy is not in question for 1:1.** AuraFace reports **99.65% on LFW**.
+   Its authors' caveat — weaker than ArcFace — bites in 1:N search, where
+   false-match probability compounds with gallery size. We have a gallery of
+   **one**, behind a geofence, anti-mock checks and a liveness challenge.
+4. **It is the only free option that is legally usable at all.** Every smaller
+   free model is trained on research-only data. Smallness is not currently
+   purchasable with anything except money or a licence violation.
+
+### 9.3 Measured scaling behaviour — deploy processes, not threads
+
+| Workers (1 thread each) | faces/s | per worker | scaling |
+|---|---|---|---|
+| 1 | 12.1 | 12.1 | 1.00× |
+| 2 | 23.8 | 11.9 | 1.96× |
+| 4 | 42.4 | 10.6 | 3.50× |
+| 6 | 50.7 | 8.5 | 4.18× |
+
+Compare one process using intra-op threads: **4 threads gives only 22.9 faces/s**
+(1.86×). Four independent single-threaded workers give **42.4 faces/s** — the
+same cores, **1.85× more throughput**.
+
+Two consequences:
+
+- **Deploy N single-threaded replicas, one per core** — not one fat
+  multi-threaded process. This is also exactly the shape that scales across
+  machines, so the same decision serves both vertical and horizontal growth.
+- **Batching is not a lever.** 80.0 ms/face at batch 8 versus 81.5 ms at
+  batch 1 — the workload is compute-bound, not memory-bandwidth-bound. No
+  request-coalescing layer is needed, which removes a whole class of complexity
+  (and of tail-latency risk) from the design.
+
+### 9.4 Capacity model
+
+**Derating:** measurements are on an Apple M4 core. A shared cloud vCPU is
+roughly 2–3× slower for this workload, so the planning figure is a conservative
+**4 verifications/second per vCPU**. Note the VPS is **x86**, where int8 usually
+*beats* fp32 (VNNI) — the opposite of what was measured on ARM — so this is
+likely pessimistic.
+
+**Demand assumptions:** 100 staff per school, 2 events/day (in + out). Two peak
+models, because the answer is sensitive to how tightly arrivals cluster:
+
+| Peak model | Per school | Schools per vCPU |
+|---|---|---|
+| Pessimistic — 100% of staff in a 15-min window, all schools aligned | 0.111 req/s | **~36** |
+| Realistic — 60% in the busiest 30 min, staggered start times | 0.033 req/s | **~120** |
+
+| Deployment | Peak load (pessimistic) | Capacity needed | Infrastructure | Cost/month |
+|---|---|---|---|---|
+| 1–10 schools (pilot) | ≤1.1 req/s | share of the existing core | **current VPS, unchanged** | **₹0 extra** |
+| ~35 schools | ~3.9 req/s | 1 dedicated vCPU | current VPS or 2 vCPU | ~$12–15 |
+| ~100 schools | ~11 req/s | ~3 vCPU | 4 vCPU / 8 GB | ~$24–30 |
+| ~500 schools | ~55 req/s | ~14 vCPU | 2 × 8 vCPU / 16 GB | ~$96–120 |
+
+At 100 schools that is roughly **$0.25–0.30 per school per month**. Face
+verification is not, and will not become, a meaningful infrastructure cost.
+
+**Memory:** 222 MB per replica, one replica per core. A 4-vCPU box needs
+~890 MB — comfortable in 8 GB. On the *current* box (1.9 GB free) two replicas
+fit easily; CPU, not RAM, is the first limit there.
+
+**When to add capacity:** when sustained morning-peak utilisation exceeds ~70%
+of replica capacity, or p95 verification latency drifts above ~1 s end-to-end.
+Both are directly observable. Scaling is adding replicas — the service is
+**stateless**, so there is no session affinity, no shared cache, and no
+coordination to design.
+
+### 9.5 What 1:1 removes from the architecture
+
+Worth stating because it is a permanent simplification, not a temporary one:
+
+- **No vector database, no pgvector, no ANN index.** 1:N would need one; 1:1
+  needs a single row lookup by staff id and one 512-float dot product —
+  microseconds, and it can live in the existing edge function.
+- **No gallery-size accuracy decay.** The false-match rate does not degrade as
+  the school count grows, so accuracy validated at one school holds at 500.
+- **Capacity scales with *arrival rate*, not with *enrolled population*.** Adding
+  schools adds requests; it does not make each request more expensive.
+
+### 9.6 Recommended final architecture
+
+| Layer | Choice |
+|---|---|
+| Detection, alignment, liveness | **On-device** (existing ML Kit path), sends an aligned 112×112 crop (~10–20 KB) |
+| Model | **AuraFace `glintr100`, dynamic int8** — 63 MB, 222 MB RSS, Apache-2.0 |
+| Runtime | ONNX Runtime, CPU execution provider |
+| Deployment | **N single-threaded replicas, one per vCPU**, stateless, behind the existing nginx |
+| Matching | Cosine similarity in the edge function; no vector store |
+| Start | **The existing VPS.** No resize, no second host, no licence purchase |
+| Model tag | `auraface-v1` (the server already 422s across tags, so the swap is safe by construction) |
+
+**Optimisation scorecard:** commercial licensing ✅ Apache-2.0 · accuracy ✅
+99.65% LFW, 1:1 · latency ✅ ~150–250 ms inference · infrastructure cost ✅ ~$0
+to start, ~$0.25/school/month at 100 · horizontal scalability ✅ stateless,
+near-linear to 4 workers · maintainability ✅ central model swap, no app release,
+no re-enrolment.
+
+**Open items before implementation** (unchanged, both from §5 and §8): confirm
+the AuraFace pack provenance for anything beyond `glintr100`, and widen the
+`face_match.ts` threshold band — the `[0.5, 0.99]` clamp cannot express the
+~0.3–0.4 an ArcFace-family space needs, and the 0.82 default would reject
+everyone.
