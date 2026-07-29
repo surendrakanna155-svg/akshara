@@ -775,7 +775,7 @@ class MockSisRepository implements SisRepository {
 
   // ── SIS-1: certificate issuance + transfer certificate (TC) ─────────────────
 
-  static const String _mockSchoolName = 'Akshara Public School';
+  static const String _mockSchoolName = 'NIKSHA Public School';
   static const String _mockSchoolCode = 'DPSKKP';
 
   SisCertificateData _buildCertificateData(

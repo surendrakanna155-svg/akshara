@@ -34,7 +34,7 @@ void main() {
           allocationId: 'alloc_5',
           routeId: 'route_12',
           pickupStop: 'Lake View Colony',
-          dropStop: 'Akshara Main Gate',
+          dropStop: 'NIKSHA Main Gate',
         ),
       );
 
@@ -59,7 +59,7 @@ void main() {
           allocationId: 'alloc_5',
           routeId: 'route_12',
           pickupStop: 'Lake View Colony',
-          dropStop: 'Akshara Main Gate',
+          dropStop: 'NIKSHA Main Gate',
         ),
       );
 
@@ -69,7 +69,7 @@ void main() {
           allocationId: 'alloc_5',
           targetRouteId: 'route_08',
           pickupStop: 'Hitech City',
-          dropStop: 'Akshara Main Gate',
+          dropStop: 'NIKSHA Main Gate',
         ),
       );
 
@@ -95,7 +95,7 @@ void main() {
           allocationId: 'alloc_5',
           routeId: 'route_12',
           pickupStop: 'Lake View Colony',
-          dropStop: 'Akshara Main Gate',
+          dropStop: 'NIKSHA Main Gate',
         ),
       );
 
@@ -144,7 +144,7 @@ void main() {
             allocationId: 'alloc_5',
             routeId: 'route_12',
             pickupStop: 'Lake View Colony',
-            dropStop: 'Akshara Main Gate',
+            dropStop: 'NIKSHA Main Gate',
           ),
         ),
         throwsA(
@@ -163,7 +163,7 @@ void main() {
           allocationId: 'alloc_5',
           routeId: 'route_12',
           pickupStop: 'Lake View Colony',
-          dropStop: 'Akshara Main Gate',
+          dropStop: 'NIKSHA Main Gate',
           allowOverCapacity: true,
         ),
       );
@@ -234,7 +234,7 @@ void main() {
           allocationId: 'alloc_5',
           routeId: 'route_12',
           pickupStop: 'Lake View Colony',
-          dropStop: 'Akshara Main Gate',
+          dropStop: 'NIKSHA Main Gate',
           studentName: 'Kavya Iyer',
           admissionNumber: 'ADM-2026-0145',
           sisStudentId: 'SIS-STU-10425',
@@ -328,7 +328,7 @@ void main() {
               allocationId: 'alloc_5',
               routeId: 'route_12',
               pickupStop: 'Lake View Colony',
-              dropStop: 'Akshara Main Gate',
+              dropStop: 'NIKSHA Main Gate',
             ),
           );
 

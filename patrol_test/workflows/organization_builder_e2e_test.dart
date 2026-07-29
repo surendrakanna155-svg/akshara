@@ -21,7 +21,7 @@ void main() {
       await assertVisibleKey($, QaTestKeys.organizationBuilderInterviewScreen);
 
       await $(QaTestKeys.organizationBuilderInterviewNameField)
-          .enterText('Akshara Patrol School');
+          .enterText('NIKSHA Patrol School');
       await $(QaTestKeys.organizationBuilderInterviewContinueButton).tap();
       await $.pumpAndSettle(timeout: const Duration(seconds: 10));
 

@@ -133,7 +133,7 @@ void main() {
         findsNothing,
         reason: 'a failed report must never be given a reference number',
       );
-      expect(find.textContaining('Sent to Akshara Support'), findsNothing);
+      expect(find.textContaining('Sent to NIKSHA Support'), findsNothing);
 
       // We are still on the form, with the honest failure panel.
       expect(find.byKey(QaTestKeys.supportReportScreen), findsOneWidget);
@@ -280,7 +280,7 @@ void main() {
         findsNothing,
         reason: 'the P0: the mock used to hand the user a fabricated SUP-<n>',
       );
-      expect(find.textContaining('Sent to Akshara Support'), findsNothing);
+      expect(find.textContaining('Sent to NIKSHA Support'), findsNothing);
       expect(find.textContaining('Support will investigate'), findsNothing);
       expect(find.byKey(kSupportReportDeliveryFailureKey), findsOneWidget);
       expect(

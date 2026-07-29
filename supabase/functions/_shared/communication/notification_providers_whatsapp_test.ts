@@ -48,7 +48,7 @@ Deno.test("Batch 6: an inactive WhatsApp provider is not sent (fail closed)", as
     body: "Hello",
     whatsappConfig: {
       provider: "msg91",
-      senderId: "AKSHARA",
+      senderId: "NIKSHA",
       apiKeyRef: "key",
       templateNamespace: null,
       isActive: false,

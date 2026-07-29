@@ -2,7 +2,7 @@ import '../../core/security/erp_role.dart';
 import '../../router/route_names.dart';
 import 'copilot_models.dart';
 
-/// Copilot personas aligned with Akshara intelligence vision.
+/// Copilot personas aligned with NIKSHA intelligence vision.
 enum CopilotPersonaRole {
   platformOwner,
   organizationOwner,

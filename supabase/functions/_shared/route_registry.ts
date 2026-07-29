@@ -252,7 +252,7 @@ export const MODULE_ROUTES: readonly ModuleRouteEntry[] = [
     prefixes: ["/audit", "/domain-events/process-pending"],
     route: routeAudit,
   },
-  { name: "support", prefixes: ["/support"], route: routeSupport, note: "ASIP platform-support: schools report Akshara product issues to the Akshara Support Team." },
+  { name: "support", prefixes: ["/support"], route: routeSupport, note: "ASIP platform-support: schools report NIKSHA product issues to the NIKSHA Support Team." },
   { name: "identity", prefixes: ["/identity"], route: routeIdentity, note: "PRA-P1-05: identity-plane admin — per-user permission overrides + custom roles (ICA-G3)." },
 ] as const;
 

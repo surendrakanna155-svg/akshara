@@ -15,7 +15,7 @@ class MockDirectorRepository implements DirectorRepository {
   static final List<DirectorSchoolRow> _schools = [
     const DirectorSchoolRow(
       schoolId: 'DR-SCH-001',
-      schoolName: 'Akshara North Campus',
+      schoolName: 'NIKSHA North Campus',
       location: 'Hyderabad',
       students: 2140,
       revenueCr: 3.2,
@@ -30,7 +30,7 @@ class MockDirectorRepository implements DirectorRepository {
     ),
     const DirectorSchoolRow(
       schoolId: 'DR-SCH-002',
-      schoolName: 'Akshara East Campus',
+      schoolName: 'NIKSHA East Campus',
       location: 'Warangal',
       students: 1670,
       revenueCr: 2.4,
@@ -44,7 +44,7 @@ class MockDirectorRepository implements DirectorRepository {
     ),
     const DirectorSchoolRow(
       schoolId: 'DR-SCH-003',
-      schoolName: 'Akshara Central Campus',
+      schoolName: 'NIKSHA Central Campus',
       location: 'Vijayawada',
       students: 1420,
       revenueCr: 1.9,
@@ -58,7 +58,7 @@ class MockDirectorRepository implements DirectorRepository {
     ),
     const DirectorSchoolRow(
       schoolId: 'DR-SCH-004',
-      schoolName: 'Akshara South Campus',
+      schoolName: 'NIKSHA South Campus',
       location: 'Tirupati',
       students: 980,
       revenueCr: 1.2,
@@ -86,7 +86,7 @@ class MockDirectorRepository implements DirectorRepository {
   static List<DirectorComplianceItem> _complianceItems = [
     DirectorComplianceItem(
       id: 'cmp-1',
-      schoolName: 'Akshara Central Campus',
+      schoolName: 'NIKSHA Central Campus',
       category: 'Data privacy',
       requirement: 'Annual data processing policy attestation',
       status: DirectorComplianceStatus.overdue,
@@ -97,7 +97,7 @@ class MockDirectorRepository implements DirectorRepository {
     ),
     DirectorComplianceItem(
       id: 'cmp-2',
-      schoolName: 'Akshara South Campus',
+      schoolName: 'NIKSHA South Campus',
       category: 'Safety inspection',
       requirement: 'Fire NOC renewal',
       status: DirectorComplianceStatus.dueSoon,
@@ -108,7 +108,7 @@ class MockDirectorRepository implements DirectorRepository {
     ),
     DirectorComplianceItem(
       id: 'cmp-3',
-      schoolName: 'Akshara North Campus',
+      schoolName: 'NIKSHA North Campus',
       category: 'Financial audit',
       requirement: 'Quarterly internal audit report',
       status: DirectorComplianceStatus.compliant,
@@ -307,10 +307,10 @@ class MockDirectorRepository implements DirectorRepository {
       enrolled: 340,
       conversionPercent: 37,
       bySchoolConversion: {
-        'Akshara North Campus': 43,
-        'Akshara East Campus': 39,
-        'Akshara Central Campus': 34,
-        'Akshara South Campus': 30,
+        'NIKSHA North Campus': 43,
+        'NIKSHA East Campus': 39,
+        'NIKSHA Central Campus': 34,
+        'NIKSHA South Campus': 30,
       },
     );
   }
@@ -409,7 +409,7 @@ class MockDirectorRepository implements DirectorRepository {
     const DirectorMetricInput(
       id: 'mi-1',
       schoolId: 'DR-SCH-001',
-      schoolName: 'Akshara North Campus',
+      schoolName: 'NIKSHA North Campus',
       periodMonth: '2026-06-01',
       marketingSpendInr: 1200000,
       operatingExpenseInr: 21000000,

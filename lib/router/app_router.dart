@@ -294,7 +294,7 @@ GoRouter createAppRouter({
         name: 'teacherNotifications',
         builder: (context, state) => const NotificationsScreen(),
       ),
-      // ASIP Phase 1 — "Report an issue to Akshara Support". Top-level, auth-gated
+      // ASIP Phase 1 — "Report an issue to NIKSHA Support". Top-level, auth-gated
       // for every persona (see _isSharedSettingsRoute). `/support/new` is declared
       // before `/support/:id` so the literal wins over the id parameter.
       GoRoute(

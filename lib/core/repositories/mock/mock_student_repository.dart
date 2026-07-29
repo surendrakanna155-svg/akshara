@@ -142,7 +142,7 @@ class MockStudentRepository implements StudentRepository {
       admissionNo: student.admissionNumber,
         dateOfBirth: '14 Mar 2012',
         bloodGroup: 'B+',
-        schoolName: 'Akshara International School',
+        schoolName: 'NIKSHA International School',
         unreadNotifications: 2,
         parentContacts: [
           const ParentContact(

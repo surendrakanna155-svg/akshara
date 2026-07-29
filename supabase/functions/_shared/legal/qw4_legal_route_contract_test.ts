@@ -126,7 +126,7 @@ Deno.test("QA-B-031: POST /legal/accept persists a valid acceptance (binds calle
       "/legal/accept",
       token,
       { acceptances: [{ key: SAMPLE_KEY, version: SAMPLE_VERSION }], device_id: "dev-xyz" },
-      { "x-forwarded-for": "203.0.113.7", "user-agent": "Akshara/1.0" },
+      { "x-forwarded-for": "203.0.113.7", "user-agent": "NIKSHA/1.0" },
     ),
     config,
     "POST",

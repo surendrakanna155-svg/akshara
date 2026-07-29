@@ -88,7 +88,7 @@ class AksharaChildSelectorChip extends StatelessWidget {
   }
 }
 
-/// Shared mobile app bar for Akshara ERP feature screens.
+/// Shared mobile app bar for NIKSHA OS feature screens.
 class AksharaAppBar extends StatelessWidget implements PreferredSizeWidget {
   const AksharaAppBar({
     super.key,

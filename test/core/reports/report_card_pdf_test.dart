@@ -54,7 +54,7 @@ void main() {
   test('buildReportCardPdf produces a non-empty PDF', () async {
     final bytes = await service.buildReportCardPdf(
       card: sampleCard(),
-      schoolName: 'Akshara Vidyalaya',
+      schoolName: 'NIKSHA Vidyalaya',
       generatedAtLabel: '19 Jun 2026',
     );
     expect(bytes, isNotEmpty);
@@ -66,7 +66,7 @@ void main() {
   test('generates when rank is hidden and there is no remark', () async {
     final bytes = await service.buildReportCardPdf(
       card: sampleCard(rankShown: false, remark: null, leadershipRemark: null),
-      schoolName: 'Akshara Vidyalaya',
+      schoolName: 'NIKSHA Vidyalaya',
     );
     expect(bytes, isNotEmpty);
     expect(String.fromCharCodes(bytes.take(4)), '%PDF');
@@ -85,7 +85,7 @@ void main() {
       childClass: '8-A',
       category: 'Tuition',
       lineItems: [ReceiptLineItem(label: 'Term 2', amount: 4200)],
-      schoolName: 'Akshara Vidyalaya',
+      schoolName: 'NIKSHA Vidyalaya',
     );
     final bytes = await service.buildReceiptPdf(receipt: receipt);
     expect(bytes, isNotEmpty);

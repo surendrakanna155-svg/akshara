@@ -24,7 +24,7 @@ SisCertificateData _data({
     rollNumber: '12',
     guardianName: 'Kiran Patel',
     status: 'active',
-    schoolName: 'Akshara Public School',
+    schoolName: 'NIKSHA Public School',
     schoolCode: 'DPSKKP',
     clearanceStatement: clearanceStatement,
   );

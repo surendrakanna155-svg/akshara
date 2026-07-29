@@ -73,13 +73,13 @@ Deno.test("proposal always has a complete, go-live-shaped payload", () => {
 
 Deno.test("normalizeBrief drops junk and trims strings", () => {
   const b = normalizeBrief({
-    schoolName: "  Akshara  ",
+    schoolName: "  NIKSHA  ",
     estimatedStudents: 200,
     sectionsPerGrade: "nope",
     grades: ["Grade 1", 5, "Grade 2"],
     bogus: true,
   });
-  assertEquals(b.schoolName, "Akshara");
+  assertEquals(b.schoolName, "NIKSHA");
   assertEquals(b.estimatedStudents, 200);
   assertEquals(b.sectionsPerGrade, undefined);
   assertEquals(b.grades, ["Grade 1", "Grade 2"]);

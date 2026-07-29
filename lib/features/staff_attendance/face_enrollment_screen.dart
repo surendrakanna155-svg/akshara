@@ -191,7 +191,7 @@ class _FaceEnrollmentScreenState extends ConsumerState<FaceEnrollmentScreen> {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Text(
-                        'Face enrolment needs the mobile app — open Akshara on '
+                        'Face enrolment needs the mobile app — open NIKSHA OS on '
                         'your Android or iOS phone to enrol.',
                         key: const Key('face-enrollment-unsupported'),
                         style: context.aksharaText.bodySmall,

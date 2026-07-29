@@ -135,7 +135,7 @@ void main() {
           reason: 'no override until branding is actually configured');
       expect(container.read(schoolLogoUrlProvider), isNull);
 
-      // Theme with a null config falls back to the default Akshara palette
+      // Theme with a null config falls back to the default NIKSHA palette
       // (no crash, no enforced brand colour).
       final theme = AksharaAppTheme.light(
         whiteLabel: container.read(schoolBrandingThemeProvider),

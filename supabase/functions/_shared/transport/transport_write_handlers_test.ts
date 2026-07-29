@@ -367,7 +367,7 @@ Deno.test("assign persists studentName/admissionNumber/sisStudentId + transport 
     allocationId: "alloc-1",
     routeId: "route-12",
     pickupStop: "Lake View Colony",
-    dropStop: "Akshara Main Gate",
+    dropStop: "NIKSHA Main Gate",
     studentName: "Ravi Kumar",
     admissionNumber: "ADM-2026-0138",
     sisStudentId: "SIS-STU-10430",

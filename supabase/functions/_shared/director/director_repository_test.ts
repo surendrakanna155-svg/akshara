@@ -30,8 +30,8 @@ class MockDirectorDb {
     // Two schools: A has rich data, B is brand-new (no data → neutral health).
     if (has("FROM schools s", "s.settings")) {
       return [
-        { id: SCHOOL_A, name: "Akshara North", location: "Hyderabad" },
-        { id: SCHOOL_B, name: "Akshara East", location: "" },
+        { id: SCHOOL_A, name: "NIKSHA North", location: "Hyderabad" },
+        { id: SCHOOL_B, name: "NIKSHA East", location: "" },
       ] as T[];
     }
     if (has("FROM students", "status = 'active'", "GROUP BY school_id")) {
@@ -65,8 +65,8 @@ class MockDirectorDb {
     }
     if (has("FROM schools s", "AS leads", "AS enrolled")) {
       return [
-        { name: "Akshara North", leads: 150, enrolled: 45 },
-        { name: "Akshara East", leads: 50, enrolled: 5 },
+        { name: "NIKSHA North", leads: 150, enrolled: 45 },
+        { name: "NIKSHA East", leads: 50, enrolled: 5 },
       ] as T[];
     }
 
@@ -111,7 +111,7 @@ Deno.test("getSchoolRows computes health, fee% and status from real signals", as
   assertEquals(rows.length, 2);
 
   const north = rows[0];
-  assertEquals(north.schoolName, "Akshara North");
+  assertEquals(north.schoolName, "NIKSHA North");
   assertEquals(north.students, 1200);
   assertEquals(north.revenueCr, 3.2);
   assertEquals(north.feeCollectionPercent, 95);
@@ -144,13 +144,13 @@ Deno.test("getCollectionReport surfaces per-school money + consistent org totals
   const report = await getCollectionReport(db(), ORG);
   assertEquals(report.schools.length, 2);
 
-  const north = report.schools.find((s) => s.name === "Akshara North");
+  const north = report.schools.find((s) => s.name === "NIKSHA North");
   assertEquals(north?.billedInr, 40_000_000);
   assertEquals(north?.collectedInr, 38_000_000);
   assertEquals(north?.outstandingInr, 2_000_000);
   assertEquals(north?.feeCollectionPercent, 95);
 
-  const east = report.schools.find((s) => s.name === "Akshara East");
+  const east = report.schools.find((s) => s.name === "NIKSHA East");
   assertEquals(east?.billedInr, 0);
   assertEquals(east?.outstandingInr, 0);
 
@@ -176,8 +176,8 @@ Deno.test("getAdmissions computes funnel and per-school conversion", async () =>
   assertEquals(admissions.inquiries, 200);
   assertEquals(admissions.enrolled, 50);
   assertEquals(admissions.conversionPercent, 25); // 50/200
-  assertEquals(admissions.bySchoolConversion["Akshara North"], 30); // 45/150
-  assertEquals(admissions.bySchoolConversion["Akshara East"], 10); // 5/50
+  assertEquals(admissions.bySchoolConversion["NIKSHA North"], 30); // 45/150
+  assertEquals(admissions.bySchoolConversion["NIKSHA East"], 10); // 5/50
 });
 
 // ─── Metric inputs (the new write path) ─────────────────────────────────────
@@ -196,7 +196,7 @@ class MetricInputDb {
       return [{
         id: "mi-1",
         school_id: args[1],
-        school_name: "Akshara North",
+        school_name: "NIKSHA North",
         period_month: args[2],
         marketing_spend_inr: args[3],
         operating_expense_inr: args[4],
@@ -207,7 +207,7 @@ class MetricInputDb {
       return [{
         id: "mi-1",
         school_id: SCHOOL_A,
-        school_name: "Akshara North",
+        school_name: "NIKSHA North",
         period_month: "2026-06-01",
         marketing_spend_inr: 250000,
         operating_expense_inr: 1800000,
@@ -257,7 +257,7 @@ Deno.test("upsertMetricInput refuses a school outside the organization", async (
 Deno.test("getMetricInputs returns entered rows mapped to the domain shape", async () => {
   const rows = await getMetricInputs(metricDb(true), ORG);
   assertEquals(rows.length, 1);
-  assertEquals(rows[0].schoolName, "Akshara North");
+  assertEquals(rows[0].schoolName, "NIKSHA North");
   assertEquals(rows[0].marketingSpendInr, 250000);
   assertEquals(rows[0].studentCapacity, 1500);
 });
@@ -279,7 +279,7 @@ class SnapshotDb {
 
     // The school-belongs-to-org guard (name + location) — reused metric-inputs check.
     if (has("SELECT name", "FROM schools", "AND organization_id = $2")) {
-      return (this.opts.owned ? [{ name: "Akshara North", location: "Hyderabad" }] : []) as T[];
+      return (this.opts.owned ? [{ name: "NIKSHA North", location: "Hyderabad" }] : []) as T[];
     }
     // Any of these running means the guard let a lookup through.
     if (has("FROM students", "AND school_id = $2")) {
@@ -318,7 +318,7 @@ Deno.test("getSchoolSnapshot returns an audited read-only snapshot for an owned 
   const mock = new SnapshotDb({ owned: true });
   const snap = await getSchoolSnapshot(mock as unknown as TenantQueryClient, ORG, SCHOOL_A);
   assertEquals(snap?.schoolId, SCHOOL_A);
-  assertEquals(snap?.schoolName, "Akshara North");
+  assertEquals(snap?.schoolName, "NIKSHA North");
   assertEquals(snap?.students, 1200);
   assertEquals(snap?.attendancePercent, 90);
   assertEquals(snap?.feeCollectionPercent, 95);
@@ -385,7 +385,7 @@ Deno.test("ICA-C2: getSchoolRows bounds attendance + exam aggregates to the curr
       seen.push(sql);
       const has = (...f: string[]) => f.every((x) => sql.includes(x));
       if (has("FROM schools s", "s.settings")) {
-        return [{ id: SCHOOL_A, name: "Akshara North", location: "Hyderabad" }] as T[];
+        return [{ id: SCHOOL_A, name: "NIKSHA North", location: "Hyderabad" }] as T[];
       }
       if (has("FROM students", "status = 'active'", "GROUP BY school_id")) {
         return [{ school_id: SCHOOL_A, cnt: 100 }] as T[];
@@ -454,7 +454,7 @@ Deno.test("ICA-C2: getSchoolSnapshot excludes out-of-window attendance + marks (
     async queryObject<T>(sql: string, _args: unknown[] = []): Promise<T[]> {
       const has = (...f: string[]) => f.every((x) => sql.includes(x));
       if (has("SELECT name", "FROM schools", "AND organization_id = $2")) {
-        return [{ name: "Akshara North", location: "Hyderabad" }] as T[];
+        return [{ name: "NIKSHA North", location: "Hyderabad" }] as T[];
       }
       if (has("FROM students", "AND school_id = $2")) return [{ cnt: 100 }] as T[];
       if (has("FROM finance_invoices", "AND school_id = $2")) {
@@ -541,7 +541,7 @@ Deno.test("refineExecutiveSummaryWithClaude returns the deterministic brief when
     enrolled: 50,
     inquiries: 200,
     conversionPercent: 25,
-    atRiskSchools: ["Akshara East"],
+    atRiskSchools: ["NIKSHA East"],
   }, governance);
   assertEquals(out, brief); // safe fallback — no API key configured in tests
 });
@@ -552,7 +552,7 @@ Deno.test("buildExecutiveSummary summarizes real aggregates without PII", () => 
     [
       {
         schoolId: SCHOOL_A,
-        schoolName: "Akshara North",
+        schoolName: "NIKSHA North",
         location: "Hyderabad",
         students: 1200,
         revenueCr: 3.2,
@@ -566,7 +566,7 @@ Deno.test("buildExecutiveSummary summarizes real aggregates without PII", () => 
       },
       {
         schoolId: SCHOOL_B,
-        schoolName: "Akshara East",
+        schoolName: "NIKSHA East",
         location: "",
         students: 40,
         revenueCr: 0,
@@ -584,6 +584,6 @@ Deno.test("buildExecutiveSummary summarizes real aggregates without PII", () => 
   );
   assertEquals(summary.includes("2 schools"), true);
   assertEquals(summary.includes("1,240 active students"), true);
-  assertEquals(summary.includes("Akshara East"), true); // at-risk campus named
+  assertEquals(summary.includes("NIKSHA East"), true); // at-risk campus named
   assertEquals(summary.includes("25%"), true);
 });

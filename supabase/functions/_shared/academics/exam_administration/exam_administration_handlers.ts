@@ -278,7 +278,7 @@ async function notifyParentsOfResults(
     for (const target of targets) {
       if (!target.phone) continue;
       const msg =
-        `Akshara: Results for ${target.exam_title} are now published for ${target.name}. View them in the app.`;
+        `NIKSHA: Results for ${target.exam_title} are now published for ${target.name}. View them in the app.`;
       const result = await sendTransactionalSms(smsConfig, target.phone, msg);
       if (!result.ok) {
         console.error(`results SMS not sent (${result.code}): ${result.detail}`);

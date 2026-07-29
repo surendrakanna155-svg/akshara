@@ -13,7 +13,7 @@ void main() {
       final data = container.read(parentProfileProvider);
 
       expect(data.parentName, 'Suresh Kumar');
-      expect(data.schoolName, 'Akshara Public School');
+      expect(data.schoolName, 'NIKSHA Public School');
       expect(data.children.length, 2);
     });
 

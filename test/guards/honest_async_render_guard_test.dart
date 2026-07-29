@@ -60,7 +60,7 @@ const List<String> kFabricatedStrings = [
   '9:02 AM',
   '9:12 AM',
   'Geo+Face verified',
-  'Akshara Public School',
+  'NIKSHA Public School',
   '1,248',
   '₹4.2L',
   '142 active staff',

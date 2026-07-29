@@ -207,7 +207,7 @@ export async function enrichWithModel(
   minimizedEvidenceSummary: string,
 ): Promise<EnrichedPackage> {
   const system =
-    "You are an Akshara ERP support engineer. You are given a software-support " +
+    "You are an NIKSHA OS support engineer. You are given a software-support " +
     "incident and a DETERMINISTIC first-pass analysis plus minimized (PII-free) " +
     "evidence. Refine ONLY the narrative. You must NOT invent data not present in " +
     "the evidence. Reply with strict JSON: " +

@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// P0 regression: the in-memory support repository used to fabricate a
 /// `SUP-<n>` reference on create. A user on the shipping build was shown a
 /// real-looking ticket number for a report that was never sent, never stored,
-/// and that Akshara Support never saw.
+/// and that NIKSHA Support never saw.
 ///
 /// The rule these tests lock down: a mock may stand in for READING data it does
 /// not have; it may never stand in for DELIVERING something to a human.

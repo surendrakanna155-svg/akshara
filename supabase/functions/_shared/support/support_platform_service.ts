@@ -212,7 +212,7 @@ export async function investigate(
   const base = deterministicInvestigation(incident, diag, clusterSize);
 
   const system =
-    "You are an Akshara platform engineer triaging a software-support incident " +
+    "You are an NIKSHA platform engineer triaging a software-support incident " +
     "cluster. Given a deterministic first-pass and minimized (PII-free) evidence, " +
     "refine ONLY the narrative. Do NOT invent data. Reply with strict JSON: " +
     '{"summary":string,"likelyRootCause":string,"suggestedNextSteps":string[],"confidence":number}.';

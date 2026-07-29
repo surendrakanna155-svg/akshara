@@ -137,7 +137,7 @@ export function copilotCacheTags(assistantType: CopilotAssistantType): string[] 
 }
 
 const REFUSAL_REPLY =
-  "I can't help with that request. I'm Akshara's read-only operational " +
+  "I can't help with that request. I'm NIKSHA's read-only operational " +
   "assistant — ask me about the school data you have access to and I'll summarize it.";
 
 /**

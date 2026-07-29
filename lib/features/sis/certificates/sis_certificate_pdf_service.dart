@@ -20,7 +20,7 @@ class SisCertificatePdfService {
     String signatoryName = 'Principal',
   }) async {
     final schoolName =
-        data.schoolName.trim().isEmpty ? 'Akshara School' : data.schoolName.trim();
+        data.schoolName.trim().isEmpty ? 'NIKSHA School' : data.schoolName.trim();
     final document = pw.Document();
     document.addPage(
       pw.MultiPage(

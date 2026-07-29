@@ -105,7 +105,7 @@ Deno.test("QA-C-012 SendGrid request carries to / from / subject / plain-text bo
   }
 });
 
-Deno.test("QA-C-012 email subject defaults to 'Akshara ERP' when none is rendered", async () => {
+Deno.test("QA-C-012 email subject defaults to 'NIKSHA OS' when none is rendered", async () => {
   const original = globalThis.fetch;
   let capturedInit: RequestInit | undefined;
   globalThis.fetch = ((_url: string | URL | Request, init?: RequestInit) => {
@@ -120,7 +120,7 @@ Deno.test("QA-C-012 email subject defaults to 'Akshara ERP' when none is rendere
     payload.subject = null; // some categories enqueue body-only
     await sendViaProvider(cfg, payload);
     const sent = JSON.parse(String(capturedInit?.body)) as { subject: string };
-    assertEquals(sent.subject, "Akshara ERP");
+    assertEquals(sent.subject, "NIKSHA OS");
   } finally {
     globalThis.fetch = original;
   }

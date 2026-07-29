@@ -140,7 +140,7 @@ class MockParentRepository implements ParentRepository {
       ),
     ];
     return FeeCertificateData(
-      schoolName: 'Akshara Public School',
+      schoolName: 'NIKSHA Public School',
       guardianName: child.guardianName ?? 'Suresh Kumar',
       studentName: child.studentName,
       publicStudentId: 'AKPS-0042',
@@ -189,7 +189,7 @@ class MockParentRepository implements ParentRepository {
       parentName: 'Suresh Kumar',
       phoneLabel: '+91 98765 43210',
       email: 'suresh.kumar@email.com',
-      schoolName: 'Akshara Public School',
+      schoolName: 'NIKSHA Public School',
       preferredLanguage: preferredLanguage,
       unreadNotifications: 2,
       children: [
@@ -465,7 +465,7 @@ class MockParentRepository implements ParentRepository {
   }) async {
     final summary = await getAcademicSummary(query: query, studentId: studentId);
     return [
-      'AKSHARA SCHOOL — PARENT ACADEMIC REPORT',
+      'NIKSHA SCHOOL — PARENT ACADEMIC REPORT',
       'Attendance: ${summary.attendanceSummary['ratePercent']}%',
       'Grade: ${summary.performanceSummary['overallGrade']}',
       'Strengths: ${summary.strengths.join(', ')}',

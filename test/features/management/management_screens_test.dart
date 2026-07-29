@@ -143,7 +143,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.enterText(
         find.byKey(QaTestKeys.managementSettingsDialogField),
-        'Akshara Leadership School',
+        'NIKSHA Leadership School',
       );
       await tester
           .tap(find.byKey(QaTestKeys.managementSettingsDialogSaveButton));

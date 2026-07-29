@@ -82,7 +82,7 @@ void main() {
     test('HR-2 · buildPayslipPdf produces a non-empty single-employee PDF',
         () async {
       final bytes = await service.buildPayslipPdf(
-        schoolName: 'Akshara Public School',
+        schoolName: 'NIKSHA Public School',
         period: 'May 2026',
         employeeName: 'Mrs. Rao',
         employeeCode: 'HR-EMP-102',

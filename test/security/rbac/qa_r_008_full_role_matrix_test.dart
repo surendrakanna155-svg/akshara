@@ -256,7 +256,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        // Real Akshara theme so the production AccessDeniedScreen (which uses
+        // Real NIKSHA theme so the production AccessDeniedScreen (which uses
         // AksharaErrorState → aksharaText) renders instead of throwing.
         child: MaterialApp(
           theme: AksharaAppTheme.light(),

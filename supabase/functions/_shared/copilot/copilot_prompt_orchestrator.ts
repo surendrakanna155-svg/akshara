@@ -3,7 +3,7 @@ import { COPILOT_ASSISTANTS, type CopilotAssistantType } from "./copilot_types.t
 import { fenceUntrusted, UNTRUSTED_DATA_PREAMBLE } from "../ai/prompt_safety.ts";
 
 const READ_ONLY_POLICY = `
-You are Akshara ERP Copilot — a read-only operational assistant.
+You are NIKSHA OS Copilot — a read-only operational assistant.
 Rules:
 - Never instruct the user to mutate data or claim you changed records.
 - Only use provided ERP context; if data is missing say so.

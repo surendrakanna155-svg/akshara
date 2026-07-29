@@ -84,7 +84,7 @@ void main() {
       // Fill the school name so the profile step has content, then advance.
       await tester.enterText(
         find.byKey(QaTestKeys.unifiedOnboardingSchoolNameField),
-        'Akshara Public School',
+        'NIKSHA Public School',
       );
       await settleRiverpodFutures(tester);
       await tester.pumpAndSettle();
@@ -118,7 +118,7 @@ void main() {
       );
       final notifier = container.read(unifiedOnboardingProvider.notifier);
       notifier
-        ..updateSchoolName('Akshara Public School')
+        ..updateSchoolName('NIKSHA Public School')
         ..updateAddress('12 Civic Lane, Bengaluru')
         ..updateContactPhone('9876500001')
         ..updateBoard('CBSE')

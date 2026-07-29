@@ -122,7 +122,7 @@ void main() {
       final row = call.rows.single;
       expect(row[0], 'GRN-PO-2026-0142-482910');
       expect(row[1], 'PO-2026-0142');
-      expect(row[2], 'Akshara Stationery Supplies');
+      expect(row[2], 'NIKSHA Stationery Supplies');
       expect(row[4], 'posted');
       expect(row[5], '2');
       expect(

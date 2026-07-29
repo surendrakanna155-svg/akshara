@@ -11,7 +11,7 @@ abstract interface class MutationExecutor {
   Future<ExecutorResponse> send(MutationRequest request);
 }
 
-/// A server HTTP response, normalised to the Akshara envelope.
+/// A server HTTP response, normalised to the NIKSHA envelope.
 class ExecutorResponse {
   const ExecutorResponse({
     required this.statusCode,

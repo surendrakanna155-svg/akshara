@@ -7,7 +7,7 @@ import { sendWhatsAppMessage } from "./whatsapp_providers.ts";
 // single real WhatsApp message. It must now fail honestly instead.
 Deno.test("stub WhatsApp provider (unconfigured school) reports failure, not fake success", async () => {
   const result = await sendWhatsAppMessage(
-    { provider: "stub", senderId: "AKSHARA", apiKeyRef: null, templateNamespace: null, isActive: true },
+    { provider: "stub", senderId: "NIKSHA", apiKeyRef: null, templateNamespace: null, isActive: true },
     { toPhone: "+919999999999", templateId: "test_template" },
   );
   assertEquals(result.success, false);

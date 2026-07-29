@@ -102,7 +102,7 @@ async function notifyParentOfReceipt(
     );
     if (!target?.phone) return;
     const msg =
-      `Akshara: Payment of Rs ${amount} received for ${target.name}. Receipt available in the app.`;
+      `NIKSHA: Payment of Rs ${amount} received for ${target.name}. Receipt available in the app.`;
     const result = await sendTransactionalSms(smsConfig, target.phone, msg);
     if (!result.ok) {
       console.error(`receipt SMS not sent (${result.code}): ${result.detail}`);

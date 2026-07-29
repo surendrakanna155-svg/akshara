@@ -55,7 +55,7 @@ class OfflineReadCacheInterceptor extends Interceptor {
 
   /// Response header / extra flag marking a body that came from the offline
   /// cache rather than the network.
-  static const String offlineCacheHeader = 'X-Akshara-Offline-Cache';
+  static const String offlineCacheHeader = 'X-NIKSHA-Offline-Cache';
   static const String offlineCacheExtraKey = 'offline_cache';
 
   /// Path fragments never cached — serving a stale auth/legal/session/token

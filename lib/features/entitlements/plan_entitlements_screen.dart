@@ -232,7 +232,7 @@ class _UpgradeCallout extends StatelessWidget {
             phone: kAksharaSalesWhatsApp,
             label: 'Upgrade on WhatsApp',
             message:
-                'Hi Akshara team, I would like to upgrade my school plan and '
+                'Hi NIKSHA team, I would like to upgrade my school plan and '
                 'unlock more modules.',
           ),
         ],

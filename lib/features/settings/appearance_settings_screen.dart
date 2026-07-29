@@ -36,7 +36,7 @@ class AppearanceSettingsScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
           Text(
-            'Choose how Akshara looks. Your choice is saved on this device and '
+            'Choose how NIKSHA OS looks. Your choice is saved on this device and '
             'applies right away.',
             style: text.bodyMedium.copyWith(color: colors.onSurfaceVariant),
           ),
@@ -119,7 +119,7 @@ class _AppLockTileState extends ConsumerState<_AppLockTile> {
         secondary: Icon(Icons.lock_outline, color: colors.onSurfaceVariant),
         title: Text('App Lock', style: text.bodyLarge.copyWith(fontWeight: FontWeight.w600)),
         subtitle: Text(
-          'Require your device biometric to open Akshara after it has been in the '
+          'Require your device biometric to open NIKSHA OS after it has been in the '
           'background. No PIN fallback.',
           style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
         ),

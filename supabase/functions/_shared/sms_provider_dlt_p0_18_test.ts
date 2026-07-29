@@ -33,7 +33,7 @@ const dltConfig: SmsConfig = {
   fast2smsMessageId: "GLOBAL_TMPL_1",
 };
 
-const MSG = "Akshara: Results for Term 2 are published for Asha.";
+const MSG = "NIKSHA: Results for Term 2 are published for Asha.";
 
 Deno.test("P0-18 Quick route is unchanged (pilot default)", () => {
   const params = new URLSearchParams(

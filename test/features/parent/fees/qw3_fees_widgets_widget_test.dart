@@ -16,7 +16,7 @@ import '../../../test_helpers.dart';
 /// QA-F-011 (PaymentHistorySheet bottom sheet). These parent fee widgets were
 /// never pumped — covered here with realistic demo models from the PA-03 spec.
 
-/// Pumps a single fee widget inside a scrollable Akshara-themed surface.
+/// Pumps a single fee widget inside a scrollable NIKSHA-themed surface.
 Future<void> _pump(WidgetTester tester, Widget child) async {
   useMobileViewport(tester);
   await tester.pumpWidget(

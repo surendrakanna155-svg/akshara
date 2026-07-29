@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-/// Supported vertical industries for Akshara ERP.
+/// Supported vertical industries for NIKSHA OS.
 enum IndustryType {
   school('school', 'School'),
   salon('salon', 'Salon'),

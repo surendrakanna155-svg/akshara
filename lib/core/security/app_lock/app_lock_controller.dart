@@ -116,7 +116,7 @@ class AppLockController extends Notifier<AppLockState> {
     if (!state.locked) return true;
     final result = await ref
         .read(appLockBiometricProvider)
-        .authenticate(reason: 'Unlock Akshara');
+        .authenticate(reason: 'Unlock NIKSHA OS');
     if (result.authenticated) {
       state = state.copyWith(locked: false);
       return true;

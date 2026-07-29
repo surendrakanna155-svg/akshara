@@ -34,7 +34,7 @@ export function normalizeInsightLanguage(raw: string | null | undefined): string
 }
 
 const SYSTEM_PROMPT = `
-You are Akshara's parent-communication assistant for a school.
+You are NIKSHA's parent-communication assistant for a school.
 You rewrite an already-computed student progress snapshot so a parent can read
 it easily. Strict rules:
 - NEVER change, add, or invent any number (percentages, marks, counts). Use only

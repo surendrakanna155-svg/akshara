@@ -94,7 +94,7 @@ String supportEventLabel(SupportIncidentEvent event) {
 // ---------------------------------------------------------------------------
 // Honest-failure copy for the support WRITE path.
 //
-// One rule governs every string below: none of them may imply that Akshara
+// One rule governs every string below: none of them may imply that NIKSHA
 // Support received anything, and none of them is ever accompanied by a
 // reference number. `reason == null` means the failure was not a recognised
 // [SupportDeliveryFailure] — we genuinely do not know what happened, so we say
@@ -107,9 +107,9 @@ String supportReportFailureHeadline(SupportDeliveryFailureReason? reason) {
     case SupportDeliveryFailureReason.notConfigured:
       return 'Not sent — no support channel in this build';
     case SupportDeliveryFailureReason.notDelivered:
-      return 'Not sent — we could not reach Akshara Support';
+      return 'Not sent — we could not reach NIKSHA Support';
     case null:
-      return 'Not sent — we could not confirm this reached Akshara Support';
+      return 'Not sent — we could not confirm this reached NIKSHA Support';
   }
 }
 
@@ -118,7 +118,7 @@ String supportReportFailureHeadline(SupportDeliveryFailureReason? reason) {
 String supportReportFailureDetail(SupportDeliveryFailureReason? reason) {
   switch (reason) {
     case SupportDeliveryFailureReason.notConfigured:
-      return 'This build has no live connection to Akshara Support, so your '
+      return 'This build has no live connection to NIKSHA Support, so your '
           'report was not sent and no ticket was created. What you typed is '
           'saved on this device.';
     case SupportDeliveryFailureReason.notDelivered:
@@ -136,13 +136,13 @@ String supportReportFailureDetail(SupportDeliveryFailureReason? reason) {
 String supportReplyFailureMessage(SupportDeliveryFailureReason? reason) {
   switch (reason) {
     case SupportDeliveryFailureReason.notConfigured:
-      return 'Not sent. This build has no live connection to Akshara Support, '
+      return 'Not sent. This build has no live connection to NIKSHA Support, '
           'so your message was not delivered.';
     case SupportDeliveryFailureReason.notDelivered:
-      return 'Not sent. We could not reach Akshara Support. Your message is '
+      return 'Not sent. We could not reach NIKSHA Support. Your message is '
           'still here — check your connection and try again.';
     case null:
-      return 'Not sent. We could not confirm Akshara Support received your '
+      return 'Not sent. We could not confirm NIKSHA Support received your '
           'message. Your message is still here — please try again.';
   }
 }

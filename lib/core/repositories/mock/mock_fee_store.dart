@@ -122,7 +122,7 @@ class MockFeeStore {
       childClass: child.classLabel,
       category: 'Tuition',
       lineItems: [ReceiptLineItem(label: title, amount: amount)],
-      schoolName: 'Akshara Vidyalaya',
+      schoolName: 'NIKSHA Vidyalaya',
     );
     _receipts!.insert(0, receipt);
     return receipt;

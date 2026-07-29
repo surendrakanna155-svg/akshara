@@ -20,7 +20,7 @@ class AksharaInsightCard extends StatelessWidget {
     this.accent = KpiAccent.primary,
     this.icon = Icons.psychology_outlined,
     this.semanticLabelPrefix = 'AI insight',
-    this.eyebrow = 'AKSHARA SUGGESTS',
+    this.eyebrow = 'NIKSHA SUGGESTS',
   });
 
   final String message;

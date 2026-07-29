@@ -65,7 +65,7 @@ void main() {
         );
 
     return QuestionPaperPrintData(
-      schoolName: 'Akshara Vidyalaya',
+      schoolName: 'NIKSHA Vidyalaya',
       schoolLogoText: 'AV',
       title: 'Class 10 — Mathematics Unit Test',
       subtitle: 'Class 10 · Mathematics · Unit Test',

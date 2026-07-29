@@ -75,7 +75,7 @@ String _firstSchoolNameInTable(WidgetTester tester) {
   return tester
       .widgetList<Text>(find.byType(Text))
       .map((t) => t.data ?? '')
-      .firstWhere((s) => s.contains('Akshara'), orElse: () => '');
+      .firstWhere((s) => s.contains('NIKSHA'), orElse: () => '');
 }
 
 void main() {
@@ -252,7 +252,7 @@ void main() {
       );
       expect(find.textContaining('Read-only · audited'), findsOneWidget);
       // Aggregates render (school name + a metric tile).
-      expect(find.text('Akshara North Campus'), findsOneWidget);
+      expect(find.text('NIKSHA North Campus'), findsOneWidget);
       expect(find.text('Students'), findsOneWidget);
       expect(find.text('Admissions funnel'), findsOneWidget);
     });

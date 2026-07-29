@@ -29,7 +29,7 @@ class FeeReceipt {
     required this.childClass,
     required this.category,
     required this.lineItems,
-    this.schoolName = 'Akshara Public School',
+    this.schoolName = 'NIKSHA Public School',
   });
 
   final String id;

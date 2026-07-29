@@ -210,7 +210,7 @@ export async function handleCreateIncident(req: Request, config: AppConfig): Pro
     return { row, parts };
   });
 
-  // Mirror the PII-minimized package into the Akshara platform-support domain
+  // Mirror the PII-minimized package into the NIKSHA platform-support domain
   // (Decision A1) — best-effort, own transaction, never blocks the report.
   await mirrorIncidentBestEffort(config, claims, created.row, created.parts);
 

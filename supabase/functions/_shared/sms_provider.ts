@@ -25,7 +25,7 @@ export interface SmsConfig {
 
 /** Builds the OTP text for the Quick route. `{otp}` is substituted. */
 export function buildOtpMessage(otp: string): string {
-  return `Your Akshara OTP is ${otp}. Valid for 5 minutes. Do not share this code with anyone.`;
+  return `Your NIKSHA OTP is ${otp}. Valid for 5 minutes. Do not share this code with anyone.`;
 }
 
 export interface SmsResult {

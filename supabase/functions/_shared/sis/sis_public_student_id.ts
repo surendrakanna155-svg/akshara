@@ -1,4 +1,4 @@
-// Akshara Identity Platform — Public Student ID (PSID) allocation.
+// NIKSHA Identity Platform — Public Student ID (PSID) allocation.
 //
 // PSID = `<SCHOOL_CODE>-<RUNNING_NUMBER>`, RUNNING_NUMBER a 4-digit zero-padded,
 // PER-SCHOOL sequential value that is NEVER reused (e.g. DPSKKP-0001). See

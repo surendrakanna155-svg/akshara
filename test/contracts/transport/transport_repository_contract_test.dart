@@ -353,7 +353,7 @@ void main() {
         request: const BulkAllocateTransportRequest(
           routeId: 'route_12',
           pickupStop: 'Lake View Colony',
-          dropStop: 'Akshara Main Gate',
+          dropStop: 'NIKSHA Main Gate',
           sisStudentIds: ['SIS-STU-10425'],
         ),
       );

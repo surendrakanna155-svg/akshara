@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/security/erp_role.dart';
 import 'auth_claims.dart';
 
-/// Akshara ERP roles — persisted for multi-app routing (Parent, Teacher, etc.).
+/// NIKSHA OS roles — persisted for multi-app routing (Parent, Teacher, etc.).
 enum UserRole {
   parent,
   teacher,

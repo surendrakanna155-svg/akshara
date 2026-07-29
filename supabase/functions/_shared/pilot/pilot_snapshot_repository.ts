@@ -325,7 +325,7 @@ export async function loadStudentSnapshotContext(
     `SELECT name FROM schools WHERE id = $1 LIMIT 1`,
     [schoolId],
   );
-  const schoolName = schoolRows[0]?.name ?? "Akshara Public School";
+  const schoolName = schoolRows[0]?.name ?? "NIKSHA Public School";
 
   const guardianRows = await db.queryObject<{
     name: string;
@@ -572,7 +572,7 @@ export async function overlayReceiptsFromFinance(
     `SELECT name FROM schools WHERE id = $1 LIMIT 1`,
     [schoolId],
   );
-  const schoolName = schoolRows[0]?.name ?? "Akshara Public School";
+  const schoolName = schoolRows[0]?.name ?? "NIKSHA Public School";
 
   const rows = await db.queryObject<{
     id: string;
@@ -719,7 +719,7 @@ export async function buildFeeCertificateData(
       LIMIT 1`,
     [schoolId],
   );
-  const schoolName = schoolRows[0]?.name ?? "Akshara Public School";
+  const schoolName = schoolRows[0]?.name ?? "NIKSHA Public School";
   const signatoryTitle = schoolRows[0]?.signatory_title ?? "Principal";
 
   // Child identity: display name (students), PSID + admission number

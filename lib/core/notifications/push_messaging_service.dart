@@ -1,4 +1,4 @@
-// Firebase Cloud Messaging integration for Akshara ERP.
+// Firebase Cloud Messaging integration for NIKSHA OS.
 //
 // This is the *device* half of the existing notification pipeline — it does NOT
 // replace the Communication Hub. The backend already owns templates, the

@@ -97,7 +97,7 @@ class ExportManagementDashboardNotifier extends AsyncNotifier<Uint8List?> {
         final bytes = await ref
             .read(managementDashboardPdfServiceProvider)
             .buildDashboardPdf(
-              schoolName: 'Akshara International School',
+              schoolName: 'NIKSHA International School',
               periodLabel: periodLabel,
               data: data,
             );

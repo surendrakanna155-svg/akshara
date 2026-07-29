@@ -4,7 +4,7 @@ import { enrichSchoolBlueprintWithClaude } from "./ai_school_builder_ai.ts";
 import type { Governance } from "../ai/model_gateway.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 
-const brief = { schoolName: "Akshara Public School", board: "CBSE", lowestGrade: "Grade 1", highestGrade: "Grade 5" };
+const brief = { schoolName: "NIKSHA Public School", board: "CBSE", lowestGrade: "Grade 1", highestGrade: "Grade 5" };
 
 function stubFetch(text: string, stopReason = "end_turn") {
   globalThis.fetch = (() =>

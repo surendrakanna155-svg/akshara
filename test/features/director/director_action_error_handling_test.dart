@@ -49,7 +49,7 @@ class _FailingActionDirectorRepository implements DirectorRepository {
     return [
       DirectorComplianceItem(
         id: 'c1',
-        schoolName: 'Akshara North',
+        schoolName: 'NIKSHA North',
         category: 'Safety',
         requirement: 'Fire NOC renewal',
         status: DirectorComplianceStatus.dueSoon,

@@ -17,14 +17,14 @@ class MockFranchiseRepository implements FranchiseRepository {
   final List<FranchiseEntity> _franchises = [
     const FranchiseEntity(
       id: 'FR-01',
-      name: 'Akshara South Franchise',
+      name: 'NIKSHA South Franchise',
       region: 'South',
       schoolCount: 7,
       kpiScore: 88,
     ),
     const FranchiseEntity(
       id: 'FR-02',
-      name: 'Akshara West Franchise',
+      name: 'NIKSHA West Franchise',
       region: 'West',
       schoolCount: 5,
       kpiScore: 79,

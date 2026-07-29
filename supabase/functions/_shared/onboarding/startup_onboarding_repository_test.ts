@@ -10,7 +10,7 @@ function baseRow(overrides: Partial<StartupOnboardingRow> = {}): StartupOnboardi
     organization_id: "org",
     school_id: "school",
     current_step: "review",
-    school_name: "Akshara",
+    school_name: "NIKSHA",
     board: "CBSE",
     curriculum: "CBSE",
     address: "123 Road",

@@ -14,7 +14,7 @@ import 'domain/support_delivery_failure.dart';
 import 'support_providers.dart';
 import 'support_ui.dart';
 
-/// ASIP Phase 1 screen (a) — "Report an issue to Akshara Support".
+/// ASIP Phase 1 screen (a) — "Report an issue to NIKSHA Support".
 ///
 /// The reporter provides only a short summary, an optional description and an
 /// optional screenshot. Everything technical (app version, device, OS, screen,
@@ -56,7 +56,7 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen>
   ReportAttachment? _screenshot;
   bool _submitting = false;
 
-  /// Set when a submit did NOT reach Akshara Support. While this is non-null the
+  /// Set when a submit did NOT reach NIKSHA Support. While this is non-null the
   /// screen shows the failure panel, offers a retry, and — critically — shows no
   /// reference number of any kind. `_failed` distinguishes "never tried" from
   /// "tried and failed for a reason we could not classify" (reason == null).
@@ -180,8 +180,8 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen>
       // rather than printing an empty or invented value.
       final serverRef = result.incident.publicRef.trim();
       final sent = serverRef.isEmpty
-          ? 'Sent to Akshara Support.'
-          : 'Sent to Akshara Support. Your reference is $serverRef.';
+          ? 'Sent to NIKSHA Support.'
+          : 'Sent to NIKSHA Support. Your reference is $serverRef.';
       _showSnack(
         result.screenshotAttached
             ? sent
@@ -192,7 +192,7 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen>
         RouteNames.supportIncidentDetail(result.incident.id),
       );
     } on Object catch (error) {
-      // Nothing reached Akshara Support. Say so, show no reference, keep the
+      // Nothing reached NIKSHA Support. Say so, show no reference, keep the
       // form (and the on-device draft) exactly as the user left it, and offer
       // a retry.
       if (!mounted) return;
@@ -298,7 +298,7 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen>
                       ? 'Sending…'
                       : _failed
                           ? 'Try again'
-                          : 'Send to Akshara Support',
+                          : 'Send to NIKSHA Support',
                 ),
               ),
             ],
@@ -397,7 +397,7 @@ class _ScreenshotField extends StatelessWidget {
   }
 }
 
-/// The honest "this did not reach Akshara Support" panel.
+/// The honest "this did not reach NIKSHA Support" panel.
 ///
 /// Deliberately loud and deliberately reference-free: the single worst thing
 /// this screen could do is hand the user a ticket number for a report nobody

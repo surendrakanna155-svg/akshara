@@ -79,7 +79,7 @@ void main() {
       // 2. Enter a new value and confirm the dialog.
       await tester.enterText(
         find.byKey(QaTestKeys.managementSettingsDialogField),
-        'Akshara Leadership School',
+        'NIKSHA Leadership School',
       );
       await tester
           .tap(find.byKey(QaTestKeys.managementSettingsDialogSaveButton));

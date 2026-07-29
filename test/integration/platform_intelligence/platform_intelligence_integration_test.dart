@@ -38,7 +38,7 @@ void main() {
         PlatformIntelligenceApiPaths.organization => {
             'data': {
               'organizationId': 'ORG-001',
-              'organizationName': 'Akshara Education Trust',
+              'organizationName': 'NIKSHA Education Trust',
               'schoolCount': 11,
               'activeStudentCount': 28940,
               'revenueLakhs': 214.6,
@@ -52,7 +52,7 @@ void main() {
               'rows': [
                 {
                   'schoolId': 'SCH-1001',
-                  'schoolName': 'Akshara International Hyderabad',
+                  'schoolName': 'NIKSHA International Hyderabad',
                   'studentCount': 2840,
                   'revenueLakhs': 52.4,
                   'growthPercent': 13,
@@ -79,7 +79,7 @@ void main() {
               'organizationBreakdown': [
                 {
                   'id': 'org_akshara',
-                  'label': 'Akshara Trust',
+                  'label': 'NIKSHA Trust',
                   'value': 'INR 22.4L'
                 },
               ],
@@ -136,7 +136,7 @@ void main() {
           },
         PlatformIntelligenceApiPaths.trustDashboard => {
             'data': {
-              'trustName': 'Akshara Trust Network',
+              'trustName': 'NIKSHA Trust Network',
               'kpis': [
                 {'id': 'trust_health', 'label': 'Trust Health', 'value': '87'},
               ],
@@ -203,12 +203,12 @@ void main() {
       );
 
       expect(dashboard.ownerKpis, isNotEmpty);
-      expect(organization.organizationName, contains('Akshara'));
+      expect(organization.organizationName, contains('NIKSHA'));
       expect(comparison.rows.first.schoolId, 'SCH-1001');
       expect(revenue.revenueTrend.first.label, 'Jun');
       expect(growth.pipeline.first.name, 'East Region Expansion');
       expect(risk.risks.first.riskScore, 36);
-      expect(trust.trustName, contains('Akshara'));
+      expect(trust.trustName, contains('NIKSHA'));
       expect(summary.priorityActions, isNotEmpty);
       expect(recommendations, isNotEmpty);
     });

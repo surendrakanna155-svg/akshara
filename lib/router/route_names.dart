@@ -97,7 +97,7 @@ abstract final class RouteNames {
   static const String studentProfile = '/student/profile';
 
   // Web ERP admin shell (desktop / tablet / mobile drawer)
-  // ASIP Phase 1 — platform support ("Report an issue to Akshara Support").
+  // ASIP Phase 1 — platform support ("Report an issue to NIKSHA Support").
   // Available to ANY authenticated school user (all personas), so these are
   // top-level auth-gated routes, not part of the admin ERP shell.
   static const String support = '/support';

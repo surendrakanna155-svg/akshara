@@ -104,7 +104,7 @@ class MockSisStudentsDb {
       date_of_birth: "2014-05-15",
       gender: "male",
       blood_group: "O+",
-      address: "12 Akshara Lane",
+      address: "12 NIKSHA Lane",
       city: "Hyderabad",
       state: "Telangana",
       postal_code: "500001",

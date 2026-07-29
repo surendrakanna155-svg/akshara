@@ -169,7 +169,7 @@ void main() {
 
     await tester.enterText(
       find.byKey(QaTestKeys.multiSchoolOnboardingSchoolNameField),
-      'Akshara East',
+      'NIKSHA East',
     );
     await tester.enterText(
       find.byKey(QaTestKeys.multiSchoolOnboardingContactNameField),

@@ -145,7 +145,7 @@ class ParentMapper {
       childClass: raw['childClass'] as String? ?? '',
       category: raw['category'] as String? ?? '',
       lineItems: _mapReceiptLineItems(raw['lineItems'] as List<dynamic>? ?? const []),
-      schoolName: raw['schoolName'] as String? ?? 'Akshara Public School',
+      schoolName: raw['schoolName'] as String? ?? 'NIKSHA Public School',
     );
   }
 
@@ -154,7 +154,7 @@ class ParentMapper {
     final psid = raw['publicStudentId'] as String?;
     final admission = raw['admissionNumber'] as String?;
     return FeeCertificateData(
-      schoolName: raw['schoolName'] as String? ?? 'Akshara Public School',
+      schoolName: raw['schoolName'] as String? ?? 'NIKSHA Public School',
       guardianName: raw['guardianName'] as String? ?? '',
       studentName: raw['studentName'] as String? ?? 'Student',
       publicStudentId: (psid == null || psid.isEmpty) ? null : psid,

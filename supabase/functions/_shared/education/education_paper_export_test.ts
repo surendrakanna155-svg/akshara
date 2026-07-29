@@ -30,7 +30,7 @@ const INPUT: PaperExportInput = {
     totalMarks: 18,
     difficulty: "mixed",
   },
-  branding: { schoolName: "Akshara Vidyalaya", logoText: "AV" },
+  branding: { schoolName: "NIKSHA Vidyalaya", logoText: "NV" },
   generalInstructions: [
     "All questions are compulsory.",
     "Marks are indicated against each question.",
@@ -196,7 +196,7 @@ Deno.test("CI-C3: a single-set export yields exactly the master paper", () => {
 Deno.test("CI-C3: v2 document surfaces branding, instructions, and section meta", () => {
   const doc = buildPaperDocumentV2(INPUT, { seed: "s", generatedAt: FIXED_AT });
   assertEquals(doc.format, "akshara-education-paper-v2");
-  assertEquals(doc.branding, { schoolName: "Akshara Vidyalaya", logoText: "AV" });
+  assertEquals(doc.branding, { schoolName: "NIKSHA Vidyalaya", logoText: "NV" });
   assertEquals(doc.generalInstructions.length, 2);
   assertEquals(doc.durationMinutes, 60);
   assertEquals(doc.sections.map((s) => [s.code, s.questionCount]), [["A", 4], ["B", 3]]);

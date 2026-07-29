@@ -13,7 +13,7 @@ import '../copilot/widgets/bottom_nav_ai_scope.dart';
 
 /// ASIP Phase 1 screen (c) — one reported issue: header + status, the
 /// auto-collected timeline (lite), attachments, and the conversation with
-/// Akshara Support, with a reply box. Evidence/AI diagnosis are support-only and
+/// NIKSHA Support, with a reply box. Evidence/AI diagnosis are support-only and
 /// are never surfaced here (they are not returned to a reporter payload).
 class SupportIncidentDetailScreen extends ConsumerStatefulWidget {
   const SupportIncidentDetailScreen({super.key, required this.incidentId});
@@ -34,7 +34,7 @@ class _SupportIncidentDetailScreenState
   final _replyController = TextEditingController();
   bool _sending = false;
 
-  /// Set when the last reply did NOT reach Akshara Support. The typed text is
+  /// Set when the last reply did NOT reach NIKSHA Support. The typed text is
   /// deliberately left in the composer and the message is NOT rendered into the
   /// conversation — an undelivered message must never look delivered.
   bool _replyFailed = false;
@@ -82,7 +82,7 @@ class _SupportIncidentDetailScreenState
       backgroundColor: context.colors.surfaceContainerLow,
       appBar: const AksharaAppBar(
         titleText: 'Reported issue',
-        subtitle: 'Your conversation with Akshara Support',
+        subtitle: 'Your conversation with NIKSHA Support',
         trailingPadding: true,
       ),
       body: async.when(
@@ -151,7 +151,7 @@ class _DetailBody extends StatelessWidget {
               if (messages.isEmpty)
                 const _MutedNote(
                   text: 'No messages yet. Add a note below if you have more '
-                      'detail — Akshara Support will reply here.',
+                      'detail — NIKSHA Support will reply here.',
                 )
               else
                 for (final m in messages) ...[
@@ -433,7 +433,7 @@ class _MessageBubble extends StatelessWidget {
     final fg = mine ? colors.onPrimaryContainer : colors.onSurface;
     final who = switch (message.senderKind) {
       SupportSenderKind.reporter => 'You',
-      SupportSenderKind.support => 'Akshara Support',
+      SupportSenderKind.support => 'NIKSHA Support',
       SupportSenderKind.system => 'System',
     };
     return Align(

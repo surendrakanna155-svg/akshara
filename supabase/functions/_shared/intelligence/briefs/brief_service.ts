@@ -150,7 +150,7 @@ export function secondsToNextIstPrewarm(nowIso: string): number {
 const NARRATIVE_MAX_TOKENS = 400;
 
 const NARRATIVE_SYSTEM = `
-You are Akshara's morning-brief writer for a school.
+You are NIKSHA's morning-brief writer for a school.
 You are given today's already-computed brief sections; every count is final.
 Write a warm, 2-to-4-sentence morning summary a busy educator can absorb in
 ten seconds. Strict rules:

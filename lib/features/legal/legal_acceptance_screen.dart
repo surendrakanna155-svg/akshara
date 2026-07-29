@@ -96,7 +96,7 @@ class _LegalAcceptanceScreenState extends ConsumerState<LegalAcceptanceScreen> {
                     children: [
                       Text(
                         blocked
-                            ? 'Please review and accept the following to keep using Akshara.'
+                            ? 'Please review and accept the following to keep using NIKSHA.'
                             : 'These are the policies that apply to your account.',
                         style: theme.textTheme.bodyMedium,
                       ),

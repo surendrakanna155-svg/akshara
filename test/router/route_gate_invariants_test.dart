@@ -35,11 +35,11 @@ import '../test_helpers.dart';
 /// Keep this set as small as humanly possible. Adding an entry is a security
 /// decision and the reason belongs here, in writing.
 const Map<String, String> kNonErpShellPermissionedRoutes = <String, String>{
-  // ASIP Phase 1 "Report an issue to Akshara Support" is a shared,
+  // ASIP Phase 1 "Report an issue to NIKSHA Support" is a shared,
   // persona-agnostic surface: EVERY authenticated school user may reach it.
   // Gated by `_isSharedSettingsRoute` (auth-only) in app_router.dart. The
   // `viewSupport` entry in kErpRouteViewPermissions documents the Phase-2
-  // Akshara support-staff view contract; it intentionally gates nothing today.
+  // NIKSHA support-staff view contract; it intentionally gates nothing today.
   RouteNames.support: 'auth-only via _isSharedSettingsRoute (all personas)',
   // `/parent/insights` renders ParentInsightsScreen INSIDE the parent shell and
   // `viewParentInsights` is held by ErpRole.parent. It is closed by the

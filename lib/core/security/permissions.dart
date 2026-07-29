@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-/// Fine-grained permissions for Akshara ERP modules.
+/// Fine-grained permissions for NIKSHA OS modules.
 enum Permission {
   // Admissions
   viewAdmissions,
@@ -302,7 +302,7 @@ enum Permission {
 
   // ASIP — platform support intelligence. Reporting an issue needs NO
   // permission (any authenticated school user may report); these gate the
-  // Phase-2 Akshara support-staff view/manage surfaces and mirror the backend
+  // Phase-2 NIKSHA support-staff view/manage surfaces and mirror the backend
   // `viewSupport` / `manageSupport` permission slugs exactly.
   viewSupport,
   manageSupport,

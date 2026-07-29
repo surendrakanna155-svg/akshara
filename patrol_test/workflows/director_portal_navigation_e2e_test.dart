@@ -14,7 +14,7 @@ void main() {
 
       await goToErpRoute($, RouteNames.directorSchools);
       await waitForLoadingToClear($, timeout: const Duration(seconds: 30));
-      await assertVisibleText($, 'Akshara North Campus');
+      await assertVisibleText($, 'NIKSHA North Campus');
 
       await goToErpRoute($, RouteNames.directorRevenue);
       await waitForLoadingToClear($, timeout: const Duration(seconds: 30));

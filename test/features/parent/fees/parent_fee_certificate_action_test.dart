@@ -35,7 +35,7 @@ class _EmptyCertParentRepository extends MockParentRepository {
     String? academicYear,
   }) async {
     return FeeCertificateData(
-      schoolName: 'Akshara Public School',
+      schoolName: 'NIKSHA Public School',
       guardianName: 'Suresh Kumar',
       studentName: 'Ravi Kumar',
       academicYear: academicYear ?? '2025-2026',

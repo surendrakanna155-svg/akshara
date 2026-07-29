@@ -64,7 +64,7 @@ class ParentDashboardData {
       childClass: '8-A',
       greetingEyebrow: 'Good morning',
       greetingHeadline: "Ravi's Day at a Glance",
-      schoolName: 'Akshara Public School',
+      schoolName: 'NIKSHA Public School',
       unreadNotifications: 2,
       statusChips: [
         DashboardStatusChip(

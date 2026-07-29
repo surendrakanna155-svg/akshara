@@ -499,7 +499,7 @@ class MockFinanceRepository implements FinanceRepository {
       id: sessionId,
       invoiceId: request.invoiceId,
       amount: amount,
-      upiPayload: 'upi://pay?pa=school@upi&pn=Akshara&am=$amount&tr=$sessionId',
+      upiPayload: 'upi://pay?pa=school@upi&pn=NIKSHA&am=$amount&tr=$sessionId',
       status: QrPaymentSessionStatus.pending,
       expiresAt: DateTime.now().add(const Duration(minutes: 10)),
     );

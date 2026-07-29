@@ -43,7 +43,7 @@ void main() {
     expect(find.text('Cannot open marks'), findsOneWidget);
     // support message body is shown; the reply affordance is present
     expect(find.text('looking into it'), findsOneWidget);
-    expect(find.text('Akshara Support'), findsOneWidget);
+    expect(find.text('NIKSHA Support'), findsOneWidget);
     expect(find.byKey(QaTestKeys.supportReplyField), findsOneWidget);
     expect(find.byKey(QaTestKeys.supportReplySendButton), findsOneWidget);
   });

@@ -43,7 +43,7 @@ export async function routeSupport(
 
   const segs = path.split("/").filter((s) => s.length > 0); // ["support", "incidents", …]
 
-  // /support/platform/* — the Akshara support-console (PLATFORM_ORG) surface.
+  // /support/platform/* — the NIKSHA support-console (PLATFORM_ORG) surface.
   if (segs[1] === "platform") {
     return await routeSupportPlatform(req, config, method, path, segs);
   }

@@ -19,7 +19,7 @@ import { type DashboardKpiFacts } from "./hr_read_repository.ts";
 const INSIGHT_MAX_TOKENS = 400;
 
 const SYSTEM_PROMPT = `
-You are Akshara's HR assistant for a single school.
+You are NIKSHA's HR assistant for a single school.
 You are given the school's already-computed HR facts; every number is final.
 Write one short, decision-oriented insight for the school's HR admin. Strict rules:
 - NEVER change, add, or invent any number (counts, percentages). Use only the

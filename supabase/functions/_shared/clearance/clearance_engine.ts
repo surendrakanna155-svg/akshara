@@ -9,7 +9,7 @@
 // obligations. The engine fans out over the registry and aggregates. A new
 // module plugs in by registering a contributor — the engine never changes.
 //
-// HONESTY LAW (Akshara master audit): a clearance gate is only as trustworthy
+// HONESTY LAW (NIKSHA master audit): a clearance gate is only as trustworthy
 // as its data source. A contributor whose module has NO real per-student dues
 // ledger reports coverage `not_tracked` — it is surfaced transparently in the
 // report, NEVER fabricated into a false CLEARED or a false block. Office staff

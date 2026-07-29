@@ -660,7 +660,7 @@ export function buildInviteDeepLink(token: string): string {
 }
 
 export function buildWhatsAppInviteLink(deepLink: string, label: string): string {
-  const text = encodeURIComponent(`Welcome to Akshara ERP — ${label}. Open: ${deepLink}`);
+  const text = encodeURIComponent(`Welcome to NIKSHA OS — ${label}. Open: ${deepLink}`);
   return `https://wa.me/?text=${text}`;
 }
 

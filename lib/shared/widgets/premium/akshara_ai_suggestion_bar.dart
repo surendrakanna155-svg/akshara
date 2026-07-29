@@ -13,7 +13,7 @@ class AksharaAiSuggestionBar extends StatelessWidget {
   const AksharaAiSuggestionBar({
     super.key,
     required this.message,
-    this.eyebrow = 'AKSHARA SUGGESTS',
+    this.eyebrow = 'NIKSHA SUGGESTS',
     this.actionLabel,
     this.onAction,
     this.semanticLabelPrefix = 'AI suggestion',

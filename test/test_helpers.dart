@@ -47,7 +47,7 @@ void useMobileViewport(WidgetTester tester) {
   });
 }
 
-/// Pumps a [GoRouter] with Akshara theme + Riverpod overrides for widget tests.
+/// Pumps a [GoRouter] with NIKSHA theme + Riverpod overrides for widget tests.
 Future<void> pumpAksharaRouter(
   WidgetTester tester, {
   required GoRouter router,

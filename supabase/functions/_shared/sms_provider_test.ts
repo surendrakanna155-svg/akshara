@@ -88,7 +88,7 @@ Deno.test("buildTransactionalRequest sends custom free-text on the quick route",
   const { url, headers, body } = buildTransactionalRequest(
     baseConfig,
     "9550055155",
-    "Akshara: Payment of Rs 500 received for Asha. Receipt available in the app.",
+    "NIKSHA: Payment of Rs 500 received for Asha. Receipt available in the app.",
   );
   assertEquals(url, "https://www.fast2sms.com/dev/bulkV2");
   assertEquals(headers.authorization, "KEY");
@@ -97,7 +97,7 @@ Deno.test("buildTransactionalRequest sends custom free-text on the quick route",
   assertEquals(params.get("numbers"), "9550055155");
   assertEquals(
     params.get("message"),
-    "Akshara: Payment of Rs 500 received for Asha. Receipt available in the app.",
+    "NIKSHA: Payment of Rs 500 received for Asha. Receipt available in the app.",
   );
 });
 

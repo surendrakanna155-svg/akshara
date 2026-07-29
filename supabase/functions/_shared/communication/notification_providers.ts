@@ -123,7 +123,7 @@ async function sendEmail(
     body: JSON.stringify({
       personalizations: [{ to: [{ email: payload.recipientUserId }] }],
       from: { email: config.email.fromEmail },
-      subject: payload.subject ?? "Akshara ERP",
+      subject: payload.subject ?? "NIKSHA OS",
       content: [{ type: "text/plain", value: payload.body }],
     }),
   });
@@ -161,7 +161,7 @@ async function sendPush(
 
   const result = await sendFcmV1({
     token: payload.deviceToken,
-    title: payload.subject ?? "Akshara ERP",
+    title: payload.subject ?? "NIKSHA OS",
     body: payload.body,
     data,
   });

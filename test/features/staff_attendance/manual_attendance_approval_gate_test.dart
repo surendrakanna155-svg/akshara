@@ -144,7 +144,7 @@ void main() {
             sharedPreferencesProvider.overrideWithValue(prefs),
           ],
           // The real app theme: the refusal renders AksharaErrorState, which
-          // reads the Akshara text extension, so a bare MaterialApp would fail
+          // reads the NIKSHA text extension, so a bare MaterialApp would fail
           // to build the very screen this test is about.
           child: MaterialApp(
             theme: AksharaAppTheme.light(),

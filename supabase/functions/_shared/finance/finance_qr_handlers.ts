@@ -95,7 +95,7 @@ export async function handleCreateQrPaymentSession(
   // changing the route contract.
   const payeeVpa = `school.${schoolId.slice(0, 8)}@akshara`;
   const note = invoiceId ? `Fee ${invoiceId.slice(0, 8)}` : "School fee";
-  const upiPayload = buildUpiPayload(payeeVpa, "Akshara School", amount, note);
+  const upiPayload = buildUpiPayload(payeeVpa, "NIKSHA School", amount, note);
 
   try {
     const created = await withTenantContext(config, auth.claims, async (db) => {

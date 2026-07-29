@@ -1,4 +1,4 @@
-// Akshara Identity Platform — the single SIS-owned writer of the STUDENT
+// NIKSHA Identity Platform — the single SIS-owned writer of the STUDENT
 // identity table (`students`) and its identity profile (`student_profiles`).
 //
 // ICA-F2 (Architecture): before this module the `students` identity table had

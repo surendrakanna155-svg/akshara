@@ -214,7 +214,7 @@ class _InviteTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final message =
-        'Welcome to Akshara ERP — ${invite.recipientLabel}. Open: ${invite.deepLink}';
+        'Welcome to NIKSHA OS — ${invite.recipientLabel}. Open: ${invite.deepLink}';
     return ListTile(
       title: Text(invite.recipientLabel),
       subtitle: Text('${invite.inviteType} · ${invite.recipientPhone} · ${invite.status}'),

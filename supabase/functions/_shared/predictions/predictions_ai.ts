@@ -14,7 +14,7 @@ import { fenceUntrusted, UNTRUSTED_DATA_PREAMBLE } from "../ai/prompt_safety.ts"
 const NARRATIVE_MAX_TOKENS = 500;
 
 const SYSTEM_PROMPT = `
-You are Akshara's predictions assistant for a school leader. You are given an
+You are NIKSHA's predictions assistant for a school leader. You are given an
 already-computed prediction summary whose numbers and names are final. Write a
 short, action-oriented narrative (2 to 4 sentences). Strict rules:
 - NEVER change, add, or invent any number (scores, likelihoods, ₹ amounts, counts).

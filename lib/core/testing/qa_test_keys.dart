@@ -1580,7 +1580,7 @@ abstract final class QaTestKeys {
   static const teacherSettingsScreen =
       ValueKey<String>('teacher_settings_screen');
 
-  // ASIP — "Report an issue to Akshara Support" surface.
+  // ASIP — "Report an issue to NIKSHA Support" surface.
   static const supportEntryLink = ValueKey<String>('support_entry_link');
   static const supportReportScreen =
       ValueKey<String>('support_report_screen');

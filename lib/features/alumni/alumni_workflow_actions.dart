@@ -149,7 +149,7 @@ Future<void> showCreateEventDialog(
           AksharaFormField(
             label: 'Venue',
             controller: venueController,
-            hint: 'e.g. Akshara Main Campus',
+            hint: 'e.g. NIKSHA Main Campus',
           ),
           AksharaFormField(
             label: 'Capacity',

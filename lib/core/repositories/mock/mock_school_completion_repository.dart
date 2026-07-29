@@ -67,7 +67,7 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
   WhatsAppProviderConfig _whatsApp = const WhatsAppProviderConfig(
     provider: 'stub',
     isActive: true,
-    senderId: 'AKSHARA',
+    senderId: 'NIKSHA',
   );
 
   // Class names use the same convention as MockAcademicRepository's catalog

@@ -119,7 +119,7 @@ void main() {
             ManagementSettingUpdate(
               sectionId: 'school',
               itemId: 'name',
-              value: 'Akshara Updated School',
+              value: 'NIKSHA Updated School',
             ),
           ],
         ),
@@ -129,7 +129,7 @@ void main() {
           .items
           .firstWhere((item) => item.id == 'name')
           .value;
-      expect(updatedName, 'Akshara Updated School');
+      expect(updatedName, 'NIKSHA Updated School');
     });
   });
 }

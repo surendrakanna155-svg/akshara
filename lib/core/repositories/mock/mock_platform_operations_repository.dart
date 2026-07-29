@@ -342,7 +342,7 @@ class MockPlatformOperationsRepository implements PlatformOperationsRepository {
       schools: [
         SchoolHealthRow(
           schoolId: 'sch_101',
-          schoolName: 'Akshara Green Valley',
+          schoolName: 'NIKSHA Green Valley',
           healthScore: 88,
           status: 'healthy',
           openIncidents: 0,
@@ -350,7 +350,7 @@ class MockPlatformOperationsRepository implements PlatformOperationsRepository {
         ),
         SchoolHealthRow(
           schoolId: 'sch_102',
-          schoolName: 'Akshara City Central',
+          schoolName: 'NIKSHA City Central',
           healthScore: 63,
           status: 'watch',
           openIncidents: 2,
@@ -358,7 +358,7 @@ class MockPlatformOperationsRepository implements PlatformOperationsRepository {
         ),
         SchoolHealthRow(
           schoolId: 'sch_103',
-          schoolName: 'Akshara Horizon Campus',
+          schoolName: 'NIKSHA Horizon Campus',
           healthScore: 42,
           status: 'critical',
           openIncidents: 5,
@@ -527,7 +527,7 @@ class MockPlatformOperationsRepository implements PlatformOperationsRepository {
     return [
       TenantDiagnostic(
         tenantId: 'sch_101',
-        tenantName: 'Akshara Green Valley',
+        tenantName: 'NIKSHA Green Valley',
         isolationScore: 98,
         status: 'healthy',
         issues: const [],
@@ -535,7 +535,7 @@ class MockPlatformOperationsRepository implements PlatformOperationsRepository {
       ),
       TenantDiagnostic(
         tenantId: 'sch_102',
-        tenantName: 'Akshara City Central',
+        tenantName: 'NIKSHA City Central',
         isolationScore: 72,
         status: 'watch',
         issues: const [
@@ -546,7 +546,7 @@ class MockPlatformOperationsRepository implements PlatformOperationsRepository {
       ),
       TenantDiagnostic(
         tenantId: 'sch_103',
-        tenantName: 'Akshara Horizon Campus',
+        tenantName: 'NIKSHA Horizon Campus',
         isolationScore: 85,
         status: 'healthy',
         issues: const ['Audit upload backlog'],
@@ -1017,7 +1017,7 @@ class MockPlatformOperationsRepository implements PlatformOperationsRepository {
           id: 'risk_3',
           title: 'School churn signal',
           severity: 'medium',
-          detail: 'Akshara Horizon Campus health score 42',
+          detail: 'NIKSHA Horizon Campus health score 42',
         ),
       ],
       aiRecommendations: recommendations,

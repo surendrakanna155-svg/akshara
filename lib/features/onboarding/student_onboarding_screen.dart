@@ -417,7 +417,7 @@ class _UploadStepState extends ConsumerState<_UploadStep> {
     try {
       await service.shareTabularCsv(
         filename: 'akshara_student_template.csv',
-        reportTitle: 'Akshara Student Import Template',
+        reportTitle: 'NIKSHA Student Import Template',
         rows: rows,
       );
     } catch (_) {

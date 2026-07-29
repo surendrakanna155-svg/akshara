@@ -36,7 +36,7 @@ class BackupRestoreScreen extends ConsumerWidget {
           // a clearly-labelled informational panel describing the managed cadence,
           // not a live status read.
           const AksharaKeyValueCard(
-            title: 'Akshara-managed database backups',
+            title: 'NIKSHA-managed database backups',
             entries: [
               ('Cadence', 'Nightly · encrypted (AES-256)'),
               ('Off-site copy', 'Replicated off the server'),
@@ -47,7 +47,7 @@ class BackupRestoreScreen extends ConsumerWidget {
           const SizedBox(height: AksharaSpacing.s2),
           Text(
             'Live backup freshness and the last restore-drill result are monitored '
-            'by Akshara operations on the internal health dashboard. Contact support '
+            'by NIKSHA operations on the internal health dashboard. Contact support '
             'if you need a current backup report.',
             style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
           ),
@@ -75,7 +75,7 @@ class BackupRestoreScreen extends ConsumerWidget {
           const SizedBox(height: AksharaSpacing.s2),
           Text(
             'Restoring the database is a disaster-recovery operation performed by an '
-            'Akshara operator over SSH, following the documented procedure in '
+            'NIKSHA operator over SSH, following the documented procedure in '
             'BACKUP_RESTORE_RUNBOOK.md (akshara-restore.sh --force) with an integrity '
             'drill. To request a restore, raise a support ticket — it cannot be '
             'triggered from the app.',

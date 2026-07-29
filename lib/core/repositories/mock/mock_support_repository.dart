@@ -17,7 +17,7 @@ import '../repository_query.dart';
 ///     stand in for *delivering* something to a human being. The previous
 ///     version minted `SUP-4200`-style references locally, so a user on the
 ///     shipping build was shown a real-looking ticket number for a report that
-///     was never sent, never stored, and that Akshara Support never saw.
+///     was never sent, never stored, and that NIKSHA Support never saw.
 ///   * Throwing also keeps the honest-failure UI on the daily developer path —
 ///     every dev run exercises it, so it cannot rot behind a flag.
 ///
@@ -268,7 +268,7 @@ class MockSupportRepository implements SupportRepository {
     );
   }
 
-  /// Always throws — a reply that Akshara Support will never read must not be
+  /// Always throws — a reply that NIKSHA Support will never read must not be
   /// rendered back to the reporter as if it had been sent.
   @override
   Future<SupportMessage> postMessage({

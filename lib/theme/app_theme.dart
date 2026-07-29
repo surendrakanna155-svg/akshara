@@ -14,7 +14,7 @@ import 'spacing.dart';
 import 'theme_extensions.dart';
 import 'typography.dart';
 
-/// Builds Material 3 [ThemeData] for the Akshara ERP monorepo — M15 foundation.
+/// Builds Material 3 [ThemeData] for the NIKSHA OS monorepo — M15 foundation.
 ///
 /// Riverpod providers should call [AksharaAppTheme.light] / [.dark] with an
 /// optional [WhiteLabelThemeConfig] — keep this class free of Riverpod imports.

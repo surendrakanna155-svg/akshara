@@ -26,7 +26,7 @@ void main() {
       await assertVisibleKey($, QaTestKeys.multiSchoolOnboardingWizardScreen);
 
       await $(QaTestKeys.multiSchoolOnboardingSchoolNameField)
-          .enterText('Akshara North Campus');
+          .enterText('NIKSHA North Campus');
       await $(QaTestKeys.multiSchoolOnboardingContactNameField)
           .enterText('Admin User');
       await $(QaTestKeys.multiSchoolOnboardingContactEmailField)

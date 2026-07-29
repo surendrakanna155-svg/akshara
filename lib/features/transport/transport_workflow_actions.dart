@@ -306,7 +306,7 @@ Future<void> showAssignStudentTransportDialog(
 
   var selectedRouteId = selectableRoutes.first.id;
   final pickupController = TextEditingController();
-  final dropController = TextEditingController(text: 'Akshara Main Gate');
+  final dropController = TextEditingController(text: 'NIKSHA Main Gate');
 
   final confirmed = await showDialog<bool>(
     context: context,

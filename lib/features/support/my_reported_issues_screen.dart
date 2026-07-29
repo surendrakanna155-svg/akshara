@@ -11,7 +11,7 @@ import 'domain/support_models.dart';
 import 'support_providers.dart';
 import 'support_ui.dart';
 
-/// ASIP Phase 1 screen (b) — the reporter's list of issues raised with Akshara
+/// ASIP Phase 1 screen (b) — the reporter's list of issues raised with NIKSHA
 /// Support, with status filter chips, public refs and pull-to-refresh.
 class MyReportedIssuesScreen extends ConsumerStatefulWidget {
   const MyReportedIssuesScreen({super.key});
@@ -42,7 +42,7 @@ class _MyReportedIssuesScreenState
       backgroundColor: context.colors.surfaceContainerLow,
       appBar: const AksharaAppBar(
         titleText: 'My reported issues',
-        subtitle: 'Issues you raised with Akshara Support',
+        subtitle: 'Issues you raised with NIKSHA Support',
         trailingPadding: true,
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -232,7 +232,7 @@ class _EmptyList extends StatelessWidget {
           title: filtered ? 'No issues in this filter' : 'No reported issues',
           message: filtered
               ? 'Try a different status filter.'
-              : 'When something is not working, report it here and Akshara '
+              : 'When something is not working, report it here and NIKSHA '
                   'Support will investigate. We attach the technical details '
                   'for you automatically.',
           actionLabel: filtered ? null : 'Report an issue',

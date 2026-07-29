@@ -44,7 +44,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// in the final group.
 
 SchoolBranding _pilotBranding() => const SchoolBranding(
-      displayName: 'Akshara Pilot School',
+      displayName: 'NIKSHA Pilot School',
       tagline: 'Pilot Cohort 2026',
       primaryColor: '#0B6E4F',
       secondaryColor: '#1565C0',
@@ -101,7 +101,7 @@ void main() {
       addTearDown(container.dispose);
       await container.read(schoolBrandingProvider.future);
 
-      expect(container.read(schoolDisplayNameProvider), 'Akshara Pilot School');
+      expect(container.read(schoolDisplayNameProvider), 'NIKSHA Pilot School');
       expect(container.read(schoolBrandingThemeProvider)?.hasOverride, isTrue);
       expect(container.read(schoolLogoUrlProvider), isNotNull);
     });

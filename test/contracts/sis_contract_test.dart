@@ -134,7 +134,7 @@ void main() {
           'guardianName': 'Kiran Patel',
           'status': 'transferred',
         },
-        'school': {'name': 'Akshara Public School', 'code': 'DPSKKP'},
+        'school': {'name': 'NIKSHA Public School', 'code': 'DPSKKP'},
       });
       expect(data.type, SisCertificateType.transfer);
       expect(data.serialNo, 'TC/DPSKKP/2026-27/0001');

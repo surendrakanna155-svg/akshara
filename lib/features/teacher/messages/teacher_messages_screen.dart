@@ -244,7 +244,7 @@ class _ComposePane extends ConsumerWidget {
             phone: draft.recipient.trim(),
             label: 'Open in WhatsApp',
             message: draft.body.trim().isEmpty
-                ? 'Hello from Akshara School'
+                ? 'Hello from NIKSHA School'
                 : draft.body.trim(),
             unavailableMessage:
                 'Enter parent phone number in To field (E.164 or 10-digit).',

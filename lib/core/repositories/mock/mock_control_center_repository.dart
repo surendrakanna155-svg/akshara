@@ -83,7 +83,7 @@ class MockControlCenterRepository implements ControlCenterRepository {
   static const _schools = [
     PlatformSchool(
       id: 'SCH-1001',
-      name: 'Akshara International — Hyderabad',
+      name: 'NIKSHA International — Hyderabad',
       plan: SubscriptionPlan.premium,
       studentCount: 2840,
       status: PlatformSchoolStatus.active,
@@ -300,7 +300,7 @@ class MockControlCenterRepository implements ControlCenterRepository {
         ),
         BillingInvoice(
           id: 'INV-2026-0420',
-          schoolName: 'Akshara International — Hyderabad',
+          schoolName: 'NIKSHA International — Hyderabad',
           amountLakhs: 4.2,
           dueDate: '2026-06-30',
           status: 'Paid',
@@ -402,7 +402,7 @@ class MockControlCenterRepository implements ControlCenterRepository {
       SupportTicket(
         id: 'TKT-8803',
         subject: 'Transport GPS integration',
-        schoolName: 'Akshara International — Hyderabad',
+        schoolName: 'NIKSHA International — Hyderabad',
         status: SupportTicketStatus.resolved,
         priority: 'Low',
         slaRemaining: '—',
@@ -467,7 +467,7 @@ class MockControlCenterRepository implements ControlCenterRepository {
       ),
       WhiteLabelConfig(
         schoolId: 'SCH-1001',
-        schoolName: 'Akshara International — Hyderabad',
+        schoolName: 'NIKSHA International — Hyderabad',
         logoUrl: 'assets/branding/akshara_intl_logo.png',
         primaryColorHex: '#2E7D32',
         customDomain: 'portal.aksharainternational.in',
@@ -565,7 +565,7 @@ class MockControlCenterRepository implements ControlCenterRepository {
         ),
         PlatformRole(
           id: 'role_director',
-          name: 'Akshara Director',
+          name: 'NIKSHA Director',
           description: 'Platform revenue and analytics — no school PII',
           permissionCount: 22,
           userCount: 5,

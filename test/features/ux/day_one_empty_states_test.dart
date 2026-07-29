@@ -35,7 +35,7 @@ void _useViewport(WidgetTester tester, Size size) {
   });
 }
 
-/// Pumps a bare widget under the Akshara theme (the section widgets read
+/// Pumps a bare widget under the NIKSHA theme (the section widgets read
 /// `context.colors` / `context.aksharaText`).
 Future<void> _pumpWidget(
   WidgetTester tester,

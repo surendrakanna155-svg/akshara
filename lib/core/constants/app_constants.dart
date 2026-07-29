@@ -2,7 +2,8 @@
 ///
 /// Branding (owner decision, 2026-07-28): the product ships as **NIKSHA OS**,
 /// published by **NIKSHA Technologies Pvt. Ltd.** The former "Akshara ERP" name
-/// is retired from every user-facing surface. The Android package id stays
+/// is retired from every user-facing surface — enforced by
+/// `test/branding/niksha_branding_guard_test.dart`. The Android package id stays
 /// `com.akshara.erp` — a Play Store package id can never be changed after the
 /// first upload, and it is never shown to users.
 abstract final class AppConstants {

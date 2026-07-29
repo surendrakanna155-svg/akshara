@@ -6,7 +6,7 @@ class MockWhiteLabelPlatformRepository implements WhiteLabelPlatformRepository {
   final List<BrandingProfile> _profiles = [
     const BrandingProfile(
       id: 'wl_profile_1',
-      name: 'Akshara Default',
+      name: 'NIKSHA Default',
       primaryColor: '#1E88E5',
       accentColor: '#FFC107',
       isDefault: true,

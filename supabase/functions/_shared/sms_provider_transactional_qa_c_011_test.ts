@@ -38,7 +38,7 @@ const config: SmsConfig = {
 };
 
 const FEE_RECEIPT_SMS =
-  "Akshara: Payment of Rs 4,200 received for Asha (Class 3A). Receipt available in the app.";
+  "NIKSHA: Payment of Rs 4,200 received for Asha (Class 3A). Receipt available in the app.";
 
 // --- recipient normalization across stored formats ---------------------------
 
@@ -75,7 +75,7 @@ Deno.test("QA-C-011 transactional SMS sends the rendered body verbatim on the 'q
 
 Deno.test("QA-C-011 a pre-rendered {{var}} body reaches the wire unchanged (no double templating)", () => {
   // upstream (template_renderer) substitutes vars; the SMS channel forwards the result.
-  const rendered = "Akshara: Results for Term 2 are published for Asha. Open the app to view.";
+  const rendered = "NIKSHA: Results for Term 2 are published for Asha. Open the app to view.";
   const params = new URLSearchParams(
     buildTransactionalRequest(config, "9550055155", rendered).body,
   );
