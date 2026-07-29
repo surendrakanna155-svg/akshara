@@ -5615,3 +5615,40 @@ pattern. One outlier was found and fixed; two findings are recorded below.
 - **Why only P3:** `payment_requests.status` is a coarse tracker; the
   authoritative money record is the intent plus the finance_collections row,
   and neither is affected. Worth a guard for consistency, not urgent.
+
+---
+
+## XMOD-DUP-001 — the manual-attendance fallback is implemented TWICE
+
+- **Severity:** P2 — both implementations work; the cost is confusion, drift and
+  a compile-level name collision, not a user-visible failure today.
+- **Added:** 2026-07-29, found while re-wiring the geofence entry point.
+
+Two complete client implementations of the same feature coexist, each with its
+own datasource, its own provider **of the same name**, and its own UI:
+
+| | A | B |
+|---|---|---|
+| Datasource file | `manual_attendance_request_datasource.dart` | `manual_request_datasource.dart` |
+| Class | `ManualAttendanceRequestDataSource` (interface) + `…RemoteDataSource` | `ManualAttendanceRequestDataSource` (concrete) |
+| Provider declared in | `manual_attendance_request_providers.dart` | `staff_attendance_providers.dart` |
+| Provider name | `manualAttendanceRequestDataSourceProvider` | `manualAttendanceRequestDataSourceProvider` |
+| Surfaced by | `ManualAttendanceApproverScreen`, `ManualAttendanceRequestScreen`, `StaffCheckInCard` | `ManualRequestQueue`, `ManualRequestDialog`, `HrAttendanceScreen` |
+
+Both classes AND both providers share their names, so any file importing both
+libraries fails to compile on an ambiguous reference. That is currently worked
+around with `show`-scoped imports, which is a symptom, not a fix.
+
+- **Origin:** a W0.2b union artifact — two branches implemented the same slice
+  and both survived the merge.
+- **Consequence today:** a principal approving from the HR attendance screen and
+  a principal approving from the dedicated approver route are running different
+  client code against the same endpoints. A fix applied to one does not reach
+  the other — which is exactly how the singular/plural route bug (fixed in
+  `2b81a223`) survived in A while B had the correct path all along.
+- **Recommended fix:** decide which UI is canonical — the dedicated approver
+  screen or the inline HR queue — delete the other implementation and its
+  datasource, and keep one provider name. This is a product decision about
+  where approval lives, not a mechanical rename, which is why it is recorded
+  rather than done.
+- **Dependencies:** none blocking; do it before either surface is changed again.
