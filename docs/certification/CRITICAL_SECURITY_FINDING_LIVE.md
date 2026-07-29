@@ -133,3 +133,83 @@ split. That single omission is what made this attempt unshippable.
 - Verification evidence: baseline restored and re-verified
 - Regression coverage: **not yet added**
 - Deployment status: **not deployed; live exposure unchanged**
+
+---
+
+## ROOT CAUSE — established 2026-07-29. It is not a code defect.
+
+**The application code is correct and already fails closed.**
+
+`requireInternalHealthAccess` (`_shared/internal_health_auth.ts`) is invoked as
+the FIRST statement of all five sensitive handlers (`_shared/tenant_handlers.ts`
+lines 32, 102, 155, 195, 284) — before any probe runs. It uses a constant-time
+compare, and when no token is configured it returns **403 in production**.
+
+The deduction is airtight from the code plus the observed live behaviour:
+
+1. A token configured + no header sent ⟹ **403**. We sent no header and got
+   **200** ⟹ `INTERNAL_HEALTH_TOKEN` is **not configured**.
+2. No token configured + `environment === "production"` ⟹ **403**. We got
+   **200** ⟹ `config.environment` is **not `"production"`**.
+3. `config.environment = Deno.env.get("APP_ENV") ?? "development"` (`config.ts:91`).
+
+⟹ **The deployed pilot is running with `APP_ENV` unset or not `"production"`.**
+
+### Why this is worse than the health endpoints alone
+
+`APP_ENV` is the master production switch. The same flag gates
+`canReturnOtpInResponse` (`auth_handlers.ts:112-117`), which short-circuits on
+production *before* consulting the pilot allowlist or the dev flag. With
+`APP_ENV` not production, **that OTP protection is also off**, and any other
+production-only hardening with it. The health exposure is a symptom; the flag is
+the defect.
+
+This also explains API-105: the forced-auth behaviour the repo test asserts is
+almost certainly gated the same way. One misconfiguration, several symptoms.
+
+### The fix is a deployment action, not a code change
+
+Nothing in this repository can close this exposure. It requires, on the VPS:
+
+1. Set `APP_ENV=production` in `/opt/akshara/deploy/akshara-vps/.env.akshara`
+2. Set `INTERNAL_HEALTH_TOKEN` to a high-entropy value in the same file
+3. **RECREATE** the edge container — `docker compose ... up -d --no-deps
+   --force-recreate akshara-edge`. A `restart` does **not** re-read env.
+4. Re-run the verifier below; it must exit 0.
+
+⚠️ Setting `APP_ENV=production` will also enable `requireTls` and
+`requireAuthentication`, and will disable demo-auth paths. That is correct and
+intended — but it is a behaviour change on a running pilot, so run the verifier
+immediately afterwards and confirm the app still logs in.
+
+### Guard shipped — `deploy/akshara-vps/verify-deployment-security.sh`
+
+Probes the DEPLOYMENT from outside with no credentials, because the repo test
+passing was never evidence about the running system. Run after every deploy.
+
+**Executed against the live pilot 2026-07-29 — 8 checks FAILED**, exactly
+matching the confirmed findings:
+
+```
+[1] Internal health endpoints reject anonymous access
+  FAIL  /health/tenant-access -> 503      FAIL  /health/operations -> 200
+  FAIL  /health/providers     -> 200      FAIL  /health/backup     -> 200
+  FAIL  /health/storage       -> 200
+[2] Public liveness discloses nothing sensitive
+  PASS  /health exposes no internals
+[3] Auth precedes validation on protected routes
+  FAIL  /attendance/register/monthly -> 422 (validated BEFORE authenticating)
+  FAIL  /audit/events -> 404   FAIL  /identity/roles -> 404
+RESULT: 8 check(s) FAILED
+```
+
+This script is the regression coverage. It fails today and must pass after the
+deployment fix — that is the acceptance test.
+
+### Status
+
+- **Root cause:** ✅ established — `APP_ENV` not `"production"` on the deployment
+- **Fix implemented:** ⛔ owner/infra action; no code change can do it
+- **Verification evidence:** ✅ verifier run against live, 8 failures recorded above
+- **Regression coverage:** ✅ `verify-deployment-security.sh`, fails today
+- **Deployment status:** ⛔ NOT deployed — **live exposure unchanged**
