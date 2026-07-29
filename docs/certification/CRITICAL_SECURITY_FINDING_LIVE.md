@@ -89,3 +89,47 @@ This is **not** a declaration that the pilot has been breached. There is no
 evidence of exploitation, and none was sought. The finding is that the exposure
 exists and that the isolation self-check is red — both facts, neither an
 incident report.
+
+---
+
+## Remediation attempt 1 — REVERTED (2026-07-29)
+
+Owner authorised the fix. The attempt died mid-edit on an infrastructure error
+(connection closed), leaving four modified files plus one new file. The state
+**typechecked but broke the test suite** — `qa_r_010_health_routes_test.ts`
+failed type-checking because a dependent test was not updated.
+
+**Reverted to baseline** rather than committed. Half-finished security code that
+compiles is more dangerous than none: it reads as done. Baseline re-verified —
+`deno check` clean, `qa_r_010_health_routes_test.ts` 11 passed / 0 failed, tree
+clean. **No fix is in place. The live exposure stands.**
+
+### What the attempt established — do not re-derive
+
+1. **`supabase/functions/_shared/internal_health_auth.ts` already exists.** The
+   authorisation mechanism for `/health/*` is present in the codebase and simply
+   is not enforced on these routes. The fix is to enforce an existing control,
+   not to build one — which makes it smaller and safer than it first appeared.
+2. It judged a **route-table split** worthwhile (`_shared/health_routes.ts`), so
+   health routes are declared in one place and cannot be added without passing
+   through the auth decision. That is the right shape for the guard.
+3. It was touching `auth_handlers.ts` and `api/app.ts` together — consistent
+   with moving authentication ahead of route dispatch (TASK 1).
+4. **Lead on `isolation.pass=false`:** it found a misleading comment on the SIS
+   create probe — the comment says INSERT, the SQL is a SELECT. A probe whose
+   comment and query disagree is a strong candidate for a probe that does not
+   test what it claims. Start there, and do NOT assume the certification's
+   attribution (4 student-scope probes) is correct.
+
+### Sequencing note for the retry
+
+Update `qa_r_010_health_routes_test.ts` **in the same change** as the route-table
+split. That single omission is what made this attempt unshippable.
+
+### Status
+
+- Root cause: **partially established** (see above), not yet confirmed
+- Fix implemented: **none — reverted**
+- Verification evidence: baseline restored and re-verified
+- Regression coverage: **not yet added**
+- Deployment status: **not deployed; live exposure unchanged**
