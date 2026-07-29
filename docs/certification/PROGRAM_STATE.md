@@ -115,6 +115,28 @@ fallback must default to LESS access. Pull forward with CERT-001.
 - Never record a check that did not run. "Could not verify X" is a valid finding.
 - Corrections to earlier findings are recorded, never silently amended.
 
+## Roadmap complete — remediation is the next action
+
+`SYSTEMIC_REMEDIATION_ROADMAP.md` (2,760 lines, 42 waves, Phases 1–4).
+Mechanically verified: all 196 register IDs assigned exactly once — 190 to
+waves, 4 to the owner track, 2 excluded. Zero duplicates, zero unassigned.
+
+**Correction to my own framing, recomputed not asserted:** the five systemic
+causes account for **84 of 196** entries and **21 of 36 P0s** — not the 95/31
+I implied when naming them. The other 15 P0s are residual security / data /
+financial defects scheduled by severity. Every P0 lands in Phase 1–3 or the
+owner track; **none** is in Phase 4.
+
+**Third ordering constraint, found while sequencing:** POLISH-011 must precede
+POLISH-003/004/012/017/021, or Finance, SIS and Admissions are silently
+excluded from every Phase 4 fix by the three forked async bodies.
+
+**Every wave must ship a guard** (lint / invariant / contract test). This is
+non-negotiable and is the lesson of cycle 1: the RC phase fixed one skeleton
+of six, one exception dump of 23, one tap target in a file with three more,
+and four dashboard holes of ten. A wave that fixes instances without a guard
+has not closed its class.
+
 ## Resume instructions
 
 1. `git add docs/certification/ && git commit` — pick up any agent output written
