@@ -29,7 +29,19 @@ PRODUCT CERTIFICATION COMPLETE
 | 10 School-OS coherence | ✅ | see findings |
 
 **CYCLE 1 CERTIFICATION COMPLETE — all 11 workstreams done. NOT CERTIFIED.**
-Register: **174** (29 P0 · 89 P1 · 50 P2 · 6 P3).
+Register: **196** (36 P0 · 104 P1 · 50 P2 · 6 P3) — counts recomputed
+mechanically from headings, not incremented by hand (the table had drifted
+under concurrent appends; the method is documented inline in the register).
+
+### Fifth systemic item — one truth per quantity does not exist
+Canonical shared state is the **exception, not the rule**: 1 of 13 cross-module
+quantities (attendance-%, whose own header says it was a one-off remediation).
+Against that: **4 definitions of "student count" — and billing uses the
+unfiltered one**; two grading scales that disagree at 35% (server says F, the
+report card says D); 3 definitions of "collected"; and **no academic-year
+resolver at all** — 66 hard-coded literals, in two different dash characters.
+This is the root of the School-OS verdict. Fix the resolver and the canonical
+counts before wiring anything new on top of them.
 
 ### ⚠️ LIVE PRODUCTION SECURITY — verify before any pilot use (API-105/107/108)
 Found by read-only probes against the deployed pilot, NOT inferred from code:

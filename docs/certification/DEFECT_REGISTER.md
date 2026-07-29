@@ -33,6 +33,9 @@ completes, ahead of ordinary P0 ordering.
 | **WIDGET-011** | The principal's "School health score" is blended from hard-coded fallbacks (68 and 31) whenever the real figures are absent, so a school with no data is shown a confident **51**. A fabricated financial claim to the owner. |
 | **JOURNEY-001** | The `/admin` landing hero — the first screen 6 of 15 staff roles see, every day — renders compile-time constants as live KPIs: "1,248 Students · 86 Staff · **96% Attendance**" and "**₹4.2L Collected today** · ₹1.8L Pending". Fabricated attendance and financial data, on day one at an empty school, with no failure required to trigger it. |
 | **JOURNEY-007** | `/parent/payment` falls back to a fabricated payment summary — another child's name, "₹4,000 + ₹200 late fee", a due date — whenever the live summary call fails or is still loading, and sends that fabricated **amount** to `POST /parent/payments/initiate`. Fabricated money on the payment write path. |
+| **POLISH-001** | **No staff persona can log out.** In a release build the only profile affordance for principal, teacher, accountant and every other staff role is a snackbar reading "Profile menu coming soon." On the shared school devices this product is designed for, a session cannot be ended — the next person inherits full access to student PII, fee collection and marks entry. It is also the first personal affordance a principal touches. One conditional away from fixed. |
+| **OS-007** | Audit is **not transactional at any of its 305 call sites**: the mutation commits, the audit insert fails, and the caller is told the operation failed — so the money moved, the trail is missing, and the operator will do it again. The RC phase's stated guarantee of in-transaction auditing cannot hold, because there are no transactions. |
+| **OS-009** | The notification rail reaches **9 of ~62 mutating modules**. `payment` moves money, `attendance` marks a child absent, and `library` records an overdue book — none of them tells anybody. 53 modules change state that no human ever learns about. This is the single strongest disproof of "operating system", and it generalises SIM-003, XMOD-019 and XMOD-023 from isolated misses into a population. |
 | **API-119** | An in-flight `409 IDEMPOTENCY_CONFLICT` is classified by the reliability outbox as `confirmed`, but the backend releases that claim when the racing request fails. The app can therefore record a fee collection as **confirmed** — terminal, never retried — with nothing written to the books. A collection the school believes it took and the ledger never received. Fabricated financial state by the standing rule, on the money write path. |
 | **E2E-017** | **There is no file picker in the product.** All four upload surfaces — SIS student documents, admissions documents, student homework submission, teacher homework attachment — post the same hard-coded blank PDF under a user-typed file name. A clerk can then mark that blank page **verified**, and an admission can be approved on a documents checklist made entirely of them. Fabricated records data, on the paths that hold a child's legal documents. |
 | **E2E-008** | The counter's "Record collection" sends the literal string `'Today'` as the payment date. The FIN-D1 closed-day guard compares it lexically and returns "not locked" every time, so **closed and reported books silently take new money**; and `fiscalYearOf("Today")` returns `"NaN-NaN"`, so the receipt number handed to the parent reads `SCH/NaN-NaN/000042` and every fiscal year shares one sequence. |
@@ -57,13 +60,19 @@ Root cause (if known) · Recommended fix · Dependencies · Risk · Evidence`
 
 | Total | P0 | P1 | P2 | P3 |
 |---|---|---|---|---|
-| 174 | 29 | 89 | 50 | 6 |
+| 196 | 36 | 104 | 50 | 6 |
 
 By workstream: **CERT** 6 (1 P0 · 5 P1) · **XMOD** 39 (10 P0 · 22 P1 · 7 P2) ·
 **DAI** 16 (2 P0 · 7 P1 · 5 P2 · 2 P3) · **WIDGET** 18 (3 P0 · 8 P1 · 6 P2 · 1 P3) ·
-**JOURNEY** 16 (3 P0 · 10 P1 · 3 P2) · **SIM** 4 (4 P1) · **E2E** 21 (6 P0 · 11 P1 · 4 P2) ·
-**POLISH** 23 (10 P1 · 10 P2 · 3 P3) · **AI** 6 (3 P1 · 3 P2) ·
-**API** 25 (4 P0 · 9 P1 · 12 P2).
+**JOURNEY** 16 (3 P0 · 10 P1 · 3 P2) · **SIM** 4 (4 P1) ·
+**E2E** 21 (6 P0 · 11 P1 · 4 P2) · **API** 25 (4 P0 · 9 P1 · 12 P2) ·
+**AI** 6 (3 P1 · 3 P2) · **POLISH** 24 (1 P0 · 10 P1 · 10 P2 · 3 P3) ·
+**OS** 21 (6 P0 · 15 P1).
+
+> Counts recomputed mechanically from the `### <PREFIX>-<NNN> · <severity>`
+> headings in this file, not carried forward by hand — several workstreams
+> append concurrently and the running totals had drifted. Re-run the same
+> extraction after any append.
 
 *(Certification in progress.)*
 
@@ -5233,3 +5242,313 @@ so the capability is not counted as delivered.
 - **Evidence:** `_shared/route_registry.ts:119`;
   `_shared/validation/rbac_route_inventory.ts:12`;
   `docs/roadmap/RC_EXECUTION_LOG.md:48-52`.
+
+### OS-014 · **P1** · Workspaces / RBAC · The workspace model collapses at both ends, and four roles cannot reach the modules their job requires
+
+- **Repro steps:** Sign in as an admissions counsellor and try to enrol the
+  applicant you just admitted. Then as a librarian, try to look up the student
+  borrowing a book. Then as a hostel manager, try to see a resident's fees.
+- **Expected:** A workspace containing the modules that role uses together.
+- **Actual:** None of them can. Each workspace contains **one module**.
+- **Root cause:** `kRoleWorkspaces` (`lib/core/workspace/workspace.dart:177-193`)
+  maps 15 roles (`lib/core/security/erp_role.dart:2-17`) onto 10 workspaces
+  (`workspace.dart:15-26`), and the mapping degenerates at both ends:
+  **five roles collapse into one workspace** — superAdmin, schoolAdmin,
+  principal, vicePrincipal and management all resolve to `schoolAdministration`,
+  so the product distinguishes a principal from a VP in its permission model and
+  then shows them an identical workspace; and **eight of ten workspaces hold
+  exactly one module** (`workspace.dart:110,119,128,137,146,155` — finance,
+  inventory, transport, hostel, library each a singleton; frontOffice =
+  {admissions, marketing}), while **three hold zero** (teaching, parentSpace,
+  studentSpace, `:95-102,157-172`).
+  Compounding it, `homeRouteForStaffErp`
+  (`lib/features/auth/qa_login_persona.dart:207-216`) has arms for only 5 of 15
+  roles; **seven staff roles** (schoolAdmin, management, admissionsCounselor,
+  transportManager, hostelManager, librarian, storekeeper) fall to
+  `_ => RouteNames.admin` at `:214` and land on the launcher — **even though
+  their own workspace declares a `homeRoute`** at `workspace.dart:126,135,144,153`
+  that is never consulted. The data to fix that exists and is not read.
+- **Why P1:** a "workspace" that is a synonym for a single module is not a
+  workspace, and the admissions counsellor case breaks the product's own primary
+  workflow: admit, then enrol, spans two workspaces and the role that performs it
+  can only see one.
+- **Recommended fix:** Populate workspaces around **jobs** rather than modules —
+  frontOffice should hold admissions, SIS, certificates, gate pass and complaints;
+  finance should include SIS lookup; hostel and library should include SIS. Then
+  read `workspace.homeRoute` in `homeRouteForStaffErp` instead of the unfinished
+  switch.
+- **Dependencies:** JOURNEY-004 (the unfinished landing switch), JOURNEY-008 (the
+  five orphaned desks), JOURNEY-013 (no office-staff role to hold them).
+- **Risk of fixing:** Low-medium — widening a workspace changes which tiles each
+  role sees; permission filtering still applies on top.
+- **Evidence:** `lib/core/workspace/workspace.dart:15-26,59-173,177-193`;
+  `lib/core/security/erp_role.dart:2-17,46-59`;
+  `lib/features/auth/qa_login_persona.dart:207-216`.
+
+### OS-016 · **P1** · Student 360, Finance, SIS, Transport, Library, Teacher · Role opens the door and never furnishes the room — 2 of 8 shared screens adapt to the viewer
+
+- **Repro steps:** Open Student 360 as a teacher, then as a hostel manager, then
+  as a finance admin. Compare what each sees.
+- **Expected:** A screen scoped to what that role needs and is entitled to see.
+- **Actual:** **The identical 1,050-line dossier** — fees, behaviour,
+  communication history, documents — to all three. A hostel warden and the
+  accountant both read a child's full behavioural and communication record.
+- **Root cause:** **17 of 310 `*_screen.dart` files (5.5%)** reference
+  `rbacServiceProvider`, `hasPermission` or `ErpRole` at all.
+  `lib/features/student_360/student_360_screen.dart` has **zero** occurrences.
+  So do `finance/collections/finance_collections_screen.dart`,
+  `teacher/attendance/teacher_attendance_screen.dart`,
+  `sis/registry/sis_registry_screen.dart`,
+  `transport/routes/transport_routes_screen.dart`, and **every screen in
+  `lib/features/library/`**. Role is enforced only at the route guard.
+  The two that do it properly are worth naming as the target pattern:
+  `sis/profile/sis_profile_screen.dart` (per-action gates at
+  `:101,115,129,144,473,541` plus `hasPermission(approveClearanceWaiver)` at
+  `:158`) and `academics/exam_admin/exam_marks_entry_screen.dart` (six distinct
+  gates — `manageExamMarks` `:507`, `manageExams` `:524`, `verifyExamResults`
+  `:535`, `submitExamResults` `:546`, `publishExamResults` `:567`,
+  `moderateExamMarks` `:1004`).
+  The structural tell is the timetable: rather than one role-adaptive screen
+  there are **four hard-forked copies** —
+  `academics/timetable/timetable_hub_screen.dart`,
+  `teacher/timetable/teacher_timetable_screen.dart`,
+  `student_app/timetable/student_timetable_screen.dart`,
+  `parent/timetable/parent_timetable_screen.dart`. Role is resolved by file path,
+  not by the screen. That is the architecture of four apps.
+- **Recommended fix:** Section-gate Student 360 by permission (fees behind
+  `viewFinance`, behaviour and communication behind their own), using the
+  `AksharaManageAction` pattern `sis_profile_screen.dart` already uses.
+- **Dependencies:** None for Student 360.
+- **Risk of fixing:** Low-medium — some roles will lose sections they can
+  currently see, which is the intent.
+- **Evidence:** file:line list above.
+
+### OS-017 · **P1** · Platform / Workspace context · Workspace, academic year and class context do not propagate; only tenant does
+
+- **Repro steps:** Pick Class 8A in teacher attendance, then open Fees, Exams or
+  SIS. Then switch workspace and observe what changes in any module.
+- **Expected:** Context follows the user.
+- **Actual:** You re-pick the class in every module, and switching workspace
+  changes only which tiles render.
+- **Root cause:** `activeWorkspaceProvider` / `activeWorkspaceIdProvider` /
+  `userWorkspacesProvider` (`lib/core/workspace/workspace_providers.dart:8-34`)
+  are read by **exactly four files outside their own directory** —
+  `admin/admin_navigation_provider.dart:328`,
+  `admin/screens/admin_hub_screen.dart:32`,
+  `shared/navigation/persona_nav.dart:166`,
+  `shared/widgets/workspace_switcher.dart:19,22,46,68,71,156`. **Zero feature
+  modules read it.** Class context is private to
+  `lib/features/teacher/attendance/` and
+  `teacher/reports/teacher_report_exporters.dart`. Academic year has no global
+  provider at all (see OS-006). The one thing that does propagate is
+  `repositoryQueryProvider` (`lib/core/tenant/tenant_provider.dart:41-43`), read
+  by **173 files** — genuinely shared, and a data-fetch scope rather than a UI
+  context. `currentUserContextProvider` (`:46`) is read by one file.
+- **Why P1:** the product's stated north star is USER→ROLE→WORKSPACE→TASK. The
+  workspace exists as a data structure with a switcher and a hero graphic, and is
+  consumed by four navigation files and no module. It is a nav filter wearing the
+  name of a context.
+- **Recommended fix:** Extend `TenantContext` into a school context carrying
+  workspace, academic year, term and (optionally) a selected class, and make
+  `repositoryQueryProvider` — which 173 files already read — the propagation
+  vehicle.
+- **Dependencies:** OS-006 (year/term), OS-014 (workspaces need real contents
+  before propagating them is meaningful).
+- **Risk of fixing:** Medium — changes fetch scope broadly; needs care that
+  narrowing context does not hide data a role currently sees.
+- **Evidence:** file:line list above.
+
+### OS-018 · **P1** · DAI / Global search · 23 of 30 modules cannot be asked about, including every front-office desk
+
+- **Repro steps:** Ask the assistant about a library book, a hostel resident, a
+  staff member's leave, a gate pass, a certificate, or an infirmary visit.
+- **Expected:** Something, or an honest "I cannot answer that".
+- **Actual:** Nothing — those modules have no intent (and per DAI-007 there is no
+  cannot-answer state either).
+- **Root cause:** `lib/core/dai/dai_resolver.dart:66-78` (`_rules`) defines 11
+  intents (`dai_intent.dart:6-42`) reaching **7 modules**: Finance
+  (`openReceipt` `:111-125`, `feeDefaulters` `:128-149`), SIS (`lowAttendance`
+  `:152-172`, `openClass` `:273-288`), Transport (`:175-191`), Attendance
+  (`:194-212`), Homework (`:215-228`), Exams (`:231-244`), and parent/student
+  self-service (`:247-270`). `openPerson` (`:295-340`) resolves to a null route.
+  Unreachable: admin, admissions, marketing, certificateDesk, gatePass,
+  complaints, studentHealth, schoolCompletion, hr, employee, management, hostel,
+  library, inventory, alumni, controlCenter, director, organizationBuilder,
+  platformOperations, industry, healthcare, salon, restaurant, accommodation,
+  whiteLabel, dynamicWidgets.
+- **Compound effect worth noting:** the five desks orphaned from every workspace
+  (JOURNEY-008) are also absent from DAI — so they are unreachable from the hub,
+  from the bottom nav, and from search. There is no path to them at all.
+- **Recommended fix:** Add intents for the desks first (certificate, gate pass,
+  complaint, infirmary) — they are the surfaces a front office reaches for by
+  name, and they currently have no other entry point.
+- **Dependencies:** JOURNEY-008; DAI-007 (no cannot-answer state).
+- **Risk of fixing:** Low — additive rules in an ordered list.
+- **Evidence:** `lib/core/dai/dai_resolver.dart:66-78,111-340`;
+  `lib/core/dai/dai_intent.dart:6-42`;
+  `lib/features/admin/models/admin_nav_models.dart:6-38`.
+
+### OS-019 · **P1** · DAI / Global search · DAI reads zero state, so no question spanning two modules can ever be answered
+
+- **Repro steps:** Ask "which Class 8 students have both low attendance and fee
+  dues" — the canonical question an OS answers and a module collection cannot.
+- **Expected:** An answer, or an honest refusal.
+- **Actual:** A deep link into **one** module's list screen, with the other half
+  of the question discarded and the class filter dropped.
+- **Root cause:** `DaiResolver` is declared `abstract final class` and documented
+  as **"Pure and synchronous. No I/O, no clock, no randomness"**
+  (`dai_resolver.dart:26-27`). It reads no repository, no provider, no `ref`.
+  Every intent yields a route string the caller `context.go()`s
+  (`lib/features/admin/global_search/global_search_overlay.dart:170`). It carries
+  `className`, `section` and `threshold` as fields on the intent and **the
+  destination screen never receives or applies them** — `sisStudents` is pushed as
+  a bare route (the mechanism behind DAI-004 and DAI-011). And `_feeDefaulters`
+  and `_lowAttendance` are **mutually exclusive rules in an ordered first-match
+  list** (`:50-53`), so a two-predicate question cannot even be represented. The
+  sibling `GlobalSearchRegistry` has 18 static entries — a menu index, not a query
+  engine.
+- **Why it belongs in this workstream rather than WS5:** DAI-006 registers that
+  "Ask anything" over-promises. This entry records the architectural reason: DAI
+  is a natural-language shortcut **to the navigation menu**. That is a legitimate
+  and useful thing to have built, and it is not integration. Cross-module query is
+  not missing — it is excluded by the resolver's stated design contract.
+- **Recommended fix:** Decide explicitly. Either keep the pure resolver and
+  reframe the product copy as navigation (cheap, honest, closes DAI-006), or add
+  a query tier above it that reads shared state and can compose predicates. Do not
+  ship the current copy over the current capability.
+- **Dependencies:** DAI-004, DAI-006, DAI-011.
+- **Risk of fixing:** Low for the copy; high for a query tier.
+- **Evidence:** `lib/core/dai/dai_resolver.dart:26-27,50-53,66-78`;
+  `lib/features/admin/global_search/global_search_overlay.dart:170`.
+
+### OS-020 · **P1** · Student 360 · The product's one cross-module hub has zero outbound taps, and its model has no field for library, hostel or health
+
+- **Repro steps:** Open Student 360 for any student. Tap the Fees figure. Tap the
+  attendance percentage. Tap an exam row. Tap the transport route. Look for the
+  student's library loans.
+- **Expected:** The screen built as a 360° view lets you follow the student into
+  each module.
+- **Actual:** **Nothing is tappable.** And the library, hostel and health data are
+  not there to link to.
+- **Root cause:** `lib/features/student_360/student_360_screen.dart` is 1,050
+  lines containing **zero** occurrences of `context.push`, `context.go`,
+  `Navigator`, `RouteNames.` or `onTap`. Every section — Academic performance
+  `:98`, Attendance `:105`, Fees `:112`, Transport `:118`, Homework `:124`,
+  Behaviour `:130`, Communication `:136`, Documents `:142` — is built by `_Section`
+  (`:628-666`), which passes `List<(String,String)> entries` into an
+  `AksharaKeyValueCard`: plain text pairs. `_ExamList` (`:688`) renders and never
+  navigates. The only outbound actions are "call guardian" (which **leaves the
+  app**, `:493`) and PDF export (`:905`). And `Student360Profile`
+  (`student_360_models.dart:3-45`) has **no `library`, `hostel`, `health`,
+  `certificate` or `gatePass` field** — precisely the three or four modules a
+  school chases a student across at year end.
+  Inbound is healthy by contrast: five modules deep-link in via `openStudent360`
+  (`lib/router/student360_navigation.dart:7-10`) — student_success `:309`,
+  sis_profile `:342`, sis_registry `:374`, teacher class dashboard `:122`,
+  teacher_student_risk `:173`. **Every module can push you in; nothing carries you
+  out.**
+- **Why P1 and why it is the workstream's clearest single exhibit:** the
+  entity-continuity test fails at hop one, on the screen designed to pass it. The
+  screen is not missing links so much as missing the idea that its contents are
+  entities.
+- **Recommended fix:** Make each section header and each row a navigation target
+  into the owning module scoped to the student; add the missing model fields
+  (library loans, hostel allocation, health visits) — which also closes the
+  clearance blind spot XMOD-021 and XMOD-025 describe from the other side.
+- **Dependencies:** XMOD-021, XMOD-025 (hostel/library/inventory invisible to
+  clearance); OS-021 (Hostel and Library hold no linkable student key).
+- **Risk of fixing:** Low-medium for the taps; medium for the model fields, which
+  need Hostel and Library to key on the student UUID first.
+- **Evidence:** `lib/features/student_360/student_360_screen.dart:98-142,493,628-666,688,905`;
+  `lib/features/student_360/student_360_models.dart:3-45`;
+  `lib/router/student360_navigation.dart:7-10`.
+
+### OS-021 · **P1** · Hostel, Alumni, Backup, Memories, Parent Meetings, Continuity, Dynamic Widgets · Seven modules are ISOLATED — they work, but nothing outside them learns anything happened
+
+- **Repro steps:** Allocate a hostel room. Graduate a student. Open the backup
+  console. Then check whether any other module knows.
+- **Expected:** For a School OS, at minimum: the resident is the same person as
+  the SIS student; graduating creates an alumnus; the backup status is real.
+- **Actual:** None of it. **This list is the answer to the workstream's
+  question.**
+  1. **Hostel** (LIVE) — touches only `hostel_entities`
+     (`hostel/hostel_read_repository.ts:7,56`); imports nothing but audit,
+     entitlements and the generic entity store. **It carries its own duplicate
+     copy of the student roster** as a `student` entity type inside
+     `hostel_entities` (`:224-225`), so a hostel resident and an SIS student are
+     two unrelated records. Registered `tracked: false` in the clearance registry
+     (`clearance/clearance_contributors.ts:115-125`) and absent from every shared
+     dashboard query. **A residential school's second-largest operational surface
+     is a private database.**
+  2. **Alumni** (HIDDEN, owner CODE-8) — zero SQL, zero cross-module imports
+     beyond audit/entitlements; a pure `alumni_entities` JSONB blob.
+     **Graduating a student in SIS does not create an alumnus.** The isolation is
+     structural, not a consequence of hiding.
+  3. **Backup & Restore** (LIVE, orphan route) —
+     `lib/features/admin/backup/backup_restore_screen.dart`. No backend
+     directory; the status panel is a **hard-coded static card**; and the route
+     has zero navigation references (`lib/router/app_router.dart:602` is the only
+     mention). A backup console reporting a fabricated status is a claim about
+     data safety nobody can act on.
+  4. **Memories** (HIDDEN) · 5. **Parent Meetings** (HIDDEN — UI built, **no
+     backend write path at all**) · 6. **Continuity** (HIDDEN — no backend
+     directory) · 7. **Dynamic Widgets** (HIDDEN — complete backend, zero
+     consumers, OS-012).
+- **Explicitly excluded rather than counted:** verticals (healthcare, salon,
+  restaurant, accommodation), industry, white-label, platform operations,
+  multi-school, branch, franchise, workflow automation, resource optimisation and
+  education/QIE are MOCK/HIDDEN in the release build per FEATURE_INVENTORY.md
+  M25/M26 — flags absent from `config/live_release.json`, repositories resolving
+  to `Mock*`, both hide gates active. **Hiding a backend-less surface is the
+  honest behaviour the inventory documents, not a defect.**
+- **Recommended fix:** Hostel first and alone — key `hostel_entities` on the SIS
+  student UUID, delete the duplicate roster, and flip its clearance contributor
+  to `tracked: true`. Alumni second — derive from SIS graduation. Backup:
+  either connect it or remove the route.
+- **Dependencies:** XMOD-021 (clearance covers fees only), XMOD-025 (nothing
+  released when a student leaves), OS-020.
+- **Risk of fixing:** Medium for Hostel (data migration from the private roster);
+  low for the rest.
+- **Evidence:** file:line list above; `docs/certification/FEATURE_INVENTORY.md`
+  M25/M26 for the MOCK/HIDDEN determinations.
+
+### OS-022 · **P1** · Library, Complaints, HR/Payroll · Three modules that only look connected
+
+- **Repro steps:** Return a book late and ask which parent was told. Raise a
+  complaint and ask who was notified. Run payroll and look for the expense in
+  Finance.
+- **Expected:** The borrower's parent, the assignee, and a posted expense.
+- **Actual:** Every parent in the school, nobody, and nothing.
+- **Root cause:** Each of these would pass a shallower audit, which is why they
+  are recorded rather than left inside OS-021.
+  **Library** escapes ISOLATED only via `library/library_write_handlers.ts:1049`
+  (`scheduleReminder` → `comm_broadcasts`) — and that call is a **blanket
+  broadcast to the entire parent body**, not a message to the borrower's parent.
+  The module's own comment at `:30` says so: *"fan out to the whole parent body."*
+  Members are keyed **by name, not by student UUID**; it holds a
+  `library_entities` JSONB store with no SIS read; clearance registers it
+  `tracked: false` (`clearance/clearance_contributors.ts:98-112`).
+  **Functionally an isolated ledger with a megaphone** — every parent is told a
+  book is overdue and the one who owes it is not told specifically.
+  **Complaints** escapes only by reading `inventory_vendors` to fill an assignment
+  dropdown (`complaints/complaints_repository.ts:436`). It writes `complaints`
+  and `complaint_events` and produces no notification at any point — SIM-003
+  confirmed structurally rather than by symptom.
+  **HR/Payroll** — `hr/hr_finance_posting_repository.ts:105` writes
+  `payroll_finance_postings`, and **no module reads that table** (the only
+  mentions are inside `hr/`). The intended consumer,
+  `_shared/expense_ledger/`, has **zero `postExpense` callers and is not
+  registered in `route_registry.ts`**. The Finance import at `hr/hr_handlers.ts:12`
+  is a response mapper only. **The payroll → finance link is fully built and never
+  connected** — the same "built, tested, never wired" pattern as POLISH-017 and
+  OS-012, here on the money path. Salary is the largest expense a school has and
+  it does not reach the books.
+- **Recommended fix:** Library — key members on the student UUID and address the
+  overdue reminder to that student's guardians. Complaints — enqueue on raise,
+  assign and resolve (SIM-003 has the detail). Payroll — register
+  `expense_ledger` in the route registry and call `postExpense` from
+  `hr_finance_posting_repository.ts`.
+- **Dependencies:** OS-009 (the rail), SIM-003, XMOD-021.
+- **Risk of fixing:** Medium for Library (re-keying members); low-medium for the
+  other two — both are wiring existing, working code.
+- **Evidence:** file:line list above.
