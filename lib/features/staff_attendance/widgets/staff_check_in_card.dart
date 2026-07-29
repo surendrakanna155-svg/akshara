@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../router/route_names.dart';
 import '../manual_attendance_request_providers.dart';
 import '../staff_attendance_models.dart';
+import '../staff_attendance_providers.dart';
+import 'geofence_settings_dialog.dart';
 
 /// Self-service staff check-in/out card (B4). Attendance is proven by being inside
 /// the school geofence + a live camera face match (NO device biometric); the host
@@ -42,6 +44,7 @@ class StaffCheckInCard extends ConsumerStatefulWidget {
     this.onOpenApproverQueue,
     this.onOpenEnrollment,
     this.onManualRequest,
+    this.onConfigureGeofence,
   });
 
   final Future<StaffCheckOutcome> Function(StaffCheckEvent event) onRecord;
@@ -55,6 +58,10 @@ class StaffCheckInCard extends ConsumerStatefulWidget {
   /// Overrides navigation to the approver queue (used in tests). When null the
   /// card pushes [RouteNames.hrStaffManualRequestQueue].
   final VoidCallback? onOpenApproverQueue;
+
+  /// Overrides opening the geofence configuration dialog (used in tests). When
+  /// null the card shows [GeofenceSettingsDialog] itself — no route needed.
+  final VoidCallback? onConfigureGeofence;
 
   @override
   ConsumerState<StaffCheckInCard> createState() => _StaffCheckInCardState();
@@ -98,10 +105,33 @@ class _StaffCheckInCardState extends ConsumerState<StaffCheckInCard> {
     context.push(RouteNames.hrStaffManualRequestQueue);
   }
 
+  /// Opens the school geofence editor. Deliberately a dialog rather than a
+  /// route: the geofence is the setup step that makes THIS card work, so it
+  /// belongs where the blocked check-in happens.
+  void _openGeofenceSettings() {
+    final override = widget.onConfigureGeofence;
+    if (override != null) {
+      override();
+      return;
+    }
+    // The location source is resolved lazily (ref.read, on tap) exactly like
+    // the record path — never at card-build time. On web/desktop it is the
+    // fail-loud placeholder, so "Use my current location" reports honestly
+    // and manual entry still works.
+    showDialog<bool>(
+      context: context,
+      builder: (_) => GeofenceSettingsDialog(
+        datasource: ref.read(schoolGeofenceDataSourceProvider),
+        locationSource: ref.read(attendanceLocationSourceProvider),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final canApprove = ref.watch(canApproveManualAttendanceProvider);
+    final canConfigureGeofence = ref.watch(canConfigureSchoolGeofenceProvider);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -220,6 +250,20 @@ class _StaffCheckInCardState extends ConsumerState<StaffCheckInCard> {
                   onPressed: _openApproverQueue,
                   icon: const Icon(Icons.rule, size: 18),
                   label: const Text('Approve manual requests'),
+                ),
+              ),
+            // The school geofence is the FIRST gate of the chain — without it
+            // the server rejects EVERY check-in with GEOFENCE_NOT_CONFIGURED.
+            // Offered only to the supervisory roles the server grants
+            // `manageSchoolGeofence` to (it re-enforces the slug on the write).
+            if (canConfigureGeofence)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  key: const Key('staff-configure-geofence-button'),
+                  onPressed: _openGeofenceSettings,
+                  icon: const Icon(Icons.location_searching, size: 18),
+                  label: const Text('Set school geofence'),
                 ),
               ),
           ],

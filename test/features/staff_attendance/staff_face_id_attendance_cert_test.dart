@@ -27,6 +27,7 @@ import 'package:akshara_erp/core/security/permissions.dart';
 import 'package:akshara_erp/core/security/role_permissions.dart';
 import 'package:akshara_erp/features/staff_attendance/attendance_capture_sources.dart';
 import 'package:akshara_erp/features/staff_attendance/manual_attendance_request_providers.dart';
+import 'package:akshara_erp/features/staff_attendance/staff_attendance_providers.dart';
 import 'package:akshara_erp/features/staff_attendance/staff_attendance_controller.dart';
 import 'package:akshara_erp/features/staff_attendance/staff_attendance_models.dart';
 import 'package:akshara_erp/features/staff_attendance/widgets/staff_check_in_card.dart';
@@ -273,16 +274,32 @@ void main() {
   });
 
   group('B4 attendance — RBAC + reliability policy (unchanged contracts)', () {
-    test('every staff persona holds markStaffAttendance; parent/student never', () {
+    test(
+        'every staff persona holds markStaffAttendance; parent/student and the '
+        'unsupported sentinel never', () {
+      // JOURNEY-002: `ErpRole.unsupported` is the fail-closed sentinel an
+      // unmapped server role slug resolves to. It must grant NOTHING —
+      // self-check-in included — so it joins parent/student on the deny side
+      // rather than inheriting the blanket "everyone else is staff" default.
+      const neverSelfChecksIn = {
+        ErpRole.parent,
+        ErpRole.student,
+        ErpRole.unsupported,
+      };
       for (final role in ErpRole.values) {
         final has = RolePermissionMatrix.permissionsFor(role)
             .contains(Permission.markStaffAttendance);
-        if (role == ErpRole.parent || role == ErpRole.student) {
+        if (neverSelfChecksIn.contains(role)) {
           expect(has, isFalse, reason: '${role.name} must NOT self-check-in');
         } else {
           expect(has, isTrue, reason: '${role.name} is staff and may self-check-in');
         }
       }
+      // The sentinel holds nothing at all, not merely "not this one".
+      expect(
+        RolePermissionMatrix.permissionsFor(ErpRole.unsupported).values,
+        isEmpty,
+      );
     });
 
     test('multi-hat union grants it when ANY hat is staff (parent+teacher)', () {
@@ -326,6 +343,7 @@ void main() {
       await tester.pumpWidget(ProviderScope(
         overrides: [
           canApproveManualAttendanceProvider.overrideWithValue(false),
+          canConfigureSchoolGeofenceProvider.overrideWithValue(false),
         ],
         child: MaterialApp(
           home: Scaffold(body: StaffCheckInCard(onRecord: controller.record)),
@@ -354,6 +372,7 @@ void main() {
       await tester.pumpWidget(ProviderScope(
         overrides: [
           canApproveManualAttendanceProvider.overrideWithValue(false),
+          canConfigureSchoolGeofenceProvider.overrideWithValue(false),
         ],
         child: MaterialApp(
           home: Scaffold(body: StaffCheckInCard(onRecord: controller.record)),

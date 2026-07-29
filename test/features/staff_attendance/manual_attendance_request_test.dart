@@ -15,6 +15,13 @@ import 'package:akshara_erp/features/staff_attendance/manual_attendance_approver
 import 'package:akshara_erp/features/staff_attendance/manual_attendance_request_datasource.dart';
 import 'package:akshara_erp/features/staff_attendance/manual_attendance_request_models.dart';
 import 'package:akshara_erp/features/staff_attendance/manual_attendance_request_providers.dart';
+// `show`-scoped deliberately: staff_attendance_providers.dart ALSO declares a
+// `manualAttendanceRequestDataSourceProvider`, of a different (identically
+// named) class, for the parallel slice-4 queue UI — see XMOD-DUP-001 in the
+// defect register. Importing it wholesale collides with the provider this file
+// actually exercises.
+import 'package:akshara_erp/features/staff_attendance/staff_attendance_providers.dart'
+    show canConfigureSchoolGeofenceProvider;
 import 'package:akshara_erp/features/staff_attendance/manual_attendance_request_screen.dart';
 import 'package:akshara_erp/features/staff_attendance/staff_attendance_models.dart';
 import 'package:akshara_erp/features/staff_attendance/widgets/staff_check_in_card.dart';
@@ -86,6 +93,7 @@ Widget _wrap(Widget child, _FakeDataSource fake, {bool canApprove = false}) {
     overrides: [
       manualAttendanceRequestDataSourceProvider.overrideWithValue(fake),
       canApproveManualAttendanceProvider.overrideWithValue(canApprove),
+      canConfigureSchoolGeofenceProvider.overrideWithValue(false),
     ],
     child: MaterialApp(theme: AksharaAppTheme.light(), home: child),
   );

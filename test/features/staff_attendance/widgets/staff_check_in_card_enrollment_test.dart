@@ -12,6 +12,7 @@
 // card-UI group, minus the parts that are already covered there.
 
 import 'package:akshara_erp/features/staff_attendance/manual_attendance_request_providers.dart';
+import 'package:akshara_erp/features/staff_attendance/staff_attendance_providers.dart';
 import 'package:akshara_erp/features/staff_attendance/staff_attendance_models.dart';
 import 'package:akshara_erp/features/staff_attendance/widgets/staff_check_in_card.dart';
 import 'package:flutter/material.dart';
@@ -26,6 +27,7 @@ Future<void> _pumpCard(
   await tester.pumpWidget(ProviderScope(
     overrides: [
       canApproveManualAttendanceProvider.overrideWithValue(false),
+          canConfigureSchoolGeofenceProvider.overrideWithValue(false),
     ],
     child: MaterialApp(
       home: Scaffold(

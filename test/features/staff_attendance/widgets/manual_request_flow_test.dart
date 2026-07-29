@@ -5,6 +5,7 @@
 //      submit → pending-approval confirmation.
 
 import 'package:akshara_erp/features/staff_attendance/manual_attendance_request_providers.dart';
+import 'package:akshara_erp/features/staff_attendance/staff_attendance_providers.dart';
 import 'package:akshara_erp/features/staff_attendance/manual_request_datasource.dart';
 import 'package:akshara_erp/features/staff_attendance/staff_attendance_models.dart';
 import 'package:akshara_erp/features/staff_attendance/widgets/manual_request_dialog.dart';
@@ -62,6 +63,7 @@ Future<void> _pumpCard(
     ProviderScope(
       overrides: [
         canApproveManualAttendanceProvider.overrideWithValue(false),
+          canConfigureSchoolGeofenceProvider.overrideWithValue(false),
       ],
       child: MaterialApp(
         home: Scaffold(
@@ -147,6 +149,7 @@ void main() {
         ProviderScope(
           overrides: [
             canApproveManualAttendanceProvider.overrideWithValue(false),
+          canConfigureSchoolGeofenceProvider.overrideWithValue(false),
           ],
           child: MaterialApp(
             home: Scaffold(

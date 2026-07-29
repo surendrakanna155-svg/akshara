@@ -5,11 +5,14 @@ import '../../core/audit/audit_provider.dart';
 import '../../core/network/dio_provider.dart';
 import '../../core/providers/router_provider.dart';
 import '../../core/reliability/reliability_providers.dart';
+import '../../core/security/permissions.dart';
+import '../../core/security/rbac_service.dart';
 import '../../core/tenant/tenant_provider.dart';
 import 'attendance_capture_sources.dart';
 import 'device/geolocator_location_source.dart';
 import 'device/mlkit_face_capture.dart';
 import 'face_enrollment_datasource.dart';
+import 'geofence_datasource.dart';
 import 'manual_request_datasource.dart';
 import 'staff_attendance_controller.dart';
 import 'staff_attendance_remote_datasource.dart';
@@ -51,6 +54,32 @@ final faceEnrollmentDataSourceProvider = Provider<FaceEnrollmentDataSource>(
     query: ref.watch(repositoryQueryProvider),
   ),
 );
+
+/// The school attendance geofence read/write seam — the FIRST gate of the
+/// attendance chain. Until a school stores one, POST /staff-attendance/check
+/// rejects every check-in with GEOFENCE_NOT_CONFIGURED, so this is the setup
+/// step that turns staff attendance on.
+final schoolGeofenceDataSourceProvider = Provider<SchoolGeofenceDataSource>(
+  (ref) => SchoolGeofenceDataSource(
+    dio: ref.watch(dioProvider),
+    query: ref.watch(repositoryQueryProvider),
+  ),
+);
+
+/// Client-side gate for the geofence configuration affordance.
+///
+/// The SERVER is the authority and enforces the exact `manageSchoolGeofence`
+/// slug on PUT /staff-attendance/geofence. The client `Permission` enum carries
+/// no such value, but migration 20260820000000 seeds `manageSchoolGeofence` and
+/// `approveStaffAttendance` to the IDENTICAL role list in a single statement
+/// (principal, vicePrincipal, schoolAdmin, hrManager, management, superAdmin,
+/// organizationOwner, organizationAdmin) — so `approveStaffAttendance` is an
+/// exact client-side proxy, not an approximation. Overridable in tests.
+final canConfigureSchoolGeofenceProvider = Provider<bool>((ref) {
+  return ref
+      .watch(rbacServiceProvider)
+      .hasApprovePermission(Permission.approveStaffAttendance);
+});
 
 /// Slice 4 — the Manual Attendance Request datasource (staff submission +
 /// approver queue). Same direct-Dio shape as the enrollment datasource.
