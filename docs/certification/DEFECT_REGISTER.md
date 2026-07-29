@@ -28,6 +28,9 @@ completes, ahead of ordinary P0 ordering.
 | ID | Why |
 |---|---|
 | **CERT-001** | `/parent/fees` renders a fabricated ₹23,000 statement and four fake "Paid" payments on the failure path. Fabricated financial data shown to a parent. |
+| **WIDGET-001** | `/parent/dashboard` renders `ParentDashboardData.mock()` — "₹4,200 due", "Present · Marked 9:12 AM" — during **every** load, not only on failure. Same class as CERT-001, on a higher-traffic screen, and the skeleton meant to prevent it is unreachable code. |
+| **WIDGET-002** | `/teacher/dashboard` asserts a staff check-in at "9:02 AM · Geo+Face verified" that did not happen, on the record that feeds payroll and the staff-attendance audit trail. |
+| **WIDGET-011** | The principal's "School health score" is blended from hard-coded fallbacks (68 and 31) whenever the real figures are absent, so a school with no data is shown a confident **51**. A fabricated financial claim to the owner. |
 
 ## Severity
 
@@ -47,9 +50,10 @@ Root cause (if known) · Recommended fix · Dependencies · Risk · Evidence`
 
 | Total | P0 | P1 | P2 | P3 |
 |---|---|---|---|---|
-| 45 | 11 | 27 | 7 | 0 |
+| 79 | 16 | 42 | 18 | 3 |
 
-By workstream: **CERT** 6 (1 P0 · 5 P1) · **XMOD** 39 (10 P0 · 22 P1 · 7 P2).
+By workstream: **CERT** 6 (1 P0 · 5 P1) · **XMOD** 39 (10 P0 · 22 P1 · 7 P2) ·
+**DAI** 16 (2 P0 · 7 P1 · 5 P2 · 2 P3) · **WIDGET** 18 (3 P0 · 8 P1 · 6 P2 · 1 P3).
 
 *(Certification in progress.)*
 
@@ -1121,3 +1125,1352 @@ so the capability is not counted as delivered.
 - **Severity note:** this meets the letter of the register's **P0** clause ("a false
   claim shown to a user"). Graded P1 because it is a single decorative headline rather
   than the report content or a money figure — flagging the judgement rather than hiding it.
+
+---
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     DAI — Workstream 5, Digital Academic Intelligence (2026-07-29)
+     Full trace: docs/certification/findings/DAI-certification.md
+     Resolver behaviour below was EXECUTED (standalone harness over the
+     shipping lib/core/dai/ source), not inferred. Router behaviour is derived
+     from lib/router/app_router.dart guards — no device run (charter boundary).
+     ═══════════════════════════════════════════════════════════════════════ -->
+
+### DAI-004 · **P0** · DAI / Global search · Answer sentence claims a filter the destination never applies
+
+- **Repro steps:** Sign in as principal. Open admin global search (search icon in the
+  admin chrome). Type `students below 75% attendance`. A DAI card appears reading
+  **"Showing students below 75% attendance."** Tap it.
+- **Expected:** A list restricted to students below 75% attendance — or a sentence that
+  does not promise one.
+- **Actual:** You land on `/sis/students`, **the complete student roster with no
+  attendance filter of any kind**. Nothing on the destination screen indicates a filter
+  was requested and dropped. Same defect on every parameterised intent:
+  `grade 10 fee defaulters` → "…for Class 10." → `/finance/defaulters` school-wide;
+  `class 8a` → "Opening Class 8A students." → `/sis/students` unfiltered;
+  `bus 5` → "Opening transport route 5." → `/transport/routes` full list.
+- **Root cause:** `DaiResolver` extracts `className`, `section`, `threshold`,
+  `routeNumber`, `receiptNumber` into the intent and interpolates them into `answer`
+  (`lib/core/dai/dai_resolver.dart:139-148,161-171,180-190,277-287`), but the sole
+  consumer navigates with the **bare route constant** —
+  `context.go(_daiAnswer!.route!)` at
+  `lib/features/admin/global_search/global_search_overlay.dart:170`. Every extracted
+  parameter is discarded at the navigation boundary. The doc comment two lines below
+  the offending call (`global_search_overlay.dart:277-278`) asserts the card "can never
+  say something the system will not then do" — that invariant is not enforced anywhere.
+- **Recommended fix:** Two options, in preference order. (a) Plumb the parameters:
+  append query args and have the destinations honour them — the pattern already exists,
+  `teacherAttendanceRouteBuilder` reads `?class=` at `lib/router/app_router.dart:2606`.
+  (b) If (a) cannot be done for v1.0, weaken every sentence to match reality
+  ("Opening the defaulters list — filter to Class 10 there") and add a resolver-level
+  invariant test that fails when an intent carries an extracted field the route cannot
+  consume. Do **not** ship (b) for `lowAttendance`: `/sis/students` cannot filter by
+  attendance at all, so that intent should be re-pointed or withdrawn.
+- **Dependencies:** none for (b). (a) needs a filter parameter on
+  `FinanceDefaultersScreen`, the SIS student list and `TransportRoutesScreen`.
+- **Risk of fixing:** low for (b); medium for (a) — touches four destination screens.
+- **Evidence:** `lib/core/dai/dai_resolver.dart:111-125,128-149,152-172,175-191,273-288`;
+  `lib/features/admin/global_search/global_search_overlay.dart:165-172,277-278`;
+  `lib/router/finance_navigation.dart:96-100` (`return const FinanceDefaultersScreen();`
+  — takes no argument); `lib/router/app_router.dart:2602-2612` (the parameter pattern
+  that exists and is not used here).
+- **Severity note:** graded **P0** under the standing rule. `lowAttendance` presents the
+  full roster to a principal as the below-75% list. Attendance shortage drives exam
+  eligibility and detention notices; a head of school acting on that screen acts on a
+  false statement about attendance data that they cannot independently check from the
+  screen they are looking at.
+
+### DAI-001 · **P0** · DAI / Global search · "Today's attendance" passes the permission guard and then dead-ends
+
+- **Repro steps:** Sign in as **principal** (`ErpRole.principal`, `UserRole.staff`, no
+  `ErpRole.teacher` claim). Open admin global search. Type `today's attendance`. The DAI
+  card renders: *"Opening today's attendance."* Tap it.
+- **Expected:** Today's school attendance position.
+- **Actual:** The sheet closes and the user is silently returned to `/admin`. No error,
+  no explanation. The single most-typed principal query in the product produces a
+  confident answer card that goes nowhere.
+- **Root cause:** `_attendanceToday` routes to `RouteNames.teacherAttendance`
+  (`/teacher/attendance`) — `lib/core/dai/dai_resolver.dart:203`. `_resolveDai` only
+  checks the **permission** (`Permission.viewAttendance`), which `ErpRole.principal`
+  **does hold** (`lib/core/security/role_permissions.dart:323,378`), so the card passes
+  the filter and renders. On tap, `_authRedirect` → `_canAccessRoute`
+  (`lib/router/app_router.dart:2125,2264`) finds `/teacher/attendance` is not an admin
+  ERP route (verified: `RouteNames.adminErpRoutes` has 112 entries, none under
+  `/teacher/`, `/student/` or `/parent/`) and applies the staff arm —
+  `isPersonaOwnedRoute(UserRole.teacher, location) && claims.hasRole(ErpRole.teacher)`
+  (`app_router.dart:2288-2289`) — which is false for a principal → redirect to
+  `homeRouteForRole(staff)` = `/admin`.
+- **Recommended fix:** Re-point `attendanceToday` at an admin-ERP attendance surface.
+  `dai_brief.dart:216` already solved this exact problem for the same data
+  (`RouteNames.managementAnalytics`, with the reasoning written out at
+  `dai_brief.dart:211-216`) — reuse that destination and that reasoning. Then add a
+  resolver invariant test asserting **every** `DaiIntent.route` is in
+  `RouteNames.adminErpRoutes`, mirroring the assertion `dai_brief_test.dart` already
+  makes for the brief.
+- **Dependencies:** shares a root cause with DAI-002; fix together.
+- **Risk of fixing:** low — a route constant change plus a test.
+- **Evidence:** `lib/core/dai/dai_resolver.dart:194-212`;
+  `lib/features/admin/global_search/global_search_overlay.dart:81-89,165-172`;
+  `lib/router/app_router.dart:2264-2291`; `lib/core/security/role_permissions.dart:323,378`;
+  `lib/core/dai/dai_brief.dart:211-216` (the same bug, already fixed in the dormant file).
+- **Severity note:** graded **P0** as a core daily workflow that cannot complete from
+  the surface that offers it, on the persona the surface exists for. It is not a data
+  falsehood, so reviewers may argue P1 — the judgement is flagged rather than hidden.
+
+### DAI-002 · **P1** · DAI / Global search · Four intents route outside the admin shell and silently bounce
+
+- **Repro steps:** As any staff user, open admin global search and type each of:
+  `pending homework` · `my exam schedule` · `my attendance` · `my fees`. A DAI card
+  renders for all four. Tap any of them.
+- **Expected:** No card for a destination this user cannot enter (the project already
+  chose this remedy for the search registry — see the note below).
+- **Actual:** Card renders → tap → bounce to `/admin`.
+  `homework` → `/teacher/homework`; `exams`(own) → `/student/exams`;
+  `myAttendance` → `/student/attendance`; `myFees` → `/parent/fees`.
+- **Root cause:** All four carry `requiredPermission: null`
+  (`dai_resolver.dart:225,240,250-255,263-268`), so the only guard in `_resolveDai`
+  (`global_search_overlay.dart:86-87`) is a no-op for them. A **permission** cannot
+  express "holds `ErpRole.teacher`", and staff can never enter `/student/*` or
+  `/parent/*` at all under `_canAccessRoute` (`app_router.dart:2280-2290`).
+- **Recommended fix:** Adopt the decision already recorded for the sibling surface.
+  `lib/features/admin/global_search/global_search_registry.dart:193-212` (P1-7,
+  2026-07-28) **removed** the Parent/Teacher/Student Dashboard entries for this exact
+  reason, concluding "the correct fix is no tile rather than a tile that silently
+  bounces". Apply the same conclusion: drop `myFees`/`myAttendance`/`exams(own)` from
+  the admin-surfaced set and re-point `homework` at an admin-ERP homework surface (or
+  drop it too). Enforce with the route-membership invariant test from DAI-001.
+- **Dependencies:** DAI-001 (same root cause and same fix).
+- **Risk of fixing:** low.
+- **Evidence:** `lib/core/dai/dai_resolver.dart:215-228,231-244,247-257,260-270`;
+  `lib/features/admin/global_search/global_search_overlay.dart:81-89`;
+  `lib/router/app_router.dart:2264-2291`;
+  `lib/features/admin/global_search/global_search_registry.dart:193-212`.
+
+### DAI-003 · **P2** · DAI / Global search · Parent/student intents exist on a surface no parent or student can open
+
+- **Repro steps:** Sign in as a parent. Try to reach the DAI card. There is no path.
+- **Expected:** Either the parent/student intents are reachable by parents and students,
+  or they are not built.
+- **Actual:** `DaiResolver` has **one** production call site
+  (`global_search_overlay.dart:83`), raised from **one** place —
+  `lib/features/admin/admin_content_scaffold.dart:82`, the admin ERP chrome. Parent,
+  teacher and student shells never build `AdminContentScaffold`. Three intents
+  (`myFees`, `myAttendance`, `exams`(own)) and the whole "my child" vocabulary therefore
+  serve personas that can never invoke them.
+- **Root cause:** Surface placement, not resolver logic. The resolver was written for a
+  cross-persona search; only the admin shell ever wired it.
+- **Recommended fix:** Product decision. Either surface DAI in the parent/student/teacher
+  shells (then DAI-002's routes become correct rather than broken), or remove the
+  personal intents. Do not leave both halves in place.
+- **Dependencies:** decides the shape of the DAI-002 fix.
+- **Risk of fixing:** low to remove; medium to surface in three more shells.
+- **Evidence:** `lib/features/admin/admin_content_scaffold.dart:82`;
+  `lib/features/admin/global_search/global_search_overlay.dart:22-31,83`; no other
+  reference to `DaiResolver` exists in `lib/`.
+
+### DAI-005 · **P1** · DAI / Global search · `openPerson` — 1 of 12 intents — can never be shown
+
+- **Repro steps:** Type `Rohan`, `teacher Ravi`, `staff Priya`, or any bare name. No DAI
+  card ever appears, for any input, for any user.
+- **Expected:** Either the intent surfaces, or the resolver does not claim to produce it.
+- **Actual:** `openPerson` always sets `route: null` (by design —
+  `dai_resolver.dart:332-339`), and `_resolveDai` discards any intent where
+  `needsDirectoryLookup || route == null` (`global_search_overlay.dart:85`).
+  `needsDirectoryLookup` is defined as `kind == openPerson && route == null`
+  (`dai_intent.dart:126-127`), which is unconditionally true. The entire `openPerson`
+  branch — the name extraction, the `DaiPersonHint` staff/student disambiguation, the
+  `_nonNameTokens` rejection list, the `_titleCase` composer and every
+  `'Looking for X…'` string — is **dead in production**.
+- **Root cause:** The intent was designed to hand off to a directory lookup the consumer
+  was never given. `AdaptiveSearchResults` (rendered directly beneath, line 175) does
+  its own independent name search from the raw query and does not consume the intent's
+  `personName` or `personHint` at all.
+- **Recommended fix:** Either feed `personName`/`personHint` into `AdaptiveSearchResults`
+  so the staff/student hint actually narrows the entity list (the useful outcome — the
+  resolver already knows "teacher Ravi" means staff, and today that knowledge is thrown
+  away), or delete the branch. Leaving ~60 lines of unreachable intent logic under test
+  gives a false impression of coverage.
+- **Dependencies:** none.
+- **Risk of fixing:** low.
+- **Evidence:** `lib/core/dai/dai_resolver.dart:290-350`; `lib/core/dai/dai_intent.dart:126-127`;
+  `lib/features/admin/global_search/global_search_overlay.dart:85,175`.
+
+### DAI-016 · **P1** · DAI / Global search · `_person` is a junk drawer — any unmatched short phrase becomes a confident person lookup
+
+- **Repro steps:** Resolve `payroll`, `timetable`, `settings`, `alumni`, `notices`,
+  `circular`, `apply leave`, `pending approvals`, `hostel rooms`, `library books issued`,
+  `inventory stock`, `audit log`, `support ticket`, `fee structure`, `syllabus progress`,
+  `lesson plan`, `urgent`, `help`, `summary`, `anything`, `defualters`, `feedefaulters`.
+- **Expected:** `DaiIntentKind.unknown` — none of these is a person.
+- **Actual:** All resolve to `openPerson` at confidence 60 with answers like
+  *"Looking for Payroll…"*, *"Looking for Pending Approvals…"*,
+  *"Looking for Support Ticket…"*. `add new student` resolves at confidence **88** to
+  *"Looking for Add New…"*.
+- **Root cause:** `_person` is the last rule and has no positive evidence requirement —
+  it accepts any 1–3 token alphabetic residue (`dai_resolver.dart:295-340`). Its only
+  rejections are digits, >3 words, <2 chars, and the 25-token `_nonNameTokens` list.
+  Because it returns confidence 60 (≥ the 55 floor), `resolve()` returns it rather than
+  `unknown`, so **the resolver's own contract — "never guesses" — is not met**; the user
+  is protected only by the consumer discarding the result (DAI-005).
+- **Recommended fix:** Require positive person evidence: an explicit qualifier
+  (`teacher`/`student`/`staff`/…), or a capitalised token in the *raw* query, or a
+  directory hit. Absent that, return `unknown`. This also unblocks DAI-007 — the system
+  cannot say "I do not handle that" while `_person` is claiming everything.
+- **Dependencies:** interacts with DAI-005 (if `openPerson` is ever surfaced, this
+  becomes user-visible and jumps to P0-adjacent: a demo showing "Looking for Payroll…"
+  is worse than showing nothing).
+- **Risk of fixing:** low today (result is discarded); the fix is what makes DAI-005
+  safe to implement.
+- **Evidence:** `lib/core/dai/dai_resolver.dart:66-78,290-350`; harness output over 209
+  queries, recorded in `docs/certification/findings/DAI-certification.md` §4.1, §5.
+
+### DAI-006 · **P1** · DAI / Global search · "Ask anything" over-promises a 40-phrase keyword router
+
+- **Repro steps:** Open admin global search. The field reads
+  **"Ask anything — 'fee defaulters', 'Class 8A'…"**. Type any of the 27 module queries
+  listed in the certification §5 (`pending approvals`, `who is on leave today`,
+  `salary slip`, `send message to parents`, `admission enquiries`, …).
+- **Expected:** Copy that sets the expectation the system can meet.
+- **Actual:** Nothing happens — no card, no acknowledgement. DAI answers 7 of the
+  inventory's 28 modules, three of those only partially. The two examples in the hint
+  are the two things it does best, which makes the failure that follows feel like a bug
+  rather than a boundary.
+- **Root cause:** Copy written to the aspiration, not the implementation
+  (`lib/features/admin/global_search/global_search_overlay.dart:137`).
+- **Recommended fix:** Say what it does: *"Search or ask — 'fee defaulters',
+  'Class 8A', 'bus 5'"*. A closed, well-executed vocabulary is a feature; claiming an
+  open one and failing is not.
+- **Dependencies:** pairs with DAI-007.
+- **Risk of fixing:** trivial — one string.
+- **Evidence:** `lib/features/admin/global_search/global_search_overlay.dart:135-139`;
+  module coverage table in `docs/certification/findings/DAI-certification.md` §5.
+
+### DAI-007 · **P1** · DAI / Global search · No "I cannot answer that" state — 21 of 28 modules fail silently
+
+- **Repro steps:** Type `pending approvals` (Management), `salary slip` (HR),
+  `admission enquiries` (Admissions), `send message to parents` (Communication) — the
+  four modules a principal touches every morning.
+- **Expected:** Either an answer, or an explicit acknowledgement that DAI does not
+  handle that yet, so the user learns the boundary instead of concluding the product is
+  broken.
+- **Actual:** No DAI card. The user sees only the registry list, which matches on screen
+  *titles* — so `pending approvals` surfaces nothing while an Approvals screen exists.
+  DAI has **zero** coverage of M1, M2, M3, M7, M8 Admissions, M11 HR & Payroll,
+  M12 Management, M14 Hostel, M15 Library, M16 Inventory, M18 Communication,
+  M19 Intelligence, M20 Education, M21 PRC-A desks, M22 Alumni, M23 Control Center,
+  M24 Director, M25 Multi-school, M26 Verticals, M27 Evolution.
+- **Root cause:** `resolve()` returns `DaiIntent.unknown` and the consumer renders
+  nothing (`global_search_overlay.dart:84`). There is no "understood the domain, no rule
+  for it" tier between "confident answer" and "silence".
+- **Recommended fix:** Add a small deterministic module-keyword map that renders a
+  neutral card — *"I can't answer that yet. Opening Approvals."* — for domain terms with
+  a known destination but no intent rule. Honest, still deterministic, and it converts
+  the 21-module gap from a perceived defect into a stated boundary. Blocked by DAI-016
+  until `_person` stops claiming these queries.
+- **Dependencies:** DAI-016; pairs with DAI-006.
+- **Risk of fixing:** low.
+- **Evidence:** `lib/features/admin/global_search/global_search_overlay.dart:84,165-172`;
+  `docs/certification/FEATURE_INVENTORY.md` module index M1–M28;
+  probe results in `docs/certification/findings/DAI-certification.md` §5.
+
+### DAI-009 · **P1** · DAI / Global search · Multi-intent and multi-scope queries silently drop half the question
+
+- **Repro steps:** Type `fee defaulters and low attendance`. Then
+  `fee defaulters class 8 and class 9`. Then `attendance and fees today`.
+- **Expected:** Either both parts addressed, or an explicit "I answered the first part".
+- **Actual:** Query 1 → `feeDefaulters` conf 90, *"Showing students with outstanding
+  fees."* — the attendance half vanishes with no trace. Query 2 → conf **95**,
+  *"…for Class 8."* — Class 9 dropped. Query 3 → `attendanceToday`, fees dropped.
+  Confidence **rises** (90→95) on the query that drops more.
+- **Root cause:** `resolve()` returns the first rule that clears the floor
+  (`dai_resolver.dart:50-53`); rules never compete and no rule reports leftover input.
+  `_classOf` (`:83-92`) takes the first regex match and ignores the rest of the string.
+- **Recommended fix:** After a rule fires, check for a second rule that would also fire
+  on the residue; when one exists, either lower confidence and say so ("Showing fee
+  defaulters — attendance wasn't included") or offer two cards. Minimum viable fix:
+  detect a second class match in `_classOf` and say "for Class 8 (first of 2 classes in
+  your query)".
+- **Dependencies:** none.
+- **Risk of fixing:** low-medium.
+- **Evidence:** `lib/core/dai/dai_resolver.dart:41-55,83-92`; harness output.
+
+### DAI-010 · **P1** · DAI / Global search · `staff attendance today` opens *student* class attendance
+
+- **Repro steps:** As principal or HR admin, type `staff attendance today`.
+- **Expected:** HR staff attendance for today (`/hr/*`, M11 — the module that owns it).
+- **Actual:** Resolves to `attendanceToday` conf 90, answer *"Opening today's
+  attendance."*, route `/teacher/attendance` — the **student** class-attendance roster.
+  Wrong module, and the sentence does not disclose which attendance it means. (It then
+  also bounces, per DAI-001.) Related: `teacher attendance` resolves to `openPerson`
+  → *"Looking for Attendance…"*.
+- **Root cause:** `_attendanceToday` matches the bare word `attendance` plus a today
+  word (`dai_resolver.dart:195-197`) with no staff/student discrimination; no rule
+  covers HR staff attendance at all.
+- **Recommended fix:** Add a staff-attendance discriminator (`staff`, `teacher`,
+  `employee` + `attendance` → HR staff attendance) and make the student-attendance
+  answer say "student attendance" explicitly.
+- **Dependencies:** DAI-001 (destination must be an admin-ERP route either way).
+- **Risk of fixing:** low.
+- **Evidence:** `lib/core/dai/dai_resolver.dart:194-212,296`; harness output.
+
+### DAI-011 · **P2** · DAI / Global search · `fee dues class 8` opens a class roster instead of the dues list
+
+- **Repro steps:** Type `fee dues class 8`.
+- **Expected:** Fee defaulters for Class 8.
+- **Actual:** `openClass` conf 82 → *"Opening Class 8 students."* → `/sis/students`.
+  A fee question confidently answered with a roster.
+- **Root cause:** `_feeDefaulters` requires a fee word **and** a separate risk word
+  (`dai_resolver.dart:129-131`). "dues" is classified only as a fee word, never as a
+  risk word, so `fee dues` satisfies neither branch; the query falls through to
+  `_classLookup`. `outstanding dues` works only because "outstanding" is on the risk
+  list. Same shape: `who has not paid fees` → unknown; `fee collection this month`
+  → unknown.
+- **Recommended fix:** Put `dues`/`due` on the risk list as well as the fee list, and
+  add negation phrasing (`not paid`, `unpaid by`, `yet to pay`).
+- **Dependencies:** none.
+- **Risk of fixing:** low — widening `_feeDefaulters` is safe because it is tried before
+  `_classLookup` and `_person`.
+- **Evidence:** `lib/core/dai/dai_resolver.dart:128-149,273-288`; harness output.
+
+### DAI-012 · **P2** · DAI / Global search · Natural attendance phrasings fail
+
+- **Repro steps:** Type `who is absent today` · `how many students are present today` ·
+  `absentees today` · `low attendance students` · `poor attendance` ·
+  `shortage of attendance` · `atendance below 75` (one typo).
+- **Expected:** attendance intents.
+- **Actual:** `who is absent today` and `how many students are present today` → unknown.
+  The other four → dead `openPerson`. `atendance below 75` → unknown (no fuzzy match).
+  "Attendance shortage" is the standard Indian-school term for exactly the report
+  `lowAttendance` produces, and it does not resolve.
+- **Root cause:** `_lowAttendance` requires a numeric threshold
+  (`dai_resolver.dart:154-155`) so qualitative phrasings cannot match;
+  `_attendanceToday` requires the literal word `attendance` (`:195`) so
+  `absent`/`present`/`absentees` phrasings cannot match.
+- **Recommended fix:** Accept qualitative low-attendance phrasings with a default
+  threshold, state the default in the answer ("below 75% — the default threshold"), and
+  add `absent`/`present`/`absentees` to the today-attendance trigger.
+- **Dependencies:** DAI-004 (a stated threshold must actually be applied).
+- **Risk of fixing:** low.
+- **Evidence:** `lib/core/dai/dai_resolver.dart:152-172,194-212`; harness output.
+
+### DAI-013 · **P2** · DAI / Global search · Alphanumeric receipt numbers cannot be resolved
+
+- **Repro steps:** Type `receipt RCP-2024-19`. Then `receipt 1023`.
+- **Expected:** Both resolve to `openReceipt`.
+- **Actual:** `receipt 1023` works; `receipt RCP-2024-19` → **unknown**. Bare `receipt`
+  → dead `openPerson` (*"Looking for Receipt…"*).
+- **Root cause:** `_normalise` strips `-` to a space (`dai_resolver.dart:62`), then the
+  capture group `(\w*\d[\w\d]*)` must start immediately after `receipt|no|number` and
+  must contain a digit (`:113`). "rcp" has none, so the match fails and the whole rule
+  returns null. Any prefixed receipt format is unresolvable.
+- **Recommended fix:** Allow an optional alphabetic prefix and rejoin adjacent tokens
+  (`receipt\s*#?\s*([\w-]*\d[\w-]*)`), matching on the raw query rather than the
+  punctuation-stripped one. Confirm the tenant's actual receipt-number format first —
+  the fixture data uses `rcpt_term_1`-style ids (`lib/router/app_router.dart:2350-2356`),
+  which this rule also cannot parse.
+- **Dependencies:** needs the live receipt-number format; not verifiable here (no
+  Postgres lane, charter boundary).
+- **Risk of fixing:** low.
+- **Evidence:** `lib/core/dai/dai_resolver.dart:60-64,111-125`; harness output.
+
+### DAI-008 · **P2** · DAI / Global search · The 55-confidence floor is unreachable dead code
+
+- **Repro steps:** Inspect every `confidence:` literal in `dai_resolver.dart`.
+- **Expected:** A meaningful floor — some inputs score below it and are rejected by it.
+- **Actual:** The only values emitted are 60, 78, 82, 85, 88, 90, 92, 93, 94, 95. **No
+  code path can produce 1–54**, so `hit.confidence >= minConfidence`
+  (`dai_resolver.dart:52`) never rejects anything and the `minConfidence` guard in the
+  `_person` doc contract is untestable. Actual rejection is done entirely by rules
+  returning `null`.
+- **Root cause:** Confidences are hand-assigned constants per rule rather than computed
+  from match quality, so the floor and the scores were never connected.
+- **Recommended fix:** Either compute confidence from evidence (token coverage, whether
+  an entity was extracted, how much of the query went unconsumed) so the floor becomes
+  live, or delete the floor and document that rejection is by rule. Do not keep a
+  documented safety mechanism that cannot fire — `dai_resolver.dart:29-31` and
+  `dai_intent.dart:119-120` both describe a branch that does not exist at runtime.
+- **Dependencies:** a computed confidence would also give DAI-009 its ambiguity signal.
+- **Risk of fixing:** medium if confidences become computed — the golden corpus pins
+  exact values.
+- **Evidence:** `lib/core/dai/dai_resolver.dart:36-39,50-54` and every `confidence:`
+  literal at lines 122, 146, 169, 186, 207, 225, 241, 254, 267, 284, 330.
+
+### DAI-014 · **P3** · DAI / Global search · No range validation on thresholds, class numbers or route numbers
+
+- **Repro steps:** Type `students below 200% attendance` · `attendance below 0` ·
+  `below -5% attendance` · `grade 0` · `class 99` · `bus 0`.
+- **Expected:** Nonsense values rejected or clamped.
+- **Actual:** All accepted verbatim. *"Showing students below 200% attendance."*
+  *"Showing students below 0% attendance."* `below -5%` silently becomes **5** (the
+  minus is stripped by `_normalise` and the sign is lost, inverting the meaning).
+  `grade 0` → *"Opening Class 0 students."* `class 100` → unknown (the `\d{1,2}` bound),
+  so the ceiling is arbitrary rather than domain-derived.
+- **Root cause:** `_thresholdOf` (`dai_resolver.dart:95-103`) and `_classOf` (`:83-92`)
+  parse with no domain bounds.
+- **Recommended fix:** Clamp threshold to 1–100 and class to 1–12 (or the tenant's
+  configured grade range); return null outside. Low user impact today because DAI-004
+  means the number is discarded anyway — but that will stop being true when DAI-004 is
+  fixed, at which point a 200% filter reaches a real query.
+- **Dependencies:** should be fixed **with** DAI-004, not after.
+- **Risk of fixing:** low.
+- **Evidence:** `lib/core/dai/dai_resolver.dart:83-103`; harness output.
+
+### DAI-015 · **P3** · DAI / Global search · Person rule is ASCII-only and caps at three tokens
+
+- **Repro steps:** Resolve `Rohan Sharma Kumar Verma` (4 tokens) and `रोहन`.
+- **Expected:** Both recognised as person queries.
+- **Actual:** Both → **unknown**. Four-token names exceed the `words.length > 3`
+  rejection (`dai_resolver.dart:314`); Devanagari input is stripped to empty by
+  `_normalise`'s `[^\w\s%]` (`:62`), because Dart's `\w` is ASCII-only without the
+  unicode flag. `Mary-Anne` → "Mary Anne", `D'Souza` → "D Souza".
+- **Root cause:** ASCII-oriented normalisation and a heuristic token cap.
+- **Recommended fix:** Raise the cap to 4–5 tokens (four-part names are common in
+  Indian schools) and use a unicode-aware character class. Consistent with the
+  English-first product decision, non-Latin *queries* are out of scope — but non-Latin
+  *names* may still exist in SIS records, so the boundary should be a decision rather
+  than an accident of regex.
+- **Dependencies:** DAI-005 — worth nothing until `openPerson` surfaces.
+- **Risk of fixing:** low.
+- **Evidence:** `lib/core/dai/dai_resolver.dart:60-64,308-320`; harness output.
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     JOURNEY — Workstream 3, Complete role journeys (2026-07-29)
+     Full trace: docs/certification/findings/JOURNEY-role-journeys.md
+     ═══════════════════════════════════════════════════════════════════════ -->
+
+### JOURNEY-001 · **P0** · Admin shell / Admin Hub · Landing hero shows fabricated attendance and money
+
+- **Repro steps:** Sign in as any staff role and open `/admin` (the post-login
+  landing for superAdmin, schoolAdmin, management, admissionsCounselor,
+  transportManager, hostelManager, librarian, storekeeper). Do it on a brand-new
+  tenant with zero students, zero staff, zero fee collections.
+- **Expected:** Either real per-workspace figures, or no figures at all.
+- **Actual:** The `AksharaWorkspaceLanding` hero renders compile-time constants as
+  if they were live KPIs. School Administration: **"1,248 Students · 86 Staff ·
+  96% Attendance"**. Finance: **"₹4.2L Collected today · ₹1.8L Pending · 92% This
+  month"**. Library: "8,450 Titles · 214 On loan · 7 Overdue". Hostel: "312
+  Residents · 96 Rooms · 88% Occupancy". Transport: "18 Routes · 22 Buses · 97%
+  On-time". Front Office: "23 Open enquiries · 14 Admissions · 9 Visitors today".
+  Inventory: "642 SKUs · 12 Low stock · 38 Issued today". Nothing in the UI marks
+  them as demo data.
+- **Root cause:** `lib/features/admin/workspace_landing_config.dart:27-84` is a
+  `const Map<WorkspaceId, WorkspaceLandingConfig>` of hard-coded
+  `AksharaWorkspaceStat` values; `lib/features/admin/screens/admin_hub_screen.dart:39-63`
+  passes `landing?.stats` straight into the hero, which renders them whenever the
+  list is non-empty (`shared/widgets/premium/akshara_workspace_landing.dart:85-94`).
+  The file's own comment concedes it: *"Stats are curated demo figures consistent
+  with the seeded school so demos read as live."*
+- **Recommended fix:** Delete the `stats` from `kWorkspaceLandingConfig` (keep the
+  motif/eyebrow) so the hero renders name-only until real per-workspace summary
+  providers exist — the widget already accepts an empty list and the hub already
+  handles `landing == null`. Do **not** substitute a different constant.
+- **Dependencies:** none. Independent of CERT-001/002.
+- **Risk of fixing:** very low — removal only, no data path involved.
+- **Evidence:** `lib/features/admin/workspace_landing_config.dart:5-12,27-84`;
+  `lib/features/admin/screens/admin_hub_screen.dart:28-63`;
+  `lib/shared/widgets/premium/akshara_workspace_landing.dart:85-94`;
+  `lib/core/workspace/workspace.dart:177-193` (which role maps to which workspace).
+
+### JOURNEY-002 · **P0** · Auth / RBAC · An unrecognised server role is mapped to Super Admin
+
+- **Repro steps:** Assign a user a server role the client enum does not contain —
+  e.g. `officeStaff`, `hrManager`, `healthStaff`, `classTeacher`, `coordinator`,
+  `counselor`, `financeManager`, `marketingManager`, `petTeacher`, `danceTeacher`,
+  `musicTeacher`, `organizationOwner`, `organizationAdmin`, `schoolGroupDirector`
+  (all seeded in `supabase/migrations/20260608100000_rbac_foundation.sql:166-193`,
+  `20260851000000_…:33`, `20260887000000_student_health.sql:42`). Log in on a live
+  build. Inspect the session claims and open `/admin/plan/assign`.
+- **Expected:** An unknown role fails **closed** — least privilege, or an explicit
+  "your role is not supported by this app version" state.
+- **Actual:** The client resolves the role to **`ErpRole.superAdmin`**. The
+  session's `claims.erpRoles` becomes `[superAdmin]`, so the user is placed in the
+  School Administration workspace, shown the school-administration hero
+  (JOURNEY-001), and passes every **role-keyed** gate. The most consequential is
+  `canAssignOrganizationPlansProvider`, which is role-only with no permission
+  conjunct — the organization plan-assignment screen and its Save action render
+  for an office clerk or a school nurse. (Control Center is **not** exposed: both
+  `ControlCenterGuard` and `RbacModuleRegistry.canAccessControlCenter` AND the
+  role check with `viewControlCenter`.)
+- **Root cause:** `lib/core/repositories/api/auth/mapper/auth_mapper.dart:63-66`
+  — `erpRole: ErpRole.fromName(raw['role'] ?? raw['erpRole']) ?? ErpRole.superAdmin`.
+  Repeated at `lib/core/auth/auth_session_manager.dart:172`. That value is copied
+  verbatim into the session claims at `lib/features/auth/auth_provider.dart:309-311`.
+  The backend sends a single `role: ctx.resolved.primaryRole` slug
+  (`supabase/functions/_shared/auth_handlers.ts:126`) drawn from a 29-value server
+  vocabulary against a 15-value client enum (`lib/core/security/erp_role.dart:2-17`).
+- **Recommended fix:** Make the fallback fail closed. Introduce an explicit
+  `ErpRole.unknown` (or make `AuthUser.erpRole` nullable) that grants no
+  workspace, no role-keyed gate, and renders a clear "role not supported" state.
+  Separately, add the missing school roles (`hrManager`, `officeStaff`,
+  `healthStaff`, `classTeacher`, `coordinator`) to the enum and to
+  `kRoleWorkspaces`. Add a permission conjunct to
+  `canAssignOrganizationPlansProvider`.
+- **Dependencies:** JOURNEY-003 (the contradictory second fallback must be fixed
+  in the same change). JOURNEY-012 / JOURNEY-013 / JOURNEY-014 are the missing
+  roles this defect exposes.
+- **Risk of fixing:** medium. Failing closed will lock out any live user currently
+  benefiting from the accidental super-admin mapping, so the enum additions must
+  ship in the same release, and a live audit of assigned role slugs is needed
+  first (not possible in this harness — SSH is owner-bound).
+- **Evidence:** `lib/core/repositories/api/auth/mapper/auth_mapper.dart:56-72`;
+  `lib/core/auth/auth_session_manager.dart:172`;
+  `lib/features/auth/auth_provider.dart:303-320`;
+  `lib/core/entitlements/subscription_admin_provider.dart:15-18`;
+  `lib/core/workspace/workspace.dart:177-193`;
+  `supabase/functions/_shared/auth_handlers.ts:119-138`;
+  `supabase/migrations/20260608100000_rbac_foundation.sql:166-193`.
+
+### JOURNEY-003 · **P1** · Auth · Two contradictory fallbacks for the same unknown role
+
+- **Repro steps:** Compare the role resolved on the login path with the role
+  resolved when a persisted session is rehydrated from JSON, for the same
+  unrecognised slug.
+- **Expected:** One deterministic answer.
+- **Actual:** Login → `ErpRole.superAdmin`
+  (`api/auth/mapper/auth_mapper.dart:63-66`). Session restore →
+  `roles.add(ErpRole.fromName(json['role']) ?? ErpRole.parent)`
+  (`lib/features/auth/auth_claims.dart:126-132`) — **`ErpRole.parent`**. The same
+  user is a super admin in one code path and a parent in the other, which also
+  means their workspace, landing route and hub tiles change between a fresh login
+  and an app relaunch.
+- **Root cause:** the fallback was written independently in two places, in
+  opposite directions.
+- **Recommended fix:** one shared resolver, failing closed (see JOURNEY-002).
+- **Dependencies:** JOURNEY-002 — fix together.
+- **Risk of fixing:** low once JOURNEY-002 defines the closed default.
+- **Evidence:** `lib/features/auth/auth_claims.dart:107-145`;
+  `lib/core/repositories/api/auth/mapper/auth_mapper.dart:63-66`.
+
+### JOURNEY-004 · **P1** · Router · Post-login landing is an unfinished switch; six roles land on a launcher
+
+- **Repro steps:** Sign in as librarian, transportManager, hostelManager,
+  storekeeper, admissionsCounselor and management in turn.
+- **Expected:** A single-module role lands in that module; a role that owns a
+  dashboard lands on it.
+- **Actual:** All six land on `/admin`. For librarian, transportManager,
+  hostelManager and storekeeper the resulting tile grid contains **exactly one
+  tile** — a one-item menu that costs a wasted screen and a wasted tap on every
+  sign-in. `management` lands on `/admin` despite holding `viewManagement` and
+  despite principal/vicePrincipal being routed to `/management/dashboard`.
+  `storekeeper` and `inventoryManager` share the Inventory workspace and the same
+  single module, yet `inventoryManager` is routed straight to
+  `/inventory/dashboard` and `storekeeper` is not.
+- **Root cause:** `homeRouteForStaffErp`
+  (`lib/features/auth/qa_login_persona.dart:207-216`) enumerates only 5 of 15
+  roles and sends the rest to `RouteNames.admin` via `_ =>`.
+- **Recommended fix:** Derive the landing from the resolved workspace's
+  `homeRoute` (`lib/core/workspace/workspace.dart:45,60-172` — every workspace
+  already declares one) instead of a hand-written switch. That gives
+  librarian → `/library/dashboard`, transport → `/transport/dashboard`,
+  hostel → `/hostel/dashboard`, storekeeper → `/inventory/dashboard`,
+  admissionsCounselor → `/admissions/dashboard`, and keeps `/admin` only for the
+  multi-module School Administration workspace.
+- **Dependencies:** none.
+- **Risk of fixing:** low. Multi-hat users already land on their primary
+  workspace's home by the same rule.
+- **Evidence:** `lib/features/auth/qa_login_persona.dart:207-216`;
+  `lib/router/app_router.dart:2295-2311`; `lib/core/workspace/workspace.dart:59-193`;
+  `lib/features/admin/admin_navigation_provider.dart:325-337`.
+
+### JOURNEY-005 · **P1** · Admin Hub · No empty state when the tile grid resolves to nothing
+
+- **Repro steps:** Sign in as a user whose permissions unlock no workspace module
+  — the seeded `officeStaff` role holds only `viewAdminHub`
+  (`supabase/migrations/20260608100000_rbac_foundation.sql:238`). Open `/admin`.
+- **Expected:** A message explaining that no modules are available and what to do
+  (contact the school admin), or a route to the surfaces they can reach.
+- **Actual:** The hero renders (with its fabricated stats, JOURNEY-001), the
+  subtitle says *"Jump to a module you are authorized to access"*, and beneath it
+  the `Wrap` renders zero children — a blank area with no explanation. The
+  drawer, which is **not** workspace-scoped, does list what they can open, but
+  nothing on screen points there.
+- **Root cause:** `lib/features/admin/screens/admin_hub_screen.dart:86-97` has no
+  `modules.isEmpty` branch; `:29-31` additionally strips `AdminModule.admin`, so a
+  single-permission user always ends at zero.
+- **Recommended fix:** Add an `AksharaEmptyState` branch naming the situation and
+  offering the drawer / support contact. The product already has honest empty
+  states to copy (`teacher_attendance_screen.dart:420-437`).
+- **Dependencies:** worsened by JOURNEY-008 (six live modules are stripped from
+  this grid for everyone).
+- **Risk of fixing:** very low.
+- **Evidence:** `lib/features/admin/screens/admin_hub_screen.dart:28-99`;
+  `lib/features/admin/admin_navigation_provider.dart:277-337`.
+
+### JOURNEY-006 · **P2** · Admin shell · Phone bottom-nav tabs are chosen by declaration order
+
+- **Repro steps:** Sign in as principal or schoolAdmin on a phone-width layout.
+  Read the four bottom-nav tabs.
+- **Expected:** The four surfaces that role opens most.
+- **Actual:** **Admin Hub · Admissions · Marketing · Finance** — the first four
+  entries of `kAllAdminNavDestinations`. Management, SIS, Exams, HR and the
+  approval queue are all two taps away behind "More", while Marketing (an
+  entitlement-gated growth module that may render *locked*) holds a permanent slot.
+- **Root cause:** `lib/features/admin/admin_bottom_nav.dart:31,50` —
+  `destinations.take(_maxTabs)` over a list whose order is the source-file order
+  of `kAllAdminNavDestinations` (`admin_navigation_provider.dart:17-274`).
+- **Recommended fix:** Give `AdminNavDestination` an explicit priority/rank used
+  for tab selection, or order per workspace. Locked destinations should never
+  occupy a primary slot.
+- **Dependencies:** none.
+- **Risk of fixing:** low.
+- **Evidence:** `lib/features/admin/admin_bottom_nav.dart:31-60`;
+  `lib/features/admin/admin_navigation_provider.dart:17-49,294-301`.
+
+### JOURNEY-007 · **P0** · Parent App · Fee-payment screen fabricates the amount, the child and the due date
+
+- **Repro steps:** As a parent on a live build, open Fees → **Pay now** (or deep
+  link `/parent/payment?installmentId=...`) while `GET /parent/payments/summary`
+  fails or returns nothing — e.g. a brand-new school with no fee structure
+  assigned, or any backend error.
+- **Expected:** An honest error/empty state. Never a payable amount the school
+  has not raised.
+- **Actual:** The screen renders a complete fabricated payment summary — child
+  **"Ravi Kumar"**, class **"8-A"**, *"Due 12 Jun 2026"*, base ₹4,000 + late fee
+  ₹200 = **₹4,200**, with a four-line breakdown (Tuition ₹3,200 / Transport ₹600 /
+  Activity ₹200 / Late fee ₹200). The app bar subtitle shows that other child's
+  name and class. If the parent proceeds, `submitParentPayment` sends
+  `amount: summary.totalAmount` — the fabricated ₹4,200 — to
+  `POST /parent/payments/initiate`.
+- **Root cause:** `lib/features/parent/payment/parent_payment_provider.dart:63`
+  — `return data ?? async.value ?? _fallbackSummary(installmentId);` with
+  `_fallbackSummary` (`:66-101`) returning hard-coded demo `PaymentSummary`
+  objects. `watchRepositoryFuture` returns null for anything that is not
+  `AsyncData` (`lib/core/providers/repository_future.dart:12-13`) and
+  `AsyncError.value` is null, so the fallback is the **production** path on
+  failure and while loading. The screen's `hasError` branch is driven by
+  `parentPaymentErrorProvider`, a `StateProvider<bool>` set only by
+  `test/features/parent/payment/parent_payment_provider_test.dart:62` — the same
+  false-premise error-state pattern as CERT-001/CERT-002. The amount is then fed
+  to the initiate mutation at `:134-145`.
+- **Recommended fix:** Delete `_fallbackSummary`. Make `parentPaymentSummaryProvider`
+  return `AsyncValue<PaymentSummary>` (or null) and let the screen render a real
+  error/empty state; refuse to enable the pay action without a server-issued
+  summary. Mirror `StudentDashboardData.empty()`
+  (`student_dashboard_provider.dart:274-285`), the correct in-tree pattern.
+  Keep the existing fail-closed `pendingGatewayVerification` state — that part is
+  right.
+- **Dependencies:** same family as CERT-001 (`/parent/fees`) and CERT-003
+  (receipt-id mapping); JOURNEY-015 is the entry point that reaches it.
+- **Risk of fixing:** low — removal plus an honest state; no server change.
+- **Evidence:** `lib/features/parent/payment/parent_payment_provider.dart:39-101,120-150`;
+  `lib/features/parent/payment/parent_payment_screen.dart:52-104`;
+  `lib/core/providers/repository_future.dart:5-14`.
+
+### JOURNEY-008 · **P1** · Admin shell · Five live school modules can never appear on the Admin Hub
+
+- **Repro steps:** Sign in as any staff role holding `requestStudentCertificate`,
+  `requestGatePass`, `raiseComplaint`, `viewStudentHealthRecord` or `viewSubjects`
+  (server-seeded — principal, vicePrincipal, schoolAdmin, officeStaff…). Open
+  `/admin` and look for Certificates / Gate Pass / Complaints / Infirmary /
+  School Completion. Then open the drawer.
+- **Expected:** A module the user is authorized to access appears on the hub the
+  hub's own subtitle promises ("Jump to a module you are authorized to access").
+- **Actual:** None of the five appears on the hub tile grid or (on a phone) the
+  bottom nav. They appear **only** in the nav rail / drawer. Org Builder is in the
+  same position.
+- **Root cause:** the hub (`admin_hub_screen.dart:28`) and the bottom nav
+  (`admin_bottom_nav.dart:47`) read `workspaceScopedNavDestinationsProvider`,
+  which keeps a destination only if `workspace.containsModule(...)`
+  (`admin_navigation_provider.dart:325-337`). `AdminModule.certificateDesk`,
+  `gatePass`, `complaints`, `studentHealth`, `schoolCompletion` and
+  `organizationBuilder` are absent from **every** `Workspace.modules` set in
+  `lib/core/workspace/workspace.dart:59-173`. The rail
+  (`admin_navigation_rail.dart:56`) reads the un-scoped
+  `adminNavDestinationsProvider`, so the three surfaces disagree.
+- **Recommended fix:** Add the five school desks to
+  `WorkspaceId.schoolAdministration.modules` (and `schoolCompletion` too), create
+  a front-office workspace membership for the desks, and make all three nav
+  surfaces read one provider so they cannot drift again. A router/nav invariant
+  test should assert that every non-hidden `AdminModule` belongs to at least one
+  workspace.
+- **Dependencies:** JOURNEY-005 (this is why some users reach zero tiles),
+  JOURNEY-013 (the office role these desks were built for).
+- **Risk of fixing:** low-medium — widening a workspace changes which tiles each
+  role sees; permission filtering still applies on top.
+- **Evidence:** `lib/features/admin/screens/admin_hub_screen.dart:28`;
+  `lib/features/admin/admin_bottom_nav.dart:47`;
+  `lib/features/admin/admin_navigation_rail.dart:56`;
+  `lib/features/admin/admin_navigation_provider.dart:277-337`;
+  `lib/features/admin/models/admin_nav_models.dart:6-38`;
+  `lib/core/workspace/workspace.dart:59-173`. Note this refutes
+  `FEATURE_INVENTORY.md` §3e, which lists all five as tile-reachable.
+
+### JOURNEY-009 · **P2** · Management · Dashboard filter chips hard-code the financial year
+
+- **Repro steps:** Open `/management/dashboard` in any year other than FY 2026-27.
+- **Expected:** The filter reflects the tenant's configured academic/financial year.
+- **Actual:** The chips are the constant list `['FY 2026-27', 'Q1', 'All quarters']`.
+- **Root cause:** `lib/features/management/dashboard/management_dashboard_screen.dart:32-36`.
+- **Recommended fix:** Derive from the active academic year
+  (`GET /academic/years`), which the product already models.
+- **Dependencies:** none. **Risk of fixing:** low.
+- **Evidence:** `lib/features/management/dashboard/management_dashboard_screen.dart:32-36`.
+
+### JOURNEY-010 · **P1** · Teacher App · Tapping a student on the class-teacher dashboard bounces the teacher to Home
+
+- **Repro steps:** Sign in as a **class teacher**. Open
+  `/teacher/class-teacher-dashboard`. Under "Students requiring attention", tap a
+  student row (a normal tap, not a long-press). Also: open a student risk dossier
+  and press **"Open Student 360"**.
+- **Expected:** The student's dossier opens.
+- **Actual:** The router silently redirects to `/teacher/dashboard`. No message,
+  no Access Denied — the teacher is simply thrown back Home.
+- **Root cause:** both call sites use `openStudent360`
+  (`teacher_class_teacher_dashboard_screen.dart:122`,
+  `teacher_student_risk_screen.dart:170-177`) → `context.push('/student-360/<id>')`
+  (`lib/router/student360_navigation.dart:6-10`). `student360` is listed in
+  `RouteNames.adminErpRoutes:644`, so `_canAccessRoute`
+  (`lib/router/app_router.dart:2273-2275`) defers to `canAccessAdminErpShell`,
+  which requires `auth.role == UserRole.staff` (`route_guards.dart:271-273`); a
+  teacher is `UserRole.teacher`. `_authRedirect:2125-2127` then returns
+  `homeRouteForRole(UserRole.teacher)`. The "Open Student 360" button is wrapped
+  in `AksharaViewAction(permission: Permission.viewStudent360)` and the teacher
+  **does** hold that permission (`role_permissions.dart:665`), so the button
+  renders and then bounces — the permission and the shell wall disagree. The
+  working route `/teacher/student-risk/:id` is bound to `onLongPress` only.
+- **Recommended fix:** Same remedy already applied to lesson logs and syllabus
+  progress (`teacher_shell.dart:74-81`): give the teacher shell a
+  `/teacher/student-360/:id` sibling rendering `Student360Screen`, and point
+  `openStudent360` at it when `auth.role == UserRole.teacher`. Failing that, hide
+  the affordance for teachers. Promote the long-press destination to the tap.
+- **Dependencies:** none. Same root cause class as the 15 teacher permissions that
+  unlock only admin-shell routes.
+- **Risk of fixing:** low.
+- **Evidence:** `lib/features/teacher/dashboard/teacher_class_teacher_dashboard_screen.dart:116-127`;
+  `lib/features/teacher/student_risk/teacher_student_risk_screen.dart:169-177`;
+  `lib/router/student360_navigation.dart:6-10`; `lib/router/route_names.dart:644`;
+  `lib/router/app_router.dart:2264-2292`; `lib/router/route_guards.dart:271-273`;
+  `lib/core/security/role_permissions.dart:643-679`.
+
+### JOURNEY-011 · **P1** · Finance / Transport · The daily money and operations screens are in the phone sub-nav overflow
+
+- **Repro steps:** On a phone, sign in as financeAdmin and try to record a counter
+  payment. Then sign in as transportManager and try to allocate a student to a
+  route or mark bus attendance.
+- **Expected:** The action a role performs dozens of times a day is at most one
+  tap from its landing screen.
+- **Actual:** Finance: **Collections** (which owns the "Record collection" dialog)
+  and **Offline Payments** are the 5th and 6th sub-nav entries, so both fall into
+  the "More" bottom sheet — 3 taps to the money-taking dialog, while Fee
+  Structures (annual configuration) holds a permanent inline slot. The finance
+  dashboard has no "Record collection" action of its own. Transport: **Allocation**
+  and **Attendance** are the 5th and 6th entries and overflow the same way, while
+  Vehicles and Drivers (registry screens) stay inline.
+- **Root cause:** `AksharaModuleSubNav.maxInlineOnMobile = 4`
+  (`lib/shared/widgets/akshara_navigation.dart:296,319-334`) applied to
+  frequency-agnostic orderings — `kFinanceNavScreens`
+  (`lib/features/finance/finance_navigation.dart:6-21`) and `kTransportNavScreens`
+  (`lib/features/transport/transport_navigation.dart:6-16`).
+- **Recommended fix:** Reorder both lists by daily frequency (Finance: Dashboard ·
+  Collections · Offline Payments · Defaulters; Transport: Dashboard · Allocation ·
+  Attendance · Tracking), and add a primary "Record collection" action to the
+  finance dashboard.
+- **Dependencies:** none.
+- **Risk of fixing:** very low — list reordering; routes unchanged.
+- **Evidence:** `lib/shared/widgets/akshara_navigation.dart:287-345`;
+  `lib/features/finance/finance_navigation.dart:6-21`;
+  `lib/features/finance/collections/finance_collections_screen.dart:116-120`;
+  `lib/features/finance/dashboard/finance_dashboard_screen.dart:58-149`;
+  `lib/features/transport/transport_navigation.dart:6-16`.
+
+### JOURNEY-012 · **P1** · RBAC · There is no HR role; payroll can only be run by the principal or a school admin
+
+- **Repro steps:** Try to give a school's HR manager access to HR/payroll and
+  nothing else.
+- **Expected:** An HR role exists.
+- **Actual:** `ErpRole` has no HR value. `viewHr`/`manageHr` are held only by
+  superAdmin, schoolAdmin, principal, vicePrincipal and management — so running
+  payroll requires handing someone a 105–138-permission account that also opens
+  every student record, every fee ledger and the approval queue. The server
+  already seeds a correct narrow role (`hrManager` → `viewAdminHub`, `viewHr`,
+  `manageHr`, `20260608100000_rbac_foundation.sql:228`); assigning it triggers
+  JOURNEY-002 instead. The code documents the gap itself:
+  *"HR and Director have no dedicated ErpRole"* (`qa_login_persona.dart:17-19`).
+- **Root cause:** client `ErpRole` enum was never extended to the server role set.
+- **Recommended fix:** Add `ErpRole.hrManager` with a `RolePermissionMatrix` entry
+  matching the server grants, a `kRoleWorkspaces` entry (a new HR workspace, or
+  School Administration scoped to `{admin, hr, employee}`), and a landing route.
+- **Dependencies:** JOURNEY-002 (fallback), JOURNEY-004 (landing).
+- **Risk of fixing:** low-medium.
+- **Evidence:** `lib/core/security/erp_role.dart:2-17`;
+  `lib/core/security/role_permissions.dart` (`viewHr` holders);
+  `lib/features/auth/qa_login_persona.dart:16-19,68`;
+  `supabase/migrations/20260608100000_rbac_foundation.sql:176,228`.
+
+### JOURNEY-013 · **P1** · RBAC / Front office · No Office Staff or Reception role; the desks built for them are unreachable
+
+- **Repro steps:** Try to give a school's front-desk clerk exactly the front-office
+  job — raise certificate requests, issue gate passes, log complaints, handle
+  visitors.
+- **Expected:** A front-office role that lands on those desks.
+- **Actual:** *Reception* exists in no layer at all. *Office Staff* exists only
+  server-side (`officeStaff`) and is granted `viewAdminHub`,
+  `requestStudentCertificate` and `approveCertificateRequest` — nothing for gate
+  passes, complaints or visitors. Client-side the role does not exist, so the
+  clerk is mapped to `superAdmin` (JOURNEY-002), lands on `/admin`, sees the
+  fabricated school hero (JOURNEY-001) and an **empty tile grid** with no empty
+  state (JOURNEY-005), because the Certificates desk belongs to no workspace
+  (JOURNEY-008). The certificate-desk permission set was explicitly designed for
+  this role — `20260884000000_certificate_requests.sql:134-140` grants
+  `requestStudentCertificate` to `parent`, `officeStaff`, `classTeacher`,
+  `coordinator`, principal, vicePrincipal, schoolAdmin — and **three of those
+  seven slugs do not exist client-side** while `parent` has no screen at all.
+- **Root cause:** the front-office persona was modelled in migrations and in the
+  desk UIs, but never added to `ErpRole`, `RolePermissionMatrix`, `kRoleWorkspaces`
+  or `homeRouteForStaffErp`.
+- **Recommended fix:** Add `ErpRole.officeStaff` (front-office workspace: admin,
+  certificateDesk, gatePass, complaints, admissions) and grant it
+  `requestGatePass` and `raiseComplaint` server-side. Add a parent-facing
+  certificate-request screen inside `ParentShell` so the server's parent grant is
+  usable.
+- **Dependencies:** JOURNEY-002, JOURNEY-005, JOURNEY-008.
+- **Risk of fixing:** medium — new role plus new server grants plus a new parent
+  surface.
+- **Evidence:** `supabase/migrations/20260608100000_rbac_foundation.sql:189,238`;
+  `supabase/migrations/20260884000000_certificate_requests.sql:123-149`;
+  `lib/core/security/erp_role.dart:2-17`; `lib/core/workspace/workspace.dart:112-120`;
+  `lib/features/admin/admin_navigation_provider.dart:74-108`;
+  `supabase/functions/_shared/certificate_desk/certificate_desk_handlers.ts:167-182`.
+
+### JOURNEY-014 · **P1** · Student health · The nurse role cannot be represented, and the teacher-facing half does not render
+
+- **Repro steps:** Assign `healthStaff` to a school nurse
+  (`supabase/migrations/20260887000000_student_health.sql:42-43`). Sign in. Look
+  for the Infirmary tile. Separately, sign in as a teacher and look for a student
+  care alert.
+- **Expected:** The nurse lands on the Infirmary console; teachers see care alerts
+  for children in their class.
+- **Actual:** (a) `ErpRole` has no `healthStaff` value, so the nurse is mapped to
+  `superAdmin` (JOURNEY-002) and placed in the School Administration workspace.
+  (b) `AdminModule.studentHealth` belongs to no workspace, so the Infirmary tile
+  can never render on the hub or the phone bottom nav (JOURNEY-008) — the console
+  is drawer-only. (c) `lib/features/student_health/care_alert/care_alert_widget.dart`
+  is imported nowhere in `lib/` (already catalogued DEAD in FEATURE_INVENTORY M28),
+  so the teacher-facing care alert has no rendering site at all.
+- **Root cause:** the module shipped server-first; the client role, workspace
+  membership and the alert mount point were never added.
+- **Recommended fix:** Add `ErpRole.healthStaff` + a health workspace whose
+  `homeRoute` is `/student-health`; add `AdminModule.studentHealth` to it; mount
+  `CareAlertWidget` on the teacher dashboard / class-teacher dashboard behind
+  `Permission.viewStudentCareAlert`.
+- **Dependencies:** JOURNEY-002, JOURNEY-008.
+- **Risk of fixing:** medium — surfaces sensitive health data; the migration's
+  need-to-know intent and its access-log audit must be preserved exactly.
+- **Evidence:** `supabase/migrations/20260887000000_student_health.sql:42-43,444-495`;
+  `lib/core/security/erp_role.dart:2-17`; `lib/core/workspace/workspace.dart:59-173`;
+  `lib/features/student_health/care_alert/care_alert_widget.dart` (no importers);
+  `lib/features/admin/admin_navigation_provider.dart:98-108`.
+
+### JOURNEY-015 · **P1** · Parent App · "Pay now" from the dashboard always opens a hard-coded installment
+
+- **Repro steps:** As a parent, tap the dashboard's Pay-now / pay-fee quick action.
+- **Expected:** The next unpaid installment for the selected child.
+- **Actual:** The router always navigates to
+  `/parent/payment?installmentId=term_2` regardless of what is owed;
+  `handleParentFeesNavigation` likewise defaults `installmentId ?? 'term_2'`.
+  With live data no such id exists, so the payment summary lookup fails — and
+  JOURNEY-007 then renders a fabricated ₹4,200 statement in its place.
+- **Root cause:** `lib/router/parent_navigation.dart:33-36` and `:110-115` —
+  demo-fixture ids left in the production router, the same residue class as
+  CERT-003.
+- **Recommended fix:** Pass the real installment id from the tapped model; if none
+  is selected, open `/parent/fees` rather than guessing.
+- **Dependencies:** JOURNEY-007, CERT-001, CERT-003.
+- **Risk of fixing:** low.
+- **Evidence:** `lib/router/parent_navigation.dart:29-45,96-116`;
+  `lib/router/app_router.dart:2341-2376`.
+
+### JOURNEY-016 · **P2** · Parent App · Two dashboard items route to the hidden PTM screen
+
+- **Repro steps:** As a parent, tap the notice/event whose id is `notice_n1` or
+  `event_e2` on the dashboard.
+- **Expected:** The notice or event opens.
+- **Actual:** Navigation goes to `RouteNames.parentPtm`, which
+  `SchoolBuildScope.hiddenRoutePrefixes` blocks in a school build — the builder
+  returns `AccessDeniedScreen`. The parent taps a school notice and is told access
+  is denied.
+- **Root cause:** `lib/router/parent_navigation.dart:83-85` maps two fixture ids
+  to PTM and does not consult `SchoolBuildScope.isRouteHidden`. The "More" sheet
+  does consult it (`lib/shared/navigation/persona_nav.dart:212-213`), so the tile
+  is correctly hidden while this handler is not.
+- **Recommended fix:** Delete the fixture-id special cases; route notices to
+  `/parent/notices` and events to `/parent/events` as the generic branches
+  already do. Any remaining PTM navigation should be guarded by
+  `SchoolBuildScope.isRouteHidden`.
+- **Dependencies:** none.
+- **Risk of fixing:** very low.
+- **Evidence:** `lib/router/parent_navigation.dart:82-92`;
+  `lib/core/config/school_build_scope.dart` (`hiddenRoutePrefixes`);
+  `lib/shared/navigation/persona_nav.dart:206-223`.
+
+---
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     WIDGET — Workstream 6, Dashboard & widget certification (2026-07-29)
+     Full trace: docs/certification/findings/WIDGET-dashboard-certification.md
+     Source-traced screen → widget → provider → repository → release flag.
+     No device run (release binary requires production + live API) — every
+     rendering claim is derived from the widget tree, not a screenshot.
+     ═══════════════════════════════════════════════════════════════════════ -->
+
+### WIDGET-001 · **P0** · Parent · Dashboard renders fabricated fees and attendance during every load, and permanently on failure
+
+- **Repro steps:** Sign in as a parent on any tenant. Cold-open `/parent/dashboard` and
+  watch the first frames. Then repeat with `GET /parent/dashboard` failing (airplane
+  mode, or a 500).
+- **Expected:** A skeleton while loading; an honest empty/error state on failure. The
+  screen already passes `skeleton: AksharaSkeleton.dashboard()`.
+- **Actual:** Both paths render `ParentDashboardData.mock()` — child **"Ravi Kumar,
+  8-A"**, school "Akshara Public School", status chip **"₹4,200 due"**, today rows
+  **"Present · Marked 9:12 AM"**, **"2 homework due today"**, **"Term 2 installment due
+  12 Jun"**, the AI bar **"Fee due in 5 days — pay early to avoid late fee"**, plus three
+  fabricated notices and three fabricated events. On failure this is permanent. The
+  skeleton is unreachable code.
+- **Root cause:** Two independent gaps. (1) `parent_dashboard_screen.dart:39-41` derives
+  `isLoading`/`hasError`/`isEmpty` **only** from `parentDashboardLoadingProvider`,
+  `…ErrorProvider`, `…EmptyProvider` — `StateProvider<bool>` defaulting to `false` and,
+  verified by grep across `lib/`, **never written outside tests**. The real
+  `AsyncValue` state is never consulted. (2)
+  `parent_dashboard_provider.dart:312-314` ends `data ?? future.value ?? ParentDashboardData.mock()`,
+  and `watchRepositoryFuture` returns null while pending
+  (`lib/core/providers/repository_future.dart:13` is `whenOrNull(data:)`), so the mock
+  wins during the fetch as well as after a failure.
+- **Recommended fix:** Copy the student dashboard verbatim — it is the same widget
+  family and already correct: `student_dashboard_screen.dart:36-39` ORs
+  `|| async.isLoading` / `|| async.hasError`, and
+  `student_dashboard_provider.dart:283-285` falls back to `StudentDashboardData.empty()`,
+  not a mock. Add `ParentDashboardData.empty()` and delete `.mock()` from the production
+  path (keep it for tests only).
+- **Dependencies:** none. Note that `test/golden/golden_test_helpers.dart:79-81,123-125`
+  overrides all nine dashboard loading providers to `false`, so the golden suite pins the
+  mock path; those goldens must be re-baselined against the honest states.
+- **Risk of fixing:** low. The change is additive to the async read and swaps one
+  fallback constructor.
+- **Evidence:** `lib/features/parent/dashboard/parent_dashboard_screen.dart:38-41,67-72`;
+  `lib/features/parent/dashboard/parent_dashboard_provider.dart:41-174,291-293,304-316`;
+  `lib/core/providers/repository_future.dart:5-14`;
+  `lib/features/student_app/dashboard/student_dashboard_screen.dart:34-39` and
+  `…/student_dashboard_provider.dart:277-285` (the correct pattern).
+- **Severity note:** the register's standing rule, twice — fabricated **financial** and
+  fabricated **attendance** data shown to a parent. `FEATURE_INVENTORY.md` records this
+  screen under **CERT-002** as failing "on failure"; this entry records the mechanism and
+  the fact that the **loading** path is affected on every single cold open, which is a
+  different fix from the fallback constant.
+
+### WIDGET-002 · **P0** · Teacher · Dashboard asserts a staff check-in that did not happen
+
+- **Repro steps:** Sign in as a teacher. Cold-open `/teacher/dashboard`. Repeat with
+  `GET /teacher/dashboard` failing.
+- **Expected:** Skeleton, then real data; honest error on failure.
+- **Actual:** Both paths render `TeacherDashboardData.mock()`: greeting **"Good morning,
+  Priya" / "Priya Sharma"**, a staff check-in card reading **"9:02 AM · Geo+Face
+  verified"** with status `checkedIn`, class attendance **"34 of 38 present"**, a pending
+  banner **"Attendance not marked for Class 8-A · Period 1"**, and a three-period
+  fabricated timetable — to a teacher who may be called Anita, has not checked in, and
+  does not teach 8-A.
+- **Root cause:** Identical to WIDGET-001.
+  `teacher_dashboard_screen.dart:31-33` reads only the manual state providers;
+  `teacher_dashboard_provider.dart:314-323` ends `?? TeacherDashboardData.mock()`.
+- **Recommended fix:** As WIDGET-001 — OR in `async.isLoading`/`async.hasError`, add
+  `TeacherDashboardData.empty()`, remove `.mock()` from the production path.
+- **Dependencies:** same golden re-baseline as WIDGET-001.
+- **Risk of fixing:** low.
+- **Evidence:** `lib/features/teacher/dashboard/teacher_dashboard_screen.dart:29-33,52-57,83-92`;
+  `lib/features/teacher/dashboard/teacher_dashboard_provider.dart:159-193,304-323`.
+- **Severity note:** worse than WIDGET-001 in kind rather than degree. **"Geo+Face
+  verified"** is a specific claim about a biometric attendance event, on the record that
+  feeds payroll and the staff-attendance audit trail. A teacher who sees "checked in
+  9:02 AM" and does not then check in has been actively misled by the product about their
+  own attendance.
+
+### WIDGET-011 · **P0** · Management · "School health score" is computed from hard-coded fallback constants
+
+- **Repro steps:** Sign in as principal on a **new** tenant with no fee data and no
+  finance-intelligence KPIs. Open `/management/dashboard`. Read the ring at the top of
+  the Principal overview panel.
+- **Expected:** No score, or an explicit "not enough data yet".
+- **Actual:** A large premium progress ring reading **51**, labelled **"School health
+  score"**, subtitled **"Blends fee collection and margin trends"** — for a school that
+  has recorded neither.
+- **Root cause:** `lib/features/management/widgets/management_principal_overview_panel.dart:24-39`:
+  `int.tryParse(collectionRate.replaceAll(RegExp(r'[^0-9]'),'')) ?? 68` and
+  `int.tryParse(…net_margin… ?? '31') ?? 31`, blended
+  `((feeRate*0.55)+(margin*0.45)).round().clamp(0,100)`. With no fee data `feeRate`
+  becomes the literal **68**; a school without the finance-intelligence module has no
+  `net_margin` KPI at all so `margin` is **always** the literal **31**; together they
+  yield **51**. Two further problems in the same six lines: the weights 0.55/0.45 are
+  undocumented and unconfigurable, and stripping non-digits from a **money-or-percent
+  string** means a `collectionRate` returned as an amount (`₹12,45,000`) parses as
+  `1245000` and pegs the score at **100**.
+- **Recommended fix:** Make the score nullable and render an honest "Not enough data yet"
+  when either input is absent — never substitute a constant. Move the computation out of
+  the widget to a place where the weights can be reviewed and, ideally, to the backend
+  that owns the figures. Parse a typed percentage, not a scraped string.
+- **Dependencies:** needs a typed `collectionRate`/`netMargin` on
+  `ManagementDashboardData` rather than display strings.
+- **Risk of fixing:** low-medium — the panel is the first thing on the principal's
+  dashboard, so the empty rendering needs design attention.
+- **Evidence:** `lib/features/management/widgets/management_principal_overview_panel.dart:24-39,226-280`.
+- **Severity note:** P0 under the standing rule. It is a single headline number, derived
+  from financial inputs, presented as this school's health, that the viewer cannot check
+  from the screen showing it — the same shape as **CERT-006**, but load-bearing rather
+  than decorative, and shown to the owner.
+
+### WIDGET-003 · **P1** · Management · `ManagementSegmentPanel` renders a 240–320px blank box on day one
+
+- **Repro steps:** Open `/management/dashboard` on a tenant with no expense
+  categorisation (every new school).
+- **Expected:** An empty state, as its row-mate `ManagementTrendChart` already does.
+- **Actual:** A bordered card containing the title **"Expense breakdown"** and then
+  240–300px of nothing.
+- **Root cause:** `lib/features/management/widgets/management_segment_panel.dart:37-86`
+  wraps a `ListView.separated` in a **fixed-height `SizedBox`** with no `segments.isEmpty`
+  branch, so the height is reserved whether or not there is anything to draw.
+- **Recommended fix:** Mirror `FinanceCollectionTrendChart`
+  (`lib/features/finance/widgets/finance_collection_trend_chart.dart:32-67`), which
+  suppresses the fixed height **and** the legend and substitutes an empty state.
+- **Dependencies:** none.
+- **Risk of fixing:** low.
+- **Evidence:** `lib/features/management/widgets/management_segment_panel.dart:21-93`;
+  `lib/features/management/dashboard/management_dashboard_screen.dart:163-197`;
+  contrast `lib/features/finance/widgets/finance_collection_trend_chart.dart:32-67`.
+
+### WIDGET-004 · **P1** · Parent, Teacher · Headed dashboard sections render zero-height holes when empty
+
+- **Repro steps:** (a) Parent: open `/parent/dashboard` on a school with no timetable,
+  homework or attendance recorded — the **"Today"** header and its **"See all"** link
+  render with nothing beneath them. (b) Teacher: a backend returning an empty
+  `quickActions` list leaves the **"Quick Actions"** header above an empty grid.
+- **Expected:** Header + empty state, or the whole section self-hides. This exact class
+  was fixed elsewhere during RC — `PendingTasksSection:38`, `TodayScheduleCard:39`,
+  `HomeworkDueList:38` and `DailyScheduleStrip:45` all do it correctly.
+- **Actual:** Both sections render the header unconditionally and iterate a possibly
+  empty list with no guard.
+- **Root cause:** `lib/features/parent/dashboard/parent_dashboard_screen.dart:538-575`
+  (`_TodaySummarySection`) and
+  `lib/features/teacher/dashboard/teacher_dashboard_screen.dart:312-344`
+  (`_QuickActionsSection`).
+- **Recommended fix:** Add the same `if (items.isEmpty) return AksharaEmptyState(...)`
+  used by the four widgets above. "Today" reads better self-hidden; "Quick Actions" with
+  no actions is a configuration error and should say so.
+- **Dependencies:** none.
+- **Risk of fixing:** low.
+- **Evidence:** `lib/features/parent/dashboard/parent_dashboard_screen.dart:198-202,538-575`;
+  `lib/features/teacher/dashboard/teacher_dashboard_screen.dart:177-180,312-344`;
+  correct precedents at `lib/features/teacher/dashboard/widgets/pending_tasks_section.dart:38`,
+  `…/today_schedule_card.dart:39`,
+  `lib/features/student_app/dashboard/widgets/homework_due_list.dart:38`,
+  `…/daily_schedule_strip.dart:45`.
+
+### WIDGET-005 · **P1** · Student · Exam reminder card announces an exam that does not exist
+
+- **Repro steps:** Sign in as a student at a school with no exams scheduled. Open
+  `/student/dashboard`.
+- **Expected:** No card, or "No exams scheduled".
+- **Actual:** A full secondary-tinted card with a calendar icon, an **"Exam"** badge, the
+  text **"In 0 days"** and three blank lines where title, subject and date belong.
+  Tapping it fires the action id `'exam_'`. The screen-reader label is
+  *"Exam reminder: , , , in 0 days"*.
+- **Root cause:** `lib/features/student_app/dashboard/student_dashboard_screen.dart:152-158`
+  renders `ExamReminderCard` unconditionally, and
+  `lib/features/student_app/dashboard/widgets/exam_reminder_card.dart:20` has no empty
+  branch. `StudentDashboardData.empty()` supplies
+  `ExamReminder(id:'', title:'', subject:'', dateLabel:'', daysUntil:0)`.
+- **Recommended fix:** Return `SizedBox.shrink()` when `reminder.id.isEmpty`, and gate the
+  render site on the same condition so the surrounding spacing collapses too.
+- **Dependencies:** none.
+- **Risk of fixing:** low.
+- **Evidence:** `lib/features/student_app/dashboard/widgets/exam_reminder_card.dart:19-132`;
+  `lib/features/student_app/dashboard/student_dashboard_provider.dart:251-262`;
+  `lib/features/student_app/dashboard/student_dashboard_screen.dart:152-158`.
+
+### WIDGET-006 · **P1** · Student, Teacher, Management · AI suggestion bar renders a branded card with no message
+
+- **Repro steps:** Open `/student/dashboard` on a new tenant (`.empty()` supplies
+  `StudentAiInsight(message:'', actionLabel:'')`). Same on `/teacher/dashboard` and
+  `/management/dashboard` whenever the backend returns an empty insight.
+- **Expected:** No bar. The **parent** dashboard already does exactly this —
+  `parent_dashboard_screen.dart:174`, `if (data.aiInsight.message.isNotEmpty)`.
+- **Actual:** The full brand-gradient bar renders: sparkle icon, drop shadow, the eyebrow
+  **"AKSHARA SUGGESTS"**, a blank message line and — because the action guard tests
+  `actionLabel != null` rather than `.isNotEmpty` — a **blank action button**. The most
+  visually prominent element on the screen, saying nothing.
+- **Root cause:** `lib/shared/widgets/premium/akshara_ai_suggestion_bar.dart` has no
+  empty-message guard, and its action guard at line ~114 is
+  `if (actionLabel != null && onAction != null)`. Render sites
+  `lib/features/student_app/dashboard/student_dashboard_screen.dart:179-188,200-205` and
+  `lib/features/teacher/dashboard/teacher_dashboard_screen.dart:189-193,253-257` are
+  unconditional. (`AksharaInsightCard` on management gets the action label right —
+  `akshara_insight_card.dart:39` uses `actionLabel.isEmpty ? null : actionLabel` — but
+  still renders with an empty message.)
+- **Recommended fix:** Guard inside the shared widget — `if (message.trim().isEmpty)
+  return const SizedBox.shrink();` — so all three call sites are fixed at once, and
+  change the action guard to test `isNotEmpty`. Also collapse the surrounding
+  `SizedBox(height: s4)` at the render sites.
+- **Dependencies:** none.
+- **Risk of fixing:** low, but it is a shared premium widget — re-run the golden suite.
+- **Evidence:** `lib/shared/widgets/premium/akshara_ai_suggestion_bar.dart:12-127`;
+  `lib/features/student_app/dashboard/student_dashboard_provider.dart:261`;
+  correct precedent at `lib/features/parent/dashboard/parent_dashboard_screen.dart:174-181`.
+- **Note:** the eyebrow default is the string **"AKSHARA SUGGESTS"** while the app is
+  renaming to NIKSHA OS — a user-visible legacy brand string on every persona dashboard.
+
+### WIDGET-007 · **P1** · Director · Portfolio section is a headed hole and the empty state is disabled by construction
+
+- **Repro steps:** Sign in as director on an org with no schools onboarded (or one where
+  `schoolRows` returns empty). Open the director dashboard.
+- **Expected:** The `emptyMessage` the screen already declares —
+  "No dashboard data available."
+- **Actual:** An empty KPI row, then the header **"School portfolio health"**, then
+  nothing, then the executive summary. The empty state can never fire.
+- **Root cause:** `lib/features/director/director_dashboard_screen.dart:41` passes
+  `resolveErpAsync(state, isDataEmpty: (_) => false)` — the emptiness predicate is
+  hard-coded false, making `emptyMessage` on line 43 dead. The portfolio list at
+  `:72-93` then iterates `data.schoolRows` with no guard.
+- **Recommended fix:** Supply a real predicate (`(d) => d.schoolRows.isEmpty && d.kpis.isEmpty`)
+  and add an empty state under the portfolio header for the partial case.
+- **Dependencies:** none.
+- **Risk of fixing:** low.
+- **Evidence:** `lib/features/director/director_dashboard_screen.dart:38-49,65-93`.
+
+### WIDGET-008 · **P1** · Finance, SIS, HR, Admissions, Transport, Library, Hostel, Inventory, Alumni, Director · Dashboard filter chips do not filter
+
+- **Repro steps:** Open `/finance/dashboard`. Tap **"This month"**, then **"All classes"**,
+  then **"All modes"**. The selected chip changes. No figure on the page changes. Repeat
+  on the SIS, HR, Admissions, Transport, Library, Hostel, Inventory, Alumni and Director
+  dashboards — same result on all of them.
+- **Expected:** The dashboard re-queries for the selected scope, as the **Management**
+  dashboard does.
+- **Actual:** The `*DashboardFilterProvider` is read **only** by the screen, to paint
+  which chip looks selected. Every `*DashboardFutureProvider` calls
+  `getDashboard(query: ref.watch(repositoryQueryProvider))` — the unfiltered base query.
+  The chip row is an inert control that implies the numbers responded to it.
+- **Root cause:** Missing query provider. Management shows the intended shape:
+  `managementDashboardQueryProvider`
+  (`lib/features/management/management_providers.dart:16-25`) maps the index to
+  `{'period':…,'quarter':…}` and `managementDashboardFutureProvider:27-32` watches it.
+  Nine dashboards never got the equivalent.
+- **Recommended fix:** Either add the per-module query provider (mechanical, and the
+  backend `getDashboard` already takes a `RepositoryQuery`), or — for any module where
+  the backend cannot filter — **remove the chips**. Do not ship a control that does
+  nothing; the register already has the precedent that a tile which silently does nothing
+  should be removed rather than left in place
+  (`global_search_registry.dart:193-212`, P1-7).
+- **Dependencies:** each module's backend `GET /<module>/dashboard` must accept the
+  filter params. Not verifiable from the client (no Postgres lane / owner-bound SSH).
+- **Risk of fixing:** low to remove; medium to wire (touches 9 providers + 9 backends).
+- **Evidence:** `lib/features/finance/dashboard/finance_dashboard_provider.dart:13-25`;
+  `lib/features/sis/dashboard/sis_dashboard_provider.dart:12-18`;
+  `lib/features/hr/hr_providers.dart:16-19`;
+  `lib/features/admissions/dashboard/admissions_dashboard_provider.dart:13-16`;
+  `lib/features/transport/transport_providers.dart:16-19`;
+  `lib/features/library/library_providers.dart:16-19`;
+  `lib/features/hostel/hostel_providers.dart:16-19`;
+  `lib/features/inventory/inventory_providers.dart:16-19`;
+  `lib/features/alumni/alumni_providers.dart:16-19`;
+  `lib/features/director/director_dashboard_screen.dart:24`;
+  contrast `lib/features/management/management_providers.dart:14-32`.
+
+### WIDGET-009 · **P2** · All module dashboards · Filter chip labels are hard-coded constants unrelated to the tenant
+
+- **Repro steps:** Open the Hostel dashboard at a school with five hostel blocks; open
+  Inventory at a school whose stores are organised by subject; open Alumni in 2027.
+- **Expected:** Options drawn from the school's own configuration.
+- **Actual:** Hostel offers **`Block A` · `Block B` · `All blocks`**. Inventory offers
+  **`All departments` · `IT` · `Hostel` · `Science`**. Alumni offers **`All batches` ·
+  `2024–25` · `2022–23`** and no other batch, ever. HR offers **`Academics` ·
+  `Administration`**. SIS offers the single year **`2026–27`**. Transport offers
+  **`AM shift` · `PM shift`**. Management offers **`FY 2026-27` · `Q1`** — a fiscal year
+  that will be wrong in April 2027, and a quarter selector that cannot select Q2, Q3 or
+  Q4. Director's chips (**`All schools` · `Region` · `Quarter`**) name *dimensions*, not
+  selections.
+- **Root cause:** `static const List<String> filterLabels` in each dashboard screen.
+- **Recommended fix:** Derive from `schoolCapabilitiesProvider` / the module's own
+  configuration, or reduce to genuinely universal scopes (This month / This year / All).
+  The management FY label must be computed from the tenant's academic year — it is also
+  passed verbatim into the Copilot context
+  (`management_dashboard_screen.dart:140`), so the AI assistant is currently told the
+  period is "FY 2026-27" regardless of the real year.
+- **Dependencies:** WIDGET-008 — pointless to fix the labels while the chips are inert.
+- **Risk of fixing:** low.
+- **Evidence:** `management_dashboard_screen.dart:32-36,140`;
+  `finance_dashboard_screen.dart:25-29`; `sis_dashboard_screen.dart` filterLabels;
+  `hr_dashboard_screen.dart`; `admissions_dashboard_screen.dart`;
+  `transport_dashboard_screen.dart`; `library_dashboard_screen.dart`;
+  `hostel_dashboard_screen.dart`; `inventory_dashboard_screen.dart`;
+  `alumni_dashboard_screen.dart`; `director_dashboard_screen.dart:24`.
+
+### WIDGET-010 · **P2** · Finance, SIS, Admissions · Three unrelated filter dimensions in one single-select group
+
+- **Repro steps:** On `/finance/dashboard`, select **"This month"**. Now select
+  **"All classes"** — "This month" deselects.
+- **Expected:** Period, class and payment mode are independent; they should be separate
+  controls (or a filter sheet).
+- **Actual:** One single-select chip row spans three dimensions, so the control cannot
+  express "this month AND all classes" even in principle. Finance:
+  `This month / All classes / All modes`. SIS: `2026–27 / All classes / All statuses`.
+  Admissions: `This month / All counselors / All sources`.
+- **Root cause:** A single `StateProvider<int>` index backing a multi-dimensional filter.
+- **Recommended fix:** Model the filter as a record of independent dimensions, or collapse
+  to a single dimension per row.
+- **Dependencies:** WIDGET-008.
+- **Risk of fixing:** medium — a UX change, not just wiring.
+- **Evidence:** `lib/features/finance/dashboard/finance_dashboard_screen.dart:25-42`;
+  `lib/features/sis/dashboard/sis_dashboard_screen.dart:33-41`;
+  `lib/features/admissions/dashboard/admissions_dashboard_screen.dart:37-44`.
+
+### WIDGET-012 · **P2** · Management · The same insight and the same approval queue render two and three times on one screen
+
+- **Repro steps:** Open `/management/dashboard` with a non-empty AI insight and more than
+  five pending approvals. Scroll once.
+- **Expected:** Each fact stated once, in the place it belongs.
+- **Actual:** `data.aiInsight` renders **twice** — as an amber `AksharaWarningBanner`
+  inside "Alert center" (pushed into `_alerts` at
+  `management_principal_overview_panel.dart:219-220`, with a **"Review"** button hard-wired
+  to `/management/approvals`) and again as `AksharaInsightCard` at the bottom
+  (`management_dashboard_screen.dart:257-263`, **"View approvals"**, same destination).
+  A fee-collection insight is therefore shown twice, both times styled as something to
+  approve. Pending approvals render **three** times: `_priorities` (top 3, as "Approve X ·
+  ₹Y" cards, `:145-175`), `_alerts` ("N items waiting in approval queue", `:216-218`), and
+  `_ApprovalQueuePreview` (top 5, as a table, `management_dashboard_screen.dart:235`).
+- **Root cause:** Two panels composed independently, each deciding what is urgent, with no
+  shared "already surfaced" set. `lib/core/dai/dai_brief.dart:14-19` records the same
+  observation and declined to ship the morning brief because it would be a **third**
+  "what matters today" surface — the second is already present.
+- **Recommended fix:** Pick one home for each fact. The insight belongs in the insight
+  card; the alert centre should carry only what is not already a priority card. Derive the
+  insight card's `actionLabel` from the insight rather than hard-coding "View approvals"
+  (management) / "Review defaulters" (finance), so the button matches the sentence.
+- **Dependencies:** none.
+- **Risk of fixing:** low-medium — it is a layout/ordering decision.
+- **Evidence:** `lib/features/management/widgets/management_principal_overview_panel.dart:143-223`;
+  `lib/features/management/dashboard/management_dashboard_screen.dart:148,233-235,257-263`;
+  `lib/features/finance/dashboard/finance_dashboard_screen.dart:95-101,135-141`;
+  `lib/core/dai/dai_brief.dart:12-19`.
+
+### WIDGET-013 · **P2** · Management, Finance · Hard-coded, inconsistent alert thresholds
+
+- **Repro steps:** (a) A 200-student school with **38** fee defaulters — nearly a fifth of
+  its roll — sees no warning banner anywhere. (b) A school with **25** defaulters sees the
+  Alert-Centre banner but **not** the dashboard warning banner, on the same screen, about
+  the same fact.
+- **Expected:** Escalation proportional to the school, and one consistent threshold for one
+  fact.
+- **Actual:** `defaulters > 40` gates the fee banner on **both** the management dashboard
+  (`management_dashboard_screen.dart:149,156`) and the finance dashboard
+  (`finance_dashboard_screen.dart:69,76`); `defaulters > 20` gates the Alert-Centre entry
+  (`management_principal_overview_panel.dart:211`); `approvalQueue.length > 5` gates the
+  approvals alert (`:216`). All absolute counts, none configurable, two of them
+  contradictory.
+- **Root cause:** Magic numbers inline in widget build methods.
+- **Recommended fix:** Make the fee threshold proportional (a share of enrolment or of the
+  billed amount) and define it once. If absolute counts must stay for v1.0, at minimum
+  reconcile 20 and 40 to a single constant.
+- **Dependencies:** proportional thresholds need enrolment on `ManagementDashboardData`.
+- **Risk of fixing:** low.
+- **Evidence:** `lib/features/management/dashboard/management_dashboard_screen.dart:149,156`;
+  `lib/features/management/widgets/management_principal_overview_panel.dart:209-223`;
+  `lib/features/finance/dashboard/finance_dashboard_screen.dart:69,76`.
+
+### WIDGET-014 · **P3** · Management · Approval-queue empty state is a bare sentence
+
+- **Repro steps:** Open `/management/dashboard` with an empty approval queue.
+- **Expected:** `AksharaEmptyState`, as used everywhere else in the product.
+- **Actual:** The section header **"Approval queue"** followed by unframed grey body text
+  **"No items in the approval queue."** — no icon, no card, no surface. Visually it reads
+  as a rendering failure rather than a calm all-clear.
+- **Root cause:** `lib/features/management/dashboard/management_dashboard_screen.dart:338-348`
+  returns a bare `Text` in the empty branch.
+- **Recommended fix:** Use `AksharaEmptyState` with an icon, matching
+  `FinanceRecentPaymentsTable` and `FinanceHandoffQueue`.
+- **Dependencies:** none.
+- **Risk of fixing:** trivial.
+- **Evidence:** `lib/features/management/dashboard/management_dashboard_screen.dart:331-348`;
+  contrast `lib/features/finance/dashboard/widgets/finance_recent_payments_table.dart:21-25`
+  and `lib/features/finance/widgets/finance_handoff_queue.dart:36-40`.
+
+### WIDGET-015 · **P2** · Dashboards · Four dashboard widgets ship with no rendering site, one of them bound to a live endpoint
+
+- **Repro steps:** Search `lib/` for imports of each file below. There are none.
+- **Expected:** Widgets that ship are widgets that render.
+- **Actual:** Four dashboard-family widgets are compiled into the release with no caller:
+  `lib/features/parent/dashboard/widgets/hero_card.dart` (158 lines),
+  `lib/features/teacher/dashboard/widgets/greeting_header.dart`,
+  `lib/features/student_app/dashboard/widgets/hero_greeting_card.dart` — all three
+  superseded by `AksharaGradientHero` — and
+  `lib/features/student_health/care_alert/care_alert_widget.dart`, which is bound to the
+  **live** `GET /student-health/care-alerts` endpoint and has no rendering site anywhere.
+  The care alert is the inverse of a placeholder: a working data source with no widget on
+  screen, so a teacher is never told a child in their class has an active care alert.
+- **Root cause:** Superseded during the DS V2 migration (the three heroes) and never
+  wired (the care alert). All four are already enumerated in `FEATURE_INVENTORY.md` §M28.
+- **Recommended fix:** Delete the three superseded heroes. The care alert is a product
+  decision, not a cleanup: either give it a rendering site on the teacher dashboard /
+  class roster, or remove it and stop serving the endpoint.
+- **Dependencies:** the care-alert decision needs a product owner.
+- **Risk of fixing:** trivial for the deletions.
+- **Evidence:** `docs/certification/FEATURE_INVENTORY.md` §M28 (rows "UI | 6 orphaned
+  widgets" and "Student health | Care-alert widget"), verified by import search.
+
+### WIDGET-016 · **P1** · Parent · "Homework pending" KPI counts summary rows, not homework
+
+- **Repro steps:** Open `/parent/dashboard`. Compare the **"Homework pending"** KPI card
+  with the "Today" row about homework directly below it.
+- **Expected:** The same number.
+- **Actual:** The KPI shows **1** while the row reads **"2 homework due today"**. Two
+  numbers about one fact, on one screen, disagreeing.
+- **Root cause:** `lib/features/parent/dashboard/parent_dashboard_screen.dart:314-315`:
+  `todaySummary.where((t) => t.id.contains('homework')).length` — it counts *summary rows
+  whose id mentions homework*, which is 0 or 1, not the homework count. The same widget
+  derives the Attendance and Fees KPIs by substring-scraping chip **labels**
+  (`c.label.toLowerCase().contains('attendance')` / `.contains('fee')`, `:306-313`), so
+  any backend re-wording of a chip silently turns those cards into `'—'`.
+- **Recommended fix:** Put a typed `homeworkPendingCount` (and typed attendance/fee
+  values) on `ParentDashboardData` and read those. Presentation strings are not a data
+  source.
+- **Dependencies:** `GET /parent/dashboard` must expose the typed fields; the values are
+  already computed server-side to build the strings.
+- **Risk of fixing:** low-medium — a DTO change.
+- **Evidence:** `lib/features/parent/dashboard/parent_dashboard_screen.dart:295-358`;
+  `lib/features/parent/dashboard/parent_dashboard_provider.dart:102-127`.
+
+### WIDGET-017 · **P1** · Parent · Academic progress ring renders 0% when attendance is unknown
+
+- **Repro steps:** Open `/parent/dashboard` where `GET /parent/experience/…` returns a
+  summary without `attendanceSummary['ratePercent']` (new school, term not started).
+- **Expected:** A neutral "not computed yet" — not a gauge with a value.
+- **Actual:** `AksharaProgressRing` renders **completely unfilled**, captioned **"—%"** and
+  **"Present"**, with the screen-reader label *"Attendance — percent"*. An empty ring is a
+  strong visual assertion of near-zero attendance. The same pattern applies to
+  `Grade '—'` and `Homework '—%'`, and the homework `LinearProgressIndicator` beside them
+  sits at 0.
+- **Root cause:** `lib/features/parent/dashboard/parent_dashboard_screen.dart:374-378`:
+  `attendance = …['ratePercent'] ?? '—'` then
+  `attendanceFraction = (double.tryParse('$attendance') ?? 0) / 100.0`. The `?? 0` turns
+  "unknown" into "zero" before it reaches the gauge.
+- **Recommended fix:** Make the fraction nullable and render an indeterminate/greyed ring
+  (or omit the ring and show "Attendance not available yet") when it is null. Never map
+  unknown to 0 in a gauge.
+- **Dependencies:** none.
+- **Risk of fixing:** low.
+- **Evidence:** `lib/features/parent/dashboard/parent_dashboard_screen.dart:360-481`.
+- **Severity note:** attendance data under the standing rule, graded P1 rather than P0
+  because the numeric caption honestly reads "—" — the falsehood is carried only by the
+  gauge's visual position. Flagging the judgement rather than hiding it.
+
+### WIDGET-018 · **P2** · Management · "At-risk fees" tile shows a student count
+
+- **Repro steps:** Open `/management/dashboard`. Read the third tile of the summary strip.
+- **Expected:** A money figure, given the label.
+- **Actual:** The tile shows `data.feeSnapshot.defaulters` — a **count of students** —
+  under the subtitle **"At-risk fees"**, immediately beside a "Fee collection" tile showing
+  a percentage. Three tiles, three different units, one of them mislabelled. The
+  outstanding **amount** (`feeSnapshot.outstanding`) exists on the same object and is not
+  shown here.
+- **Root cause:** `lib/features/management/widgets/management_principal_overview_panel.dart:311-318`.
+- **Recommended fix:** Either relabel to "Fee defaulters" (a count) or show
+  `feeSnapshot.outstanding` (an amount). Given this is the principal's money summary, the
+  amount is the more useful figure.
+- **Dependencies:** none.
+- **Risk of fixing:** trivial.
+- **Evidence:** `lib/features/management/widgets/management_principal_overview_panel.dart:282-323`.
