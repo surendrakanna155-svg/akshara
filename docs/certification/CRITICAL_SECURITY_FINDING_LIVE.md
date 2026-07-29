@@ -213,3 +213,81 @@ deployment fix — that is the acceptance test.
 - **Verification evidence:** ✅ verifier run against live, 8 failures recorded above
 - **Regression coverage:** ✅ `verify-deployment-security.sh`, fails today
 - **Deployment status:** ⛔ NOT deployed — **live exposure unchanged**
+
+---
+
+# ✅ RESOLVED — verified on the live deployment, 2026-07-29
+
+`./deploy/akshara-vps/verify-deployment-security.sh https://api.nikshaos.in`
+→ **all 9 checks pass** (was 8 failing).
+
+```
+[1] Internal health endpoints reject anonymous access
+  PASS /health/tenant-access 403   PASS /health/operations 403
+  PASS /health/providers     403   PASS /health/backup     403
+  PASS /health/storage       403
+[2] PASS  /health exposes no internals
+[3] PASS /attendance/register/monthly 401  PASS /audit/events 401
+    PASS /identity/roles 401
+```
+
+## Root cause
+
+Two distinct causes, not one:
+
+1. **Deployment configuration.** `APP_ENV=staging` (not `production`) and
+   `INTERNAL_HEALTH_TOKEN` unset. The application code was already correct and
+   fails closed — the guard runs first in all five handlers and returns 403 in
+   production. Confirmed directly on the VPS.
+2. **Code.** Authentication ran *after* validation and dispatch, so an anonymous
+   caller learned a route's parameter contract and could distinguish existing
+   routes by 404-vs-422.
+
+## Fix
+
+1. `INTERNAL_HEALTH_TOKEN` set (32-byte random) in `/opt/akshara/.env.akshara`,
+   file backed up first; `akshara-edge` recreated (`--no-deps`, scoped — the VPS
+   is shared with unrelated production workloads).
+2. Auth moved ahead of validation and dispatch. The public surface is now an
+   explicit, reviewable allow-list (`_shared/public_routes.ts`) rather than an
+   accident of handler order.
+
+`APP_ENV` was deliberately left at `staging` — see Owner decision below.
+
+## Verification evidence
+
+- Live verifier: 9/9 pass, output above
+- Full backend suite: **4174 passed / 0 failed / 3 ignored**
+- **Login not broken** — `/auth/login` and `/auth/verify-otp` return 422 on an
+  empty body, i.e. still public and reachable. Checked explicitly, because a
+  security change that locks out the pilot is a worse outcome than the exposure.
+
+## Regression coverage
+
+- `api/auth_precedes_dispatch_guard_test.ts` — any route answering an
+  unauthenticated request with anything other than 401 fails the build, except
+  the explicit allow-list.
+- `deploy/akshara-vps/verify-deployment-security.sh` — probes the DEPLOYMENT
+  from outside, with no credentials.
+
+Both are needed. `eng4_5_forced_auth_test` asserted this behaviour and PASSED
+while production did not: a repo test cannot observe the running configuration.
+That is the durable lesson here, and it is why the deployment probe exists.
+
+## Deployment status
+
+✅ **Deployed and verified live on `api.nikshaos.in`.**
+
+## Remaining owner decision — `APP_ENV`
+
+`APP_ENV` is still `staging`. Setting it to `production` would additionally
+enable `requireTls` and `requireAuthentication` and disable demo-auth paths —
+which would **stop OTP-in-response for the 6 allowlisted pilot phones**, so
+those testers would need real SMS delivery to log in.
+
+`AUTH_OTP_DEV_MODE=false`, so that exposure is limited to those 6 numbers, not
+general. The database holds **10 schools / 5 students** — demo scale, not a
+populated school.
+
+Not a code change and not urgent at demo scale, but it must be flipped before
+real pupil data is loaded.

@@ -71,9 +71,14 @@ class _MarketingSchoolConfiguration extends SchoolConfigurationNotifier {
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  // `convertFlutterSurfaceToImage` is a one-way, once-per-process conversion on
-  // Android; calling it twice throws.
+  // `convertFlutterSurfaceToImage` must be called once PER TEST. The binding
+  // tears the converted surface down between tests, so a process-wide "already
+  // converted" flag makes every test after the first fail with
+  // "Call convertFlutterSurfaceToImage() before taking a screenshot" — while the
+  // first one still succeeds, which is exactly how this hid at first.
+  // Calling it twice inside one test also throws, hence the per-test flag.
   var surfaceConverted = false;
+  setUp(() => surfaceConverted = false);
 
   Future<void> capture(WidgetTester tester, String name) async {
     if (!surfaceConverted) {
@@ -134,22 +139,19 @@ void main() {
   /// Demo login: testing-account chip → Continue → mock OTP → Verify.
   Future<void> signIn(WidgetTester tester, TestingLoginAccount account) async {
     await waitFor(tester, find.byKey(QaTestKeys.loginPhoneField));
-
-    final chip = find.widgetWithText(ChoiceChip, account.label);
-    await waitFor(tester, chip);
-    await tester.tap(chip);
-    await settle(tester);
-
-    await tester.tap(find.byKey(QaTestKeys.loginContinueButton));
-    await settle(tester);
+    await tapVisible(tester, find.widgetWithText(ChoiceChip, account.label));
+    await tapVisible(tester, find.byKey(QaTestKeys.loginContinueButton));
 
     final otpField = find.byKey(QaTestKeys.otpField);
     await waitFor(tester, otpField);
     await tester.enterText(otpField, kDemoOtp);
     await settle(tester);
-
-    await tester.tap(find.byKey(QaTestKeys.otpVerifyButton));
+    // Entering text raises the soft keyboard, which can push the verify button
+    // off-screen at wider layouts — dismiss it before trying to tap.
+    await tester.testTextInput.receiveAction(TextInputAction.done);
     await settle(tester);
+
+    await tapVisible(tester, find.byKey(QaTestKeys.otpVerifyButton));
   }
 
   // -------------------------------------------------------------------------
@@ -211,10 +213,13 @@ TestingLoginAccount resolveAccount(String label) {
 /// Landing screen per persona. Deeper journeys are added once these are proven
 /// green at every layout tier — a shot list is only useful if it is repeatable.
 const List<MarketingShot> kPersonaShots = [
+  // The principal does NOT land on a "Dashboard" — the staff/principal entry
+  // point is the Admin Hub workspace (students / staff / attendance summary and
+  // the authorised-module list). Discovered from the harness's own timeout dump.
   MarketingShot(
-    name: 'principal-dashboard',
+    name: 'principal-admin-hub',
     account: 'Principal',
-    anchor: 'Dashboard',
+    anchor: 'Admin Hub',
   ),
   MarketingShot(
     name: 'teacher-dashboard',
@@ -252,6 +257,30 @@ Future<void> settle(
     await tester.pump(const Duration(milliseconds: 120));
     if (!tester.binding.hasScheduledFrame) return;
   }
+}
+
+/// Waits for [finder], scrolls it into view if it is inside a scrollable, then
+/// taps it.
+///
+/// A plain `tester.tap` is not safe across layout tiers: the same widget that
+/// sits mid-screen on a phone can fall below the fold on a tablet, where it is
+/// present in the tree but not hit-testable — the tap silently lands on nothing
+/// and the run stalls on a screen that looks correct. This is what broke the
+/// first tablet capture on the OTP screen.
+Future<void> tapVisible(
+  WidgetTester tester,
+  Finder finder, {
+  Duration timeout = const Duration(seconds: 40),
+}) async {
+  await waitFor(tester, finder, timeout: timeout);
+  try {
+    await tester.ensureVisible(finder);
+    await settle(tester);
+  } catch (_) {
+    // Not inside a Scrollable — already as visible as it will get.
+  }
+  await tester.tap(finder);
+  await settle(tester);
 }
 
 /// Pumps until [finder] matches, or fails the test with a useful message.

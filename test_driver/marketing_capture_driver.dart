@@ -20,8 +20,14 @@ import 'dart:io';
 import 'package:integration_test/integration_test_driver_extended.dart';
 
 /// Where captures land before review. Git-ignored; promoted by hand into
-/// `deploy/nikshaos/src/product-shots/` only after the §6.5 hygiene review.
-const String kOutputDir = 'build/marketing-capture';
+/// `deploy/nikshaos/src/product-shots/` only after the §6.5 hygiene review and
+/// the §10.1 depicted-state check.
+///
+/// Set by `capture_shots.sh` to a per-tier directory so a phone, tablet and
+/// desktop set can coexist. Falls back to a tier-less path for a direct
+/// `flutter drive` invocation during development.
+final String kOutputDir = Platform.environment['MARKETING_OUT_DIR'] ??
+    'build/marketing-capture/adhoc';
 
 Future<void> main() async {
   await integrationDriver(
