@@ -29,7 +29,16 @@ PRODUCT CERTIFICATION COMPLETE
 | 10 School-OS coherence | ✅ | see findings |
 
 **CYCLE 1 CERTIFICATION COMPLETE — all 11 workstreams done. NOT CERTIFIED.**
-Register: **120** (25 P0 · 67 P1 · 25 P2 · 3 P3).
+Register: **149** (25 P0 · 80 P1 · 38 P2 · 6 P3).
+
+### ⚠️ REMEDIATION ORDERING CONSTRAINT — do not lose this (AI-001)
+**DAI-005 and DAI-016 are load-bearing on each other.** `openPerson` being
+structurally unreachable is the ONLY thing currently hiding 34 wrong answers —
+the `_person` rule is last and swallows the whole out-of-vocabulary space
+(`payroll`, `timetable`, `gate pass` → "Looking for Payroll…"). **Fixing DAI-005
+alone makes the product visibly worse.** The AI harness enforces this ordering
+and fails if `openPerson` gains a route while the drawer is still open. Fix them
+together or not at all.
 
 ### Third systemic item (from WS2)
 **Dates stored as display labels.** Five modules persist a human string where a

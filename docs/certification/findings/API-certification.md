@@ -742,3 +742,80 @@ offline has a registered policy, so a new queueable write is opted in by
 remembering to add a registry entry. The fallback is safe (`onlineOnly`), so the
 failure mode is "a write that should have been queued isn't" — a lost teacher
 action rather than a corrupted one. Worth a guard, not a blocker.
+
+---
+
+## 9. Coverage — what was and was not certified
+
+**Certified by reading, end to end:** the route registry and central dispatch;
+the auth/permission middleware and every gate idiom in use; finance collections,
+refunds, day-close, fee reductions; the payment intent lifecycle and the Razorpay
+webhook; exam administration mark writes; attendance sessions/register/
+corrections; approvals (single + batch + the type→permission map); audit
+ingestion, read and retention; the ASIP support school and platform surfaces;
+identity custom roles and permission overrides; the entity read/write factories
+that back HR, inventory, transport, library, hostel, alumni and management; the
+idempotency dispatcher and its per-route backstops; the client Dio stack,
+reliability outbox, policy registry and response classifier.
+
+**Certified mechanically, spot-verified by hand:** the 700–800-route enumeration,
+the RBAC inventory diff, the ungated-mutating-route sweep, the
+validate-before-authorise sweep, the error-leak sweep, the SQL-interpolation
+sweep, and the org-only-predicate sweep. Where a mechanical result drove a
+defect, the specific instance was opened and read (every file/line in §1–§8 was
+verified individually).
+
+**Not certified, and why:**
+
+- **Authorised response shapes.** No probe carried a session, so no route's 200
+  body, pagination envelope, or field types were verified against the client
+  DTOs. Response *shape* conformance is unverified for the entire API.
+- **Live persistence and RLS.** No Postgres lane, no SSH. Every isolation claim
+  is a DDL reading except `/health/tenant-access`, which is red (API-108).
+- **Concurrency in practice.** The row locks, guarded `UPDATE`s and partial
+  unique indexes were read and reasoned about; none was executed under
+  contention. The existing suite's race tests use a MOCK DB.
+- **Rate limiting / abuse.** No rate limiter was found on any route, including
+  `POST /auth/login`. Not probed (that would require sending volume) and not
+  raised as a defect on unexecuted evidence — flagged here as an open question.
+- **Request body size.** No application-level cap was found; the effective limit
+  is whatever nginx sets, which is not readable from here (bears on API-115).
+- **The 26 `POST /school/*` school-completion writes** and the AI/intelligence
+  surfaces were enumerated and gate-checked but not traced end to end; they are
+  covered by other workstreams.
+
+## 10. Verdict
+
+**NOT CERTIFIED.**
+
+The application code is in better shape than the surrounding controls. Every
+mutating route in the repository reaches a permission or scope gate; the money
+paths carry row locks, day-close guards, over-collection guards, natural-key
+dedup and an idempotency wrapper that is genuinely well built; the SQL surface is
+fully parameterised; the response envelope and security headers are uniform. That
+is a real result and it should not be diluted.
+
+Four things block certification:
+
+1. **API-105 — production is not running this code.** The central auth
+   chokepoint that the test suite asserts, and that the whole "no route is
+   unauthenticated by omission" argument rests on, is demonstrably absent from
+   the deployed build. Nothing in this document can be claimed about the live
+   system until it is redeployed and re-probed.
+2. **API-107 — the pilot appears to be running outside production mode**, which
+   leaves the internal health surface open to the internet and, if confirmed,
+   puts login OTPs in API responses.
+3. **API-108 — the pilot's own isolation self-test is red**, on the persona
+   boundary, right now.
+4. **API-119 — the reliability outbox can report a fee collection as confirmed
+   when nothing was written.** This is the standing-rule class: fabricated
+   financial state presented to the school.
+
+Behind those, the structural finding is API-100/API-101: **the RBAC route
+inventory is not a completeness gate and the RBAC test suite never dispatches a
+route.** Two attendance routes shipping unaudited was not an accident of
+attention — it is the expected output of a control that compares a hand-written
+file to itself. Until that is inverted (routes generated from the routers, matrix
+driven through the dispatcher), every future "every route is gated" statement is
+an assertion rather than a finding, and this workstream will have to be redone by
+hand each cycle.

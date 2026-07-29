@@ -33,6 +33,7 @@ completes, ahead of ordinary P0 ordering.
 | **WIDGET-011** | The principal's "School health score" is blended from hard-coded fallbacks (68 and 31) whenever the real figures are absent, so a school with no data is shown a confident **51**. A fabricated financial claim to the owner. |
 | **JOURNEY-001** | The `/admin` landing hero — the first screen 6 of 15 staff roles see, every day — renders compile-time constants as live KPIs: "1,248 Students · 86 Staff · **96% Attendance**" and "**₹4.2L Collected today** · ₹1.8L Pending". Fabricated attendance and financial data, on day one at an empty school, with no failure required to trigger it. |
 | **JOURNEY-007** | `/parent/payment` falls back to a fabricated payment summary — another child's name, "₹4,000 + ₹200 late fee", a due date — whenever the live summary call fails or is still loading, and sends that fabricated **amount** to `POST /parent/payments/initiate`. Fabricated money on the payment write path. |
+| **API-119** | An in-flight `409 IDEMPOTENCY_CONFLICT` is classified by the reliability outbox as `confirmed`, but the backend releases that claim when the racing request fails. The app can therefore record a fee collection as **confirmed** — terminal, never retried — with nothing written to the books. A collection the school believes it took and the ledger never received. Fabricated financial state by the standing rule, on the money write path. |
 | **E2E-017** | **There is no file picker in the product.** All four upload surfaces — SIS student documents, admissions documents, student homework submission, teacher homework attachment — post the same hard-coded blank PDF under a user-typed file name. A clerk can then mark that blank page **verified**, and an admission can be approved on a documents checklist made entirely of them. Fabricated records data, on the paths that hold a child's legal documents. |
 | **E2E-008** | The counter's "Record collection" sends the literal string `'Today'` as the payment date. The FIN-D1 closed-day guard compares it lexically and returns "not locked" every time, so **closed and reported books silently take new money**; and `fiscalYearOf("Today")` returns `"NaN-NaN"`, so the receipt number handed to the parent reads `SCH/NaN-NaN/000042` and every fiscal year shares one sequence. |
 | **E2E-011** | `/teacher/student-risk/:id` shows a class teacher a student's Attendance, Homework and **Fees** rows composed from constants — `92`, `80`, and `feeAccountId == 'acct_ravi' ? '₹4,200 due' : 'No dues'`. A teacher is shown "No dues" for a student who may owe fees, on the screen they open before a parent meeting. |
@@ -56,12 +57,13 @@ Root cause (if known) · Recommended fix · Dependencies · Risk · Evidence`
 
 | Total | P0 | P1 | P2 | P3 |
 |---|---|---|---|---|
-| 149 | 25 | 80 | 38 | 6 |
+| 174 | 29 | 89 | 50 | 6 |
 
 By workstream: **CERT** 6 (1 P0 · 5 P1) · **XMOD** 39 (10 P0 · 22 P1 · 7 P2) ·
 **DAI** 16 (2 P0 · 7 P1 · 5 P2 · 2 P3) · **WIDGET** 18 (3 P0 · 8 P1 · 6 P2 · 1 P3) ·
 **JOURNEY** 16 (3 P0 · 10 P1 · 3 P2) · **SIM** 4 (4 P1) · **E2E** 21 (6 P0 · 11 P1 · 4 P2) ·
-**POLISH** 23 (10 P1 · 10 P2 · 3 P3) · **AI** 6 (3 P1 · 3 P2).
+**POLISH** 23 (10 P1 · 10 P2 · 3 P3) · **AI** 6 (3 P1 · 3 P2) ·
+**API** 25 (4 P0 · 9 P1 · 12 P2).
 
 *(Certification in progress.)*
 
