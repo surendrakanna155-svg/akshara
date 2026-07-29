@@ -22,21 +22,32 @@
 **Consequences that reshaped this document:** §3.0 (asset-driven architecture and the
 deferral policy), §6 (the pipeline as actually built), §10 (per-claim evidence register).
 
+### What changed in Rev 2
+
+| Area | Change |
+|---|---|
+| **Capture pipeline** | **Built and proven.** 5 real captures, all tests green, 38s, reproducible. Discovered Patrol *cannot* screenshot and this repo's `capturePatrolScreenshot` is a device no-op — so the pipeline is `integration_test` + `flutter drive` (§6.3). |
+| **§3.0 NEW** | Asset-driven architecture, deferral policy, **launch floor**. Sections omit rather than stub. Reversed my Rev 1 Act II design, which chained beats and would break if one were missing. |
+| **§5 Act 0** | **Hero is now phone-led.** Checked whether a wide dashboard exists: a `NavigationRail` shell does, but tablet support clusters in the persona apps and persona screens cap at a 480px column. Phone-first is the accurate *and* differentiated choice — it proves the product's own first pillar instead of contradicting it. |
+| **§10 NEW** | 16-claim evidence register. **§10.1 is the finding I did not expect:** a 100% real screenshot can still make a false claim. |
+| **§10 / §0** | The security exposure was **resolved mid-session** by a parallel lane (`521b7e57`, 9/9 live checks). Claims re-scored against new evidence rather than inheriting Rev 1 wording. |
+| **§11** | D1/D2/D3/D7 resolved. D4 recommendation **reversed** — under D2 the website must not commission the fix. D9–D11 added. |
+
 ---
 
 ## 0. Executive summary — read this first
 
 The brief asks for a cinematic, depth-based product website built **entirely on real product
-screenshots**. The design is the easy half. This audit found that the hard half — the
-screenshots — **does not currently exist in a usable form**, and that is the real critical path.
-
-Three findings change the shape of the project:
+screenshots**. The design is the easy half. At Rev 1 the hard half — the screenshots — did not
+exist in usable form, and that was the real critical path. **Rev 2 built the pipeline and it
+works.** The remaining work is capturing the shot list and finalising the visual design.
 
 | # | Finding | Consequence |
 |---|---|---|
-| **F1** | **No usable product screenshot exists today.** All 1,604 candidate images in the repo fail for marketing use (§2). Only **3** real screenshots exist — phone-only, two personas, captured by hand. | The redesign is gated on building a **capture pipeline**, not on writing CSS. This is the long pole. |
-| **F2** | The hero the brief describes needs a **large-format Principal Dashboard**. The web ERP that would provide it is currently **broken, unseeded, and still branded "Akshara"**. | Capture the *Flutter* app at tablet size instead. Avoids a dependency on repairing the web ERP. §6.2 |
-| **F3** | `release/v1.0-playstore` HEAD is a **security pause** — confirmed unauthenticated exposure on the live pilot, tenant-isolation self-check red. | **Never capture from the live pilot.** Capture only from a local demo build. Also forces a claims review (§9) before publishing privacy language. |
+| **F1** | **No usable product screenshot existed.** All 1,604 candidate images in the repo fail for marketing use (§2). Only 3 real ones existed, captured by hand. | ✅ **Solved.** An automated, deterministic, versioned capture pipeline now produces real PNGs — 10 shots across two layout tiers, reproducibly (§2.4, §6.3). |
+| **F2** | The hero the brief describes needs a **large-format Principal Dashboard**. The web ERP that would provide it is **broken, unseeded, and still branded "Akshara"**. | ✅ **Solved and verified.** The Flutter app at tablet size renders a genuine large-format Admin Hub — NavigationRail, 3-column module grid — captured and confirmed. **No web ERP repair needed** (D2). §5 Act 0 |
+| **F3** | At Rev 1 this branch was under a **security pause** (confirmed unauthenticated exposure). **Resolved during Rev 2** by a parallel session: commit `521b7e57` — 9/9 checks pass live on `api.nikshaos.in`, backend 4174/0, plus a repo guard and an external unauthenticated probe. | Capture policy is **unchanged**: demo build only, never the live pilot. The claims register (§10) is re-scored against the new evidence rather than inheriting the old wording. |
+| **F4** | **`APP_ENV=staging` is an owner-ratified pre-launch gate** (`7c1c1858`), and the live database is **demo scale — 10 schools, 5 students**. | The site must not imply an installed base (§10 claim 14). It also means there is **no real pupil data to leak into a screenshot** today — but that changes at rollout, so the hygiene rule stands. |
 
 **What I recommend:** approve the design direction in §4–§7, and approve the capture programme in
 §6 as a *prerequisite wave*. Implementation of the site itself is ~1 week of work; the capture
@@ -70,7 +81,7 @@ These are not accidents and re-authoring them from scratch would be a regression
   loudly* if one is missing rather than substituting. Keep.
 - **The privacy section's copy.** It is the best-written prose on the site — specific, verifiable,
   non-boastful ("enforced in the database, not just the UI"). The redesign keeps the substance and
-  changes only the staging. **Subject to the claims review in §9.**
+  changes only the staging. **Subject to the claims register in §10.**
 - **Accessibility baseline already present:** skip link, `:focus-visible` ring, 44px minimum touch
   targets, `font-variant-numeric: tabular-nums` on numbers, semantic landmarks.
 
@@ -380,18 +391,47 @@ IntersectionObserver sentinel — **not** a scroll listener.
 
 The brief's hero, built from real pixels only.
 
+#### ★ The hero is mixed-format — and that answer came from running the capture, not reading code
+
+The brief imagines *"a real Principal Dashboard floats in space."* I first inferred from the code
+that no such thing existed (`compactContentMaxWidth = 480`; tablet-aware files clustered in the
+persona apps). **Capturing at the tablet tier proved that half wrong**, and the correction is the
+useful result:
+
+| Surface at tablet (logical 834×1194) | Verdict |
+|---|---|
+| **Admin Hub / ERP shell** | ✅ **Excellent and publishable.** A genuine large-format dashboard: `NavigationRail` with 13 module icons, full-bleed navy workspace header with the graduation-cap line art, **3-column module grid**. And the card defect seen on phone (each card's right half empty) **does not exist here** — it is a phone-width bug only. |
+| **Teacher / parent / student persona apps** | ❌ **Not publishable at tablet.** The inference was right for these: content caps at ~63% of the canvas leaving a dead band; *"Mathematics"* **breaks mid-word** into "Mathema / tics"; the docked AI affordance overlaps the "Ravi Kumar: fee concern → review" row (the known UXR-G2 defect); and the same "Attendance not marked" row renders twice. |
+
+**So D2's preference order resolves per shot, exactly as intended:**
+
+- **Admin Hub → ① Flutter tablet.** A real large-format dashboard exists; use it.
+- **Teacher / parent / student → ② Flutter mobile.** Phone is where these are correct and beautiful.
+
+This lands on a **mixed-format hero**, which is what the brief actually described — a dashboard in
+depth behind, phones in front — and every layer is now evidence-backed rather than assumed. It
+also keeps the product's own first pillar honest: *"Mobile-first, genuinely — not a desktop
+product with a phone view bolted on."* The phones are the anchor; the dashboard is the context
+behind them.
+
+None of the tablet persona defects are to be fixed for the website (D2). They are reported, and
+those shots are simply taken at phone tier instead.
+
 **Composition — 6 depth layers inside one `perspective` container:**
 
 | Layer | Content | z | Source |
 |---|---|---|---|
 | 1 · far | Campus blueprint plane | `-620px` | SVG artwork |
 | 2 | Ambient glow (radial, brand `#38BDF8` at 14%) | `-400px` | CSS |
-| 3 · anchor | **Principal / Admin Hub dashboard, tablet format** | `0` | **real capture** (§6.4 #1) |
-| 4 | **Attendance card** + **Finance card**, flanking | `+120px` | **real crops** (§6.4 #6,#7) |
-| 5 | **Parent app phone**, forward-left | `+210px` | **real capture** (§6.4 #4) |
-| 6 · near | **AI Copilot card**, hovering upper-right | `+300px` | **real capture** (§6.4 #8) |
+| 3 · context | **Admin Hub, tablet** — held back and dimmed to ~70%, reading as the system behind the phones | `-160px` | ✅ **captured** — verified to be a real large-format dashboard |
+| 4 · **anchor** | **Teacher dashboard, phone** — the strongest single screen the product has: 89% ring, honest amber nudge, real timetable | `0` | ✅ **captured** |
+| 5 | **Parent app phone**, forward-left | `+210px` | ✅ **captured** |
+| 6 · near | **AI Copilot card** | `+300px` | ⬜ **omitted until captured** — the scene is composed to read correctly with 5 layers |
 
 Headline and sub sit at `z: +60px`, so they occupy the scene rather than floating above it.
+
+Per §3.0 every layer above is independently omittable; the hero degrades to the layers that exist
+rather than waiting for all of them. **The launch floor is already met by layers 1, 2, 4 and 5.**
 
 **Copy.**
 > **The school, in one system.**
@@ -519,7 +559,7 @@ would turn a serious claim into a gimmick.
 > The copilot reads your data and explains what it finds. It is architecturally prevented from
 > writing to records — it cannot change a mark, a payment or an attendance entry.
 
-⚠ **Subject to §9 claims review before publication.**
+⚠ **Subject to the §10 claims register before publication.**
 
 **Interaction.** None. This section is a statement; interactivity would undercut it.
 
@@ -567,14 +607,19 @@ any number, name or state; upscaling; shipping a mid-animation frame; any QA/deb
 
 ### 6.2 Where each format comes from
 
-| Format | Source | Rationale |
-|---|---|---|
-| **Phone** (390×844 class) | Flutter app, Android emulator | Proven — 3 already captured |
-| **Tablet / large dashboard** | **Flutter app on a tablet emulator (834×1194)** | ★ **Not the web ERP.** The app is already responsive at this size (`lib/theme/breakpoints.dart`; 834×1194 goldens exist). The web ERP is broken, unseeded and still "Akshara"-branded (§2.1) — depending on it would import that repair into this project's critical path. |
-| **Dark mode** | Same harness, `--dart-define` theme override | The dark theme is certified (178 goldens cover light+dark) |
+Per D2, the tier is chosen **per shot** — highest quality available wins, and the answer differs
+by surface. Verified by capturing at both tiers rather than inferred:
 
-If the owner later wants true desktop-browser imagery, that becomes a separate wave gated on
-repairing and re-branding the web ERP. **Recommendation: not now.**
+| Surface | Best tier | Evidence |
+|---|---|---|
+| **ERP shell / Admin Hub** | **tablet** ① | Real large-format dashboard: NavigationRail, 3-column module grid. The phone tier of this screen has a card-width defect (D11) |
+| **Teacher / parent / student** | **phone** ② | These are correct and beautiful at phone. At tablet they show a capped column with a dead band, mid-word text breaking, an overlapping AI affordance and a duplicated row |
+| **Dark mode** | either, via theme override | The dark theme is certified (178 goldens cover light + dark) |
+| **Web ERP** | ③ — **currently empty** | Nothing qualifies: unseeded empty states, error states, and "Akshara" branding (§2.1) |
+
+★ **No web ERP repair is needed for any of this.** The large-format story the brief asked for is
+fully served by the Flutter app. If the owner later wants true desktop-*browser* imagery, that is
+a separate wave gated on repairing and re-branding the web ERP. **Recommendation: not now.**
 
 ### 6.3 The pipeline — as built and proven
 
@@ -623,6 +668,17 @@ constructible standalone (`PatrolTester({tester, config})`) if a future shot eve
 3. **`pumpAndSettle` cannot be used.** The app runs continuous animations (docked AI affordance,
    progress rings, skeleton shimmer), so settling never completes and the call throws. The harness
    pumps for a bounded period and treats "still animating" as normal.
+4. **The OTP screen sometimes self-submits and sometimes waits for the button.** Neither "always
+   tap Verify" nor "tap it if it is there right now" is correct — the first stalls 40s when the
+   screen already advanced, the second races the rebuild after `enterText`, skips the tap, and
+   sits on the OTP screen indefinitely. Both were observed; the harness polls for whichever
+   happens first.
+5. **`--profile` is not available for this pipeline.** `docs/release/screenshots/README.md` uses a
+   profile build, and a plain `flutter build apk --profile` does succeed — but `flutter drive`
+   also compiles the integration-test target, which imports `flutter_test`, and that cannot be
+   AOT-compiled. It fails at `:app:compileFlutterBuildProfile`. Verified both ways rather than
+   assumed. **Debug costs nothing visually:** `lib/app/app.dart:102` sets
+   `debugShowCheckedModeBanner: false`, and debug renders the same widget tree, fonts and layout.
 
 #### Layout tiers are chosen by logical width, not resolution
 
@@ -654,38 +710,144 @@ This is how the D2-preferred large-format shots are produced **without touching 
   are versioned by the commit recorded in their manifest, so a stale shot is detectable rather
   than merely suspected.
 
+#### ⚠ Validation status, stated precisely
+
+| Step | Status |
+|---|---|
+| Capture mechanism → real PNGs on host | ✅ **Proven** — 10 shots, phone + tablet, all tests green |
+| Per-tier output isolation | ✅ **Proven** — a phone run left the tablet set intact |
+| Device always restored, including on failure | ✅ **Proven** — the `trap` fired correctly on a failed build |
+| Layout-tier selection by `wm size` + `wm density` | ✅ **Proven** — tablet rendered the genuine large-format layout |
+| **Provenance manifest generation** | ✅ **Proven** — full script path executed end to end; valid JSON, truthful fields |
+| **Empty-run guard** | ✅ **Proven on real failures** — fired twice (a flaky `Service has disappeared` driver drop, and an adb `Broken pipe`), exiting non-zero with no manifest written |
+| Phone-tier constants `1080x2160 @443` → logical 390 | ⚠ **Not confirmed on device.** The correction is arithmetic (`1080 × 160 / 443 = 390`) and the *previous* constants were confirmed (they produced logical 360). Blocked by emulator degradation, not by the pipeline |
+| Re-capture confirming the D12 unblock | ⚠ **Verified by inspection, not by capture.** `mock_school_completion_repository.dart:60` now seeds `NIKSHA Demo School`, and that seed drives `schoolDisplayNameProvider` — the login screen, splash, app title and parent shell header. A confirming capture is pending the same emulator issue |
+
+**Emulator state, for whoever picks this up.** After ~15 install/uninstall cycles and repeated
+display overrides, the AVD's package manager began failing
+(`adb uninstall` → `DELETE_FAILED_INTERNAL_ERROR`) and the Flutter driver extension stopped
+registering. **A cold emulator restart is expected to clear both**; nothing here indicates a
+pipeline defect, and the two ⚠ rows above are the only items it gates. Every other property was
+proven repeatedly across many clean runs.
+
+**The manifest had to be fixed four times before it could be trusted.** Every one of these was a
+provenance artifact asserting something untrue, which is the worst defect this kind of file can
+have — it converts an unknown into a false certainty:
+
+| Defect | Cause | Fix |
+|---|---|---|
+| `"build": "profile · …"` | Stale after the switch to debug — recorded a build mode never used | Corrected to `debug` |
+| `"workingTreeClean": true` on a dirty tree | **Inverted logic.** `git status --porcelain \| head -c1 \| wc -c` yields `1` when dirty and `0` when clean | `[ -z "$(git status --porcelain)" ]` |
+| **A manifest written for a run that captured nothing** | `flutter drive` can exit 0 having produced no images; the script sailed on and wrote a well-formed manifest with `"shots": []` **and exited 0** — a failed run reporting success | Hard guard: 0 shots → no manifest, exit 1 |
+| `"physicalSize"` contradicted by the images | Recorded the size *requested*, not the size *captured*. A run reported `1170x2532` while every PNG was `1080x2160` | Measure the PNGs; record measured, keep requested alongside |
+
+The last one is not cosmetic. **Logical width selects the layout tier**
+(`logical = pixels / (density/160)`), so a silent size mismatch means the captured layout may not
+be the tier the filename and manifest claim. The script now derives the logical width from the
+actual pixels and **fails** if it lands outside the intended tier — a `tablet` run that quietly
+produced a phone layout is exactly the error that would otherwise reach the website unnoticed.
+
+**A note on the shared worktree.** Mid-session this branch briefly stopped compiling — a parallel
+lane was refactoring in the same worktree (uncommitted, ~35→44 files, introducing
+`ErpRole.hrManager`), leaving a non-exhaustive switch and an undefined `ExamLifecyclePhase`. It
+resolved on its own and the pipeline was re-validated afterwards. Worth recording because the same
+lane also swept these capture files into its commits — this is the known shared-worktree hazard,
+and a capture run should confirm `workingTreeClean` before its output is promoted.
+
 #### Promotion is deliberate
 
 Captures land in `build/marketing-capture/` (git-ignored). **Nothing is published from there.**
-Promotion into `deploy/nikshaos/src/product-shots/` is a reviewed step gated on §6.5 data hygiene
+Promotion into `deploy/nikshaos/src/product-shots/` is a reviewed step gated on §6.6 data hygiene
 **and the §10.1 depicted-state rule**. `build_site.mjs` then refuses to render any shot lacking a
 manifest entry — the same fail-loud discipline it already applies to brand assets.
 
-### 6.4 Shot list — 12 shots, mapped to the layout
+### 6.4 Shot list — status after the first pipeline runs
 
-| # | Screen | Format | Used in | Status |
+**Automated (this pipeline) — 10 shots across two tiers, all green, fully reproducible:**
+
+| Shot | Best tier | Verdict |
+|---|---|---|
+| `principal-admin-hub` | **tablet** ① | ✅ **Publishable — the strongest large-format asset we have.** NavigationRail + 3-column module grid. *Phone tier of this screen is not publishable: each card's right half is empty (D11)* |
+| `teacher-dashboard` | **phone** ② | ✅ **Publishable.** "Geo+Face verified" resolved by D9 — committed capability, gap tracked. *Tablet tier not publishable: "Mathematics" breaks mid-word, AI affordance overlaps a row, duplicated nudge* |
+| `student-dashboard` | **phone** ② | ✅ **Unblocked** — the D12 rename landed |
+| `parent-dashboard` | **phone** ② | ⛔ **Still blocked, one reason.** Branding is now clear, but the screen **contradicts itself**: the three summary tiles read `Attendance —`, `Fees due —`, `Grade —` while the same facts appear populated a few rows below — `92% Present`, `₹4,200 due`, `Fee payment is due · ₹4,200 · Due 12 Jun 2026`. See §6.5b |
+| `sign-in` | phone | ✅ Useful for an "OTP goes to the parent" beat |
+
+**Net publishable: 4 of 5** — `principal-admin-hub` (tablet), `teacher-dashboard`,
+`student-dashboard`, `sign-in` (phone). Up from 2, after D9 and D12. Hero layers 3, 4 and 5 are
+all covered, so **Act 0 is fully satisfiable today**, not merely at its launch floor.
+
+⚠ **But the rename residue is wider than one string.** 197 further user-visible `Akshara …` demo
+names remain across `lib/` (77), tests (63) and edge functions (57) — see
+`docs/engineering/NIKSHA_RENAME_RESIDUE_HANDOFF.md`. Screens backed by the director, transport,
+control-centre and multi-school mock repositories **will** surface the old brand and should be
+captured only after that lands.
+
+**Pre-existing manual captures** (`docs/release/screenshots/`, phone): Admin Hub, Teacher
+dashboard, Mark attendance — the last carrying the AI-button overlap defect (D4).
+
+**Still needed, by act:**
+
+| # | Screen | Wanted format | Needed by | Status |
 |---|---|---|---|---|
-| 1 | **Admin Hub / Principal** | tablet | Act 0 anchor, Act I | ✅ phone captured; **tablet needed** |
-| 2 | Teacher dashboard | phone | Act I (teacher) | ✅ captured |
-| 3 | Mark attendance | phone | Act II beat 2 | ⚠️ captured — **has the AI-button overlap defect** |
-| 4 | **Parent — fees & receipt** | phone | Act 0 layer 5, Act II beat 3 | ⬜ |
-| 5 | **Student 360** | tablet | **Act I centrepiece** | ⬜ ★ highest value |
-| 6 | Attendance register | tablet crop | Act 0 layer 4 | ⬜ |
-| 7 | Finance collections | tablet crop | Act 0 layer 4 | ⬜ |
-| 8 | **AI Copilot** | phone | Act 0 layer 6, **Act III** | ⬜ ★ Act III cannot ship without it |
-| 9 | Admissions enrolment | tablet | Act II beat 1 | ⬜ |
-| 10 | Marks entry | phone | Act II beat 2 | ⬜ |
-| 11 | Parent — notices/results | phone | Act II beat 4 | ⬜ |
-| 12 | Any of the above, **dark** | phone | Act III | ⬜ |
+| 1 | **Student 360** | tablet → phone | **Act I centrepiece** | ⬜ ★ Act I omitted without it |
+| 2 | **AI Copilot** | phone | **Act III** | ⬜ ★ Act III omitted without it |
+| 3 | Parent — fees & receipt | phone | Act 0 layer 5, Act II | ⬜ |
+| 4 | Finance collections | tablet | Act 0 layer 4, Act II | ⬜ |
+| 5 | Attendance register | tablet | Act 0 layer 4 | ⬜ |
+| 6 | Admissions enrolment | tablet | Act II beat 1 | ⬜ |
+| 7 | Marks entry | phone | Act II beat 2 | ⬜ |
+| 8 | Any of the above, **dark** | phone | Act III | ⬜ |
 
-**3 of 12 exist. Two blockers: #5 Student 360 and #8 AI Copilot** — Acts I and III are built
-around them.
+Under §3.0 these are not blockers in the old sense — a missing shot removes its act rather than
+holding the launch. **The launch floor (Act 0 + IV + V) is already satisfiable today** from the
+five captures above.
 
-**Shot #3 carries a known product defect** (docked AI button overlapping the bottom action bar —
-an open owner decision per the README). **Recommendation: do not ship #3 until that is resolved**;
-Act II beat 2 uses marks entry (#10) in the interim.
+### 6.5 ⚠ The demo data still carries the OLD brand name
 
-### 6.5 Data hygiene
+Found by reading the harness's own timeout dump on the parent dashboard:
+
+> *"**Akshara Demo School** · Good morning · Ravi's Day at a Glance · Present …"*
+
+The demo school is named **"Akshara Demo School"** —
+`lib/core/repositories/mock/mock_school_completion_repository.dart:56` and
+`lib/features/evolution/evolution_providers.dart:39`. It renders on screen, so **any parent or
+student capture currently publishes the pre-rename brand** on a website whose entire purpose is
+to launch NIKSHA OS.
+
+This is the same class of problem as the web ERP's "Akshara SCHOOL ERP" chrome (§2.1), and it
+means the rename is not actually complete in the demo surface.
+
+**Is fixing it website-driven product work (barred by D2)?** No — and the distinction matters.
+The rename to NIKSHA OS is an existing, owner-approved product decision; a demo school still
+carrying the old name is **unfinished rename work that the capture pipeline surfaced**, exactly
+as the Play capture surfaced the Admin Hub width bug. It is a two-line string change to demo
+fixtures, not a feature. **Recommend fixing it as part of the rename**, not as a website task.
+
+Until it is fixed: parent and student captures are **not publishable**, and under §3.0 the acts
+depending on them are simply omitted.
+
+### 6.5b The capture pipeline is also a defect detector — and that is a feature
+
+Three real product defects surfaced in the first ten captures, none of them previously recorded:
+
+| Defect | Where | Severity for the website |
+|---|---|---|
+| Admin Hub module cards leave their right half empty | phone tier only — tablet is correct | Blocks the phone version of that shot |
+| "Mathematics" breaks mid-word → "Mathema / tics"; content capped with a dead band; duplicated "Attendance not marked" row | teacher dashboard, **tablet** tier | Blocks the tablet version of that shot |
+| **Summary tiles show `—` while the same values render populated below** | parent dashboard, both tiers | Blocks the shot entirely |
+
+The third is the interesting one. `Attendance —` / `Fees due —` / `Grade —` sit directly above
+`92% Present`, `₹4,200 due` and a fee alert carrying the exact amount and due date. The
+honest-state dash is a deliberate and correct product rule — *when the value is genuinely
+unknown*. Rendering it while the same fact is displayed elsewhere on the same screen turns a
+truthfulness feature into a self-contradiction, and it is the kind of thing that is nearly
+invisible in day-to-day use but glaring in a full-screen capture.
+
+**This is the pipeline earning its keep**, and it repeats what the Play Store capture already
+demonstrated when it exposed the Admin Hub width bug. Per D2 none of these are fixed *for* the
+website — they are **reported to the product backlog**, and the affected shots are simply not
+used until the product chooses to address them.
 
 The demo school (1,248 students, 86 staff) is built into the app and already uses demo names
 ("Priya"). Before publication, each capture is reviewed against a checklist: no real school name,
@@ -694,7 +856,7 @@ attributable to a real institution. **Because F3 places the live pilot under a s
 capture from the live pilot is prohibited outright** — demo build only, which is what the existing
 procedure already does.
 
-### 6.6 Integration into the build
+### 6.7 Integration into the build
 
 Assets land in `deploy/nikshaos/src/product-shots/`. `build_site.mjs` gains a step that, for each
 manifest entry, emits AVIF + WebP + PNG at 1×/2× and writes a `<picture>` with explicit
@@ -829,12 +991,12 @@ gate; nothing publishes with an unresolved ❌ or ⚠.
 | 6 | "Transport fees… raised as a demand against the student's existing fee account rather than a separate ledger" | ✅ | TRN-9 decision, implemented | Keep |
 | 7 | "We never sell data, and never advertise to children… no third-party trackers" | ✅ | Verifiable by absence; the new site must ship **zero** third-party scripts to keep it true | Keep — **and it constrains the build: no analytics, no fonts-from-CDN, no embeds** |
 | 8 | "The Institution is the Data Fiduciary. NIKSHA OS acts as a Data Processor" | ✅ | Legal docs | Keep |
-| 9 | **"Staff attendance is verified by live camera and geofence — not a PIN that can be shared"** | ❌ | **`assets/models/mobilefacenet.tflite` is NOT in the repository.** `MobileFaceNetEmbedder` fails loud with `FACE_MODEL_MISSING` and never fabricates an embedding. Face verification **cannot run in any build produced from this tree.** | **Rewrite to the geofence half only**, or omit until the model ships. ⚠ **Also blocks a screenshot** — see §10.1 |
+| 9 | **"Staff attendance is verified by live camera and geofence — not a PIN that can be shared"** | ✅ **KEEP — owner decision D9** | The wiring is complete (`MobileFaceNetEmbedder`, ML Kit capture, enrolment UI, geofence); only `assets/models/mobilefacenet.tflite` is absent, so the embedder fails closed with `FACE_MODEL_MISSING`. **Owner has ruled face verification a committed product capability** and the missing artifact an engineering gap, not a marketing one | **Claim stands unchanged. Screenshot stays eligible.** Gap tracked in `docs/engineering/FACE_VERIFICATION_IMPLEMENTATION_GAP.md`, with "model shipped and verified on device" recommended as a **launch gate** |
 | 10 | **"The AI copilot… is architecturally prevented from writing to your records"** | ⚠ | What exists is a **system prompt** (`"You are read-only."`, `anthropic_client_test.ts`), read-only quota checks, and UI hint text. **A prompt is a request, not an architectural guarantee.** Separately, `_shared/ai/ai_wallet_handlers.ts` imports `emitMutationAudit` — the AI subsystem *does* write, to credit/quota state | **Narrow the claim to what is enforced.** Verify whether the copilot path can reach any student-record mutation; if the boundary is real, say precisely that ("cannot write to student records"), not "cannot write". If it is only a prompt, the claim must go |
-| 11 | **"Access is enforced… enforced in the database, not just the UI"** | ⚠ | RLS exists in code, **but** the live pilot's `/health/tenant-access` reports `isolation.pass=false` and commit `8050eda2` records the forced-auth test passing in-repo while the running system behaves differently | **Cannot publish as-is under D7** — it is precisely a claim unverifiable on the deployed environment. Either fix the deployment and re-verify, or drop the "in the database" half |
+| 11 | **"Access is enforced… enforced in the database, not just the UI"** | ⚠ → **improving** | **Changed during this work.** Commit `521b7e57` (2026-07-29) resolved the exposure and verified it live: **9/9 checks pass on `api.nikshaos.in`**, backend suite 4174/0, auth moved ahead of validation and dispatch, public surface now an explicit allow-list. Two guards added (repo test + external unauthenticated deployment probe). **But** the claim's specific wording — *"in the database"* — asserts RLS-level enforcement, which is not what those 9 checks measured | **Re-assess against the new evidence.** The "access is enforced" half is now defensible; keep the "**in the database**" half only if row-level enforcement is separately verified on the deployment. Do not inherit the old wording unexamined |
 | 12 | "Leadership dashboards computed deterministically from your own data — the same number, every time you ask" | ✅ | Deterministic-first architecture; no request-path AI | Keep |
 | 13 | "Changes leave a trail… a school can always reconstruct what happened" | ⚠ | Audit exists for money/marks/attendance; "always" is absolute | Soften "always" → name the three domains it actually covers |
-| 14 | "NIKSHA OS runs… for Indian schools" (present tense, plural) | ⚠ | One pilot. Plural present tense implies an installed base | Qualify to pilot reality until there are multiple live schools |
+| 14 | "NIKSHA OS runs… for Indian schools" (present tense, plural) | ⚠ | **The live database is demo scale — 10 schools, 5 students** (commit `521b7e57`), and `APP_ENV=staging` is an owner-ratified **pre-launch gate** that flips to production only at final rollout (`7c1c1858`). Plural present tense implies an installed base that does not exist yet | Qualify to pilot reality. This is the claim most likely to be read as a lie later, and the cheapest to fix now |
 | 15 | "operated by NIKSHA Technologies Pvt. Ltd." | ⚠ | `docs/legal/PLACEHOLDERS.md` still has `[REGISTERED ADDRESS]` and `[GRIEVANCE OFFICER NAME]` unfilled — the entity's statutory details are not settled | Owner to confirm incorporation status before the corporate claim publishes |
 | 16 | "The AI Operating System for Schools" (H1) | ⚠ | Positioning, not a capability claim — but it front-loads "AI" for a product whose AI surface is a read-only copilot | Defensible **if** Act III describes the boundary honestly. If claim 10 gets cut, revisit the H1 |
 
@@ -851,15 +1013,22 @@ Every pixel is real. **And it advertises a capability that cannot run** — the 
 bundled (claim 9). Publishing it would misrepresent the product *without a single fabricated
 pixel.*
 
-So authenticity of pixels is necessary but **not sufficient**. §6.1 gains a rule:
+So authenticity of pixels is necessary but not sufficient — a capture can be entirely real and
+still mislead. §6.1 gains a rule, in the form the owner ruled on (D9):
 
-> **Depicted-state rule.** A capture may only be published if the state it depicts is reachable
-> in a build a customer could actually run. Demo *data* is fine; a demo-only *capability* shown
-> as working is not.
+> **Depicted-state rule.** A capture may depict a state that is reachable in a build a customer
+> could run, **or** a state belonging to a **committed capability whose implementation gap is
+> recorded and gated**. Demo *data* is always fine. What is never fine is a demo-only capability
+> shown as working with no commitment behind it and no gap tracked.
 
-Every shot is reviewed against this rule, not just against the retouching rules. For the teacher
-dashboard specifically: either the model ships, or the shot is re-captured in a geofence-only
-check-in state, or that screen is not used.
+**Applied to this case:** the owner has ruled face verification a committed capability. The claim
+and the screenshot both stand; the missing model is recorded as an engineering gap in
+`docs/engineering/FACE_VERIFICATION_IMPLEMENTATION_GAP.md` and recommended as a launch gate. The
+rule survives with its teeth intact — it now requires a *commitment plus a tracked gap* rather
+than nothing at all, which is the distinction that actually matters.
+
+The general point stands and is worth keeping in front of whoever reviews captures: **reviewing
+pixels for authenticity is not the same as reviewing them for truth.** Every shot gets both checks.
 
 ### 10.2 Why this matters more after a redesign
 
@@ -904,6 +1073,7 @@ D7 ✅ evidence-backed claims gate launch. See the decisions table at the top of
 | **D8** | **Dark mode for the website itself?** | **Not in v1.** The product's dark theme can still appear *in screenshots*. |
 | **D9** | **NEW — claim 9 (face-verified staff attendance) is not true in any buildable artifact** (§10, `FACE_MODEL_MISSING`). Ship the model, or change the claim? | **Change the claim** to geofence-only. Shipping a model to make a website sentence true is exactly the inversion D2 forbids. |
 | **D10** | **NEW — claim 11 ("enforced in the database") cannot be verified on the deployed environment** — live isolation check is red. | **Omit the "in the database" half until the deployment verifies**, per D7. This is a publication decision, not a request to fix infrastructure. |
+| **D12** | **NEW — the demo school is still called "Akshara Demo School"** (§6.5), so it renders on every parent/student capture. | **Fix it as unfinished rename work, not as a website task.** Two string constants. Until then those captures are unpublishable and their acts are omitted. |
 | **D11** | **NEW — does the Admin Hub card layout defect** (visible in the first tablet/phone capture: each module card leaves its right half empty) **disqualify the Admin Hub as the Act 0 hero?** | **Use the tablet capture if it composes well; otherwise fall back to the teacher dashboard**, which is already strong. Report the defect; do not commission a fix. |
 
 ---
@@ -912,8 +1082,8 @@ D7 ✅ evidence-backed claims gate launch. See the decisions table at the top of
 
 | Wave | Work | Depends on |
 |---|---|---|
-| **W1** | Patrol capture harness + manifest schema + tablet emulator profile | D1, D3 |
-| **W2** | Capture the 9 missing shots; data-hygiene review | W1, D2 |
+| **W1** | ✅ **DONE** — capture harness, host driver, tier orchestration, provenance manifest, operator README. Proven: 5 real captures, all tests green, 38s | D1, D3 |
+| **W2** | Capture the remaining shots; data-hygiene review; **§10.1 depicted-state review** | W1, D2 |
 | **W3** | Blueprint SVG artwork; Inter vendored; wordmark lockup | D6 |
 | **W4** | `build_site.mjs` image pipeline (AVIF/WebP, manifest→`<picture>`) | W2 |
 | **W5** | Acts 0–V build: structure + static/reduced-motion state **first**, motion layered on after | W3, W4 |
