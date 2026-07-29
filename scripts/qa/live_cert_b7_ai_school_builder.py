@@ -5,7 +5,7 @@ Real VPS + real OTP auth + real DB + real AI provider (OpenRouter/Claude).
 Classifies each check PASS/FAIL/BLOCKED. DB verification via the ssh ControlMaster."""
 import json, os, time, subprocess, urllib.request, urllib.error
 
-BASE = "https://akshara.veloraunisexsalon.com"
+BASE = os.environ.get("API_BASE_URL", "https://api.nikshaos.in")
 SCHOOL = "a2000000-0000-4000-8000-000000000001"
 ORG = "a1000000-0000-4000-8000-000000000001"
 SOCK = os.path.expanduser("~/.ssh/akshara-cm.sock")

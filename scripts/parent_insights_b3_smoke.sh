@@ -12,7 +12,7 @@
 # Always restores the org to Professional + language english at the end.
 #
 # Usage:
-#   API_BASE_URL=https://akshara.veloraunisexsalon.com \
+#   API_BASE_URL=https://api.nikshaos.in \
 #     ADMIN_PHONE=9876543210 PARENT_PHONE=9876543211 \
 #     STUDENT_ID=a4000000-0000-4000-8000-000000000001 \
 #     scripts/parent_insights_b3_smoke.sh

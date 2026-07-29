@@ -23,7 +23,7 @@ export function SupportConsoleGate() {
     return (
       <DataUnavailable
         icon="support_agent"
-        title="Akshara Support Console"
+        title="NIKSHA OS Support Console"
         message="This cross-tenant support workspace requires a live platform-support session (a PLATFORM_ORG member holding the platformSupport permission). Connect the backend to sign in as support."
       />
     );
@@ -39,7 +39,7 @@ export function SupportConsoleGate() {
           Support Console access required
         </Text>
         <Text variant="body-md" className="mt-s1 max-w-reading text-on-surface-variant">
-          The Akshara Support Console is restricted to the platform-support team. Your account does not hold the
+          The NIKSHA OS Support Console is restricted to the platform-support team. Your account does not hold the
           <span className="ak-mono"> platformSupport </span>
           permission.
         </Text>

@@ -84,7 +84,7 @@ up in the publish gate. They still have to be right before submission.
 
 | Where | Current value | Owner action |
 |---|---|---|
-| `lib/core/legal/legal_links.dart` → `policyHostBaseUrl` | `https://akshara.veloraunisexsalon.com` | Point at the real domain. Today the policies are served from an unrelated business's host — a parent tapping "Privacy Policy" in a school app lands on `veloraunisexsalon.com`, which reads as a phishing redirect to anyone paying attention. |
+| `lib/core/legal/legal_links.dart` → `policyHostBaseUrl` | `https://nikshaos.in` | Point at the real domain. Today the policies are served from an unrelated business's host — a parent tapping "Privacy Policy" in a school app lands on `veloraunisexsalon.com`, which reads as a phishing redirect to anyone paying attention. |
 | Play Console → "Privacy Policy" field | not yet set | Must be **byte-identical** to `policyHostBaseUrl` + `/privacy`. A mismatch between the listing and the policy is a documented rejection trigger. |
 | Play Console → contact email, website | not yet set | Owner-supplied. |
 

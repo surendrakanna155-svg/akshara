@@ -1,0 +1,91 @@
+# CRITICAL SECURITY FINDING — live environment
+
+**Raised:** 2026-07-29 · **Status:** ⛔ PAUSED FOR OWNER REVIEW
+**Host:** `https://akshara.veloraunisexsalon.com` (the deployed pilot)
+**Method:** unauthenticated read-only HTTP GET. No mutation, no auth attempt,
+no real data submitted. Nothing was changed.
+
+## Verification requested, and what it found
+
+The instruction was to determine whether API-105/106/107/108 are *confirmed on
+the live environment* or merely inferred from configuration. **They are
+confirmed.** Reproduced directly, from an ordinary internet client, with no
+credentials:
+
+```
+GET /health/tenant-access  -> 503  {"status":"degraded","connection":{"ok":true,
+                                    "role":"erp_tenant","bypassRls":false},
+                                    "isolation":{"pass":false,...}}
+GET /health/backup         -> 200  {"status":"ok","maxAgeHours":26,
+                                    "lastBackup":{"kind":"nightly","ageHours":3.1,"bytes":19...}}
+GET /health/operations     -> 200  {"status":"ok","connection":{...},"snapshot":{...}}
+GET /health/providers      -> 200  {"status":"ok","storage":{"bucket":"sch..."}}
+
+GET /audit/events                  -> 404   (expected 401)
+GET /identity/roles                -> 404   (expected 401)
+GET /attendance/register/monthly   -> 422   (expected 401 — it answered
+                                             "classLabel is required" instead)
+```
+
+## Two confirmed findings
+
+**1. Unauthenticated operational disclosure (API-107).** Four `/health/*`
+endpoints answer the public internet with backup age and size, database role,
+RLS-bypass status, storage bucket name, and the tenant-isolation verdict.
+
+**2. No central auth chokepoint (API-105).** `/attendance/register/monthly`
+performs *validation* before authentication — it tells an anonymous caller what
+parameter it wants. `eng4_5_forced_auth_test` asserts ICA-F1 returns 401 on
+exactly these paths, and it passes. **That is a property of this repository,
+not of the deployed build.** The running system is behind the code, and no test
+in this repo can detect that gap.
+
+## And the finding that makes this urgent
+
+`/health/tenant-access` currently reports **`status: degraded`, `isolation.pass:
+false`**. The pilot's own tenant-isolation self-check is **failing right now**,
+and that failure is readable by anyone.
+
+Cycle-1 evidence (API-108) attributes this to 4 student-scope probes:
+school↔school and parent↔child isolation both pass, so on that evidence this is
+a **persona boundary failure, not a cross-tenant leak**. That distinction is
+material and should be verified, not assumed, before any conclusion is drawn.
+
+## What I could NOT determine — stated plainly
+
+**Whether this instance holds real school data.** No probed endpoint exposes a
+school count or any record, and I did not attempt authentication or any
+mutation to find out. That question decides the severity, and it is the owner's
+to answer:
+
+- **Real pupil/parent data present** → treat as a live exposure, act before
+  anything else in the remediation program.
+- **Demo/seed data only** → serious, but schedulable with Phase 1.
+
+## Why the program is paused here
+
+The instruction was explicit: confirmed on a live environment → classify
+Critical, document the evidence, and pause for owner review before any
+infrastructure decision. The findings are confirmed. Infrastructure changes
+also need SSH, which is owner-bound.
+
+**No infrastructure action has been taken.** No remediation wave has started.
+
+## Owner decisions required
+
+1. **Does this instance hold real school data?** Decides urgency.
+2. **Authorise the fix** — `/health/*` requires a token, and the auth chokepoint
+   must precede route dispatch. Both are deploy-time changes.
+3. **Investigate `isolation.pass: false`** — is it the 4 student-scope probes
+   (persona boundary) or something wider?
+4. Note that the `/health/*` guard keys off the **same `APP_ENV` flag** that
+   controls whether login OTPs appear in the response body. If that flag is
+   wrong in production, both fail together — so check the flag, not just the
+   endpoints.
+
+## Explicitly NOT concluded
+
+This is **not** a declaration that the pilot has been breached. There is no
+evidence of exploitation, and none was sought. The finding is that the exposure
+exists and that the isolation self-check is red — both facts, neither an
+incident report.

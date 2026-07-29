@@ -1,3 +1,4 @@
+import os
 #!/usr/bin/env python3
 """Live-mode certification for MODULE_JOURNEY_ROADMAP **Journey Wave 3** —
 "Static-snapshot read modernization — apply the live-overlay/recompute framework
@@ -41,7 +42,7 @@ nor corrupt prior data.
 """
 import json, os, time, urllib.request, urllib.error
 
-BASE = "https://akshara.veloraunisexsalon.com"
+BASE = os.environ.get("API_BASE_URL", "https://api.nikshaos.in")
 ADMIN, PARENT, STUDENT, TEACHER = (
     "+919876543210", "+919876543211", "+919876543212", "+919876543213",
 )

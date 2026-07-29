@@ -1,7 +1,7 @@
 // Authenticate ONCE (patiently waiting out OTP cooldown/rate-limit) and cache the
 // school-scoped session to /tmp/live-session.json for reuse by the browser sweeps.
 import fs from 'node:fs';
-const API='https://akshara.veloraunisexsalon.com/functions/v1/api';
+const API='https://api.nikshaos.in/functions/v1/api';
 const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
 async function post(p,b,t){const r=await fetch(API+p,{method:'POST',headers:{'Content-Type':'application/json',...(t?{Authorization:`Bearer ${t}`}:{})},body:JSON.stringify(b)});return{status:r.status,json:await r.json().catch(()=>null)};}
 async function get(p,t){const r=await fetch(API+p,{headers:t?{Authorization:`Bearer ${t}`}:{}});return{status:r.status,json:await r.json().catch(()=>null)};}

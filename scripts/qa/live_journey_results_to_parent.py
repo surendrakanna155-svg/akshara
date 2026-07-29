@@ -6,7 +6,8 @@ loop end to end, and that the publish approval gate is real (publish is refused
 without an approval). Publishing is irreversible, so each run creates a uniquely
 titled throwaway exam for the parent's child's section (class 5-A in the seed)."""
 import json, time, urllib.request, urllib.error, sys
-BASE = "https://akshara.veloraunisexsalon.com"
+import os
+BASE = os.environ.get("API_BASE_URL", "https://api.nikshaos.in")
 SCHOOL = "a2000000-0000-4000-8000-000000000001"
 ADMIN, PARENT = "+919876543210", "+919876543211"
 GRADE, SECTION, SUBJECT = "5", "A", "Mathematics"

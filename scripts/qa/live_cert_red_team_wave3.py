@@ -31,7 +31,7 @@ and is cleaned up. Re-runnable; the live DB is left unchanged.
 """
 import json, os, subprocess, time, uuid
 
-BASE = "https://akshara.veloraunisexsalon.com"
+BASE = os.environ.get("API_BASE_URL", "https://api.nikshaos.in")
 ORG = "a1000000-0000-4000-8000-000000000001"
 USER = "a3000000-0000-4000-8000-000000000001"        # schoolAdmin in SCHOOL_A (version 2)
 SCHOOL_A = "a2000000-0000-4000-8000-000000000001"

@@ -1,3 +1,4 @@
+import os
 #!/usr/bin/env python3
 """QA-R-001 — Single-school full-year pilot simulation — LIVE certification.
 
@@ -46,7 +47,7 @@ socket or the API is unreachable the script ERRORS in setup — it never greens.
 """
 import json, os, time, base64, subprocess, urllib.request, urllib.error
 
-BASE = os.environ.get("API_BASE_URL", "https://akshara.veloraunisexsalon.com")
+BASE = os.environ.get("API_BASE_URL", "https://api.nikshaos.in")
 # Target DB for the direct-psql helper. Default = production akshara_db; set to
 # akshara_tenant_test (with API_BASE_URL pointed at the isolated test edge) to run
 # this sim entirely against the isolated Track-B validation stack (never prod).

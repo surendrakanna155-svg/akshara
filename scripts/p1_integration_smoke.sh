@@ -10,7 +10,7 @@
 #   Chain 4  WhatsApp data readiness on a converted lead  (B5 × B6 → B1)
 #
 # Usage:
-#   API_BASE_URL=https://akshara.veloraunisexsalon.com/functions/v1/api scripts/p1_integration_smoke.sh
+#   API_BASE_URL=https://api.nikshaos.in/functions/v1/api scripts/p1_integration_smoke.sh
 set -euo pipefail
 
 BASE="${API_BASE_URL:-http://127.0.0.1:54321/functions/v1/api}"

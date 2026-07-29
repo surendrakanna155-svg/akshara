@@ -244,7 +244,7 @@ function Splash() {
     <div className="grid h-screen place-items-center bg-surface-low">
       <div className="flex flex-col items-center gap-s4">
         <span className="grid h-14 w-14 animate-pulse place-items-center rounded-2xl bg-primary text-2xl font-bold text-on-primary">A</span>
-        <span className="ak-label-md text-on-surface-variant">Loading Akshara…</span>
+        <span className="ak-label-md text-on-surface-variant">Loading NIKSHA OS…</span>
       </div>
     </div>
   );

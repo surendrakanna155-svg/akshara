@@ -1,0 +1,314 @@
+/* ==========================================================================
+   NIKSHA OS — nikshaos.in product website
+   Palette and typography are taken verbatim from brand/BRAND_GUIDELINES.md.
+   ========================================================================== */
+
+:root {
+  /* NIKSHA OS palette — BRAND_GUIDELINES.md §2 */
+  --navy:    #0B1F4B;  /* app canvas / icon background */
+  --deep:    #1E3A8A;
+  --primary: #2563EB;
+  --light:   #38BDF8;
+  --growth:  #10B981;  /* accent only, never a fill (§2 rule 2) */
+
+  --ink:      #0F172A;
+  --body:     #334155;
+  --muted:    #64748B;
+  --line:     #E2E8F0;
+  --bg:       #FFFFFF;
+  --bg-soft:  #F8FAFC;
+
+  --radius: 14px;
+  --container: 1120px;
+
+  /* §5: Inter, falling back to the platform UI font — never a display serif.
+     Inter is not vendored in this repo, so the platform stack is what ships. */
+  --font: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 1.65;
+  color: var(--body);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Numbers must align in columns wherever they appear — §5. */
+table, .tabular { font-variant-numeric: tabular-nums; }
+
+img { max-width: 100%; height: auto; display: block; }
+
+a { color: var(--primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+h1, h2, h3, h4 { color: var(--ink); line-height: 1.2; margin: 0 0 0.5em; font-weight: 600; }
+
+.container { width: 100%; max-width: var(--container); margin: 0 auto; padding: 0 24px; }
+
+.skip {
+  position: absolute; left: -9999px; top: 0; z-index: 100;
+  background: var(--primary); color: #fff; padding: 12px 20px; border-radius: 0 0 8px 0;
+}
+.skip:focus { left: 0; }
+
+:focus-visible { outline: 3px solid var(--light); outline-offset: 2px; border-radius: 4px; }
+
+/* ---------------------------------------------------------------- Brand mark
+   The horizontal lockup master does not exist in brand/niksha-os/svg/.
+   Until it does, the name is typeset to the §5 wordmark specification
+   (Inter 700, tracking +0.14em; "OS" sub-label Inter 600 in brand primary)
+   beside the approved symbol master.
+
+   TO SWAP IN A REAL LOCKUP: replace the <img> + .brand-name markup in
+   build_site.mjs (NAV / FOOTER) with the lockup SVG and delete .wordmark /
+   .suffix below. Nothing else references them.
+   ---------------------------------------------------------------- */
+.brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; }
+.brand:hover { text-decoration: none; }
+.brand-symbol { flex: none; }
+.brand-name { display: inline-flex; align-items: baseline; gap: 7px; }
+
+.wordmark {
+  font-weight: 700;
+  letter-spacing: 0.14em;   /* §5 — the tracking is what makes it read as a mark */
+  color: var(--ink);
+  font-size: 1.0625rem;
+}
+.suffix {
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--primary);
+  font-size: 0.9375rem;
+}
+
+/* ------------------------------------------------------------------ Buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 600; font-size: 0.9375rem;
+  padding: 11px 20px; border-radius: 10px;
+  border: 1px solid transparent; cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease, transform .15s ease;
+  text-decoration: none; white-space: nowrap;
+  min-height: 44px;  /* touch target */
+}
+.btn:hover { text-decoration: none; }
+.btn-sm { padding: 8px 16px; font-size: 0.875rem; min-height: 40px; }
+.btn-lg { padding: 14px 26px; font-size: 1rem; min-height: 52px; }
+
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: #1D4ED8; }
+
+.btn-ghost { background: transparent; color: #DBEAFE; border-color: rgba(219, 234, 254, .35); }
+.btn-ghost:hover { background: rgba(255, 255, 255, .08); border-color: rgba(219, 234, 254, .6); }
+
+.btn-light { background: #fff; color: var(--deep); }
+.btn-light:hover { background: #EFF6FF; }
+
+/* ------------------------------------------------------------------- Header */
+.site-header {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(255, 255, 255, .88);
+  backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+.header-inner { display: flex; align-items: center; justify-content: space-between; gap: 24px; height: 68px; }
+.nav { display: flex; align-items: center; gap: 28px; }
+.nav a { color: var(--body); font-size: 0.9375rem; font-weight: 500; }
+.nav a:hover { color: var(--ink); text-decoration: none; }
+.nav a.btn-primary { color: #fff; }
+
+/* --------------------------------------------------------------------- Hero */
+.hero {
+  background:
+    radial-gradient(1000px 500px at 50% -10%, rgba(56, 189, 248, .22), transparent 65%),
+    linear-gradient(170deg, #0E2757 0%, var(--navy) 55%, #081736 100%);
+  color: #E2E8F0;
+  padding: 96px 0 104px;
+  text-align: center;
+}
+.hero-inner { max-width: 760px; }
+.hero-mark { margin: 0 auto 28px; }
+.hero-title {
+  color: #fff;
+  font-size: clamp(2.1rem, 5.2vw, 3.4rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 20px;
+}
+.hero-sub { font-size: clamp(1.05rem, 2.2vw, 1.2rem); color: #CBD5E1; margin: 0 auto 34px; }
+.hero-cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.hero-note { margin-top: 26px; font-size: 0.9rem; color: #94A3B8; }
+.hero-note a { color: var(--light); }
+
+/* ----------------------------------------------------------------- Sections */
+.section { padding: 92px 0; }
+.section-soft { background: var(--bg-soft); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+
+.eyebrow {
+  font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.11em;
+  text-transform: uppercase; color: var(--primary); margin: 0 0 12px;
+}
+.eyebrow-light { color: var(--light); }
+
+.section-title { font-size: clamp(1.65rem, 3.4vw, 2.35rem); letter-spacing: -0.015em; max-width: 24ch; margin-bottom: 18px; }
+.section-lede { font-size: 1.0625rem; color: var(--muted); max-width: 68ch; margin: 0 0 48px; }
+
+.section-navy { background: var(--navy); color: #CBD5E1; }
+.section-navy .section-title { color: #fff; max-width: 26ch; }
+.section-lede-light { color: #94A3B8; }
+
+/* ------------------------------------------------------------------ Pillars */
+.pillars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; }
+.pillar-icon {
+  width: 44px; height: 44px; border-radius: 11px;
+  background: #EFF6FF; color: var(--primary);
+  display: grid; place-items: center; margin-bottom: 18px;
+}
+.pillar-icon svg { width: 23px; height: 23px; }
+.pillar h3 { font-size: 1.125rem; margin-bottom: 10px; }
+.pillar p { margin: 0; font-size: 0.9688rem; color: var(--muted); }
+
+/* ----------------------------------------------------------------- Features */
+.features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.feature {
+  background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 26px 24px; transition: border-color .15s ease, box-shadow .15s ease;
+}
+.feature:hover { border-color: #BFDBFE; box-shadow: 0 6px 24px rgba(15, 23, 42, .06); }
+.feature h3 { font-size: 1.0625rem; margin-bottom: 9px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.feature p { margin: 0; font-size: 0.9375rem; color: var(--muted); }
+.feature-wide { grid-column: 1 / -1; border-color: #BFDBFE; background: linear-gradient(180deg, #F8FBFF, #fff); }
+
+.tag {
+  font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: #065F46; background: #D1FAE5; border-radius: 999px; padding: 3px 9px;
+}
+
+/* ------------------------------------------------------------- Screenshots */
+.shots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
+.shot { margin: 0; }
+.shot-frame {
+  aspect-ratio: 9 / 17;
+  border-radius: 22px;
+  border: 1px solid var(--line);
+  background:
+    repeating-linear-gradient(135deg, #F1F5F9 0 12px, #F8FAFC 12px 24px);
+  display: grid; place-items: center;
+  position: relative;
+  box-shadow: inset 0 0 0 8px #fff, 0 8px 30px rgba(15, 23, 42, .07);
+}
+.shot-label {
+  font-size: 0.8125rem; font-weight: 600; color: var(--muted);
+  background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 7px 15px;
+}
+.shot figcaption { margin-top: 16px; font-size: 0.9062rem; color: var(--muted); text-align: center; }
+
+/* -------------------------------------------------------- Privacy section */
+.commitments { display: grid; grid-template-columns: repeat(2, 1fr); gap: 28px; margin-bottom: 48px; }
+.commitment {
+  border-left: 3px solid var(--growth);   /* accent, not fill — §2 rule 2 */
+  padding: 4px 0 4px 20px;
+}
+.commitment h3 { color: #fff; font-size: 1.0312rem; margin-bottom: 8px; }
+.commitment p { margin: 0; font-size: 0.9375rem; color: #94A3B8; }
+
+.legal-links { display: flex; align-items: center; gap: 26px; flex-wrap: wrap; }
+.legal-link { color: var(--light); font-size: 0.9375rem; font-weight: 500; }
+
+/* ------------------------------------------------------------------ Contact */
+.contact { text-align: center; }
+.contact .section-title, .contact .section-lede { margin-left: auto; margin-right: auto; }
+.contact-email { font-size: clamp(1.3rem, 3vw, 1.75rem); font-weight: 600; margin: 0 0 18px; }
+.contact-meta { font-size: 0.9062rem; color: var(--muted); max-width: 60ch; margin: 0 auto; }
+
+/* ------------------------------------------------------------------- Footer */
+.site-footer { background: var(--navy); color: #94A3B8; padding: 64px 0 0; }
+.footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; padding-bottom: 48px; }
+.footer-brand img { margin-bottom: 14px; }
+.footer-name { margin: 0 0 6px; display: inline-flex; align-items: baseline; gap: 7px; }
+.footer-name .wordmark { color: #fff; }
+.footer-name .suffix { color: var(--light); }
+.footer-tagline { margin: 0; font-size: 0.9062rem; color: #64748B; }
+.site-footer h3 { color: #E2E8F0; font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; margin-bottom: 14px; }
+.site-footer ul { list-style: none; margin: 0; padding: 0; }
+.site-footer li { margin-bottom: 10px; }
+.site-footer li a { color: #94A3B8; font-size: 0.9375rem; }
+.site-footer li a:hover { color: #fff; }
+.footer-base { border-top: 1px solid rgba(255, 255, 255, .08); padding-top: 24px; padding-bottom: 28px; }
+.footer-base p { margin: 0; font-size: 0.875rem; color: #64748B; }
+
+/* -------------------------------------------------------------- Legal pages */
+.page-legal { background: var(--bg); }
+.legal { max-width: 780px; padding-top: 56px; padding-bottom: 88px; }
+.legal-back { margin: 0 0 32px; font-size: 0.9375rem; }
+.legal h1 { font-size: clamp(1.8rem, 4vw, 2.4rem); letter-spacing: -0.015em; margin-bottom: 24px; }
+.legal h2 { font-size: 1.3125rem; margin-top: 44px; padding-top: 4px; }
+.legal h3 { font-size: 1.0625rem; margin-top: 30px; }
+.legal p { margin: 0 0 16px; }
+.legal ul, .legal ol { margin: 0 0 18px; padding-left: 24px; }
+.legal li { margin-bottom: 9px; }
+.legal hr { border: 0; border-top: 1px solid var(--line); margin: 40px 0; }
+.legal a { text-decoration: underline; text-underline-offset: 2px; }
+.legal code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.875em; background: var(--bg-soft); border: 1px solid var(--line);
+  border-radius: 5px; padding: 1px 5px;
+}
+.legal blockquote {
+  margin: 22px 0; padding: 16px 22px;
+  background: var(--bg-soft); border-left: 3px solid var(--primary); border-radius: 0 8px 8px 0;
+  color: var(--muted);
+}
+.legal blockquote p:last-child { margin-bottom: 0; }
+
+.table-wrap { overflow-x: auto; margin: 0 0 24px; }
+.legal table { border-collapse: collapse; width: 100%; font-size: 0.9375rem; }
+.legal th, .legal td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.legal th { background: var(--bg-soft); font-weight: 600; color: var(--ink); white-space: nowrap; }
+
+/* Unfilled legal fields — must never be mistaken for completed content. */
+.pending {
+  display: inline-block;
+  font-size: 0.8125em; font-weight: 600;
+  color: #92400E; background: #FEF3C7; border: 1px dashed #FCD34D;
+  border-radius: 5px; padding: 1px 7px;
+}
+.notice {
+  background: #FFFBEB; border: 1px solid #FDE68A; border-radius: var(--radius);
+  padding: 18px 20px; margin-bottom: 36px; font-size: 0.9375rem; color: #78350F;
+}
+.notice a { color: #92400E; }
+
+/* -------------------------------------------------------------- Responsive */
+@media (max-width: 940px) {
+  .pillars { grid-template-columns: 1fr; gap: 34px; }
+  .features { grid-template-columns: repeat(2, 1fr); }
+  .commitments { grid-template-columns: 1fr; gap: 24px; }
+  .footer-grid { grid-template-columns: 1fr 1fr; gap: 34px; }
+  .shots { grid-template-columns: 1fr; max-width: 320px; margin: 0 auto; gap: 40px; }
+}
+
+@media (max-width: 700px) {
+  body { font-size: 16px; }
+  .section { padding: 64px 0; }
+  .hero { padding: 68px 0 76px; }
+  .features { grid-template-columns: 1fr; }
+  .nav { gap: 16px; }
+  /* Keep the sign-in action reachable; drop secondary links on small screens. */
+  .nav a:not(.btn) { display: none; }
+  .footer-grid { grid-template-columns: 1fr; gap: 30px; }
+  .legal { padding-top: 40px; padding-bottom: 64px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; }
+}

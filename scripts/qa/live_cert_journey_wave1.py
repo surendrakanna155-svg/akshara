@@ -32,7 +32,7 @@ pass, an attendance correction) and do not delete or corrupt prior data.
 """
 import json, os, re, time, urllib.request, urllib.error
 
-BASE = "https://akshara.veloraunisexsalon.com"
+BASE = os.environ.get("API_BASE_URL", "https://api.nikshaos.in")
 ADMIN, PARENT, STUDENT, TEACHER = (
     "+919876543210", "+919876543211", "+919876543212", "+919876543213",
 )

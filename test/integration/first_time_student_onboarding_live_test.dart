@@ -9,7 +9,7 @@
 // Run (against the live VPS backend):
 //   flutter test test/integration/first_time_student_onboarding_live_test.dart \
 //     --dart-define=RUN_LIVE_ONBOARDING_TEST=true \
-//     --dart-define=API_BASE_URL=https://akshara.veloraunisexsalon.com/functions/v1/api \
+//     --dart-define=API_BASE_URL=https://api.nikshaos.in/functions/v1/api \
 //     --dart-define=LIVE_TENANT_ID=<tenant> \
 //     --dart-define=LIVE_SCHOOL_ID=<school> \
 //     --dart-define=LIVE_ORG_ID=<org> \

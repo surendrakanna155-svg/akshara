@@ -4,7 +4,7 @@
 // Exported for harness reuse; also runnable directly.
 import fs from 'node:fs';
 
-const API = process.env.API_BASE || 'https://akshara.veloraunisexsalon.com/functions/v1/api';
+const API = process.env.API_BASE || 'https://api.nikshaos.in/functions/v1/api';
 const SESSION = '/tmp/ak-web-session.json';
 const STATE = '/tmp/ak-web-state.json';
 const ORIGIN = process.env.BASE_URL || 'http://localhost:4350';

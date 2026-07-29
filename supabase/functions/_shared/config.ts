@@ -36,7 +36,7 @@ export interface AppConfig {
   supabaseServiceRoleKey: string;
   /**
    * Public origin (scheme+host) the APP can reach storage at, e.g.
-   * https://akshara.veloraunisexsalon.com. Signed upload/download URLs are
+   * https://api.nikshaos.in. Signed upload/download URLs are
    * generated against the internal `supabaseUrl` (gateway) for server-to-server
    * calls, then their origin is rewritten to THIS before being returned to the
    * device (which cannot reach the internal gateway host). Null => return the

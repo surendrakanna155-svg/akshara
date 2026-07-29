@@ -2,7 +2,7 @@
 #
 # Launch the Akshara app pointed at the LIVE backend on the VPS.
 #
-#   Live edge API:  https://akshara.veloraunisexsalon.com   (routes served at ROOT, no /v1)
+#   Live edge API:  https://api.nikshaos.in   (routes served at ROOT, no /v1)
 #
 # This only passes --dart-define values at runtime; it does NOT change any
 # committed defaults. Without these defines the app still runs on local mocks.
@@ -19,7 +19,7 @@
 
 set -euo pipefail
 
-LIVE_URL="https://akshara.veloraunisexsalon.com"
+LIVE_URL="https://api.nikshaos.in"
 
 flutter run \
   --dart-define=APP_ENV=staging \

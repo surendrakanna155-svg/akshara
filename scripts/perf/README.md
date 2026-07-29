@@ -43,7 +43,7 @@ Requires [`k6`](https://k6.io/docs/get-started/installation/).
 
 ```bash
 # Read + write hot endpoints, OTP login, 224ms p95 budget:
-API_BASE_URL=https://akshara.veloraunisexsalon.com/functions/v1/api \
+API_BASE_URL=https://api.nikshaos.in/functions/v1/api \
 ADMIN_PHONE=9876543210 \
 k6 run scripts/perf/qa_x_025_p95_latency_probe.js
 

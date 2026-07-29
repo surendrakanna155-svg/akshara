@@ -65,7 +65,7 @@ class Environment {
   // `config/live_release.json` (see scripts/build_release.sh).
   static const production = Environment(
     name: EnvironmentName.production,
-    apiBaseUrl: 'https://akshara.veloraunisexsalon.com',
+    apiBaseUrl: 'https://api.nikshaos.in',
     enableApiMode: false,
     enableLogging: false,
     requireTls: true,

@@ -27,7 +27,7 @@ list two real student ids, while PAR-7 real-name proof uses the genuine login.
 """
 import json, os, subprocess, urllib.request, urllib.error
 
-BASE = "https://akshara.veloraunisexsalon.com"
+BASE = os.environ.get("API_BASE_URL", "https://api.nikshaos.in")
 ORG = "a1000000-0000-4000-8000-000000000001"
 SCHOOL_A = "a2000000-0000-4000-8000-000000000001"
 PARENT_USER = "a3000000-0000-4000-8000-000000000003"   # real pilot parent

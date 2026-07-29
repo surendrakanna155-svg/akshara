@@ -30,7 +30,7 @@ COMPOSE="/opt/akshara/docker-compose.tenant-test.yml"
 COMPOSE_DIR="/opt/akshara"
 TEST_EDGE="http://127.0.0.1:3001/functions/v1/api"
 WEBROOT="/var/www/akshara-review"
-ORIGIN="https://akshara.veloraunisexsalon.com"
+ORIGIN="https://api.nikshaos.in"
 REVIEW_API="${ORIGIN}/review-api"
 NGINX_CONF="/etc/nginx/sites-available/akshara"
 

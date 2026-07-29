@@ -115,6 +115,21 @@ fallback must default to LESS access. Pull forward with CERT-001.
 - Never record a check that did not run. "Could not verify X" is a valid finding.
 - Corrections to earlier findings are recorded, never silently amended.
 
+## ⛔ PAUSED — Critical Security Finding on the live pilot (2026-07-29)
+
+Remediation has NOT started. API-105/107/108 were verified by unauthenticated
+read-only probe and are **CONFIRMED on the deployed pilot**: four `/health/*`
+endpoints answer the internet with operational data, `/attendance/register/monthly`
+validates before authenticating, and `/health/tenant-access` reports
+`isolation.pass: false` right now.
+
+Whether that instance holds REAL school data could not be determined without
+authenticating, which was not attempted. That answer sets the severity and is an
+owner decision. See `CRITICAL_SECURITY_FINDING_LIVE.md`.
+
+Per instruction, the program pauses here for owner review before any
+infrastructure decision. Phase 1 Wave 1 is ready to start on that signal.
+
 ## Roadmap complete — remediation is the next action
 
 `SYSTEMIC_REMEDIATION_ROADMAP.md` (2,760 lines, 42 waves, Phases 1–4).

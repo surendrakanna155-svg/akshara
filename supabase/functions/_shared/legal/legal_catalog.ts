@@ -51,7 +51,7 @@ export const LEGAL_POLICIES: Record<string, PolicyDefinition> = {
     title: "School / Institution Agreement",
     version: "1.0",
     summary:
-      "The agreement (incl. data-processing terms) between your school and Akshara. Accept on the school's behalf.",
+      "The agreement (incl. data-processing terms) between your school and NIKSHA OS. Accept on the school's behalf.",
     path: "/terms/institution",
   },
 };

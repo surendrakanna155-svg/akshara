@@ -11,7 +11,7 @@ RBAC + multi-school aggregation. Classifies each check PASS/FAIL/BLOCKED.
 DB verification + token minting run through the ssh ControlMaster socket."""
 import json, os, subprocess, urllib.request, urllib.error
 
-BASE = "https://akshara.veloraunisexsalon.com"
+BASE = os.environ.get("API_BASE_URL", "https://api.nikshaos.in")
 ORG = "a1000000-0000-4000-8000-000000000001"
 SCHOOL_A = "a2000000-0000-4000-8000-000000000001"
 USER = "a3000000-0000-4000-8000-000000000001"  # real users.id → satisfies generated_by FK

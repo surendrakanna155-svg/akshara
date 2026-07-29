@@ -2,7 +2,7 @@
 // actually live. READ-ONLY. Reuses the cached session token (no OTP). Run after a
 // session is cached at /tmp/live-session.json.
 import fs from 'node:fs';
-const API = 'https://akshara.veloraunisexsalon.com/functions/v1/api';
+const API = 'https://api.nikshaos.in/functions/v1/api';
 const s = JSON.parse(fs.readFileSync('/tmp/live-session.json', 'utf8'));
 async function get(p) {
   const r = await fetch(API + p, { headers: { Authorization: `Bearer ${s.token}`, 'X-Tenant-Id': s.tenantId, 'X-School-Id': s.schoolId } });
