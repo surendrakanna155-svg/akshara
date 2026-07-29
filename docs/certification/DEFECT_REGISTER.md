@@ -4,6 +4,31 @@
 appends here. Nothing is fixed from this file during certification — it feeds
 the remediation roadmap produced at the end.
 
+## Standing rule — fabricated authoritative data is ALWAYS P0
+
+Any feature that presents **fabricated financial, attendance, examination,
+certificate or legal information** to a user is release-blocking, without
+argument and regardless of how it came about (demo fallback, mock repository,
+optimistic UI, a placeholder nobody removed).
+
+The reasoning is not severity arithmetic. These are the classes of data a school
+and a parent *act on* and cannot independently check. A parent shown payments
+they never made, a student shown marks nobody awarded, a certificate asserting
+a fact that is not true — the product is not degraded in those cases, it is
+lying, and the person it lies to is the one who most depends on it being true.
+
+Precedents already closed under this rule: the fabricated `SUP-####` support
+ticket (RC phase), and **CERT-001 ⭐PRIORITY-REMEDIATION-CANDIDATE** below.
+
+## Priority Remediation Candidates
+
+Placed at the TOP of the Product Remediation Roadmap when certification
+completes, ahead of ordinary P0 ordering.
+
+| ID | Why |
+|---|---|
+| **CERT-001** | `/parent/fees` renders a fabricated ₹23,000 statement and four fake "Paid" payments on the failure path. Fabricated financial data shown to a parent. |
+
 ## Severity
 
 | | Meaning |
