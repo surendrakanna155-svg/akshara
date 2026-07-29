@@ -41,29 +41,24 @@ class _ParentPaymentScreenState extends ConsumerState<ParentPaymentScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.installmentId != null) {
-      Future.microtask(() {
-        ref.read(parentPaymentInstallmentIdProvider.notifier).state =
-            widget.installmentId!;
-      });
-    }
+    // JOURNEY-007 — the screen is only ever pointed at the id the route
+    // carried. Opening it without one clears any previous selection rather
+    // than inheriting it, so no stale installment can be paid.
+    Future.microtask(() {
+      if (!mounted) return;
+      ref.read(parentPaymentInstallmentIdProvider.notifier).state =
+          widget.installmentId?.trim() ?? '';
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = ref.watch(parentPaymentLoadingProvider);
-    final hasError = ref.watch(parentPaymentErrorProvider);
+    // JOURNEY-007 — honest-async contract. The summary is whatever the server
+    // issued, or nothing. There is no fabricated child, amount or due date to
+    // fall back on, and the pay action below cannot render without one.
+    final state = ref.watch(parentPaymentViewStateProvider);
     final phase = ref.watch(parentPaymentPhaseProvider);
-
-    PaymentSummary? summary;
-    if (!hasError && phase == PaymentFlowPhase.summary) {
-      summary = ref.watch(parentPaymentSummaryProvider);
-    } else if (!hasError &&
-        (phase == PaymentFlowPhase.processing ||
-            phase == PaymentFlowPhase.success ||
-            phase == PaymentFlowPhase.failure)) {
-      summary = ref.read(parentPaymentSummaryProvider);
-    }
+    final summary = state.data;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -81,15 +76,17 @@ class _ParentPaymentScreenState extends ConsumerState<ParentPaymentScreen> {
       // ceremony below are unchanged.
       body: AksharaPremiumBackground(
         showMotif: false,
-        child: isLoading
+        child: state.isLoading
             ? const AksharaLoadingState(
                 semanticLabel: 'Loading payment details')
-            : hasError
+            : state.hasError
                 ? AksharaErrorState(
-                    message: 'Unable to load payment details.',
-                    onRetry: () => ref
-                        .read(parentPaymentErrorProvider.notifier)
-                        .state = false,
+                    message: state.errorText,
+                    onRetry: () {
+                      ref.read(parentPaymentErrorProvider.notifier).state =
+                          false;
+                      ref.invalidate(parentPaymentSummaryFutureProvider);
+                    },
                   )
                 : _buildPhaseBody(context, ref, phase, summary),
       ),
@@ -128,9 +125,15 @@ class _ParentPaymentScreenState extends ConsumerState<ParentPaymentScreen> {
           message: 'Payment could not be completed. Please try again.',
           onRetry: () => resetPaymentFlow(ref),
         ),
+      // JOURNEY-007 — without a SERVER-ISSUED summary there is no payable
+      // amount, so there is no Pay action to render. The screen says so
+      // honestly instead of inventing one.
       PaymentFlowPhase.summary => summary == null
           ? const AksharaEmptyState(
-              message: 'No payable installment selected.',
+              title: 'Nothing to pay right now',
+              message:
+                  'The school has not raised a payable installment for this '
+                  'child yet. Open Fees to see the current statement.',
               icon: Icons.payments_outlined,
             )
           : _PaymentSummaryView(

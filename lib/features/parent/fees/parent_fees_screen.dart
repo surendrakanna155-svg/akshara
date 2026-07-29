@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -39,15 +40,16 @@ class ParentFeesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // CERT-001 — honest-async contract: loading / error / empty all come from
+    // the real repository state. There is no mock payload behind this screen.
+    final state = ref.watch(parentFeesViewStateProvider);
     final data = ref.watch(parentFeesProvider);
-    final isLoading = ref.watch(parentFeesLoadingProvider);
-    final hasError = ref.watch(parentFeesErrorProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'Fees',
-        unreadNotifications: data.unreadNotifications,
+        unreadNotifications: state.hasData ? data.unreadNotifications : 0,
         showReceiptHistory: true,
         trailingPadding: true,
         onReceiptHistoryTap: () {
@@ -63,23 +65,27 @@ class ParentFeesScreen extends ConsumerWidget {
       // with the dashboards. Money display + pay flow below are unchanged.
       body: AksharaPremiumBackground(
         showMotif: false,
-        child: isLoading
-            ? const AksharaLoadingState()
-            : hasError
-                ? AksharaErrorState(
-                    message: 'Unable to load fees right now.',
-                    onRetry: () => ref
-                        .read(parentFeesErrorProvider.notifier)
-                        .state = false,
-                  )
-                : LayoutBuilder(
+        child: ErpAsyncBody<ParentFeesData>(
+          state: state,
+          loadingLabel: 'Loading fees',
+          emptyMessage:
+              'No fee statement has been issued for your child yet. It will '
+              'appear here once the school assigns a fee structure.',
+          emptyIcon: Icons.receipt_long_outlined,
+          onRetry: () {
+            ref.read(parentFeesErrorProvider.notifier).state = false;
+            ref.invalidate(parentFeesFutureProvider);
+          },
+          builder: (data) => LayoutBuilder(
                     builder: (context, constraints) {
                       final isTablet =
                           constraints.maxWidth >= _tabletBreakpoint;
                       final horizontalPadding = isTablet
                           ? AksharaSpacing.tabletMargin
                           : AksharaSpacing.mobileMargin;
-                      final showStickyCta = !isTablet && data.hasPending;
+                      final payableId = _payableInstallmentId(data);
+                      final showStickyCta =
+                          !isTablet && data.hasPending && payableId != null;
 
                       return Align(
                         alignment: Alignment.topCenter,
@@ -115,10 +121,15 @@ class ParentFeesScreen extends ConsumerWidget {
                                           paidAmount: data.paidAmount,
                                           annualAmount: data.annualAmount,
                                           showInlinePayButton: isTablet,
-                                          onPayNow: data.hasPending
-                                              ? () => _handlePayNow(
-                                                  installmentId: 'term_2')
-                                              : null,
+                                          // JOURNEY-007 — the pay action carries
+                                          // the REAL due installment id, never a
+                                          // demo fixture id, and is disabled
+                                          // when there is none.
+                                          onPayNow: payableId == null
+                                              ? null
+                                              : () => _handlePayNow(
+                                                    installmentId: payableId,
+                                                  ),
                                         ),
                                         const SizedBox(
                                             height: AksharaSpacing.s4),
@@ -175,8 +186,9 @@ class ParentFeesScreen extends ConsumerWidget {
                               if (showStickyCta)
                                 PayNowBottomBar(
                                   amountDue: data.pendingAmount,
-                                  onPayNow: () =>
-                                      _handlePayNow(installmentId: 'term_2'),
+                                  onPayNow: () => _handlePayNow(
+                                    installmentId: payableId,
+                                  ),
                                 ),
                             ],
                           ),
@@ -184,8 +196,22 @@ class ParentFeesScreen extends ConsumerWidget {
                       );
                     },
                   ),
+        ),
       ),
     );
+  }
+
+  /// The real, server-issued id of the installment a payment should target.
+  /// Null when the school has raised nothing payable — in which case the pay
+  /// affordances are hidden rather than pointed at a demo id (JOURNEY-007).
+  static String? _payableInstallmentId(ParentFeesData data) {
+    for (final installment in data.installments) {
+      if (installment.status == FeeInstallmentStatus.due &&
+          installment.id.trim().isNotEmpty) {
+        return installment.id;
+      }
+    }
+    return null;
   }
 
   void _handlePayNow({String? installmentId}) {

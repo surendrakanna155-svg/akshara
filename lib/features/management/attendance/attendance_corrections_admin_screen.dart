@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/attendance/attendance_correction_models.dart';
-import '../../../core/repositories/mock/mock_attendance_sync_store.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
 import '../../../router/route_names.dart';
@@ -27,7 +26,6 @@ class AttendanceCorrectionsAdminScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final requestsAsync = ref.watch(attendanceCorrectionsAdminProvider);
-    final sync = MockAttendanceSyncStore.instance;
 
     return Scaffold(
       // DS V2 P4 — persona (admin/indigo) premium canvas behind the corrections
@@ -58,23 +56,13 @@ class AttendanceCorrectionsAdminScreen extends ConsumerWidget {
           builder: (requests) => ListView(
             padding: const EdgeInsets.all(AksharaSpacing.s4),
             children: [
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.lock_clock_outlined),
-                  title: Text(
-                    sync.hasTeacherSubmission
-                        ? 'Teacher attendance submitted'
-                        : 'No teacher submission yet',
-                  ),
-                  subtitle: sync.hasTeacherSubmission
-                      ? Text(
-                          'Present ${sync.presentCount} · Absent ${sync.absentCount} · Late ${sync.lateCount}',
-                        )
-                      : const Text(
-                          'Marks unlock after first class submission.'),
-                ),
-              ),
-              const SizedBox(height: AksharaSpacing.s4),
+              // E2E-005 — the "teacher submission" card is gone. It was driven
+              // by `MockAttendanceSyncStore`, an in-memory QA shim whose only
+              // writer is `MockTeacherRepository`. In a release build the
+              // teacher app resolves the API repository, so the store was never
+              // written and the card told the principal, as fact, that no
+              // teacher had submitted — on a day when every class had.
+              // It returns only when it is sourced from `GET /attendance/pending`.
               Text(
                 'Correction requests',
                 style: context.aksharaText.titleMedium,

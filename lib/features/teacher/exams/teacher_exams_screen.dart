@@ -18,6 +18,7 @@ import 'exam_models.dart';
 import 'teacher_exams_provider.dart';
 import '../communication/teacher_teaching_context_provider.dart';
 import '../../academics/exam_admin/exam_administration_provider.dart';
+import '../../academics/exam_admin/exam_marks_entry_provider.dart';
 import '../teacher_mutations_provider.dart';
 import '../../../theme/breakpoints.dart';
 
@@ -52,12 +53,29 @@ class TeacherExamsScreen extends ConsumerWidget {
         additionalActions: [
           // TCH-3 — export my-class marks summary (entered/total/pending +
           // status) as CSV/PDF on the shared XCT-1 grid pipeline.
+          // E2E-012 — the export is built from the LIVE marks-entry progress
+          // read (`examMarksEntryProgressProvider` → the repository), not from
+          // `ExamAdministrationStore.instance.marksEntryProgress()`, which calls
+          // `ensureSeeded()` and in a release build returns the seeded demo exam
+          // (`exam_math_8a`, "Unit Test — Mathematics", mock roster). The file
+          // leaves the app, so it must describe exams that exist. With no live
+          // rows there is nothing to export and the action says so.
           IconButton(
             key: QaTestKeys.teacherMarksSummaryExportButton,
             tooltip: 'Export marks summary',
             onPressed: () {
               final progress =
-                  ExamAdministrationStore.instance.marksEntryProgress();
+                  ref.read(examMarksEntryProgressProvider).valueOrNull;
+              if (progress == null || progress.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'No marks-entry data available to export yet.',
+                    ),
+                  ),
+                );
+                return;
+              }
               final exporters = TeacherReportExporters(
                 ref.read(aksharaReportExportServiceProvider),
               );

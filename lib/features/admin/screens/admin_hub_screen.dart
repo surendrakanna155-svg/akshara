@@ -55,11 +55,13 @@ class AdminHubScreen extends ConsumerWidget {
               const WorkspaceSwitcher(),
               const SizedBox(height: AksharaSpacing.s6),
             ],
+            // JOURNEY-001 — name-only hero. Headline figures are only ever
+            // passed here from a real per-workspace summary provider; there is
+            // no compile-time stats table to fall back on.
             AksharaWorkspaceLanding(
               workspaceName: title,
               motif: landing?.motif ?? AksharaMotif.graduationCap,
               eyebrow: landing?.eyebrow ?? 'WORKSPACE',
-              stats: landing?.stats ?? const <AksharaWorkspaceStat>[],
             ),
             const SizedBox(height: AksharaSpacing.s4),
             Text(

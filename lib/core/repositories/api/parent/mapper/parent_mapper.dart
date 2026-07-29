@@ -320,8 +320,21 @@ class ParentMapper {
           DashboardStatusChip(
             label: item['label'] as String? ?? '',
             tone: ParentEnumCodec.parseDashboardChipTone(item['tone'] as String?),
+            // Typed when the server sends it; otherwise classified once, here,
+            // rather than sniffed at every render site.
+            kind: _chipKind(item),
           ),
     ];
+  }
+
+  DashboardChipKind _chipKind(Map<String, dynamic> item) {
+    final raw = (item['kind'] ?? item['id']) as String?;
+    if (raw != null) {
+      for (final kind in DashboardChipKind.values) {
+        if (kind.name == raw) return kind;
+      }
+    }
+    return classifyDashboardChip(item['label'] as String? ?? '');
   }
 
   List<DashboardQuickAction> _mapQuickActions(List<dynamic> items) {

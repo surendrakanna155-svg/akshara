@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -25,17 +26,19 @@ class ParentHomeworkScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // CERT-002 — honest-async contract.
+    final state = ref.watch(parentHomeworkViewStateProvider);
     final data = ref.watch(parentHomeworkDataProvider);
     final selectedFilter = ref.watch(homeworkFilterProvider);
-    final isLoading = ref.watch(parentHomeworkLoadingProvider);
-    final hasError = ref.watch(parentHomeworkErrorProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'Homework',
-        subtitle: '${data.childName} · ${data.childClass}',
-        unreadNotifications: data.unreadNotifications,
+        subtitle: state.hasData && data.childName.isNotEmpty
+            ? '${data.childName} · ${data.childClass}'
+            : null,
+        unreadNotifications: state.hasData ? data.unreadNotifications : 0,
         showAi: false,
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,
@@ -43,16 +46,16 @@ class ParentHomeworkScreen extends ConsumerWidget {
       // DS V2 P4 — premium persona canvas behind the homework content.
       body: AksharaPremiumBackground(
         showMotif: false,
-        child: isLoading
-          ? const AksharaLoadingState()
-          : hasError
-              ? AksharaErrorState(
-                  message: 'Unable to load homework right now.',
-                  onRetry: () => ref
-                      .read(parentHomeworkErrorProvider.notifier)
-                      .state = false,
-                )
-              : LayoutBuilder(
+        child: ErpAsyncBody<ParentHomeworkData>(
+          state: state,
+          loadingLabel: 'Loading homework',
+          emptyMessage: 'No homework has been published for your child yet.',
+          emptyIcon: Icons.assignment_outlined,
+          onRetry: () {
+            ref.read(parentHomeworkErrorProvider.notifier).state = false;
+            ref.invalidate(parentHomeworkFutureProvider);
+          },
+          builder: (_) => LayoutBuilder(
                   builder: (context, constraints) {
                     final isTablet = constraints.maxWidth >= _tabletBreakpoint;
                     final horizontalPadding = isTablet
@@ -116,13 +119,14 @@ class ParentHomeworkScreen extends ConsumerWidget {
                                     ],
                                   ),
                                 const SizedBox(height: AksharaSpacing.s4),
-                                AksharaInsightCard(
-                                  message: data.insightMessage,
-                                  actionLabel: data.insightActionLabel,
-                                  onAction: () => ref
-                                      .read(homeworkFilterProvider.notifier)
-                                      .state = HomeworkFilter.pending,
-                                ),
+                                if (data.insightMessage.isNotEmpty)
+                                  AksharaInsightCard(
+                                    message: data.insightMessage,
+                                    actionLabel: data.insightActionLabel,
+                                    onAction: () => ref
+                                        .read(homeworkFilterProvider.notifier)
+                                        .state = HomeworkFilter.pending,
+                                  ),
                               ],
                             ),
                           ),
@@ -131,6 +135,7 @@ class ParentHomeworkScreen extends ConsumerWidget {
                     );
                   },
                 ),
+        ),
       ),
     );
   }

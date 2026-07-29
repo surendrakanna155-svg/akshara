@@ -35,10 +35,10 @@ class ParentDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // WIDGET-001 — honest-async contract: the state comes from the REAL
+    // repository call, not from a StateProvider<bool> production never writes.
+    final state = ref.watch(parentDashboardViewStateProvider);
     final data = ref.watch(parentDashboardProvider);
-    final isLoading = ref.watch(parentDashboardLoadingProvider);
-    final hasError = ref.watch(parentDashboardErrorProvider);
-    final isEmpty = ref.watch(parentDashboardEmptyProvider);
     final academic = ref.watch(parentAcademicSummaryProvider);
     final unreadNotifications = ref.watch(unreadNotificationsCountProvider);
     final activeChild = ref.watch(parentActiveChildProvider);
@@ -53,8 +53,9 @@ class ParentDashboardScreen extends ConsumerWidget {
       appBar: AksharaAppBar(
         title: AksharaChildSelectorChip(
           key: QaTestKeys.parentChildSelectorChip,
-          name: activeChild?.name ?? data.childName,
-          classLabel: activeChild?.classLabel ?? data.childClass,
+          name: activeChild?.name ?? (state.hasData ? data.childName : ''),
+          classLabel:
+              activeChild?.classLabel ?? (state.hasData ? data.childClass : ''),
           onTap: () => showParentChildSwitcherSheet(context, ref),
         ),
         unreadNotifications: unreadNotifications,
@@ -64,11 +65,15 @@ class ParentDashboardScreen extends ConsumerWidget {
         onNotificationsTap: () => _navigate('notifications'),
         onProfileTap: () => _navigate('profile'),
       ),
-      body: MobileAsyncBody(
-        isLoading: isLoading,
-        hasError: hasError,
-        isEmpty: isEmpty,
-        onRetry: () => ref.invalidate(parentDashboardFutureProvider),
+      body: MobileAsyncBody.fromState(
+        state,
+        loadingLabel: 'Loading dashboard',
+        emptyMessage: 'Your child\'s day will appear here once the school '
+            'publishes today\'s records.',
+        onRetry: () {
+          ref.read(parentDashboardErrorProvider.notifier).state = false;
+          ref.invalidate(parentDashboardFutureProvider);
+        },
         skeleton: AksharaSkeleton.dashboard(),
         builder: (context) => LayoutBuilder(
           builder: (context, constraints) {
@@ -301,18 +306,39 @@ class _ChildSummaryKpiRow extends StatelessWidget {
   final List<DashboardStatusChip> chips;
   final List<TodaySummaryItem> todaySummary;
 
+  /// Resolves a KPI value for [kind] from the payload, or null when the
+  /// quantity is genuinely unknown.
+  ///
+  /// The honest-state invariant: `—` means *we do not have this value*. It must
+  /// never appear beside the same value rendered for real. The chips are keyed
+  /// by typed [DashboardChipKind]; `todaySummary` (which carries its own ids) is
+  /// the secondary source, so a payload that reports attendance in either place
+  /// produces a value here.
+  String? _valueFor(DashboardChipKind kind, String summaryId) {
+    for (final chip in chips) {
+      if (chip.kind == kind && chip.label.trim().isNotEmpty) {
+        return chip.label;
+      }
+    }
+    for (final item in todaySummary) {
+      if (item.id == summaryId && item.title.trim().isNotEmpty) {
+        return item.title;
+      }
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final attendance = chips
-        .where((c) => c.label.toLowerCase().contains('attendance'))
-        .map((c) => c.label)
-        .firstOrNull;
-    final fees = chips
-        .where((c) => c.label.toLowerCase().contains('fee'))
-        .map((c) => c.label)
-        .firstOrNull;
-    final homeworkCount =
-        todaySummary.where((t) => t.id.contains('homework')).length.toString();
+    final attendance = _valueFor(DashboardChipKind.attendance, 'attendance');
+    final fees = _valueFor(DashboardChipKind.fees, 'fees');
+    // Homework: a COUNT, so an empty payload must read as unknown, not as a
+    // measured zero. When rows exist the count is the number of homework rows.
+    final homeworkRows =
+        todaySummary.where((t) => t.id.contains('homework')).length;
+    final homeworkChip = _valueFor(DashboardChipKind.homework, '__none__');
+    final String? homework = homeworkChip ??
+        (todaySummary.isEmpty ? null : homeworkRows.toString());
 
     return Builder(
       builder: (context) {
@@ -334,7 +360,7 @@ class _ChildSummaryKpiRow extends StatelessWidget {
               const SizedBox(width: AksharaSpacing.s3),
               Expanded(
                 child: AksharaPremiumKpiCard(
-                  value: homeworkCount,
+                  value: truncateStressLabel(homework ?? '—'),
                   label: narrow ? 'Homework' : 'Homework pending',
                   accent: KpiAccent.warning,
                   icon: Icons.assignment_outlined,
@@ -357,6 +383,27 @@ class _ChildSummaryKpiRow extends StatelessWidget {
   }
 }
 
+/// Parses a percentage the backend may send as a number, `'92'` or `'92%'`.
+/// Returns null for anything that is not a percentage — including the honest
+/// placeholders (`'—'`, `'N/A'`, `''`) — so "unknown" stays unknown instead of
+/// silently becoming 0.
+double? _percentOrNull(Object? raw) {
+  if (raw == null) return null;
+  if (raw is num) {
+    final v = raw.toDouble();
+    return (v < 0 || v > 100) ? null : v;
+  }
+  final match =
+      RegExp(r'^\s*(\d{1,3}(?:\.\d+)?)\s*%?\s*$').firstMatch(raw.toString());
+  if (match == null) return null;
+  final value = double.tryParse(match.group(1)!);
+  if (value == null || value < 0 || value > 100) return null;
+  return value;
+}
+
+String _trimPercent(double value) =>
+    value == value.roundToDouble() ? value.round().toString() : '$value';
+
 class _AcademicHeroCard extends StatelessWidget {
   const _AcademicHeroCard({
     required this.summary,
@@ -371,11 +418,20 @@ class _AcademicHeroCard extends StatelessWidget {
     final text = context.aksharaText;
     final colors = context.colors;
     final premium = context.premium;
-    final attendance = summary.attendanceSummary['ratePercent'] ?? '—';
-    final grade = summary.performanceSummary['overallGrade'] ?? '—';
-    final homework = summary.homeworkStatus['completionRate'] ?? '—';
-    final homeworkFraction = (double.tryParse('$homework') ?? 0) / 100.0;
-    final attendanceFraction = (double.tryParse('$attendance') ?? 0) / 100.0;
+    // Honest-state invariant: a value is either KNOWN (render it, and render
+    // the ring/bar at that value) or UNKNOWN (render `—`, and leave the ring
+    // silent). Previously the raw value was interpolated as `'$x%'` — which
+    // printed the literal `—%` when absent — and the ring fraction came from
+    // `double.tryParse` on the *display* string, so a perfectly good `92%`
+    // parsed as 0 and the ring contradicted the number printed inside it.
+    final attendancePercent = _percentOrNull(summary.attendanceSummary['ratePercent']);
+    final homeworkPercent = _percentOrNull(summary.homeworkStatus['completionRate']);
+    final gradeRaw = summary.performanceSummary['overallGrade']?.toString().trim();
+    final grade = (gradeRaw == null || gradeRaw.isEmpty) ? null : gradeRaw;
+    final attendanceLabel =
+        attendancePercent == null ? '—' : '${_trimPercent(attendancePercent)}%';
+    final homeworkLabel =
+        homeworkPercent == null ? '—' : '${_trimPercent(homeworkPercent)}%';
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -411,16 +467,20 @@ class _AcademicHeroCard extends StatelessWidget {
                 // Signature data-viz: the headline attendance metric as a
                 // premium progress ring in the persona accent.
                 AksharaProgressRing(
-                  value: attendanceFraction,
+                  value: (attendancePercent ?? 0) / 100.0,
                   size: 92,
                   strokeWidth: 9,
-                  color: premium.brandStart,
-                  semanticLabel: 'Attendance $attendance percent',
+                  color: attendancePercent == null
+                      ? colors.outlineVariant
+                      : premium.brandStart,
+                  semanticLabel: attendancePercent == null
+                      ? 'Attendance not available'
+                      : 'Attendance ${_trimPercent(attendancePercent)} percent',
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        '$attendance%',
+                        attendanceLabel,
                         style: text.titleMedium.copyWith(
                           fontWeight: FontWeight.w800,
                           letterSpacing: -0.3,
@@ -445,9 +505,11 @@ class _AcademicHeroCard extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Expanded(child: _stat(context, 'Grade', '$grade')),
                           Expanded(
-                            child: _stat(context, 'Homework', '$homework%'),
+                            child: _stat(context, 'Grade', grade ?? '—'),
+                          ),
+                          Expanded(
+                            child: _stat(context, 'Homework', homeworkLabel),
                           ),
                         ],
                       ),
@@ -455,11 +517,15 @@ class _AcademicHeroCard extends StatelessWidget {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(AksharaRadius.xs),
                         child: LinearProgressIndicator(
-                          value: homeworkFraction.clamp(0.0, 1.0),
+                          value: ((homeworkPercent ?? 0) / 100.0)
+                              .clamp(0.0, 1.0),
                           minHeight: 8,
                           backgroundColor: colors.surfaceContainerHighest,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(premium.brandStart),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            homeworkPercent == null
+                                ? colors.outlineVariant
+                                : premium.brandStart,
+                          ),
                         ),
                       ),
                     ],

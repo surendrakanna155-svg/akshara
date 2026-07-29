@@ -42,7 +42,24 @@ class TeacherStudentRiskScreen extends ConsumerWidget {
           ),
         ),
       ),
-      data: (snapshot) => _buildContent(context, ref, snapshot),
+      // E2E-011 — no live dossier means no dossier. The screen says so instead
+      // of rendering a fixture-composed attendance / marks / homework / fees
+      // profile for a student it knows nothing about.
+      data: (snapshot) => snapshot == null
+          ? Scaffold(
+              appBar: const AksharaAppBar(titleText: 'Student risk'),
+              body: AksharaEmptyState(
+                title: 'Risk profile not available',
+                message:
+                    'This student has no risk profile from the intelligence '
+                    'service yet. Attendance, marks, homework and fee details '
+                    'will appear here once they are published.',
+                icon: Icons.insights_outlined,
+                actionLabel: 'Open Student 360',
+                onAction: () => openStudent360(context, sisStudentId),
+              ),
+            )
+          : _buildContent(context, ref, snapshot),
     );
   }
 
@@ -68,8 +85,10 @@ class TeacherStudentRiskScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
-        titleText: snapshot.studentName,
-        subtitle: '${snapshot.classLabel} · Roll ${snapshot.rollNo}',
+        titleText: snapshot.studentName.isEmpty
+            ? 'Student risk'
+            : snapshot.studentName,
+        subtitle: _identitySubtitle(snapshot),
       ),
       // DS V2 P4 — premium persona canvas behind the risk 360. The headline is a
       // categorical risk LEVEL (not a %), so no ring — attendance/homework %s are
@@ -90,16 +109,30 @@ class TeacherStudentRiskScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: AksharaSpacing.s3),
-            _Row('Attendance',
-                '${snapshot.attendancePercent}% · ${snapshot.attendanceTrend}'),
-            _Row('Homework',
-                '${snapshot.homeworkCompletionPercent}% completion'),
-            _Row('Behaviour', '${snapshot.behaviorIncidentCount} incident(s)'),
+            // E2E-011 — every row is an honest unknown until its real source is
+            // wired. `_Row` renders "Not available" for a null value; it never
+            // shows a constant.
+            _Row('Attendance', _attendanceLabel(snapshot)),
+            _Row(
+              'Homework',
+              snapshot.homeworkCompletionPercent == null
+                  ? null
+                  : '${snapshot.homeworkCompletionPercent}% completion',
+            ),
+            _Row(
+              'Behaviour',
+              snapshot.behaviorIncidentCount == null
+                  ? null
+                  : '${snapshot.behaviorIncidentCount} incident(s)',
+            ),
             _Row('Fees', snapshot.feePendingLabel),
             const SizedBox(height: AksharaSpacing.s2),
             const AksharaSectionHeader(title: 'Subject performance'),
-            for (final entry in snapshot.subjectPerformance.entries)
-              _Row(entry.key, entry.value),
+            if (snapshot.subjectPerformance.isEmpty)
+              const _Row('Subject marks', null)
+            else
+              for (final entry in snapshot.subjectPerformance.entries)
+                _Row(entry.key, entry.value),
             const SizedBox(height: AksharaSpacing.s3),
             const AksharaSectionHeader(title: 'Communication history'),
             Text(
@@ -191,6 +224,21 @@ class TeacherStudentRiskScreen extends ConsumerWidget {
     );
   }
 
+  static String? _identitySubtitle(TeacherStudentRiskSnapshot snapshot) {
+    final parts = <String>[
+      if (snapshot.classLabel.isNotEmpty) snapshot.classLabel,
+      if (snapshot.rollNo.isNotEmpty) 'Roll ${snapshot.rollNo}',
+    ];
+    return parts.isEmpty ? null : parts.join(' · ');
+  }
+
+  static String? _attendanceLabel(TeacherStudentRiskSnapshot snapshot) {
+    final percent = snapshot.attendancePercent;
+    if (percent == null) return null;
+    final trend = snapshot.attendanceTrend;
+    return trend == null ? '$percent%' : '$percent% · $trend';
+  }
+
   void _openComms(
     WidgetRef ref,
     BuildContext context,
@@ -208,14 +256,25 @@ class TeacherStudentRiskScreen extends ConsumerWidget {
 class _Row extends StatelessWidget {
   const _Row(this.label, this.value);
   final String label;
-  final String value;
+
+  /// Null renders the honest unknown, never a placeholder figure.
+  final String? value;
 
   @override
   Widget build(BuildContext context) {
+    final value = this.value;
     return ListTile(
       dense: true,
       title: Text(label),
-      trailing: Text(value, style: context.aksharaText.bodyMedium),
+      trailing: value == null
+          ? Text(
+              'Not available',
+              style: context.aksharaText.bodyMedium.copyWith(
+                color: context.colors.onSurfaceVariant,
+                fontStyle: FontStyle.italic,
+              ),
+            )
+          : Text(value, style: context.aksharaText.bodyMedium),
     );
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../parent_active_child_provider.dart';
 import 'homework_models.dart';
 
@@ -18,17 +18,23 @@ final parentHomeworkFutureProvider = FutureProvider<ParentHomeworkData>((ref) as
   return ref.read(parentRepositoryProvider).getHomework(query: ref.watch(parentRepositoryQueryProvider));
 });
 
-final _parentHomeworkBaseDataProvider = Provider<ParentHomeworkData>((ref) {
-  final data = watchRepositoryFuture(
-    ref,
+/// CERT-002 — honest-async contract for `/parent/homework`.
+final parentHomeworkViewStateProvider =
+    Provider<ErpViewState<ParentHomeworkData>>((ref) {
+  return resolveErpAsync<ParentHomeworkData>(
     ref.watch(parentHomeworkFutureProvider),
-    manualLoading: ref.watch(parentHomeworkLoadingProvider),
-    manualError: ref.watch(parentHomeworkErrorProvider),
-    manualEmpty: ref.watch(parentHomeworkEmptyProvider),
+    forceLoading: ref.watch(parentHomeworkLoadingProvider),
+    forceError: ref.watch(parentHomeworkErrorProvider),
+    forceEmpty: ref.watch(parentHomeworkEmptyProvider),
+    errorMessage: 'Unable to load homework right now.',
   );
-  return data ??
-      ref.watch(parentHomeworkFutureProvider).value ??
-      ParentHomeworkData.mock();
+});
+
+final _parentHomeworkBaseDataProvider = Provider<ParentHomeworkData>((ref) {
+  return honestPayload(
+    ref.watch(parentHomeworkViewStateProvider),
+    ParentHomeworkData.empty,
+  );
 });
 
 /// Filtered homework rows based on [homeworkFilterProvider].

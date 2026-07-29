@@ -42,8 +42,13 @@ final parentAttendanceProvider = Provider<AttendanceMonthData>((ref) {
     manualEmpty: ref.watch(parentAttendanceEmptyProvider),
   );
   final month = ref.watch(attendanceMonthProvider);
+  // Honest-async contract (same class as WIDGET-001): the fallback used to be
+  // `AttendanceMonthData.mock`, a fabricated June-2026 calendar for "Ravi
+  // Kumar, 8-A" complete with present/absent/late days. Fabricated attendance
+  // shown to a parent is P0 under the register's standing rule. The student app
+  // already used `.empty()` here; the parent app now does too.
   final resolved = base ??
       ref.watch(parentAttendanceFutureProvider).value ??
-      AttendanceMonthData.mock(month: month);
+      AttendanceMonthData.empty(month: month);
   return resolved.withSelectedDay(selected);
 });

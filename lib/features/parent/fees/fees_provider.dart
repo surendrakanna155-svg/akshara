@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../parent_active_child_provider.dart';
 
 /// Installment payment state (PA-03 §8).
@@ -102,6 +102,23 @@ class ParentFeesData {
   final int unreadNotifications;
 
   bool get hasPending => pendingAmount > 0;
+
+  /// Honest-async contract: the neutral shape used when the server issued no
+  /// fee statement. It carries NO money, NO due date and NO payment history —
+  /// the screen renders an empty/error state around it.
+  factory ParentFeesData.empty() {
+    return const ParentFeesData(
+      pendingAmount: 0,
+      isOverdue: false,
+      dueLabel: '',
+      paidAmount: 0,
+      annualAmount: 0,
+      progressPercent: 0,
+      installments: [],
+      breakdown: [],
+      paymentHistory: [],
+    );
+  }
 
   factory ParentFeesData.mock() {
     return const ParentFeesData(
@@ -210,54 +227,6 @@ class ParentFeesData {
     );
   }
 
-  /// PA-03 all-paid variant (build sequence step 11).
-  factory ParentFeesData.allPaid() {
-    return ParentFeesData(
-      pendingAmount: 0,
-      isOverdue: false,
-      dueLabel: 'All installments paid',
-      paidAmount: 23000,
-      annualAmount: 23000,
-      progressPercent: 100,
-      installments: const [
-        FeeInstallment(
-          id: 'term_1',
-          title: 'Term 1',
-          amount: 8000,
-          status: FeeInstallmentStatus.paid,
-          meta: 'Paid 15 Apr · ₹8,000',
-          hasReceipt: true,
-        ),
-        FeeInstallment(
-          id: 'term_2',
-          title: 'Term 2',
-          amount: 4200,
-          status: FeeInstallmentStatus.paid,
-          meta: 'Paid 12 Jun · ₹4,200',
-          hasReceipt: true,
-        ),
-        FeeInstallment(
-          id: 'term_3',
-          title: 'Term 3',
-          amount: 5400,
-          status: FeeInstallmentStatus.paid,
-          meta: 'Paid 18 Aug · ₹5,400',
-          hasReceipt: true,
-        ),
-        FeeInstallment(
-          id: 'term_4',
-          title: 'Term 4',
-          amount: 5400,
-          status: FeeInstallmentStatus.paid,
-          meta: 'Paid 20 Nov · ₹5,400',
-          hasReceipt: true,
-          isLast: true,
-        ),
-      ],
-      breakdown: ParentFeesData.mock().breakdown,
-      paymentHistory: ParentFeesData.mock().paymentHistory,
-    );
-  }
 }
 
 /// Formats whole rupee amounts as `₹4,200`.
@@ -286,18 +255,33 @@ final parentFeesFutureProvider = FutureProvider<ParentFeesData>((ref) async {
   return ref.read(parentRepositoryProvider).getFees(query: ref.watch(parentRepositoryQueryProvider));
 });
 
-/// Fees payload for [ParentFeesScreen].
-final parentFeesProvider = Provider<ParentFeesData>((ref) {
-  final data = watchRepositoryFuture(
-    ref,
+/// CERT-001 — honest-async contract. Loading/error/empty are derived from the
+/// REAL [AsyncValue]; there is no terminal mock fallback, so a failed or empty
+/// `GET /parent/fees` can no longer render a fabricated ₹23,000 statement with
+/// four "Paid" receipts.
+final parentFeesViewStateProvider = Provider<ErpViewState<ParentFeesData>>((
+  ref,
+) {
+  return resolveErpAsync<ParentFeesData>(
     ref.watch(parentFeesFutureProvider),
-    manualLoading: ref.watch(parentFeesLoadingProvider),
-    manualError: ref.watch(parentFeesErrorProvider),
-    manualEmpty: ref.watch(parentFeesEmptyProvider),
+    forceLoading: ref.watch(parentFeesLoadingProvider),
+    forceError: ref.watch(parentFeesErrorProvider),
+    forceEmpty: ref.watch(parentFeesEmptyProvider),
+    errorMessage: 'Unable to load fees right now.',
+    // NOT `isDataEmpty`: a school that has published nothing still renders the
+    // screen, because each section carries its OWN honest empty state
+    // ("No installment schedule published yet.", "No fee breakdown published
+    // yet.") which says more than one generic page-level empty would.
   );
-  return data ??
-      ref.watch(parentFeesFutureProvider).value ??
-      ParentFeesData.mock();
+});
+
+/// Fees payload for [ParentFeesScreen]. Neutral-empty when the server issued
+/// nothing — never a demo statement.
+final parentFeesProvider = Provider<ParentFeesData>((ref) {
+  return honestPayload(
+    ref.watch(parentFeesViewStateProvider),
+    ParentFeesData.empty,
+  );
 });
 
 /// Index of expanded accordion panel (PA-03 expanded index 0).

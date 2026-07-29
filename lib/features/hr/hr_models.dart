@@ -622,37 +622,46 @@ class HrReportsData {
   });
 
   final List<HrReportCatalogItem> catalog;
-  final String headlineMetric;
+
+  /// CERT-006 — nullable. `null` means "this school's staff/attendance KPIs are
+  /// not available", and the screen says exactly that. It is never backfilled
+  /// with another school's figures.
+  final String? headlineMetric;
 
   factory HrReportsData.mock() {
     return const HrReportsData(
       headlineMetric: '142 active staff · 96.2% attendance MTD',
-      catalog: [
-        HrReportCatalogItem(
-          id: 'hr_headcount',
-          title: 'Headcount by department',
-          description: 'Active, on-leave, and probation counts',
-          icon: Icons.groups_outlined,
-        ),
-        HrReportCatalogItem(
-          id: 'hr_attendance',
-          title: 'Attendance compliance',
-          description: 'Daily presence and late arrivals',
-          icon: Icons.fact_check_outlined,
-        ),
-        HrReportCatalogItem(
-          id: 'hr_leave',
-          title: 'Leave utilization',
-          description: 'Approved vs pending leave by type',
-          icon: Icons.event_busy_outlined,
-        ),
-        HrReportCatalogItem(
-          id: 'hr_payroll',
-          title: 'Payroll readiness',
-          description: 'Processed vs draft payroll cycles',
-          icon: Icons.payments_outlined,
-        ),
-      ],
+      catalog: kHrReportCatalog,
     );
   }
 }
+
+/// The HR report **catalog** — report types (titles/descriptions/icons). This is
+/// static product configuration, not school data: it is the list of reports the
+/// module can produce, identical for every tenant. It carries no figures.
+const List<HrReportCatalogItem> kHrReportCatalog = [
+  HrReportCatalogItem(
+    id: 'hr_headcount',
+    title: 'Headcount by department',
+    description: 'Active, on-leave, and probation counts',
+    icon: Icons.groups_outlined,
+  ),
+  HrReportCatalogItem(
+    id: 'hr_attendance',
+    title: 'Attendance compliance',
+    description: 'Daily presence and late arrivals',
+    icon: Icons.fact_check_outlined,
+  ),
+  HrReportCatalogItem(
+    id: 'hr_leave',
+    title: 'Leave utilization',
+    description: 'Approved vs pending leave by type',
+    icon: Icons.event_busy_outlined,
+  ),
+  HrReportCatalogItem(
+    id: 'hr_payroll',
+    title: 'Payroll readiness',
+    description: 'Processed vs draft payroll cycles',
+    icon: Icons.payments_outlined,
+  ),
+];

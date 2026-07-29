@@ -210,7 +210,11 @@ void main() {
           teacherDashboardErrorProvider.overrideWith((ref) => true),
         ],
       );
-      expect(find.text('Unable to load dashboard right now.'), findsOneWidget);
+      // WIDGET-002: the teacher dashboard now carries its own error copy
+      // (matching the student dashboard's) rather than the generic
+      // MobileAsyncBody default.
+      expect(find.text('Unable to load your dashboard.'), findsOneWidget);
+      expect(find.text('Try again'), findsOneWidget);
     });
   });
 

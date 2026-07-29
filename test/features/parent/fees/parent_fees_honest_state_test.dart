@@ -162,7 +162,12 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: erpWidgetTestOverrides([
-            parentFeesProvider.overrideWithValue(_unpublished()),
+            // CERT-001: drive the REAL repository future. Overriding the
+            // derived `parentFeesProvider` used to be enough because the screen
+            // read it directly; the screen now derives its state from the
+            // actual AsyncValue, so an override that the live path cannot
+            // produce would prove nothing.
+            parentFeesFutureProvider.overrideWith((ref) async => _unpublished()),
           ]),
           child: MaterialApp(
             theme: AksharaAppTheme.light(),

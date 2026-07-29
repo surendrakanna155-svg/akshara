@@ -1,15 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../parent_mutations_provider.dart';
 import '../parent_requests.dart';
 import 'payment_models.dart';
 
 /// Selected installment id (from route query).
+///
+/// JOURNEY-007: this starts EMPTY. It used to default to the demo fixture id
+/// `'term_2'`, which is what made a fabricated ₹4,200 summary resolvable — and
+/// payable — on a screen opened with no installment at all.
 final parentPaymentInstallmentIdProvider = StateProvider<String>(
-  (ref) => 'term_2',
+  (ref) => '',
 );
 
 /// Selected payment method in PA-10.
@@ -37,68 +41,51 @@ final parentPaymentSuccessResultProvider = StateProvider<PaymentSuccessResult?>(
 );
 
 final parentPaymentSummaryFutureProvider = FutureProvider.family<PaymentSummary, String>((ref, installmentId) async {
+  if (installmentId.trim().isEmpty) {
+    // Nothing selected — do NOT ask the server for a summary and do NOT invent
+    // one. The screen renders an honest "no payable installment" state.
+    throw const NoPayableInstallmentSelected();
+  }
   return ref.read(parentRepositoryProvider).getPaymentSummary(
         query: ref.watch(repositoryQueryProvider),
         installmentId: installmentId,
       );
 });
 
-/// Payment summary derived from installment id.
-final parentPaymentSummaryProvider = Provider<PaymentSummary>((ref) {
+/// Raised when the pay screen is opened without a real, server-issued
+/// installment id. It is an honest empty state, not an error.
+class NoPayableInstallmentSelected implements Exception {
+  const NoPayableInstallmentSelected();
+  @override
+  String toString() => 'No payable installment selected';
+}
+
+/// JOURNEY-007 — honest-async contract for the pay screen.
+///
+/// There is no fallback summary. If the server did not issue one, [data] is
+/// null, the summary view never renders and — see [submitParentPayment] — no
+/// amount can reach `POST /parent/payments/initiate`.
+final parentPaymentViewStateProvider = Provider<ErpViewState<PaymentSummary>>((
+  ref,
+) {
   final installmentId = ref.watch(parentPaymentInstallmentIdProvider);
-  final hasError = ref.watch(parentPaymentErrorProvider);
-
-  if (hasError) {
-    throw StateError('Payment summary unavailable');
+  if (installmentId.trim().isEmpty && !ref.watch(parentPaymentErrorProvider)) {
+    return const ErpViewState<PaymentSummary>(isEmpty: true);
   }
-
-  final async = ref.watch(parentPaymentSummaryFutureProvider(installmentId));
-  final data = watchRepositoryFuture(
-    ref,
-    async,
-    manualLoading: ref.watch(parentPaymentLoadingProvider),
-    manualError: ref.watch(parentPaymentErrorProvider),
-    manualEmpty: ref.watch(parentPaymentEmptyProvider),
+  return resolveErpAsync<PaymentSummary>(
+    ref.watch(parentPaymentSummaryFutureProvider(installmentId)),
+    forceLoading: ref.watch(parentPaymentLoadingProvider),
+    forceError: ref.watch(parentPaymentErrorProvider),
+    forceEmpty: ref.watch(parentPaymentEmptyProvider),
+    errorMessage: 'Unable to load payment details.',
   );
-  return data ?? async.value ?? _fallbackSummary(installmentId);
 });
 
-PaymentSummary _fallbackSummary(String installmentId) {
-  return switch (installmentId) {
-    'term_1' => const PaymentSummary(
-        installmentId: 'term_1',
-        installmentTitle: 'Term 1',
-        childName: 'Ravi Kumar',
-        childClass: '8-A',
-        dueLabel: 'Paid 15 Apr 2026',
-        baseAmount: 8000,
-        lateFee: 0,
-        convenienceFee: 0,
-        breakdown: [
-          PaymentBreakdownLine(label: 'Tuition', amount: 6500),
-          PaymentBreakdownLine(label: 'Transport', amount: 1000),
-          PaymentBreakdownLine(label: 'Activity', amount: 500),
-        ],
-      ),
-    _ => const PaymentSummary(
-        installmentId: 'term_2',
-        installmentTitle: 'Term 2',
-        childName: 'Ravi Kumar',
-        childClass: '8-A',
-        dueLabel: 'Due 12 Jun 2026',
-        baseAmount: 4000,
-        lateFee: 200,
-        convenienceFee: 0,
-        unreadNotifications: 2,
-        breakdown: [
-          PaymentBreakdownLine(label: 'Tuition', amount: 3200),
-          PaymentBreakdownLine(label: 'Transport', amount: 600),
-          PaymentBreakdownLine(label: 'Activity', amount: 200),
-          PaymentBreakdownLine(label: 'Late fee', amount: 200),
-        ],
-      ),
-  };
-}
+/// Payment summary for the selected installment, or **null** when the server
+/// has not issued one. Never a fabricated ₹4,200 for a fabricated child.
+final parentPaymentSummaryProvider = Provider<PaymentSummary?>((ref) {
+  return ref.watch(parentPaymentViewStateProvider).data;
+});
 
 /// Initiates a fee payment and — ONLY when handed VERIFIED gateway proof —
 /// confirms it via the repository mutation providers.
@@ -131,7 +118,19 @@ Future<void> submitParentPayment(
   }
 
   try {
+    // ── JOURNEY-007 (P0) — MONEY GUARD ──────────────────────────────────────
+    // Only a SERVER-ISSUED summary may be paid. Without one there is no amount
+    // and no installment, so the initiate call is not made at all. This is the
+    // last line of defence: even if a future screen re-enables the pay button
+    // without a summary, no fabricated amount can reach the endpoint.
     final summary = ref.read(parentPaymentSummaryProvider);
+    if (summary == null ||
+        summary.installmentId.trim().isEmpty ||
+        summary.totalAmount <= 0) {
+      ref.read(parentPaymentPhaseProvider.notifier).state =
+          PaymentFlowPhase.failure;
+      return;
+    }
     final method = ref.read(parentPaymentMethodProvider);
 
     final initiation = await ref

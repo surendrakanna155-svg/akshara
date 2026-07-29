@@ -20,16 +20,31 @@ void main() {
   });
 
   group('parentPaymentProvider', () {
-    test('returns term 2 payment summary by default', () async {
+    // JOURNEY-007 — the screen no longer defaults to the demo installment id
+    // `term_2`. With nothing selected there is NO summary at all: the honest
+    // empty state, not a fabricated ₹4,200 for "Ravi Kumar".
+    test('no installment selected => no summary, honest empty state', () async {
       final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
+      expect(container.read(parentPaymentInstallmentIdProvider), '');
+      expect(container.read(parentPaymentSummaryProvider), isNull);
+      expect(container.read(parentPaymentViewStateProvider).isEmpty, isTrue);
+      expect(container.read(parentPaymentViewStateProvider).hasError, isFalse);
+    });
+
+    test('server-issued summary is used verbatim once selected', () async {
+      final container = createMobileProviderTestContainer();
+      addTearDown(container.dispose);
+
+      container.read(parentPaymentInstallmentIdProvider.notifier).state =
+          'term_2';
       await container.read(parentPaymentSummaryFutureProvider('term_2').future);
       final summary = container.read(parentPaymentSummaryProvider);
 
-      expect(summary.installmentTitle, 'Term 2');
+      expect(summary, isNotNull);
+      expect(summary!.installmentTitle, 'Term 2');
       expect(summary.totalAmount, 4200);
-      expect(summary.childName, 'Ravi Kumar');
     });
 
     test('parentPaymentMethodProvider defaults to UPI', () async {
@@ -51,20 +66,19 @@ void main() {
       await container.read(parentPaymentSummaryFutureProvider('term_1').future);
       final summary = container.read(parentPaymentSummaryProvider);
 
-      expect(summary.installmentTitle, 'Term 1');
+      expect(summary, isNotNull);
+      expect(summary!.installmentTitle, 'Term 1');
       expect(summary.totalAmount, 8000);
     });
 
-    test('parentPaymentErrorProvider blocks summary read', () async {
+    test('error state yields no summary and an honest error', () async {
       final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
       container.read(parentPaymentErrorProvider.notifier).state = true;
 
-      expect(
-        () => container.read(parentPaymentSummaryProvider),
-        throwsStateError,
-      );
+      expect(container.read(parentPaymentSummaryProvider), isNull);
+      expect(container.read(parentPaymentViewStateProvider).hasError, isTrue);
     });
   });
 
@@ -99,6 +113,10 @@ void main() {
         final ref = await pumpCapturingRef(tester);
 
         await tester.runAsync(() async {
+          // JOURNEY-007: the pay flow is only reachable with a REAL, selected
+          // installment id — the route carries it. Without one there is no
+          // server summary and submit refuses outright (asserted below).
+          ref.read(parentPaymentInstallmentIdProvider.notifier).state = 'term_2';
           await ref.read(parentPaymentSummaryFutureProvider('term_2').future);
           // No gatewayPayment: no payment-gateway SDK is wired, so the flow
           // MUST fail closed rather than optimistically confirm.
@@ -128,6 +146,7 @@ void main() {
         final ref = await pumpCapturingRef(tester);
 
         await tester.runAsync(() async {
+          ref.read(parentPaymentInstallmentIdProvider.notifier).state = 'term_2';
           await ref.read(parentPaymentSummaryFutureProvider('term_2').future);
           await submitParentPayment(
             ref,
@@ -144,6 +163,39 @@ void main() {
           PaymentFlowPhase.success,
         );
         expect(ref.read(parentPaymentSuccessResultProvider), isNotNull);
+      },
+    );
+
+    // JOURNEY-007 (P0) — the money guard. The register's finding was not that a
+    // fabricated ₹4,200 was displayed, but that `submitParentPayment` sent
+    // `amount: summary.totalAmount` — the fabricated figure — to
+    // `POST /parent/payments/initiate`. With no server-issued summary there is
+    // now no amount and no installment, so the request is never built.
+    testWidgets(
+      'no server-issued summary ⇒ initiate is NEVER called and no amount is sent',
+      (tester) async {
+        final ref = await pumpCapturingRef(tester);
+
+        // Nothing selected — exactly the state the screen is in when
+        // `GET /parent/payments/summary` fails or the school has raised nothing.
+        expect(ref.read(parentPaymentInstallmentIdProvider), '');
+        expect(ref.read(parentPaymentSummaryProvider), isNull);
+
+        await tester.runAsync(() async {
+          await submitParentPayment(ref);
+        });
+        await tester.pump();
+
+        // It fails closed rather than initiating a payment for an invented sum.
+        expect(ref.read(parentPaymentPhaseProvider), PaymentFlowPhase.failure);
+        expect(
+          ref.read(parentPaymentPhaseProvider),
+          isNot(PaymentFlowPhase.pendingGatewayVerification),
+          reason: 'pendingGatewayVerification is only reachable AFTER a real '
+              'initiate call succeeded — reaching it here would mean an amount '
+              'was sent.',
+        );
+        expect(ref.read(parentPaymentSuccessResultProvider), isNull);
       },
     );
 

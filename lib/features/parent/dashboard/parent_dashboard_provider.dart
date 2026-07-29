@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/school_config/school_configuration_provider.dart';
 import '../../../core/school_config/school_dashboard_adapter.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../parent_active_child_provider.dart';
 
 /// Mock dashboard payload for [ParentDashboardScreen] (PA-01).
@@ -38,6 +38,26 @@ class ParentDashboardData {
   final DashboardAiInsight aiInsight;
   final int unreadNotifications;
 
+  /// Honest-async contract neutral shape (WIDGET-001). No child name, no
+  /// attendance claim, no money, no notices — the screen renders a skeleton or
+  /// an honest error/empty around this, never a demo day.
+  factory ParentDashboardData.empty() {
+    return const ParentDashboardData(
+      childName: '',
+      childClass: '',
+      greetingEyebrow: '',
+      greetingHeadline: '',
+      schoolName: '',
+      statusChips: [],
+      quickActions: [],
+      todaySummary: [],
+      notices: [],
+      events: [],
+      aiInsight: DashboardAiInsight(message: '', actionLabel: ''),
+      unreadNotifications: 0,
+    );
+  }
+
   factory ParentDashboardData.mock() {
     return const ParentDashboardData(
       childName: 'Ravi Kumar',
@@ -50,14 +70,17 @@ class ParentDashboardData {
         DashboardStatusChip(
           label: 'Present',
           tone: DashboardChipTone.success,
+          kind: DashboardChipKind.attendance,
         ),
         DashboardStatusChip(
           label: '₹4,200 due',
           tone: DashboardChipTone.warning,
+          kind: DashboardChipKind.fees,
         ),
         DashboardStatusChip(
           label: '2 msgs',
           tone: DashboardChipTone.primary,
+          kind: DashboardChipKind.messages,
         ),
       ],
       quickActions: [
@@ -206,15 +229,58 @@ class ParentDashboardData {
 
 enum DashboardChipTone { primary, success, warning, error }
 
+/// The quantity a status chip is *about*. Carried as a typed id so a consumer
+/// never has to sniff the display label.
+///
+/// This is the fix for a same-screen contradiction: `_ChildSummaryKpiRow` used
+/// to find the attendance chip with `label.contains('attendance')` and the fee
+/// chip with `label.contains('fee')`. The real labels are `Present` and
+/// `₹4,200 due`, so neither ever matched — the hero rendered the true values as
+/// pills while the KPI cards immediately below rendered `—` for the SAME two
+/// quantities. "Unknown" shown next to the known value is worse than either: it
+/// teaches the user that the honest-unknown marker means nothing.
+enum DashboardChipKind { attendance, fees, homework, messages, other }
+
 @immutable
 class DashboardStatusChip {
   const DashboardStatusChip({
     required this.label,
     required this.tone,
+    this.kind = DashboardChipKind.other,
   });
 
   final String label;
   final DashboardChipTone tone;
+
+  /// What quantity this chip reports. Consumers key off this, never the label.
+  final DashboardChipKind kind;
+}
+
+/// Deterministic classifier for payloads that predate the typed `kind` (the
+/// server currently sends `{label, tone}`). Label-based, but centralised and
+/// tested, rather than re-invented at each call site with a substring that
+/// never matched.
+DashboardChipKind classifyDashboardChip(String label) {
+  final l = label.toLowerCase();
+  if (l.contains('₹') || l.contains('fee') || l.contains('due') ||
+      l.contains('paid')) {
+    return DashboardChipKind.fees;
+  }
+  if (l.contains('homework') || l.contains('hw ')) {
+    return DashboardChipKind.homework;
+  }
+  if (l.contains('attendance') ||
+      l.contains('present') ||
+      l.contains('absent') ||
+      l.contains('late') ||
+      l.contains('leave') ||
+      l.contains('half day')) {
+    return DashboardChipKind.attendance;
+  }
+  if (l.contains('msg') || l.contains('message') || l.contains('unread')) {
+    return DashboardChipKind.messages;
+  }
+  return DashboardChipKind.other;
 }
 
 @immutable
@@ -301,16 +367,24 @@ final parentDashboardFutureProvider = FutureProvider<ParentDashboardData>((ref) 
   return base.forActiveChild(childName: child.name, childClass: child.classLabel);
 });
 
-final parentDashboardProvider = Provider<ParentDashboardData>((ref) {
-  final data = watchRepositoryFuture(
-    ref,
+/// WIDGET-001 / CERT-002 — honest-async contract. Both the loading frames and
+/// the failure path are derived from the REAL [AsyncValue]; the skeleton is no
+/// longer dead code and no `.mock()` day is ever rendered as this child's day.
+final parentDashboardViewStateProvider =
+    Provider<ErpViewState<ParentDashboardData>>((ref) {
+  final capabilities = ref.watch(schoolCapabilitiesProvider);
+  return resolveErpAsync<ParentDashboardData>(
     ref.watch(parentDashboardFutureProvider),
-    manualLoading: ref.watch(parentDashboardLoadingProvider),
-    manualError: ref.watch(parentDashboardErrorProvider),
-    manualEmpty: ref.watch(parentDashboardEmptyProvider),
+    forceLoading: ref.watch(parentDashboardLoadingProvider),
+    forceError: ref.watch(parentDashboardErrorProvider),
+    forceEmpty: ref.watch(parentDashboardEmptyProvider),
+    errorMessage: 'Unable to load dashboard right now.',
+  ).mapData((data) => adaptParentDashboard(data, capabilities));
+});
+
+final parentDashboardProvider = Provider<ParentDashboardData>((ref) {
+  return honestPayload(
+    ref.watch(parentDashboardViewStateProvider),
+    ParentDashboardData.empty,
   );
-  final raw = data ??
-      ref.watch(parentDashboardFutureProvider).value ??
-      ParentDashboardData.mock();
-  return adaptParentDashboard(raw, ref.watch(schoolCapabilitiesProvider));
 });
