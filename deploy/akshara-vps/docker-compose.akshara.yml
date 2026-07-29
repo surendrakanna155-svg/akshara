@@ -78,6 +78,41 @@ services:
     ports: ["127.0.0.1:3000:8000"]
     networks: [akshara-net]
 
+  # Face embedding service — derives the 512-d AuraFace vector from an aligned
+  # 112x112 crop for 1:1 staff-attendance verification.
+  #
+  # NO `ports:` — deliberately. This handles biometric data and is reachable
+  # only from akshara-net (the edge function calls it by service name). Exposing
+  # it on the host would put an unauthenticated embedding endpoint on the box.
+  #
+  # WORKERS = one per vCPU. Measured: N single-threaded workers scale ~linearly
+  # (3.50x at 4) where intra-op threads manage only 1.86x, so N workers beat one
+  # N-threaded process by ~1.85x on identical cores. The current VPS is 1 vCPU.
+  #
+  # The model is mounted read-only, never baked into the image and never
+  # committed. Populate ./face-inference/models via face-inference/fetch_model.sh.
+  akshara-face-inference:
+    build: ./face-inference
+    image: akshara-face-inference:latest
+    container_name: akshara-face-inference
+    logging: *default-logging
+    restart: unless-stopped
+    environment:
+      WORKERS: "1"
+      FACE_MODEL_PATH: /models/glintr100_int8.onnx
+      FACE_MODEL_TAG: auraface-v1
+    volumes:
+      - ./face-inference/models:/models:ro
+    healthcheck:
+      # Loads the model, so a missing or unreadable file surfaces here rather
+      # than on a staff member's first check-in.
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8080/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks: [akshara-net]
+
   # Supabase Storage (Batch 7). Self-host on local disk volume; service manages
   # its own storage.* schema. One-time setup (role password, schema ownership,
   # grants, bucket) is in storage/README.md. Host port lets the public Nginx

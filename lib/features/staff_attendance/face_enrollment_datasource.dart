@@ -111,17 +111,17 @@ class FaceEnrollmentDataSource {
   static const String _statusPath = '/attendance-auth/face/enrollment';
   static const String _revokePath = '/attendance-auth/face/revoke';
 
-  Future<FaceEnrollmentResult> enroll({
-    required List<double> embedding,
-    String modelTag = '',
-  }) async {
+  /// Enrols the caller's reference face from an aligned 112x112 crop.
+  ///
+  /// The SERVER derives the embedding, exactly as it does for check-in — if
+  /// enrolment used a client-computed vector and check-in used a server-derived
+  /// one, the two would live in different embedding spaces and nothing would
+  /// ever match.
+  Future<FaceEnrollmentResult> enroll({required String cropBase64}) async {
     try {
       final response = await _dio.request<Map<String, dynamic>>(
         _enrollPath,
-        data: <String, dynamic>{
-          'embedding': embedding,
-          'modelTag': modelTag,
-        },
+        data: <String, dynamic>{'crop': cropBase64},
         queryParameters: _scope(),
         options: Options(method: 'POST'),
       );

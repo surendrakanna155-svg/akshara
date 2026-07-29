@@ -23,6 +23,10 @@ import {
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { recordMutationAudit } from "../audit/audit_repository.ts";
+import {
+  deriveFaceEmbedding,
+  FaceEmbeddingUnavailableError,
+} from "./face_embedding_client.ts";
 import { attendanceAuthAudit } from "../audit/mutation_audit_catalog.ts";
 import {
   type AttendanceAuthScope,
@@ -90,15 +94,49 @@ export async function handleEnrollFace(req: Request, config: AppConfig): Promise
   const target = resolveTarget(claims, body);
   if (target instanceof Response) return target;
 
-  const modelTagRaw = body?.modelTag ?? body?.model_tag;
-  const modelTag = typeof modelTagRaw === "string" ? modelTagRaw : "";
+  // Enrolment derives the embedding server-side, exactly like check-in. If the
+  // two used different producers the vectors would live in different spaces and
+  // nothing would ever match — so a client-supplied embedding is REFUSED here
+  // too, rather than silently stored in the wrong space.
+  if (body?.embedding !== undefined || body?.modelTag !== undefined ||
+      body?.model_tag !== undefined) {
+    return errorEnvelope(
+      "ATTENDANCE_AUTH_FACE_EMBEDDING_NOT_ACCEPTED",
+      "This server derives the face embedding itself — send crop, not embedding. Update the app.",
+      422,
+    );
+  }
+
+  const cropRaw = body?.crop ?? body?.face_crop;
+  const crop = typeof cropRaw === "string" ? cropRaw.trim() : "";
+  if (crop === "") {
+    return errorEnvelope(
+      "ATTENDANCE_AUTH_FACE_CROP_REQUIRED",
+      "A live face capture is required to enrol",
+      422,
+    );
+  }
+
+  let derived: { embedding: number[]; modelTag: string };
+  try {
+    derived = await deriveFaceEmbedding(crop);
+  } catch (error) {
+    if (error instanceof FaceEmbeddingUnavailableError) {
+      return errorEnvelope(
+        `ATTENDANCE_AUTH_${error.code}`,
+        error.message,
+        error.code === "FACE_SERVICE_UNAVAILABLE" ? 503 : 422,
+      );
+    }
+    throw error;
+  }
 
   try {
     const result = await withTenantContext(config, claims, async (db) => {
       const enrollment = await enrollFace(db, scopeOf(claims), {
         userId: target.userId,
-        embedding: body?.embedding,
-        modelTag,
+        embedding: derived.embedding,
+        modelTag: derived.modelTag,
         enrolledBy: claims.sub,
       });
       const spec = attendanceAuthAudit.faceEnrolled(enrollment.id, target.userId, claims.sub);

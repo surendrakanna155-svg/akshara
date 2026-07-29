@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
@@ -14,13 +15,13 @@ import '../attendance_capture_sources.dart';
 import '../staff_attendance_models.dart';
 import 'camera_image_converter.dart';
 import 'face_crop.dart';
-import 'face_embedder.dart';
 import 'liveness_detector.dart';
 import 'still_face_validation.dart';
 
-/// Real [FaceCaptureSource] (Slice 3 device adapter): presents [FaceCaptureScreen]
-/// — front camera + live liveness challenge + on-device embedding — and turns
-/// its result into either a [FaceCapture] or the right [AttendanceCaptureException].
+/// Real [FaceCaptureSource]: presents [FaceCaptureScreen] — front camera + live
+/// liveness challenge + alignment — and turns its result into either a
+/// [FaceCapture] (an aligned crop) or the right [AttendanceCaptureException].
+/// The embedding is derived server-side; nothing here computes one.
 ///
 /// Navigates via `goRouterProvider.push(...)` (the app's existing pattern for
 /// pushing a route from non-widget code — see `lib/app/app.dart`'s
@@ -28,14 +29,10 @@ import 'still_face_validation.dart';
 /// source is constructible (and this whole seam remains injectable) without any
 /// widget in scope. Construction does NO plugin work.
 class MlkitFaceCaptureSource implements FaceCaptureSource {
-  MlkitFaceCaptureSource({
-    required GoRouter Function() router,
-    FaceEmbedder? embedder,
-  })  : _router = router,
-        _embedder = embedder ?? MobileFaceNetEmbedder();
+  MlkitFaceCaptureSource({required GoRouter Function() router})
+      : _router = router;
 
   final GoRouter Function() _router;
-  final FaceEmbedder _embedder;
 
   @override
   Future<FaceCapture> capture() async {
@@ -57,10 +54,7 @@ class MlkitFaceCaptureSource implements FaceCaptureSource {
     // AttendanceCaptureException for a terminal failure the user cannot fix
     // by retrying (e.g. FACE_MODEL_MISSING — audit R1 P3-3, no dead-end
     // screens), or null when the user cancels.
-    final result = await _router().push<Object?>(
-      RouteNames.staffFaceCapture,
-      extra: _embedder,
-    );
+    final result = await _router().push<Object?>(RouteNames.staffFaceCapture);
     if (result is FaceCapture) return result;
     if (result is AttendanceCaptureException) throw result;
     throw const AttendanceCaptureException(
@@ -80,10 +74,7 @@ class MlkitFaceCaptureSource implements FaceCaptureSource {
 /// deliberately NOT covered by the headless test suite (no fake camera/mlkit
 /// plugin surface exists to drive it without a device).
 class FaceCaptureScreen extends StatefulWidget {
-  FaceCaptureScreen({super.key, FaceEmbedder? embedder})
-      : embedder = embedder ?? MobileFaceNetEmbedder();
-
-  final FaceEmbedder embedder;
+  const FaceCaptureScreen({super.key});
 
   @override
   State<FaceCaptureScreen> createState() => _FaceCaptureScreenState();
@@ -110,14 +101,9 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
 
   Future<void> _init() async {
     try {
-      // Pre-flight the embedder BEFORE the camera and the blink challenge.
-      // Without this, a build whose face model is absent still runs the user
-      // through the entire ceremony — permission prompt, camera, hold-still,
-      // blink — and only then fails with FACE_MODEL_MISSING. The check-in was
-      // never going to succeed; say so in the first second rather than the
-      // last. Warming up also moves the model load off the capture path.
-      await widget.embedder.warmUp();
-
+      // No embedder pre-flight any more: the model lives on the SERVER, so
+      // there is nothing local that can be missing. The screen's job ends at
+      // producing an aligned crop.
       final cameras = await availableCameras();
       final front =
           cameras.where((c) => c.lensDirection == CameraLensDirection.front);
@@ -272,14 +258,26 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
         boundingBox: verdict.cropTarget!,
       );
       final faceImage = cropAndResizeForEmbedder(oriented, crop);
-      final embedding = await widget.embedder.embed(faceImage);
+
+      // Encode the aligned crop and send THAT — the embedding is derived on the
+      // server now, so a tampered client cannot fabricate or replay a template.
+      // PNG rather than JPEG: at 112x112 the size difference is a few KB either
+      // way, and lossless avoids compression artefacts perturbing a biometric
+      // signal that a similarity threshold is applied to.
+      final png = img.encodePng(
+        img.Image.fromBytes(
+          width: faceImage.width,
+          height: faceImage.height,
+          bytes: faceImage.bytes.buffer,
+          numChannels: 3,
+        ),
+      );
 
       if (!mounted) return;
       Navigator.of(context).pop(
         FaceCapture(
-          embedding: embedding,
+          cropBase64: base64Encode(png),
           livenessPassed: true,
-          modelTag: widget.embedder.modelTag,
         ),
       );
     } on AttendanceCaptureException catch (e) {

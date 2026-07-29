@@ -101,9 +101,14 @@ Deno.test("attendance-auth: a student/parent-scope session is 403 (school scope 
   assertEquals(parent?.status, 403);
 });
 
-Deno.test("attendance-auth: self-service enrol/status/revoke need only school scope — reaches DB (503)", async () => {
-  const enroll = await call("POST", "/attendance-auth/face/enroll", [], { body: { embedding: DIM64 } });
+Deno.test("attendance-auth: self-service enrol/status/revoke need only school scope", async () => {
+  // Enrol now derives the embedding server-side, so it reaches the INFERENCE
+  // service before the DB. Asserting the code, not just 503, keeps this test
+  // honest about which stage it actually proved reachable — both stages return
+  // 503, so a bare status check would silently stop testing what it claims.
+  const enroll = await call("POST", "/attendance-auth/face/enroll", [], { body: { crop: "Y3JvcA==" } });
   assertEquals(enroll?.status, 503);
+  assertEquals((await enroll!.json()).error.code, "ATTENDANCE_AUTH_FACE_SERVICE_UNAVAILABLE");
 
   const status = await call("GET", "/attendance-auth/face/enrollment", []);
   assertEquals(status?.status, 503);
@@ -114,17 +119,18 @@ Deno.test("attendance-auth: self-service enrol/status/revoke need only school sc
 
 Deno.test("attendance-auth: enrolling ANOTHER user (targetUserId) without manageHr is 403", async () => {
   const res = await call("POST", "/attendance-auth/face/enroll", [], {
-    body: { embedding: DIM64, targetUserId: "u2" },
+    body: { crop: "Y3JvcA==", targetUserId: "u2" },
   });
   assertEquals(res?.status, 403);
   assertEquals((await res!.json()).error.code, "FORBIDDEN");
 });
 
-Deno.test("attendance-auth: enrolling ANOTHER user WITH manageHr reaches the DB (503)", async () => {
+Deno.test("attendance-auth: enrolling ANOTHER user WITH manageHr passes the permission gate", async () => {
   const res = await call("POST", "/attendance-auth/face/enroll", ["manageHr"], {
-    body: { embedding: DIM64, targetUserId: "u2" },
+    body: { crop: "Y3JvcA==", targetUserId: "u2" },
   });
   assertEquals(res?.status, 503);
+  assertEquals((await res!.json()).error.code, "ATTENDANCE_AUTH_FACE_SERVICE_UNAVAILABLE");
 });
 
 Deno.test("attendance-auth: revoking ANOTHER user without manageHr is 403; with it, reaches the DB", async () => {
@@ -141,9 +147,10 @@ Deno.test("attendance-auth: revoking ANOTHER user without manageHr is 403; with 
 
 Deno.test("attendance-auth: a targetUserId equal to the caller's own id is still self-service (no manageHr needed)", async () => {
   const res = await call("POST", "/attendance-auth/face/enroll", [], {
-    body: { embedding: DIM64, targetUserId: "u1" },
+    body: { crop: "Y3JvcA==", targetUserId: "u1" },
   });
   assertEquals(res?.status, 503);
+  assertEquals((await res!.json()).error.code, "ATTENDANCE_AUTH_FACE_SERVICE_UNAVAILABLE");
 });
 
 Deno.test("attendance-auth: audit catalog backs both mutations (attendance_auth module)", () => {

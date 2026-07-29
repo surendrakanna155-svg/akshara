@@ -8,38 +8,44 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('FaceCapture.toJson', () {
-    test('includes modelTag alongside embedding/livenessPassed', () {
+    test('sends the aligned crop — and NO embedding or modelTag', () {
+      // The client no longer computes an embedding, so it must not claim one.
+      // The server REFUSES a request carrying either field
+      // (FACE_EMBEDDING_NOT_ACCEPTED), so sending them would break check-in
+      // outright rather than degrade quietly.
       const capture = FaceCapture(
-        embedding: [0.1, 0.2, 0.3],
+        cropBase64: 'Y3JvcC1ieXRlcw==',
         livenessPassed: true,
-        modelTag: 'mobilefacenet-v1',
       );
 
       final json = capture.toJson();
 
-      expect(json['embedding'], [0.1, 0.2, 0.3]);
+      expect(json['crop'], 'Y3JvcC1ieXRlcw==');
       expect(json['livenessPassed'], isTrue);
-      expect(json['modelTag'], 'mobilefacenet-v1');
+      expect(json.containsKey('embedding'), isFalse);
+      expect(json.containsKey('modelTag'), isFalse);
     });
 
-    test('defaults modelTag to an empty string when not provided', () {
-      const capture = FaceCapture(embedding: [0.1], livenessPassed: true);
-
-      expect(capture.modelTag, '');
-      expect(capture.toJson()['modelTag'], '');
-    });
-
-    test('omits captureRef when null but always sends modelTag', () {
+    test('omits captureRef when null', () {
       const capture = FaceCapture(
-        embedding: [0.1],
+        cropBase64: 'Y3JvcC1ieXRlcw==',
         livenessPassed: false,
-        modelTag: 'mobilefacenet-v1',
       );
 
       final json = capture.toJson();
 
       expect(json.containsKey('captureRef'), isFalse);
-      expect(json.containsKey('modelTag'), isTrue);
+      expect(json['livenessPassed'], isFalse);
+    });
+
+    test('carries captureRef when supplied', () {
+      const capture = FaceCapture(
+        cropBase64: 'Y3JvcC1ieXRlcw==',
+        livenessPassed: true,
+        captureRef: 'cap/1.png',
+      );
+
+      expect(capture.toJson()['captureRef'], 'cap/1.png');
     });
   });
 

@@ -59,9 +59,8 @@ AttendanceLocationFix _fix() => AttendanceLocationFix(
     );
 
 FaceCapture _face() => const FaceCapture(
-      embedding: [0.1, 0.2, 0.3],
+      cropBase64: 'Y3JvcC1ieXRlcw==',
       livenessPassed: true,
-      modelTag: 'mobilefacenet-v1',
     );
 
 Future<StaffCheckRecord> _record(_FakeReliableWriter reliable) =>
@@ -93,9 +92,9 @@ void main() {
       expect(record.faceMatched, isTrue);
       expect(reliable.capturedType, 'staffAttendance.check');
       expect(
-        (reliable.capturedBody?['face'] as Map?)?['modelTag'],
-        'mobilefacenet-v1',
-        reason: 'modelTag must reach the server on the reliability path too',
+        (reliable.capturedBody?['face'] as Map?)?['crop'],
+        'Y3JvcC1ieXRlcw==',
+        reason: 'the crop must reach the server on the reliability path too',
       );
     });
 

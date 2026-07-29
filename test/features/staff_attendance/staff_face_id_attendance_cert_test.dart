@@ -45,7 +45,7 @@ AttendanceLocationFix _fix({bool isMock = false}) => AttendanceLocationFix(
     );
 
 FaceCapture _face() => const FaceCapture(
-      embedding: [0.1, 0.2, 0.3, 0.4],
+      cropBase64: 'Y3JvcC1ieXRlcw==',
       livenessPassed: true,
       captureRef: 'cap/1.jpg',
     );

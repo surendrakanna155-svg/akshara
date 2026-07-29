@@ -86,10 +86,9 @@ class _FaceEnrollmentScreenState extends ConsumerState<FaceEnrollmentScreen> {
         return;
       }
       final face = captured;
-      final result = await ref.read(faceEnrollmentDataSourceProvider).enroll(
-            embedding: face.embedding,
-            modelTag: face.modelTag,
-          );
+      final result = await ref
+          .read(faceEnrollmentDataSourceProvider)
+          .enroll(cropBase64: face.cropBase64);
       if (!mounted) return;
       setState(() {
         _status = FaceEnrollmentStatus(

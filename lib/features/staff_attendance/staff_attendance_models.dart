@@ -50,24 +50,32 @@ class AttendanceLocationFix {
 /// [embedding]. Slice 2: when both this and the enrolled reference's model tag
 /// are non-empty and differ, the server 422s FACE_EMBEDDING_MISMATCH ("re-enrol")
 /// instead of silently comparing embeddings from two different model spaces.
+/// A live face capture, as an ALIGNED 112x112 crop — not an embedding.
+///
+/// The client used to compute the embedding on-device and post it. That made
+/// template forgery possible: a tampered build could enrol vector E and replay
+/// it forever, and the server had no way to tell, because it only ever saw a
+/// number array. The server now derives the embedding itself from [cropBase64],
+/// so the client cannot fabricate one. The server REFUSES a request carrying an
+/// embedding (`FACE_EMBEDDING_NOT_ACCEPTED`), so this is not a soft migration —
+/// an old client fails loudly rather than silently degrading.
 class FaceCapture {
   const FaceCapture({
-    required this.embedding,
+    required this.cropBase64,
     required this.livenessPassed,
     this.captureRef,
-    this.modelTag = '',
   });
 
-  final List<double> embedding;
+  /// Base64 of the aligned 112x112 face crop (JPEG or PNG). ~10-20 KB, so the
+  /// upload stays small enough not to dominate check-in latency.
+  final String cropBase64;
   final bool livenessPassed;
   final String? captureRef;
-  final String modelTag;
 
   Map<String, dynamic> toJson() => {
-        'embedding': embedding,
+        'crop': cropBase64,
         'livenessPassed': livenessPassed,
         if (captureRef != null) 'captureRef': captureRef,
-        'modelTag': modelTag,
       };
 }
 

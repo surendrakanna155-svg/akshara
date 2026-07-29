@@ -95,7 +95,6 @@ import 'admissions_navigation.dart';
 import 'finance_navigation.dart';
 import '../features/settings/appearance_settings_screen.dart';
 import '../core/reliability/sync_center/sync_center_screen.dart';
-import '../features/staff_attendance/device/face_embedder.dart';
 import '../features/staff_attendance/device/mlkit_face_capture.dart';
 import '../features/staff_attendance/face_enrollment_screen.dart';
 import 'copilot_navigation.dart';
@@ -264,12 +263,7 @@ GoRouter createAppRouter({
       GoRoute(
         path: RouteNames.staffFaceCapture,
         name: 'staffFaceCapture',
-        builder: (context, state) {
-          final extra = state.extra;
-          return FaceCaptureScreen(
-            embedder: extra is FaceEmbedder ? extra : null,
-          );
-        },
+        builder: (context, state) => const FaceCaptureScreen(),
       ),
       GoRoute(
         path: RouteNames.staffFaceEnrollment,

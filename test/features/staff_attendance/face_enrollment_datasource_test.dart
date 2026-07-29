@@ -61,15 +61,18 @@ void main() {
 
       final ds = FaceEnrollmentDataSource(dio: dio, query: RepositoryQuery.demo);
       final result = await ds.enroll(
-        embedding: List.filled(192, 0.01),
-        modelTag: 'mobilefacenet-v1',
+        cropBase64: 'Y3JvcC1ieXRlcw==',
       );
 
       expect(result.id, 'enr_1');
       expect(result.modelTag, 'mobilefacenet-v1');
       expect(result.enrolledAt, DateTime.parse('2026-07-11T10:00:00.000Z'));
-      expect(capturedBody?['modelTag'], 'mobilefacenet-v1');
-      expect((capturedBody?['embedding'] as List).length, 192);
+      // Enrolment posts the CROP; the server derives the embedding and stamps
+      // the tag. Sending either from here would put the reference in a
+      // different space from what check-in derives, and nothing would match.
+      expect(capturedBody?['crop'], 'Y3JvcC1ieXRlcw==');
+      expect(capturedBody?.containsKey('embedding'), isFalse);
+      expect(capturedBody?.containsKey('modelTag'), isFalse);
       expect(capturedQuery?['tenantId'], RepositoryQuery.demo.tenantId);
       expect(capturedQuery?['schoolId'], RepositoryQuery.demo.schoolId);
     });
@@ -88,7 +91,7 @@ void main() {
       final ds = FaceEnrollmentDataSource(dio: dio, query: RepositoryQuery.demo);
 
       await expectLater(
-        () => ds.enroll(embedding: const [0.1, 0.2]),
+        () => ds.enroll(cropBase64: 'Y3JvcC1ieXRlcw=='),
         throwsA(
           isA<FaceEnrollmentRejected>().having(
             (e) => e.code,
@@ -104,7 +107,7 @@ void main() {
       final ds = FaceEnrollmentDataSource(dio: dio, query: RepositoryQuery.demo);
 
       await expectLater(
-        () => ds.enroll(embedding: const [0.1, 0.2]),
+        () => ds.enroll(cropBase64: 'Y3JvcC1ieXRlcw=='),
         throwsA(isA<DioException>()),
       );
     });
