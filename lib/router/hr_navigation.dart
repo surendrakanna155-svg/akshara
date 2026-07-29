@@ -49,15 +49,22 @@ Widget hrStaffManualRequestRouteBuilder(
   return const ManualAttendanceRequestScreen();
 }
 
-/// PRA-P0-15 — approver queue for manual-attendance requests. Client gate is a
-/// manage-level guard (closest representable proxy for `approveStaffAttendance`,
-/// which the server re-enforces on the decide endpoint).
+/// PRA-P0-15 — approver queue for manual-attendance requests.
+///
+/// Guarded on `approveStaffAttendance`, the exact slug the server enforces on
+/// the decide endpoint, and matching `canApproveManualAttendanceProvider` which
+/// gates the button that leads here.
+///
+/// It must be an [ApprovePermissionGuard], not a [ManagePermissionGuard]:
+/// `hasManagePermission` requires the permission NAME to start with `manage`
+/// (see `isManagePermission`), so a manage-guard holding an `approve*` slug
+/// denies every role unconditionally.
 Widget hrStaffManualRequestQueueRouteBuilder(
   BuildContext context,
   GoRouterState state,
 ) {
-  return const ManagePermissionGuard(
-    permission: Permission.manageHr,
+  return const ApprovePermissionGuard(
+    permission: Permission.approveStaffAttendance,
     child: ManualAttendanceApproverScreen(),
   );
 }

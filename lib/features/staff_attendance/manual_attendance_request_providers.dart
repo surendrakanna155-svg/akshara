@@ -25,11 +25,21 @@ final pendingManualAttendanceRequestsProvider =
 
 /// Client-side gate for the approver queue nav entry.
 ///
-/// The server enforces the exact `approveStaffAttendance` slug on the decide
-/// endpoint (the authoritative gate). The client `Permission` enum does not yet
-/// carry that slug, so the nav entry is gated on the closest representable
-/// supervisory permission — `manageHr` (held by school-admin / management /
-/// super-admin). Overridable in tests.
+/// Gated on the SAME slug the server enforces on the decide endpoint —
+/// `approveStaffAttendance` — via the approve-class check, so this provider and
+/// [ApprovePermissionGuard] on the route agree by construction.
+///
+/// This previously read `manageHr`, on a stale premise that the client
+/// `Permission` enum did not carry the real slug. It does
+/// ([Permission.approveStaffAttendance]), and the proxy was wrong in BOTH
+/// directions: Principal and Vice-Principal — the approvers the attendance
+/// design names — hold `approveStaffAttendance` but NOT `manageHr`, so they were
+/// hidden from their own queue; while `hrManager` holds `manageHr` but not the
+/// approve slug, so they saw a button the server would 403.
+///
+/// Overridable in tests.
 final canApproveManualAttendanceProvider = Provider<bool>((ref) {
-  return ref.watch(rbacServiceProvider).hasPermission(Permission.manageHr);
+  return ref
+      .watch(rbacServiceProvider)
+      .hasApprovePermission(Permission.approveStaffAttendance);
 });

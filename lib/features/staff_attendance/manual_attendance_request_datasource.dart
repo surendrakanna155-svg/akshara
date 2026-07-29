@@ -40,7 +40,14 @@ class ManualAttendanceRequestRemoteDataSource
   final Dio _dio;
   final RepositoryQuery _query;
 
+  /// POST target — the singular route that RAISES a request.
   static const String _base = '/staff-attendance/manual-request';
+
+  /// GET target — the PLURAL route that lists them. The server registers these
+  /// as two distinct paths (`staff_attendance_router.ts:42-48`); there is no
+  /// `GET /staff-attendance/manual-request`, so reading from [_base] 404s.
+  static const String _listPath = '/staff-attendance/manual-requests';
+
   static const String _decidePath = '/staff-attendance/manual-request/decide';
 
   @override
@@ -70,9 +77,13 @@ class ManualAttendanceRequestRemoteDataSource
   @override
   Future<List<ManualAttendanceRequest>> listPending() async {
     try {
+      // No `status` filter: the server has none. Omitting `mine=true` IS the
+      // request for the school's pending approval queue, and it re-gates that
+      // read on `approveStaffAttendance` (`handleListManualRequests`). The
+      // previous `status: 'pending'` param was never read by anything.
       final response = await _dio.request<Map<String, dynamic>>(
-        _base,
-        queryParameters: <String, dynamic>{..._scope(), 'status': 'pending'},
+        _listPath,
+        queryParameters: _scope(),
         options: Options(method: 'GET'),
       );
       final data = response.data?['data'];
