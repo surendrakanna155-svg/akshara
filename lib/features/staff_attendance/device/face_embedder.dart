@@ -41,6 +41,15 @@ class FaceImageRgb {
 abstract interface class FaceEmbedder {
   Future<List<double>> embed(FaceImageRgb face);
 
+  /// Loads whatever [embed] will need, ahead of time.
+  ///
+  /// Throws the SAME [AttendanceCaptureException] `embed` would — so a caller
+  /// can discover an unusable embedder BEFORE putting the user through a
+  /// capture ceremony, instead of after. Safe to call repeatedly; a successful
+  /// warm-up is cached, so this also removes the model load from the latency of
+  /// the first capture.
+  Future<void> warmUp();
+
   /// Identifies the model that produced [embed]'s output — sent to the server
   /// as `face.modelTag` (see [mobileFaceNetModelTag]).
   String get modelTag;
@@ -135,6 +144,11 @@ class MobileFaceNetEmbedder implements FaceEmbedder {
             'face check-in.',
       );
     }
+  }
+
+  @override
+  Future<void> warmUp() async {
+    await _loadInterpreter();
   }
 
   @override

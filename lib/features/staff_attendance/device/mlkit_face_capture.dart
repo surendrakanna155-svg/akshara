@@ -110,6 +110,14 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
 
   Future<void> _init() async {
     try {
+      // Pre-flight the embedder BEFORE the camera and the blink challenge.
+      // Without this, a build whose face model is absent still runs the user
+      // through the entire ceremony — permission prompt, camera, hold-still,
+      // blink — and only then fails with FACE_MODEL_MISSING. The check-in was
+      // never going to succeed; say so in the first second rather than the
+      // last. Warming up also moves the model load off the capture path.
+      await widget.embedder.warmUp();
+
       final cameras = await availableCameras();
       final front =
           cameras.where((c) => c.lensDirection == CameraLensDirection.front);
@@ -144,6 +152,13 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
       );
       setState(() => _controller = controller);
       await _startStream();
+    } on AttendanceCaptureException catch (e) {
+      // Terminal and not fixable by retrying (FACE_MODEL_MISSING). Pop with the
+      // typed failure, exactly as the post-liveness path does — the contract in
+      // `capture()` above. Rendering it inline would strand the user on a dead
+      // camera screen, which is the dead-end this flow is written to avoid.
+      if (!mounted) return;
+      Navigator.of(context).pop(e);
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = 'Could not start the camera: $e');

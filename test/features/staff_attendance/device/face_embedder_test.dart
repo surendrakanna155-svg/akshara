@@ -123,5 +123,34 @@ void main() {
         ),
       );
     });
+
+    test('warmUp() reports the SAME failure, so the caller can fail before the '
+        'ceremony instead of after it', () async {
+      // FaceCaptureScreen._init() calls this before opening the camera. Without
+      // it, a build with no bundled model still walks the user through the
+      // permission prompt, the preview, hold-still and the blink challenge —
+      // and only then admits the check-in was never going to succeed.
+      await expectLater(
+        MobileFaceNetEmbedder().warmUp,
+        throwsA(
+          isA<AttendanceCaptureException>()
+              .having((e) => e.code, 'code', 'FACE_MODEL_MISSING')
+              .having((e) => e.step, 'step', AttendanceCaptureStep.face),
+        ),
+      );
+    });
+
+    test('warmUp() is still construction-safe and repeatable', () async {
+      final embedder = MobileFaceNetEmbedder();
+      // Calling it twice must fail the same way, not throw something new from a
+      // half-initialised interpreter — the screen may retry.
+      for (var attempt = 0; attempt < 2; attempt++) {
+        await expectLater(
+          embedder.warmUp,
+          throwsA(isA<AttendanceCaptureException>()
+              .having((e) => e.code, 'code', 'FACE_MODEL_MISSING')),
+        );
+      }
+    });
   });
 }
