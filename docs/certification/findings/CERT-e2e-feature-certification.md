@@ -264,3 +264,189 @@ reads the singleton once and — having nothing to watch — caches that value f
 life of the app. Changing the scale therefore does not reach the tabulation and
 distribution reports in the same session.
 
+---
+
+# 4 — Documents & records (SIS · Admissions · Homework)
+
+Traced: the school asks for a document → it is uploaded → it is verified → a
+decision is taken on it.
+
+| Link | State | Evidence |
+|---|---|---|
+| First action | ❌ | **there is no file picker in the product** — `file_picker` is not a dependency; `image_picker` is used only by the support screen |
+| UI | ❌ | the dialogs collect a *document type* and a *file name* as free text |
+| Validation | ❌ | nothing checks a type against a required-documents list, and there is nothing to validate because there is no file |
+| API | ✅ | the Storage path itself is real: presign → PUT bytes → confirm |
+| Database | ⚠️ | a document row is created and is retrievable — pointing at a blank page |
+| Audit | ✅ | verification decisions are audited |
+| Notifications | ❌ | none on request, upload or verification |
+| Related modules | ❌ | admissions approval, TC/clearance and homework grading all consume these rows as if they were documents |
+| Final outcome | ❌ | **the school's record asserts it holds a document it does not hold — E2E-017** |
+
+This is the single widest defect found in this workstream: four upload surfaces
+(SIS student documents, admissions documents, student homework submission,
+teacher homework attachment) all post the same hard-coded five-line blank PDF.
+Each source file documents the substitution as a temporary stand-in for a missing
+platform picker; it ships.
+
+---
+
+# 5 — HR & Payroll
+
+| Link | State | Evidence |
+|---|---|---|
+| First action | ✅ | `showGeneratePayrollRunDialog` — period pre-filled with the current month |
+| UI | ⚠️ | period is a free-text field ("Period (e.g. July 2026)") |
+| Validation | ❌ | no format validation client- or server-side; `period` is `requireStr` only — **E2E-018** |
+| API | ✅ | `POST /hr/payroll/run/generate`, `manageHr`, entitlement-gated |
+| Database | ✅ | draft run + entries via a guarded snapshot mutation; a processed run is refused 409 |
+| Audit | ✅ | payroll writes are audited |
+| Notifications | ❌ | no payslip notification to staff |
+| Reports | ✅ | register + payslips |
+| Analytics | ⚠️ | LOP term permanently zero (**XMOD-012**); attendance % non-canonical (**XMOD-038**) |
+| Related modules | ❌ | teacher-app leave never reaches payroll (**XMOD-011**); approved leave counted as absence (**XMOD-003**) |
+| Final outcome | ⚠️ | a run is produced; the statutory month is always `null` — **E2E-018** |
+
+**No HR role exists** to run any of this (**JOURNEY-012**) — payroll is reachable
+only by the principal or a school admin.
+
+---
+
+# 6 — Inventory & Procurement
+
+| Link | State | Evidence |
+|---|---|---|
+| First action | ✅ | Create purchase order; the vendor dropdown is built from the real catalog, with an inline "Add vendor" when it is empty (good) |
+| UI | ⚠️ | items and total amount are single free-text fields — there is no line-item editor |
+| Validation | ⚠️ | client checks only that a vendor is selected; amount and items may be blank |
+| API | ❌ | **the client sends the vendor's display name in the `vendorId` field — E2E-019** |
+| Database | ❌ | `purchase_orders.vendor_id` is `UUID NOT NULL REFERENCES inventory_vendors(id)`; a display name cannot cast |
+| Audit | ✅ | `purchaseOrderCreated` + `inventory.procurement.created` domain event (server side, correct) |
+| Final outcome | ❌ | a purchase order cannot be created from the app |
+
+Secondary, in the same adapter: the free-text PO is translated into **one synthetic
+line** (`sku: 'GEN-<PO>'`, `quantity: 1`, `unitCost: <the whole total>`), so
+per-item goods receipt against the PO is structurally impossible; and
+`purchase_orders.total_amount` is `INTEGER`, so any paise in the typed total are
+lost.
+
+**Verified clean:** `withMockWriteFallback` — used by the transport, hostel,
+library, inventory, HR, director and predictions hybrid repositories — routes a
+write to the in-memory mock when `ApiNotConnectedException` is raised. A
+repo-wide grep shows **nothing throws that exception**, so no live write silently
+lands in a mock. This was checked because it is exactly the silent-success shape
+this workstream is looking for; it is not one.
+
+---
+
+# 7 — Cross-cutting: dates are stored as display labels
+
+Not one defect but a pattern, found independently in five modules:
+
+| Where | Column / field | Consequence |
+|---|---|---|
+| Attendance corrections | `date_label TEXT` (`session_date DATE` exists, never written) | the correction is applied to the wrong day (**E2E-004**) |
+| Exams | `date_label TEXT`, no `exam_date` | no datesheet ordering, no clash detection, no reminder (**E2E-014**) |
+| Admissions follow-ups | `scheduledLabel`, default `'Tomorrow 10:00 AM'` | nothing can remind the counsellor |
+| Finance collections | client sends the literal `'Today'` | day-close lock bypassed, receipt number reads `NaN` (**E2E-008**) |
+| HR payroll | `period` free text ("July 2026") vs a parser expecting `YYYY-MM` | statutory month always `null` (**E2E-018**) |
+
+In every case a real date type exists nearby — `marksEntryDeadline` is a validated
+timestamp on the same exam row; `session_date` is a `DATE` column on the same
+corrections row; `finance_collections.collection_date` is a `DATE`. The pattern is
+not an architectural constraint, it is an unfinished migration from labels to
+dates, and it is why four separate features cannot schedule, sort, or validate
+anything time-based.
+
+---
+
+# 8 — Modules traced but not defect-bearing here
+
+These were opened and read; nothing new was found beyond what other workstreams
+already recorded. Stating what was checked, per the charter's honesty rules.
+
+| Module | What was checked | Verdict |
+|---|---|---|
+| **Certificates (PRC-A desk)** | `certificate_desk_repository.ts` state machine, the raise dialog, the approval effect | The lifecycle is properly guarded — `pending → approved/rejected → issued/blocked_dues`, each transition a single guarded UPDATE, with a distinct `blocked_dues` terminal state and an `issue_note` recording why. No new defect. The module's real problems are already filed: **XMOD-008** (fee certificate rejected by a DB CHECK), **XMOD-023** (never delivered to the parent), **XMOD-031** (library-blocked TC returns an opaque 500), **XMOD-039** (no parent-facing request surface), **XMOD-021** (no-dues means fees only) |
+| **Transport** | `transport_workflow_actions.dart` bulk raise-demand loop | The per-student loop counts `raised / alreadyBilled / failed` and reports all three honestly in the snackbar — a good example of the opposite of E2E-001. Pre-filled `'Akshara Main Gate'` drop point and `'annual'` term are cosmetic. **XMOD-004** (allocation raises no demand) is the module's real defect |
+| **Library** | `library_workflow_actions.dart` issue/return/fine/waive dialogs | Fine waiver names the amount and the member in the confirmation; the threshold setting is `int.tryParse`-guarded. No new defect |
+| **Hostel** | allocation dialog | Pre-filled block `'A'` / beds `'2'` are plausible defaults, not fabricated records |
+| **Communication** | broadcast admin → `notifications_queue` → delivery | Already fully covered by **SIM-001** (nothing monitors the queue), **XMOD-019** (enqueued, never drained), **XMOD-015**, **XMOD-018** |
+| **Leave** | teacher/parent submit → approval effect | Already fully covered by **XMOD-002**, **XMOD-003**, **XMOD-011** — the two disjoint leave stores and the missing date window are the module |
+
+# 9 — What this workstream certified as sound
+
+Recording these explicitly, because a register of 120 defects otherwise implies
+a product with no working parts, and that is not what the code shows.
+
+1. **Class attendance submit** — one session per class/date/period whoever marks
+   it; exact roster reconciliation; submitted sessions immutable; teacher
+   ownership enforced; approved leave auto-excused; audited in-transaction.
+2. **Exam marks entry** — bounds enforced in three places (client, handler, DB
+   CHECK); published marks immutable; optimistic concurrency; subject teachers
+   scoped to exams they teach; every cell change individually audited with its
+   before value.
+3. **The fee collection transaction itself** — invoice row-locked, idempotency
+   key replayed, over-collection rejected, receipt number allocated last so a
+   rollback never burns one, parent notified after commit. (Its *inputs* are
+   defective — E2E-008 — but the transaction is right.)
+4. **Offline instrument reconciliation** — `FOR UPDATE` before the state check, a
+   single consistent lock order, idempotent re-reconcile, a guarded terminal
+   write that fails closed, and two partial-unique DB indexes as backstops. A
+   cheque cannot be double-credited.
+5. **The certificate-desk state machine** — guarded transitions with a distinct
+   blocked terminal state.
+6. **`withMockWriteFallback`** — checked specifically for the silent-success
+   shape; nothing throws the exception it catches, so no live write lands in a
+   mock.
+
+# 10 — Coverage and boundaries
+
+**Traced end to end:** attendance (mark + correct), fees (counter collection +
+instrument register), exams (create · marks · publish · report card · settings),
+documents/uploads (SIS · admissions · homework), payroll (run generation),
+procurement (PO creation).
+
+**Read but not fully traced:** transport, library, hostel, communication, leave,
+certificates — each already carries a complete trace from XMOD/SIM/JOURNEY; this
+workstream checked them for the four weighted defect classes only and cites those
+findings rather than duplicating them.
+
+**Not reached in this pass:** alumni, control centre, director portal, multi-school
+and the platform verticals. All are outside the "what a school touches daily"
+prioritisation this workstream was given, and none is a money, marks, attendance
+or records path.
+
+**Boundaries that could not be crossed** (charter): no Postgres lane, so every
+"writes row X" claim here is proved from the handler SQL plus the migration that
+defines the column, never from an observed row — this is why E2E-004 and E2E-008
+are argued from the *absence of a producer* and from *string-comparison semantics*
+rather than from a query result. No live VPS. No release binary. No live payment
+gateway, so the Razorpay leg of §2 remains UNKNOWN as the feature inventory
+already records.
+
+# Appendix — defects raised by this workstream
+
+| ID | Sev | Module | One line |
+|---|---|---|---|
+| E2E-001 | P1 | Attendance | A rejected submit is reported as a data-entry mistake |
+| E2E-002 | P1 | Attendance | Correction dialog pre-filled with a fabricated date and reason |
+| E2E-003 | P1 | Attendance | Staff correction route trusts the body for who is asking |
+| E2E-004 | **P0** | Attendance | Approved corrections apply to the wrong day; no day but today can be marked |
+| E2E-005 | P1 | Attendance | Corrections admin screen reports submission status from a mock store |
+| E2E-006 | P2 | Attendance | A live route approves a correction without applying it |
+| E2E-007 | P1 | Attendance | Approving a correction that matches no record reports success |
+| E2E-008 | **P0** | Finance | The counter sends `"Today"` — day-close bypassed, receipts read `NaN` |
+| E2E-009 | P1 | Finance | Instrument register defaults to a demo invoice ID and validates nothing |
+| E2E-010 | P1 | Finance | Cash recorded in the instrument register is never money |
+| E2E-011 | **P0** | Teacher / Records | Student risk dossier fabricates attendance, marks, homework and fees |
+| E2E-012 | **P0** | Exams | "Export marks summary" exports a seeded demo exam |
+| E2E-013 | P2 | Exams | Create-exam dialog pre-fills a date, time, room and term |
+| E2E-014 | P1 | Exams | An exam has no machine-readable date |
+| E2E-015 | P1 | Report cards | Overall grade ignores the school's grading scale |
+| E2E-016 | P1 | Exams | The grading-scale setting never leaves the device |
+| E2E-017 | **P0** | SIS · Admissions · Homework | Every upload uploads a synthetic empty PDF |
+| E2E-018 | P1 | Payroll | Free-text period → statutory month always null; a month can run twice |
+| E2E-019 | **P0** | Procurement | PO create sends the vendor's name where a UUID is required |
+| E2E-020 | P2 | Admissions | A follow-up is "scheduled" for a string |
+| E2E-021 | P2 | AI content | A failed generation is returned as generated content |

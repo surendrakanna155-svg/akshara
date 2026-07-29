@@ -33,6 +33,10 @@ completes, ahead of ordinary P0 ordering.
 | **WIDGET-011** | The principal's "School health score" is blended from hard-coded fallbacks (68 and 31) whenever the real figures are absent, so a school with no data is shown a confident **51**. A fabricated financial claim to the owner. |
 | **JOURNEY-001** | The `/admin` landing hero — the first screen 6 of 15 staff roles see, every day — renders compile-time constants as live KPIs: "1,248 Students · 86 Staff · **96% Attendance**" and "**₹4.2L Collected today** · ₹1.8L Pending". Fabricated attendance and financial data, on day one at an empty school, with no failure required to trigger it. |
 | **JOURNEY-007** | `/parent/payment` falls back to a fabricated payment summary — another child's name, "₹4,000 + ₹200 late fee", a due date — whenever the live summary call fails or is still loading, and sends that fabricated **amount** to `POST /parent/payments/initiate`. Fabricated money on the payment write path. |
+| **E2E-017** | **There is no file picker in the product.** All four upload surfaces — SIS student documents, admissions documents, student homework submission, teacher homework attachment — post the same hard-coded blank PDF under a user-typed file name. A clerk can then mark that blank page **verified**, and an admission can be approved on a documents checklist made entirely of them. Fabricated records data, on the paths that hold a child's legal documents. |
+| **E2E-008** | The counter's "Record collection" sends the literal string `'Today'` as the payment date. The FIN-D1 closed-day guard compares it lexically and returns "not locked" every time, so **closed and reported books silently take new money**; and `fiscalYearOf("Today")` returns `"NaN-NaN"`, so the receipt number handed to the parent reads `SCH/NaN-NaN/000042` and every fiscal year shares one sequence. |
+| **E2E-011** | `/teacher/student-risk/:id` shows a class teacher a student's Attendance, Homework and **Fees** rows composed from constants — `92`, `80`, and `feeAccountId == 'acct_ravi' ? '₹4,200 due' : 'No dues'`. A teacher is shown "No dues" for a student who may owe fees, on the screen they open before a parent meeting. |
+| **E2E-012** | The teacher's **Export marks summary** builds its CSV/PDF from the seeded demo exam (`exam_math_8a`, "Unit Test — Mathematics", mock roster) rather than the school's exams — a shareable document of examination data about an exam that does not exist. |
 
 ## Severity
 
@@ -52,11 +56,12 @@ Root cause (if known) · Recommended fix · Dependencies · Risk · Evidence`
 
 | Total | P0 | P1 | P2 | P3 |
 |---|---|---|---|---|
-| 99 | 19 | 56 | 21 | 3 |
+| 149 | 25 | 80 | 38 | 6 |
 
 By workstream: **CERT** 6 (1 P0 · 5 P1) · **XMOD** 39 (10 P0 · 22 P1 · 7 P2) ·
 **DAI** 16 (2 P0 · 7 P1 · 5 P2 · 2 P3) · **WIDGET** 18 (3 P0 · 8 P1 · 6 P2 · 1 P3) ·
-**JOURNEY** 16 (3 P0 · 10 P1 · 3 P2) · **SIM** 4 (4 P1).
+**JOURNEY** 16 (3 P0 · 10 P1 · 3 P2) · **SIM** 4 (4 P1) · **E2E** 21 (6 P0 · 11 P1 · 4 P2) ·
+**POLISH** 23 (10 P1 · 10 P2 · 3 P3) · **AI** 6 (3 P1 · 3 P2).
 
 *(Certification in progress.)*
 
@@ -3171,3 +3176,1669 @@ so the capability is not counted as delivered.
   `lib/features/teacher/teacher_mutations_provider.dart:618-648`;
   `pubspec.yaml:58` (only `image_picker`, used solely at
   `lib/features/support/report_issue_screen.dart:54`).
+
+### E2E-018 · **P1** · HR / Payroll · The payroll period is free text, so the statutory month is always null and a month can be run twice
+
+- **Repro steps:**
+  1. HR → Payroll → **Generate payroll run**. The period is pre-filled
+     `"July 2026"` (helper text: *"Period (e.g. July 2026)"*). Generate.
+  2. Configure a state with a special-month Professional Tax slab (e.g. the
+     February slab used in several states) and generate that month's run. Compare
+     the PT deducted with the configured special-month slab.
+  3. Generate again, this time typing `"Jul 2026"`.
+- **Expected:** One run per calendar month; the special-month PT slab applied in
+  that month.
+- **Actual:**
+  - **The special-month PT slab can never be selected.** The handler computes
+    `statutory.month = monthFromPeriod(period)`, and `monthFromPeriod` matches
+    `/^\d{4}-(\d{2})/` — a `YYYY-MM` period. The app's own default and helper text
+    produce `"July 2026"`, which never matches, so `month` is `null` on every run
+    generated from the app. `computePtFromSlabs` then does
+    `month != null ? inBand.find(s => s.month === month) : undefined`, falls
+    through to the month-agnostic slab, and a school that configured a
+    special-month slab silently never gets it. A statutory deduction, computed on
+    the wrong slab, on every payslip in that month.
+  - **A month can be run twice.** `payrollRunIdForPeriod` slugs the free text, so
+    `"July 2026"` → `pay_run_july_2026`, `"Jul 2026"` → `pay_run_jul_2026`,
+    `"2026-07"` → `pay_run_2026_07` — three distinct runs, each independently
+    processable into payslips, for one month. `period` is `requireStr` on the
+    server with no format check and no uniqueness constraint on the month.
+- **Root cause:** two representations of a period — a human label in the client
+  and `YYYY-MM` in the statutory engine — with no normalisation between them.
+- **Recommended fix:** replace the text field with a month picker producing
+  `YYYY-MM`; validate the format server-side (422 otherwise); derive the display
+  label for the UI; and reject a second draft for a month that already has a
+  processed run.
+- **Dependencies:** **XMOD-012** (LOP term zero) and **XMOD-003** (approved leave
+  counted as absence) affect the same run; all three should be fixed together
+  before payroll is certified.
+- **Risk of fixing:** medium — changes run ids, so existing runs need a mapping.
+- **Evidence:** `lib/features/hr/hr_workflow_actions.dart:451,478-487,509-524`;
+  `_shared/hr/hr_write_handlers.ts:1573,1609-1621`;
+  `_shared/hr/statutory_payroll.ts:358-363` (the `YYYY-MM` parser),
+  `:198-215` (special-month slab selection), `:356` (the comment that documents
+  the null case without noticing the client never satisfies the parser).
+
+### E2E-019 · **P0** · Inventory / Procurement · A purchase order cannot be created — the client sends the vendor's name where a UUID is required
+
+- **Repro steps:** Inventory → Procurement → **Create purchase order**. Select a
+  vendor from the dropdown, type items and a total, tap **Create draft PO**.
+- **Expected:** A draft PO.
+- **Actual:** An error. `ApiInventoryRepository.createProcurementOrder` builds the
+  request body with **`'vendorId': request.vendorName.trim()`** — the vendor's
+  human display name — discarding the `vendorId` the dialog carefully captured
+  from the selected catalog row. `purchase_orders.vendor_id` is
+  `UUID NOT NULL REFERENCES inventory_vendors (id)`, so Postgres rejects the
+  INSERT with `invalid input syntax for type uuid` (22P02). The handler's catch
+  maps only `PO_LINES_REQUIRED`, so the error rethrows as an unmapped **500** and
+  the user sees a generic failure with no indication of what is wrong. Procurement
+  — the module's primary write — is unusable on the live path.
+
+  `withMockWriteFallback` does **not** rescue it: it catches only
+  `ApiNotConnectedException`, which nothing in the codebase throws. So this fails
+  loudly rather than silently, which is the one good thing about it.
+- **Root cause:** the adapter that translates the app's free-text PO into the
+  server's structured PO uses the wrong field. The adapter's own comment
+  enumerates what the server needs ("requires a vendorId, a poNumber, and
+  structured lines") and then supplies the name.
+- **Recommended fix:** send `request.vendorId`. Separately: map 22P02 / FK
+  violations in the handler to a 422 with a useful message; and consider whether
+  the single synthetic line (`sku: 'GEN-<PO>'`, `quantity: 1`,
+  `unitCost: <whole total>`) is acceptable — it makes per-item goods receipt
+  against the PO impossible, and `total_amount INTEGER` drops any paise.
+- **Dependencies:** blocks certification of goods receipt, the AP commitment and
+  the inventory→finance reconciliation that consume the PO.
+- **Risk of fixing:** low for the field; medium if a real line-item editor is
+  added.
+- **Evidence:** `lib/core/repositories/api/inventory/api_inventory_repository.dart:124-160`
+  (line 143 is the defect);
+  `lib/features/inventory/inventory_workflow_actions.dart:130-145` (the dialog
+  does capture `vendor.id`);
+  `supabase/migrations/20260614920000_inventory_finance_integration.sql:3-15`;
+  `_shared/inventory_finance/inventory_finance_handlers.ts` (`handleCreatePurchaseOrder`,
+  catch maps only `PO_LINES_REQUIRED`);
+  `lib/core/repositories/api/hybrid_write_fallback.dart:4-13`.
+
+### E2E-020 · **P2** · Admissions · A follow-up is "scheduled" for a string
+
+- **Repro steps:** Admissions → a lead → **Add follow-up**. The Scheduled field is
+  pre-filled `'Tomorrow 10:00 AM'`. Save. Wait until tomorrow at 10:00.
+- **Expected:** The counsellor is reminded, or at least the lead list can be
+  sorted by what is due.
+- **Actual:** `FollowUpRequest.scheduledLabel` is a display string. Nothing parses
+  it, nothing schedules from it, and the default means a counsellor who types only
+  the task creates a follow-up nominally due "Tomorrow 10:00 AM" forever. The same
+  literal is the default in the second scheduling dialog at
+  `admissions_workflow_actions.dart:623`.
+- **Root cause:** the label-instead-of-date pattern described in §7 of the finding
+  document.
+- **Recommended fix:** a date-time picker writing a real timestamp, with the label
+  derived for display; then the follow-up can join the reminder rail
+  (**XMOD-033**) once a scheduler exists (**XMOD-016**).
+- **Dependencies:** XMOD-016.
+- **Risk of fixing:** low.
+- **Evidence:** `lib/features/admissions/admissions_workflow_actions.dart:216,247-254,623`.
+
+### E2E-021 · **P2** · AI content · A failed generation is returned as generated content
+
+- **Repro steps:** Open the AI content composer, enter a prompt, generate, with
+  the AI gateway unavailable (no key, network failure, rate limit).
+- **Expected:** An honest failure state.
+- **Actual:** `AiContentService` catches **every** exception and returns an
+  `AiGeneratedContent` whose body is the user's own prompt reformatted —
+  `"Notice: <prompt>\n\nAudience: <audience>. Tone: <tone>."` — stamped
+  `generatedAt: DateTime.now()`. The UI cannot tell this from a real generation.
+  If that text is then sent as a broadcast, the school has published a machine's
+  echo of its own instruction as if it were composed content.
+- **Root cause:** a catch-all fallback that returns a success-shaped value.
+- **Recommended fix:** rethrow, and let the composer show the failure; if a
+  degraded template is wanted, mark it explicitly and block the send action.
+- **Dependencies:** none. Belongs to the AI certification suite (workstream 8);
+  recorded here because it was found while tracing the communication chain.
+- **Risk of fixing:** low.
+- **Evidence:** `lib/features/copilot/content/ai_content_service.dart:32-39`.
+
+### AI-001 · **P1** · DAI / Global search · Fixing DAI-005 before DAI-016 turns 34 silent misroutes into 34 visible false answers
+
+- **Repro steps:** Run `flutter test test/core/dai/` and read
+  `build/dai_certification_report.txt` §WS8-1. Then, as a thought experiment the
+  test makes concrete: give `DaiIntentKind.openPerson` a non-null route (the fix
+  DAI-005 asks for) and re-run. Type `payroll`, `timetable`, `gate pass`,
+  `audit log`, `settings`, `apply leave`, `hostel rooms` or `report card` into
+  the admin search box.
+- **Expected:** A query the product cannot answer produces no card, so the user
+  falls through to plain directory search.
+- **Actual:** `_person` is the last rule in the chain and accepts any unmatched
+  one-to-three-word alphabetic phrase, so **34 of the 42 out-of-vocabulary
+  queries in the certification corpus resolve to `openPerson` at confidence 60**
+  — "Looking for Payroll…", "Looking for Gate Pass…", "Looking for Audit Log…".
+  Honest refusal is **7/42 = 16.7%**. Today none of this is visible, *solely*
+  because `openPerson` has a null route and the overlay filters it before render
+  (DAI-005). The injection probes are worse: 12 of 46 become a person, including
+  "Looking for Rm Rf…", "Looking for Etc Passwd…" and "Looking for Hr Payroll…".
+- **Root cause:** two defects are load-bearing on each other. DAI-005 (dead
+  intent) is currently *masking* DAI-016 (junk drawer). Each is filed as an
+  independent defect, so a remediation wave that picks up DAI-005 alone — the
+  smaller, more obviously-correct-looking change — makes the product visibly
+  worse than it is today.
+- **Recommended fix:** sequence it. **DAI-016 first**: give `_person` a positive
+  admission test (an explicit qualifier such as `teacher`/`student`/`sir`, a
+  directory hit, or a name-shaped token that is not a known module noun) instead
+  of accepting everything the earlier rules declined. Add a module-noun stop
+  list covering the 21 uncovered modules. **Only then** wire DAI-005's directory
+  lookup. The harness enforces the order: `AI-002 · the junk drawer` asserts
+  every swallowed query still has a null route, and fails the moment
+  `openPerson` gains one while the drawer is still open.
+- **Dependencies:** DAI-005, DAI-016. Interacts with DAI-007 (an "I don't handle
+  that" state is the honest destination for these 34 queries).
+- **Risk of fixing:** medium. Tightening `_person` will cost recall on genuine
+  bare names ("Rohan" is currently confidence 60 with no qualifier); the
+  directory fallback beneath the card already handles those, so the loss is
+  smaller than it looks.
+- **Evidence:** `lib/core/dai/dai_resolver.dart:295-350` (`_person`, last in
+  `_rules` at :77); `test/core/dai/dai_certification_suite_test.dart`
+  → `AI-002 · the junk drawer — and why DAI-005 must not be fixed alone`;
+  `build/dai_certification_report.txt` §WS8-1 confusion pairs (`unknown ->
+  openPerson`, 34) and §WS8-4 BLOCKLIST.
+
+### AI-002 · **P1** · DAI / Global search · A query naming two modules is answered by whichever rule comes first, with a confident sentence from the wrong one
+
+- **Repro steps:** In the admin search box type `attendance defaulters`. Then
+  type `Rohan marks`.
+- **Expected:** `attendance defaulters` → the attendance-shortage list.
+  `Rohan marks` → that student's report card / dossier.
+- **Actual:** `attendance defaulters` resolves to **`feeDefaulters`** at
+  confidence 90, opens `/finance/defaulters`, and the card reads *"Showing
+  students with outstanding fees."* — an attendance question answered with a
+  **money** list. `Rohan marks` resolves to `exams` at confidence 88 and opens
+  `/school/exam-administration`, the whole-school exam console, for a
+  one-student question.
+- **Root cause:** `DaiResolver.resolve` (`dai_resolver.dart:50-53`) returns the
+  first rule that yields non-null; there is no head-noun/modifier analysis and
+  no contest between rules. `_feeDefaulters` (`:131`) fires on the bare token
+  `defaulters` with no fee word required, so the *attendance* modifier is never
+  consulted. `_exams` fires on `marks` and discards the name entirely.
+- **Recommended fix:** when two module keywords are present, prefer the head
+  noun (the last content word) and require the earlier rule's own domain word;
+  i.e. `_feeDefaulters` should not fire on `defaulters` when an attendance word
+  is also present. Where a person name co-occurs with a module word, resolve to
+  the person-scoped view of that module rather than the school-wide screen.
+- **Dependencies:** related to DAI-009 (multi-intent silently drops half the
+  question) and DAI-010 (`staff attendance today` opens student attendance) —
+  same root cause, different pairs. Fixing rule precedence should address all
+  three together.
+- **Risk of fixing:** medium — precedence changes ripple across the whole rule
+  chain. The golden corpus in `test/core/dai/dai_certification_suite_test.dart`
+  pins the current chain (`homework attendance fees today` → attendanceToday;
+  `fee dues class 8` → openClass) so any ripple is visible in the diff.
+- **Evidence:** `lib/core/dai/dai_resolver.dart:50-53` (first-match-wins),
+  `:128-149` (`_feeDefaulters`, `defaulters` alone suffices), `:231-244`
+  (`_exams`); `build/dai_certification_report.txt` §WS8-1 MISSES.
+
+### AI-003 · **P1** · DAI / SIS · Roll number and admission number — how Indian schools actually identify a student — cannot be resolved
+
+- **Repro steps:** Type `roll number 23`, then `admission number 4471`, then
+  `roll no 12 class 8a`.
+- **Expected:** the student's dossier, or at minimum the class roster scrolled
+  to that roll number.
+- **Actual:** `roll number 23` → **unknown**, no card. `admission number 4471` →
+  **unknown**, no card. `roll no 12 class 8a` → **openClass** at confidence 82:
+  the roll number is silently dropped and the entire class roster opens.
+- **Root cause:** there is no identifier rule. `_person` rejects any string
+  containing a digit (`dai_resolver.dart:312`) precisely to stop
+  "grade 10 fee defaulters" being read as a name, which also excludes every
+  numeric identifier. `_receipt` is the only rule that parses a number, and it
+  requires the literal token `receipt` first (`:112`).
+- **Recommended fix:** add a `_studentIdentifier` rule ahead of `_classLookup`
+  matching `roll (no|number)? <n>`, `adm(ission)? (no|number)? <n>` and a bare
+  admission-number pattern, emitting `openPerson` with the identifier carried in
+  a new field — or, once DAI-005 is wired, resolving through the RBAC-scoped
+  directory by identifier rather than by name. Scope it with the class when both
+  are present.
+- **Dependencies:** DAI-005 (the person path must render before an identifier
+  lookup has anywhere to land); AI-001 (do not widen `_person` to accept digits
+  while it is still the catch-all).
+- **Risk of fixing:** low-medium. A dedicated rule placed before `_classLookup`
+  is additive; the risk is stealing queries from `_classLookup`, which the
+  golden corpus pins.
+- **Evidence:** `lib/core/dai/dai_resolver.dart:312` (digit rejection), `:111-124`
+  (`_receipt` requires "receipt"), `:273-288` (`_classLookup` takes
+  `roll no 12 class 8a`); `build/dai_certification_report.txt` §WS8-1 MISSES;
+  `docs/certification/findings/AI-certification-suite.md` §1.4.
+
+### AI-004 · **P2** · DAI / Test integrity · The shipping golden corpus certifies destinations no user can reach
+
+- **Repro steps:** Read `test/core/dai/dai_resolver_test.dart:15-23` (the corpus
+  doc comment), then rows `:41-44` and `:62-70`. Run `flutter test
+  test/core/dai/dai_resolver_test.dart` — all green.
+- **Expected:** a golden corpus described as "the NLU certification … with the
+  destination it must resolve to" should pin outcomes a user can actually obtain.
+- **Actual:** the file states it covers "every phrasing a principal, teacher,
+  parent or student is expected to type", but **teacher, parent and student can
+  never open the DAI surface at all** (one call site, admin shell only — WS5 §1,
+  re-confirmed in WS8 §2.1 where all three personas score 100% `noSurface`). It
+  pins `_Case('Has my child paid fees?', myFees, route: parentFees)`,
+  `_Case('My attendance', myAttendance, route: studentAttendance)` and
+  `_Case('My exam schedule', exams, route: studentExams)` as certified
+  destinations that no reachable user can be delivered to, and four `openPerson`
+  rows for an intent that never renders (DAI-005). The suite is green while
+  asserting a false premise — the exact failure mode the charter's honesty rules
+  single out.
+- **Root cause:** the corpus was written against the resolver in isolation,
+  before the single-call-site constraint and the shell guard were understood. It
+  tests the function, and documents itself as testing the product.
+- **Recommended fix:** do not delete the rows — they are correct assertions about
+  the *resolver*. Correct the doc comment to say it certifies resolver output
+  only, and annotate the four persona rows and four `openPerson` rows with the
+  defect that makes them unreachable, as
+  `test/core/dai/dai_certification_suite_test.dart` does. End-to-end reachability
+  is certified there.
+- **Dependencies:** DAI-002, DAI-003, DAI-005. Once those are fixed the rows
+  become honest and the annotations can go.
+- **Risk of fixing:** none — comments and test names only.
+- **Evidence:** `test/core/dai/dai_resolver_test.dart:15-23, 41-44, 62-70`;
+  `lib/features/admin/global_search/global_search_overlay.dart:83`;
+  `lib/features/admin/screens/admin_content_scaffold.dart:82`;
+  `build/dai_certification_report.txt` §WS8-2.
+
+### AI-005 · **P2** · DAI / Global search · A two-character class label can never be answered, whatever the resolver does
+
+- **Repro steps:** Open the admin search overlay and type `8A`. Then `9B`,
+  `10`, `KG`.
+- **Expected:** `8A` opens Class 8A — it is how staff refer to a section in
+  speech and on paper.
+- **Actual:** no DAI card, ever. `_resolveDai` returns before calling the
+  resolver: `if (_query.length < 3) return null`
+  (`global_search_overlay.dart:82`). `8A` is two characters, so is `9B`, so is
+  `KG`. Even after `_classLookup` is taught bare labels (WS5 recorded `8A` →
+  unknown), the card would still never appear.
+- **Root cause:** a length heuristic in the consumer, intended to stop the card
+  flickering on the first keystrokes, sitting in front of a vocabulary whose
+  shortest valid terms are two characters.
+- **Recommended fix:** lower the floor to 2, or bypass it for inputs matching a
+  class-label shape (`\d{1,2}[a-e]?`). Debounce rather than length-gate if the
+  concern is flicker.
+- **Dependencies:** must be fixed together with the resolver-side gap (`8A` and
+  `section B` do not resolve today) — fixing either alone changes nothing the
+  user can see.
+- **Risk of fixing:** low. Lowering the floor makes the card appear on
+  two-character input; with the junk drawer still open (AI-001) that is a reason
+  to sequence this after AI-001, not before.
+- **Evidence:** `lib/features/admin/global_search/global_search_overlay.dart:82`;
+  `test/core/dai/dai_certification_suite_test.dart` → `sub-3-character input
+  never reaches the resolver in production`.
+
+### AI-006 · **P2** · DAI / Homework · The same card delivers or bounces depending on hats the card never mentions
+
+- **Repro steps:** As a **principal** (staff, no `ErpRole.teacher`), type
+  `pending homework` and tap the card. Then repeat as a staff user who also
+  holds `ErpRole.teacher` (e.g. Teacher + Inventory Manager).
+- **Expected:** either both land, or the card is not offered to the user who
+  cannot land.
+- **Actual:** both see the identical card — *"Showing pending homework."*,
+  confidence 92, no permission required. The teacher-hatted staff user lands on
+  `/teacher/homework`. The principal and the accounts clerk are bounced to
+  `/admin`. The card is identical in both cases and mentions nothing about
+  teaching claims.
+- **Root cause:** `_homework` carries `requiredPermission: null` by deliberate
+  choice (`dai_resolver.dart:222-224`: "the teacher shell guards the route by
+  persona, so leave requiredPermission null rather than invent a permission
+  RBAC does not know about"). The reasoning is sound; the consequence is that
+  the overlay's permission filter is a no-op for this intent, and the persona
+  guard it defers to (`app_router.dart:2288-2290`) runs only *after* the user
+  has tapped.
+- **Recommended fix:** filter on shell reachability, not only on permission —
+  the overlay should drop any intent whose route the current session cannot
+  enter. That single change also closes DAI-001 and DAI-002 and would have
+  prevented this class of defect at the source, exactly as removing the tiles
+  did for the search registry on 2026-07-28.
+- **Dependencies:** DAI-001, DAI-002 — same fix. **Corrects the scope of
+  DAI-002**, which recorded `homework` as uniformly bouncing; it is conditional,
+  so the remedy is to gate the card, not to delete the intent.
+- **Risk of fixing:** low. A reachability predicate already exists in production
+  (`isAdminErpRoute` + `isPersonaOwnedRoute`); the overlay needs to call it.
+- **Evidence:** `lib/core/dai/dai_resolver.dart:215-228`;
+  `lib/router/app_router.dart:2286-2292`;
+  `lib/features/admin/global_search/global_search_overlay.dart:81-89`;
+  `lib/router/global_search_registry.dart:193-212` (the same fix, already taken
+  on the registry half of the sheet);
+  `test/core/dai/dai_certification_suite_test.dart` → `REFINES WS5 · homework is
+  dead for plain staff, live for a teacher-hat`.
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     POLISH — Workstream 9, Product polish (2026-07-29)
+     Full trace: docs/certification/findings/POLISH-product-polish.md
+     Standard applied: "would a principal paying for this believe it is
+     finished?" A control that responds visually but changes no outcome is
+     treated as polish-critical, per WS6's dead-filter-chip precedent.
+     WIDGET-008/009/010 (ten dashboard filter bars) are NOT re-reported.
+     ═══════════════════════════════════════════════════════════════════════ -->
+
+### POLISH-001 · **P0** ⭐PRIORITY-REMEDIATION-CANDIDATE · Admin shell / Auth · No staff persona can log out; the only profile affordance says "coming soon"
+
+- **Repro steps:** Build a release build (`APP_ENV=production`). Sign in as any
+  staff role — principal, teacher, accountant, admissions counsellor. Tap the
+  avatar in the top app bar, which renders as an enabled button
+  (`Semantics(button: true, label: 'Staff profile')`). Then try to find any
+  other way to end the session.
+- **Expected:** A profile menu, or at minimum a log out action, reachable by
+  every persona.
+- **Actual:** A snackbar reading **"Profile menu coming soon."** — and there is
+  no log-out anywhere else. `confirmAndLogout`
+  (`lib/features/auth/auth_logout.dart:11`) has three call sites: the
+  dev-only branch of the admin scaffold, the parent profile screen, and nothing
+  else. Teacher profile (`teacher_profile_screen.dart:157`, whose "Account"
+  section offers only Settings and Legal), teacher settings, student profile and
+  SIS profile were each checked and contain none. **Parents can log out. Nobody
+  else can.**
+- **Root cause:** `lib/features/admin/admin_content_scaffold.dart:88-111`
+  branches on `isQaLoginEnabledProvider`; the log-out bottom sheet is inside the
+  QA branch, and `guardForRelease` forces `enableQaLogin: false` in a release
+  build (`lib/core/config/environment.dart:161`). The fallback is
+  `_showPlaceholderSnackBar` — a method whose name says what it is
+  (`admin_content_scaffold.dart:57`). None of the 20 `AdminContentScaffold(`
+  call sites passes `onProfileTap`. The only other session-clearing paths are
+  the biometric App Lock recovery button (`lib/app/app.dart:152`, requires App
+  Lock enabled *and* engaged) and declining the legal gate
+  (`lib/features/legal/legal_acceptance_screen.dart:64`).
+- **Why P0 and why a priority candidate:** Indian schools run shared devices —
+  the front-office tablet, the staff-room device, the principal's phone handed
+  to the VP. A teacher who finishes marking attendance cannot end their session,
+  so the next person inherits authenticated access to student PII, fee
+  collection and marks entry. A staff member who leaves the school keeps a live
+  session until the token expires. It is simultaneously a privacy-breach vector,
+  a core daily workflow that cannot complete, and the **first personal
+  affordance a principal touches** — they will tap their own avatar within the
+  first minute of an evaluation and be told the product is unfinished.
+- **Recommended fix:** Move the log-out sheet out of the QA branch and give it a
+  real profile menu (name, role, school, Appearance, Support, Log out). The
+  sheet already exists and works — it is one conditional away.
+- **Dependencies:** None. This is the cheapest P0 in the register.
+- **Risk of fixing:** Low.
+- **Evidence:** `lib/features/admin/admin_content_scaffold.dart:57,88-111`;
+  `lib/core/config/environment.dart:161`;
+  `lib/core/config/environment_provider.dart:21-23`;
+  `lib/features/auth/auth_logout.dart:11`;
+  `lib/features/admin/admin_app_bar.dart:120-131`;
+  `lib/features/teacher/profile/teacher_profile_screen.dart:157,166,173`.
+
+### POLISH-002 · **P1** · Admin shell / Notifications · The bell opens the parent inbox and its badge can never show a count
+
+- **Repro steps:** Sign in as principal. Note the bell in the admin app bar. (a)
+  Have anything at all become unread. (b) Tap the bell.
+- **Expected:** (a) A badge count. (b) A staff-scoped notifications inbox.
+- **Actual:** (a) The badge never appears. (b) The parent persona's route
+  `/parent/notifications` opens.
+- **Root cause:** `lib/features/admin/admin_content_scaffold.dart:83-84` defaults
+  `onNotificationsTap` to `context.push(RouteNames.parentNotifications)` and no
+  admin screen overrides it. Separately, `unreadNotifications` is declared on
+  `AdminAppBar` (`admin_app_bar.dart:19,29,101-102`) and piped through
+  `AdminContentScaffold` (`:31,48,81`) with a default of `0` — and **none of the
+  20 `AdminContentScaffold(` call sites passes it.** The router comment at
+  `app_router.dart:290-292` records that the *teacher* bell was already moved off
+  the parent path for exactly this reason (F-128, giving
+  `/teacher/notifications`); the admin shell was not given the same treatment.
+  The student shell wires the badge correctly
+  (`student_app/dashboard/student_dashboard_screen.dart:57`), which is what makes
+  the admin omission an oversight rather than a decision.
+- **Recommended fix:** Add `/admin/notifications` (or reuse
+  `/teacher/notifications`, which is already role-neutral) and wire
+  `unreadNotifications` from the notifications provider in the shell rather than
+  per screen.
+- **Dependencies:** None.
+- **Risk of fixing:** Low.
+- **Evidence:** `lib/features/admin/admin_content_scaffold.dart:31,48,81,83-84`;
+  `lib/features/admin/admin_app_bar.dart:19,29,101-102`;
+  `lib/router/app_router.dart:284-296`; `lib/router/route_names.dart:36`.
+
+### POLISH-003 · **P1** · All admin modules · Pull-to-refresh exists on 1 of 78 admin list screens
+
+- **Repro steps:** Open Finance → Collections while the accountant posts a
+  receipt at the counter. Pull down. Repeat on defaulters, admissions leads,
+  hostel rooms, library circulation, inventory, gate pass, certificate desk.
+- **Expected:** The list reloads, as it does everywhere in the parent app.
+- **Actual:** Nothing happens, and there is no refresh button either. The only
+  way to see new data is to navigate away and come back.
+- **Root cause:** There are **19 `RefreshIndicator`s in the app; 18 are in the
+  parent / student / teacher / notifications / support surfaces.** The single
+  admin exception is
+  `lib/features/management/school_calendar/school_calendar_screen.dart:79`. Only
+  two admin screens carry an `Icons.refresh` action (`school_calendar_screen.dart:55`,
+  `intelligence/student_success/student_success_screen.dart:167`), and
+  `lib/shared/widgets/akshara_app_bar.dart` has no built-in refresh.
+- **Recommended fix:** Wrap the scroll body in `ErpAsyncBody` with a
+  `RefreshIndicator` bound to the `onRetry` callback **every one of the 78
+  screens already passes**. This is one shared wrapper, not 78 changes.
+- **Dependencies:** None.
+- **Risk of fixing:** Low — the invalidate path already exists and is exercised
+  by the error-retry flow.
+- **Evidence:** `lib/shared/async/erp_async_state.dart:77`;
+  `lib/features/management/school_calendar/school_calendar_screen.dart:55,79`;
+  `lib/shared/widgets/akshara_app_bar.dart`.
+
+### POLISH-004 · **P1** · Platform, Intelligence, Verticals · Permission-denied renders as a bare sentence on a blank white screen (17 screens)
+
+- **Repro steps:** As a principal exploring the product, open any module you do
+  not hold the permission for — Platform Operations, White Label, Branch,
+  Franchise, Platform Intelligence, Student Success, Exam Intelligence, Trust
+  Intelligence, Industry Hub, or any of the four vertical dashboards.
+- **Expected:** The permission state the design system already models —
+  `AksharaErrorState.fromFailure` with `AksharaFailureKind.permission` has its
+  own icon, tone and copy.
+- **Actual:** A centred grey sentence on an otherwise empty `Scaffold`. No icon,
+  no "ask your administrator", no back action, no branding. **Indistinguishable
+  from a crash** — and this is the state a principal is most likely to hit,
+  because exploring means opening things you are not entitled to.
+- **Root cause:** 17 screens hand-roll the denial instead of calling the
+  purpose-built widget.
+- **Recommended fix:** Replace each with `AksharaErrorState.fromFailure(...)`.
+  Mechanical; the widget takes the same information these screens already have.
+- **Dependencies:** None.
+- **Risk of fixing:** Low.
+- **Evidence:** `lib/features/platform/platform_operations/platform_operations_hub_screen.dart:56`;
+  `lib/features/platform/white_label/white_label_hub_screen.dart:18`;
+  `lib/features/platform/branch/branch_screen.dart:19`;
+  `lib/features/platform/franchise/franchise_screen.dart:19`;
+  `lib/features/platform/control_center/intelligence/platform_intelligence_screen.dart:46`;
+  `lib/features/intelligence/student_success/student_success_screen.dart:53`;
+  `lib/features/intelligence/exam/exam_intelligence_screen.dart:59`;
+  `lib/features/intelligence/intelligence_screen.dart:228,297,367`;
+  `lib/features/intelligence/trust/trust_intelligence_hub_screen.dart:51`;
+  `lib/features/industry/industry_hub_screen.dart:24`;
+  `lib/features/verticals/{restaurant,salon,healthcare,accommodation}/*_dashboard_screen.dart:19`.
+
+### POLISH-005 · **P1** · Platform Operations · The hub prints 22 raw exception dumps to the user
+
+- **Repro steps:** Open Platform Operations with the backend unreachable.
+- **Expected:** A styled error state with retry.
+- **Actual:** `App health error: DioException [connection error]: ...` rendered
+  inline in a card, in **22 places**, with no retry on any of them.
+- **Root cause:** The screen interpolates `$error` directly into `Text` at lines
+  `212, 231, 250, 279, 298, 330, 354, 372, 472, 483, 502, 562, 582, 601, 619,
+  638, 667, 686, 736, 762`, plus `:143` (`subtitle: Text('Unavailable: $error')`).
+  Its loading state is a bare `LinearProgressIndicator` (`:211,229,248,277,296`).
+- **Why this matters beyond the screen:** the RC phase closed exactly this defect
+  class ("Raw `DioException` text incl. internal endpoint URLs on the day-one
+  import screen", `docs/roadmap/RC_EXECUTION_LOG.md:71`). The instance was fixed;
+  the class was not swept, and this screen has 22 of them.
+- **Recommended fix:** Route all 22 through `AksharaErrorState` / `ErpAsyncBody`.
+- **Dependencies:** None.
+- **Risk of fixing:** Low.
+- **Evidence:** `lib/features/platform/platform_operations/platform_operations_hub_screen.dart:143,211-762`.
+
+### POLISH-006 · **P1** · Copilot / AI · Every AI quick action opens an empty chat
+
+- **Repro steps:** From the AI dock (or the bottom-nav AI slot, or the admin nav
+  rail), pick a quick action such as "Explain fee defaulters".
+- **Expected:** The assistant opens with that prompt staged in the composer.
+- **Actual:** The assistant opens **blank**. Every quick action, every persona.
+- **Root cause:** `lib/features/copilot/widgets/copilot_ai_quick_actions.dart:132`
+  (`executeCopilotQuickAction`) writes the prompt into
+  `copilotMessageDraftProvider` (`lib/features/copilot/copilot_provider.dart:19`)
+  — **a provider that is never read anywhere in the repository.** The composer
+  (`copilot_screen.dart:29`, `_messageController`) is constructed empty. This is
+  the WIDGET-008 defect shape (state written, never consumed) on the product's
+  flagship AI surface.
+- **Recommended fix:** Seed `_messageController.text` from
+  `copilotMessageDraftProvider` on mount and clear the provider after read.
+- **Dependencies:** None.
+- **Risk of fixing:** Low.
+- **Evidence:** `lib/features/copilot/widgets/copilot_ai_quick_actions.dart:132`;
+  `lib/features/copilot/copilot_provider.dart:19`;
+  `lib/features/copilot/copilot_screen.dart:29`;
+  entry points `copilot/dock/copilot_floating_dock.dart:63`,
+  `copilot_bottom_nav_ai_slot.dart`,
+  `lib/features/admin/admin_navigation_rail.dart:204`.
+
+### POLISH-007 · **P1** · Accessibility / Motion · The OS "Reduce motion" setting has no effect anywhere in the app
+
+- **Repro steps:** Enable Reduce Motion / Remove Animations in Android or iOS
+  accessibility settings. Open NIKSHA OS and navigate between screens.
+- **Expected:** Entrance animations and page transitions are suppressed.
+- **Actual:** Every animation still runs.
+- **Root cause:** `lib/theme/motion.dart:33` —
+  `animationsEnabledInEnvironment => !bool.fromEnvironment('FLUTTER_TEST')`.
+  It **never reads `MediaQuery.disableAnimations`**. Every entrance animation
+  routes through `AksharaMotionAppear` (which wraps all loading, empty and error
+  states) and every page transition through `page_transitions.dart:17`, so the
+  gate is global. The correct check is already written in the codebase — in
+  `lib/shared/widgets/premium/akshara_mount_fade.dart:55`, a widget with **zero
+  production call sites** (see POLISH-017).
+- **Recommended fix:** Add `MediaQuery.maybeDisableAnimationsOf(context)` to the
+  gate. One expression, and it makes every animated surface compliant at once.
+- **Dependencies:** None.
+- **Risk of fixing:** Low — the suppressed path already exists and is exercised
+  under `FLUTTER_TEST`.
+- **Evidence:** `lib/theme/motion.dart:33`; `lib/theme/page_transitions.dart:17`;
+  `lib/shared/widgets/premium/akshara_mount_fade.dart:55`.
+
+### POLISH-008 · **P1** · HR, Management ×5, Admissions ×3, Library, Control Center, Finance · Twelve more filter bars and period pickers the fetch never reads
+
+- **Repro steps:** On HR → Payroll, tap "Last month". On Management → Finance,
+  tap "This quarter". On Admissions → Leads, tap a source. Repeat on the eleven
+  screens below.
+- **Expected:** The list narrows.
+- **Actual:** The chip highlights and the data does not change.
+- **Root cause:** The same defect as WIDGET-008/009/010, but on **list and detail
+  screens rather than dashboards**, so it is outside that entry's scope. In each
+  file the selection provider is `watch`ed only to paint `selectedFilterIndex:`
+  and written on tap; a repo-wide grep finds no other reader — no `.where`, no
+  query parameter, no view-state provider.
+  `admissions/applications/admissions_applications_screen.dart:36,42` ·
+  `admissions/documents/admissions_documents_screen.dart:35,43` ·
+  `admissions/leads/admissions_leads_screen.dart:36,62` ·
+  **`hr/payroll/hr_payroll_screen.dart:36,43`** ·
+  `library/resources/library_resources_screen.dart:34,43` ·
+  `management/academics/management_academics_screen.dart:36,43` ·
+  `management/finance/management_finance_screen.dart:37,44` ·
+  `management/performance/management_performance_screen.dart:34,41` ·
+  `management/analytics/management_analytics_screen.dart:36,43` ·
+  `management/admissions/management_admissions_screen.dart:35,42` ·
+  `platform/control_center/crm/control_center_crm_screen.dart:32,39`.
+  Plus **Finance → Executive Dashboard**
+  (`finance/intelligence/finance_executive_dashboard_screen.dart:19,23,37-41,143`),
+  where `_periodFilters = ['This month','This quarter','YTD']` and
+  `financeExecutiveProvider` takes no period argument at all.
+- **Why the HR one is worse than the rest:** "Current month / Last month / All
+  runs" on a **payroll** screen is not a convenience filter. An accountant who
+  selects "Last month" and is shown the current month's runs, unlabelled and
+  unchanged, is actively misled about which payroll they are reading.
+- **Why the Management cluster matters:** five of the eleven are in Management.
+  Together with JOURNEY-009's dashboard, **every screen in the Management
+  workspace has a filter bar that does nothing** — and Management is the
+  principal's own workspace.
+- **Recommended fix:** Per screen, either pass the selection into the query, or
+  remove the bar. Removing it is the honest interim.
+- **Dependencies:** WIDGET-008/009/010 — same class, same remediation wave.
+- **Risk of fixing:** Low to remove; medium to wire (needs query parameters the
+  backend may not accept yet).
+- **Evidence:** file:line list above.
+
+### POLISH-009 · **P1** · Exam Admin, School Completion, Platform, Intelligence · Unguarded fixed-width `Wrap` filter bars overflow on a phone
+
+- **Repro steps:** Open Exam Reports on a 360dp phone. Then Substitute Manager.
+- **Expected:** The filter controls stack.
+- **Actual:** `exam_reports_screen.dart:448,469,490` puts three fixed-width
+  dropdowns — 160 + 160 + 220 = **540dp** — in one `Wrap` with no narrow guard,
+  in a 360dp viewport. `substitute_manager_screen.dart:271,293` does the same
+  with 220 + 240.
+- **Root cause:** Exactly the pattern the RC phase fixed on the Admin Hub
+  (hard-coded card widths inside a `Wrap`), reintroduced in four more places:
+  also `platform/organization_builder/organization_builder_hub_screen.dart:104`
+  (280), `platform/multi_school/multi_school_portfolio_screen.dart:101` (220),
+  `intelligence/trust/trust_intelligence_hub_screen.dart:312` and
+  `platform/control_center/intelligence/platform_intelligence_screen.dart:338`
+  (260).
+- **Recommended fix:** Use the guard that already exists twice in the product —
+  `director/widgets/director_shared_widgets.dart:38-47` and
+  `director/director_school_snapshot_screen.dart:188-194` fall back to a `Column`
+  before the `Wrap`; `admissions/settings/admissions_settings_screen.dart:73`
+  guards its 540dp sections.
+- **Dependencies:** None.
+- **Risk of fixing:** Low — the template exists.
+- **Evidence:** file:line list above; `lib/theme/breakpoints.dart`
+  (`narrowMobileMaxWidth: 360`).
+
+### POLISH-010 · **P1** · Parent app / Router · Notice and event taps dispatch on hard-coded demo IDs; two of them target a blocked route
+
+- **Repro steps:** As a parent with real notices, tap any notice on the
+  dashboard.
+- **Expected:** That notice opens.
+- **Actual:** The generic notices list opens. The tap *looks* like a drill-down
+  and is not.
+- **Root cause:** `lib/router/parent_navigation.dart:86-93` dispatches on the
+  hard-coded mock ids `notice_n1`, `event_e2`, `notice_n3`. Against real data no
+  id matches, so every tap falls through. The two ids that *do* match target
+  `/parent/ptm`, which is a **blocked route prefix**
+  (`lib/core/config/school_build_scope.dart:82-83`). And `:133-134`
+  (`default: break;`) silently swallows any unmapped `actionId` — a dead tap with
+  no feedback. Separately `:33-36` and `:115-118` route "Pay fee" to a hard-coded
+  `installmentId=term_2` (second call site of JOURNEY-015).
+- **Recommended fix:** Dispatch on the entity id carried by the tapped item;
+  make the `default` arm surface an honest failure rather than returning silently.
+- **Dependencies:** JOURNEY-015, JOURNEY-016.
+- **Risk of fixing:** Low-medium.
+- **Evidence:** `lib/router/parent_navigation.dart:33-36,86-93,115-118,133-134`;
+  `lib/core/config/school_build_scope.dart:82-83`.
+
+### POLISH-011 · **P1** · Finance, SIS, Admissions · The shared async body was forked three times and each fork lost a parameter
+
+- **Repro steps:** Compare `lib/shared/async/erp_async_state.dart:35,77` with
+  `lib/features/finance/finance_async_state.dart:77`,
+  `lib/features/sis/sis_async_state.dart:77` and
+  `lib/features/admissions/admissions_async_state.dart:77`.
+- **Expected:** One shared async body.
+- **Actual:** Four, byte-identical except a doc comment — and **the three forks
+  dropped the `errorMessage` parameter** the canonical version carries at
+  `erp_async_state.dart:35`.
+- **Why this is P1 despite being mechanically trivial:** a future improvement to
+  the canonical async body — the pull-to-refresh of POLISH-003, the permission
+  state of POLISH-004, a skeleton — **will not reach Finance, SIS or
+  Admissions**, the three highest-traffic admin modules in the product. It is a
+  divergence that silently excludes the screens that matter most from every
+  subsequent fix.
+- **Recommended fix:** Delete the three forks; import the shared one.
+- **Dependencies:** Should land **before** POLISH-003 and POLISH-004, or those
+  fixes will need doing four times.
+- **Risk of fixing:** Low.
+- **Evidence:** `lib/shared/async/erp_async_state.dart:35,77`;
+  `lib/features/finance/finance_async_state.dart:77`;
+  `lib/features/sis/sis_async_state.dart:77`;
+  `lib/features/admissions/admissions_async_state.dart:77`.
+
+### POLISH-012 · **P2** · Finance, Communication, Inventory, Employee, Intelligence, Evolution, Parent, Copilot, Education · Errors swallowed into blank space, and 17 more that only toast
+
+- **Repro steps:** Open Finance → Defaulters with the backend failing.
+- **Expected:** An error state distinguishable from "nobody owes money".
+- **Actual:** A blank screen. **A fee-defaulters list that renders empty on
+  failure tells a principal that nobody owes money.**
+- **Root cause:** The failure branch renders nothing:
+  `finance/defaulters/finance_defaulters_screen.dart:225` ·
+  `finance/intelligence/finance_copilot_screen.dart:63` ·
+  `communication/broadcast_admin_screen.dart:490,515` ·
+  `inventory/intelligence/inventory_lifecycle_screen.dart:64` ·
+  `employee/employee_360_screen.dart:71` ·
+  `intelligence/management/intelligence_hub_screen.dart:433,526,543` ·
+  `evolution/teacher_assistant_screen.dart:68` ·
+  `parent/academics/parent_academic_report_screen.dart:41` ·
+  `copilot/copilot_screen.dart:170` · `education/education_bank_item_form.dart:137`.
+  A further **17 screens are SnackBar-only** — the error toasts away after four
+  seconds, the page stays blank, no retry — including
+  `admin/backup/backup_restore_screen.dart`,
+  `school_config/school_discovery_screen.dart`,
+  `platform/multi_school/school_onboarding_wizard_screen.dart`,
+  `teacher/leave_approvals/teacher_leave_approvals_screen.dart`,
+  `achievement_promotion/achievement_promotion_preview_screen.dart`,
+  `onboarding/unified_onboarding_flow_screen.dart`.
+- **Recommended fix:** Route each through `ErpAsyncBody`, which cannot be
+  constructed without `onRetry`.
+- **Dependencies:** POLISH-011.
+- **Risk of fixing:** Low.
+- **Evidence:** file:line list above.
+
+### POLISH-013 · **P2** · Transport, Hostel, Control Center ×2, Library, Intelligence · Six Export/Download/Print buttons that produce nothing
+
+- **Repro steps:** Transport → Dashboard → Export. Then Library → Reports, and
+  compare the overdue tab's Download with any other tab's.
+- **Expected:** A file.
+- **Actual:** A snackbar: *"preview only. Export pipeline not connected yet."*
+- **Root cause:** `showAksharaReportExportPreviewSnackBar`
+  (`lib/shared/widgets/operational_action_feedback.dart:17-30`). **The copy is
+  honest — that deserves credit.** The control is not: it is a full-size,
+  permission-gated button visually identical to the real exporters in the same
+  module. `transport/dashboard/transport_dashboard_screen.dart:41` ·
+  `hostel/dashboard/hostel_dashboard_screen.dart:41` ·
+  `platform/control_center/dashboard/control_center_dashboard_screen.dart:44` ·
+  `platform/control_center/analytics/control_center_analytics_screen.dart:30` ·
+  **`library/reports/library_reports_screen.dart:179`** (whose own overdue tab has
+  a real CSV/PDF export at `:161-174`, so a librarian sees a working download on
+  one tab and a stub on the next) ·
+  `intelligence/intelligence_screen.dart:586-592` ("Print", whenever
+  `report.printable`).
+- **Recommended fix:** Until the pipeline lands, use the pattern the product
+  already has one directory away —
+  `hostel/reports/hostel_reports_screen.dart:168-169` uses `onPressed: null` with
+  the tooltip "Export not available yet": visibly disabled, honest, impossible to
+  mistake for a working control. One line each.
+- **Dependencies:** OS-011 (there is no backend report/export service).
+- **Risk of fixing:** Trivial for the disable; the real export is a feature.
+- **Evidence:** file:line list above.
+
+### POLISH-014 · **P2** · Admissions, Hostel ×3, Transport ×2, Library, Inventory, Alumni · Six dashboards still render headed holes on day one
+
+- **Repro steps:** On an empty school, open the Admissions, Hostel, Transport,
+  Library, Inventory and Alumni dashboards.
+- **Expected:** The `AksharaSectionEmpty` card the RC phase added to HR, SIS,
+  Finance and Admissions.
+- **Actual:** A section header followed by nothing — or, on Hostel's "Health
+  alerts", **an empty bordered Card with no content at all**, which is the worst
+  of the set.
+- **Root cause:** The RC phase fixed four dashboards and did not sweep the class.
+  Verified still broken: **Admissions "Follow-ups due today"**
+  (`admissions/dashboard/admissions_dashboard_screen.dart:115` →
+  `admissions_followups_table.dart:22`, no `isEmpty` guard — a bare 7-column
+  header row on desktop, a zero-height gap on mobile at `:23-31`, **sitting
+  between two now-polished empty cards**) · Hostel
+  (`hostel/dashboard/hostel_dashboard_screen.dart:90`→`:202`, `:126`→`:106`,
+  `:184`→`:159`) · Transport
+  (`transport/dashboard/transport_dashboard_screen.dart:77`→`:109`,
+  `:274`→`:255`) · Library (`library/dashboard/library_dashboard_screen.dart:95`→`:147`) ·
+  Inventory (`inventory/dashboard/inventory_dashboard_screen.dart:125`→`:157`,
+  `:274`) · Alumni (`alumni/dashboard/alumni_dashboard_screen.dart:69`→`:99`).
+- **Recommended fix:** Apply the `AksharaSectionEmpty` guard already used by the
+  four fixed dashboards. Add a widget test asserting every headed dashboard
+  section renders something at zero rows, so the class cannot regress.
+- **Dependencies:** WIDGET-003, WIDGET-004, WIDGET-007 — same class.
+- **Risk of fixing:** Low.
+- **Evidence:** file:line list above; fixed exemplars at
+  `hr/dashboard/hr_dashboard_screen.dart:141,186`,
+  `finance/dashboard/widgets/finance_recent_payments_table.dart:24`.
+
+### POLISH-015 · **P2** · Shared navigation, Parent, Teacher, AI · Tap targets under 48dp — including inside the file the RC phase fixed
+
+- **Repro steps:** Tap the admin app-bar search field; the parent dashboard
+  school avatar; a "View receipt" icon on Parent → Fees; "Check in now" on the
+  teacher dashboard.
+- **Expected:** 48dp minimum.
+- **Actual:** 40, 40, 40 and 36dp respectively.
+- **Root cause:** `lib/shared/navigation/akshara_navigation.dart:667` —
+  `AksharaNavSearchField` is an `InkWell` around `Container(height: 40)`. **This
+  is the same file the RC log records as fixed 40→48dp**; three other sites in it
+  use `AksharaSpacing.minTouchTarget` (`:241,464,611`) and the search field was
+  missed. Also `parent/dashboard/widgets/hero_card.dart:145-147`
+  (`SizedBox(40×40)`), `parent/fees/installment_timeline.dart:167`
+  (`minimumSize: Size(40,40)`, an explicit override of the theme floor),
+  `teacher/dashboard/widgets/attendance_summary_card.dart:160`
+  (`minimumSize: Size(0,36)` on a daily primary action), and
+  `adaptive_ai/widgets/adaptive_search_results.dart:98-99` (`Size.zero` +
+  `MaterialTapTargetSize.shrinkWrap`). A further 24 `VisualDensity.compact` sites
+  shave ~8dp each across transport, hostel, library, finance discounts (`:422`),
+  notifications (`:381`) and the approval queue table (`:483,496`).
+- **Why it was not caught:** `test/theme/tap_target_lint_test.dart` asserts only
+  the **theme defaults** and pumps exactly two widgets. It cannot see a
+  per-call-site override — a test whose premise is weaker than the claim it
+  appears to defend.
+- **Recommended fix:** Fix the six sites; then replace the lint with one that
+  walks the rendered tree of representative screens and asserts every
+  hit-testable target is ≥48dp.
+- **Dependencies:** None.
+- **Risk of fixing:** Low, with golden regeneration.
+- **Evidence:** file:line list above; `test/theme/tap_target_lint_test.dart`.
+
+### POLISH-016 · **P2** · Theme · Contrast coverage stops at the status chip; two live surfaces fail
+
+- **Repro steps:** Read a KPI card's neutral "no change" delta chip in daylight.
+  Read any form field's hint text.
+- **Expected:** ≥4.5:1 for 11px normal text.
+- **Actual:** ~4.04:1 and ~3.42:1 respectively, neither covered by any test.
+- **Root cause:** The RC fix and its test are genuine — 4.5 asserted
+  (`test/theme/rendered_contrast_audit_test.dart:46`,
+  `lib/theme/accessibility.dart:6`), all 14 tone×scheme pairs enumerated
+  (`KpiAccent` has exactly 7 values at `lib/theme/theme_extensions.dart:246` ×
+  2 themes, `:51-60`), and a premise guard at `:134`. **The claim holds.** But it
+  covers one widget. Uncovered and failing: the KPI trend chip's neutral state
+  (`onSurfaceVariant` #64748B on `surfaceContainerHigh` #E8EDF3 at 11px w600), in
+  two independent copies — `lib/shared/widgets/akshara_kpi_card.dart:186,213` and
+  `lib/shared/widgets/akshara_executive_kpi_card.dart:165` — which is the delta
+  label under **every KPI on the parent, teacher, student and management
+  dashboards**; and hint text at `lib/theme/app_theme.dart:687,698-700`
+  (`onSurfaceVariant` at 0.85 alpha on `surfaceContainerLow`), which is every
+  search box and form field in the app.
+  Two further gate weaknesses: chart legend labels pass at ~4.55:1 by 0.05 and
+  are untested (`lib/shared/widgets/akshara_chart.dart:145-153`); and
+  `onSurfaceVariant on surface` — the app's default secondary **body** colour —
+  is asserted at only **3.0** (`lib/theme/accessibility.dart:80`) while measuring
+  4.76:1, so the gate is 1.76 points looser than reality and would green-light a
+  real regression. No coverage at all for on-accent text
+  (`lib/shared/widgets/workspace_switcher.dart:227`), snackbar/tooltip text,
+  badges outside `_MarkBadge`, or severity labels.
+- **Recommended fix:** Darken the two failing pairs; raise the
+  `onSurfaceVariant on surface` assertion to 4.5; extend the rendered-contrast
+  audit to trend chips, hints, legends, on-accent and severity text.
+- **Dependencies:** None.
+- **Risk of fixing:** Low-medium (token change → golden regeneration).
+- **Evidence:** file:line list above.
+
+### POLISH-017 · **P2** · Shared widgets · Five skeletons, an animated switcher and a reduce-motion fade were built, tested, and never wired
+
+- **Repro steps:** Open any of the 78 admin list screens and watch it load.
+- **Expected:** The list skeleton that exists in the design system.
+- **Actual:** A spinner (`lib/shared/async/erp_async_state.dart:110`).
+- **Root cause:** `lib/shared/widgets/akshara_skeleton.dart` defines six
+  builders; **only `.dashboard()` has production call sites (11).** `.list()`,
+  `.row()`, `.card()`, `.line()` and `.circle()` have **zero** — `.list(rows:)`
+  appears only in `test/widgets/akshara_skeleton_test.dart:36,60,110`. Likewise
+  `AksharaAnimatedSwitcher` (`lib/shared/widgets/akshara_motion.dart:121`,
+  unit-tested at `test/widgets/akshara_motion_test.dart:31`) has zero production
+  uses, and `lib/shared/widgets/premium/akshara_mount_fade.dart` has zero uses
+  **while being the only widget in the repo that honours
+  `MediaQuery.disableAnimations`** (`:55` — see POLISH-007).
+  `premium/akshara_premium_empty_state.dart` is used exactly once
+  (`evolution/parent_insights_screen.dart:167`), so two parallel empty-state
+  visual languages coexist.
+- **Why it matters:** the RC phase already found one unreachable skeleton (the
+  parent dashboard's). It was not one case. A tested widget with no call site is
+  a specific kind of unfinished — the work was done and the last step skipped —
+  and it means the golden suite is proving the appearance of things nobody sees.
+- **Recommended fix:** Wire `.list()` into `ErpAsyncBody`'s list variant; adopt
+  `akshara_mount_fade` or fold its `disableAnimations` check into
+  `motion.dart:33`; retire whichever empty-state language is not chosen.
+- **Dependencies:** POLISH-007, POLISH-011.
+- **Risk of fixing:** Low-medium (visible change → golden regeneration).
+- **Evidence:** file:line list above.
+
+### POLISH-018 · **P2** · Admissions, Director · Fixed-height wrappers defeat the shared text-scale fix
+
+- **Repro steps:** Set system font to ~1.6× and open the Admissions dashboard,
+  then the Director dashboard.
+- **Expected:** KPI tiles grow, as `AksharaKpiCard` is built to do
+  (`lib/shared/widgets/akshara_kpi_card.dart:33-36`).
+- **Actual:** They clip or overflow.
+- **Root cause:** `admissions/dashboard/widgets/admissions_dashboard_kpi_row.dart:34`
+  wraps the card in `SizedBox(height: 120)`, and
+  `director/widgets/director_shared_widgets.dart:31,45` pin
+  `SizedBox(height: 140)` on both the phone and wrap paths — each **overriding**
+  the card's own growth. There is no global textScaleFactor clamp
+  (`lib/app/app.dart:107` does not override MediaQuery; clamping is confined to
+  two legitimately dense grids at `lib/theme/accessibility.dart:58` and
+  `lib/shared/marks_grid/marks_grid.dart:145`), so layouts must survive on their
+  own. Known ceiling, recorded not as a defect but as a fact: above ~1.6×
+  `akshara_kpi_card.dart:34` and `akshara_progress_ring.dart:43` fall back to
+  `maxLines:1 + ellipsis`, so a principal on maximum font sees a truncated money
+  value ("₹12,4…").
+- **Recommended fix:** Replace `SizedBox(height:)` with `ConstrainedBox(minHeight:)`
+  — the same repair the RC phase made to `akshara_section_header.dart:98-103`.
+- **Dependencies:** None.
+- **Risk of fixing:** Low.
+- **Evidence:** file:line list above.
+
+### POLISH-019 · **P2** · School Completion, Verticals, Platform, Intelligence · 40 routed screens bypass the shared page shell; 21 more use a different page gutter
+
+- **Repro steps:** Navigate from HR or Academics to a School Completion screen —
+  Substitute Manager, Teacher Reassignment, Lesson Analytics, Pilot Dashboard,
+  Communication Analytics.
+- **Expected:** The same page frame as its neighbours.
+- **Actual:** A different one. No 1440 content grid, no `AdminAppBar`, no
+  breadcrumbs, no filter bar.
+- **Root cause:** Twelve module scaffolds correctly delegate to
+  `AdminContentScaffold` (`finance/widgets/finance_module_scaffold.dart:36` and
+  its HR, SIS, admissions, library, inventory, alumni, hostel, transport,
+  management, director and control-center siblings) — **this is the strongest
+  part of the system.** But 177 of 310 screens use a bare `Scaffold`; the persona
+  shells legitimately account for ~50, leaving `school_completion/` (**20
+  screens, 28 router refs**), `verticals/` (20, MOCK/HIDDEN), `platform/` (14),
+  `intelligence/` (7), `academics/` (5) and `management/` (3). Separately, page
+  gutters are mostly consistent (104× `EdgeInsets.all(AksharaSpacing.s4)`) but 21
+  screens deviate — 14× `s6`, 3× `s5`, 3× raw `16`, 1× `symmetric(16.0, 16.0)` —
+  and sibling screens at 16dp vs 24dp gutters is the classic "assembled by
+  different people" tell.
+- **Recommended fix:** Adopt `AdminContentScaffold` in `school_completion/`
+  first — it is the only cluster a school actually sees.
+- **Dependencies:** None. Largest effort in the workstream.
+- **Risk of fixing:** Medium — visible layout change on 20 routed screens.
+- **Evidence:** `lib/features/admin/admin_content_scaffold.dart`;
+  `lib/features/finance/widgets/finance_module_scaffold.dart:36`;
+  `lib/features/school_completion/**`.
+
+### POLISH-020 · **P2** · Management ×2, Admissions ×2, School Completion, Platform, Intelligence · Token bypass on daily screens: mixed radii, raw status colours, a dark-mode hole, emoji as iconography
+
+- **Repro steps:** Open the Admissions dashboard and compare card corners. Open
+  Office Attendance and read the status chips. Switch to dark mode and open the
+  approval queue.
+- **Expected:** One corner radius, tokenised status colours, tokenised
+  foregrounds.
+- **Actual:** Mixed corners on one screen; status chips that do not shift with
+  the persona accent; white text on a token-resolved fill in dark mode.
+- **Root cause:** Against a genuinely clean baseline — **zero raw `Color(0x…)` in
+  all 954 feature files**, 3,497 `AksharaSpacing.*` uses, one icon family (1,567
+  `Icons.*`, 0 `CupertinoIcons.*`), and a dark theme regression-locked by
+  goldens (`test/golden/dark_mode_render_test.dart`) — the strays are:
+  **Radius:** 11 distinct raw values against a 7-value token set (off-token 2, 3,
+  4, 10, 14). `admissions/dashboard/widgets/admissions_assistant_card.dart:160,162,174`
+  uses radius **14** three times beside cards at `AksharaRadius.lg` (16) — the
+  visible mixed-corner symptom on a daily screen. Radius `4` appears 13× as one
+  byte-identical `*_segment_panel.dart:73` forked across **8 modules**
+  (management, library, inventory, hr, alumni, hostel, transport,
+  platform/control_center), so a single fix kills 13 of 18 off-token radii.
+  **Colour:** 51 genuine `Colors.<name>` uses, concentrated at
+  `management/attendance/office_attendance_screen.dart:452-457,946-949` (**9 raw
+  status colours** in two switch maps on a daily principal screen) and
+  `school_completion/branding_screen.dart:102` (`return Colors.blue;` as the
+  fallback when a **school's own brand colour** fails to parse).
+  **Dark mode:** `management/approval/widgets/approval_queue_table.dart:524`
+  (`const onTone = Colors.white;` on a token-resolved fill — will fail contrast
+  on a light accent) and `admissions/widgets/admissions_chart_panel.dart:134`.
+  Two comments at `office_attendance_screen.dart:383-384,871` document this exact
+  `Colors.white`-on-token WCAG failure being fixed once already; the class was
+  not swept.
+  **Emoji as UI:** `school_completion/timetable_automation_screen.dart:77`
+  (`Text('⚠ $w')` instead of `Icons.warning_amber`),
+  `achievement_promotion/achievement_promotion_screen.dart:130`
+  (`'👁 ${views} · ↗ ${shares}'`),
+  `platform/platform_operations/platform_operations_hub_screen.dart:575`.
+  Elevation strays: `copilot/dock/copilot_floating_dock.dart:44` uses **6**,
+  which is not on the `AksharaElevation` ladder at all.
+- **Recommended fix:** In order of return — the 8 `_segment_panel` clones (one
+  change), the Admissions radius 14, the approval-queue white, the 9 office
+  attendance colours, the emoji.
+- **Dependencies:** None.
+- **Risk of fixing:** Low, with golden regeneration.
+- **Evidence:** file:line list above.
+
+### POLISH-021 · **P2** · Intelligence, Entitlements, Dynamic Widgets, Org Builder, Finance, SIS, Legal, Platform · Developer-grade empty states and bare full-page spinners
+
+- **Repro steps:** On an empty school open Intelligence; then Finance →
+  Collection Detail and watch it load.
+- **Expected:** The shared empty-state widget (used by 130 files) and the shared
+  loading state (used by 257 screens).
+- **Actual:** A bare left-aligned sentence, and an unframed spinner.
+- **Root cause:** ~20 screens skip `akshara_empty_state.dart` /
+  `akshara_section_empty.dart`. Worst:
+  `intelligence/intelligence_screen.dart:139,154` — bare sentences sitting in the
+  **same `.when()`** as a proper `AksharaLoadingState` and `AksharaErrorState`,
+  so loading and error are designed and **the empty state, which is what a
+  school sees on day one, is not** ·
+  `entitlements/organization_plan_assignment_screen.dart:94` ·
+  `dynamic_widgets/dynamic_widget_runtime_screen.dart:96` ·
+  `platform/organization_builder/organization_builder_hub_screen.dart:172` ("No
+  interview drafts yet." with **no call to action on a screen whose only job is
+  creating drafts**). Plus P3 instances in `substitute_manager_screen.dart:328`,
+  `teacher_reassignment_screen.dart:279,362`, `onboarding_hub_screen.dart:53,83`,
+  `school_memory_event_screen.dart:217`, `control_center_providers_screen.dart:123`,
+  `hr_employee_profile_screen.dart:256,305`, `finance_discounts_screen.dart:595`,
+  `alumni_profile_screen.dart:217`, `teacher_parent_communication_screen.dart:297`.
+  Loading treatments number six across the app — 257 shared, 11 skeleton, **17
+  bare full-page spinners** (`finance/collection_detail/finance_collection_detail_screen.dart:310`,
+  `sis/registry/sis_registry_screen.dart:590`,
+  `legal/legal_acceptance_screen.dart:89`, `platform/branch/branch_screen.dart:68`,
+  `platform/multi_school/multi_school_portfolio_screen.dart:60`,
+  `platform/organization_builder/organization_builder_hub_screen.dart:77`,
+  `inventory/intelligence/inventory_copilot_screen.dart:89`,
+  `dynamic_widgets/dynamic_widget_registry_screen.dart:75,92`), **35
+  `loading: () => const SizedBox.shrink()`** (content pops in with no feedback),
+  and 25 with nothing at all.
+- **Recommended fix:** Adopt the shared widgets. Both exist and are well built.
+- **Dependencies:** POLISH-011, POLISH-017.
+- **Risk of fixing:** Low.
+- **Evidence:** file:line list above.
+
+### POLISH-022 · **P3** · Admin shell · The Admin Hub card interior is sparse now that cards are full width
+
+- **Repro steps:** Sign in as principal on a ~411dp phone and look at `/admin` —
+  the first screen 6 of 15 staff roles see every day.
+- **Expected:** A dense, informative home.
+- **Actual:** A vertical stack of ~379×138dp white cards, each with its content
+  hugging the left edge and roughly the right 60–70% blank — one short word
+  ("Finance", "HR") floating in a wide empty rectangle, repeated 8–12 times.
+- **Root cause:** `lib/features/admin/screens/admin_hub_screen.dart:138-174` is a
+  `Column(crossAxisAlignment: .start)` — a layout designed for 220dp tiles — now
+  rendered at full width by the (correct) responsive fix at `:76-99`. The RC log
+  records this consequence honestly; it is confirmed still true.
+- **Recommended fix:** At one column, use a horizontal ListTile-shaped row —
+  icon left, label plus a live count centre, chevron right. The count would also
+  address JOURNEY-005's empty-hub problem by giving each tile something to say.
+- **Dependencies:** JOURNEY-005, JOURNEY-008.
+- **Risk of fixing:** Low-medium (golden regeneration).
+- **Evidence:** `lib/features/admin/screens/admin_hub_screen.dart:76-99,124-125,138-174`.
+
+### POLISH-023 · **P3** · Platform, Evolution, SIS, and 5 persona dashboards · Type scale drift — 12 distinct sizes, and one element hand-typed five times
+
+- **Repro steps:** Compare the micro-label under a KPI on the parent, teacher and
+  student dashboards.
+- **Expected:** One token.
+- **Actual:** `fontSize: 10` typed by hand in five files —
+  `parent/dashboard/parent_dashboard_screen.dart:434`,
+  `teacher/dashboard/widgets/attendance_summary_card.dart:233`,
+  `teacher/exams/teacher_exams_screen.dart:267`,
+  `student_app/exams/student_exams_screen.dart:185`,
+  `parent/attendance/attendance_kpi_strip.dart:68`.
+- **Root cause:** 86 `fontSize:` literals, of which **52 are legitimate** (inside
+  7 `*_pdf_service.dart` files using `pw.TextStyle`, which has no Flutter theme).
+  The real count is 34 literals across 12 distinct sizes (8–22). Worst cluster:
+  `lib/features/platform/` hand-rolls `TextStyle(fontSize: 16, fontWeight: w600)`
+  as an ersatz section header six times
+  (`organization_builder_hub_screen.dart:53,71`,
+  `multi_school_portfolio_screen.dart:54,71`,
+  `organization_provisioning_screen.dart:83`,
+  `organization_builder_preview_screen.dart:116`). Orphan sizes:
+  `evolution/growth_platform_screen.dart:389` (22, the only 22 in the app),
+  `sis/profile/sis_profile_edit_sheet.dart:112` (18 on a sheet title whose
+  siblings use `titleMedium`).
+- **Recommended fix:** Add a `labelMicro` token for the KPI micro-label; replace
+  the platform pseudo-headers with `AksharaSectionHeader`.
+- **Dependencies:** None.
+- **Risk of fixing:** Low.
+- **Evidence:** file:line list above. (Spacing is near-clean by contrast: raw
+  `EdgeInsets.all` uses only on-scale 8/12/16 with no odd 7/13/18/22 anywhere;
+  drift is confined to `EdgeInsets.symmetric` and raw `SizedBox(height:)`.)
+
+### POLISH-024 · **P3** · Finance, SIS, Admissions, Parent, Transport, HR · Nine providers written and never read
+
+- **Repro steps:** Static — grep each identifier for a reader.
+- **Expected:** Every provider has a consumer.
+- **Actual:** Declared with zero call sites: `financeDiscountsTabProvider`,
+  `parentPreferredLanguageProvider`, `transportSelectedRouteIdProvider`,
+  `financeAssignmentDraftProvider`, `sisAssignmentDraftProvider`,
+  `parentComposeDraftProvider`, `hrExportRunIdProvider`. Written and never read:
+  `financeLastReceiptNumberProvider`
+  (`lib/features/finance/finance_workflow_actions.dart:1409`) and
+  `admissionsLastApprovalIdProvider`
+  (`lib/features/admissions/admissions_enrollment_provider.dart:111`).
+- **Root cause:** Residue. None is user-visible, so this is cleanup rather than
+  polish — recorded so the "written but never read" class is closed rather than
+  sampled. Note that the two journey breadcrumbs are the *same* pattern that made
+  POLISH-006 and WIDGET-008 user-visible defects; the class is worth a lint.
+- **Recommended fix:** Delete, or wire the two breadcrumbs into the confirmation
+  surfaces they were plainly written for.
+- **Dependencies:** None.
+- **Risk of fixing:** Trivial.
+- **Evidence:** identifiers and file:line above.
+
+### API-100 · **P1** · Platform / RBAC · 97 mutating routes are absent from the RBAC route inventory
+
+- **Repro steps:** extract every `(method, path)` from the 66 module routers under
+  `supabase/functions/_shared/**` and diff against `RBAC_ROUTE_INVENTORY`
+  (`_shared/validation/rbac_route_inventory.ts`, 315 rules).
+- **Expected:** the inventory is the completeness surface for "is every mutating
+  route gated?", so every mutating route appears in it exactly once.
+- **Actual:** 232 literal routes are absent, **97 of them mutating**, plus ~250
+  parameterised mutating routes. Absent money writes include
+  `POST /finance/collections`, `POST /finance/refunds`, `POST /finance/day-close`,
+  `POST /finance/discounts`, `POST /finance/fee-assignments` (+ `/bulk`),
+  `POST /finance/late-fees/accrue`,
+  `POST /finance/fee-reductions/{discount-applications,scholarship-awards}`,
+  `POST /finance/recovery/{contacts,promises,targets}`. Absent governance writes
+  include every `/approvals/:id/{approve,reject,cancel}`,
+  `POST /approvals/audit`, all 26 `POST /school/*` school-completion writes, all
+  `/academics/exams/*` mark-write routes, `/identity/roles{,/update,/delete}`,
+  and `/staff-attendance/{enroll-face,manual-request,manual-request/decide}`.
+  The RC phase's "two attendance routes missing" was a sample of this, not an
+  outlier: the attendance router exposes 11 routes and the inventory holds one.
+- **Root cause:** the inventory is a hand-maintained data file with no
+  code-derived source and no test comparing it to the routers. Adding a route
+  does not require touching it.
+- **Recommended fix:** derive the route list mechanically (export a
+  `(method, path, handler)` table from each router, as `MODULE_ROUTES` already
+  does for prefixes) and add a test that fails when a mutating route has no
+  inventory rule. Backfill the 97.
+- **Dependencies:** none. Prerequisite for any future "every route is gated"
+  claim, and for API-101.
+- **Risk of fixing:** low — additive test + data. The backfill will surface
+  genuine gate disagreements, which is the point.
+- **Evidence:** `supabase/functions/_shared/validation/rbac_route_inventory.ts`
+  (315 rules); `_shared/attendance/attendance_router.ts` (11 routes, 1 rule);
+  `_shared/finance/finance_router.ts`; `docs/certification/findings/API-certification.md` §1.2.
+
+### API-101 · **P1** · Platform / RBAC · The RBAC test suite validates the inventory against itself and never dispatches a route
+
+- **Repro steps:** read `_shared/validation/rbac_route_validation_test.ts` and
+  `rbac_full_matrix_test.ts`.
+- **Expected:** a per-route RBAC matrix proves that *the route* denies a
+  non-holder.
+- **Actual:** both tests iterate `RBAC_ROUTE_INVENTORY` and call the pure
+  function `requirePermission(claims, rule.permission)`. Neither constructs a
+  `Request`, calls `matchModuleRoute`, or invokes a handler. The suite proves
+  that a 20-line permission comparator works. A route added with no gate, or
+  with the wrong gate, passes the entire RBAC suite by simply not being listed —
+  and, per API-100, 97 mutating routes are not listed.
+- **Root cause:** the matrix was built over the inventory data structure rather
+  than over the dispatcher.
+- **Recommended fix:** drive the matrix through `routeModuleRequest` with a
+  synthetic `Request` and a claims fixture, asserting 403 for a non-holder and
+  non-403 for a holder. Keep the pure-function tests as unit coverage of
+  `requirePermission`.
+- **Dependencies:** API-100 (needs a complete route list to be meaningful).
+- **Risk of fixing:** medium — a dispatcher-level test needs a DB seam; the
+  existing spy-DB harness is sufficient for status-code assertions.
+- **Evidence:** `_shared/validation/rbac_full_matrix_test.ts:31-70`;
+  `_shared/validation/rbac_route_validation_test.ts:86-100`.
+
+### API-102 · **P2** · Platform / RBAC · 91 inventory rules describe routes that no longer exist
+
+- **Repro steps:** diff `RBAC_ROUTE_INVENTORY` against the extracted route set in
+  the other direction.
+- **Expected:** every rule maps to a live route.
+- **Actual:** 91 rules have no matching route. The load-bearing example:
+  `{ method: "PUT", path: "/teacher/exams/marks/:id", permission: "manageExamMarks" }`
+  — a route **deleted by PRA-P0-12** because it shadowed the governed exam-mark
+  route — is still declared, while the governed replacement
+  `PUT /academics/exams/marks/:id` is absent. Anyone consulting the inventory to
+  answer "what gates a mark change?" reads a rule for a route that does not
+  exist. `POST /parent/attendance/corrections` is the only attendance rule and it
+  is also the only attendance route present.
+- **Root cause:** same as API-100 — no reconciliation in either direction.
+- **Recommended fix:** the same generated table; fail the build on an orphan rule.
+- **Dependencies:** API-100.
+- **Risk of fixing:** low.
+- **Evidence:** `rbac_route_inventory.ts:146,147`; `_shared/route_registry.ts:176-184`
+  (the PRA-P0-12 note).
+
+### API-103 · **P2** · Attendance · The whole attendance office-read surface is undocumented in RBAC
+
+- **Repro steps:** compare `_shared/attendance/attendance_router.ts` with the
+  `module: "attendance"` rules in the inventory.
+- **Expected:** 11 rules.
+- **Actual:** one, and it is for a different router's route. Undocumented:
+  `GET /attendance/sessions`, `GET /attendance/sessions/:id`,
+  `GET /attendance/register`, `GET /attendance/register/monthly`,
+  `GET /attendance/pending`, `GET /attendance/alerts/consecutive-absence`,
+  `GET /attendance/alerts/short-attendance`, `GET /attendance/corrections`,
+  `GET /attendance/corrections/:id`, `POST /attendance/corrections`,
+  `PATCH /attendance/corrections/:id/status`. The last is the approval that
+  changes a child's attendance record; it is gated on
+  `approveAttendanceCorrection` in code and on nothing in the inventory.
+- **Root cause:** API-100.
+- **Recommended fix:** backfill with the gates the handlers actually apply
+  (`viewSis` for reads, `manageSis` for the create, `approveAttendanceCorrection`
+  for the decide).
+- **Dependencies:** API-100.
+- **Risk of fixing:** low.
+- **Evidence:** `_shared/attendance/attendance_router.ts:17-77`;
+  `_shared/attendance/attendance_handlers.ts:49-68`.
+
+### API-104 · **P2** · Platform / Routing · The route registry's prefix table omits a route its own router owns
+
+- **Repro steps:** compare `MODULE_ROUTES`'s `audit` entry with `routeAudit`.
+- **Expected:** `prefixes` lists every path subtree the router claims — that
+  table is the input to the single-ownership guard.
+- **Actual:** `{ name: "audit", prefixes: ["/audit"] }`, but `routeAudit` also
+  owns `POST /domain-events/process-pending`
+  (`if (!path.startsWith("/audit") && path !== "/domain-events/process-pending") return null;`).
+  A path the table does not know about cannot be checked for double-ownership, so
+  the guarantee the registry exists to provide does not cover this mutating
+  route.
+- **Root cause:** the prefix was declared from the router's name rather than from
+  its guard clause.
+- **Recommended fix:** add `"/domain-events/process-pending"` to the entry, and
+  add a guard test that every literal path a router accepts is covered by one of
+  its declared prefixes.
+- **Dependencies:** none.
+- **Risk of fixing:** low.
+- **Evidence:** `_shared/route_registry.ts:231`; `_shared/audit/audit_router.ts:36`.
+
+### API-105 · **P0** · Platform / Security · The deployed build has no central auth chokepoint — an anonymous caller can enumerate the API, and ICA-F1's guarantee is not live
+
+- **Repro steps (live, read-only, performed):**
+  `curl https://akshara.veloraunisexsalon.com/zzz/nope` → **404**;
+  `.../support/incidents/not-a-uuid` → **422 VALIDATION**;
+  `.../support/platform/incidents/not-a-uuid` → **422**;
+  `.../attendance/register/monthly` → **422 ATTENDANCE_VALIDATION "classLabel is required"**.
+  All four with no `Authorization` header. All four carry `x-correlation-id` and
+  the app's security headers, so they are produced by the application.
+- **Expected:** `api/app.ts` authenticates **before** dispatch, and
+  `api/eng4_5_forced_auth_test.ts` asserts "an unauthenticated request to ANY
+  module path is 401 at the central gate … so even an unknown route returns 401
+  (not 404) — unauthenticated callers cannot enumerate which routes exist."
+- **Actual:** production routes and validates first and authenticates inside the
+  handler. The only build that behaves this way predates ICA-F1 (`e0e98375`,
+  2026-07-21). Corroborated by three routes that exist on this branch and 404
+  live: `GET /audit/events`, `GET /audit/retention`, `GET /identity/roles`.
+- **Root cause:** the pilot has not been redeployed since ICA-F1 (and later)
+  landed. `GET /health` cannot confirm which commit is live (API-106).
+- **Recommended fix:** deploy the release branch, then re-run the probe set and
+  confirm every module path 401s. Until then, no ICA-F1-dependent property may be
+  asserted about production, and every handler-level `authenticateRequest` is
+  load-bearing with no backstop.
+- **Dependencies:** owner — deploy access. Blocks all of Workstream 7's live
+  conclusions and any release claim about API security.
+- **Risk of fixing:** deploy risk only; the code is already correct in the repo.
+- **Evidence:** `docs/certification/findings/API-certification.md` §2, probes
+  P8/P9/P10/P12/P13/P14/P15; `supabase/functions/api/app.ts:48-56`;
+  `supabase/functions/api/eng4_5_forced_auth_test.ts:89-98`.
+
+### API-106 · **P1** · Platform / Ops · `/health` cannot identify the deployed commit
+
+- **Repro steps:** `curl https://akshara.veloraunisexsalon.com/health`.
+- **Expected:** the build stamp `_shared/build_info.ts` was written to provide —
+  `AKSHARA_BUILD_SHA` from the container env, or a colocated `build_info.json`
+  written at deploy time.
+- **Actual:** `{"status":"ok","service":"akshara-api","version":"unknown","builtAt":null}`.
+  Neither source is populated, so "which commit is live" is unanswerable by any
+  black-box means — which is exactly the question API-105 forced, and it had to
+  be answered by inference from route behaviour instead.
+- **Root cause:** the deploy step never sets the env var or writes the file; the
+  handler's "unknown" fallback is silent.
+- **Recommended fix:** set `AKSHARA_BUILD_SHA`/`AKSHARA_BUILD_TIME` in the deploy
+  recipe, and make the post-deploy smoke check assert that `/health` reports the
+  SHA just deployed.
+- **Dependencies:** owner — deploy pipeline.
+- **Risk of fixing:** low.
+- **Evidence:** live probe P1; `_shared/build_info.ts:20-55`.
+
+### API-107 · **P0** · Platform / Security · Sensitive health endpoints answer the public internet, implying the pilot runs with `APP_ENV != production`
+
+- **Repro steps (live, read-only, performed):** with no
+  `x-internal-health-token` header —
+  `GET /health/tenant-access` → 503 with the full RLS isolation matrix;
+  `GET /health/operations` → 200 with queue depths;
+  `GET /health/storage` → 200 with the bucket name;
+  `GET /health/providers` → 200 with `vault:{configured:false}`;
+  `GET /health/backup` → 200 with the nightly backup's **sha256, byte size,
+  `offsite:false` and completion time**.
+- **Expected:** `requireInternalHealthAccess` returns
+  `403 FORBIDDEN "Internal health endpoints require INTERNAL_HEALTH_TOKEN in
+  production"` when the token is unset and `environment === "production"`.
+- **Actual:** the guard passes through, which requires **both**
+  `INTERNAL_HEALTH_TOKEN` unset **and** `APP_ENV` not equal to `"production"`.
+  The guard has shipped since the pilot build (`9057bfb8`, 2026-06-10), so its
+  absence from the deployed code is unlikely.
+  Anonymous disclosure today: the tenant's school count (`visible_schools=7`),
+  the internal DB role name, which isolation tests fail, operational queue
+  depths, storage bucket, vault state, and backup fingerprints.
+  **The second-order risk is larger than the leak.** `APP_ENV != "production"` is
+  the same flag `canReturnOtpInResponse` reads: outside production the login OTP
+  is returned **in the response body** for any allowlisted pilot phone, and for
+  *every* phone when `OTP_DEV_MODE` is on. That is account takeover with no SMS.
+  **This was not tested** — it is a mutation and an authentication attempt, both
+  out of scope for a read-only pass.
+- **Root cause:** container environment configuration, not code. The repo test
+  `ICA-B2: canReturnOtpInResponse is false in production` passes while asserting a
+  premise the live environment may not satisfy.
+- **Recommended fix:** owner to read `APP_ENV`, `OTP_DEV_MODE`, `OTP_PILOT_PHONES`
+  and `INTERNAL_HEALTH_TOKEN` off the live container **before release**. Set
+  `APP_ENV=production` and a real `INTERNAL_HEALTH_TOKEN`; re-probe to confirm the
+  health endpoints 403. Add a startup assertion that refuses to boot a
+  production-hostname deployment with `APP_ENV != production`.
+- **Dependencies:** owner — SSH/container access (outside this harness).
+- **Risk of fixing:** low for the token; setting `APP_ENV=production` will
+  correctly disable OTP-in-response, which pilot logins may currently depend on —
+  verify SMS delivery works first.
+- **Evidence:** live probes P3–P7; `_shared/internal_health_auth.ts:6-20`;
+  `_shared/auth_handlers.ts:112-117`; `_shared/config.ts:91`.
+
+### API-108 · **P0** · Platform / Tenant isolation · The live pilot's own RLS isolation matrix is failing four student-scope probes
+
+- **Repro steps (live, read-only, performed):**
+  `GET https://akshara.veloraunisexsalon.com/health/tenant-access`.
+- **Expected:** `status: "ok"`, `isolation.pass: true`.
+- **Actual:** `status: "degraded"`, `isolation.pass: false`, `enforced: true`,
+  role `erp_tenant`, `bypassRls: false`, with four failing probes:
+
+  | Probe | Live detail | Expected |
+  |---|---|---|
+  | `student_denied_student_profiles` | `visible_profiles=1` | 0 |
+  | `student_denied_sis_students_api` | `visible_directory_rows=1` | 0 |
+  | `student_denied_sis_student_create` | `visible_profiles_for_create=1` | 0 |
+  | `student_denied_sis_dashboard` | `visible_directory_rows=1` | 0 |
+
+  Every school↔school and parent↔child probe passes
+  (`school_a_cannot_see_school_b`, `school_a_cannot_see_school_b_students`,
+  `parent_cannot_see_unlinked_student`, `org_scope_denied_raw_students`), so this
+  is a **persona** isolation failure, not cross-tenant leakage between schools: a
+  `student`-scope DB session sees rows through `student_profiles` and the SIS
+  directory/create/dashboard query shapes that the probes assert it must not.
+- **Root cause:** undetermined. Either an RLS policy grants `student` scope more
+  than intended on `student_profiles`/the SIS directory views, **or** the visible
+  row is the student's own record and the probe's premise is wrong — in which
+  case the probe is the defect and the pilot has been reporting a false
+  `degraded` for as long as it has been deployed. Distinguishing them needs a DB
+  session; there is no Postgres lane and SSH is owner-bound.
+- **Recommended fix:** owner to run the four probe SQL shapes under a
+  `student`-scope session and report the row's identity. If it is another
+  student's record, fix the policy; if it is the student's own, fix the probe and
+  restore a green matrix.
+- **Dependencies:** owner — DB access. Nothing else in this workstream can raise
+  or lower this until it is answered.
+- **Risk of fixing:** unknown until the cause is known.
+- **Evidence:** live probe P3; `_shared/tenant_isolation_probes.ts:1092-1099,
+  1218-1226, 1254-1262, 1400-1408`.
+
+### API-109 · **P2** · Platform / CORS · Preflight omits `DELETE` while the API exposes `DELETE` routes
+
+- **Repro steps:** `curl -X OPTIONS -H "Origin: https://evil.example"
+  https://akshara.veloraunisexsalon.com/finance/collections` (performed).
+- **Expected:** every method the API serves is advertised.
+- **Actual:** `Access-Control-Allow-Methods: GET, POST, PUT, PATCH, OPTIONS`.
+  The API serves `DELETE /academic/timetables/substitutions/:id`,
+  `DELETE /sis/students/:id/guardians/:guardianUserId` and others — several
+  declared in the RBAC inventory itself. A browser client (the `web/` app) cannot
+  issue them: the preflight never allows the method. The Flutter client is
+  unaffected. Separately `Access-Control-Allow-Origin: *` lets any origin's
+  script call the API with a bearer token it already holds; `*` prevents cookie
+  credentials, and this API is bearer-only, so the practical exposure is bounded
+   — but `*` is not a defensible default for a school-data API.
+- **Root cause:** `corsHeaders` in `api/app.ts` was written before the `DELETE`
+  routes existed and never revisited.
+- **Recommended fix:** add `DELETE` to `Access-Control-Allow-Methods`; replace
+  `*` with an allowlist of the web app's origins.
+- **Dependencies:** none.
+- **Risk of fixing:** low; origin allowlisting needs the deployed web origins.
+- **Evidence:** live probe P17; `supabase/functions/api/app.ts:30-35`;
+  `rbac_route_inventory.ts` (DELETE rules).
+
+### API-110 · **P1** · Approvals / Audit · `POST /approvals/audit` writes the audit trail from a caller-supplied actor
+
+- **Repro steps:** read `handleRecordApprovalAudit`.
+- **Expected:** an audit entry's actor is derived from the verified session
+  (`auth.claims.sub`).
+- **Actual:** `actorId` and `actorName` are read from the **request body**
+  (`optionalStr(body, "actor_id", "actorId")`) and inserted verbatim;
+  `auth.claims.sub` is available and ignored. A `manageManagement` holder can
+  write an approval-audit entry attributing an approval to any named person. The
+  `action` field is a bare `as "submitted" | "approved" | "rejected" | "cancelled"`
+  cast with no runtime validation, so an out-of-enum value reaches the
+  `approval_audit_action_check` constraint and surfaces as a **500** rather than a
+  422. The route is also absent from the RBAC inventory (API-100), and no client
+  code was found calling it.
+- **Root cause:** the endpoint mirrors the repository function's parameter list
+  instead of the request's trust boundary.
+- **Recommended fix:** derive `actorId` from `claims.sub` and `actorName` from the
+  session's display name; validate `action` against the enum and return 422;
+  consider deleting the route if nothing calls it.
+- **Dependencies:** none.
+- **Risk of fixing:** low.
+- **Evidence:** `_shared/approval/approval_handlers.ts:675-720`;
+  `supabase/migrations/20260617100000_approval_requests.sql:42-56`.
+
+### API-111 · **P1** · Payments / RBAC · The inventory declares a `viewPayments` gate that is enforced nowhere
+
+- **Repro steps:** `grep -r viewPayments supabase/functions lib`.
+- **Expected:** `GET /payments/intents/:id` requires `viewPayments`, as declared.
+- **Actual:** the string appears **only** in `rbac_route_inventory.ts` (the rule
+  and the slug list). `handleGetPaymentIntent` never calls `requirePermission`;
+  its only gate is `claims.scope !== "parent" && claims.scope !== "school"` → 403.
+  Any school-scope session — a teacher, a librarian, a transport clerk — can read
+  any payment intent in its school by id, exposing `amount`, `gatewayOrderId`,
+  `collectionId`, `invoiceId`, `refundId`. School isolation still holds via the
+  `payment_intents_school_read` RLS policy, so this is intra-school
+  over-exposure, not a tenant leak. Of the 96 permission slugs in the inventory,
+  this is the only one enforced nowhere — the other 95 are real.
+- **Root cause:** the rule was written to the intended design; the handler was
+  written to scope only, and nothing compares the two (API-101).
+- **Recommended fix:** add `requirePermission(claims, "viewFinance")` (or mint
+  and seed `viewPayments`) to the school-scope branch; keep the parent-ownership
+  check.
+- **Dependencies:** API-101 would have caught this.
+- **Risk of fixing:** low — confirm which roles need the read before choosing the
+  slug.
+- **Evidence:** `_shared/payment/payment_handlers.ts:140-152`;
+  `rbac_route_inventory.ts:140,401`.
+
+### API-112 · **P2** · Approvals · Batch approvals are recorded against the literal name "Approver"
+
+- **Repro steps:** approve two or more items via `POST /approvals/batch-decide`
+  and read `approval_audit_entries`.
+- **Expected:** the same approver name as a single approve/reject.
+- **Actual:** `handleBatchDecideApprovals` sets `const actorName = "Approver";`
+  before calling the shared `decideOne`; the single-decision handlers pass the
+  real name. The same decision is attributed to a person one at a time and to
+  "Approver" from the multi-select, in the table an auditor reads. `actorId` is
+  correct in both, so the record is recoverable — but every human-readable
+  approval report is wrong for batch decisions.
+- **Root cause:** a placeholder left in when the batch path was factored onto the
+  shared `decideOne`.
+- **Recommended fix:** resolve the display name from the session, as the single
+  path does.
+- **Dependencies:** none.
+- **Risk of fixing:** low.
+- **Evidence:** `_shared/approval/approval_handlers.ts:596-597`.
+
+### API-113 · **P1** · Finance · Money parsing silently converts malformed input into a plausible amount
+
+- **Repro steps:** read `parseAmount` in `finance_collections_handlers.ts` and
+  trace `body.amountCollected`.
+- **Expected:** a non-numeric or badly-formed amount is a 422.
+- **Actual:** `parseFloat(String(raw))` — `"100abc"` becomes `100`, `"1e5"`
+  becomes `100000`, `"12.999"` is accepted at sub-paisa precision. There is no
+  2-decimal check and no upper bound; only `<= 0` and `> outstanding` are
+  rejected. The same idiom recurs across the finance handlers. The invoice lock,
+  the over-collection guard and the day-close guard all operate on whatever
+  number `parseFloat` produced.
+- **Root cause:** `parseFloat`'s prefix-parsing semantics, used as if it were a
+  validator.
+- **Recommended fix:** one shared money parser — reject anything that is not a
+  canonical decimal with ≤2 places, bound it, and use it on every money field.
+- **Dependencies:** touches every finance write; do it once, centrally.
+- **Risk of fixing:** medium — a stricter parser may reject client payloads that
+  currently work; audit the client DTOs first.
+- **Evidence:** `_shared/finance/finance_collections_handlers.ts:127-132`;
+  `_shared/finance/finance_collections_repository.ts:432-476`.
+
+### API-114 · **P1** · Exams · `maxMarks` accepts values that make an exam permanently unusable
+
+- **Repro steps:** `POST /academics/exams` with `maxMarks: -50`, then attempt any
+  mark entry for that exam. Repeat with `maxMarks: 0` and `maxMarks: 1.5`.
+- **Expected:** a positive integer, or a 422.
+- **Actual:** `maxMarks: Number(body.maxMarks ?? body.max_marks ?? 100) || 100`.
+  `0` is falsy and silently becomes `100` (the school's zero-mark exam is stored
+  as a 100-mark exam). `-50` is truthy and is stored — the column is
+  `INTEGER NOT NULL DEFAULT 100` with **no** positivity CHECK — and because the
+  mark constraint is `marks_obtained >= 0 AND marks_obtained <= max_marks`,
+  **every** subsequent mark entry for that exam fails at the database. The exam
+  is unusable and the teacher sees a 500-class failure, not a validation message.
+  `1.5` reaches an `INTEGER` column and errors as a 500.
+- **Root cause:** `Number(x) || default` used as a validator; no DB CHECK as
+  backstop.
+- **Recommended fix:** require a positive integer in the handler (422 otherwise)
+  and add `CHECK (max_marks > 0)` to `exam_sessions`.
+- **Dependencies:** the CHECK needs a migration and a scan for existing bad rows.
+- **Risk of fixing:** low.
+- **Evidence:** `_shared/academics/exam_administration/exam_administration_handlers.ts:458`;
+  `supabase/migrations/20260618120000_f4_exam_sessions.sql:16`;
+  `supabase/migrations/20260814000000_red_team_wave1_transactional_integrity.sql:95-107`.
+
+### API-115 · **P2** · Platform / Validation · No free-text field in the core ERP has a length limit
+
+- **Repro steps:** grep the migrations for `char_length`/`length(` CHECKs and the
+  handlers for any maximum-length validation.
+- **Expected:** every persisted free-text field is bounded.
+- **Actual:** length constraints exist in exactly three places — the ASIP support
+  tables (`title` 1–200, `description`/`body` ≤ 8000), `org_assets`, and
+  `expense_ledger.category`. Everywhere else — `exam_sessions.title`,
+  `approval_requests.title`, `finance_collections.notes` and `reference_number`,
+  complaint text, broadcast bodies, student names — the column is bare `TEXT` and
+  the handler applies `String(...)` and `.trim()` with no maximum. Nothing in the
+  request path caps a string. `MAX_BULK_ITEMS` (500) bounds array length only,
+  never element size. A single request can persist a multi-megabyte value that is
+  then rendered into a receipt, a report and a PDF.
+- **Root cause:** the support module was built with a validation discipline the
+  older core modules were not.
+- **Recommended fix:** a shared `boundedStr(body, key, max)` helper applied at the
+  handler boundary, plus `CHECK (char_length(col) <= n)` on the high-traffic text
+  columns.
+- **Dependencies:** none; can be done module by module.
+- **Risk of fixing:** low-medium — pick limits generous enough not to reject real
+  data.
+- **Evidence:** `supabase/migrations/20260920000000_support_incident_core.sql:79-80`
+  (the good pattern); `20260618120000_f4_exam_sessions.sql:7`;
+  `20260617100000_approval_requests.sql:10`.
+
+### API-116 · **P2** · Platform / Tenant isolation · 30 repository reads restate no school predicate and rely on RLS alone
+
+- **Repro steps:** scan `*_repository.ts` for `SELECT`s that bind
+  `organization_id` but never `school_id`.
+- **Expected:** defence in depth — route guard, repository predicate, RLS.
+- **Actual:** 30 such queries, including `audit_events`
+  (`audit_repository.ts:107`), `finance_collections`
+  (`finance_collections_repository.ts:398`), `payment_intents` and
+  `payment_requests` (`payment_repository.ts:78,121`), four communication tables,
+  nine director queries over `finance_invoices`/`students`/`admissions_leads`,
+  and the AI-wallet and storage-quota tables. The matching RLS policies were read
+  and they **do** restate `school_id = app_current_school_id()`, so isolation
+  holds today (the live pilot confirms `role: erp_tenant`, `bypassRls: false`).
+  The risk is structural: any future path that runs one of these repositories
+  under `createServiceClient` — which bypasses RLS — reads across every school in
+  the organization with no second barrier. Service-client use is currently
+  bounded and appropriate (auth, session validation, identity, the Razorpay
+  webhook, the cron broadcast drain, HR offboarding), which is what keeps this
+  latent.
+- **Root cause:** RLS was introduced as the isolation mechanism and repository
+  predicates were not brought up to match.
+- **Recommended fix:** add the `school_id` bind to school-scoped reads; add a
+  lint/test that a repository query touching a school-scoped table binds both.
+- **Dependencies:** none.
+- **Risk of fixing:** low, but each query needs checking for a legitimate
+  org-scope caller (the director module genuinely needs the org view).
+- **Evidence:** `docs/certification/findings/API-certification.md` §5.1 (full table).
+
+### API-117 · **P1** · Platform / Security · Twelve handlers return the raw exception string to the client in a 500
+
+- **Repro steps:** grep for `errorEnvelope(…, String(error), 500)` and
+  `errorEnvelope("SERVER_ERROR", error.message, 500)`.
+- **Expected:** `ENG-7 (SEC-6)` — the real message is logged server-side and the
+  client gets a generic envelope plus a correlation id, as `handleRequest` does.
+- **Actual:** twelve call sites catch the exception themselves and put its string
+  in the response: `widget_platform_handlers.ts:45,68,105,130,156`,
+  `widget_layout_handlers.ts:101`, `setup_wizard_handlers.ts:73,105,163`,
+  `platform_providers_handlers.ts:51,58`,
+  `control_center_write_handlers.ts:33`, `school_calendar_handlers.ts:45`,
+  `copilot_handlers.ts:69`. A `deno-postgres` error stringifies to the driver
+  message, carrying the failing SQL fragment plus table, column and constraint
+  names. **`auth_handlers.ts:345` is the worst case**: it returns
+  `SERVER_ERROR` with the Supabase insert error's `message` verbatim on the
+  **pre-authentication OTP request path**, i.e. to an anonymous caller. Two more
+  sites return DB-configuration text with a 503 (`tenant_handlers.ts:98`,
+  `platform_db.ts:196`). The ~120 other `error.message` uses are on **typed
+  domain errors** with author-written messages and are correct.
+- **Root cause:** modules added their own catch-all after the central one was
+  hardened, reintroducing the pattern locally.
+- **Recommended fix:** delete these local catches and let the exception reach the
+  central handler, or replace the message with a constant. Add a lint rule
+  banning `String(error)` / raw `error.message` inside a 5xx `errorEnvelope`.
+- **Dependencies:** none.
+- **Risk of fixing:** low.
+- **Evidence:** file/line list above; `supabase/functions/api/app.ts:363-380`
+  (the correct pattern).
+
+### API-118 · **P1** · Attendance · Five routes validate before they authorise, so a denial is reported as a 422 and no access-denied audit is written
+
+- **Repro steps:** call `GET /attendance/register/monthly` without `classLabel`
+  as a user lacking `viewSis`. Live (unauthenticated), performed:
+  `curl https://akshara.veloraunisexsalon.com/attendance/register/monthly`
+  → **422 `ATTENDANCE_VALIDATION — classLabel is required`**.
+- **Expected:** 403, and an access-denied audit row.
+- **Actual:** `handleAttendanceMonthlyRegister`, `handleAttendanceRegister`,
+  `handleAttendancePending`, `handleAttendanceConsecutiveAbsence` and
+  `handleAttendanceShortAttendance` all parse and reject query parameters
+  **before** calling `withAuth`. An unauthorised caller learns the parameter
+  contract instead of being refused. Because `api/app.ts` records the
+  access-denied audit event by observing `response.status === 403` centrally
+  (QA-X-017), no audit row is written for these denials. On the live build, where
+  there is no central auth gate (API-105), the same code answers a fully
+  anonymous caller.
+- **Root cause:** the parse was hoisted above `withAuth` so a bad parameter could
+  be rejected before opening a DB connection — a reasonable goal implemented in
+  the wrong order.
+- **Recommended fix:** authenticate and authorise first, then validate. If the
+  early rejection is worth keeping, do it inside `withAuth` after the permission
+  check.
+- **Dependencies:** these are the same five routes missing from the RBAC
+  inventory (API-103).
+- **Risk of fixing:** low.
+- **Evidence:** `_shared/attendance/attendance_handlers.ts:205-300`;
+  `supabase/functions/api/app.ts:341-352`; live probe P12.
+
+### API-119 · **P0** · Finance / Reliability · An in-flight `409 IDEMPOTENCY_CONFLICT` is recorded by the client as a confirmed write — a fee can be shown as collected and never reach the books
+
+- **Repro steps:** two requests carrying the same `Idempotency-Key` for
+  `POST /finance/collections`. Request A claims the key and is still running;
+  the outbox drains request B, which receives `409 IDEMPOTENCY_CONFLICT`;
+  request A then fails (validation, day-lock, DB error) and its claim is
+  released.
+- **Expected:** nothing was written, so the client must retry or surface a
+  failure.
+- **Actual:** `send_classification.dart` maps **any** 409 whose code is
+  `IDEMPOTENCY_CONFLICT` to `SendClassification.confirmed` ("already applied").
+  But the backend returns that exact code for a request **still in flight**
+  ("A request with this Idempotency-Key is already being processed"), and the
+  same wrapper **releases the claim on a non-2xx** so the failed attempt leaves
+  no row. The outbox therefore stores `SyncStatus.confirmed`, which is terminal
+  and never retried. For `OperationTypes.collectFee` that is a fee the app
+  reports as collected and the books never receive. The same 409 shape is thrown
+  by `module_write_handlers.runWithIdempotency`, so the whole generic
+  entity-write surface shares it.
+- **Root cause:** one status code is used for two different meanings — "already
+  applied" (a stored 2xx payload exists) and "maybe applied, still running" — and
+  the client was written against the first meaning. The backend comment ("the
+  client treats this as 'already applied'") records the agreement; the code does
+  not honour it.
+- **Recommended fix:** split the wire contract. Return a distinct code (e.g.
+  `IDEMPOTENCY_IN_FLIGHT`, 409) when the claim exists with a NULL payload, and
+  reserve `IDEMPOTENCY_CONFLICT`/replay for a stored response. Classify the
+  in-flight code as `transient` so the outbox retries with the same key. Until
+  fixed, the safest client change is to classify 409 as `transient` for
+  high-risk operations.
+- **Dependencies:** backend + client must ship together; the client change alone
+  is safe (extra retries are deduped by the same key).
+- **Risk of fixing:** low, and it removes a silent-money-loss path.
+- **Evidence:** `lib/core/reliability/sync/send_classification.dart:25-37`;
+  `supabase/functions/_shared/idempotency_dispatch.ts` (in-flight 409 branch, and
+  the `_safeRelease` on non-2xx);
+  `_shared/entity_write/module_write_handlers.ts:84-92`;
+  `lib/core/reliability/policy/operation_policy_registry.dart` (`collectFee`).
+
+### API-120 · **P2** · Payments · Confirming an already-captured payment returns 200 or 422 depending on timing
+
+- **Repro steps:** call `POST /payments/intents/confirm` twice for the same
+  intent.
+- **Expected:** one deterministic outcome for "this payment is already captured".
+- **Actual:** `confirmPayment` returns success on its first read
+  (`if (intent.status === "captured" || intent.status === "settled") return buildConfirmResult(intent);`)
+  but throws `PaymentIntentStateError("Payment already captured …")` → **422**
+  after taking the capture lock. Which one a parent gets depends purely on
+  whether another request captured the intent between the two reads. Both mean
+  "your payment went through"; only one looks like it.
+- **Root cause:** the PRA-M-2 capture lock was added below an existing
+  early-return without reconciling the two responses.
+- **Recommended fix:** return the same idempotent success from the post-lock
+  branch.
+- **Dependencies:** none.
+- **Risk of fixing:** low.
+- **Evidence:** `_shared/payment/payment_service.ts:245-302`.
+
+### API-121 · **P2** · Payments · The confirm path does not forward an `Idempotency-Key`
+
+- **Repro steps:** compare `handleInitiatePayment` and `handleConfirmPayment`.
+- **Expected:** symmetry — both money paths pass the header down.
+- **Actual:** `handleInitiatePayment` passes `idempotencyKey: idempotencyKey(req)`
+  to `initiatePayment`; `handleConfirmPayment` passes no key to `confirmPayment`.
+  Confirm is protected only by the universal dispatch wrapper plus the
+  `SELECT … FOR UPDATE` capture lock; there is no natural-key backstop tying a
+  confirm to its intent, so if the wrapper is bypassed (no header) the lock is
+  the only defence.
+- **Root cause:** oversight when the key was threaded through initiate.
+- **Recommended fix:** forward the key and persist it on the resulting
+  collection, as the counter path does.
+- **Dependencies:** none.
+- **Risk of fixing:** low.
+- **Evidence:** `_shared/payment/payment_handlers.ts:57-95` vs `97-138`.
+
+### API-122 · **P2** · Payments · The Razorpay webhook mints a random dedupe key when the payload has no `id`
+
+- **Repro steps:** read the event-id derivation in `handleRazorpayWebhook`.
+- **Expected:** replay protection is a property of this service.
+- **Actual:** ``const eventId = String(payload.id ?? `evt_${crypto.randomUUID()}`);``
+  A payload without `id` produces a fresh key on every delivery, so
+  `recordWebhookEvent` always reports "new" and the event is processed again on
+  every redelivery. Razorpay always sends `id`, so this is latent — but it makes
+  the guarantee depend on the provider rather than on the code, and it is silent
+  when it degrades.
+- **Root cause:** a defensive default that defeats the mechanism it defends.
+- **Recommended fix:** reject a webhook with no event id (422) rather than
+  fabricate one.
+- **Dependencies:** none.
+- **Risk of fixing:** low.
+- **Evidence:** `_shared/payment/payment_handlers.ts:230`.
+
+### API-123 · **P2** · Finance · `POST /finance/collections` has no natural-key dedup, only key dedup
+
+- **Repro steps:** submit the same collection twice with two different
+  `Idempotency-Key`s.
+- **Expected:** the second is recognised as the same human intent, or is at least
+  flagged.
+- **Actual:** both succeed. Idempotency is keyed solely on
+  `(organization_id, idempotency_key)`; there is no uniqueness on
+  (invoice, amount, date, method). The client mints a fresh key per repository
+  call, so a user tapping "Collect" twice, or re-entering the screen after a lost
+  response, produces two keys and two collections. `ICA-A2` added exactly this
+  kind of natural-key backstop for offline instruments
+  (`finance_collections_offline_payment_uq`); the counter path has none.
+- **Root cause:** the key-based mechanism was considered sufficient without
+  modelling the double-submit case.
+- **Recommended fix:** either a short-window duplicate check on
+  (invoice, amount, method) returning a 409 the UI can explain, or a client-side
+  stable key derived from the collection intent rather than minted per call.
+- **Dependencies:** interacts with API-119 — fix that first.
+- **Risk of fixing:** medium — a legitimate second identical payment (two
+  instalments of the same amount on one day) must remain possible.
+- **Evidence:** `_shared/finance/finance_collections_repository.ts:451-469,531-560`;
+  `lib/core/reliability/reliable_writer.dart:25-33`.
+
+### API-124 · **P2** · Reliability · Nothing asserts that a route reachable offline has a registered outbox policy
+
+- **Repro steps:** read `OperationPolicyRegistry.withDefaults()`.
+- **Expected:** a guard that every write the app can perform while offline is
+  registered.
+- **Actual:** eleven operations are registered; everything else falls back to
+  `OperationPolicy.fallback` (`onlineOnly`). The registry is keyed by an
+  operation-type string, not by route, and no test relates the two. A new
+  queueable write is opted in by remembering to add an entry. The fallback is
+  safe, so the failure mode is "a write that should have been queued isn't" — a
+  lost teacher action rather than a corrupted one.
+- **Root cause:** the registry is deliberately opt-in (documented), with no
+  completeness check.
+- **Recommended fix:** enumerate the `OperationTypes` constants used by
+  `ReliableWriter` call sites and assert each has an explicit policy.
+- **Dependencies:** none.
+- **Risk of fixing:** low.
+- **Evidence:** `lib/core/reliability/policy/operation_policy_registry.dart:33-80`.

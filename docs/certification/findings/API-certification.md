@@ -300,3 +300,445 @@ preflight). Separately, `Access-Control-Allow-Origin: *` lets any origin script
 call the API with a bearer token it already holds; with `*` the browser refuses
 to send cookies, and this API is bearer-only, so the practical risk is bounded —
 but `*` on a school-data API is not a defensible default.
+
+---
+
+## 3. Permissions — is every mutating route gated?
+
+### 3.1 The result: in the repository, yes
+
+A route→handler map was built from all 66 routers, then every handler reached by
+a `POST`/`PUT`/`PATCH`/`DELETE` was resolved (through one or two levels of local
+helper — `guard()`, `withAuth()`, `runWrite()`, the `createModule*Handlers` and
+`create*ScopedReadHandlers` factories) and checked for a permission or scope
+gate. **No ungated mutating route was found.** The two legitimate exceptions are
+signature-authenticated by design and were confirmed fail-closed:
+
+- `POST /webhooks/razorpay` — HMAC-verified. `RT-23` decoupled signature
+  enforcement from `stubMode`, and `ICA-A5` additionally refuses to post to the
+  books while the gateway is stubbed. Both were read and hold.
+- `POST /communications/delivery/webhook` — `verifyCommunicationWebhookSignature`.
+- `POST /communications/broadcasts/run-scheduled` also accepts an
+  `x-internal-cron-token`; `verifyInternalCronToken` returns `false` when the
+  token is unset (fail-closed), verified in `communication_cron_auth.ts:72`.
+
+This is a real and non-obvious strength, and it should be recorded as such: the
+gate coverage is good. What is broken is the *machinery that is supposed to
+prove* it (§1.2) — and that machinery failing is what will let the next
+ungated route through.
+
+The 96 permission slugs in the inventory were also checked against handler code:
+**95 are genuinely enforced somewhere.** Exactly one is fiction — see §3.2.
+
+### 3.2 `viewPayments` is enforced nowhere — API-111
+
+The inventory declares:
+
+```ts
+{ method: "GET", path: "/payments/intents/:id", permission: "viewPayments", scope: "school", module: "payment" },
+```
+
+`handleGetPaymentIntent` never calls `requirePermission`. Its only gate is:
+
+```ts
+if (auth.claims.scope !== "parent" && auth.claims.scope !== "school") { …403… }
+```
+
+The string `"viewPayments"` appears in the entire backend **only** inside
+`rbac_route_inventory.ts` — it is enforced by no handler and granted by no role
+seed. So *any* school-scope session (a teacher, a librarian, a transport clerk)
+can read any payment intent in its school by id, including `amount`,
+`gatewayOrderId`, `collectionId`, `invoiceId` and `refundId`. School isolation
+holds (the `payment_intents_school_read` RLS policy pins `school_id`), so this is
+an intra-school over-exposure, not a tenant leak. The defect worth weighting is
+that **the inventory documents a control that does not exist**, and the RBAC
+suite happily green-lights it because it only ever tests the inventory against
+itself.
+
+### 3.3 `POST /approvals/audit` accepts a caller-supplied actor — API-110
+
+`handleRecordApprovalAudit` correctly requires `manageManagement` (RT-22 fixed an
+earlier `viewManagement` gate), but then writes the audit row from the **request
+body**:
+
+```ts
+const actorId   = optionalStr(body, "actor_id",   "actorId");
+const actorName = optionalStr(body, "actor_name", "actorName");
+…
+insertAuditEntry(db, orgId, schoolId, approvalRequestId,
+  action as "submitted" | "approved" | "rejected" | "cancelled",
+  actorId, actorName, …);
+```
+
+`auth.claims.sub` is available and ignored. A `manageManagement` holder can
+therefore write an approval-audit entry attributing an approval to *any* named
+person. An audit trail whose actor is client-supplied is not an audit trail. The
+`action` is also a bare `as` cast with no runtime validation — the value reaches
+the `approval_audit_action_check` constraint, so a bad value becomes a **500**
+rather than a 422.
+
+### 3.4 Batch approvals record a placeholder approver — API-112
+
+`handleBatchDecideApprovals` sets `const actorName = "Approver";` before calling
+the shared `decideOne`. The single-decision endpoints pass the real name. So the
+same approval decision is attributed to a named person when taken one at a time
+and to the literal string "Approver" when taken from the multi-select — in the
+same `approval_audit_entries` table an auditor reads. `actorId` is correct in
+both, so the record is recoverable, but any human-readable approval report is
+wrong for every batch decision.
+
+### 3.5 Separation of duties is coarse in HR/inventory/transport/library
+
+`createModuleWriteHandlers` takes exactly **one** `manage*` permission for a
+whole module: `manageHr` covers creating an employee, approving leave, running
+payroll and posting statutory liabilities to Finance; `manageInventory` covers
+both stock issue and stock adjustment; `manageTransport` covers routes, vehicles
+and the transport fee demand. Where the product has an explicit maker–checker
+decision (fee concession FIN-D4, clearance waivers SCE-1, refunds, purchase
+orders) the split is properly implemented with a distinct `approve*` slug. Where
+it does not, a single slug is the whole authority. This is a design observation,
+not a code defect — recorded so it is a deliberate choice rather than an
+accident.
+
+---
+
+## 4. Validation
+
+### 4.1 Money
+
+`POST /finance/collections` is the best-validated write in the system and it
+holds up:
+
+- amount must be finite and `> 0` (handler **and** repository);
+- the invoice row is locked, and `amountCollected > outstanding` is rejected;
+- the collection date is refused if the day is closed (`FIN-D1`);
+- cheque/DD/PDC cannot be entered directly — they must come through the offline
+  instrument register (`PRA-P1-09`);
+- the receipt number is allocated last, inside the transaction, so a rollback
+  never burns a number (`PRA-P1-08`).
+
+Two gaps remain:
+
+**API-113 — money parsing silently truncates garbage.** `parseAmount` is
+`parseFloat(String(raw))`. `parseFloat("100abc")` is `100`, `parseFloat("1e5")`
+is `100000`, and `"12.999"` is accepted at sub-paisa precision with no 2-decimal
+check and no upper bound. A malformed client field becomes a *plausible* amount
+rather than a 422. The same `parseFloat`-and-hope idiom appears across the
+finance handlers.
+
+**API-114 — `maxMarks` accepts values that brick an exam.**
+`handleCreateExam` computes `maxMarks: Number(body.maxMarks ?? body.max_marks ?? 100) || 100`.
+Consequences: `maxMarks: 0` silently becomes `100`; `maxMarks: -50` is stored
+(the column is `INTEGER NOT NULL DEFAULT 100` with **no** positivity CHECK), and
+because the mark CHECK is `marks_obtained >= 0 AND marks_obtained <= max_marks`,
+**every** subsequent mark entry for that exam fails at the database — the exam is
+unusable and the teacher sees a 500-class error, not a validation message. A
+fractional `maxMarks: 1.5` reaches an `INTEGER` column and errors as a 500.
+
+### 4.2 Marks
+
+`parseMarkPayload` + `applyMarkUpdate` are correct: `marksObtained` must be a
+finite **non-negative integer** (RT-08), must be `<= max_marks`, status is a
+closed enum, and `20260814000000_red_team_wave1_transactional_integrity.sql`
+adds the DB CHECK as the backstop. Absent/medical/debarred correctly store NULL
+marks with a status rather than a 0. No defect found.
+
+### 4.3 Dates
+
+Dates are validated per-handler against explicit regexes (`DATE_RE` = `YYYY-MM-DD`,
+`MONTH_RE` = `YYYY-MM`) and `parseDeadline` rejects an unparseable timestamp with
+a 422 *before* opening the tenant context (EXM-6) — a good pattern. There is,
+however, no shared date validator: each module re-declares its own, so the
+rejection message and the accepted format vary by module. Not a defect on its
+own; it is why a date bug in one module will not be caught by another's tests.
+
+### 4.4 Free text — API-115
+
+Length constraints exist in exactly three places: the ASIP support tables
+(`title` 1–200, `description`/`body` ≤ 8000), `org_assets`, and
+`expense_ledger.category`. Everywhere else in the core ERP — `exam_sessions.title`,
+`approval_requests.title`, `finance_collections.notes`,
+`finance_collections.reference_number`, complaint text, broadcast bodies,
+student names — the column is bare `TEXT` and the handler applies `String(...)`
+and `.trim()` with **no maximum length**. Nothing in the request path caps a
+string field. A single request can persist a multi-megabyte "notes" value that
+then has to be rendered into a receipt, a report and a PDF. The `MAX_BULK_ITEMS`
+cap (500) bounds array *length* only, never element size.
+
+### 4.5 SQL injection — none found
+
+Every user-controlled value reaches the database as a `$n` bind parameter. 153
+template-literal interpolations into SQL-looking strings were reviewed; all are
+either server-owned constants, table names fixed at module construction
+(`createEntityWriteStore("hr_entities", …)`), numerically clamped (`LIMIT
+${Math.min(1000, …)}`), or `$n` placeholder indices built from a server-side
+`conditions[]` array. The one genuine string interpolation —
+`trackPromotionMetric`'s `'{${metric}}'` jsonb path — is preceded by an explicit
+`["views","shares","downloads"].includes(metric)` allowlist in the handler. This
+surface is clean.
+
+---
+
+## 5. Tenant isolation
+
+### 5.1 Three layers, and one of them is frequently absent
+
+The intended model is route guard → repository predicate → RLS. Layer 3 is
+comprehensive: every school table carries `ENABLE`/`FORCE ROW LEVEL SECURITY`
+with `app_current_tenant_id()` / `app_current_school_id()` / scope-aware
+policies, and the live pilot confirms the app connects as `erp_tenant` with
+`bypassRls: false`.
+
+Layer 2 is not. **30 repository `SELECT`s filter on `organization_id` with no
+`school_id` predicate**, including:
+
+| Repository | Table |
+|---|---|
+| `audit/audit_repository.ts:107` | `audit_events` |
+| `finance/finance_collections_repository.ts:398` | `finance_collections` |
+| `payment/payment_repository.ts:78,121` | `payment_intents`, `payment_requests` |
+| `communication/communication_repository.ts` | `notification_deliveries`, `comm_threads`, `comm_broadcasts`, `comm_device_tokens` |
+| `director/director_repository.ts` (9 queries) | `finance_invoices`, `finance_collections`, `students`, `sis_student_enrollments`, `admissions_leads`, … |
+| `ai/ai_wallet_repository.ts`, `storage/storage_quota_repository.ts` | wallet + quota tables |
+
+For each of these, school isolation rests **entirely on RLS**. The matching
+policies were read and they do restate `school_id = app_current_school_id()`
+(e.g. `audit_events_tenant_read`, `payment_intents_school_read`), so today the
+isolation holds — but with no defence in depth. Any future path that runs one of
+these repositories under `createServiceClient` (which bypasses RLS) reads across
+every school in the organization with no second barrier. Service-client use is
+currently bounded and appropriate (auth, session validation, identity/custom
+roles, the Razorpay webhook, the cron broadcast drain, HR offboarding
+revocation) — that is what keeps this a latent risk rather than a live one.
+**API-116.**
+
+### 5.2 Cross-school reads in a multi-school tenant
+
+`MULTI-SCHOOL` is a supported product configuration, so "same organization,
+different school" is a real boundary and not a theoretical one. The director
+module deliberately crosses it (that is its purpose) and is gated by
+`module.multi_branch` entitlement plus organization scope; the
+`org_scope_*` isolation probes covering it pass live. No cross-school defect was
+found in code review.
+
+### 5.3 The live isolation matrix is red
+
+See §2.3. Four `student`-scope probes fail on the pilot right now. This is the
+only executed isolation evidence available, and it is the one that matters most
+— **API-108**.
+
+---
+
+## 6. Failure behaviour — what the client sees
+
+### 6.1 The envelope is consistent
+
+Every response is `{ data, error: { code, message } }`, produced by the single
+`errorEnvelope` helper, with security headers and a correlation id attached
+centrally. `handleRequest`'s outer catch is correct and deliberate: it logs
+`error.message` server-side and returns
+`SERVER_ERROR — "An unexpected error occurred."` with the correlation id. The
+`CONFIG_ERROR` path does the same. That is the right shape and it was verified
+live (§2).
+
+### 6.2 Twelve handlers bypass that discipline and return the raw exception — API-117
+
+The central catch only fires for exceptions that *escape* a handler. Twelve call
+sites catch the exception themselves and put its string into the client
+envelope with a 500:
+
+| File | Sites |
+|---|---|
+| `widget_platform/widget_platform_handlers.ts` | 45, 68, 105, 130, 156 |
+| `widget_platform/widget_layout_handlers.ts` | 101 |
+| `setup_wizard/setup_wizard_handlers.ts` | 73, 105, 163 |
+| `control_center/platform_providers_handlers.ts` | 51, 58 |
+| `control_center/control_center_write_handlers.ts` | 33 |
+| `school_calendar/school_calendar_handlers.ts` | 45 |
+| `copilot/copilot_handlers.ts` | 69 |
+
+all of the form `errorEnvelope("…", String(error), 500)`. A `deno-postgres`
+error stringifies to the driver's message — which carries the failing SQL
+fragment, the table and column names, and the constraint name. `ENG-7 (SEC-6)`
+closed exactly this hole in `app.ts`; these handlers re-open it one module at a
+time. `_shared/auth_handlers.ts:345` is the worst instance because it is on the
+**pre-authentication OTP request path**: a Supabase insert failure returns
+`SERVER_ERROR` with `error.message` verbatim to an anonymous caller.
+
+Two more sites return the DB configuration error text with a 503
+(`tenant_handlers.ts:98`, `platform_db.ts:196`).
+
+Everything else is fine: the ~120 other `error.message` uses are on **typed
+domain errors** (`ExamValidationError`, `CollectionAmountError`,
+`ApprovalNotFoundError`, …) whose messages are author-written and safe to show.
+That distinction is the point — the defect is not "message contains a message",
+it is "message contains an exception the author never saw".
+
+### 6.3 403 precedence and the access-denied audit — API-118
+
+`api/app.ts` records an access-denied audit event by observing
+`response.status === 403` centrally (QA-X-017). Five attendance handlers return
+**422 before any authorisation runs**:
+
+```ts
+export async function handleAttendanceMonthlyRegister(req, config) {
+  const url = new URL(req.url);
+  const classLabel = (url.searchParams.get("classLabel") ?? "").trim();
+  if (!classLabel) return errorEnvelope("ATTENDANCE_VALIDATION", "classLabel is required", 422);
+  …
+  return await withAuth(req, config, true, async (claims) => { … });   // ← auth is HERE
+}
+```
+
+(also `handleAttendanceRegister`, `handleAttendancePending`,
+`handleAttendanceConsecutiveAbsence`, `handleAttendanceShortAttendance`). A user
+without `viewSis` who sends a malformed request gets a 422 describing the
+parameter contract instead of a 403 — and because no 403 is produced, **no
+access-denied audit row is written**. On the live build, where there is no
+central auth gate (§2.1), the same code answers an entirely anonymous caller —
+verified as probe P12. These are the same five routes that are missing from the
+RBAC inventory.
+
+---
+
+## 7. Retries and idempotency
+
+### 7.1 The design is sound
+
+Two independent layers:
+
+1. **Universal store-and-replay** — `dispatchWithIdempotency` wraps the whole
+   module dispatch. With an `Idempotency-Key` on a mutating request it claims
+   `(organization_id, idempotency_key)`, runs the write once, replays the stored
+   2xx envelope on retry, releases the claim on a non-2xx so a transient failure
+   stays retryable, rejects key reuse across a different `(method, path)` with
+   `422 IDEMPOTENCY_KEY_REUSED` (ICA-D1), and re-claims a slot abandoned by a
+   crash after `IN_FLIGHT_CLAIM_TTL_MS` (ICA-A4). It never turns a committed
+   write into a 500 when the replay payload fails to persist.
+2. **Per-route natural-key backstops** — `finance_collections` has a partial
+   unique index on `(organization_id, idempotency_key)` and another on
+   `offline_payment_id` (ICA-A2); `payment_webhook_events` dedupes by gateway
+   event id; `confirmPayment` takes `SELECT … FOR UPDATE` on the intent and
+   re-reads status before creating a collection (PRA-M-2); approval decisions
+   use a guarded `UPDATE … AND status = 'pending'`.
+
+The client cooperates: `IdempotencyKeyInterceptor` mints a key for **every**
+mutating Dio request, and `DioMutationExecutor` sends the outbox envelope's
+stored key so an outbox retry reuses it.
+
+### 7.2 An in-flight 409 is reported to the user as success — API-119 (P0 for money)
+
+This is the defect that matters. `send_classification.dart`:
+
+```dart
+if (resp.statusCode == 409) {
+  if (resp.errorCode == kIdempotencyConflictCode) {
+    return SendClassification.confirmed;      // "already applied"
+  }
+  …
+}
+```
+
+But the backend returns `409 IDEMPOTENCY_CONFLICT` for a request that is **still
+in flight**, not one that has succeeded:
+
+```ts
+// Genuinely in-flight (NULL payload, not stale) → transient conflict.
+return { claimed: false, priorStatus: null, priorPayload: null };
+…
+return errorEnvelope("IDEMPOTENCY_CONFLICT",
+  "A request with this Idempotency-Key is already being processed", 409);
+```
+
+and the very same wrapper **releases the claim if that in-flight request then
+fails**:
+
+```ts
+// Non-2xx → release the claim so the client can safely retry later.
+await _safeRelease(store);
+```
+
+So the sequence — attempt A claims and is still running; the outbox drains
+attempt B with the same key and gets 409; A then fails validation or errors, and
+its claim is released — leaves **nothing written to the database and a
+`SyncStatus.confirmed` in the client's outbox**. A `confirmed` envelope is
+terminal: it is never retried. For `OperationTypes.collectFee` that is a fee
+recorded as collected in the app and absent from the books. The same 409 shape
+is thrown by `module_write_handlers.runWithIdempotency`, so the entire generic
+entity-write surface shares it.
+
+The backend comment (`idempotency_dispatch.ts`, "the client treats this as
+'already applied'") shows the two sides agreed on a contract the backend does not
+honour: a 409 in-flight is a *maybe*, and only a stored 2xx payload is an
+"already applied". Nothing distinguishes them on the wire today.
+
+### 7.3 Same state, two different statuses on the payment confirm path — API-120
+
+`confirmPayment` returns success for an already-captured intent on its first
+read:
+
+```ts
+if (intent.status === "captured" || intent.status === "settled") return buildConfirmResult(intent);
+```
+
+but throws after taking the capture lock:
+
+```ts
+if (captureLock[0]?.status === "captured")
+  throw new PaymentIntentStateError(`Payment already captured for intent ${intent.id}`);   // → 422
+```
+
+A parent retrying a confirm therefore gets `200` or `422 VALIDATION_ERROR`
+depending purely on whether another request captured it between the two reads.
+Both are "your payment went through"; only one looks like it.
+
+### 7.4 Smaller idempotency gaps
+
+- **API-121** — `handleConfirmPayment` does not forward an `Idempotency-Key` to
+  `confirmPayment`, although `handleInitiatePayment` does. Confirm is protected
+  only by the universal wrapper plus the row lock; there is no natural-key
+  backstop tying a confirm to its intent.
+- **API-122** — the Razorpay webhook derives its dedupe key as
+  `String(payload.id ?? \`evt_${crypto.randomUUID()}\`)`. A provider payload
+  without `id` mints a fresh key on every delivery, so `recordWebhookEvent`
+  always reports "new" and the event is processed on every redelivery. Razorpay
+  always sends `id`; the fallback silently makes replay protection a property of
+  the provider rather than of this service.
+- **API-123** — `POST /finance/collections` has no *natural*-key dedup (invoice +
+  amount + date + method). Two genuinely different `Idempotency-Key`s for the
+  same human intent — a user tapping "Collect" twice, or a screen re-entered
+  after a lost response — both succeed. `ICA-A2` added exactly this kind of
+  backstop for offline instruments; the counter path has none.
+
+---
+
+## 8. Offline and recovery — what the outbox does with each route
+
+`OperationPolicyRegistry.withDefaults()` is the whole policy surface. Eleven
+operations are registered; **everything else falls back to `onlineOnly`**, which
+is the safe default and is correctly documented as such.
+
+| Operation | Policy | API route | Assessment |
+|---|---|---|---|
+| `attendance.mark` / `attendance.submit` | queueable, low-risk LWW | `POST /teacher/attendance/{draft,submit}` | Correct. Single-owner data; last write wins is the documented decision. |
+| `exam.marks.saveDraft` | queueable, low-risk | draft save | Correct. |
+| `exam.marks.submit` | queueable, **high-risk** | `PUT /academics/exams/marks/:id` | Correct — requires explicit conflict resolution. |
+| `leave.apply` | queueable, low-risk | `POST /parent/leave`, `POST /teacher/leave` | Correct. |
+| `finance.collectFee` | queueable, **high-risk** | `POST /finance/collections` | Correct in shape — and the optimistic projection deliberately mints **no** receipt number, showing "Pending Sync" until the server confirms. Undermined by API-119. |
+| `staffAttendance.check` | onlineOnly | `POST /staff-attendance/check` | Correct, and well reasoned: a queued GPS+face check-in would be guaranteed stale, so the only offline path is the audited manual request. |
+| `login`, `gatewayPayment`, `aiGenerate` | onlineOnly | — | Correct. |
+
+Failure classification is otherwise sound: 5xx and 429 are `transient` and
+retried with backoff; 4xx other than 409 is `failed` and not retried; a real 409
+becomes `conflict` and, for a high-risk operation, is surfaced for explicit
+resolution rather than silently re-applied. `NetworkUnavailableException` covers
+connect/send/receive timeouts, so a lost response on a slow link is queued and
+retried **with the same key** — which is the case idempotency was built for and
+it works.
+
+**API-124 (P2)** — the registry is keyed by an operation *type* string, not by
+route. There is no test asserting that every route the app can call while
+offline has a registered policy, so a new queueable write is opted in by
+remembering to add a registry entry. The fallback is safe (`onlineOnly`), so the
+failure mode is "a write that should have been queued isn't" — a lost teacher
+action rather than a corrupted one. Worth a guard, not a blocker.

@@ -22,13 +22,24 @@ PRODUCT CERTIFICATION COMPLETE
 | 4 Cross-module | ✅ | NOT CERTIFIED |
 | 5 DAI | ✅ | NOT CERTIFIED |
 | 6 Widgets | ✅ | NOT CERTIFIED |
-| 2 End-to-end features | running | — |
-| 7 API | running | — |
-| 8 AI suite (6 sub-suites) | running | — |
-| 9 Polish | running | — |
-| 10 School-OS coherence | running | — |
+| 2 End-to-end features | ✅ | NOT CERTIFIED |
+| 7 API | ✅ | see findings |
+| 8 AI suite (6 sub-suites) | ✅ | see findings |
+| 9 Polish | ✅ | see findings |
+| 10 School-OS coherence | ✅ | see findings |
 
-Register at last commit: **99** (19 P0 · 56 P1 · 21 P2 · 3 P3).
+**CYCLE 1 CERTIFICATION COMPLETE — all 11 workstreams done. NOT CERTIFIED.**
+Register: **120** (25 P0 · 67 P1 · 25 P2 · 3 P3).
+
+### Third systemic item (from WS2)
+**Dates stored as display labels.** Five modules persist a human string where a
+real date column sits unused on the same row — the shared root of E2E-004,
+E2E-008, E2E-014, E2E-018, E2E-020. The fee counter literally sends `'Today'`,
+so the closed-day guard compares lexically and never fires, and parents' receipts
+read `SCH/NaN-NaN/000042`. One remediation item, not five.
+
+### Honest coverage gap
+WS2 did not reach alumni, control centre, director, multi-school. Cycle 2 must.
 
 ## THE systemic finding — treat as ONE remediation item, not many
 
