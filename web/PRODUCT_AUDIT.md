@@ -80,7 +80,7 @@ All discovered gaps are official ERP tasks in
 ## 8. Live production validation (2026-07-17)
 
 Ran `web/scripts/live_validate.mjs` against the **production VPS**
-(`https://akshara.veloraunisexsalon.com/functions/v1/api`, health 200). Authenticated
+(`https://akshara.veloraunisexsalon.com/functions/v1/api`, health 200 — **historical: probed against the pre-migration host, retained as dated evidence**). Authenticated
 with a pilot phone (dev-OTP returned in-app, no SMS), resolved school context via
 `/auth/context/switch`, and probed **128 GET endpoints** the web pages consume.
 

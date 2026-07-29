@@ -141,13 +141,15 @@ It renders `/privacy`, `/terms`, `/terms/user`, `/terms/acceptable-use`,
 is unfilled**. Deploy per `docs/Operations/VPS-Deployment-Runbook.md` §6.
 
 **Current gate status: PUBLISH_BLOCKED** — nine tokens remain, every one downstream
-of two owner actions (buy the domain, register the company). See
+of one remaining owner action (company registration — the domain is now live). See
 `docs/legal/PLACEHOLDERS.md`.
 
-⚠️ **The policy host is currently `https://akshara.veloraunisexsalon.com`** — an
-unrelated business's domain. A parent tapping "Privacy Policy" inside their child's
-school app lands on a salon's hostname. It must move to the real domain before
-submission; it reads as a phishing redirect to anyone paying attention.
+✅ **The policy host is `https://nikshaos.in`** — the canonical production domain.
+
+This was previously served from an unrelated business's hostname, so a parent
+tapping "Privacy Policy" inside their child's school app landed somewhere that
+read as a phishing redirect. That is resolved. The Play Console field and
+`legal_links.dart` must stay byte-identical to this host.
 
 ---
 

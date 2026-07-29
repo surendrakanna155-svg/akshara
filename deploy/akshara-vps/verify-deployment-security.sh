@@ -26,7 +26,10 @@ FAILURES=0
 pass() { printf '  \033[32mPASS\033[0m  %s\n' "$1"; }
 fail() { printf '  \033[31mFAIL\033[0m  %s\n' "$1"; FAILURES=$((FAILURES+1)); }
 
-code_of() { curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$HOST$1" 2>/dev/null || echo "000"; }
+# NOTE: curl already prints 000 on a connection failure via -w, so a `|| echo`
+# fallback would CONCATENATE and yield "000000". Capture, then default only when
+# the output is empty.
+code_of() { local c; c=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$HOST$1" 2>/dev/null); echo "${c:-000}"; }
 body_of() { curl -s --max-time 15 "$HOST$1" 2>/dev/null | head -c 400; }
 
 echo "Deployment security verification — $HOST"
