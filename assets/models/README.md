@@ -46,6 +46,14 @@ license-cleared model is provided.
 
 ## Licensing survey — 2026-07-29 (do NOT skip this)
 
+> **A second, architecture-agnostic survey of the whole market followed this
+> one. Its conclusion: there is no free, commercially clean, mobile-viable face
+> embedding model of ANY architecture, and Face Verification is deferred to V2.
+> Full candidate matrix, evidence and owner options:
+> [`docs/engineering/FACE_VERIFICATION_MODEL_LICENSING_SURVEY.md`](../../docs/engineering/FACE_VERIFICATION_MODEL_LICENSING_SURVEY.md).**
+>
+> Read that before considering any model, including non-MobileFaceNet ones.
+
 A search was run for a pre-trained MobileFaceNet `.tflite` matching the contract
 above that could be redistributed inside a **commercially sold** app. **None was
 found.** Record of what was checked, so this is not re-derived — or worse,
