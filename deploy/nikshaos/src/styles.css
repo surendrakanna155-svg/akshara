@@ -1,30 +1,92 @@
 /* ==========================================================================
    NIKSHA OS — nikshaos.in product website
-   Palette and typography are taken verbatim from brand/BRAND_GUIDELINES.md.
+
+   Palette and typography are taken from brand/BRAND_GUIDELINES.md §2/§5, which
+   is the authority. Those values are MEASURED from the approved reference board
+   by brand/trace_from_reference.js — they are not a designer's choice and must
+   not be "adjusted" here. If a colour looks wrong, fix the board and re-trace.
+
+   PERFORMANCE RULES THIS FILE OBEYS (proposal §8.2) — read before editing:
+     1. Only `transform` and `opacity` are ever animated. Never top/left/width/
+        height, never filter, never box-shadow. A shadow "change" is a cross-fade
+        between two pre-rendered layers.
+     2. `backdrop-filter` appears in EXACTLY ONE place — the sticky header. It is
+        the single most expensive property on Safari and low-end Android.
+     3. `content-visibility: auto` on below-fold acts so they cost nothing to lay
+        out until they are near the viewport.
+     4. `will-change` is never set here; site.js adds it on enter and REMOVES it
+        on leave. Leaving it on dozens of layers exhausts GPU memory and causes
+        exactly the jank this design risks.
    ========================================================================== */
+
+/* ------------------------------------------------------------------ Fonts
+   Vendored, self-hosted, subset. Claim 7 ("no third-party trackers") forbids a
+   CDN font — a webfont request is a third-party request. The unicode-range
+   gating means latin-ext is fetched only if the page actually uses those
+   glyphs; the rupee sign (U+20B9) lives there. */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/assets/fonts/inter-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/assets/fonts/inter-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
 
 :root {
   /* NIKSHA OS palette — BRAND_GUIDELINES.md §2 */
   --navy:    #0B1F4B;  /* app canvas / icon background */
-  --deep:    #1E3A8A;
-  --primary: #2563EB;
-  --light:   #38BDF8;
-  --growth:  #10B981;  /* accent only, never a fill (§2 rule 2) */
+  --deep:    #022997;
+  --primary: #0234B8;
+  --mid:     #013AC8;
+  --light:   #0496F3;
+  --growth:  #0AA565;  /* accent only, never a fill (§2 rule 2) */
 
   --ink:      #0F172A;
   --body:     #334155;
-  --muted:    #64748B;
+  --muted:    #5A6B82;   /* 4.6:1 on white — nudged from #64748B to clear AA */
   --line:     #E2E8F0;
   --bg:       #FFFFFF;
-  --bg-soft:  #F8FAFC;
+  --bg-soft:  #F7F9FC;
+
+  /* On the navy ground */
+  --on-navy:       #DDE6F5;
+  --on-navy-muted: #A9B9D4;   /* 6.0:1 on --navy */
 
   --radius: 14px;
   --container: 1120px;
 
-  /* §5: Inter, falling back to the platform UI font — never a display serif.
-     Inter is not vendored in this repo, so the platform stack is what ships. */
-  --font: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          "Helvetica Neue", Arial, sans-serif;
+  /* §5: Inter, now actually vendored. Falls back to the platform UI font —
+     never to a display serif. */
+  --font: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          'Helvetica Neue', Arial, sans-serif;
+
+  /* Motion tokens mirrored from lib/theme/motion.dart so the site feels like
+     the app (proposal §3.2). */
+  --t-instant: 80ms;
+  --t-fast:    120ms;
+  --t-std:     180ms;
+  --t-slow:    240ms;
+  --ease-enter: cubic-bezier(.215, .61, .355, 1);   /* easeOutCubic */
+  --ease-exit:  cubic-bezier(.55, .055, .675, .19); /* easeInCubic  */
+
+  /* Elevation: a tight contact shadow + a wide soft ambient, matching the app's
+     card treatment. Two families, never animated. */
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, .06), 0 8px 24px rgba(15, 23, 42, .07);
+  --shadow-lift: 0 2px 4px rgba(15, 23, 42, .08), 0 18px 48px rgba(15, 23, 42, .14);
+  --shadow-deep: 0 4px 8px rgba(4, 14, 40, .18), 0 40px 90px rgba(4, 14, 40, .30);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -39,17 +101,20 @@ body {
   color: var(--body);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;   /* the hero scene translates; the page must never scroll sideways */
 }
 
-/* Numbers must align in columns wherever they appear — §5. */
-table, .tabular { font-variant-numeric: tabular-nums; }
+/* §5: numerals are tabular anywhere they align or change. A product rule that
+   holds on the site too. */
+table, .tabular, .stage, .truth-card { font-variant-numeric: tabular-nums; }
 
 img { max-width: 100%; height: auto; display: block; }
+picture { display: contents; }
 
 a { color: var(--primary); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
-h1, h2, h3, h4 { color: var(--ink); line-height: 1.2; margin: 0 0 0.5em; font-weight: 600; }
+h1, h2, h3, h4 { color: var(--ink); line-height: 1.18; margin: 0 0 .5em; font-weight: 600; }
 
 .container { width: 100%; max-width: var(--container); margin: 0 auto; padding: 0 24px; }
 
@@ -59,197 +124,291 @@ h1, h2, h3, h4 { color: var(--ink); line-height: 1.2; margin: 0 0 0.5em; font-we
 }
 .skip:focus { left: 0; }
 
+/* Must stay visible on the navy ground as well as on white (§9.8). */
 :focus-visible { outline: 3px solid var(--light); outline-offset: 2px; border-radius: 4px; }
 
 /* ---------------------------------------------------------------- Brand mark
-   The horizontal lockup master does not exist in brand/niksha-os/svg/.
-   Until it does, the name is typeset to the §5 wordmark specification
-   (Inter 700, tracking +0.14em; "OS" sub-label Inter 600 in brand primary)
-   beside the approved symbol master.
+   The horizontal lockup master still does not exist in brand/niksha-os/svg/,
+   and it must NOT be hand-drawn: every master is a traced build-output of
+   brand/_reference/niksha-brand-board.png, and hand-authored geometry is
+   explicitly barred (BRAND_GUIDELINES.md preamble — an earlier hand-drawn
+   revision drifted from the reference and was replaced wholesale).
 
-   TO SWAP IN A REAL LOCKUP: replace the <img> + .brand-name markup in
-   build_site.mjs (NAV / FOOTER) with the lockup SVG and delete .wordmark /
-   .suffix below. Nothing else references them.
+   So the name is typeset to the §5 wordmark specification — Inter 700, tracking
+   +0.14em, "OS" in Inter 600 in the brand primary — beside the approved symbol.
+   Now that Inter is actually vendored this renders as specified rather than in
+   whatever UI font the visitor happened to have.
+
+   TO SWAP IN A REAL LOCKUP: add it to the reference board, re-trace, then
+   replace the <img> + .brand-name markup in build_site.mjs (NAV / FOOTER).
    ---------------------------------------------------------------- */
-.brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; }
+.brand { display: inline-flex; align-items: center; gap: 11px; text-decoration: none; }
 .brand:hover { text-decoration: none; }
-.brand-symbol { flex: none; }
+.brand-symbol { flex: none; width: 34px; height: 34px; }
 .brand-name { display: inline-flex; align-items: baseline; gap: 7px; }
 
 .wordmark {
   font-weight: 700;
-  letter-spacing: 0.14em;   /* §5 — the tracking is what makes it read as a mark */
+  letter-spacing: .14em;   /* §5 — the tracking is what makes it read as a mark */
   color: var(--ink);
   font-size: 1.0625rem;
 }
 .suffix {
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: .06em;
   color: var(--primary);
-  font-size: 0.9375rem;
+  font-size: .9375rem;
 }
 
 /* ------------------------------------------------------------------ Buttons */
 .btn {
   display: inline-flex; align-items: center; justify-content: center;
-  font-weight: 600; font-size: 0.9375rem;
+  font-weight: 600; font-size: .9375rem;
   padding: 11px 20px; border-radius: 10px;
   border: 1px solid transparent; cursor: pointer;
-  transition: background-color .15s ease, border-color .15s ease, transform .15s ease;
+  transition: background-color var(--t-fast) var(--ease-enter),
+              border-color var(--t-fast) var(--ease-enter),
+              transform var(--t-fast) var(--ease-enter);
   text-decoration: none; white-space: nowrap;
-  min-height: 44px;  /* touch target */
+  min-height: 44px;   /* touch target (§9.9) */
 }
 .btn:hover { text-decoration: none; }
-.btn-sm { padding: 8px 16px; font-size: 0.875rem; min-height: 40px; }
+/* 44px even at the small size: the header "Sign in" is the most-tapped control
+   on the page and §9.9 sets 44px as the floor, with no exemption for "small". */
+.btn-sm { padding: 8px 16px; font-size: .875rem; min-height: 44px; }
 .btn-lg { padding: 14px 26px; font-size: 1rem; min-height: 52px; }
 
+/* Mirrors Motion.hoverLift in the app. */
 .btn-primary { background: var(--primary); color: #fff; }
-.btn-primary:hover { background: #1D4ED8; }
+.btn-primary:hover { background: var(--deep); transform: translateY(-1px); }
 
-.btn-ghost { background: transparent; color: #DBEAFE; border-color: rgba(219, 234, 254, .35); }
-.btn-ghost:hover { background: rgba(255, 255, 255, .08); border-color: rgba(219, 234, 254, .6); }
+.btn-quiet { background: #fff; color: var(--ink); border-color: var(--line); }
+.btn-quiet:hover { border-color: #B9CCEA; transform: translateY(-1px); }
+
+.btn-outline { background: transparent; color: var(--primary); border-color: #B9CCEA; }
+.btn-outline:hover { background: #F1F6FE; transform: translateY(-1px); }
 
 .btn-light { background: #fff; color: var(--deep); }
-.btn-light:hover { background: #EFF6FF; }
+.btn-light:hover { background: #EFF4FE; transform: translateY(-1px); }
+
+.cta-row { display: flex; gap: 12px; flex-wrap: wrap; }
 
 /* ------------------------------------------------------------------- Header */
+.header-sentinel { position: absolute; top: 80px; height: 1px; width: 1px; }
+
 .site-header {
   position: sticky; top: 0; z-index: 50;
-  background: rgba(255, 255, 255, .88);
-  backdrop-filter: saturate(180%) blur(12px);
-  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0);
+  border-bottom: 1px solid transparent;
+  transition: background-color var(--t-std) var(--ease-enter),
+              border-color var(--t-std) var(--ease-enter);
 }
-.header-inner { display: flex; align-items: center; justify-content: space-between; gap: 24px; height: 68px; }
-.nav { display: flex; align-items: center; gap: 28px; }
-.nav a { color: var(--body); font-size: 0.9375rem; font-weight: 500; }
-.nav a:hover { color: var(--ink); text-decoration: none; }
+/* ★ The ONLY backdrop-filter on the site (§8.2 rule 5). Do not add another. */
+.site-header.is-stuck {
+  background: rgba(255, 255, 255, .82);
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+  border-bottom-color: var(--line);
+}
+.header-inner {
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  height: 72px;
+  transition: height var(--t-std) var(--ease-enter);
+}
+.site-header.is-stuck .header-inner { height: 60px; }
+
+.nav { display: flex; align-items: center; gap: 26px; }
+.nav a { color: var(--body); font-size: .9375rem; font-weight: 500; position: relative; }
+.nav a:not(.btn):hover { color: var(--ink); text-decoration: none; }
+/* A 2px rule that grows from the left, 120ms — transform only. */
+.nav a:not(.btn)::after {
+  content: ''; position: absolute; left: 0; bottom: -6px; height: 2px; width: 100%;
+  background: var(--primary); transform: scaleX(0); transform-origin: left;
+  transition: transform var(--t-fast) var(--ease-enter);
+}
+.nav a:not(.btn):hover::after { transform: scaleX(1); }
 .nav a.btn-primary { color: #fff; }
 
-/* --------------------------------------------------------------------- Hero */
-.hero {
-  background:
-    radial-gradient(1000px 500px at 50% -10%, rgba(56, 189, 248, .22), transparent 65%),
-    linear-gradient(170deg, #0E2757 0%, var(--navy) 55%, #081736 100%);
-  color: #E2E8F0;
-  padding: 96px 0 104px;
-  text-align: center;
+/* --------------------------------------------------------- Blueprint planes
+   One SVG serves every ground: `mask-image` takes the drawing's shape and
+   `background-color` supplies the colour, so the file is fetched and cached
+   once. Decorative — every consumer carries aria-hidden (§9.4) — and animated
+   only by translate3d (§3.3), never redrawn. */
+.bp-plane {
+  position: absolute; inset: -10% -5% -10% -5%;
+  background-color: var(--primary);
+  -webkit-mask-image: url('/assets/blueprint.svg');
+          mask-image: url('/assets/blueprint.svg');
+  /* Scale matters: at ~1100px the line work reads as drafting texture. Much
+     larger and the individual rooms read as random rectangles instead. */
+  -webkit-mask-size: 1100px auto;
+          mask-size: 1100px auto;
+  -webkit-mask-position: 50% 0;
+          mask-position: 50% 0;
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  opacity: .055;
+  pointer-events: none;
+  will-change: auto;
 }
-.hero-inner { max-width: 760px; }
-.hero-mark { margin: 0 auto 28px; }
-.hero-title {
-  color: #fff;
-  font-size: clamp(2.1rem, 5.2vw, 3.4rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  margin-bottom: 20px;
-}
-.hero-sub { font-size: clamp(1.05rem, 2.2vw, 1.2rem); color: #CBD5E1; margin: 0 auto 34px; }
-.hero-cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
-.hero-note { margin-top: 26px; font-size: 0.9rem; color: #94A3B8; }
-.hero-note a { color: var(--light); }
+.bp-plane-light { opacity: .06; }
+.bp-plane-dark  { background-color: var(--light); opacity: .11; }
+.bp-plane-dense { opacity: .08; }
 
 /* ----------------------------------------------------------------- Sections */
-.section { padding: 92px 0; }
+.act { position: relative; padding: 104px 0; }
+/* Off-screen acts cost nothing to lay out (§8.2 rule 6). The intrinsic size
+   keeps the scrollbar honest so the reservation never causes a jump. */
+.act-truth, .act-guardrails, .act-close {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 760px;
+}
+
 .section-soft { background: var(--bg-soft); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.section-navy { background: var(--navy); color: var(--on-navy); overflow: hidden; }
 
 .eyebrow {
-  font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.11em;
+  font-size: .8125rem; font-weight: 700; letter-spacing: .11em;
   text-transform: uppercase; color: var(--primary); margin: 0 0 12px;
 }
 .eyebrow-light { color: var(--light); }
 
-.section-title { font-size: clamp(1.65rem, 3.4vw, 2.35rem); letter-spacing: -0.015em; max-width: 24ch; margin-bottom: 18px; }
-.section-lede { font-size: 1.0625rem; color: var(--muted); max-width: 68ch; margin: 0 0 48px; }
-
-.section-navy { background: var(--navy); color: #CBD5E1; }
+.section-title { font-size: clamp(1.7rem, 3.4vw, 2.4rem); letter-spacing: -.018em; max-width: 24ch; margin-bottom: 18px; text-wrap: balance; }
 .section-navy .section-title { color: #fff; max-width: 26ch; }
-.section-lede-light { color: #94A3B8; }
+.section-lede { font-size: 1.0625rem; color: var(--muted); max-width: 66ch; margin: 0 0 48px; }
+.section-lede-light { color: var(--on-navy-muted); }
 
-/* ------------------------------------------------------------------ Pillars */
-.pillars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; }
-.pillar-icon {
-  width: 44px; height: 44px; border-radius: 11px;
-  background: #EFF6FF; color: var(--primary);
-  display: grid; place-items: center; margin-bottom: 18px;
-}
-.pillar-icon svg { width: 23px; height: 23px; }
-.pillar h3 { font-size: 1.125rem; margin-bottom: 10px; }
-.pillar p { margin: 0; font-size: 0.9688rem; color: var(--muted); }
+.micro { font-size: .9rem; color: var(--muted); }
+.section-navy .micro { color: var(--on-navy-muted); }
 
-/* ----------------------------------------------------------------- Features */
-.features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-.feature {
-  background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
-  padding: 26px 24px; transition: border-color .15s ease, box-shadow .15s ease;
-}
-.feature:hover { border-color: #BFDBFE; box-shadow: 0 6px 24px rgba(15, 23, 42, .06); }
-.feature h3 { font-size: 1.0625rem; margin-bottom: 9px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.feature p { margin: 0; font-size: 0.9375rem; color: var(--muted); }
-.feature-wide { grid-column: 1 / -1; border-color: #BFDBFE; background: linear-gradient(180deg, #F8FBFF, #fff); }
-
-.tag {
-  font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
-  color: #065F46; background: #D1FAE5; border-radius: 999px; padding: 3px 9px;
-}
-
-/* ------------------------------------------------------------- Screenshots */
-.shots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
-.shot { margin: 0; }
-.shot-frame {
-  aspect-ratio: 9 / 17;
-  border-radius: 22px;
-  border: 1px solid var(--line);
-  background:
-    repeating-linear-gradient(135deg, #F1F5F9 0 12px, #F8FAFC 12px 24px);
-  display: grid; place-items: center;
+/* ============================================================ ACT 0 · APERTURE
+   The scene is a real 3D space: `perspective` on the stage, depth by translateZ
+   only. Focus order follows DOM order and depth never reorders it (§9.3). */
+.act-aperture {
   position: relative;
-  box-shadow: inset 0 0 0 8px #fff, 0 8px 30px rgba(15, 23, 42, .07);
+  padding: 52px 0 32px;
+  background:
+    radial-gradient(1100px 620px at 50% -8%, rgba(4, 150, 243, .10), transparent 62%),
+    linear-gradient(to top right, #F4F8FF 0%, #FFFFFF 55%);  /* §2 rule 1: BL -> TR */
+  overflow: hidden;
 }
-.shot-label {
-  font-size: 0.8125rem; font-weight: 600; color: var(--muted);
-  background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 7px 15px;
-}
-.shot figcaption { margin-top: 16px; font-size: 0.9062rem; color: var(--muted); text-align: center; }
 
-/* -------------------------------------------------------- Privacy section */
-.commitments { display: grid; grid-template-columns: repeat(2, 1fr); gap: 28px; margin-bottom: 48px; }
+.aperture-glow {
+  position: absolute; left: 50%; top: 46%;
+  width: min(1100px, 96vw); aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(4, 150, 243, .14), transparent 62%);
+  pointer-events: none;
+}
+
+.aperture-copy { position: relative; z-index: 2; text-align: center; max-width: 800px; margin: 0 auto; }
+.display {
+  font-size: clamp(2.3rem, 5.6vw, 3.9rem);
+  font-weight: 700; letter-spacing: -.032em; line-height: 1.04;
+  color: var(--ink); margin: 0 auto 18px;
+  /* Without this the line breaks after "one", stranding "system." on its own. */
+  max-width: 15ch;
+  text-wrap: balance;
+}
+.aperture-copy .lede { font-size: clamp(1.05rem, 2.1vw, 1.2rem); color: var(--muted); margin: 0 auto 26px; max-width: 52ch; text-wrap: pretty; }
+.aperture-copy .cta-row { justify-content: center; }
+.aperture-copy .micro { margin: 18px 0 0; }
+
+/* ------------------------------------------------------------------- Stage */
+.stage {
+  position: relative;
+  width: 100%; max-width: 980px;
+  margin: -8px auto 0;
+  aspect-ratio: 980 / 660;
+  perspective: 1400px;
+  perspective-origin: 50% 42%;
+  z-index: 1;
+}
+.layer { position: absolute; transform-style: preserve-3d; }
+.layer picture, .layer img { pointer-events: none; }   /* they are images, not affordances (§5 Act 0) */
+
+/* Layer 3 · context — the system BEHIND the phones, held back and dimmed. */
+.layer-context { left: 29%; top: 0; width: 42%; transform: translateZ(-160px); opacity: .78; }
+/* Layer 4 · anchor — the strongest single screen the product has. */
+.layer-anchor  { left: 10%; top: 20%; width: 21%;  transform: translateZ(0); }
+/* Layer 5 · forward. Placed right rather than the spec's left: layer 6 (the AI
+   Copilot card) is omitted until captured, and with five layers the composition
+   balances only if the two phones flank the dashboard. */
+.layer-fore    { left: 72%; top: 33%; width: 16.5%; transform: translateZ(210px); }
+
+/* Device bezel. §6.1 allows a bezel around an unmodified capture; it is drawn
+   here in CSS so not one pixel inside it is anything but the capture. */
+.device { position: relative; overflow: hidden; background: #fff; }
+.device img { width: 100%; height: auto; }
+.device-phone  { border-radius: 22px; padding: 4px; box-shadow: var(--shadow-lift); }
+.device-tablet { border-radius: 16px; padding: 5px; box-shadow: var(--shadow-deep); }
+.device-phone img  { border-radius: 18px; }
+.device-tablet img { border-radius: 11px; }
+
+/* ============================================================== ACT II · TRUTH */
+.truth-grid { display: grid; gap: 30px; grid-template-columns: repeat(4, 1fr); align-items: start; }
+.truth-grid-3 { grid-template-columns: repeat(3, 1fr); }
+.truth-grid-2 { grid-template-columns: repeat(2, 1fr); max-width: 620px; }
+
+.truth-card { margin: 0; display: flex; flex-direction: column; }
+/* The tablet capture is 1:1.43 and the phones are 1:2, so a width-driven grid
+   leaves the tablet card short and its caption floating above the other three.
+   Sizing every device to a COMMON HEIGHT and letting width follow puts all four
+   captions on one baseline — and it is only scaling, which §6.1 allows. */
+.truth-card .device {
+  height: clamp(240px, 27vw, 380px);
+  width: auto;
+  margin: 0 auto 22px;
+  display: flex;
+}
+.truth-card .device img { height: 100%; width: auto; }
+.truth-card figcaption h3 { font-size: 1.0625rem; margin-bottom: 8px; }
+.truth-card figcaption p { margin: 0; font-size: .9375rem; color: var(--muted); }
+
+/* ========================================================= ACT IV · GUARDRAILS */
+.act-guardrails .container { position: relative; z-index: 1; }
+.commitments { display: grid; grid-template-columns: repeat(2, 1fr); gap: 30px 40px; margin-bottom: 48px; }
 .commitment {
   border-left: 3px solid var(--growth);   /* accent, not fill — §2 rule 2 */
   padding: 4px 0 4px 20px;
 }
 .commitment h3 { color: #fff; font-size: 1.0312rem; margin-bottom: 8px; }
-.commitment p { margin: 0; font-size: 0.9375rem; color: #94A3B8; }
+.commitment p { margin: 0; font-size: .9375rem; color: var(--on-navy-muted); }
 
 .legal-links { display: flex; align-items: center; gap: 26px; flex-wrap: wrap; }
-.legal-link { color: var(--light); font-size: 0.9375rem; font-weight: 500; }
+.legal-link { color: var(--light); font-size: .9375rem; font-weight: 500; }
 
-/* ------------------------------------------------------------------ Contact */
-.contact { text-align: center; }
-.contact .section-title, .contact .section-lede { margin-left: auto; margin-right: auto; }
-.contact-email { font-size: clamp(1.3rem, 3vw, 1.75rem); font-weight: 600; margin: 0 0 18px; }
-.contact-meta { font-size: 0.9062rem; color: var(--muted); max-width: 60ch; margin: 0 auto; }
+/* ============================================================== ACT V · CLOSE */
+.act-close { text-align: center; overflow: hidden; }
+.close-inner { position: relative; z-index: 1; }
+.act-close .section-title, .act-close .section-lede { margin-left: auto; margin-right: auto; }
+.act-close .section-lede { margin-bottom: 32px; }
+.act-close .cta-row { justify-content: center; }
+.close-email { font-size: clamp(1.15rem, 2.6vw, 1.5rem); font-weight: 600; margin: 30px 0 14px; }
+.close-inner .micro { max-width: 60ch; margin: 0 auto; }
 
 /* ------------------------------------------------------------------- Footer */
-.site-footer { background: var(--navy); color: #94A3B8; padding: 64px 0 0; }
+.site-footer { background: var(--navy); color: var(--on-navy-muted); padding: 64px 0 0; }
 .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; padding-bottom: 48px; }
 .footer-brand img { margin-bottom: 14px; }
 .footer-name { margin: 0 0 6px; display: inline-flex; align-items: baseline; gap: 7px; }
 .footer-name .wordmark { color: #fff; }
 .footer-name .suffix { color: var(--light); }
-.footer-tagline { margin: 0; font-size: 0.9062rem; color: #64748B; }
-.site-footer h3 { color: #E2E8F0; font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; margin-bottom: 14px; }
+.footer-tagline { margin: 0; font-size: .9062rem; color: var(--on-navy-muted); }
+.site-footer h2 { color: #E2E8F0; font-size: .8125rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; margin-bottom: 14px; }
 .site-footer ul { list-style: none; margin: 0; padding: 0; }
 .site-footer li { margin-bottom: 10px; }
-.site-footer li a { color: #94A3B8; font-size: 0.9375rem; }
+.site-footer li a { color: var(--on-navy-muted); font-size: .9375rem; }
 .site-footer li a:hover { color: #fff; }
 .footer-base { border-top: 1px solid rgba(255, 255, 255, .08); padding-top: 24px; padding-bottom: 28px; }
-.footer-base p { margin: 0; font-size: 0.875rem; color: #64748B; }
+.footer-base p { margin: 0; font-size: .875rem; color: var(--on-navy-muted); }
 
 /* -------------------------------------------------------------- Legal pages */
 .page-legal { background: var(--bg); }
+.page-legal .site-header { background: rgba(255, 255, 255, .82); border-bottom-color: var(--line); }
 .legal { max-width: 780px; padding-top: 56px; padding-bottom: 88px; }
-.legal-back { margin: 0 0 32px; font-size: 0.9375rem; }
-.legal h1 { font-size: clamp(1.8rem, 4vw, 2.4rem); letter-spacing: -0.015em; margin-bottom: 24px; }
+.legal-back { margin: 0 0 32px; font-size: .9375rem; }
+.legal h1 { font-size: clamp(1.8rem, 4vw, 2.4rem); letter-spacing: -.015em; margin-bottom: 24px; }
 .legal h2 { font-size: 1.3125rem; margin-top: 44px; padding-top: 4px; }
 .legal h3 { font-size: 1.0625rem; margin-top: 30px; }
 .legal p { margin: 0 0 16px; }
@@ -259,7 +418,7 @@ h1, h2, h3, h4 { color: var(--ink); line-height: 1.2; margin: 0 0 0.5em; font-we
 .legal a { text-decoration: underline; text-underline-offset: 2px; }
 .legal code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.875em; background: var(--bg-soft); border: 1px solid var(--line);
+  font-size: .875em; background: var(--bg-soft); border: 1px solid var(--line);
   border-radius: 5px; padding: 1px 5px;
 }
 .legal blockquote {
@@ -270,45 +429,109 @@ h1, h2, h3, h4 { color: var(--ink); line-height: 1.2; margin: 0 0 0.5em; font-we
 .legal blockquote p:last-child { margin-bottom: 0; }
 
 .table-wrap { overflow-x: auto; margin: 0 0 24px; }
-.legal table { border-collapse: collapse; width: 100%; font-size: 0.9375rem; }
+.legal table { border-collapse: collapse; width: 100%; font-size: .9375rem; }
 .legal th, .legal td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
 .legal th { background: var(--bg-soft); font-weight: 600; color: var(--ink); white-space: nowrap; }
 
 /* Unfilled legal fields — must never be mistaken for completed content. */
 .pending {
   display: inline-block;
-  font-size: 0.8125em; font-weight: 600;
+  font-size: .8125em; font-weight: 600;
   color: #92400E; background: #FEF3C7; border: 1px dashed #FCD34D;
   border-radius: 5px; padding: 1px 7px;
 }
 .notice {
   background: #FFFBEB; border: 1px solid #FDE68A; border-radius: var(--radius);
-  padding: 18px 20px; margin-bottom: 36px; font-size: 0.9375rem; color: #78350F;
+  padding: 18px 20px; margin-bottom: 36px; font-size: .9375rem; color: #78350F;
 }
 .notice a { color: #92400E; }
 
-/* -------------------------------------------------------------- Responsive */
-@media (max-width: 940px) {
-  .pillars { grid-template-columns: 1fr; gap: 34px; }
-  .features { grid-template-columns: repeat(2, 1fr); }
-  .commitments { grid-template-columns: 1fr; gap: 24px; }
-  .footer-grid { grid-template-columns: 1fr 1fr; gap: 34px; }
-  .shots { grid-template-columns: 1fr; max-width: 320px; margin: 0 auto; gap: 40px; }
+/* ==================================================================== Motion
+   The reveal's RESTING state is "visible". site.js adds .reveal-armed only
+   after confirming motion is allowed, which is what guarantees the page is
+   complete with JS off or under reduced motion (§9.1, §9.2) — the static state
+   is the designed artifact, not a degraded leftover. */
+[data-reveal] { opacity: 1; transform: none; }
+
+.motion-ok [data-reveal].reveal-armed {
+  opacity: 0;
+  transform: translateY(18px) scale(.98);   /* enterScale 0.98 — §3.2 */
+}
+.motion-ok [data-reveal].reveal-in {
+  opacity: 1;
+  transform: none;
+  transition: opacity var(--t-slow) var(--ease-enter),
+              transform var(--t-slow) var(--ease-enter);
 }
 
-@media (max-width: 700px) {
+/* ------------------------------------------------------------- Responsive
+   §7. Depth is preserved down to 768px; below that there is no scrubbing, no
+   pinning and no 3D — each act becomes one static composition. Mobile is
+   deliberately plain: the audience opens this link on a mid-range Android over
+   4G, and an elegant static page beats a cinematic one at 25fps. */
+@media (max-width: 1279px) {
+  .stage { max-width: 880px; }
+  /* Depth amplitude reduced ~40% (§7). */
+  .layer-context { transform: translateZ(-96px); }
+  .layer-fore    { transform: translateZ(126px); }
+}
+
+@media (max-width: 1023px) {
+  .act { padding: 84px 0; }
+  .truth-grid, .truth-grid-3 { grid-template-columns: repeat(2, 1fr); }
+  .commitments { grid-template-columns: 1fr; gap: 26px; }
+  .footer-grid { grid-template-columns: 1fr 1fr; gap: 34px; }
+}
+
+@media (max-width: 767px) {
   body { font-size: 16px; }
-  .section { padding: 64px 0; }
-  .hero { padding: 68px 0 76px; }
-  .features { grid-template-columns: 1fr; }
-  .nav { gap: 16px; }
-  /* Keep the sign-in action reachable; drop secondary links on small screens. */
-  .nav a:not(.btn) { display: none; }
+  .act { padding: 64px 0; }
+  .act-aperture { padding: 44px 0 8px; }
+
+  /* No 3D at all below 768 (§7). The stage becomes a plain stack. */
+  .stage {
+    perspective: none;
+    aspect-ratio: auto;
+    max-width: 460px;
+    display: flex; justify-content: center; align-items: flex-start;
+    gap: 14px;
+    margin-top: 28px;
+  }
+  .layer { position: static; transform: none !important; opacity: 1; }
+  /* The tablet dashboard is dropped rather than shrunk into illegibility (§7);
+     it still reaches mobile readers in Act II, at a size where it is readable. */
+  .layer-context { display: none; }
+  .layer-anchor { width: 58%; }
+  .layer-fore   { width: 40%; margin-top: 34px; }
+
+  .truth-grid, .truth-grid-3, .truth-grid-2 { grid-template-columns: 1fr; max-width: 340px; margin: 0 auto; gap: 44px; }
   .footer-grid { grid-template-columns: 1fr; gap: 30px; }
   .legal { padding-top: 40px; padding-bottom: 64px; }
+
+  .nav { gap: 14px; }
+  /* Keep the sign-in action reachable; drop secondary links on small screens. */
+  .nav a:not(.btn) { display: none; }
 }
 
+/* ★ prefers-reduced-motion REMOVES motion — it does not reduce it (§9.1).
+   Every act renders in its final composed state. site.js checks matchMedia
+   before building anything, so the parallax and reveal never initialise; this
+   block is the belt to that braces. */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  * { transition: none !important; }
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+  [data-reveal] { opacity: 1 !important; transform: none !important; }
+  .bp-plane { transform: none !important; }
+}
+
+/* prefers-contrast: more drops the decorative layers and raises text contrast
+   (§9.11). */
+@media (prefers-contrast: more) {
+  .bp-plane, .aperture-glow { display: none; }
+  :root { --muted: #40506B; --on-navy-muted: #C8D6EC; }
+  .layer-context { opacity: 1; }
 }

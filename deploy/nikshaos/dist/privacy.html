@@ -17,25 +17,26 @@
 <link rel="icon" href="/assets/favicon-32.png" sizes="32x32" />
 <link rel="icon" href="/assets/favicon-192.png" sizes="192x192" />
 <link rel="apple-touch-icon" href="/assets/favicon-180.png" />
+<link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="/assets/styles.css" />
 </head>
 <body class="page-legal">
 <a class="skip" href="#main">Skip to content</a>
-<header class="site-header">
+<header class="site-header" data-header>
   <div class="container header-inner">
     <a class="brand" href="/" aria-label="NIKSHA OS home">
-      <img class="brand-symbol" src="/assets/niksha-os-symbol.svg" alt="" width="36" height="36" />
+      <img class="brand-symbol" src="/assets/niksha-os-symbol.png" alt="" width="34" height="34" />
       <span class="brand-name"><span class="wordmark">NIKSHA</span><span class="suffix">OS</span></span>
     </a>
     <nav class="nav" aria-label="Primary">
-      <a href="/#product">Product</a>
-      <a href="/#features">Features</a>
-      <a href="/#security">Privacy</a>
-      <a href="/#contact">Contact</a>
+      <a href="/#same-truth">Product</a>
+      <a href="/#guardrails">Privacy</a>
+      <a href="/#close">Contact</a>
       <a class="btn btn-primary btn-sm" href="https://app.nikshaos.in">Sign in</a>
     </nav>
   </div>
 </header>
+<span class="header-sentinel" data-header-sentinel aria-hidden="true"></span>
 <main id="main">
 
 <article class="legal container">
@@ -156,21 +157,20 @@
   <footer class="site-footer">
     <div class="container footer-grid">
       <div class="footer-brand">
-        <img src="/assets/niksha-os-symbol-on-dark.svg" alt="" width="40" height="40" />
+        <img src="/assets/niksha-os-symbol-on-dark.png" alt="" width="40" height="40" />
         <p class="footer-name"><span class="wordmark">NIKSHA</span><span class="suffix">OS</span></p>
-        <p class="footer-tagline">The AI Operating System for Schools</p>
+        <p class="footer-tagline">One system for the whole school.</p>
       </div>
       <div>
-        <h3>Product</h3>
+        <h2>Product</h2>
         <ul>
-          <li><a href="/#product">Overview</a></li>
-          <li><a href="/#features">Features</a></li>
-          <li><a href="/#screens">Screens</a></li>
+          <li><a href="/#same-truth">Overview</a></li>
+          <li><a href="/#guardrails">Privacy &amp; data</a></li>
           <li><a href="https://app.nikshaos.in">Sign in</a></li>
         </ul>
       </div>
       <div>
-        <h3>Legal</h3>
+        <h2>Legal</h2>
         <ul>
           <li><a href="/privacy">Privacy Policy</a></li>
           <li><a href="/terms/user">Parent &amp; User Terms</a></li>
@@ -179,7 +179,7 @@
         </ul>
       </div>
       <div>
-        <h3>Contact</h3>
+        <h2>Contact</h2>
         <ul>
           <li><a href="mailto:support@nikshaos.in">support@nikshaos.in</a></li>
         </ul>
@@ -189,5 +189,6 @@
       <p>&copy; 2026 NIKSHA Technologies Pvt. Ltd. All rights reserved.</p>
     </div>
   </footer>
+
 </body>
 </html>

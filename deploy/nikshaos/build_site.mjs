@@ -11,20 +11,38 @@
  *   dist/terms/user.html               -> /terms/user
  *   dist/terms/acceptable-use.html     -> /terms/acceptable-use
  *   dist/terms/institution.html        -> /terms/institution
- *   dist/assets/…                      brand assets + stylesheet
+ *   dist/assets/…                      brand assets, fonts, stylesheet, script
+ *   dist/shots/…                       product captures, AVIF + WebP + PNG
  *
  * The four legal routes are NOT arbitrary: they are the `path` values in
  * `supabase/functions/_shared/legal/legal_catalog.ts`, which the Flutter client
  * joins to `LegalLinks.policyHostBaseUrl`. Changing a path here breaks the
- * in-app "view full policy" link.
+ * in-app "view full policy" link. The post-build checks at the end of this file
+ * assert that contract on the emitted bytes.
  *
  * Brand assets are COPIED from `brand/niksha-os/` — the approved package. This
  * script never draws or generates a mark; if an asset is missing it fails loudly
  * rather than substituting one.
+ *
+ * ★ ASSET-DRIVEN (proposal §3.0). An act renders only if every capture it names
+ *   is present in `src/product-shots/shots.json`. Missing -> the act is OMITTED
+ *   and the omission is printed. There is deliberately no code path that emits a
+ *   shot-shaped element without a real file behind it, so placeholder UI is not
+ *   discouraged here — it is unrepresentable.
+ *
+ * ★ ZERO THIRD-PARTY SCRIPTS. The site publishes "no third-party trackers"
+ *   (claim 7). Keeping that true is a build constraint: no analytics, no fonts
+ *   from a CDN, no embeds. Inter is vendored into `src/fonts/`. Do not add one.
+ *
+ * Requires `sharp` for the image pipeline — build tooling only, not a repo
+ * dependency, the same convention as `brand/build_assets.js`:
+ *
+ *   npm i sharp --no-save
  */
 import { readFileSync, writeFileSync, mkdirSync, copyFileSync, existsSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ACTS, DEFERRED_ACTS, LEGAL_ROUTES } from './src/acts.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, '..', '..');
@@ -32,6 +50,15 @@ const SRC = join(HERE, 'src');
 const DIST = join(HERE, 'dist');
 const BRAND = join(REPO, 'brand', 'niksha-os');
 const LEGAL = join(REPO, 'docs', 'legal');
+const SHOTS_DIR = join(SRC, 'product-shots');
+
+let sharp = null;
+try {
+  ({ default: sharp } = await import('sharp'));
+} catch {
+  /* Resolved after the shot inventory is known: a build with no product shots
+     does not need an encoder, and should not demand one. */
+}
 
 /* ------------------------------------------------------------------ *
  * Placeholder policy
@@ -127,10 +154,11 @@ function escapeHtml(s) {
 
 /* Sentinel used to shield already-built HTML from escapeHtml(). It must not be
    anything that can occur in the source text: a bare number would be swallowed
-   the first time a policy said "within 30 days". */
-const SENTINEL_OPEN = '\u0001SPAN';
-const SENTINEL_CLOSE = '\u0001';
-const SENTINEL_RE = /\u0001SPAN(\d+)\u0001/g;
+   the first time a policy said "within 30 days". U+0001 cannot appear in the
+   markdown, which is the whole point. */
+const SENTINEL_OPEN = 'SPAN';
+const SENTINEL_CLOSE = '';
+const SENTINEL_RE = /SPAN(\d+)/g;
 
 function inline(text) {
   // Protect already-injected pending spans from escaping.
@@ -150,10 +178,10 @@ function inline(text) {
       return `<a href="${href}" rel="noopener noreferrer" target="_blank">${label}</a>`;
     }
     const map = {
-      'PRIVACY_POLICY.md': '/privacy',
-      'PARENT_USER_TERMS.md': '/terms/user',
-      'ACCEPTABLE_USE_POLICY.md': '/terms/acceptable-use',
-      'INSTITUTION_AGREEMENT.md': '/terms/institution',
+      'PRIVACY_POLICY.md': LEGAL_ROUTES.privacy,
+      'PARENT_USER_TERMS.md': LEGAL_ROUTES.user,
+      'ACCEPTABLE_USE_POLICY.md': LEGAL_ROUTES.acceptableUse,
+      'INSTITUTION_AGREEMENT.md': LEGAL_ROUTES.institution,
     };
     const key = href.split('/').pop();
     if (map[key]) return `<a href="${map[key]}">${label}</a>`;
@@ -285,18 +313,158 @@ function renderMarkdown(md) {
 }
 
 /* ------------------------------------------------------------------ *
+ * Build helpers
+ * ------------------------------------------------------------------ */
+function need(path, what) {
+  if (!existsSync(path)) {
+    console.error(`\nFATAL: approved brand asset missing: ${what}\n  expected at: ${path}\n` +
+      `This script does not substitute branding. Add the approved asset and re-run.\n`);
+    process.exit(1);
+  }
+  return path;
+}
+
+function fail(msg) {
+  console.error(`\nFATAL: ${msg}\n`);
+  process.exit(1);
+}
+
+rmSync(DIST, { recursive: true, force: true });
+mkdirSync(join(DIST, 'assets'), { recursive: true });
+mkdirSync(join(DIST, 'terms'), { recursive: true });
+mkdirSync(join(DIST, 'shots'), { recursive: true });
+
+/* ------------------------------------------------------------------ *
+ * Product shots -> responsive image pipeline
+ *
+ * Every published shot must carry provenance. `shots.json` is written by
+ * scripts/marketing/promote_shots.mjs from the capture manifest; a PNG sitting
+ * in the directory without an entry is refused rather than published, the same
+ * fail-loud discipline the brand assets already get.
+ * ------------------------------------------------------------------ */
+const WIDTHS = [300, 600, 900, 1200];
+
+const shotsManifest = existsSync(join(SHOTS_DIR, 'shots.json'))
+  ? JSON.parse(readFileSync(join(SHOTS_DIR, 'shots.json'), 'utf8'))
+  : { shots: {} };
+const SHOTS = shotsManifest.shots || {};
+
+const rendered = {};
+if (Object.keys(SHOTS).length) {
+  if (!sharp) {
+    fail(
+      'product shots are present but `sharp` is not installed, so AVIF/WebP cannot be encoded.\n' +
+        '  npm i sharp --no-save        (build tooling only, not a repo dependency)',
+    );
+  }
+  for (const [name, meta] of Object.entries(SHOTS)) {
+    const src = join(SHOTS_DIR, meta.file);
+    if (!existsSync(src)) fail(`shots.json lists "${name}" but ${meta.file} is not in ${SHOTS_DIR}.`);
+
+    const { width: srcW, height: srcH } = await sharp(src).metadata();
+
+    /* The manifest's pixel dimensions come from the capture run. If the file on
+       disk disagrees, the provenance no longer describes these pixels — which is
+       exactly the class of defect that made the capture manifest untrustworthy
+       four times over (§6.3). Refuse rather than publish a false record. */
+    if (meta.pixels && meta.pixels !== `${srcW}x${srcH}`) {
+      fail(
+        `"${name}" is ${srcW}x${srcH} on disk but its manifest records ${meta.pixels}.\n` +
+          `  Re-run scripts/marketing/promote_shots.mjs so provenance matches the pixels.`,
+      );
+    }
+
+    const widths = WIDTHS.filter((w) => w <= srcW);
+    if (!widths.length) widths.push(srcW);
+
+    const variants = { avif: [], webp: [], png: [] };
+    for (const w of widths) {
+      const h = Math.round((srcH / srcW) * w);
+      const base = `${name}-${w}`;
+      const resized = sharp(src).resize({ width: w, withoutEnlargement: true });
+      await resized.clone().avif({ quality: 55, effort: 4 }).toFile(join(DIST, 'shots', `${base}.avif`));
+      await resized.clone().webp({ quality: 78 }).toFile(join(DIST, 'shots', `${base}.webp`));
+      await resized.clone().png({ compressionLevel: 9, palette: true }).toFile(join(DIST, 'shots', `${base}.png`));
+      variants.avif.push(`/shots/${base}.avif ${w}w`);
+      variants.webp.push(`/shots/${base}.webp ${w}w`);
+      variants.png.push(`/shots/${base}.png ${w}w`);
+      if (w === widths[widths.length - 1]) variants.fallback = { src: `/shots/${base}.png`, w, h };
+    }
+    rendered[name] = { ...meta, srcW, srcH, variants };
+  }
+}
+
+/**
+ * A `<picture>` with explicit intrinsic dimensions.
+ *
+ * `width`/`height` are always emitted so the browser reserves the box before
+ * the bytes arrive — this is what holds CLS under 0.02 (§8.1). Alt text comes
+ * from the manifest and describes what the screen SHOWS, never "screenshot of
+ * the app" (§9.4).
+ */
+function picture(name, { sizes = '100vw', loading = 'lazy', fetchpriority } = {}) {
+  const s = rendered[name];
+  if (!s) fail(`picture("${name}") — no such promoted shot. An act must declare it in \`requires\`.`);
+  const fp = fetchpriority ? ` fetchpriority="${fetchpriority}"` : '';
+  return `<picture>
+  <source type="image/avif" srcset="${s.variants.avif.join(', ')}" sizes="${sizes}" />
+  <source type="image/webp" srcset="${s.variants.webp.join(', ')}" sizes="${sizes}" />
+  <img src="${s.variants.fallback.src}" srcset="${s.variants.png.join(', ')}" sizes="${sizes}"
+       width="${s.srcW}" height="${s.srcH}" alt="${escapeHtml(s.alt || '')}"
+       loading="${loading}" decoding="async"${fp} />
+</picture>`;
+}
+
+/* ------------------------------------------------------------------ *
+ * Act gating — the mechanical form of §3.0
+ * ------------------------------------------------------------------ */
+const ctx = { has: (n) => Boolean(rendered[n]), picture };
+const omissions = [];
+const body = [];
+
+for (const act of ACTS) {
+  const missing = (act.requires || []).filter((n) => !rendered[n]);
+
+  /* An act that degrades by item (the persona grid) needs a floor, not a full
+     set: below the floor it is omitted rather than shown as a stub. */
+  let present = null;
+  if (act.degradesOver) {
+    present = act.degradesOver.filter((n) => rendered[n]);
+    if (present.length < (act.minimum ?? 1)) {
+      missing.push(`fewer than ${act.minimum} of [${act.degradesOver.join(', ')}]`);
+    }
+  }
+
+  if (missing.length) {
+    if (act.required) {
+      fail(
+        `${act.title} is REQUIRED by the launch floor but is missing: ${missing.join(', ')}.\n` +
+          `  Capture it, review it, and promote it with scripts/marketing/promote_shots.mjs.`,
+      );
+    }
+    omissions.push({ title: act.title, missing });
+    continue;
+  }
+
+  body.push(act.render(ctx));
+  if (present && present.length < act.degradesOver.length) {
+    const dropped = act.degradesOver.filter((n) => !rendered[n]);
+    omissions.push({ title: `${act.title} (rendered, degraded)`, missing: dropped, partial: true });
+  }
+}
+
+/* ------------------------------------------------------------------ *
  * Page shell — shared by the landing page and every legal page.
  * ------------------------------------------------------------------ */
 const NAV = `
     <a class="brand" href="/" aria-label="NIKSHA OS home">
-      <img class="brand-symbol" src="/assets/niksha-os-symbol.svg" alt="" width="36" height="36" />
+      <img class="brand-symbol" src="/assets/niksha-os-symbol.png" alt="" width="34" height="34" />
       <span class="brand-name"><span class="wordmark">NIKSHA</span><span class="suffix">OS</span></span>
     </a>
     <nav class="nav" aria-label="Primary">
-      <a href="/#product">Product</a>
-      <a href="/#features">Features</a>
-      <a href="/#security">Privacy</a>
-      <a href="/#contact">Contact</a>
+      <a href="/#same-truth">Product</a>
+      <a href="/#guardrails">Privacy</a>
+      <a href="/#close">Contact</a>
       <a class="btn btn-primary btn-sm" href="https://app.nikshaos.in">Sign in</a>
     </nav>`;
 
@@ -304,30 +472,29 @@ const FOOTER = `
   <footer class="site-footer">
     <div class="container footer-grid">
       <div class="footer-brand">
-        <img src="/assets/niksha-os-symbol-on-dark.svg" alt="" width="40" height="40" />
+        <img src="/assets/niksha-os-symbol-on-dark.png" alt="" width="40" height="40" />
         <p class="footer-name"><span class="wordmark">NIKSHA</span><span class="suffix">OS</span></p>
-        <p class="footer-tagline">The AI Operating System for Schools</p>
+        <p class="footer-tagline">One system for the whole school.</p>
       </div>
       <div>
-        <h3>Product</h3>
+        <h2>Product</h2>
         <ul>
-          <li><a href="/#product">Overview</a></li>
-          <li><a href="/#features">Features</a></li>
-          <li><a href="/#screens">Screens</a></li>
+          <li><a href="/#same-truth">Overview</a></li>
+          <li><a href="/#guardrails">Privacy &amp; data</a></li>
           <li><a href="https://app.nikshaos.in">Sign in</a></li>
         </ul>
       </div>
       <div>
-        <h3>Legal</h3>
+        <h2>Legal</h2>
         <ul>
-          <li><a href="/privacy">Privacy Policy</a></li>
-          <li><a href="/terms/user">Parent &amp; User Terms</a></li>
-          <li><a href="/terms/acceptable-use">Acceptable Use</a></li>
-          <li><a href="/terms/institution">Institution Agreement</a></li>
+          <li><a href="${LEGAL_ROUTES.privacy}">Privacy Policy</a></li>
+          <li><a href="${LEGAL_ROUTES.user}">Parent &amp; User Terms</a></li>
+          <li><a href="${LEGAL_ROUTES.acceptableUse}">Acceptable Use</a></li>
+          <li><a href="${LEGAL_ROUTES.institution}">Institution Agreement</a></li>
         </ul>
       </div>
       <div>
-        <h3>Contact</h3>
+        <h2>Contact</h2>
         <ul>
           <li><a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a></li>
         </ul>
@@ -338,7 +505,7 @@ const FOOTER = `
     </div>
   </footer>`;
 
-function shell({ title, description, body, bodyClass = '', canonical }) {
+function shell({ title, description, body, bodyClass = '', canonical, script = false }) {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -358,44 +525,38 @@ function shell({ title, description, body, bodyClass = '', canonical }) {
 <link rel="icon" href="/assets/favicon-32.png" sizes="32x32" />
 <link rel="icon" href="/assets/favicon-192.png" sizes="192x192" />
 <link rel="apple-touch-icon" href="/assets/favicon-180.png" />
+<link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="/assets/styles.css" />
 </head>
 <body class="${bodyClass}">
 <a class="skip" href="#main">Skip to content</a>
-<header class="site-header">
+<header class="site-header" data-header>
   <div class="container header-inner">${NAV}
   </div>
 </header>
+<span class="header-sentinel" data-header-sentinel aria-hidden="true"></span>
 <main id="main">
 ${body}
 </main>
 ${FOOTER}
+${script ? '<script src="/assets/site.js" defer></script>' : ''}
 </body>
 </html>
 `;
 }
 
 /* ------------------------------------------------------------------ *
- * Build
+ * Assets
  * ------------------------------------------------------------------ */
-function need(path, what) {
-  if (!existsSync(path)) {
-    console.error(`\nFATAL: approved brand asset missing: ${what}\n  expected at: ${path}\n` +
-      `This script does not substitute branding. Add the approved asset and re-run.\n`);
-    process.exit(1);
-  }
-  return path;
-}
 
-rmSync(DIST, { recursive: true, force: true });
-mkdirSync(join(DIST, 'assets'), { recursive: true });
-mkdirSync(join(DIST, 'terms'), { recursive: true });
-
-// --- Brand assets (copied from the approved package, never generated here) ---
+/* The traced SVG master is 406 paths and ~326KB — correct as a master, far too
+   heavy for a 34px header mark, and nothing on the site references it. The PNGs
+   are generated from that same master by brand/build_assets.js, so using one
+   here is still the approved artwork (BRAND_GUIDELINES.md §6 permits "the vector
+   master or a PNG generated from it"), at 9KB instead of 326KB. */
 const ASSETS = [
-  [join(BRAND, 'svg', 'niksha-os-symbol.svg'), 'niksha-os-symbol.svg'],
-  [join(BRAND, 'svg', 'niksha-os-symbol-on-dark.svg'), 'niksha-os-symbol-on-dark.svg'],
-  [join(BRAND, 'svg', 'niksha-os-symbol-white.svg'), 'niksha-os-symbol-white.svg'],
+  [join(BRAND, 'png', 'symbol-128-transparent.png'), 'niksha-os-symbol.png'],
+  [join(BRAND, 'png', 'symbol-128-dark.png'), 'niksha-os-symbol-on-dark.png'],
   [join(BRAND, 'icons', 'favicon-32.png'), 'favicon-32.png'],
   [join(BRAND, 'icons', 'favicon-180.png'), 'favicon-180.png'],
   [join(BRAND, 'icons', 'favicon-192.png'), 'favicon-192.png'],
@@ -406,28 +567,51 @@ for (const [from, to] of ASSETS) {
   need(from, to);
   copyFileSync(from, join(DIST, 'assets', to));
 }
-copyFileSync(join(SRC, 'styles.css'), join(DIST, 'assets', 'styles.css'));
 
-// --- Landing page ---
-const landing = readFileSync(join(SRC, 'landing.html'), 'utf8');
+copyFileSync(join(SRC, 'styles.css'), join(DIST, 'assets', 'styles.css'));
+copyFileSync(join(SRC, 'site.js'), join(DIST, 'assets', 'site.js'));
+
+/* Site artwork (not a brand asset — it never draws the mark). */
+need(join(SRC, 'blueprint.svg'), 'blueprint.svg (run src/blueprint/make_blueprint.mjs)');
+copyFileSync(join(SRC, 'blueprint.svg'), join(DIST, 'assets', 'blueprint.svg'));
+
+/* Inter, vendored. Claim 7 forbids a CDN font; §8.2.9 requires self-hosting. */
+mkdirSync(join(DIST, 'assets', 'fonts'), { recursive: true });
+for (const f of ['inter-latin.woff2', 'inter-latin-ext.woff2', 'Inter-LICENSE.txt']) {
+  need(join(SRC, 'fonts', f), `vendored font ${f}`);
+  copyFileSync(join(SRC, 'fonts', f), join(DIST, 'assets', 'fonts', f));
+}
+
+/* ------------------------------------------------------------------ *
+ * Landing page
+ * ------------------------------------------------------------------ */
 writeFileSync(
   join(DIST, 'index.html'),
   shell({
-    title: 'NIKSHA OS — The AI Operating System for Schools',
+    /* Claim 16 (§10): the old H1 "The AI Operating System for Schools"
+       front-loaded AI for a product whose AI surface is a read-only copilot,
+       and §10 makes it defensible only if Act III describes the boundary
+       honestly. Act III is omitted (no Copilot capture, and claim 10 is still
+       ⚠), so per that condition the AI framing is not carried forward. */
+    title: 'NIKSHA OS — one system for the whole school',
     description:
-      'NIKSHA OS runs admissions, attendance, examinations, fees, transport, hostel, library, HR and parent communication for Indian schools — one mobile-first platform.',
+      'NIKSHA OS runs admissions, attendance, examinations, fees, transport, hostel, library, HR and parent ' +
+      'communication on one record per student — mobile-first, built for Indian schools.',
     canonical: 'https://nikshaos.in/',
     bodyClass: 'page-landing',
-    body: landing,
+    body: body.join('\n'),
+    script: true,
   }),
 );
 
-// --- Legal pages ---
+/* ------------------------------------------------------------------ *
+ * Legal pages
+ * ------------------------------------------------------------------ */
 const LEGAL_PAGES = [
-  { md: 'PRIVACY_POLICY.md', out: 'privacy.html', route: '/privacy', title: 'Privacy Policy' },
-  { md: 'PARENT_USER_TERMS.md', out: 'terms/user.html', route: '/terms/user', title: 'Parent & User Terms' },
-  { md: 'ACCEPTABLE_USE_POLICY.md', out: 'terms/acceptable-use.html', route: '/terms/acceptable-use', title: 'Acceptable Use Policy' },
-  { md: 'INSTITUTION_AGREEMENT.md', out: 'terms/institution.html', route: '/terms/institution', title: 'School / Institution Agreement' },
+  { md: 'PRIVACY_POLICY.md', out: 'privacy.html', route: LEGAL_ROUTES.privacy, title: 'Privacy Policy' },
+  { md: 'PARENT_USER_TERMS.md', out: 'terms/user.html', route: LEGAL_ROUTES.user, title: 'Parent & User Terms' },
+  { md: 'ACCEPTABLE_USE_POLICY.md', out: 'terms/acceptable-use.html', route: LEGAL_ROUTES.acceptableUse, title: 'Acceptable Use Policy' },
+  { md: 'INSTITUTION_AGREEMENT.md', out: 'terms/institution.html', route: LEGAL_ROUTES.institution, title: 'School / Institution Agreement' },
 ];
 
 const PRELAUNCH_NOTICE = `
@@ -443,7 +627,7 @@ for (const page of LEGAL_PAGES) {
   const before = pendingSeen.size;
   const html = renderMarkdown(applyPlaceholders(stripInternalNotes(raw)));
   const hasPending = pendingSeen.size > before || /class="pending"/.test(html);
-  const body = `
+  const pageBody = `
 <article class="legal container">
   <p class="legal-back"><a href="/">&larr; Back to NIKSHA OS</a></p>
   ${hasPending ? PRELAUNCH_NOTICE : ''}
@@ -458,12 +642,113 @@ for (const page of LEGAL_PAGES) {
       description: `${page.title} for NIKSHA OS, operated by NIKSHA Technologies Pvt. Ltd.`,
       canonical: `https://nikshaos.in${page.route}`,
       bodyClass: 'page-legal',
-      body,
+      body: pageBody,
     }),
   );
 }
 
-console.log(`Built ${1 + LEGAL_PAGES.length} pages + ${ASSETS.length + 1} assets -> ${DIST}`);
+/* ------------------------------------------------------------------ *
+ * ★ Post-build contract checks
+ *
+ * The four legal routes are joined at runtime by the Flutter client from
+ * `supabase/functions/_shared/legal/legal_catalog.ts`. If a refactor drops or
+ * renames one, the in-app "view full policy" link breaks silently — the site
+ * still builds, still looks correct, and the failure only surfaces on a user's
+ * phone. So the build asserts the contract on its own output rather than
+ * trusting that nobody touched it.
+ *
+ * These run against dist/, not against intent: they check the bytes that will
+ * be copied to /var/www/nikshaos-site.
+ * ------------------------------------------------------------------ */
+const built = readFileSync(join(DIST, 'index.html'), 'utf8');
+const contractErrors = [];
+
+/* ★ Read the expected paths from legal_catalog.ts — the OTHER side of the
+   contract — rather than from this build's own constants.
+
+   An earlier version of this check iterated LEGAL_PAGES and asserted that each
+   route matched itself, which passed for every possible value of the routes and
+   protected nothing. A guard has to compare the output against an INDEPENDENT
+   source of truth or it is theatre. */
+const catalogSrc = readFileSync(
+  join(REPO, 'supabase', 'functions', '_shared', 'legal', 'legal_catalog.ts'),
+  'utf8',
+);
+const catalogPaths = [...catalogSrc.matchAll(/^\s*path:\s*"([^"]+)"/gm)].map((m) => m[1]);
+
+if (catalogPaths.length !== 4) {
+  contractErrors.push(
+    `expected 4 policy paths in legal_catalog.ts, found ${catalogPaths.length} ` +
+      `[${catalogPaths.join(', ')}] — the catalog changed shape; re-check this build`,
+  );
+}
+
+for (const route of catalogPaths) {
+  const file = `${route.replace(/^\//, '')}.html`;
+  if (!existsSync(join(DIST, file))) {
+    contractErrors.push(
+      `legal_catalog.ts publishes "${route}" but this build emits no dist/${file} — ` +
+        `the in-app "view full policy" link for that document would 404`,
+    );
+  }
+  if (!built.includes(`href="${route}"`)) {
+    contractErrors.push(`legal_catalog.ts publishes "${route}" but the landing page does not link it`);
+  }
+}
+
+/* Claim 7 is published ON this page ("no third-party trackers"), so a
+   third-party request would make the site contradict itself. Absence is the
+   only evidence for that claim, which makes it checkable. */
+const externalHosts = [...built.matchAll(/(?:src|href)="https?:\/\/([^/"]+)/g)]
+  .map((m) => m[1])
+  .filter((h) => !/(^|\.)nikshaos\.in$/.test(h));
+if (externalHosts.length) {
+  contractErrors.push(
+    `third-party request(s) would be issued: ${[...new Set(externalHosts)].join(', ')} — ` +
+      `this breaks the published "no third-party trackers" claim`,
+  );
+}
+
+/* Every product image must carry intrinsic dimensions (CLS) and real alt text. */
+for (const tag of built.match(/<img\b[^>]*>/g) || []) {
+  if (!/\bwidth="/.test(tag) || !/\bheight="/.test(tag)) {
+    contractErrors.push(`an <img> lacks explicit width/height (CLS budget): ${tag.slice(0, 90)}…`);
+  }
+  if (!/\balt="/.test(tag)) {
+    contractErrors.push(`an <img> lacks an alt attribute: ${tag.slice(0, 90)}…`);
+  }
+}
+
+if (contractErrors.length) {
+  console.error('\nFATAL: post-build contract checks failed:');
+  for (const e of contractErrors) console.error(`  ✗ ${e}`);
+  console.error('');
+  process.exit(1);
+}
+
+/* ------------------------------------------------------------------ *
+ * Report — omissions are a visible build output, never a silent gap.
+ * ------------------------------------------------------------------ */
+console.log(`Built ${1 + LEGAL_PAGES.length} pages · ${Object.keys(rendered).length} product shots · ${ASSETS.length + 5} assets -> ${DIST}`);
+
+console.log(`\nActs rendered:`);
+for (const act of ACTS) {
+  const dropped = omissions.find((o) => o.title.startsWith(act.title));
+  if (!dropped) console.log(`  ✓ ${act.title}`);
+  else if (dropped.partial) console.log(`  ◐ ${act.title} — degraded, missing: ${dropped.missing.join(', ')}`);
+}
+
+const hard = omissions.filter((o) => !o.partial);
+if (hard.length) {
+  console.log(`\nOMITTED (asset-driven, §3.0) — a section with a missing capture is dropped, never stubbed:`);
+  for (const o of hard) console.log(`  ✗ ${o.title} — missing: ${o.missing.join(', ')}`);
+}
+
+if (DEFERRED_ACTS.length) {
+  console.log(`\nNOT BUILT — specified in the proposal, waiting on captures:`);
+  for (const d of DEFERRED_ACTS) console.log(`  · ${d.title} — needs ${d.missing.join(', ')}\n      ${d.note}`);
+}
+
 if (pendingSeen.size) {
   console.log(`\nOWNER ACTION — unfilled legal fields rendered as "pending":`);
   for (const t of [...pendingSeen].sort()) console.log(`  ${t}`);
