@@ -4844,3 +4844,392 @@ so the capability is not counted as delivered.
 - **Dependencies:** none.
 - **Risk of fixing:** low.
 - **Evidence:** `lib/core/reliability/policy/operation_policy_registry.dart:33-80`.
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     OS — Workstream 10, School-OS coherence (2026-07-29)
+     Full trace: docs/certification/findings/OS-school-operating-system.md
+     WS4's propagation evidence (dead event bus, 9 jobs / 3 crons, 31 manual
+     steps) is accepted and NOT re-derived. These entries cover the other
+     dimensions: shared state, cross-cutting layers, role/workspace, DAI,
+     entity continuity, per-module isolation.
+     Backend paths are relative to supabase/functions/_shared/.
+     ═══════════════════════════════════════════════════════════════════════ -->
+
+### OS-001 · **P0** · Student app · Canonical attendance null collapsed to 0% at a third mapper (extends XMOD-010)
+
+- **Repro steps:** Open the student app for a student before any attendance has
+  been marked, or in a window where every marked day was excused.
+- **Expected:** "—" / no data. The canonical helper's contract is explicit —
+  `null`, never 0 (`attendance/attendance_percentage.ts:24-26`).
+- **Actual:** The student is shown **0%** attendance in their own app.
+- **Root cause:** `lib/core/repositories/api/student/mapper/student_mapper.dart:221`
+  does `raw['attendancePercent'] as int? ?? 0`. XMOD-010 registers the same
+  coercion at `parent_mapper.dart:394` and `phase5_mapper.dart:150` but **not
+  this third site**, and its recommended fix is scoped to those two files.
+- **Why it is registered separately rather than folded in:** three modules
+  independently decided what to do with one canonical value, and two of the three
+  decisions were caught. Fixing XMOD-010 as written would leave the student app
+  lying.
+- **Recommended fix:** Fix all three together — make the model fields nullable
+  and render the honest-state placeholder the design system already has.
+- **Dependencies:** XMOD-010 — same wave, same change.
+- **Risk of fixing:** Low-medium (nullability ripples into consuming widgets).
+- **Evidence:** `supabase/functions/_shared/attendance/attendance_percentage.ts:24-26`;
+  `lib/core/repositories/api/student/mapper/student_mapper.dart:221`.
+
+### OS-002 · **P0** · SIS, Finance, Analytics, Director, Entitlements · Four definitions of "how many students", and the billing meter uses the loosest
+
+- **Repro steps:** On one school on one day, compare the student count on the
+  Director dashboard, the SIS dashboard, the Analytics surface and the Finance
+  dashboard. Then check what the entitlement seat check counts.
+- **Expected:** One number from one canonical resolver.
+- **Actual:** Four structurally different numbers, and **alumni and transferred
+  students count against the school's paid licence.**
+- **Root cause:** No canonical active-student function exists. Four rival
+  predicates:
+  (a) `status='active'` — `director/director_repository.ts:118,324,338,734`,
+  `sis/sis_dashboard_repository.ts:105`,
+  `management/management_aggregate_repository.ts:341`;
+  (b) **no status filter at all** — `analytics/analytics_metrics_service.ts:15`,
+  `copilot/copilot_context_engine.ts:192`, `sis/sis_dashboard_repository.ts:102`,
+  and decisively **`entitlements/entitlement_limits.ts:121`, which enforces the
+  paid seat slab**;
+  (c) `sis_student_enrollments WHERE is_current = true` —
+  `analytics_metrics_service.ts:19`, `copilot_context_engine.ts:197`,
+  `sis_dashboard_repository.ts:113`;
+  (d) `count(DISTINCT student_id) FROM finance_student_accounts WHERE
+  status='open'`, labelled `total_students` —
+  `finance/finance_dashboard_repository.ts:62-65`.
+  `sis_dashboard_repository.ts` alone uses two of them, at `:102` and `:105`.
+  Compounding it, `lib/core/repositories/api/sis/dto/sis_enum_codec.dart:31` maps
+  **`SisStudentStatus.prospect => 'active'`**, so unenrolled prospects are
+  written to the server as active students and inflate every count above,
+  **including the seat count**. Three status vocabularies exist (DB
+  `sis/sis_status_codec.ts:5`, API `:2`, Flutter
+  `lib/features/sis/sis_models.dart:30`); the backend codec is disciplined, the
+  client codec is not.
+- **Why P0:** a school is over-billed for students who have left, and a principal
+  is shown a different roll number depending on which screen they open.
+- **Recommended fix:** One `countActiveStudents(schoolId, asOf)` in `_shared/`,
+  defined against `sis_student_enrollments.is_current`; make entitlements call it;
+  fix the prospect→active client mapping.
+- **Dependencies:** OS-006 (an as-of date needs an academic-year resolver).
+- **Risk of fixing:** Medium — changes a billed quantity; needs an owner decision
+  on whether the corrected count is applied retroactively.
+- **Evidence:** file:line list above.
+
+### OS-003 · **P0** · Exams · A 35% student is F on the server and D on the report card
+
+- **Repro steps:** Enter 35% for a student. Read the grade the server assigns,
+  then the grade the client-rendered report card shows.
+- **Expected:** One grading scale.
+- **Actual:** **F** from the server, **D** on the report card.
+- **Root cause:** Two rival "defaults", each documented in its own source as
+  *"identical to the legacy fixed grading"*:
+  `academics/exam_administration/exam_administration_repository.ts:200-208`
+  (`DEFAULT_GRADE_BANDS`, 7 bands ending `>=40 D, >=0 F`) and
+  `lib/core/exams/exam_grading.dart:47-55` (`ExamGradingScale.standard`, 6 bands
+  ending `>=50 C, >=0 D`). The Flutter side additionally ships three presets —
+  `cbseScholastic`, `stateBoardSsc`, `percentageDivision` (`:60-115`) — with **no
+  backend counterpart**, so a school on the State Board preset gets client grades
+  the server can never reproduce.
+- **Why P0:** an examination grade is a claim a school makes about a child that
+  the child and parent act on and cannot independently check. Two disagreeing
+  sources mean at least one of them is issuing a false one.
+- **Recommended fix:** One grading service on the server; the client renders what
+  it is given. Move the three presets server-side and key them to school config.
+- **Dependencies:** XMOD-030 (State-Board SSC scale unreachable) — this is the
+  divergence underneath it.
+- **Risk of fixing:** Medium-high — changes issued grades; needs a migration
+  decision for results already published.
+- **Evidence:** file:line list above.
+
+### OS-004 · **P0** · Exams, Parent app · No exam-percentage helper; 24 inline sites, three rounding rules, and an unguarded division that crashes the parent app
+
+- **Repro steps:** Publish an exam component with `maxScore = 0` (a placeholder
+  or mis-configured slot). Open the parent app's exam view.
+- **Expected:** A guarded, consistent percentage.
+- **Actual:** `0/0` → `NaN.round()` → **`UnsupportedError`** — the parent app
+  throws. And across the product, the same percentage is computed with three
+  different rounding rules.
+- **Root cause:** There is no shared percentage helper anywhere.
+  **Crash:** `lib/features/parent/exams/exam_models.dart:57` —
+  `int get percent => ((scoreObtained / maxScore) * 100).round();` with no
+  `maxScore == 0` guard. **Line 99 of the same file does guard** — two rules, one
+  file. **Divergence:** backend
+  (`academics/exam_administration/exam_administration_repository.ts`) passes a raw
+  double to `gradeForPercent` at `:306,967,1070,1760,2356`, rounds to 2dp via
+  `Math.round(p*100)/100` at `:1534,1663`, and via `Math.round(x*10000)/100` at
+  `:1602,2378`; Flutter uses integer `.round()` at `exam_report_card.dart:34,103`,
+  raw doubles at `:168,226,308`, 2dp at
+  `exam_administration_store.dart:1279`, and raw at
+  `exam_reports.dart:258,311,360`.
+- **Why P0:** it is both a crash on a parent-facing path and a divergence in a
+  number that determines a grade.
+- **Recommended fix:** One `examPercent(score, maxScore)` returning nullable, in
+  a shared module with a paired SQL definition — the pattern
+  `attendance_percentage.ts` already proves works. Fix the missing guard first;
+  it is a one-line release-blocker.
+- **Dependencies:** OS-003 — the same call sites feed grading.
+- **Risk of fixing:** Low for the guard; medium for convergence (changes
+  displayed percentages).
+- **Evidence:** file:line list above.
+
+### OS-005 · **P1** · Finance, Management, Director · Three definitions of "collected", and one file uses two of them 111 lines apart
+
+- **Repro steps:** For one school and one month, compare total collected on the
+  Tally export, the Finance dashboard, the Management aggregate and Finance
+  Intelligence.
+- **Expected:** One figure.
+- **Actual:** Three, because refunded money is counted as collected by some
+  callers and not others.
+- **Root cause:** `collection_status = 'completed'` at
+  `director/director_repository.ts:125,298,456`,
+  `copilot/copilot_context_engine.ts:143`, `dashboard/dashboard_service.ts:64`,
+  `pilot/pilot_snapshot_repository.ts:779`,
+  `finance/finance_recovery_repository.ts:382,444`,
+  `finance/finance_reports_repository.ts:33`,
+  `finance/finance_tally_repository.ts:54`; versus
+  `IN ('completed','partially_refunded','refunded')` at
+  `finance/finance_dashboard_repository.ts:75,118`,
+  `management/management_aggregate_repository.ts:352`,
+  `finance/finance_intelligence_service.ts:58`; versus
+  `IN ('completed','partially_refunded')` at
+  `finance_intelligence_service.ts:169`. **`finance_intelligence_service.ts` uses
+  two different definitions 111 lines apart**, so its own collection-rate KPI at
+  `:180` is internally inconsistent — and `:180` is itself an inline fork of
+  `computeCollectionRate` (`finance_dashboard_repository.ts:39`), which has
+  exactly one production caller (`:163`).
+- **Recommended fix:** One `collectedAmount(scope, window)` with an explicit,
+  documented refund policy; delete the forked rate calculation.
+- **Dependencies:** XMOD-014 (five definitions of outstanding dues) — the same
+  disease on the other side of the ledger; fix as one wave.
+- **Risk of fixing:** Medium — changes reported money figures.
+- **Evidence:** file:line list above.
+
+### OS-006 · **P1** · Platform / all modules · There is no academic-year resolver; 66 hard-coded literals in two different dash characters
+
+- **Repro steps:** Try to move the product to FY 2027-28. Then compare the year
+  string Finance sends with the one SIS sends.
+- **Expected:** One resolver reading `academic_years.is_current`.
+- **Actual:** 66 hard-coded literals across `lib/` — **31 with an ASCII hyphen
+  (`2026-27`) and 29 with an en-dash (`2026–27`)** — compared by string equality
+  (`mock_finance_repository.dart:2726`,
+  `mock_academic_operations_repository.dart:370`). **Finance's year and SIS's year
+  are different strings for the same year.** Rolling over requires a code change
+  in 66 places.
+- **Root cause:** `TenantContext` (`lib/core/tenant/tenant_context.dart:7-18`)
+  carries only `tenantId`, `schoolId`, `organizationId`, `userId` — no year, no
+  term — so every module invents one:
+  `finance/fee_structures/finance_fee_structures_provider.dart:14` (`'2026-27'`),
+  `sis/academic_assignment/sis_academic_assignment_screen.dart:44` (`'2026–27'`),
+  `admissions/admissions_models.dart:609` (`'2026–27'`),
+  `finance/finance_workflow_actions.dart:194` (`'2026-27'`),
+  `school_completion/substitute_manager_screen.dart:27` and
+  `teacher_reassignment_screen.dart:25` (`academicYearId = 'year_1'`). The backend
+  **has** the source of truth — `academic/academic_years_repository.ts:118-119`
+  (`academic_years.is_current`) — and nothing in `lib/` reads it to seed these
+  defaults.
+- **Recommended fix:** Add `academicYearId` and `termId` to `TenantContext`,
+  seeded from `academic_years.is_current` at session bootstrap; delete the
+  literals; normalise the dash at the codec boundary.
+- **Dependencies:** OS-017 (this is the missing spine of the workspace context).
+  Blocks OS-002.
+- **Risk of fixing:** Medium — touches 66 sites, but mechanically.
+- **Evidence:** file:line list above.
+
+### OS-007 · **P0** ⭐PRIORITY-REMEDIATION-CANDIDATE · Platform / Audit · Audit is not transactional at any of its 305 call sites
+
+- **Repro steps:** Cancel a fee collection while the audit table is unavailable
+  (constraint violation, permission, contention).
+- **Expected:** Either both the mutation and its audit row commit, or neither.
+- **Actual:** **The mutation has already committed, no audit row exists, and the
+  caller receives a 500 telling them it failed.** All three outcomes are wrong at
+  once: the money moved, the trail is missing, and the operator believes it did
+  not happen — so they will do it again.
+- **Root cause:** `runTenant` (`tenant_db.ts`) issues no `BEGIN`/`COMMIT`; only
+  15 files in the entire backend touch `savepoint`. `emitMutationAudit`
+  (`audit/mutation_audit_catalog.ts:15`) is a separate awaited statement **after**
+  the mutation at all 305 sites — e.g.
+  `finance/finance_collections_handlers.ts:398-408`, where `cancelCollection`
+  commits and then audits.
+- **Why P0 and why a priority candidate:** the audit trail is the product's legal
+  record and the RC phase explicitly hardened the attendance-correction path to
+  audit *"in-transaction with real before→after"*. **That guarantee cannot hold,
+  because there are no transactions.** A durability claim that the architecture
+  cannot deliver is worse than a known gap, and it is on the money path.
+- **Recommended fix:** Wrap mutation + audit in one transaction in `runTenant`,
+  or make the audit write a deferred outbox row inside the same statement. The
+  catalog and writer are good; only the boundary is wrong.
+- **Dependencies:** None. Prerequisite for trusting any audit-based claim.
+- **Risk of fixing:** Medium-high — touches the shared DB entry point for every
+  handler; needs a full backend regression.
+- **Evidence:** `supabase/functions/_shared/tenant_db.ts`;
+  `_shared/audit/mutation_audit_catalog.ts:15`;
+  `_shared/audit/audit_repository.ts:283,380`;
+  `_shared/finance/finance_collections_handlers.ts:398-408`.
+
+### OS-008 · **P1** · Approvals, Vault, Student Health, and 6 more · Three private audit trails invisible to `/audit`, and seven modules that mutate with none
+
+- **Repro steps:** As an auditor, open the audit console and look for approval
+  decisions, platform-secret access, or student medical-record access.
+- **Expected:** All auditable mutations in one trail.
+- **Actual:** None of the three appears. They exist — in three private tables
+  nobody queries.
+- **Root cause:** Audit is otherwise a genuine platform layer (one writer, one
+  catalog, 305 sites, **48 of 62 mutating modules participate**). The exceptions:
+  `approval/approval_repository.ts:214` writes its own `approval_audit_entries`;
+  `vault/vault_service.ts:107,134` writes `platform_secret_audit_log`;
+  `student_health/student_health_repository.ts:71` writes
+  `student_health_access_log`. **Reimplementing a platform service privately is
+  worse than skipping it** — the trail exists, so the gap is invisible to anyone
+  checking whether auditing happens. Six further modules mutate with **zero**
+  audit of any kind: `approval/approval_repository.ts:277`,
+  `entity_write/entity_write_store.ts:103`,
+  `expense_ledger/expense_ledger_repository.ts:109`,
+  `parent_experience/parent_experience_service.ts:87`,
+  `storage/storage_quota_repository.ts:66`, `vault/vault_service.ts:93`, plus
+  `student_health/student_health_repository.ts:235`.
+- **Recommended fix:** Route the three private trails through
+  `recordServerAuditEvent` with a module-specific event type; add the six unaudited
+  write paths to the catalog. Add a test asserting every module directory
+  containing an INSERT/UPDATE imports the audit writer.
+- **Dependencies:** OS-007.
+- **Risk of fixing:** Low-medium.
+- **Evidence:** file:line list above; `_shared/audit/audit_repository.ts:283`.
+
+### OS-009 · **P0** ⭐PRIORITY-REMEDIATION-CANDIDATE · Platform / Notifications · The notification rail reaches 15% of modules; 53 modules change state and tell nobody
+
+- **Repro steps:** Mark a child absent. Record a book overdue. Take a payment.
+  Then check whether any human was told.
+- **Expected:** A notification rail every module inherits.
+- **Actual:** **`payment` moves money and notifies nobody. `attendance` marks a
+  child absent and notifies nobody. `library` records an overdue book and
+  notifies nobody.**
+- **Root cause:** `communication/notification_service.ts` (`enqueueFromTemplate`
+  `:40`, `processDeliveryQueue` `:83`, `enqueueNotificationRequested` `:218`) is a
+  well-built rail with **nine callers outside `communication/` itself**, against
+  roughly 62 mutating modules — **≈15% adoption**. The nine: `gate_pass`
+  (`gate_pass_repository.ts:479,489`), `support` (`support_handlers.ts:129`),
+  `teacher` (`teacher_parent_communication_handlers.ts:134`), `transport`
+  (`transport_write_handlers.ts:720`), `promotion`, `school_completion`
+  (`communication_bridge_service.ts:151`), `pilot`
+  (`pilot_operations_handlers.ts:253,1180`), `student_health`
+  (`student_health_operations.ts:174`), `reminders`. `communication/` is a **peer
+  module other modules mostly do not know exists**, not a rail they sit on.
+- **Why P0 and why a priority candidate:** this is the single strongest
+  disproof of "operating system" in the product. A school ERP whose events do not
+  reach people is a filing cabinet. It also generalises three already-registered
+  defects that are not isolated misses but samples from a 53-module population:
+  SIM-003 (complaints notify nobody at any point in a complaint's life),
+  XMOD-023 (issued certificates never delivered to the parent), XMOD-019
+  (absence alert enqueued but not sent).
+- **Recommended fix:** Treat enqueue as a first-class step of the mutation
+  catalog — the same place `emitMutationAudit` already sits — so a module that
+  declares an auditable mutation also declares its audience. Start with the three
+  named above.
+- **Dependencies:** XMOD-016 (nine periodic jobs, zero schedulers — the rail
+  needs a drain); OS-007 (same transactional boundary).
+- **Risk of fixing:** Medium-high — real messages to real parents; needs
+  per-event audience resolvers and rate limiting.
+- **Evidence:** file:line list above.
+
+### OS-010 · **P1** · Platform / Diagnostics · There is no request-scoped diagnostics layer; the one that exists has a single caller
+
+- **Repro steps:** A principal reports "fees didn't save this morning". Try to
+  find that request.
+- **Expected:** A request-scoped trail carrying user, session, tenant, school and
+  correlation id.
+- **Actual:** Nothing to search. `request_context.ts:15` (`setRequestContext`) has
+  **exactly one caller** — `auth_handlers.ts:211`.
+- **Root cause:** No `_shared/observability`, no request-scoped logger, no error
+  reporter, and no correlation propagation beyond an optional
+  `x-correlation-id` header read at `audit_repository.ts:396`. The RC phase built
+  the request-identity payload (userId/sessionId/tenantId/schoolId/scope from the
+  verified JWT, with `student_id` deliberately excluded) and nothing calls it.
+  The one genuine cross-cutting piece is the error envelope (`http.ts:33,46`, 200
+  files, a single raw `new Response(JSON.stringify(` outlier) — so the error
+  *shape* is uniform and observability is absent.
+- **Recommended fix:** Call `setRequestContext` in the shared route dispatcher
+  rather than in one handler, and emit it on every non-2xx.
+- **Dependencies:** None.
+- **Risk of fixing:** Low-medium.
+- **Evidence:** `_shared/request_context.ts:15`; `_shared/auth_handlers.ts:211`;
+  `_shared/http.ts:33,46`; `_shared/audit/audit_repository.ts:396`.
+
+### OS-011 · **P1** · Platform / Reporting · No backend report service; ~55 modules have no reporting surface at all
+
+- **Repro steps:** A board asks the principal for last term's attendance report,
+  the complaints log, and the inventory register.
+- **Expected:** A shared report service every module inherits.
+- **Actual:** None of the three exists. There is **no shared CSV/PDF/report
+  service in `_shared/` at all.**
+- **Root cause:** Eight hand-rolled report files across only four modules —
+  `finance/finance_reports_*`, `finance/finance_tally_export.ts`,
+  `hr/hr_reports_*`, `admissions/admissions_reports_*`,
+  `education/education_paper_export.ts`. The client does have a genuine shared
+  service (`lib/core/reports/akshara_report_export_service.dart`, 20+ callers),
+  but 8 modules still ship bespoke `*_report_exporters.dart` on top of it. **About
+  55 backend modules have no reporting surface** — including attendance,
+  complaints, certificates, inventory, hostel and staff duty, every one of which
+  holds data a principal will be asked for by a board, a parent or an inspector.
+- **Recommended fix:** One `_shared/reporting/` service (query → typed rows →
+  CSV/PDF) that modules register report definitions into.
+- **Dependencies:** POLISH-013 (six client Export buttons are stubs precisely
+  because there is nothing behind them).
+- **Risk of fixing:** Medium — new service, but additive.
+- **Evidence:** file:line list above.
+
+### OS-012 · **P1** · Platform / Dashboards · The dashboard widget platform is fully built and has zero consumers; all 23 dashboards are bespoke
+
+- **Repro steps:** Grep `lib/features/**dashboard**` for `dynamic_widget`.
+- **Expected:** Dashboards composed from registered widgets.
+- **Actual:** **Zero hits.** All 23 dashboards are hand-built.
+- **Root cause:** `lib/features/dynamic_widgets/` ships a registry, a layout
+  editor and a runtime screen (6 files); the backend ships
+  `widget_platform/widget_pack_catalog.ts` with 6 widget ids
+  (`homework_summary`, `operations_summary`, `fee_collection`, `school_health`,
+  `student_risk`, `attendance_risk`), full CRUD and a router entry. Nothing
+  consumes any of it.
+- **Why it matters:** an unused platform layer is worse than no platform layer —
+  it carries maintenance and migration cost, it appears in inventories as a
+  capability, and it disguises the absence of a real dashboard platform. It is
+  also why the same insight is hand-duplicated across screens (WIDGET-012) and
+  why four dashboard widgets ship with no rendering site (WIDGET-015). Same
+  pattern as POLISH-017, at platform scale.
+- **Recommended fix:** Either migrate the six catalog widgets onto real
+  dashboards, or delete the platform and say so. Do not leave it as an
+  inventory entry.
+- **Dependencies:** WIDGET-015, WIDGET-012.
+- **Risk of fixing:** Low to delete; medium to adopt.
+- **Evidence:** `lib/features/dynamic_widgets/` (6 files);
+  `_shared/widget_platform/widget_pack_catalog.ts`; 23 dashboard screens under
+  `lib/features/*/dashboard/`.
+
+### OS-013 · **P1** · Platform / RBAC · Ten route prefixes are outside the RBAC inventory guard
+
+- **Repro steps:** Compare `_shared/validation/rbac_route_inventory.ts` against
+  `_shared/route_registry.ts`.
+- **Expected:** Every registered prefix present in the inventory, so the
+  invariant test can verify its gating.
+- **Actual:** 47 prefixes covered against ~57 registered. **Absent:**
+  `attendance`, `attendance-auth`, `copilot`, `analytics`, `homework`, `school`,
+  `school-config`, `support`, `plans`, `legal`.
+- **Root cause:** The inventory is maintained by hand and has drifted. Those ten
+  modules gate in-handler only, unverified by the guard.
+- **Why this is worth an entry despite RBAC being the product's best platform
+  layer** (`route_registry.ts:119` with a single-ownership guard;
+  `permission_middleware` in 146 files): this is **exactly the drift that produced
+  the RC phase's five fail-open routes**, where `RouteNames.adminErpRoutes` and
+  `kErpRouteViewPermissions` disagreed and both gates keyed off the looser one
+  (`docs/roadmap/RC_EXECUTION_LOG.md:48-52`). An invariant test was added on the
+  Flutter side; the backend inventory has the same shape of hole and no such
+  test. `attendance` being in the gap is the one to look at first.
+- **Recommended fix:** Derive the inventory from the registry rather than
+  maintaining it, and fail CI when a registered prefix has no inventory entry.
+- **Dependencies:** Two attendance routes missing from the inventory are already
+  a tracked RC P1 — same fix.
+- **Risk of fixing:** Low.
+- **Evidence:** `_shared/route_registry.ts:119`;
+  `_shared/validation/rbac_route_inventory.ts:12`;
+  `docs/roadmap/RC_EXECUTION_LOG.md:48-52`.

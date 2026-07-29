@@ -29,7 +29,31 @@ PRODUCT CERTIFICATION COMPLETE
 | 10 School-OS coherence | ✅ | see findings |
 
 **CYCLE 1 CERTIFICATION COMPLETE — all 11 workstreams done. NOT CERTIFIED.**
-Register: **149** (25 P0 · 80 P1 · 38 P2 · 6 P3).
+Register: **174** (29 P0 · 89 P1 · 50 P2 · 6 P3).
+
+### ⚠️ LIVE PRODUCTION SECURITY — verify before any pilot use (API-105/107/108)
+Found by read-only probes against the deployed pilot, NOT inferred from code:
+* **API-105** — the deployed pilot has **no central auth chokepoint**. Anonymous
+  requests get 404/422, not 401. `eng4_5_forced_auth_test` asserts ICA-F1 makes
+  these 401 — that is a REPO property, not a production one. The deployed build
+  is behind the repo.
+* **API-107** — `/health/*` answer the internet unauthenticated, leaking school
+  count, backup SHA-256 and the isolation matrix. The guard keys off the SAME
+  `APP_ENV` flag that puts login OTPs in the response body. Needs an owner env
+  check — could not be tested from here.
+* **API-108** — the pilot's own isolation matrix is **RED NOW**: 4 student-scope
+  probes fail. School-to-school and parent-to-child pass, so it is a persona
+  boundary failure, not a tenant leak.
+These three are the only findings in the whole register about the RUNNING
+system rather than the code. Treat accordingly.
+
+### Fourth systemic item — the RBAC inventory is not a gate
+**97 mutating routes absent** from `rbac_route_inventory.ts` (incl.
+`POST /finance/collections`, `/finance/refunds`, every `/approvals/:id/approve`,
+all exam mark writes) and **91 stale rules**. The RBAC suite only calls
+`requirePermission()` on the inventory itself — it never dispatches a route — so
+an unlisted ungated route passes silently. The two attendance routes found in RC
+were not an outlier; they were a sample.
 
 ### ⚠️ REMEDIATION ORDERING CONSTRAINT — do not lose this (AI-001)
 **DAI-005 and DAI-016 are load-bearing on each other.** `openPerson` being
