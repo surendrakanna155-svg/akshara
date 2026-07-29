@@ -2618,3 +2618,556 @@ so the capability is not counted as delivered.
   audience resolver for a period's students/guardians).
 - **Evidence:** `supabase/functions/_shared/school_completion/timetable_workforce_service.ts:326-349`;
   `lib/features/academics/timetable/substitutions/daily_substitutions_screen.dart:127-142`.
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     E2E — Workstream 2, End-to-end feature certification (2026-07-29)
+     Full trace: docs/certification/findings/CERT-e2e-feature-certification.md
+     Paths repo-relative; `_shared/` = supabase/functions/_shared/.
+     ═══════════════════════════════════════════════════════════════════════ -->
+
+### E2E-001 · **P1** · Attendance · A rejected attendance submit is reported as a data-entry mistake
+
+- **Repro steps:** As a class teacher, mark every student, tap **Submit**, with the
+  server returning any error — roster mismatch (a student was transferred this
+  morning), holiday block, session already locked by a co-teacher, 401, or no
+  network with the queue unavailable.
+- **Expected:** The teacher is told what actually went wrong — "this class was
+  already submitted", "today is a holiday", "the roster changed, reload".
+- **Actual:** The snackbar reads **"Mark all students before submitting."** every
+  time. `submitAttendance` returns `false` for *both* `unmarkedCount > 0` **and**
+  `result == null` (the mutation-failed case), and the screen has only one
+  branch for `!ok`. The teacher re-checks a grid that is already fully marked,
+  taps submit again, gets the same message, and reasonably concludes the app is
+  broken — or that the attendance went in. Nothing was written.
+- **Root cause:** a boolean return collapses "invalid input" and "write failed"
+  into one value (`teacher_attendance_provider.dart:206-229`), and the caller
+  cannot distinguish them (`teacher_attendance_screen.dart:462-479`).
+- **Recommended fix:** return a result type (or rethrow) so the screen can show
+  `aksharaErrorMessage(error)` for a failure and keep the "mark all students"
+  copy for the genuine validation case. The backend already returns precise,
+  mapped errors (`AttendanceRosterMismatchError`, `AttendanceLockedError`,
+  holiday block) — none of them reach the teacher.
+- **Dependencies:** none.
+- **Risk of fixing:** low.
+- **Evidence:** `lib/features/teacher/attendance/teacher_attendance_provider.dart:206-229`;
+  `lib/features/teacher/attendance/teacher_attendance_screen.dart:462-479`;
+  server errors at `_shared/pilot/pilot_attendance_repository.ts:38-52,68-71`.
+
+### E2E-002 · **P1** · Attendance · The correction dialog opens pre-filled with a fabricated date and reason
+
+- **Repro steps:** As a class teacher open **My class → Attendance → Request
+  attendance correction**. Read the form before typing anything.
+- **Expected:** An empty date field (or today), and an empty reason.
+- **Actual:** The date field is pre-filled with the literal **`'12 Jun 2026'`** and
+  the reason with **"Biometric sync error — student was present"**. Both are
+  demo-seed values left in the production dialog. A teacher who changes only the
+  student and taps *Submit for approval* files a governance request asserting a
+  specific date and a specific cause, neither of which they chose — and that text
+  is what the principal reads on the approval card, what is stored in
+  `attendance_corrections.date_label` / `.reason`, and what is written into the
+  `correctionRequested` audit event.
+- **Root cause:** seeded `TextEditingController(text: …)` defaults never removed
+  (`teacher_attendance_workflow.dart:31-34`). The date default matches the demo
+  exam seed date in `exam_administration_store.dart:1500`, confirming its origin.
+- **Recommended fix:** empty both controllers; make the date a date picker
+  (see E2E-004) defaulting to today and bounded by the current academic year;
+  require a non-empty reason.
+- **Dependencies:** E2E-004 (the date must also be *used*).
+- **Risk of fixing:** low.
+- **Evidence:** `lib/features/teacher/attendance/teacher_attendance_workflow.dart:31-34,63-67,100-104`.
+
+### E2E-003 · **P1** · Attendance · The staff correction route trusts the body for who is asking
+
+- **Repro steps:** Hold `manageSis`. `POST /attendance/corrections` with
+  `{"sisStudentId": "...", "requesterId": "<someone else>", "requesterName":
+  "Principal Sharma", "requesterRole": "principal", ...}`.
+- **Expected:** Requester identity is derived from the token, as the parent route
+  already does.
+- **Actual:** `requesterId`, `requesterName` and `requesterRole` are read straight
+  from the request body and only *fall back* to `claims.sub`. They are persisted
+  onto the correction row, rendered to the approver as
+  *"By {requesterName} ({requesterRole})"*, and copied into the
+  `correctionRequested` audit event. So the approval card and the forensic trail
+  can both name someone who did not file the request. The parent route
+  (`handleParentCreateAttendanceCorrection:472-475`) does this correctly and
+  documents why — the staff route was not brought in line.
+- **Root cause:** `handleCreateAttendanceCorrection` treats identity as ordinary
+  payload.
+- **Recommended fix:** pin `requesterId = claims.sub` and `requesterRole` to the
+  caller's role; keep `requesterName` server-resolved from the employee record.
+- **Dependencies:** none.
+- **Risk of fixing:** low.
+- **Evidence:** `_shared/attendance/attendance_handlers.ts:400-403` vs
+  `:472-475`; audit at `:427-445`.
+
+  Related, same file, `attendance_correction_repository.ts:47-54`: `markToDb`
+  maps **any** unrecognised mark string to `"present"` rather than rejecting it.
+  A typo or a client-version skew silently becomes the most favourable value on
+  both `from_mark` and `to_mark`.
+
+### E2E-004 · **P0** · Attendance · An approved correction is applied to the wrong day, and no day but today can ever be marked
+
+- **Repro steps:** A parent disputes an absence recorded on 3 June. The teacher
+  files a correction with that date. The principal approves it in the Approval
+  Center. Now look at 3 June, and at today.
+- **Expected:** 3 June's mark changes.
+- **Actual:** **Today's mark changes.** `applyAttendanceCorrection` selects the
+  target session as *"the session matching `attendance_corrections.session_date`,
+  or — when that is NULL — the most recent submitted session"*. `session_date` is
+  **never written by anything**: the INSERT column list omits it, no UPDATE sets
+  it, and a repo-wide grep finds writes nowhere. The NULL branch is therefore the
+  only branch that ever runs, and every correction lands on the latest submitted
+  session. The date the teacher typed survives in `date_label`, on the approver's
+  card and in the audit event — so the audit asserts a date the write did not use.
+
+  The same gap has a second face: `upsertAttendanceSession` matches and inserts
+  on `session_date = CURRENT_DATE` only and the submit request carries no date, so
+  **there is no way to enter attendance for a past day at all**. A teacher out
+  sick on Monday cannot enter Monday's register on Tuesday, and the correction
+  workflow — the obvious workaround — silently edits Tuesday instead.
+- **Root cause:** `date_label` (free text, for display) was implemented; the
+  machine-readable `session_date` it was supposed to accompany never was. The
+  column and the query that consumes it were both written; the producer was not.
+- **Recommended fix:** parse the correction's date into `session_date` at create
+  time (reject an unparseable or out-of-year date, 422), and require it. Then the
+  existing `applyAttendanceCorrection` query works as written. Separately, accept
+  an explicit `sessionDate` on `/teacher/attendance/submit`, bounded to a
+  configurable back-window and blocked past a closed period.
+- **Dependencies:** E2E-002 (a date picker to produce a parseable value);
+  E2E-007 (once the right session is targeted, a 0-row result must stop being
+  reported as success).
+- **Risk of fixing:** medium — changes which row an approval mutates. Needs a
+  migration to backfill/annul `session_date` on existing rows so historic
+  corrections are not re-interpreted.
+- **Evidence:** `_shared/attendance/attendance_correction_repository.ts:157-181`
+  (INSERT without `session_date`), `:231-262` (the dead branch);
+  `supabase/migrations/20260618130000_f5_attendance_corrections.sql:13` (the
+  column exists); `_shared/pilot/pilot_attendance_repository.ts:57-62,84-95`
+  (`CURRENT_DATE` only); `lib/features/teacher/attendance/teacher_attendance_provider.dart:206-229`
+  (no date in the submit body).
+
+### E2E-005 · **P1** · Attendance · The corrections admin screen reports submission status from a mock store
+
+- **Repro steps:** As principal / school admin open **Attendance corrections**
+  (`/management/attendance/corrections`) on a live build, after the class teachers
+  have submitted the day's attendance.
+- **Expected:** Either the real submission status, or no such claim.
+- **Actual:** The header card always reads **"No teacher submission yet — Marks
+  unlock after first class submission."** It is driven by
+  `MockAttendanceSyncStore.instance`, an in-memory QA store written **only** by
+  `MockTeacherRepository.submitAttendance`. In a release build the teacher app
+  resolves `ApiTeacherRepository`, so the store is never written and
+  `hasTeacherSubmission` is permanently `false`. The screen states, as fact, that
+  no teacher has submitted — on a day when every class has. Had the mock path run,
+  the same card would instead show fabricated Present/Absent/Late counts.
+- **Root cause:** a QA cross-persona sync shim left wired into a production screen.
+- **Recommended fix:** delete the card, or source it from
+  `GET /attendance/pending` (`handleAttendancePending` already exists and answers
+  exactly this question: which classes have not submitted today).
+- **Dependencies:** none.
+- **Risk of fixing:** low.
+- **Evidence:** `lib/features/management/attendance/attendance_corrections_admin_screen.dart:6,30,63-76`;
+  `lib/core/repositories/mock/mock_attendance_sync_store.dart:19,50-58`;
+  sole writer `lib/core/repositories/mock/mock_teacher_repository.dart:261`;
+  unused real source `_shared/attendance/attendance_router.ts:39`.
+
+### E2E-006 · **P2** · Attendance · A live route can approve a correction without applying it
+
+- **Repro steps:** Hold `approveAttendanceCorrection`. `PATCH
+  /attendance/corrections/{id}/status` with `{"status":"approved"}`.
+- **Expected:** Either the mark changes, or the route does not offer "approved".
+- **Actual:** The correction flips to `approved`, a `correctionDecided` audit
+  event is written, and **`attendance_records` is not touched** — the handler
+  calls `updateAttendanceCorrectionStatus`, never `applyAttendanceCorrection`.
+  Only the approval-engine path (`approval_type_handlers.ts:143`) applies. The
+  result is an approved correction that changed nothing, with an audit trail
+  saying it was approved. `status` is also not validated against the allowed set
+  before the UPDATE — an arbitrary string reaches the DB CHECK and surfaces as an
+  unmapped 500 rather than a 422.
+- **Root cause:** two decision paths for one governance action; only one carries
+  the effect.
+- **Recommended fix:** have the status route delegate to `applyAttendanceCorrection`
+  for `approved`, or restrict it to `rejected`/`cancelled` and validate `status`
+  against the four allowed values. No client calls it today
+  (`attendance_correction_remote_datasource.dart:65-75` has no UI caller), so the
+  change is safe.
+- **Dependencies:** E2E-004, E2E-007.
+- **Risk of fixing:** low.
+- **Evidence:** `_shared/attendance/attendance_handlers.ts:519-593`;
+  `_shared/approval/approval_type_handlers.ts:141-166`.
+
+### E2E-007 · **P1** · Attendance · Approving a correction that matches no record reports success
+
+- **Repro steps:** Approve a correction for a student who has no record in any
+  submitted session (a new admission, a student whose class has not submitted, or
+  — routinely, because of E2E-004 — any correction at all).
+- **Expected:** The approver is told the mark could not be applied.
+- **Actual:** The UPDATE affects 0 rows; the code logs
+  `console.warn("… no attendance records row updated …")` and **continues** to
+  flip the status to `approved` and return success. Nothing surfaces to the
+  approver, the requester or the parent. The correction shows "Approved" on every
+  screen; the attendance is unchanged. The comment in the source states the
+  intent — "we surface that as a warning so the approval is not a silent no-op"
+  — but a server log is not a surface any school user has.
+- **Root cause:** the affected-row count is computed and then discarded.
+- **Recommended fix:** carry `affected` into the approval effect payload and the
+  audit event, and render it — the approval detail should say *"approved, but no
+  attendance record matched"*. Preferably fail the approval so the request stays
+  actionable.
+- **Dependencies:** E2E-004 (fixing the day selection removes most instances).
+- **Risk of fixing:** low for surfacing; medium if the approval is made to fail.
+- **Evidence:** `_shared/attendance/attendance_correction_repository.ts:276-291`;
+  effect payload at `_shared/approval/approval_type_handlers.ts:142-152`.
+
+### E2E-008 · **P0** · Finance / Collections · The counter sends the word "Today" as the payment date — day-close lock bypassed, receipt numbers read "NaN"
+
+- **Repro steps:**
+  1. As finance admin, close the day (`POST /finance/day-close` for 2026-07-28).
+  2. Open **Finance → Collections → Record collection**, pick an invoice, record
+     ₹5,000 by UPI.
+  3. Expected: rejected — the day is closed. Actual: accepted, posted into the
+     closed day.
+  4. Now turn on `receipts.receipt_sequencing` in Finance settings and record
+     another payment. Read the receipt number printed for the parent.
+- **Expected:** A collection dated on or before the last closed day is rejected
+  (FIN-D1); receipts are numbered `<PREFIX>/2026-27/000001`.
+- **Actual:** `showRecordCollectionDialog` sends the hard-coded literal
+  `collectionDate: 'Today'`. The DTO forwards it verbatim as
+  `collection_date: "Today"`; the handler reads it with `optionalStr` and does not
+  validate it. Server-side that one string breaks two derived computations:
+  - **Day lock bypassed.** `isDateLocked` compares ISO strings lexically —
+    `collectionDate.slice(0,10) <= latest.slice(0,10)`. `"Today" <= "2026-07-28"`
+    evaluates to `false` (`'T'`=84 sorts after `'2'`=50), so the guard returns
+    "not locked" for **every** collection made from the app. Books that have been
+    closed, reconciled and reported to the owner silently take new money.
+  - **Receipt number contains "NaN".** `fiscalYearOf("Today")` builds
+    `new Date("TodayT00:00:00Z")` → Invalid Date → `getUTCFullYear()` is `NaN` →
+    the function returns the string `"NaN-NaN"`. The receipt handed to the parent
+    reads `SCH/NaN-NaN/000042`, and because `fiscal_year` is part of the
+    `finance_receipt_sequences` key, **every fiscal year shares one sequence** —
+    the per-year reset that makes the numbering auditable never happens.
+
+  The INSERT itself lands on the right date only by luck: PostgreSQL accepts
+  `'today'` as a special date literal, so `collection_date` is correct while
+  everything computed from the same value in TypeScript is wrong. The
+  instrument-reconcile path passes a real ISO date and is unaffected — this is
+  specific to the counter screen, which is where nearly all money is taken.
+- **Root cause:** a display string (`'Today'`, meant for a label) was passed into
+  a field the server treats as an ISO date, and neither side validates the format.
+  Both consumers fail silently rather than throwing.
+- **Recommended fix:** (1) send `DateTime.now()` as `yyyy-MM-dd` from the dialog;
+  (2) validate `collection_date` in the handler against `^\d{4}-\d{2}-\d{2}$` and
+  422 otherwise; (3) make `fiscalYearOf` throw on an unparseable date rather than
+  returning `"NaN-NaN"`; (4) make `isDateLocked` compare parsed dates, not
+  strings. Add a data check for existing `finance_receipt_sequences` rows with
+  `fiscal_year = 'NaN-NaN'` and any receipt numbers already issued containing
+  `NaN` — those are printed documents that will need reissue.
+- **Dependencies:** none. Ships independently of everything else in this register.
+- **Risk of fixing:** low in code; the migration/backfill for already-issued
+  `NaN` receipt numbers is the careful part.
+- **Evidence:** `lib/features/finance/finance_workflow_actions.dart:1366-1372`;
+  `lib/core/repositories/api/finance/dto/create_collection_request_dto.dart:24-27`;
+  `lib/core/repositories/api/finance/remote/finance_remote_datasource.dart:197`;
+  `_shared/finance/finance_collections_handlers.ts:308` (no validation);
+  `_shared/finance/finance_day_close_repository.ts:51-61` (lexical compare);
+  `_shared/finance/finance_collections_repository.ts:221-227` (`fiscalYearOf`),
+  `:273-302` (`allocateReceiptNumber`), `:625-630` (`isDateLocked` call site).
+  Related but distinct: **XMOD-037** (receipts randomly numbered when sequencing
+  is off) — the two together mean receipt numbering is wrong in *both* settings.
+
+### E2E-009 · **P1** · Finance / Offline instruments · The register defaults to a demo invoice ID and validates nothing
+
+- **Repro steps:** Finance → Offline payments → **Record offline payment**. Read
+  the Invoice ID field. Now clear every field and tap **Record**.
+- **Expected:** An invoice picker (as the main collection dialog has), a required
+  amount, and a rejection if the invoice does not exist.
+- **Actual:** Invoice ID is pre-filled `'inv_1'` — a fixture id. The dialog has no
+  `Form`, no validator, and no required-field check on any field; amount is a bare
+  `TextField`. Server-side, `invoiceId` is `optionalStr` — never checked for
+  emptiness and **never checked to exist**. So an instrument can be recorded
+  against `inv_1`, against a typo, or against nothing. Because
+  `reconcileOfflinePayment` throws `OfflinePaymentNotInvoicedError` when
+  `invoice_id` is null and `loadInvoiceForCollection` fails when it points at a
+  non-existent invoice, such a record can **never** be reconciled — the cheque sits
+  in Pending forever with no way to correct it (there is no edit action).
+- **Root cause:** the dialog was not brought up to the standard of the main
+  collection dialog, which builds a real invoice picker from loaded invoices.
+- **Recommended fix:** reuse the invoice picker from `showRecordCollectionDialog`;
+  make invoice + amount required client-side; validate on the server that the
+  invoice exists and belongs to the school (422); add an edit/void action for a
+  pending instrument.
+- **Dependencies:** E2E-010 (same dialog).
+- **Risk of fixing:** low.
+- **Evidence:** `lib/features/finance/payments/finance_offline_payments_screen.dart:277-296,357-372`;
+  `_shared/finance/finance_offline_payments_handlers.ts:80-95`;
+  `_shared/finance/finance_offline_payments_repository.ts:296-306` (reconcile
+  rejects a non-invoiced instrument).
+
+### E2E-010 · **P1** · Finance / Offline instruments · Cash recorded in the register is never money
+
+- **Repro steps:** Finance → Offline payments → Record offline payment → method
+  **Cash**, ₹5,000, submit. Then look at the student's outstanding, the day's
+  collection total, the parent app, and `finance_collections`.
+- **Expected:** Either cash is not offered here (it belongs on the counter
+  screen), or recording it posts a collection immediately — cash has no clearance
+  event.
+- **Actual:** The cashier sees *"Offline payment recorded."*. The row is written
+  as `pending_reconciliation` with `collection_id` NULL. **No collection is
+  posted, no receipt exists, the invoice outstanding is unchanged, the day's total
+  is unchanged, and the parent still owes the full amount.** `createOfflinePayment`
+  hard-codes `'pending_reconciliation'` for every method; the module's own header
+  comment says the register is the single entry path for **cheque/DD/PDC**, yet
+  `Cash` is both in the `OfflinePaymentMethod` union and first in the dropdown.
+  Money physically in the drawer is absent from the books until somebody
+  independently opens the Reconciled tab.
+- **Root cause:** an instrument-clearance workflow given a payment method that has
+  no clearance step.
+- **Recommended fix:** remove `Cash` from this dialog and route it to the counter
+  collection dialog (which posts immediately); or, if it must stay, post the
+  collection at record time for cash and skip the pending state. Also make the
+  success copy state the actual effect — "recorded, pending clearance; not yet
+  posted to the ledger" — instead of an unqualified success.
+- **Dependencies:** E2E-009.
+- **Risk of fixing:** low-medium (touches the money-posting decision; the
+  reconcile machinery itself is sound and should not be altered).
+- **Evidence:** `_shared/finance/finance_offline_payments_repository.ts:14-20`
+  (`Cash` in the union), `createOfflinePayment` (status hard-coded);
+  `lib/features/finance/payments/finance_offline_payments_screen.dart:308-317`
+  (Cash first in the dropdown), `:400-408` (unqualified success snackbar).
+
+### E2E-011 · **P0** · Teacher / Student records · The student risk dossier fabricates attendance, marks, homework and fee dues
+
+- **Repro steps:** Sign in as a class teacher. Open
+  `/teacher/class-teacher-dashboard` and **long-press** a student under "Students
+  requiring attention" (the short tap is JOURNEY-010). The Student risk screen
+  opens. Read the Attendance, Homework, **Fees** and per-subject rows.
+- **Expected:** The student's real figures, or an honest "not available".
+- **Actual:** Every metric row is fabricated by
+  `TeacherStudentRiskService._snapshotFor`, which composes:
+  - **attendance** = `MockAttendanceSyncStore.attendancePercent()`, and when that
+    is unset (always, in a release build — the store's only writer is
+    `MockTeacherRepository`) falls back to the constant **`92`**, or to `88`/`74`
+    depending on marks;
+  - **marks** = the constant **`75`**, overridden only by
+    `ExamAdministrationStore.instance..ensureSeeded()` — the *seeded demo exam*
+    (`exam_math_8a`, "Unit Test — Mathematics", marks 42/45/40… for the mock
+    class 8-A roster);
+  - **homework** = `SchoolHomeworkStore`, else the constant **`80`**;
+  - **fees** = `student.feeAccountId == 'acct_ravi' ? '₹4,200 due' : 'No dues'` —
+    a hard-coded fee statement keyed on a fixture account id.
+
+  The screen renders these directly (`_Row('Fees', snapshot.feePendingLabel)`,
+  `'${snapshot.attendancePercent}% · …'`). The live `/intelligence/risk/*` merge
+  replaces **only** the risk level, score and reasons; every displayed metric
+  still comes from the fabricated base, and on any live failure the whole
+  fabricated snapshot is returned.
+
+  Two consequences, both bad: a class teacher preparing for a parent meeting is
+  shown "No dues" and "92% attendance" for a student who may owe fees and be at
+  55% — a fabricated financial and attendance claim, which the register's standing
+  rule makes P0. And because the roster comes from
+  `MockCanonicalStudentRegistry.byId`, a **real** student id is not found and
+  `snapshotForStudent` throws `StateError`, so at a real school the screen shows
+  an error state instead — the feature is fabricated where it works and broken
+  where it does not.
+- **Root cause:** a demo-era service that was never replaced when the intelligence
+  backend landed; the live merge was bolted onto the mock rather than replacing it.
+- **Recommended fix:** source every row from real endpoints — attendance from
+  `/attendance/*`, marks from the exams feed, homework from the homework store,
+  fees from `/finance/student-accounts` — and render an honest per-row unknown
+  state where a value is missing. Until then the screen should not ship.
+- **Dependencies:** JOURNEY-010 (the short-tap route is separately broken);
+  WIDGET-002 (same service also feeds `TeacherDashboardData.mock()`).
+- **Risk of fixing:** medium — needs four real data sources wired into one screen.
+- **Evidence:** `lib/core/communication/teacher_student_risk_service.dart:95-140`;
+  `lib/features/teacher/communication/teacher_teaching_context_provider.dart:65-95`;
+  `lib/features/teacher/student_risk/teacher_student_risk_screen.dart:29-46,94-102`;
+  route `lib/router/app_router.dart:518-524`; entry
+  `lib/features/teacher/dashboard/teacher_class_teacher_dashboard_screen.dart:124`;
+  seed `lib/core/exams/exam_administration_store.dart:1491-1520`.
+
+### E2E-012 · **P0** · Exams · "Export marks summary" exports a seeded demo exam
+
+- **Repro steps:** Sign in as any teacher. Open **Exams**. Tap the share icon →
+  **Export marks summary** → CSV or PDF. Open the file.
+- **Expected:** The teacher's own exams in the marks-entry phase, with real
+  entered/total counts.
+- **Actual:** The export is built from
+  `ExamAdministrationStore.instance.marksEntryProgress()`, which calls
+  `ensureSeeded()` and — in a release build, where nothing ever populates the
+  singleton from the API — returns the **seeded demo data**: `exam_math_8a`,
+  *"Unit Test — Mathematics"*, grade 8, section A, with entered/total counts
+  derived from the hard-coded mock roster. The exam list on the same screen comes
+  from the API and shows the school's real exams; the export button beside it
+  produces a document about an exam that does not exist. The file is shareable —
+  it leaves the app, and it is examination data, which the standing rule makes P0.
+- **Root cause:** the export was wired to the in-memory store that the marks-entry
+  screen used before the API repository landed; the screen was migrated, the
+  export was not.
+- **Recommended fix:** derive the progress rows from the same
+  `examAdministrationListProvider` + marks data the screen renders, or add a
+  `GET /academics/exams/progress` read (the route already exists per the feature
+  inventory) and export that.
+- **Dependencies:** E2E-016 (same singleton; fixing one does not fix the other).
+- **Risk of fixing:** low.
+- **Evidence:** `lib/features/teacher/exams/teacher_exams_screen.dart:59-70`;
+  `lib/core/exams/exam_administration_store.dart:839-862` (`ensureSeeded` inside
+  `marksEntryProgress`), `:621-632`, `:1491-1520` (the seed).
+
+### E2E-013 · **P2** · Exams · The create-exam dialog pre-fills a date, a time, a room and a term
+
+- **Repro steps:** Exam administration → **Create exam**. Read the form before
+  typing.
+- **Expected:** Empty scheduling fields, or values derived from the school's
+  calendar and rooms.
+- **Actual:** Term = `'Term 2'`, date = **`'15 Mar 2026'`**, time =
+  `'9:00 AM - 10:30 AM'`, venue = `'Room 8A'`. A user who fills in only the title
+  and subject schedules an exam on a fixed date in a room that may not exist. The
+  values then appear on the datesheet, the seating plan and the student's exam
+  card. Same class as E2E-002, lower severity because the exam list makes the
+  mistake visible.
+- **Root cause:** demo defaults in `TextEditingController(text: …)`.
+- **Recommended fix:** clear them; source venue from `GET /school/rooms` and term
+  from the academic-year config.
+- **Dependencies:** E2E-014.
+- **Risk of fixing:** low.
+- **Evidence:** `lib/features/academics/exam_admin/widgets/exam_create_dialog.dart:21-26`.
+
+### E2E-014 · **P1** · Exams · An exam has no machine-readable date
+
+- **Repro steps:** Create two exams for the same class on the same morning. Try to
+  sort the datesheet chronologically, detect the clash, or have the system remind
+  anyone the day before.
+- **Expected:** An exam carries a date the system can compare.
+- **Actual:** `exam_sessions` stores only `date_label TEXT NOT NULL DEFAULT ''`
+  and `time_label TEXT`. There is no `exam_date` column, the create handler does
+  no date parsing (`String(body.dateLabel ?? …).trim()`), and the client field is
+  free text. So nothing can order a datesheet, detect a two-exams-one-slot clash,
+  bound an exam to the academic year, or schedule a reminder from the exam date.
+  Notably `marksEntryDeadline` **is** a validated timestamp on the same table —
+  the deadline is machine-readable and the exam date is not.
+- **Root cause:** label-only scheduling that was never upgraded when the
+  deadline field showed the pattern.
+- **Recommended fix:** add `exam_date DATE` (+ optional `start_time`/`end_time`),
+  parse and validate on create/schedule, keep `date_label` for display, and
+  backfill where parseable.
+- **Dependencies:** E2E-013 (a date picker to produce the value).
+- **Risk of fixing:** medium — migration plus a backfill of free-text dates.
+- **Evidence:** `supabase/migrations/20260618120000_f4_exam_sessions.sql:12-13`;
+  `_shared/academics/exam_administration/exam_administration_handlers.ts:449-455`
+  (no parsing) vs `:470-483` (`parseDeadline`, which does it correctly).
+
+### E2E-015 · **P1** · Report cards · The overall grade ignores the school's grading scale
+
+- **Repro steps:** Configure the school for the CBSE (or State-Board SSC) scale.
+  Publish results. Open the parent or student report card and compare the overall
+  grade with the per-subject grades.
+- **Expected:** One scale across the document.
+- **Actual:** `ExamReportCardBuilder.fromPublishedResults` computes
+  `overallGrade: ExamGradingScale.standard.gradeFor(overallPercent)` — the
+  **standard** scale, hard-coded, always. Per-subject grades come from the server
+  and follow whatever scale the server applied. A report card can therefore carry
+  subject grades on one scale and an overall grade on another, with no indication
+  which is which. The source comment states the behaviour, so it is deliberate —
+  but a report card is a document a parent keeps and shows to the next school.
+
+  Related and in the same builder: `rankShown` is hard-coded `false`, so the
+  school's `showRankToParents` setting has no effect on any surface.
+- **Root cause:** the published-results feed does not carry the school's scale, so
+  the builder substituted a default rather than fetching it.
+- **Recommended fix:** carry the school's grading scale on the published-results
+  response (or read `GET /academics/exams/grade-scale` — see E2E-016) and use it
+  for the overall grade; carry rank + `rankShown` on the same response.
+- **Dependencies:** E2E-016; **XMOD-030** (the grading fork this sits on top of).
+- **Risk of fixing:** low-medium.
+- **Evidence:** `lib/core/exams/exam_report_card.dart:137-141,176-182`.
+
+### E2E-016 · **P1** · Exams · The grading-scale setting never leaves the device
+
+- **Repro steps:** As principal, open Exam administration → settings sheet, switch
+  the grading scale and turn rank visibility on. Sign in on another device, or as
+  another user, and look at the same sheet. Then check `audit_events`.
+- **Expected:** A school-level configuration change, persisted, audited, and
+  visible to everyone.
+- **Actual:** `ExamReportSettingsNotifier` reads and writes only
+  `ExamAdministrationStore.instance` — an in-memory singleton with a local
+  snapshot file. **No code in `lib/` calls `/academics/exams/grade-scale`**
+  (grep for `grade-scale`/`gradeScale` across `lib/` returns nothing), even though
+  the backend implements `GET` and `PUT` for it and writes an audit row on save.
+  So the change is invisible to every other device and user, is never audited, and
+  never reaches any server-side grade computation. The endpoint is orphaned from
+  the client.
+
+  Compounding it, `examReportSettingsProvider` is declared **twice** under the
+  same name — a `NotifierProvider` in `exam_settings_provider.dart:9` and a
+  dependency-free `Provider` in `exam_reports_provider.dart:116`. The settings
+  sheet and create dialog import the former; the exam **reports** screen imports
+  the latter, which reads the singleton once and, having nothing to watch, caches
+  it for the app's lifetime — so a scale change does not reach tabulation, merit
+  or distribution reports in the same session.
+- **Root cause:** a local-first settings implementation that was never connected
+  when the endpoint shipped, plus a duplicated provider name across two files.
+- **Recommended fix:** back the notifier with `GET`/`PUT
+  /academics/exams/grade-scale`; delete the duplicate `Provider` in
+  `exam_reports_provider.dart` and have the reports screen watch the notifier.
+- **Dependencies:** E2E-015 consumes the result.
+- **Risk of fixing:** low.
+- **Evidence:** `lib/features/academics/exam_admin/exam_settings_provider.dart:14-37`;
+  `lib/features/academics/exam_admin/exam_reports_provider.dart:116-118`;
+  `lib/core/exams/exam_administration_store.dart:604-614`;
+  backend `_shared/academics/exam_administration/exam_administration_handlers.ts:1207-1290`;
+  router `_shared/academics/exam_administration/exam_administration_router.ts:62-64`.
+
+### E2E-017 · **P0** · SIS · Admissions · Homework · Every document "upload" in the product uploads a synthetic empty PDF
+
+- **Repro steps:**
+  1. **SIS:** open a student profile → **Upload student document**. Type
+     "Birth Certificate" and "birth_certificate.pdf". Tap **Upload**. Then open
+     the document from the profile.
+  2. **Admissions:** open an application → upload a required document. Same.
+  3. **Student app:** submit homework with an attachment. Open it as the teacher.
+  4. **Teacher app:** attach a file to a homework. Open it as the student.
+- **Expected:** A file chooser, and the chosen file stored.
+- **Actual:** **There is no file picker on any of these screens.** Each dialog
+  collects a *document type* and a *file name* as free text, and then uploads a
+  hard-coded 5-line PDF — `%PDF-1.4 … MediaBox[0 0 200 200] … %%EOF`, a blank
+  200×200 page — through the real presign → PUT → confirm Storage path. The
+  document row is created with the name the user typed, the bytes are synthetic,
+  and the school's record now asserts it holds a document it does not hold.
+  `image_picker` is in `pubspec.yaml` but is used **only** by the support
+  "Report an issue" screen (`report_issue_screen.dart:54`); `file_picker` is not
+  a dependency at all.
+
+  The severity is not the empty file — it is what the product does with it next:
+  - a clerk can then open **Verify document** and mark that empty PDF
+    **verified**, which is a governance decision recorded against a student;
+  - an admission can be approved on a "documents complete" checklist satisfied
+    entirely by blank pages;
+  - a TC / no-dues clearance can cite verified documents that do not exist;
+  - a teacher grades a homework "submission" that is a blank page;
+  - a parent's medical-certificate reference for a leave is a file name only.
+
+  Each source file documents the substitution as a deliberate stand-in — "no OS
+  file picker dependency in the app", "wiring a native picker is a tracked UX
+  follow-up" — but the substitution ships in the release build, on the paths a
+  school uses to hold legally significant records. Fabricated records data
+  reaching a production write; P0 by the standing rule.
+- **Root cause:** the Storage path (presign/PUT/confirm) was built and tested with
+  synthetic bytes so it could be exercised without a platform picker; the picker
+  was never added and the synthetic payload became the shipping behaviour.
+- **Recommended fix:** add `file_picker` (or extend the existing `image_picker`
+  use) and pass the real bytes + real MIME type + real file name on all four
+  paths. Until then, hide the upload actions rather than write blank documents,
+  and treat any existing rows created by these paths as unverified.
+- **Dependencies:** blocks any certification of Admissions document verification,
+  SIS document verification, TC/clearance (**XMOD-021**) and homework grading.
+- **Risk of fixing:** low-medium — the server side is already correct; this is a
+  client capability gap plus a MIME/size validation pass on the presign endpoint.
+- **Evidence:** `lib/features/sis/sis_mutations_provider.dart:136-160`;
+  `lib/features/sis/sis_workflow_actions.dart:28-40,74-90` (and the verify dialog
+  immediately below at `:98-130`);
+  `lib/features/admissions/admissions_workflow_actions.dart:478-487`;
+  `lib/features/student_app/student_mutations_provider.dart:60-90`;
+  `lib/features/teacher/teacher_mutations_provider.dart:618-648`;
+  `pubspec.yaml:58` (only `image_picker`, used solely at
+  `lib/features/support/report_issue_screen.dart:54`).

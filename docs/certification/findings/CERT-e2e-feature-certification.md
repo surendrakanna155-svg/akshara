@@ -50,3 +50,217 @@ the migration that defines X, never by observing a row. Where a claim could not 
 settled from source, it is stated as a boundary rather than a finding.
 
 ---
+
+# 1 — Attendance
+
+Daily, universal, and feeds payroll (staff), the report card (student), risk
+analytics and the parent app. Traced: teacher marks a class → correction request
+→ approval → the mark actually changing.
+
+## 1.1 Chain: teacher marks a class (`/teacher/attendance` → `POST /teacher/attendance/submit`)
+
+| Link | State | Evidence |
+|---|---|---|
+| First action | ✅ | `teacher_attendance_screen.dart` roster grid; bulk-mark + "fill remaining present" (`teacher_attendance_provider.dart:139-156`) |
+| UI | ✅ | submit disabled until `unmarkedCount == 0` (`teacher_attendance_screen.dart:457`) |
+| Validation | ⚠️ | client blocks unmarked; server enforces an **exact roster match** (`pilot_attendance_repository.ts:38-52`, `AttendanceRosterMismatchError`), holiday/year-closure block, and submitted-session immutability. Strong. **But the error copy lies on failure — E2E-001** |
+| API | ✅ | `POST /teacher/attendance/submit`, `markAttendance` + `assertTeacherOwnsClass` (`pilot_operations_handlers.ts`) |
+| Database | ✅ | `attendance_sessions` (natural key org+school+class+**date**+period) + `attendance_records`; race-safe `ON CONFLICT … WHERE status <> 'submitted'` |
+| Audit | ✅ | `auditMobileWrite(…, "attendanceSubmitted", …)` with the mark counts, same transaction |
+| Notifications | ⚠️ | guardian absence alert **enqueued** per absent student — but the queue is never drained (**XMOD-019**) and the text is unlocalised/unidentifiable (**XMOD-018**) |
+| Reports | ✅ | office register / monthly register / short-attendance reads exist (`attendance_office_repository.ts`) |
+| Analytics | ⚠️ | attendance-risk uses a non-canonical formula (**XMOD-020**) |
+| Dashboards | ⚠️ | parent + teacher dashboards fabricate attendance (**WIDGET-001**, **WIDGET-002**); "no data" renders as 0% (**XMOD-010**) |
+| Related modules | ⚠️ | approved leave auto-excuses on submit (`applyApprovedLeaveExcuse`) ✅; an exited student blocks the whole class submit (**XMOD-007**) |
+| Final outcome | ✅ | the session is locked and immutable through this path |
+
+**Certified good, and worth saying so:** this is the most hardened write path
+examined in this workstream. One session per class/date/period regardless of who
+marks it; a submitted session cannot be silently overwritten; the roster diff
+makes a partial submit impossible; the teacher must own the class; approved leave
+is auto-excused server-side.
+
+**Structural gap — no attendance can ever be backdated.** `upsertAttendanceSession`
+matches and inserts on `session_date = CURRENT_DATE` only
+(`pilot_attendance_repository.ts:57-62, 84-95`); the request body carries no date
+field (`teacher_attendance_provider.dart:206-229`). A teacher who was absent
+yesterday, or a school recovering from an outage, has **no path to enter a past
+day's attendance** — and the correction workflow that looks like the answer does
+not honour a date either (§1.2). Recorded as **E2E-004**.
+
+## 1.2 Chain: attendance correction (teacher/parent → principal approval → the mark)
+
+| Link | State | Evidence |
+|---|---|---|
+| First action | ⚠️ | dialog opens **pre-filled with fabricated values** — `'12 Jun 2026'` and *"Biometric sync error — student was present"* — **E2E-002** |
+| UI | ⚠️ | attendance date is a **free-text `AksharaFormField`**, not a date picker |
+| Validation | ❌ | no date parsing or range check anywhere; `markToDb` silently coerces any unknown mark to `"present"` (`attendance_correction_repository.ts:47-54`); `requesterRole`/`requesterName` are taken from the request body on the staff route — **E2E-003** |
+| API | ✅ | `POST /attendance/corrections` (manageSis) · decision gated on `approveAttendanceCorrection`, not plain `manageSis` |
+| Database | ⚠️ | row written to `attendance_corrections` — but **`session_date` is never populated** (the INSERT omits the column entirely, `attendance_correction_repository.ts:157-181`) — **E2E-004** |
+| Audit | ✅ | `correctionRequested` at submit and `correctionDecided` at decision, both in-transaction with a real before→after and an `updated_at` nonce. Genuinely well done |
+| Notifications | ❌ | nothing is sent to the requester when their correction is approved or rejected. No enqueue call in `attendance_handlers.ts` or `approval_type_handlers.ts` for this type |
+| Reports | — | |
+| Analytics | — | |
+| Dashboards | ⚠️ | the admin corrections screen's headline card is driven by a **mock store** — **E2E-005** |
+| Related modules | ⚠️ | applied only through the approval engine (`approval_type_handlers.ts:143`); the direct `POST /attendance/corrections/:id/status` route flips the status **without applying it** — **E2E-006** |
+| Final outcome | ❌ | **the corrected date is ignored** and a 0-row update is reported as success — **E2E-004**, **E2E-007** |
+
+### The core defect in this chain
+
+`applyAttendanceCorrection` chooses which attendance record to change like this
+(`attendance_correction_repository.ts:250-259`): *if the correction carries a
+`session_date`, match that session; otherwise take the most recent submitted
+session.* `session_date` is **never written** — the create path does not include
+the column, and nothing else updates it. So the branch is dead: every approved
+correction is applied to the **latest submitted session**, whatever date the
+teacher or parent actually asked about. A parent disputing an absence from three
+weeks ago gets today's mark changed instead. The `date_label` the teacher typed is
+carried into the row, the audit trail and the approver's screen — so the audit
+records a date the write never used.
+
+---
+
+# 2 — Fees & collections
+
+The money path. Traced: cashier records a payment at the counter → receipt →
+invoice → parent; and the separate cheque/DD/PDC register.
+
+## 2.1 Chain: record a collection (`Record collection` dialog → `POST /finance/collections`)
+
+| Link | State | Evidence |
+|---|---|---|
+| First action | ✅ | `showRecordCollectionDialog` (`finance_workflow_actions.dart:1270`), reachable from the collections screen and from a student account |
+| UI | ✅ | real invoice picker built from loaded invoices, amount pre-filled from that invoice's **actual outstanding** (+ late-fee breakdown line), draft autosave/recovery (REL-3) |
+| Validation | ⚠️ | **client-side: none** — the amount field has no `validator`; the server carries all of it (`amount > 0`, `amount <= outstanding`, instrument-method rejection, invoice must exist). Correct, but every mistake costs a round trip |
+| API | ✅ | `POST /finance/collections`, `manageFinance` + school scope; `Idempotency-Key` minted for every mutation (`idempotency_key_interceptor.dart`) |
+| Database | ✅ | invoice row-locked, replay-on-key, `finance_collections` INSERT + invoice outstanding/status update in one transaction, partial-unique indexes as DB backstops |
+| Audit | ✅ | `collectionCreated` mutation audit **and** a `finance.collection.created` domain event with an idempotency key, in-transaction |
+| Notifications | ✅ | `notifyParentOfReceipt(...)` is actually called after commit — one of the few flows that closes this link |
+| Reports | ⚠️ | daily summary / day-close / Tally export read `finance_collections`; **but see E2E-008 — the day-close lock does not hold** |
+| Analytics | ⚠️ | five divergent definitions of "outstanding dues" across the module (**XMOD-014**) |
+| Dashboards | ⚠️ | admin landing hero fabricates "₹4.2L Collected today" (**JOURNEY-001**); filter chips do not filter (**WIDGET-008**) |
+| Related modules | ⚠️ | ex-students keep accruing (**XMOD-024**); transport raises no demand (**XMOD-004**) |
+| Final outcome | ❌ | **the receipt number and the day-close lock are both corrupted by a literal string the client sends as the date — E2E-008** |
+
+**The defect at the end of this chain.** The dialog hard-codes
+`collectionDate: 'Today'` (`finance_workflow_actions.dart:1371`); the DTO forwards
+the word verbatim; the handler accepts it without validation. Two things then
+happen server-side:
+
+1. `isDateLocked` compares **lexically**: `"Today" <= "2026-07-28"` is `false`
+   because `'T'` (84) sorts after `'2'` (50). The FIN-D1 closed-day guard therefore
+   **never fires for any collection made from the app**.
+2. `fiscalYearOf("Today")` does `new Date("TodayT00:00:00Z")` → Invalid Date →
+   `NaN` → returns the string **`"NaN-NaN"`**. With receipt sequencing on, every
+   receipt is numbered `PREFIX/NaN-NaN/000001` and all years share one sequence.
+
+The INSERT itself survives only because PostgreSQL happens to accept `'today'`
+as a special date literal — the write is correct by accident while everything
+derived from the same value is wrong. The instrument-reconcile path passes a real
+ISO date and is unaffected; this is specific to the counter screen.
+
+## 2.2 Chain: the offline instrument register (`/finance/payments/offline`)
+
+| Link | State | Evidence |
+|---|---|---|
+| First action | ⚠️ | "Record offline payment" FAB; **Invoice ID pre-filled `'inv_1'`** — **E2E-009** |
+| UI | ⚠️ | free-text invoice ID (no picker, unlike §2.1); instrument date + bank shown only for cheque/DD/PDC (correct) |
+| Validation | ⚠️ | no client validation at all — no validator, no required fields, no invoice existence check. Server checks amount > 0 and the method enum, **but never that `invoiceId` exists or is non-empty** |
+| API | ✅ | `POST /finance/payments/offline`, `manageFinance` |
+| Database | ✅ | `finance_offline_payments` at `pending_reconciliation`, **no money posted** — correct for an uncleared instrument |
+| Audit | ✅ | `offlinePaymentRecorded` / `Reconciled` / `Bounced`, all in-transaction |
+| Notifications | ❌ | nothing to the parent when a cheque clears or bounces |
+| Reports | ✅ | pending / reconciled / bounced tabs |
+| Analytics | — | |
+| Dashboards | ❌ | uncleared instruments appear on no dashboard; a bounced cheque surfaces nowhere outside this screen |
+| Related modules | ✅ | reconcile posts a real collection through the standard path with a hard one-collection-per-instrument DB index |
+| Final outcome | ❌ | **cash recorded here never becomes money — E2E-010** |
+
+**Certified good, and worth saying so:** the reconcile path is the most carefully
+built money code in the repo — `FOR UPDATE` on the instrument before the state
+check, a consistent instrument→invoice lock order, an idempotent re-reconcile, a
+guarded terminal `AND status = 'pending_reconciliation'` write that fails closed,
+and two partial-unique DB indexes as backstops. A cheque cannot be double-credited.
+
+**But the register offers `Cash`.** `createOfflinePayment` writes *every* method —
+cash included — as `pending_reconciliation` with no collection. Cash has no
+clearance event, so a cashier who records a cash payment here gets *"Offline
+payment recorded."*, the student's dues do not move, no receipt exists, the day's
+collection total is unchanged, and the parent still sees the full amount
+outstanding. It only becomes money if someone later opens the Reconciled tab —
+and if the invoice ID was left as the pre-filled `inv_1`, reconciliation throws
+`OfflinePaymentNotInvoicedError`/invoice-not-found and the money is stranded
+permanently.
+
+---
+
+# 3 — Exams, marks & report cards
+
+Traced: create an exam → open marks entry → a teacher enters marks → publish →
+what the parent and the student see, and what the school can export.
+
+## 3.1 Chain: marks entry (`/school/exam-administration/:examId/marks`)
+
+| Link | State | Evidence |
+|---|---|---|
+| First action | ✅ | per-student cells + bulk paste; AB/ML/DB status selector |
+| UI | ✅ | out-of-range cells are counted and named before save ("… out of range 0–80 — not saved") |
+| Validation | ✅ | client `0..maxMarks` + `inputFormatters`; server re-validates status enum, requires an integer ≥ 0 for `present`, enforces `<= max_marks` from the **entry's own** row, and a `NOT VALID` DB CHECK backs both |
+| API | ✅ | single PATCH and bulk save funnel through one `applyMarkUpdate` so the guards cannot diverge |
+| Database | ✅ | `exam_mark_entries` with optimistic concurrency (`expectedVersion`) and a `published = false` fence — a published mark cannot be silently edited |
+| Audit | ✅ | per-row before→after audit binding actor → exam → student, including status |
+| Notifications | ⚠️ | `POST /academics/exams/marks/remind` exists; nothing schedules it (**XMOD-016**) |
+| Reports | ⚠️ | tabulation / merit / distribution exist, but ignore publish state and AB/ML/DB (**XMOD-029**) |
+| Analytics | ⚠️ | same |
+| Dashboards | ⚠️ | teacher "marks pending" tile is fed by the seeded singleton — **E2E-012** |
+| Related modules | ⚠️ | grading forks; State-Board SSC scale unreachable (**XMOD-030**) |
+| Final outcome | ✅ | for the mark itself: correct, guarded, audited |
+
+**Certified good, and worth saying so:** alongside attendance submit, marks entry
+is the strongest write path in the product. Subject teachers are scoped to exams
+they actually teach; a published mark is immutable through this path; concurrency
+is handled; every cell change is individually audited with its before value, so
+"who changed this mark" is answerable.
+
+## 3.2 Chain: create an exam
+
+| Link | State | Evidence |
+|---|---|---|
+| First action | ⚠️ | `exam_create_dialog.dart` opens pre-filled with `'Term 2'`, **`'15 Mar 2026'`**, `'9:00 AM - 10:30 AM'`, `'Room 8A'` — **E2E-013** |
+| Validation | ⚠️ | client requires `maxMarks > 0`; **server accepts any number** — `Number(body.maxMarks ?? 100) \|\| 100` lets a negative through and silently rewrites `0` to `100`; no DB CHECK on `max_marks` |
+| Database | ❌ | `exam_sessions` has **no date column** — only `date_label TEXT` — **E2E-014** |
+| Audit | ✅ | exam lifecycle transitions are audited |
+| Reports | ⚠️ | a datesheet built from free text cannot be sorted, clash-checked or reminded on |
+| Final outcome | ⚠️ | the exam exists and is workable; its date is decorative |
+
+## 3.3 Chain: report card (parent & student)
+
+| Link | State | Evidence |
+|---|---|---|
+| Source | ✅ | **fixed and verified** — both providers now build from the server-backed published-results feed, not the old in-memory store (`parent/exams/report_card_provider.dart`, `student_app/exams/report_card_provider.dart`) |
+| Publish gate | ⚠️ | only published results reach the feed; but unpublished/unentered marks still leak through a different read (**XMOD-005**) and AB/ML/DB are counted as zero (**XMOD-009**) |
+| Grading scale | ❌ | the overall grade is **hard-coded to `ExamGradingScale.standard`** (`exam_report_card.dart:178`) regardless of the school's configured scale — **E2E-015** |
+| Rank | ⚠️ | always `rankShown: false`, so the school's `showRankToParents` setting has no effect anywhere |
+| Remarks | ⚠️ | not carried by the feed — honestly omitted rather than faked (good) |
+| Delivery | ❌ | no notification when results are published; the parent must look |
+| Final outcome | ⚠️ | a correct list of subject marks under an overall grade computed on a scale the school may not use |
+
+## 3.4 The exam settings sheet is inert
+
+`ExamReportSettingsNotifier` (grading scale · rank visibility · term hints) reads
+and writes **only** `ExamAdministrationStore.instance` — an in-memory singleton
+with local snapshot persistence. There is **no client caller of
+`/academics/exams/grade-scale` anywhere in `lib/`**, although the backend
+implements `GET`/`PUT` for it *and audits the change*. So a principal switching
+the school to the CBSE or State-Board scale changes a value on their own phone,
+which no other device, no server computation and no audit trail ever sees —
+**E2E-016**.
+
+The same name is also declared twice: `examReportSettingsProvider` exists as a
+`NotifierProvider` in `exam_settings_provider.dart:9` **and** as a dependency-free
+`Provider` in `exam_reports_provider.dart:116`. The settings sheet and the create
+dialog import the first; the exam **reports** screen imports the second, which
+reads the singleton once and — having nothing to watch — caches that value for the
+life of the app. Changing the scale therefore does not reach the tabulation and
+distribution reports in the same session.
+
