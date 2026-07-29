@@ -74,6 +74,21 @@ Two rules that are easy to miss:
   `assets/models/mobilefacenet.tflite` is not in the repo and `MobileFaceNetEmbedder` fails loud
   with `FACE_MODEL_MISSING`. Every pixel is real and the screenshot still makes a false claim.
 
+## The run can fail; that is the point
+
+The script exits non-zero and writes **no manifest** when a run produces no images, and fails when
+the captured pixels imply a different layout tier than the one requested. Both were added after
+being observed:
+
+- `flutter drive` can exit 0 having produced nothing — a failed install, a driver handshake that
+  never completed, or `ext.flutter.driver: Service has disappeared` (a flaky VM-service drop; just
+  re-run). Without the guard the script wrote a well-formed manifest with `"shots": []` and exited
+  0: a failed run reporting success.
+- A run once reported `physicalSize: 1170x2532` while every PNG was `1080x2160`. Since
+  `logical = pixels / (density/160)` selects the layout tier, a silent size mismatch means the
+  captured layout may not be the tier the filename claims. The manifest now records **measured**
+  size and keeps the requested one alongside.
+
 ## Gotchas already paid for
 
 - **The session is in the Android Keystore, not SharedPreferences.** `prefs.clear()` does not sign

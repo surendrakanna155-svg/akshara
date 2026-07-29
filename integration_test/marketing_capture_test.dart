@@ -146,12 +146,24 @@ void main() {
     await waitFor(tester, otpField);
     await tester.enterText(otpField, kDemoOtp);
     await settle(tester);
-    // Entering text raises the soft keyboard, which can push the verify button
-    // off-screen at wider layouts — dismiss it before trying to tap.
-    await tester.testTextInput.receiveAction(TextInputAction.done);
-    await settle(tester);
 
-    await tapVisible(tester, find.byKey(QaTestKeys.otpVerifyButton));
+    // The OTP screen sometimes submits itself once six digits are entered and
+    // sometimes waits for the button, so neither "always tap" nor "tap if
+    // present right now" is correct:
+    //   · always tap      -> stalls 40s when the screen already advanced
+    //   · tap if present  -> races the rebuild after enterText, skips the tap,
+    //                        and sits on the OTP screen forever
+    // Both failure modes were observed. Poll for whichever happens first.
+    final deadline = DateTime.now().add(const Duration(seconds: 20));
+    while (DateTime.now().isBefore(deadline)) {
+      if (find.byKey(QaTestKeys.otpField).evaluate().isEmpty) break; // advanced
+      final verify = find.byKey(QaTestKeys.otpVerifyButton);
+      if (verify.evaluate().isNotEmpty) {
+        await tapVisible(tester, verify);
+        break;
+      }
+      await tester.pump(const Duration(milliseconds: 150));
+    }
   }
 
   // -------------------------------------------------------------------------

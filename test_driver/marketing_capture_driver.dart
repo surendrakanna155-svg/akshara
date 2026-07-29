@@ -12,15 +12,18 @@
 //
 // `integration_test` does: the on-device test calls `binding.takeScreenshot()`,
 // which ships the bytes over the driver channel to this host process, which is
-// the only side that can write to the repository. Navigation still uses
-// `patrol_finders` (see the target file) — we keep Patrol's ergonomics and add
-// the capture capability it lacks.
+// the only side that can write to the repository.
+//
+// `PatrolBinding` cannot coexist with it, so the target file navigates with
+// `flutter_test` finders plus explicit bounded waits. Nothing is lost: no
+// captured path involves a native dialog, which is the only thing Patrol's
+// runner would have added here.
 import 'dart:io';
 
 import 'package:integration_test/integration_test_driver_extended.dart';
 
 /// Where captures land before review. Git-ignored; promoted by hand into
-/// `deploy/nikshaos/src/product-shots/` only after the §6.5 hygiene review and
+/// `deploy/nikshaos/src/product-shots/` only after the §6.6 hygiene review and
 /// the §10.1 depicted-state check.
 ///
 /// Set by `capture_shots.sh` to a per-tier directory so a phone, tablet and
