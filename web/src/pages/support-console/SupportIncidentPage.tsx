@@ -206,7 +206,15 @@ function ActionsCard({
             className="w-52"
             value={incident.supportStatus}
             disabled={setStatus.isPending}
-            options={SUPPORT_STATUS_ORDER.map((s) => ({ value: s, label: supportStatusMeta(s).label }))}
+            // 'Resolved' is deliberately absent. This control only moves the
+            // mirror-side status; resolving must also tell the school and record
+            // the resolution, which is what the Resolve action does. Offering it
+            // here let an agent close the console view while the school's
+            // incident stayed open — the API now rejects it with a 422.
+            options={SUPPORT_STATUS_ORDER.filter((s) => s !== 'resolved').map((s) => ({
+              value: s,
+              label: supportStatusMeta(s).label,
+            }))}
             onChange={(e) => {
               const next = e.target.value as SupportStatus;
               if (next === incident.supportStatus) return;

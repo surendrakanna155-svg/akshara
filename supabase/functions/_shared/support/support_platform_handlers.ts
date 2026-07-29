@@ -16,8 +16,12 @@ import {
   getCluster,
   getPlatformIncident,
   insertPlatformNote,
+  // Both are needed, and they are NOT interchangeable: cluster SIZE (for
+  // investigation confidence and the engineering handoff) counts every member,
+  // while resolve targets only rows that have not already transitioned.
   listClusterIncidentIds,
   listClusters,
+  listUnresolvedClusterIncidentIds,
   listPlatformEvidence,
   listPlatformIncidents,
   listPlatformNotes,
@@ -29,16 +33,16 @@ import {
   autoCluster,
   buildEngineeringHandoff,
   investigate,
+  isSettableSupportStatus,
 } from "./support_platform_service.ts";
 import { getKbArticle, listKbArticles } from "./support_kb_repository.ts";
 import {
   augmentRecallSemantic,
   embedArticleBestEffort,
-  learnFromResolution,
+  learnFromResolutionBestEffort,
   recallForIncident,
 } from "./support_kb_service.ts";
 
-const SUPPORT_STATUS_ORDER = ["queue", "investigating", "awaiting_engineering", "resolved"];
 
 /** PLATFORM_ORG session + platformSupport permission, else 403. */
 function requirePlatformSupport(claims: AccessTokenClaims): Response | null {
@@ -136,7 +140,20 @@ export async function handlePlatformSupportStatus(
   const a = await auth(req, config);
   if (!a.ok) return a.response;
   const body = await readJson<{ status?: string }>(req);
-  if (!body || !SUPPORT_STATUS_ORDER.includes(body.status ?? "")) {
+  // RC-3 (audit P1-B): `resolved` is NOT reachable through this endpoint — it
+  // writes only the mirror row, while resolving must also propagate to the
+  // school, notify the reporter and learn a KB article. See
+  // isSettableSupportStatus().
+  if (!body || !isSettableSupportStatus(body.status ?? "")) {
+    if (body?.status === "resolved") {
+      return errorEnvelope(
+        "VALIDATION",
+        "Use the resolve endpoint to resolve an incident — it also notifies the " +
+          "school and records the resolution. Setting 'resolved' here would close " +
+          "it only inside the support console.",
+        422,
+      );
+    }
     return errorEnvelope("VALIDATION", "a valid support status is required", 422);
   }
   const result = await withTenantContext(config, a.claims, async (db) => {
@@ -283,9 +300,22 @@ export async function handlePlatformResolve(
     // Capture the cluster's root cause BEFORE setClusterResolution overwrites it.
     const priorCluster = incident.cluster_id ? await getCluster(db, incident.cluster_id) : null;
 
+    // RC-4 (audit P1-C): resolve only rows that have not already transitioned.
+    // The notify bridge enqueues a push unconditionally on a `resolved` target,
+    // so re-resolving an already-resolved incident (directly, or by resolving
+    // its cluster afterwards) sent the reporter a second push and inflated the
+    // KB counters. Skipping settled rows makes resolve idempotent.
     const targets = body?.resolveCluster && incident.cluster_id
-      ? await listClusterIncidentIds(db, incident.cluster_id)
+      ? await listUnresolvedClusterIncidentIds(db, incident.cluster_id)
+      : incident.support_status === "resolved"
+      ? []
       : [incidentId];
+
+    // Nothing left to transition — a no-op re-resolve. No propagation, no
+    // notification, and no KB delta.
+    if (targets.length === 0) {
+      return { resolvedCount: 0, learnInput: null };
+    }
 
     for (const id of targets) {
       // Write resolution back to the school incident + mark the mirror resolved.
@@ -298,17 +328,9 @@ export async function handlePlatformResolve(
       await setClusterResolution(db, incident.cluster_id, "resolved", "", resolution);
     }
 
-    // ASIP-8 continuous learning: distil this resolution into a KB article keyed
-    // by the incident's signature (deterministic, in-tx). A future incident with
-    // the same signature recalls it. Never blocks the resolution itself.
+    // Read the evidence needed for KB learning while the context is open, but do
+    // NOT learn here — see below.
     const evidence = await listPlatformEvidence(db, incidentId);
-    const article = await learnFromResolution(db, a.claims, {
-      incident,
-      evidence,
-      resolution,
-      clusterRootCause: priorCluster?.root_cause ?? "",
-      schoolsSeen: targets.length,
-    });
 
     await recordServerAuditEvent(db, a.claims, {
       eventType: "supportPlatformResolved",
@@ -318,16 +340,37 @@ export async function handlePlatformResolve(
       metadata: {
         resolvedCount: targets.length,
         cluster: body?.resolveCluster === true,
-        kbLearned: !!article,
+        // KB learning is deferred to its own transaction after this one commits,
+        // so its outcome is not knowable here.
+        kbLearnDeferred: true,
       },
       correlationId: correlationIdFromRequest(req),
     }, req);
-    return { resolvedCount: targets.length, article };
+    return {
+      resolvedCount: targets.length,
+      learnInput: {
+        incident,
+        evidence,
+        resolution,
+        clusterRootCause: priorCluster?.root_cause ?? "",
+        schoolsSeen: targets.length,
+      },
+    };
   });
   if ("notFound" in result) return errorEnvelope("NOT_FOUND", "Incident not found", 404);
+
+  // ASIP-8 continuous learning: distil this resolution into a KB article keyed by
+  // the incident's signature, so a future incident with the same signature
+  // recalls it. Runs in its OWN transaction, AFTER the resolution has committed
+  // and the school has been notified — a KB failure must never roll back a
+  // school-facing resolution.
+  const article = result.learnInput
+    ? await learnFromResolutionBestEffort(config, a.claims, result.learnInput)
+    : null;
+
   // Best-effort semantic index of the new article (own tx; dormant without
   // embeddings/pgvector; never affects the response).
-  if (result.article) await embedArticleBestEffort(config, a.claims, result.article);
+  if (article) await embedArticleBestEffort(config, a.claims, article);
   return jsonResponse(envelope({ resolved: true, count: result.resolvedCount }));
 }
 

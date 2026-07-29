@@ -155,6 +155,35 @@ export async function learnFromResolution(
  * hold the resolve transaction open) and never throws. No-op when embeddings are
  * unconfigured or the pgvector substrate is dormant.
  */
+/**
+ * Best-effort KB learning, in its OWN transaction, AFTER the resolution commits.
+ *
+ * Learning used to run inside the resolve transaction. That made a KB write
+ * failure fatal to the resolution: an over-length title violated the article's
+ * length CHECK, the exception aborted the transaction, and `propagateResolution`
+ * rolled back — the incident stayed open and the school was never told, even
+ * though the agent saw a success. The KB is an optimisation for FUTURE
+ * diagnosis; it must never be able to undo a school-facing outcome.
+ *
+ * Returns the article when one was learned, so the caller can index it. Never
+ * throws.
+ */
+export async function learnFromResolutionBestEffort(
+  config: AppConfig,
+  claims: AccessTokenClaims,
+  input: LearnInput,
+): Promise<KbArticleRow | null> {
+  try {
+    return await withTenantContext(config, claims, async (db) =>
+      await learnFromResolution(db, claims, input));
+  } catch (_err) {
+    // Continuous learning is best-effort. The resolution has already committed
+    // and the school has already been notified; a KB failure is not their
+    // problem. Recoverable: the next incident with this signature re-learns.
+    return null;
+  }
+}
+
 export async function embedArticleBestEffort(
   config: AppConfig,
   claims: AccessTokenClaims,

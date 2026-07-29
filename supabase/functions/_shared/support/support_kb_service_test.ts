@@ -6,7 +6,12 @@ import { assert, assertEquals } from "https://deno.land/std@0.224.0/assert/mod.t
 import type { TenantQueryClient } from "../tenant_db.ts";
 import type { AccessTokenClaims } from "../jwt.ts";
 import { SUPPORT_PLATFORM_ORG } from "./support_platform_repository.ts";
-import { clusterFingerprint, diagnosticsFromMirrorEvidence } from "./support_platform_service.ts";
+import {
+  clusterFingerprint,
+  CLUSTER_TITLE_MAX,
+  clusterTitle,
+  diagnosticsFromMirrorEvidence,
+} from "./support_platform_service.ts";
 import type { PlatformEvidenceRow, PlatformIncidentRow } from "./support_platform_repository.ts";
 import type { KbArticleRow } from "./support_kb_repository.ts";
 import {
@@ -198,4 +203,49 @@ Deno.test("recallForIncident: empty KB → no matches, never throws", async () =
   const { db } = mockDb([]);
   const matches = await recallForIncident(db, incident(), diagEvidence());
   assertEquals(matches.length, 0);
+});
+
+// ─── RC-2 (audit P1-A): an over-length title must not reach the DB ────────────
+//
+// `module_key` is client-supplied and length-bounded nowhere — not by a DB
+// constraint, not by request validation. It flows into clusterTitle(), whose
+// output is written to support_kb_article.title under
+// CHECK (char_length(title) <= 400). Before the clamp, a long module_key made
+// that INSERT violate the CHECK; because learning ran inside the resolve
+// transaction, the exception rolled back propagateResolution() — the incident
+// stayed open and the school was never told.
+
+Deno.test("RC-2: clusterTitle clamps to the KB CHECK bound for any module_key", () => {
+  const long = "m".repeat(5000);
+  const title = clusterTitle("permission_rbac", long, diagnosticsFromMirrorEvidence(diagEvidence()));
+  assertEquals(title.length, CLUSTER_TITLE_MAX);
+  assert(title.length <= 400, "must satisfy support_kb_article_title_len_ck");
+});
+
+Deno.test("RC-2: learnFromResolution never emits a title over the CHECK bound", async () => {
+  const { db, calls } = mockDb([
+    { match: "INSERT INTO support_kb_article", rows: [{ id: "a1", title: "t" } as unknown as KbArticleRow] },
+  ]);
+  await learnFromResolution(db, CLAIMS, {
+    incident: incident({ module_key: "x".repeat(5000) }),
+    evidence: diagEvidence(),
+    resolution: "granted the role",
+    clusterRootCause: "",
+    schoolsSeen: 1,
+  });
+  const insert = calls.find((c) => c.sql.includes("support_kb_article"));
+  assert(insert, "expected a KB upsert");
+
+  // Only `title` is bounded at 400 — root_cause (2000) and resolution (4000)
+  // are legitimately longer, so assert on the title argument specifically.
+  const expectedTitle = clusterTitle(
+    "permission_rbac",
+    "x".repeat(5000),
+    diagnosticsFromMirrorEvidence(diagEvidence()),
+  );
+  assertEquals(expectedTitle.length, CLUSTER_TITLE_MAX);
+  assert(
+    insert!.args.some((a) => a === expectedTitle),
+    "the clamped title must be the value bound into the upsert",
+  );
 });

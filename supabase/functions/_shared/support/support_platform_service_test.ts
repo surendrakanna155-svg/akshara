@@ -4,6 +4,7 @@ import {
   buildEngineeringHandoff,
   clusterFingerprint,
   clusterTitle,
+  isSettableSupportStatus,
   deterministicInvestigation,
   diagnosticsFromMirrorEvidence,
   errorSignature,
@@ -170,4 +171,25 @@ Deno.test("applyPriorResolutions: related/semantic-only matches never override t
 Deno.test("applyPriorResolutions: no matches → base unchanged", () => {
   const base = { summary: "s", likelyRootCause: "rc", recommendedFix: "f", confidence: 50 };
   assertEquals(applyPriorResolutions(base, []), base);
+});
+
+// ─── RC-3 (audit P1-B): resolution has exactly one path ──────────────────────
+//
+// `/support-status` writes only the mirror row. Resolving must additionally
+// propagate to the school incident, notify the reporter and learn a KB article,
+// all of which live in `/resolve`. While `resolved` was settable via
+// `/support-status`, an agent picking it from the dropdown closed the console
+// view while the school's incident stayed open and the reporter was never told.
+
+Deno.test("RC-3: /support-status may set every workflow status EXCEPT resolved", () => {
+  assert(isSettableSupportStatus("queue"));
+  assert(isSettableSupportStatus("investigating"));
+  assert(isSettableSupportStatus("awaiting_engineering"));
+  assert(!isSettableSupportStatus("resolved"), "resolve must go through /resolve only");
+});
+
+Deno.test("RC-3: unknown statuses are still rejected", () => {
+  assert(!isSettableSupportStatus(""));
+  assert(!isSettableSupportStatus("closed"));
+  assert(!isSettableSupportStatus("RESOLVED"), "must not be case-bypassable");
 });

@@ -69,6 +69,44 @@ export function clusterFingerprint(
   return `${category}|${moduleKey ?? "-"}|${errorSignature(diag)}`;
 }
 
+/**
+ * Maximum stored title length. Matches the tightest constraint any consumer
+ * imposes — `support_kb_article_title_len_ck CHECK (char_length(title) <= 400)`.
+ *
+ * The clamp lives HERE rather than at each call site because `module_key` is
+ * client-supplied and bounded nowhere: not by a DB constraint, not by request
+ * validation. An over-length module_key therefore produced an over-length title,
+ * which violated the KB CHECK and — because KB learning ran inside the resolve
+ * transaction — rolled back the school-facing resolution. Clamping at the source
+ * means no caller can reintroduce that.
+ */
+export const CLUSTER_TITLE_MAX = 400;
+
+/** Every support-side status an incident can hold. */
+export const SUPPORT_STATUS_ORDER = [
+  "queue",
+  "investigating",
+  "awaiting_engineering",
+  "resolved",
+] as const;
+
+/**
+ * RC-3 (audit P1-B): which statuses the mirror-only `/support-status` endpoint
+ * may set.
+ *
+ * `resolved` is excluded. That endpoint writes only the mirror row, whereas
+ * resolving must also propagate to the school incident, notify the reporter and
+ * learn a KB article — all of which live in `/resolve`. While `resolved` was
+ * settable here the support console could show an incident closed while the
+ * school's incident stayed open and the reporter was never told.
+ *
+ * Kept as a pure predicate so both the handler and its test share one rule.
+ */
+export function isSettableSupportStatus(status: string): boolean {
+  return SUPPORT_STATUS_ORDER.includes(status as typeof SUPPORT_STATUS_ORDER[number]) &&
+    status !== "resolved";
+}
+
 export function clusterTitle(
   category: string,
   moduleKey: string | null,
@@ -77,7 +115,7 @@ export function clusterTitle(
   const where = moduleKey ? ` in ${moduleKey}` : "";
   const sig = errorSignature(diag);
   const sigLabel = sig === "none" ? "" : ` (${sig})`;
-  return `${category.replace(/_/g, "/")}${where}${sigLabel}`;
+  return `${category.replace(/_/g, "/")}${where}${sigLabel}`.slice(0, CLUSTER_TITLE_MAX);
 }
 
 /** Compute the fingerprint, upsert the cluster, link the incident, refresh count. */

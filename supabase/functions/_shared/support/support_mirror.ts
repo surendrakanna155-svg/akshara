@@ -80,9 +80,38 @@ export async function mirrorIncidentBestEffort(
       });
     });
   } catch (_err) {
-    // Best-effort: the school report already succeeded; a mirror retry can
-    // re-run via collect-evidence. Never surfaced to the reporter.
+    // Best-effort: the school report already succeeded, so a mirror failure is
+    // never surfaced to the reporter. Recovery is reconcileMirrorBestEffort(),
+    // invoked from collect-evidence and from a status change.
+    //
+    // This comment previously claimed a retry "can re-run via collect-evidence".
+    // That was false — collect-evidence did not re-mirror, and no reconcile path
+    // existed, so a transient failure here left the incident permanently
+    // invisible in the support console.
   }
+}
+
+/**
+ * RC-5 (audit P1-E): repair a mirror that was never created.
+ *
+ * `mirrorIncidentBestEffort` runs once, at incident creation. If it failed —
+ * a transient DB error, say — the school's report still succeeded (201) but no
+ * mirror row existed, and nothing ever retried. If the school never changed the
+ * incident's status it stayed permanently invisible to support, with no recovery
+ * path. (Not data loss: the school-side incident is intact; only the support
+ * copy is missing.)
+ *
+ * Re-running the full mirror is safe because `mirrorIncident` and
+ * `mirrorEvidence` are upserts, so reconciling an already-mirrored incident is a
+ * no-op. Never throws.
+ */
+export async function reconcileMirrorBestEffort(
+  config: AppConfig,
+  claims: AccessTokenClaims,
+  incident: IncidentRow,
+  parts: EvidenceParts,
+): Promise<void> {
+  await mirrorIncidentBestEffort(config, claims, incident, parts);
 }
 
 /** Best-effort mirror of just the incident header (e.g. after a status change). */

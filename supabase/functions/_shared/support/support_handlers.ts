@@ -49,6 +49,7 @@ import {
 import {
   mirrorIncidentBestEffort,
   mirrorIncidentHeaderBestEffort,
+  reconcileMirrorBestEffort,
 } from "./support_mirror.ts";
 import { categorize } from "./incident_package.ts";
 import {
@@ -505,10 +506,17 @@ export async function handleCollectEvidence(
       metadata: { signals: parts.diagnostics.signals },
       correlationId: correlationIdFromRequest(req),
     }, req);
-    return { diagnostics: parts.diagnostics };
+    return { diagnostics: parts.diagnostics, incident, parts };
   });
 
   if ("notFound" in result) return errorEnvelope("NOT_FOUND", "Incident not found", 404);
+
+  // RC-5 (audit P1-E): reconcile the support mirror. The create-time mirror is
+  // best-effort and had no retry — a transient failure there left the incident
+  // permanently invisible in the support console. The mirror writes are upserts,
+  // so this is a no-op when the mirror already exists.
+  await reconcileMirrorBestEffort(config, claims, result.incident, result.parts);
+
   return jsonResponse(envelope({ diagnostics: result.diagnostics }));
 }
 

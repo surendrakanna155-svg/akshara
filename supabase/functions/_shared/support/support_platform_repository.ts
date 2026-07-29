@@ -304,6 +304,32 @@ export async function listClusterIncidentIds(
   return rows.map((r) => r.id);
 }
 
+/**
+ * RC-4 (audit P1-C): cluster members that have NOT already been resolved.
+ *
+ * Resolving is not idempotent at the bridge — `propagate_support_resolution`
+ * guards `resolved_at` but enqueues the reporter notification unconditionally
+ * whenever the target status is `resolved`. So resolving incident A, then
+ * "resolve the whole cluster" including A, sent A's reporter a second
+ * "resolved" push and inflated the KB article's resolved_count/schools_seen.
+ *
+ * Filtering here means a re-resolve is a no-op for rows that already
+ * transitioned, so each genuine transition produces exactly one notification
+ * and one KB delta.
+ */
+export async function listUnresolvedClusterIncidentIds(
+  db: TenantQueryClient,
+  clusterId: string,
+): Promise<string[]> {
+  const rows = await db.queryObject<{ id: string }>(
+    `SELECT id FROM support_platform_incident
+      WHERE platform_org_id = $1 AND cluster_id = $2::uuid
+        AND support_status <> 'resolved'`,
+    [SUPPORT_PLATFORM_ORG, clusterId],
+  );
+  return rows.map((r) => r.id);
+}
+
 export async function setClusterResolution(
   db: TenantQueryClient,
   clusterId: string,
