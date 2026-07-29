@@ -1,13 +1,64 @@
 # Implementation gap — staff attendance face verification
 
-**Date:** 2026-07-29 · **Owner decision:** D9 (website redesign workstream)
-**Status:** OPEN — **MANDATORY PRE-LAUNCH DEPENDENCY**
-**Classification:** engineering gap. **Not** a marketing or website issue.
+**Date opened:** 2026-07-29 · **Owner decision:** D9 (website redesign workstream)
+**Status:** ✅ **CLOSED 2026-07-29 — implemented, deployed and benchmarked.**
 **Enforced by:** `test/release_gate/face_model_release_gate_test.dart`
 (`RELEASE_GATE=1 flutter test test/release_gate/`)
 
-> **One artifact is missing. Everything else is built, wired and verified.**
-> This is a procurement task, not a development task.
+> ## ⚠️ This document's original premise turned out to be wrong
+>
+> It said: *"One artifact is missing. Everything else is built, wired and
+> verified. This is a procurement task, not a development task."*
+>
+> **It was not a procurement task.** No commercially licensed, mobile-size face
+> model exists to procure — every free candidate (MobileFaceNet, EdgeFace,
+> SFace, GhostFaceNets) is trained on MS-Celeb-1M, VGGFace2, CASIA-WebFace or
+> WebFace260M, all research-only, and a repository's permissive badge does not
+> change that. The only commercially clean model, AuraFace-v1, is a 261 MB
+> ResNet100 that cannot ship in an APK.
+>
+> The resolution was architectural: **verification moved server-side**, where
+> model size stops mattering. That also closed a real security defect — the
+> client used to compute the embedding and post it, so a tampered build could
+> replay a stolen template forever.
+>
+> Full reasoning:
+> [licensing survey](FACE_VERIFICATION_MODEL_LICENSING_SURVEY.md) ·
+> [architecture](FACE_VERIFICATION_ARCHITECTURE_REEVALUATION.md) ·
+> [deployment](FACE_VERIFICATION_DEPLOYMENT_PLAN.md) ·
+> [readiness](FACE_VERIFICATION_PRODUCTION_READINESS.md)
+
+## 0. Current state (handover)
+
+| | |
+|---|---|
+| **Model** | AuraFace-v1 `glintr100` int8 — 63 MB, **Apache-2.0**, tag `auraface-v1` |
+| **Detector** | MediaPipe BlazeFace short-range — Apache-2.0, Google |
+| **Where it runs** | `akshara-face-inference` container, **live on the production VPS**, internal network only |
+| **Production latency** | **p50 124.3 ms**, p95 138.0 ms, **8.0 verifications/sec** on 1 vCPU, 183 MiB |
+| **Capacity** | ~76 schools per vCPU (pessimistic peak); current VPS covers the pilot at zero extra cost |
+| **Regression** | analyze clean · flutter 4682 · deno 4211 · service 22/22 |
+| **Client** | sends an aligned 112×112 PNG crop; the on-device embedder is gone |
+| **Enrolment** | same crop path, same model — both live in one embedding space |
+
+### The only thing left is operational
+
+**Threshold calibration on real pilot faces.** The shipped default (0.40) comes
+from published ArcFace-family practice, not from measurement against your staff,
+cameras and lighting. Run `calibrate.py` with the pilot school before enabling
+face check-in for real attendance —
+[operating procedure](FACE_THRESHOLD_CALIBRATION_PROCEDURE.md).
+
+Nothing else is missing engineering.
+
+### Does the marketing claim still hold?
+
+Yes, and more defensibly than before. The chain the website advertises —
+geofence → anti-mock → live camera face → check-in — is unchanged; only *where
+the embedding is computed* moved. Note that
+`docs/release/screenshots/02-teacher-dashboard.png` is quarantined for a
+different reason (it predates the NIKSHA rename), so re-shoot it rather than
+publishing it.
 
 ---
 

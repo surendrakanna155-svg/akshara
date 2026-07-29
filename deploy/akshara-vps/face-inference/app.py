@@ -35,6 +35,27 @@ from PIL import Image
 from pydantic import BaseModel, Field
 
 MODEL_PATH = os.environ.get("FACE_MODEL_PATH", "/models/glintr100_int8.onnx")
+DETECTOR_PATH = os.environ.get(
+    "FACE_DETECTOR_PATH", "/models/blaze_face_short_range.tflite"
+)
+# Set FACE_REQUIRE_DETECTION=false only to debug; it disables a safety check.
+REQUIRE_DETECTION = os.environ.get("FACE_REQUIRE_DETECTION", "true").lower() != "false"
+
+# Deliberately LOW — this is a structural sanity check, not the primary defence.
+#
+# Measured on this model at 112x112: a real face scores ~0.51-0.59, while smooth
+# blob noise scores ~0.53. Those overlap, so the detector CANNOT reliably
+# separate a face from a face-shaped blob, and any attempt to tune it to do so
+# would start rejecting genuine staff. What it separates reliably is STRUCTURE:
+# at 0.2, solid colours, gradients and fine noise are all rejected while a real
+# face is detected with wide margin.
+#
+# The primary defence against a non-face is the MATCH THRESHOLD, and measurement
+# supports that: non-face inputs score at most +0.180 against a real enrolled
+# face, well below the 0.40 acceptance threshold. This check exists to turn
+# obvious garbage into a clear "no face detected — capture again" instead of a
+# confusing FACE_NO_MATCH, and to catch a client that has broken entirely.
+DETECTION_CONFIDENCE = float(os.environ.get("FACE_DETECTION_CONFIDENCE", "0.2"))
 # Must match `mobileFaceNetModelTag`'s successor on the client/server. The
 # server refuses to compare embeddings across differing tags, so this string is
 # what makes a model swap safe rather than silently wrong.
@@ -46,6 +67,52 @@ EMBEDDING_DIMS = 512
 MAX_CROP_BYTES = 256 * 1024
 
 _session: ort.InferenceSession | None = None
+_detector = None
+
+
+def _load_detector():
+    """MediaPipe BlazeFace (Apache-2.0, Google). Loaded lazily and reused —
+    creating a detector per request would dominate the request cost."""
+    global _detector
+    if _detector is None:
+        import mediapipe as mp
+        from mediapipe.tasks import python as mp_python
+        from mediapipe.tasks.python import vision
+
+        _detector = vision.FaceDetector.create_from_options(
+            vision.FaceDetectorOptions(
+                base_options=mp_python.BaseOptions(model_asset_path=DETECTOR_PATH),
+                min_detection_confidence=DETECTION_CONFIDENCE,
+            )
+        )
+        globals()["_mp"] = mp
+    return _detector
+
+
+def _assert_face_present(rgb: "np.ndarray") -> None:
+    """Reject a crop that contains no detectable face.
+
+    Runs BEFORE the embedding, so a client sending non-image data gets a clear,
+    actionable error instead of an embedding that later fails to match for
+    reasons nobody can diagnose.
+    """
+    if not REQUIRE_DETECTION:
+        return
+    try:
+        detector = _load_detector()
+        mp = globals()["_mp"]
+        image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+        result = detector.detect(image)
+    except HTTPException:
+        raise
+    except Exception:
+        # A broken detector must not silently disable the check, and must not
+        # take attendance down either — surface it as unavailable so the caller
+        # falls back to the audited manual request.
+        raise HTTPException(status_code=503, detail="DETECTOR_UNAVAILABLE")
+
+    if not result.detections:
+        raise HTTPException(status_code=422, detail="FACE_NOT_DETECTED")
 
 
 def _load() -> ort.InferenceSession:
@@ -75,7 +142,7 @@ class EmbedResponse(BaseModel):
     dims: int
 
 
-def _decode(crop_b64: str) -> np.ndarray:
+def _decode(crop_b64: str) -> "tuple[np.ndarray, np.ndarray]":
     try:
         raw = base64.b64decode(crop_b64, validate=True)
     except (binascii.Error, ValueError):
@@ -97,15 +164,19 @@ def _decode(crop_b64: str) -> np.ndarray:
         # broken client and change the geometry the model was trained on.
         raise HTTPException(status_code=422, detail="CROP_WRONG_SIZE")
 
+    rgb = np.asarray(img, dtype=np.uint8)
     # ArcFace preprocessing: (x - 127.5) / 128, CHW, batch of one.
-    arr = np.asarray(img, dtype=np.float32)
+    arr = rgb.astype(np.float32)
     arr = (arr - 127.5) / 128.0
-    return np.transpose(arr, (2, 0, 1))[np.newaxis, ...]
+    return np.transpose(arr, (2, 0, 1))[np.newaxis, ...], rgb
 
 
 @app.post("/embed", response_model=EmbedResponse)
 def embed(req: EmbedRequest) -> EmbedResponse:
-    tensor = _decode(req.crop)
+    tensor, rgb = _decode(req.crop)
+    # Face-presence check BEFORE the embedding — a crop with no face should
+    # never reach the matcher.
+    _assert_face_present(rgb)
     sess = _load()
     out = sess.run(None, {sess.get_inputs()[0].name: tensor})[0][0]
 
@@ -134,8 +205,17 @@ def health() -> dict[str, object]:
         sess = _load()
     except Exception:
         raise HTTPException(status_code=503, detail="MODEL_UNAVAILABLE")
+    detector_ok = True
+    if REQUIRE_DETECTION:
+        try:
+            _load_detector()
+        except Exception:
+            detector_ok = False
+    if REQUIRE_DETECTION and not detector_ok:
+        raise HTTPException(status_code=503, detail="DETECTOR_UNAVAILABLE")
     return {
         "status": "ok",
+        "faceDetection": "enabled" if REQUIRE_DETECTION else "DISABLED",
         "modelTag": MODEL_TAG,
         "dims": EMBEDDING_DIMS,
         "inputSize": INPUT_SIZE,

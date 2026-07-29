@@ -32,6 +32,20 @@ print('quantised')
 "
 fi
 
+# Face DETECTOR — MediaPipe BlazeFace short-range.
+# Source  : Google, https://storage.googleapis.com/mediapipe-models/...
+# Licence : Apache-2.0 (Google publishes MediaPipe model weights under it and
+#           ships them in its own commercial products).
+# Chosen over OpenCV's YuNet, which is MIT but trained on WIDER FACE whose
+# commercial terms could not be established — the same provenance bar the
+# recognition model was held to.
+DET="$DIR/blaze_face_short_range.tflite"
+if [ ! -f "$DET" ]; then
+  echo "==> downloading blaze_face_short_range.tflite (~224 KB)"
+  curl -fL --retry 3 -o "$DET" \
+    "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite"
+fi
+
 echo "==> ready:"
 ls -lh "$DIR"
 echo

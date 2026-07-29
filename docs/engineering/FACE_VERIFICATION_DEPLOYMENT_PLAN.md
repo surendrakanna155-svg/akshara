@@ -1,6 +1,6 @@
 # Face Verification — deployment plan and provenance record
 
-**Status:** implementation in progress · **Architecture:** approved 2026-07-29
+**Status:** implemented and deployed · **Architecture:** approved 2026-07-29
 **Design:** [`FACE_VERIFICATION_ARCHITECTURE_REEVALUATION.md`](FACE_VERIFICATION_ARCHITECTURE_REEVALUATION.md) ·
 **Licensing:** [`FACE_VERIFICATION_MODEL_LICENSING_SURVEY.md`](FACE_VERIFICATION_MODEL_LICENSING_SURVEY.md)
 
@@ -45,35 +45,46 @@ which is what we rely on. **Recommended belt-and-braces:** one email to fal
 asking them to confirm in writing that `glintr100.onnx` is the model trained on
 their commercial dataset. Not a blocker; cheap insurance.
 
-## 2. ⚠️ Security finding — out-of-distribution inputs cluster high
+## 2. Face-presence validation — implemented, and a correction
 
-Measured while calibrating: feeding the model **non-face** inputs produces
-embeddings that are **not** spread randomly. Unrelated synthetic inputs scored a
-mean cosine of **+0.391** against each other, with a **maximum of +0.557** —
-above the 0.40 acceptance threshold.
+**Correction.** An earlier revision of this document warned that
+out-of-distribution inputs "cluster high" at up to +0.557, above the 0.40
+threshold. That measurement compared non-faces **to each other** — they cluster
+because they all collapse into the same degenerate region — which is not the
+threat. The threat is a non-face scoring high against a **real enrolled
+reference**, and measured that way non-faces reach **at most +0.180**. The
+threshold already rejects them; the earlier framing overstated the risk.
 
-This is expected behaviour for a face embedding model (it is only meaningful on
-faces; out-of-distribution inputs collapse into a degenerate region), but it has
-a concrete consequence here:
+Face-presence validation ships anyway, as defence in depth and for a clear
+error, but it is **deliberately not tuned as a face-vs-blob discriminator**,
+because measurement showed it cannot be one:
 
-> **A crop that is not a face can score above threshold.** The defence is that
-> the crop must *contain a face*, which today is enforced only on-device by ML
-> Kit detection — i.e. by the client we just stopped trusting for embeddings.
+| Input at 112×112 | BlazeFace score |
+|---|---|
+| Real face | 0.51–0.59 |
+| Smooth blob noise | ~0.53 |
+| Solid colour / gradient / fine noise | **no detection** |
 
-**Consequences, in order:**
+Real faces and face-shaped blobs are not separable at this resolution, and
+upscaling to 224 or 448 did not help. Tuning confidence up to catch blobs would
+start rejecting genuine staff — the same failure class as the old 0.82
+threshold. So it sits at **0.2**, where it reliably rejects *structureless*
+input while detecting real faces with wide margin.
 
-1. **Do not use this measurement to validate the threshold.** It cannot: these
-   are not faces, so the numbers say nothing about genuine-versus-impostor
-   separation on real faces. Threshold calibration still requires real enrolment
-   pairs (§4).
-2. **Server-side face-presence validation is a required follow-up** before
-   enforcement is relied upon as an anti-fraud control. A detector run on the
-   received crop closes the gap. It is deliberately **not** in this change to
-   avoid widening scope, and is recorded here as the top follow-up item.
-3. What *was* usefully established: the embedding is highly stable to re-capture
-   noise (same input + sensor noise scored **0.865–0.913**), so lighting and
-   angle jitter will not by themselves push a genuine staff member below
-   threshold.
+Layered honestly:
+
+- **detector** → catches obvious garbage and a fully broken client, returning
+  `FACE_NOT_DETECTED` ("capture again") instead of a confusing `FACE_NO_MATCH`
+- **threshold** → the actual defence against a non-face, evidenced at ≤ +0.180
+
+**Detector provenance:** MediaPipe BlazeFace short-range, **Apache-2.0**,
+published by Google, who ship it in their own commercial products. Held to the
+same bar as the embedder — OpenCV's YuNet was rejected despite an MIT licence
+because it trains on WIDER FACE, whose commercial terms could not be established.
+
+Also usefully established: the embedding is highly stable to re-capture noise
+(same input + sensor noise scored **0.865–0.913**), so lighting and angle jitter
+will not by themselves push a genuine staff member below threshold.
 
 ## 3. Deployment
 
@@ -83,6 +94,7 @@ a concrete consequence here:
 |---|---|---|
 | `akshara-face-inference` | new container | `deploy/akshara-vps/face-inference/` — internal network only, never published |
 | Model | `/models` mount | fetched by `fetch_model.sh`, never baked into the image, never committed |
+| Detector | `/models` mount | MediaPipe BlazeFace short-range (Apache-2.0, Google), 224 KB, same fetch script |
 | Edge function | existing `akshara-edge` | calls the service via `FACE_INFERENCE_URL` |
 
 ### Steps
@@ -92,16 +104,27 @@ a concrete consequence here:
 cd deploy/akshara-vps/face-inference && ./fetch_model.sh
 
 # 2. Verify the service against the REAL model before wiring anything to it
-FACE_MODEL_PATH=./models/glintr100_int8.onnx python3 test_app.py    # expect 17/17
+FACE_MODEL_PATH=./models/glintr100_int8.onnx python3 test_app.py    # expect 22/22
 
 # 3. Build + start, one worker per vCPU (WORKERS=1 on the current 1-vCPU box)
 docker compose -f deploy/akshara-vps/docker-compose.akshara.yml up -d \
   --build akshara-face-inference
 
-# 4. Readiness — this loads the model, so a missing/unreadable file surfaces
-#    here rather than on a staff member's first check-in
-docker exec akshara-edge curl -fsS http://akshara-face-inference:8080/health
+# 4. Readiness — this loads BOTH models, so a missing/unreadable file or a
+#    broken detector surfaces here rather than on a first check-in.
+#    Expect: {"status":"ok","faceDetection":"enabled",...}
+docker exec akshara-face-inference python -c \
+  "import urllib.request;print(urllib.request.urlopen('http://127.0.0.1:8080/health').read().decode())"
+
+# 5. Calibrate the threshold BEFORE enabling face check-in for real attendance.
+#    See FACE_THRESHOLD_CALIBRATION_PROCEDURE.md
+python3 calibrate.py --captures ./captures --out calibration_$(date +%F).csv
 ```
+
+> **Deploying on `python:*-slim`?** MediaPipe links OpenCV and needs
+> `libxcb1 libgl1 libglib2.0-0`, which slim images do not ship. Without them the
+> import fails with `libxcb.so.1: cannot open shared object file` and the health
+> check returns 503 `DETECTOR_UNAVAILABLE`. The Dockerfile installs them.
 
 ### Configuration
 
@@ -113,6 +136,9 @@ docker exec akshara-edge curl -fsS http://akshara-face-inference:8080/health
 | `WORKERS` | `1` | **one per vCPU** — see §5 |
 | `FACE_MODEL_PATH` | `/models/glintr100_int8.onnx` | |
 | `FACE_MODEL_TAG` | `auraface-v1` | must match the server's expected tag |
+| `FACE_DETECTOR_PATH` | `/models/blaze_face_short_range.tflite` | |
+| `FACE_DETECTION_CONFIDENCE` | `0.2` | structural sanity check — see §2; raising it starts rejecting genuine staff |
+| `FACE_REQUIRE_DETECTION` | `true` | debug-only escape hatch; disables a safety check |
 
 ## 4. Threshold calibration — an owner/data gate
 
@@ -168,9 +194,10 @@ no re-enrolment cost.
 
 ## 7. Follow-ups (recorded, not in scope here)
 
-1. **Server-side face-presence validation** (§2) — required before face
-   verification is relied on as an anti-fraud control.
-2. **Threshold calibration on real pairs** (§4) — owner/data gate.
+1. ✅ **Server-side face-presence validation** (§2) — DONE.
+2. **Threshold calibration on real pairs** (§4) — owner/data gate; `calibrate.py`
+   and [the operating procedure](FACE_THRESHOLD_CALIBRATION_PROCEDURE.md) ship
+   with the service.
 3. **Written confirmation from fal** on `glintr100` provenance (§1) — cheap
    insurance, not a blocker.
 4. **Errata to `docs/ATTENDANCE_AUTH_DESIGN_DECISION.md`** — that document is

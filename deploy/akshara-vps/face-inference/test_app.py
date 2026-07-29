@@ -20,10 +20,9 @@ import io
 import os
 import sys
 
-os.environ.setdefault(
-    "FACE_MODEL_PATH",
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "models", "glintr100_int8.onnx"),
-)
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.environ.setdefault("FACE_MODEL_PATH", os.path.join(_HERE, "models", "glintr100_int8.onnx"))
+os.environ.setdefault("FACE_DETECTOR_PATH", os.path.join(_HERE, "models", "blaze_face_short_range.tflite"))
 
 import numpy as np  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
@@ -96,6 +95,56 @@ check(
 )
 check("missing field -> 422", client.post("/embed", json={}).status_code == 422)
 check("PNG is accepted", client.post("/embed", json={"crop": crop_b64(fmt="PNG", seed=3)}).status_code == 200)
+
+print("face-presence validation")
+# What the detector reliably rejects is STRUCTURE, not face-vs-blob. These are
+# the cases it separates with margin; see the DETECTION_CONFIDENCE comment in
+# app.py for why it is not tuned tighter.
+import numpy as _np
+
+
+def solid(v: int) -> str:
+    buf = io.BytesIO()
+    Image.fromarray(_np.full((112, 112, 3), v, _np.uint8)).save(buf, format="PNG")
+    return base64.b64encode(buf.getvalue()).decode()
+
+
+def gradient() -> str:
+    row = _np.linspace(0, 255, 112, dtype=_np.uint8)
+    buf = io.BytesIO()
+    Image.fromarray(_np.tile(row[:, None, None], (1, 112, 3))).save(buf, format="PNG")
+    return base64.b64encode(buf.getvalue()).decode()
+
+
+def fine_noise() -> str:
+    rng = _np.random.default_rng(4)
+    buf = io.BytesIO()
+    Image.fromarray((rng.random((112, 112, 3)) * 255).astype(_np.uint8)).save(buf, format="PNG")
+    return base64.b64encode(buf.getvalue()).decode()
+
+
+for label, payload in [("solid white", solid(255)), ("solid black", solid(0)),
+                       ("gradient", gradient()), ("fine noise", fine_noise())]:
+    r = client.post("/embed", json={"crop": payload})
+    check(
+        f"{label} -> 422 FACE_NOT_DETECTED",
+        r.status_code == 422 and r.json().get("detail") == "FACE_NOT_DETECTED",
+        f"got {r.status_code} {r.json().get('detail')}",
+    )
+
+# The positive path needs a REAL face. Supply one via FACE_TEST_FIXTURE (a
+# 112x112 aligned crop) to assert it. Skipped rather than faked, because a
+# synthetic "face" would prove nothing about a detector trained on real ones —
+# and the failure this guards against (rejecting genuine staff) is exactly the
+# one a fake fixture would hide.
+fixture = os.environ.get("FACE_TEST_FIXTURE")
+if fixture and os.path.exists(fixture):
+    with open(fixture, "rb") as fh:
+        real = base64.b64encode(fh.read()).decode()
+    r = client.post("/embed", json={"crop": real})
+    check("a REAL face is accepted", r.status_code == 200, f"got {r.status_code} {r.json()}")
+else:
+    print("  SKIP  a REAL face is accepted — set FACE_TEST_FIXTURE to a 112x112 crop")
 
 print(f"\n{_passed} passed, {_failed} failed")
 sys.exit(1 if _failed else 0)

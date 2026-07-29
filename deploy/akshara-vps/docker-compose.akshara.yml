@@ -100,6 +100,7 @@ services:
     environment:
       WORKERS: "1"
       FACE_MODEL_PATH: /models/glintr100_int8.onnx
+      FACE_DETECTOR_PATH: /models/blaze_face_short_range.tflite
       FACE_MODEL_TAG: auraface-v1
     volumes:
       - ./face-inference/models:/models:ro

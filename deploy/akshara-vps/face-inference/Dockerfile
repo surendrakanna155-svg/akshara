@@ -15,6 +15,17 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# MediaPipe (the face detector) links OpenCV, which needs X11/GL runtime libs
+# that python:*-slim does not ship. Without these the import fails with
+# `libxcb.so.1: cannot open shared object file` and the detector is unavailable —
+# caught by the healthcheck at deploy rather than at a check-in, but only
+# because the healthcheck loads it. Headless server, so these are the runtime
+# libraries only, no X server.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libxcb1 libgl1 libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
