@@ -3,6 +3,23 @@
 **Mode:** autonomous. Report and roadmap are internal artifacts, NOT stop points.
 **Updated:** 2026-07-29
 
+## 🚩 PRE-LAUNCH GATE — APP_ENV (owner-ratified 2026-07-29)
+
+`APP_ENV=staging` on the pilot, **deliberately, by owner decision**. It is to be
+switched to `production` only at final production rollout, after pilot completes.
+
+**This is a hard gate before ANY real pupil data is loaded.** Flipping it also
+enables `requireTls` + `requireAuthentication` and disables demo-auth, which
+stops OTP-in-response for the 6 allowlisted pilot testers — they will need real
+SMS delivery from that moment. Plan that switchover; do not discover it.
+
+Current exposure is bounded and accepted: `AUTH_OTP_DEV_MODE=false` (so the OTP
+path is limited to those 6 numbers, not general) and the database holds 10
+schools / 5 students — demo scale.
+
+After flipping, run `deploy/akshara-vps/verify-deployment-security.sh
+https://api.nikshaos.in` and confirm login still works before announcing.
+
 ## Lifecycle position
 
 ```
