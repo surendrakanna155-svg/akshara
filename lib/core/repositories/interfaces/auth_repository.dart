@@ -44,11 +44,20 @@ class AuthUser {
     this.childIds = const [],
     this.children = const [],
     this.isChainOrganization = false,
+    this.rawRoleSlug,
   });
 
   final String id;
   final String displayName;
   final ErpRole erpRole;
+
+  /// JOURNEY-002 — the role slug the SERVER sent, before client resolution.
+  ///
+  /// Kept alongside [erpRole] so a refusal can name the slug the school's
+  /// administrator actually assigned (`officeStaff`, a tenant custom role, …)
+  /// rather than the sentinel it collapsed to. Read-only diagnostics; nothing
+  /// authorises on it.
+  final String? rawRoleSlug;
   final String tenantId;
   final String? email;
   final String? mobile;

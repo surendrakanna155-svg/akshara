@@ -101,6 +101,19 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
       final auth = ref.read(authProvider);
       context.go(homeRouteForRole(auth.role));
     } else {
+      // JOURNEY-002: an OTP that verified but whose server role this app version
+      // cannot render is NOT "invalid OTP". Saying so would send a school chasing
+      // a phone-number problem that does not exist. Name the real reason.
+      final refusedRole = ref.read(unsupportedServerRoleProvider);
+      if (refusedRole != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(unsupportedRoleMessage(refusedRole)),
+            duration: const Duration(seconds: 8),
+          ),
+        );
+        return;
+      }
       final demoAuth = ref.read(isDemoAuthEnabledProvider);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

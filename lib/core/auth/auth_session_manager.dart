@@ -169,7 +169,10 @@ class AuthSessionManager {
 
     return AuthClaims(
       userId: jwt.subject!,
-      erpRole: ErpRole.fromName(jwt.role) ?? ErpRole.superAdmin,
+      // JOURNEY-002: was `?? ErpRole.superAdmin`. Rebuilding claims from a raw
+      // access token is the third resolution path and must agree with the other
+      // two — one resolver, failing closed.
+      erpRole: ErpRole.resolve(jwt.role),
       tenantId: jwt.tenantId!,
       schoolId: jwt.schoolId,
       organizationId: jwt.organizationId,

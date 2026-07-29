@@ -119,6 +119,17 @@ class AuthClaims {
     }
 
     // Multi-role: prefer the `roles` array; fall back to the legacy `role` key.
+    //
+    // JOURNEY-003: the last line used to read
+    //   `roles.add(ErpRole.fromName(json['role']) ?? ErpRole.parent)`
+    // while the login path fell back to `ErpRole.superAdmin`. The same user was
+    // therefore a super admin on a fresh login and a parent after an app
+    // relaunch. Both paths now go through the one resolver, which fails closed.
+    //
+    // The `roles` array is filtered with the strict `fromName` so an unmappable
+    // entry inside a multi-role list is dropped rather than poisoning the whole
+    // session; the sentinel is only reached when NOTHING resolved, which is the
+    // honest description of "this app version cannot render this user".
     final roleNames = (json['roles'] as List<dynamic>?)?.cast<String>();
     final roles = <ErpRole>[];
     if (roleNames != null) {
@@ -128,7 +139,7 @@ class AuthClaims {
       }
     }
     if (roles.isEmpty) {
-      roles.add(ErpRole.fromName(json['role'] as String?) ?? ErpRole.parent);
+      roles.add(ErpRole.resolve(json['role'] as String?));
     }
 
     return AuthClaims(

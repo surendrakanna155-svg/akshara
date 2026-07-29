@@ -138,12 +138,22 @@ CopilotPersonaRole copilotPersonaForErpRole(ErpRole role) => switch (role) {
       ErpRole.teacher => CopilotPersonaRole.teacher,
       ErpRole.parent => CopilotPersonaRole.parent,
       ErpRole.student => CopilotPersonaRole.student,
+      ErpRole.classTeacher => CopilotPersonaRole.teacher,
+      ErpRole.officeStaff || ErpRole.coordinator =>
+        CopilotPersonaRole.academicCoordinator,
       ErpRole.transportManager ||
       ErpRole.hostelManager ||
       ErpRole.librarian ||
       ErpRole.inventoryManager ||
-      ErpRole.storekeeper =>
+      ErpRole.storekeeper ||
+      ErpRole.hrManager ||
+      ErpRole.healthStaff =>
         CopilotPersonaRole.hr,
+      // JOURNEY-002: a role this app version cannot render gets the most
+      // restricted persona, never a staff/leadership one. In practice the
+      // session is refused before Copilot is reachable — this is the structural
+      // backstop, so the sentinel can never widen what the assistant is told.
+      ErpRole.unsupported => CopilotPersonaRole.student,
     };
 
 CopilotAssistantType defaultAssistantForPersona(CopilotPersonaRole persona) =>

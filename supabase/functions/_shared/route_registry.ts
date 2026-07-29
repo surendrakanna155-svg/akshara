@@ -151,7 +151,20 @@ export const MODULE_ROUTES: readonly ModuleRouteEntry[] = [
   { name: "attendance_auth", prefixes: ["/attendance-auth"], route: routeAttendanceAuth },
   {
     name: "academic",
-    prefixes: ["/academic/years", "/academic/classes", "/academic/sections", "/academic/subjects", "/academic/class-subjects"],
+    prefixes: [
+      "/academic/years",
+      "/academic/classes",
+      "/academic/sections",
+      "/academic/subjects",
+      "/academic/class-subjects",
+      // OS-013: these two subtrees were served by this entry's router but
+      // declared by NOBODY, so the single-ownership guard could not see them —
+      // the same class of gap as API-104 below. Found by asking the dispatcher
+      // which paths it claims and diffing against the declared prefixes
+      // (`rbac_route_derivation.ts::moduleForPath`).
+      "/academic/teacher-assignments",
+      "/academic/transitions",
+    ],
     route: routeAcademic,
     note: "Owns /academic/* EXCEPT /academic/timetables/* (that subtree belongs to timetable). Already non-greedy pre-F4.",
   },
@@ -229,7 +242,16 @@ export const MODULE_ROUTES: readonly ModuleRouteEntry[] = [
   { name: "teacher", prefixes: ["/teacher"], route: routeTeacher },
   { name: "student", prefixes: ["/student"], route: routeStudent },
   { name: "payment", prefixes: ["/payments", "/webhooks/razorpay"], route: routePayment },
-  { name: "audit", prefixes: ["/audit"], route: routeAudit },
+  {
+    name: "audit",
+    // API-104: this entry's router guard clause reads
+    //   `if (!path.startsWith("/audit") && path !== "/domain-events/process-pending") return null;`
+    // so it owns a mutating route the prefix table did not know about. A path the
+    // table does not know about cannot be checked for double-ownership, so the
+    // guarantee the registry exists to provide did not cover it.
+    prefixes: ["/audit", "/domain-events/process-pending"],
+    route: routeAudit,
+  },
   { name: "support", prefixes: ["/support"], route: routeSupport, note: "ASIP platform-support: schools report Akshara product issues to the Akshara Support Team." },
   { name: "identity", prefixes: ["/identity"], route: routeIdentity, note: "PRA-P1-05: identity-plane admin — per-user permission overrides + custom roles (ICA-G3)." },
 ] as const;

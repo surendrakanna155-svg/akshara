@@ -6,7 +6,17 @@ class RolePermissionMatrix {
   const RolePermissionMatrix._();
 
   /// Roles that are NOT staff and therefore never self-check-in (O5/O4).
-  static const Set<ErpRole> _nonStaffRoles = {ErpRole.parent, ErpRole.student};
+  ///
+  /// [ErpRole.unsupported] is listed here for a different reason: it must receive
+  /// the empty set, and `_withStaffAttendance` would otherwise hand every
+  /// non-parent/student role `markStaffAttendance` — including the fail-closed
+  /// sentinel. A role the app cannot render must grant *nothing at all*
+  /// (JOURNEY-002).
+  static const Set<ErpRole> _nonStaffRoles = {
+    ErpRole.parent,
+    ErpRole.student,
+    ErpRole.unsupported,
+  };
 
   static PermissionSet permissionsFor(ErpRole role) {
     return PermissionSet.from(_withStaffAttendance(role, _permissionsForRole[role] ?? const {}));
@@ -703,5 +713,73 @@ class RolePermissionMatrix {
       Permission.submitAttendanceCorrection,
     },
     ErpRole.student: {},
+
+    // ─── JOURNEY-002 · the five seeded school roles ─────────────────────────
+    // Each set mirrors the grants the SERVER seeds for that slug, and nothing
+    // more. The server stays the real enforcement; these exist so the offline
+    // local-matrix fallback and the client's role-keyed gates agree with it
+    // instead of inventing access. Sources:
+    //   hrManager / officeStaff / classTeacher / coordinator
+    //     → 20260608100000_rbac_foundation.sql (+ 20260900000010_office_staff_grants.sql)
+    //   healthStaff
+    //     → 20260887000000_student_health.sql
+    ErpRole.hrManager: {
+      Permission.viewAdminHub,
+      Permission.viewHr,
+      Permission.manageHr,
+      // Client/server divergence closed: `20260820000000_staff_attendance_
+      // geofence_face_reimpl.sql:181-190` grants `approveStaffAttendance` to
+      // exactly {principal, vicePrincipal, schoolAdmin, hrManager, management,
+      // superAdmin, organizationOwner, organizationAdmin}. Every one of those
+      // that this app maps holds it here — except hrManager did not, so an HR
+      // Manager lost the manual-attendance approver queue client-side while the
+      // server would have let them decide. Deciding a colleague's attendance
+      // record is precisely an HR manager's job, and the server is the
+      // authority, so the CLIENT was wrong.
+      //
+      // `manageSchoolGeofence` is granted to the same eight roles server-side
+      // and has NO client [Permission] at all — nothing in `lib/` can express or
+      // check it. That is a real gap, but adding an enum value with no consumer
+      // would be an invention; it is reported rather than guessed at.
+      //
+      // The three org-scope roles in that list (organizationOwner,
+      // organizationAdmin, and the group-scope schoolGroupDirector) stay
+      // deliberately unmapped — see kDeliberatelyUnsupportedServerRoles.
+      Permission.approveStaffAttendance,
+    },
+    ErpRole.officeStaff: {
+      Permission.viewAdminHub,
+      Permission.viewAdmissions,
+      Permission.manageAdmissions,
+      Permission.viewSis,
+      Permission.viewAcademicTimetable,
+    },
+    ErpRole.healthStaff: {
+      Permission.viewAdminHub,
+      Permission.viewStudentHealthRecord,
+      Permission.manageStudentHealth,
+      Permission.administerStudentMedication,
+    },
+    ErpRole.classTeacher: {
+      Permission.viewAdminHub,
+      Permission.viewSis,
+      Permission.markAttendance,
+      Permission.manageHomework,
+      Permission.manageExamMarks,
+    },
+    ErpRole.coordinator: {
+      Permission.viewAdminHub,
+      Permission.viewSis,
+      Permission.viewAdmissions,
+      Permission.manageAdmissions,
+      Permission.markAttendance,
+      Permission.manageHomework,
+      Permission.manageExamMarks,
+    },
+
+    // The fail-closed sentinel: an unmapped server role grants NOTHING. Listed
+    // explicitly (rather than relying on the `?? const {}` lookup default) so the
+    // intent is visible at the point a reader looks for it.
+    ErpRole.unsupported: {},
   };
 }

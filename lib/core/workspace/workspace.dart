@@ -190,6 +190,24 @@ const Map<ErpRole, List<WorkspaceId>> kRoleWorkspaces = {
   ErpRole.librarian: [WorkspaceId.library],
   ErpRole.inventoryManager: [WorkspaceId.inventory],
   ErpRole.storekeeper: [WorkspaceId.inventory],
+
+  // ─── JOURNEY-002 · the five seeded school roles ───────────────────────────
+  // Placed in the EXISTING workspace whose module set matches their server
+  // grants; no new workspace is invented. What each of them can actually open
+  // inside that workspace is still permission-filtered
+  // (`workspaceScopedNavDestinationsProvider`), so e.g. an HR manager in the
+  // School Administration workspace sees HR and nothing else.
+  ErpRole.hrManager: [WorkspaceId.schoolAdministration],
+  ErpRole.officeStaff: [WorkspaceId.frontOffice],
+  ErpRole.healthStaff: [WorkspaceId.schoolAdministration],
+  ErpRole.classTeacher: [WorkspaceId.teaching],
+  // Coordinator spans both hats the server grants it (teaching + admissions).
+  ErpRole.coordinator: [WorkspaceId.teaching, WorkspaceId.frontOffice],
+
+  // ErpRole.unsupported is DELIBERATELY absent — an unmapped server role opens
+  // no workspace at all (JOURNEY-002). `workspacesForRoles` already returns an
+  // empty list for a role with no entry; the absence is the fail-closed
+  // behaviour and is asserted by the role-fallback guard test.
 };
 
 /// Resolves the deduped, ordered list of workspaces a multi-role user holds.

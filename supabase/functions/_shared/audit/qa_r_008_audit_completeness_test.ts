@@ -95,11 +95,40 @@ const CATALOGUED_MODULES = new Set<string>([
   "parent",
   // staff Face ID check-in/out audits via `staffAttendanceAudit` (O5).
   "staff_attendance",
+
+  // ─── API-100: modules this test could not previously SEE ────────────────
+  // The inventory it reads is now derived from the dispatcher rather than
+  // hand-maintained, so 13 modules with mutating routes appeared that were
+  // simply absent from the old 315-rule list. Their classifications below are
+  // evidence-based — each was checked for an actual audit emission — not
+  // assumed. That the gate had been green while blind to them is the point of
+  // API-100.
+  //
+  // `academics/exam_administration/exam_administration_handlers.ts` emits
+  // `examAudit.{markUpdated,markGraceApplied,marksReminderSent,resultsPublished}`.
+  "exam_administration",
+  // `school_completion/*_handlers.ts` emit `schoolCompletionAudit.*` (branding,
+  // class-subject assignment, timetable workforce) via emitMutationAudit.
+  "school_completion",
+  // `attendance_auth/face_enrollment_handlers.ts` emits
+  // `attendanceAuthAudit.{faceEnrolled,faceRevoked}` through recordMutationAudit,
+  // in the same transaction as the enrolment write.
+  "attendance_auth",
+  // `parent_experience/*` acknowledgements emit `parentExperienceAudit` — the
+  // same group the pre-existing `parent` entry already names.
+  "parent_experience",
+  // `pilot/pilot_operations_handlers.ts` — the mobile task paths under
+  // /teacher, /student, /parent and /homework. Same ad-hoc `auditMobileWrite`
+  // + `moduleEntityAudit("parent.leave.attachment.added")` pattern the
+  // pre-existing `teacher` entry documents; the registry names the module
+  // `pilot_operations`, so it needs its own entry.
+  "pilot_operations",
 ]);
 
 /**
- * Inventory modules that emit audits via the GENERIC `moduleEntityAudit`
- * factory (a dotted-slug spec per CRUD verb) rather than a bespoke named group.
+ * Inventory modules that emit audits WITHOUT a bespoke named catalog group —
+ * either through the generic `moduleEntityAudit` factory (a dotted-slug spec per
+ * CRUD verb) or, for `copilot`, through a direct `recordServerAuditEvent` write.
  * They are audited — just not through a dedicated catalog export.
  */
 const GENERIC_FACTORY_MODULES = new Set<string>([
@@ -121,6 +150,27 @@ const GENERIC_FACTORY_MODULES = new Set<string>([
   // PRC-A Batch 3 — the /ai-wallet/grant mutation audits via moduleEntityAudit
   // ("aiWallet.credit_granted") inside the same tenant transaction as the insert.
   "aiWallet",
+
+  // ─── API-100: modules the derived inventory surfaced ────────────────────
+  // `control_center/control_center_write_handlers.ts` →
+  // moduleEntityAudit("control_center.{lead,school}.created") + emitMutationAudit.
+  "control_center",
+  // `hr/{hr_write,leave_accrual,statutory_payroll}_handlers.ts` →
+  // moduleEntityAudit("hr.employee.access_revoked" …) + emitMutationAudit.
+  "hr",
+  // `management/management_write_handlers.ts` → emitMutationAudit +
+  // moduleEntityAudit.
+  "management",
+  // `legal/legal_handlers.ts` → emitMutationAudit on the acceptance write.
+  "legal",
+  // `timetable/timetable_handlers.ts` → emitMutationAudit on publish/generate/
+  // period moves.
+  "timetable",
+  // `copilot/copilot_handlers.ts` → `recordServerAuditEvent` on every session
+  // and message write (five call sites). Not the mutation catalog, but a real
+  // server-side audit row per mutation — recorded here rather than exempted, so
+  // the wording matches the code.
+  "copilot",
 ]);
 
 /**
@@ -167,6 +217,17 @@ const AUDIT_EXEMPT_MODULES: Record<string, string> = {
   // dedicated `approval_audit_entries` ledger via `insertAuditEntry` — one row per
   // decision — rather than the mutation catalog. That ledger is the audit path.
   approvals: "dedicated approval_audit_entries ledger (insertAuditEntry per decision)",
+  // API-100: the ROUTE-REGISTRY name for the same router is `approval` (singular);
+  // the derived inventory keys on that, so the exemption needs both spellings
+  // until the two vocabularies are reconciled.
+  approval: "dedicated approval_audit_entries ledger (insertAuditEntry per decision)",
+  // API-100: every stock write in `inventory_finance/inventory_stock_repository.ts`
+  // inserts exactly one immutable `stock_movements` row (qty_before → qty_after)
+  // in the same statement as the movement. That ledger is STRONGER than the
+  // mutation catalog for this surface — it records the numeric before/after the
+  // catalog would only summarise — so it is the audit path, by design.
+  inventory_finance:
+    "immutable stock_movements ledger, one row per write with qty_before → qty_after",
   // PRC-A Batch 2 / owner decision #1. Health deliberately does NOT use the
   // mutation catalog: it has a dedicated immutable `student_health_access_log`
   // (SELECT/INSERT grant only) written in the SAME transaction as the event it

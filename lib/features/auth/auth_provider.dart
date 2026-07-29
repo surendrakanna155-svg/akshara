@@ -61,6 +61,23 @@ final selectedChildProvider = Provider<LinkedChild?>((ref) {
   return ref.watch(authProvider).selectedChild;
 });
 
+/// JOURNEY-002 — the server role slug the last sign-in / session restore was
+/// **refused** for, or `null` when nothing was refused.
+///
+/// This is what makes the fail-closed default *observable* rather than silent.
+/// A user whose server role this app version cannot render does not get a
+/// degraded session with no tiles (which reads as "the app is broken"); the
+/// session is refused, this provider carries the slug, and the sign-in surface
+/// renders [unsupportedRoleMessage] naming it.
+final unsupportedServerRoleProvider = StateProvider<String?>((ref) => null);
+
+/// The explicit state a refused role renders. Names the slug so a school's
+/// administrator can act on it without reading a log.
+String unsupportedRoleMessage(String? slug) =>
+    'Your role${slug == null || slug.isEmpty ? '' : ' ($slug)'} is not supported '
+    'by this app version. Ask your school administrator to assign a supported '
+    'role, or update the app.';
+
 /// Auth controller with SharedPreferences session persistence.
 class AuthNotifier extends Notifier<AuthState> {
   late final AuthSessionStorage _storage;
@@ -114,6 +131,19 @@ class AuthNotifier extends Notifier<AuthState> {
       claims = _claimsForRole(role);
     }
     if (claims == null) {
+      await logout();
+      return;
+    }
+
+    // JOURNEY-002 / JOURNEY-003 — the restore path applies the SAME rule as
+    // login. Before this, an unmappable slug became `superAdmin` on login and
+    // `parent` here, so the identical session resolved differently depending on
+    // whether it was freshly issued or rehydrated. A persisted session that no
+    // longer resolves to a role this app version can render is refused, not
+    // downgraded to a guess.
+    if (!claims.erpRoles.any((r) => r.isSupported)) {
+      ref.read(unsupportedServerRoleProvider.notifier).state =
+          claims.erpRole.name;
       await logout();
       return;
     }
@@ -302,6 +332,18 @@ class AuthNotifier extends Notifier<AuthState> {
 
   Future<bool> _completeMobileApiAuth(AuthVerificationResult result) async {
     final user = result.user;
+
+    // ── JOURNEY-002 · fail CLOSED on an unmappable server role ──────────────
+    // `ErpRole.resolve` already refuses to invent a role, but leaving an
+    // `unsupported` session ALIVE would make correctness depend on every one of
+    // the app's role-keyed gates defaulting the right way. Refusing here is a
+    // single chokepoint, and it is the same rule the restore path applies, so a
+    // session cannot resolve one way on login and another on relaunch.
+    if (!user.erpRole.isSupported) {
+      await _refuseUnsupportedRole(user);
+      return false;
+    }
+
     final role = userRoleFromAuthUser(user);
     final linkedChildren = linkedChildrenFromAuthUser(user);
     final selectedChild = linkedChildren.isNotEmpty ? linkedChildren.first : null;
@@ -513,6 +555,36 @@ class AuthNotifier extends Notifier<AuthState> {
     await _persistSession();
     await _issueDemoTokens();
     await _auditLogin();
+  }
+
+  /// JOURNEY-002 — refuses a session whose server role this app cannot render.
+  ///
+  /// Least privilege taken to its conclusion: no session, no tokens, no cached
+  /// permissions. The refusal is RECORDED (an `accessDenied` audit event naming
+  /// the raw slug) and SURFACED ([unsupportedServerRoleProvider]), because a
+  /// silent denial is how the 29-vs-15 gap stayed invisible in the first place.
+  Future<void> _refuseUnsupportedRole(AuthUser user) async {
+    final slug = user.rawRoleSlug ?? '';
+    ref.read(unsupportedServerRoleProvider.notifier).state =
+        slug.isEmpty ? user.erpRole.name : slug;
+
+    await ref.read(tokenStorageProvider).clear();
+    await ref.read(serverPermissionCacheProvider).clear();
+    await _storage.clear();
+    ref.read(serverPermissionSyncProvider.notifier).state =
+        const ServerPermissionSyncState();
+    state = const AuthState(status: AuthStatus.unauthenticated);
+
+    await recordAuditEvent(
+      ref,
+      type: AuditEventType.accessDenied,
+      userId: user.id,
+      tenantId: user.tenantId,
+      metadata: {
+        'reason': 'unsupported_server_role',
+        'serverRole': slug,
+      },
+    );
   }
 
   /// Updates active child and persists selection for next app launch.
