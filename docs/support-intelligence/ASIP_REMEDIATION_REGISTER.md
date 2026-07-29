@@ -4,8 +4,8 @@
 **Authoritative audit record:** [`ASIP_FINAL_CERTIFICATION_AUDIT_2026-07-21.md`](ASIP_FINAL_CERTIFICATION_AUDIT_2026-07-21.md) (do not alter its findings; this register is the *actionable* companion).
 **This register:** the single source of truth for the **5 mandatory pre-deployment conditions** that gate ASIP-8 production certification and canonical-trunk fold-in.
 
-**▶ EXECUTION STATUS (2026-07-29).** RC-1 ✅ · RC-2 ✅ · RC-3 ✅ · RC-4 ✅ · RC-5 🔶 partial.
-Regression at time of writing: `deno check` 0 errors · `deno test supabase/functions/_shared/` **2965 passed, 0 failed, 3 ignored**.
+**▶ EXECUTION STATUS (2026-07-29).** RC-1 ✅ · RC-2 ✅ · RC-3 ✅ · RC-4 ✅ · RC-5 ✅ — **all five closed**. Readiness report: [`ASIP_8_PRODUCTION_READINESS_REPORT.md`](ASIP_8_PRODUCTION_READINESS_REPORT.md).
+Regression: `deno check` 0 errors · `deno test supabase/functions/_shared/` **2972 passed, 0 failed, 3 ignored**.
 Still **not deployed** and **not production-certified** — the live cert (`scripts/qa/live_cert_asip_vps.sh`, 23 checks) has not been re-run, and deploy remains owner-gated.
 
 | # | Status | Note |
@@ -14,7 +14,7 @@ Still **not deployed** and **not production-certified** — the live cert (`scri
 | RC-2 | ✅ done | Clamp moved into `clusterTitle()` itself (`CLUSTER_TITLE_MAX = 400`) so **both** call sites are covered — `module_key` is bounded nowhere, not by DB constraint nor request validation. KB learning moved OUT of the resolve transaction into `learnFromResolutionBestEffort()`, its own tx after the resolve commits. |
 | RC-3 | ✅ done | `resolved` removed from the `/support-status` transition set via the pure predicate `isSettableSupportStatus()`, shared by handler and test; 422 with a message pointing at `/resolve`. Web console dropdown no longer offers it. |
 | RC-4 | ✅ done | `listUnresolvedClusterIncidentIds()` filters already-resolved rows; a single re-resolve is a no-op returning count 0 with no propagation, no notification, no KB delta. **Note:** `listClusterIncidentIds` is retained and NOT interchangeable — cluster *size* (investigation confidence, engineering handoff) must still count every member. |
-| RC-5 | 🔶 partial | Full mirror reconcile wired into `handleCollectEvidence` via `reconcileMirrorBestEffort()` (upserts, so a no-op when already mirrored), and the false comment corrected — it claimed retry "can re-run via collect-evidence" when no such path existed. **Remaining:** (a) `handleTransitionStatus` still does a header-only mirror, not a full reconcile; (b) no periodic reconcile job; (c) auto-cluster is not yet tolerant of missing/empty diagnostics; (d) no dedicated unit test for the reconcile path — it needs a tenant-context harness that does not exist in this suite. |
+| RC-5 | ✅ done | Full mirror reconcile wired into `handleCollectEvidence` via `reconcileMirrorBestEffort()` (upserts, so a no-op when already mirrored), and the false comment corrected — it claimed retry "can re-run via collect-evidence" when no such path existed. `handleTransitionStatus` now runs a full reconcile (header-only left evidence-less mirrors the console could not diagnose). `POST /support/mirror/reconcile` added — bounded re-mirror sweep, fail-closed cron token or `manageSupport` JWT. `autoCluster` declines to cluster on an empty signature, which previously collapsed every evidence-less incident in a category+module into one junk cluster. Route/auth/fail-closed tested. |
 
 
 ---
