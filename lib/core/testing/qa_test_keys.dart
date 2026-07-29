@@ -2062,6 +2062,17 @@ abstract final class QaTestKeys {
 
   static const parentTransportScreen =
       ValueKey<String>('parent_transport_screen');
+
+  /// BUS-003 — honest "transport not enabled for parents yet" state.
+  static const parentTransportNotEnabledState =
+      ValueKey<String>('parent_transport_not_enabled_state');
+
+  /// BUS-006/BUS-007 — stop form time fields (drop time was previously
+  /// unreachable in tests, which is how its silent erasure survived).
+  static const transportStopPickupTimeField =
+      ValueKey<String>('transport_stop_pickup_time_field');
+  static const transportStopDropTimeField =
+      ValueKey<String>('transport_stop_drop_time_field');
   static const parentPtmScreen = ValueKey<String>('parent_ptm_screen');
 
   // --- Parent persona client (PAR-1..PAR-D4) ---

@@ -2,9 +2,9 @@
 
 > **This is the authoritative entry point.** Every document listed here is current and required for day-to-day engineering. Read these — *not* `docs/archive/`.
 
-> _Total active documents: **~204**. Completed / superseded / historical material lives under [`docs/archive/`](archive/README.md) (kept for traceability, never read for current decisions)._
+> _Active documents live in the non-archive `docs/` tree. Completed / superseded / historical material lives under [`docs/archive/`](archive/README.md) (kept for traceability, never read for current decisions)._
 
-> _Last reorganised: 2026-06-27 (Documentation Cleanup — see [`DOCUMENTATION_CLEANUP_REPORT.md`](DOCUMENTATION_CLEANUP_REPORT.md)); reconciled 2026-07-03 (post-cleanup drift: certifications, decision records and backlogs indexed; historical items archived). Repo-wide start-here: [`../PROJECT_INDEX.md`](../PROJECT_INDEX.md)._
+> _Last reorganised: 2026-06-27 (Documentation Cleanup — see [`DOCUMENTATION_CLEANUP_REPORT.md`](DOCUMENTATION_CLEANUP_REPORT.md)); reconciled 2026-07-03; refreshed 2026-07-20 (Repository Hygiene & IA review — the roadmap/execution/owner governance cluster is now indexed; see [`engineering/REPOSITORY_HYGIENE_AND_IA_PLAN.md`](engineering/REPOSITORY_HYGIENE_AND_IA_PLAN.md)). Repo-wide start-here: [`../PROJECT_INDEX.md`](../PROJECT_INDEX.md)._
 
 
 ## Engineering governance (highest authority)
@@ -13,6 +13,24 @@
 - [`docs/engineering/ENGINEERING_GATE_POLICY.md`](engineering/ENGINEERING_GATE_POLICY.md)
 - [`docs/engineering/eos/EOS_RUN_LEDGER.md`](engineering/eos/EOS_RUN_LEDGER.md)
 - [`docs/engineering/eos/README.md`](engineering/eos/README.md)
+- [`docs/engineering/REPOSITORY_HYGIENE_AND_IA_PLAN.md`](engineering/REPOSITORY_HYGIENE_AND_IA_PLAN.md) — repository hygiene & information-architecture cleanup plan (2026-07-20).
+
+## Roadmap, execution & governance (source of truth)
+
+> The forward-plan authority. Read the roadmap here, not `docs/FINAL_QA_ROADMAP.md` (which is frozen QA-wave history).
+
+- [`docs/roadmap/AKSHARA_CONSTITUTION_ALIGNED_MASTER_ROADMAP.md`](roadmap/AKSHARA_CONSTITUTION_ALIGNED_MASTER_ROADMAP.md) — **the current forward roadmap (SSOT, 2026-07-20).**
+- [`docs/roadmap/FINAL_EXECUTION_MASTER_ROADMAP.md`](roadmap/FINAL_EXECUTION_MASTER_ROADMAP.md) — PRA register / execution-traceability authority (superseded *as the forward plan* by the roadmap above).
+- [`docs/roadmap/NEXT_ACTIVE_WAVE.md`](roadmap/NEXT_ACTIVE_WAVE.md) — current wave · [`docs/roadmap/PRODUCT_REALITY_CORRECTNESS_PROGRAM_TRACKER.md`](roadmap/PRODUCT_REALITY_CORRECTNESS_PROGRAM_TRACKER.md) — PRA tracker · [`docs/roadmap/PROGRAM_SOP_IDENTITY_AND_PLATFORM.md`](roadmap/PROGRAM_SOP_IDENTITY_AND_PLATFORM.md)
+- [`docs/execution/IMPLEMENTATION_PROGRESS.md`](execution/IMPLEMENTATION_PROGRESS.md) — permanent execution journal · [`docs/execution/EXECUTION_DASHBOARD.md`](execution/EXECUTION_DASHBOARD.md) · [`docs/execution/CANONICAL_EXECUTION_BASELINE.md`](execution/CANONICAL_EXECUTION_BASELINE.md)
+- [`docs/owner/AKSHARA_MASTER_PRODUCT_CONSTITUTION_v2.0.md`](owner/AKSHARA_MASTER_PRODUCT_CONSTITUTION_v2.0.md) — supreme product authority (owner).
+- [`docs/strategy/`](strategy/) — strategy inputs (incl. `PRODUCTION_CERTIFICATION_FRAMEWORK.md`).
+- [`docs/audits/`](audits/) — Fable independent audit corpus (`00`–`11`) + [`AUDIT_FINDINGS_LEDGER.md`](audits/AUDIT_FINDINGS_LEDGER.md).
+- [`docs/audits/PRODUCT_EXPERIENCE_CERTIFICATION_AUDIT_2026-07-21.md`](audits/PRODUCT_EXPERIENCE_CERTIFICATION_AUDIT_2026-07-21.md) — **Product Experience Certification Audit (2026-07-21, 17-reviewer board): NOT CERTIFIED.** Folded into the roadmap as **§5.6 PROGRAM UXR** (100 work items) + finding-level annex [`docs/roadmap/UXR_FINDINGS_REGISTER.md`](roadmap/UXR_FINDINGS_REGISTER.md) (250 verbatim findings · 45 verification verdicts · 114 never-change patterns).
+
+## Question Intelligence (QIE) — current lane
+
+- [`docs/question-intelligence-quality/README.md`](question-intelligence-quality/README.md) — QIE landing page (current docs vs decision records vs superseded specs vs snapshots vs evidence).
 
 ## Project context & entry points
 

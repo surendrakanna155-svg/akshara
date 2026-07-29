@@ -5,7 +5,7 @@ You are the lead software architect, UI/UX designer, Flutter developer, backend 
 Read the **active, authoritative** documents before making any decision — in this order:
 1. `docs/engineering/AKSHARA_ENGINEERING_CONSTITUTION.md` — highest engineering authority.
 2. `docs/ProjectStatus.md` — current project state.
-3. **The single authoritative execution plan** — `docs/roadmap/FINAL_EXECUTION_MASTER_ROADMAP.md` (Phases 0–8), executed per `docs/roadmap/AUTONOMOUS_EXECUTION_PLAN.md`, current work in `docs/roadmap/NEXT_ACTIVE_WAVE.md`, journal in `docs/execution/IMPLEMENTATION_PROGRESS.md`.
+3. **The current forward roadmap (SSOT, 2026-07-20)** — `docs/roadmap/AKSHARA_CONSTITUTION_ALIGNED_MASTER_ROADMAP.md`. It supersedes `docs/roadmap/FINAL_EXECUTION_MASTER_ROADMAP.md` *as the forward plan* (that doc is retained as the PRA register / execution-traceability authority). Current work: `docs/roadmap/NEXT_ACTIVE_WAVE.md`; journal: `docs/execution/IMPLEMENTATION_PROGRESS.md`. For the repo-wide map and canonical-document list, defer to `PROJECT_INDEX.md`.
 4. The QA history of record — `docs/FINAL_QA_ROADMAP.md` (QW1–QW8 frozen history; its Phase B/C/D forward plan is superseded by #3, except the §Phase-C C0–C21 wave table which remains the normative decomposition for P1-PROD-1..21), `docs/FINAL_QA_MASTER_TRACKER.md`, `docs/FINAL_QA_AUDIT.md`.
 5. The relevant architecture / module-spec / SRS document in `docs/` (see `docs/README.md` for the full active index).
 
@@ -20,7 +20,7 @@ Rules:
 5. Follow AI architecture documents.
 6. Follow infrastructure architecture documents.
 
-Development Strategy:
+Development Strategy (⚠ ORIGINAL BOOTSTRAP SEQUENCE — HISTORICAL. The project is long past this eight-phase bootstrap; the live plan is the forward roadmap named in item 3 above. Retained only for origin context):
 
 Phase 1:
 Create production-quality Figma-style UI mockups.

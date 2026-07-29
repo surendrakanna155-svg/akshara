@@ -21,6 +21,15 @@ import { assignFeeStructure } from "../finance/finance_assignments_repository.ts
 const writeStore = createEntityWriteStore("transport_entities", "Transport");
 const { runWrite } = createModuleWriteHandlers("manageTransport");
 
+/**
+ * BUS-002 — the dedicated broadcast audience for a ONE-ROUTE transport alert.
+ * Must be a `comm_broadcasts.audience` CHECK token (widened by migration
+ * 20260881000000) and a member of `EXPLICIT_COHORT_AUDIENCES`, so the broadcast
+ * service refuses to send it without an explicit recipient cohort instead of
+ * degrading to the school-wide set.
+ */
+export const TRANSPORT_ROUTE_AUDIENCE = "route_parents";
+
 // ── TRN-2: strict ISO calendar-date validator ────────────────────────────────
 // Document-expiry fields (vehicle insurance/fitness/puc/permit/roadTax, driver
 // licence) must be real YYYY-MM-DD dates so TRN-8's within-N-days scan is exact.
@@ -379,12 +388,84 @@ export async function handleRemoveStudentTransport(
 }
 
 /**
- * POST /transport/notify-delay — broadcast a delay notification to the parents
- * of students on a given route. The real, certifiable half of TR-07: GPS live
- * telemetry needs hardware, but a delay alert does not — it reuses the
- * Communication broadcast pipeline ({@link sendBroadcastMessage}) which queues
- * push deliveries out of the request cycle. `recipientCount` is the number of
- * students currently allocated to the route (the affected cohort).
+ * BUS-002 — resolve the guardian user ids for a set of transport allocations.
+ *
+ * Allocations store `sisStudentId`, which may be a students.id UUID, a
+ * `student_code`, or an admission number (the same tolerance
+ * {@link resolveStudentId} implements for a single id). This resolves the whole
+ * cohort in ONE query rather than N round-trips, then maps to active guardians.
+ *
+ * Returns `null` when the cohort is non-empty but NO guardian could be
+ * resolved — the caller must fail closed rather than fall back to a wider
+ * audience. An empty cohort (no students on the route) returns `[]`.
+ */
+export async function resolveRouteGuardianRecipients(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  allocations: Array<Record<string, unknown>>,
+): Promise<string[] | null> {
+  const studentRefs = [
+    ...new Set(
+      allocations
+        .map((a) => String(a.sisStudentId ?? "").trim())
+        .filter((s) => s.length > 0),
+    ),
+  ];
+  if (studentRefs.length === 0) return [];
+
+  const rows = await db.queryObject<{ guardian_user_id: string }>(
+    `SELECT DISTINCT sg.guardian_user_id
+       FROM students s
+       LEFT JOIN student_profiles sp
+         ON sp.student_id = s.id
+        AND sp.organization_id = s.organization_id
+        AND sp.school_id = s.school_id
+       JOIN student_guardians sg
+         ON sg.student_id = s.id
+        AND sg.organization_id = s.organization_id
+      WHERE s.organization_id = $1
+        AND s.school_id = $2
+        AND sg.status = 'active'
+        AND (
+          s.id::text = ANY($3::text[])
+          OR s.student_code = ANY($3::text[])
+          OR sp.admission_number = ANY($3::text[])
+        )`,
+    [organizationId, schoolId, studentRefs],
+  );
+
+  const guardians = rows
+    .map((r) => r.guardian_user_id)
+    .filter((id) => (id ?? "").trim().length > 0);
+
+  // Students on the route but not one resolvable guardian → fail closed.
+  return guardians.length > 0 ? guardians : null;
+}
+
+/**
+ * POST /transport/notify-delay — notify the parents of students on ONE route
+ * that the route is delayed. Reuses the Communication broadcast pipeline
+ * ({@link sendBroadcastMessage}), which queues push deliveries out of the
+ * request cycle.
+ *
+ * BUS-002 — this handler previously computed the affected cohort, returned and
+ * audited its size, and then dispatched with audience "parents": EVERY parent in
+ * the school. Parents of walkers and car-drop children received bus alerts, and
+ * both the API response and the audit trail misreported the reach. Alert fatigue
+ * from this path degrades the whole notification channel (parents who mute the
+ * app also mute fee reminders and exam notices).
+ *
+ * The cohort is now resolved to actual guardian user ids and passed explicitly
+ * under the dedicated `route_parents` audience, so the send cannot widen. Three
+ * fail-closed branches replace the silent school-wide fallback:
+ *   - no students allocated to the route  → notify nobody, recipientCount 0
+ *   - students present but no guardian resolvable → 422, nothing sent
+ *   - explicit-cohort audience with no cohort → rejected by the broadcast service
+ *
+ * `recipientCount` in the response AND in the audit event is now the number of
+ * recipients actually enqueued — not the student count it used to report.
+ * BUS-107 replaces this with shared route-cohort targeting infrastructure.
  */
 export async function handleNotifyRouteDelay(
   req: Request,
@@ -405,26 +486,84 @@ export async function handleNotifyRouteDelay(
     const allocations = await writeStore.findAll(db, organizationId, schoolId, "allocation");
     const affected = allocations.filter((a) => String(a.routeId ?? "") === routeId);
 
+    // Nobody rides this route — notifying the school would be pure noise.
+    if (affected.length === 0) {
+      await emitMutationAudit(
+        db,
+        claims,
+        moduleEntityAudit("transport.delay.notified", "transport_route", routeId, {
+          routeId,
+          recipientCount: 0,
+          studentCount: 0,
+          skipped: "no_students_allocated",
+        }),
+        request,
+      );
+      return {
+        payload: {
+          routeId,
+          routeName,
+          recipientCount: 0,
+          studentCount: 0,
+          notified: false,
+          reason: "no_students_allocated",
+        },
+        status: 200,
+      };
+    }
+
+    const recipients = await resolveRouteGuardianRecipients(
+      db,
+      organizationId,
+      schoolId,
+      affected,
+    );
+    if (recipients === null) {
+      throw new WriteValidationError(
+        `No contactable guardian found for the ${affected.length} student(s) on route ${routeName}. ` +
+          `Link guardians before sending a transport alert.`,
+        422,
+        "NO_ROUTE_RECIPIENTS",
+      );
+    }
+
     const title = `Transport delay — ${routeName}`;
-    await sendBroadcastMessage(
+    const sent = await sendBroadcastMessage(
       db,
       claims,
-      { audience: "parents", title, body: message },
+      {
+        audience: TRANSPORT_ROUTE_AUDIENCE,
+        title,
+        body: message,
+        recipientUserIds: recipients,
+      },
       request,
     );
+    // Report what was ENQUEUED, not what we hoped to reach: the broadcast
+    // service caps very large cohorts, and the audit must not overstate reach.
+    const enqueued = Number(sent.recipientCount ?? recipients.length);
 
     await emitMutationAudit(
       db,
       claims,
       moduleEntityAudit("transport.delay.notified", "transport_route", routeId, {
         routeId,
-        recipientCount: affected.length,
+        recipientCount: enqueued,
+        studentCount: affected.length,
+        broadcastId: sent.broadcastId ?? "",
       }),
       request,
     );
 
     return {
-      payload: { routeId, routeName, recipientCount: affected.length },
+      payload: {
+        routeId,
+        routeName,
+        recipientCount: enqueued,
+        studentCount: affected.length,
+        notified: true,
+        broadcastId: sent.broadcastId ?? "",
+      },
       status: 200,
     };
   });

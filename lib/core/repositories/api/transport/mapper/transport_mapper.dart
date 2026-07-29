@@ -273,7 +273,12 @@ class TransportMapper {
         if (item is Map<String, dynamic>)
           TransportKpi(
             id: item['id'] as String? ?? '',
-            value: item['value'] as String? ?? '',
+            // BUS-004: a null value means "no data source yet". It renders as
+            // an em dash + "not configured", never as 0 — a zero on a KPI reads
+            // as a measurement ("no buses ran today"), which for an
+            // unconfigured school is a false statement.
+            value: item['value'] as String? ?? '—',
+            notConfigured: item['notConfigured'] as bool? ?? false,
             label: item['label'] as String? ?? '',
             icon: TransportEnumCodec.iconForKpi(
               item['icon'] as String?,
@@ -319,6 +324,14 @@ class TransportMapper {
     ];
   }
 
+  /// BUS-006 — the canonical stop-time keys are `pickupTime` / `dropTime`,
+  /// matching what `handleAddStop` / `handleUpdateStop` have always written.
+  ///
+  /// This previously read `scheduledTime`, a key the write path never produced,
+  /// so every stop created through the product rendered with a blank pickup
+  /// time no matter what the admin typed. `scheduledTime` is still accepted as
+  /// a READ-ONLY legacy fallback for rows seeded before the fix; nothing writes
+  /// it, and BUS-030 migrates those rows onto the canonical shape.
   List<TransportStop> _mapStops(List<dynamic> items) {
     return [
       for (final item in items)
@@ -327,7 +340,10 @@ class TransportMapper {
             id: item['id'] as String? ?? '',
             name: item['name'] as String? ?? '',
             sequence: item['sequence'] as int? ?? 0,
-            scheduledTime: item['scheduledTime'] as String? ?? '',
+            pickupTime: item['pickupTime'] as String? ??
+                item['scheduledTime'] as String? ??
+                '',
+            dropTime: item['dropTime'] as String? ?? '',
             status: TransportEnumCodec.parseStopStatus(
               item['status'] as String?,
             ),

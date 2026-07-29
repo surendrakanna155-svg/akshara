@@ -110,15 +110,36 @@ def sample_params(t: NumTemplate, seed: str) -> Tuple[float, ...]:
     return tuple(_seed_int(f"{seed}|{t.template_id}|{i}", lo, hi) for i, (lo, hi) in enumerate(t.param_ranges))
 
 
-def numeric_distractors(answer: float, t: NumTemplate) -> List[float]:
-    """Governed, evidence-grounded wrong values: standard learner errors (double, half, sign flip / off-by-a
-    factor). All are transforms of the correct value — never random. Kept distinct and != answer."""
-    cands = [answer * 2, answer / 2, answer + max(1, round(abs(answer) * 0.1, t.round_to)),
-             answer * 10 if abs(answer) < 100 else answer / 10]
+def numeric_distractors(answer: float, t: NumTemplate, params: Tuple[float, ...] = ()) -> List[float]:
+    """Wrong values grounded in NAMEABLE student errors, computed from the item's OWN operands where possible,
+    and kept in a plausible magnitude band so a distractor is never an absurd off-scale number.
+
+    Misconception candidates (2-operand items), ORDERED strongest-first: the WRONG OPERATION between the two
+    quantities — multiplying/dividing the wrong way (a*b, a/b, b/a: "multiplied instead of divided", "forgot to
+    square" e.g. I*R for I²R) ranks ahead of the weaker wrong-OPERAND errors (a+b, |a-b|), then the coefficient
+    errors (dropped ½ / extra factor -> answer*2, answer/2, answer*1.5). Each is a mistake a marker can name.
+    A wide [0.05x, 20x] band rejects only absurd off-scale values while KEEPING legitimate order-of-magnitude
+    errors (a "forgot to square" distractor can sit at answer/I); a min separation of 5% kills answer±1
+    near-clones (when an operand is 1); a coefficient-error fallback guarantees 3 distinct distractors."""
+    p = [float(x) for x in params]
+    cands: List[float] = []
+    if len(p) >= 2:
+        a, b = p[0], p[1]
+        cands += [a * b] + ([a / b, b / a] if a and b else []) + [a + b, abs(a - b)]  # operation errors first
+    cands += [answer * 2, answer / 2, answer * 1.5]         # coefficient / dropped-factor errors
+    ans_r = round(answer, t.round_to)
+    lo, hi = 0.05 * abs(answer), 20 * abs(answer)           # wide band — keep a real "forgot to square" error
+    sep = max(10 ** (-t.round_to), 0.05 * abs(answer))      # min separation — no answer±1 near-clones
     out: List[float] = []
     for c in cands:
         c = round(c, t.round_to)
-        if abs(c - round(answer, t.round_to)) > 10 ** (-t.round_to) and c not in out:
+        if c > 0 and lo <= abs(c) <= hi and abs(c - ans_r) >= sep and c not in out:
+            out.append(c)
+    for c in (answer * 2, answer / 2, answer * 1.5, answer * 0.75, answer * 3):   # fallback: always reach 3
+        if len(out) >= 3:
+            break
+        c = round(c, t.round_to)
+        if c > 0 and abs(c - ans_r) >= sep and c not in out:
             out.append(c)
     return out[:3]
 
@@ -135,7 +156,7 @@ def generate(templates=TEMPLATES, per_template: int = 4, seed: str = "N1") -> Li
             if answer is None:
                 continue
             answer = round(answer, t.round_to)
-            distr = numeric_distractors(answer, t)
+            distr = numeric_distractors(answer, t, params)
             if len(distr) < 3:
                 continue
             opts_vals = sorted([answer] + distr,

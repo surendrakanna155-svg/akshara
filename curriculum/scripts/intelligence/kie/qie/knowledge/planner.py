@@ -30,6 +30,7 @@ import sqlite3
 from typing import Dict, List, Optional, Tuple
 
 from kie.qie.archetypes import ARCHETYPES
+from kie.qie.knowledge import prereq_bridge as _PB
 
 # archetype x reasoning-depth compatibility. The trial's generator refused specs like
 # "direct_recall at depth 3", correctly: "direct recall is by definition a single lookup of a stored
@@ -111,14 +112,25 @@ class PlanRefused(Exception):
 
 
 def certified_universe(iconn: sqlite3.Connection, subject: str,
-                       classes: Optional[List[int]] = None) -> List[dict]:
-    """The ONLY legal planning input: independently-audited, certified knowledge records."""
-    q = ("SELECT c.concept_id, c.canonical_name, c.subject, c.taught_at_class, c.sub_concepts, "
-         "c.prerequisites, c.boundary, c.evidence_chunks, c.section_heading, "
+                       classes: Optional[List[int]] = None,
+                       discipline: Optional[str] = None) -> List[dict]:
+    """The ONLY legal planning input: independently-audited, certified knowledge records.
+
+    `subject` is the CURRICULUM SOURCE subject — the book NCERT actually prints. For classes 11-12 that
+    is already Physics/Chemistry/Biology/Mathematics; for classes 6-10 it is honestly 'Science', because
+    the integrated book is what exists. `discipline` (optional) filters the separately-audited
+    `academic_discipline` column and is purely ADDITIVE — it can only narrow a result set, never widen
+    one. Callers wanting a discipline across the whole 6-12 range use `certified_universe_by_discipline`.
+    """
+    q = ("SELECT c.concept_id, c.canonical_name, c.subject, c.academic_discipline, c.taught_at_class, "
+         "c.sub_concepts, c.prerequisites, c.boundary, c.evidence_chunks, c.section_heading, "
          "ch.chapter_id, ch.chapter_no, ch.title AS chapter_title "
          "FROM ki_concept c JOIN ki_chapter ch ON ch.chapter_id = c.chapter_id "
          "WHERE c.subject=? AND c.status='certified' AND ch.status='accepted'")
     args: List = [subject]
+    if discipline:
+        q += " AND c.academic_discipline=?"
+        args.append(discipline)
     if classes:
         q += " AND c.taught_at_class IN (%s)" % ",".join("?" * len(classes))
         args += classes
@@ -133,6 +145,65 @@ def certified_universe(iconn: sqlite3.Connection, subject: str,
         d["boundary"] = json.loads(d["boundary"] or "{}")
         out.append(d)
     return out
+
+
+def certified_universe_by_discipline(iconn: sqlite3.Connection, discipline: str,
+                                     classes: Optional[List[int]] = None) -> List[dict]:
+    """The DISCIPLINE-first planning reader — the only way to reach classes 6-10 Physics/Chemistry/Biology.
+
+    WHY THIS EXISTS (architecture verification 2026-07-29, defect W4). `certified_universe` selects on the
+    CURRICULUM SOURCE subject, which is correct and must stay that way: `subject` records the book that
+    was actually printed, and for classes 6-10 that book is the integrated 'Science' text. The consequence
+    was that `certified_universe('Physics', [6..10])` returned 0 rows while 208 certified Physics concepts
+    sat in the index under subject='Science' — 524 certified Phys/Chem/Bio concepts across classes 6-10
+    were unreachable to every planner call.
+
+    `academic_discipline` is the separately-engineered, independently-audited discipline dimension
+    (`engineer.py`); it is populated on 100% of the 2,009 certified concepts and, on the single-subject
+    11-12 books, it agrees with `subject` by construction. Selecting on it therefore spans 6-12 in one
+    read WITHOUT inferring discipline from a filename or a document label — the thing spine.py forbids.
+
+    This does not widen the certified universe by a single row: it is the same
+    `status='certified' AND ch.status='accepted'` predicate, keyed on an audited column instead of the
+    source-book column. Every spec built from it still faces the full `check_plan` battery.
+    """
+    q = ("SELECT c.concept_id, c.canonical_name, c.subject, c.academic_discipline, c.taught_at_class, "
+         "c.sub_concepts, c.prerequisites, c.boundary, c.evidence_chunks, c.section_heading, "
+         "ch.chapter_id, ch.chapter_no, ch.title AS chapter_title "
+         "FROM ki_concept c JOIN ki_chapter ch ON ch.chapter_id = c.chapter_id "
+         "WHERE c.academic_discipline=? AND c.status='certified' AND ch.status='accepted'")
+    args: List = [discipline]
+    if classes:
+        q += " AND c.taught_at_class IN (%s)" % ",".join("?" * len(classes))
+        args += classes
+    out = []
+    for r in iconn.execute(q + " ORDER BY c.taught_at_class, ch.chapter_no, c.canonical_name, c.concept_id",
+                           args):
+        d = dict(r)
+        d["sub_concepts"] = json.loads(d["sub_concepts"] or "[]")
+        d["prerequisites"] = json.loads(d["prerequisites"] or "[]")
+        d["boundary"] = json.loads(d["boundary"] or "{}")
+        out.append(d)
+    return _attach_prereqs(out)
+
+
+def _attach_prereqs(universe: List[dict]) -> List[dict]:
+    """Attach RESOLVED prerequisite ids and structural depth from the prerequisite graph.
+
+    The certified index stores `prerequisites` as free-text NAMES ("Electric Potential and Potential
+    Difference"). `graph_edges.db prereq_edge` is the audited resolution of those names to certified
+    concept ids — 1,183 of 1,805 resolved, with ambiguous and unresolved edges honestly excluded. This
+    attaches the resolved form so downstream code can reason over ids instead of strings.
+
+    Additive and reversible: when `graph_edges.db` is absent the bridge returns an empty graph, every
+    record gets `prereq_ids=[]` / `prereq_depth=0`, and every consumer behaves exactly as before.
+    """
+    ids = {c["concept_id"] for c in universe}
+    graph = _PB.load(certified_ids=ids)
+    for c in universe:
+        c["prereq_ids"] = sorted(graph.prerequisites(c["concept_id"]))
+        c["prereq_depth"] = graph.depth(c["concept_id"])
+    return universe
 
 
 def check_plan(spec: dict, universe_by_id: Dict[str, dict]) -> List[str]:
@@ -161,6 +232,16 @@ def check_plan(spec: dict, universe_by_id: Dict[str, dict]) -> List[str]:
     # 3. subject mismatch — 49.7% of the trial's refusals. Now free.
     if spec.get("subject") != kc["subject"]:
         v.append(f"subject_mismatch: spec says {spec.get('subject')!r}, certified index says {kc['subject']!r}")
+
+    # 3a. discipline mismatch (W4). ADDITIVE and fail-closed: a spec MAY declare the academic discipline
+    #     it intends (needed for classes 6-10, where the source subject is the integrated 'Science' book and
+    #     'Physics' vs 'Biology' is carried only on the audited discipline column). When it declares one it
+    #     MUST match the certified value, so a Class-8 Physics spec can never be filled from a Class-8
+    #     Biology concept. A spec that declares nothing is unchanged — this can only ADD a refusal.
+    disc = spec.get("discipline")
+    if disc and disc != kc.get("academic_discipline"):
+        v.append(f"discipline_mismatch: spec says {disc!r}, certified index says "
+                 f"{kc.get('academic_discipline')!r}")
 
     # 3b. name must match the certified canonical name — a resolving id carrying a MISLABELLED (non-junk)
     #     name is a defect a subject/junk check alone cannot see.
@@ -212,6 +293,49 @@ def check_plan(spec: dict, universe_by_id: Dict[str, dict]) -> List[str]:
             if p["taught_at_class"] > kc["taught_at_class"]:
                 v.append(f"unsupported_composition: partner {p['canonical_name']!r} is taught at class "
                          f"{p['taught_at_class']} > {kc['taught_at_class']}")
+
+    # 6b. PREREQUISITE BACKING for a multi-concept composition (prerequisite-graph integration).
+    #
+    # Before this check, the only test of a composition was "same subject, not above class" — which admits
+    # ANY two concepts that happen to share a subject. Sharing a subject is not evidence that two concepts
+    # belong in one question; one resting on the other IS. The certified curriculum already records that
+    # relation, and `graph_edges.db prereq_edge` resolves it to concept ids.
+    #
+    # A composition is prerequisite-backed when either concept transitively rests on the other, OR they
+    # share a common prerequisite (siblings taught off the same foundation — a legitimate pairing that a
+    # strict ancestor test would wrongly reject).
+    #
+    # FAIL-OPEN BY DESIGN, and the exact form of that fail-open was corrected by measurement. The rule
+    # refuses ONLY when the graph records prerequisites for BOTH concepts and still finds no relation
+    # between them. That is a defensible refusal: the curriculum was asked about both and connected
+    # neither.
+    #
+    # An earlier version asked whether EITHER concept was known, and it was wrong. The graph covers 45.3%
+    # of certified concepts, so "either" fires whenever one concept happens to be catalogued and the other
+    # does not — which flagged two legitimate chains during the proof-of-impact study
+    # (`Volume of a Cuboid + Density`, `Work Done by a Constant Force + Work-Energy Theorem`), in both
+    # cases because ONE side had zero recorded prerequisites. Refusing a good question on the strength of
+    # a gap in the graph is the W7 failure mode repeated. Measured effect of the correction on a fixed
+    # 400-concept sample: same-subject refusals fall from 12,675 to 4,484.
+    if comp == "multi" and partners and kc:
+        graph = _PB.load(certified_ids=set(universe_by_id))
+        if graph.loaded:
+            for pid in partners:
+                p = universe_by_id.get(pid)
+                if not p:
+                    continue
+                a, b = kc["concept_id"], pid
+                known_both = bool(graph.prerequisites(a)) and bool(graph.prerequisites(b))
+                if not known_both:
+                    continue                      # the graph cannot speak about both — do not invent a refusal
+                if graph.related(a, b):
+                    continue
+                if graph.transitive_prerequisites(a) & graph.transitive_prerequisites(b):
+                    continue                      # siblings on a shared foundation
+                v.append(
+                    f"composition_not_prerequisite_backed: {kc['canonical_name']!r} and "
+                    f"{p['canonical_name']!r} share a subject but neither rests on the other and they "
+                    f"share no prerequisite — the certified curriculum records no relation between them")
 
     return v
 

@@ -42,8 +42,15 @@ class TransportKpiRow extends StatelessWidget {
               icon: kpi.icon,
               accent: _accent(kpi.accentName),
               style: AksharaKpiCardStyle.filled,
-              detail: kpi.detail,
-              semanticLabel: '${kpi.label}: ${kpi.value}',
+              // BUS-004: an unmeasured KPI states WHY it is blank instead of
+              // showing a bare dash the reader must interpret.
+              detail: kpi.notConfigured
+                  ? (kpi.detail ?? 'Not configured yet')
+                  : kpi.detail,
+              // Screen readers must hear "not measured", not "dash".
+              semanticLabel: kpi.notConfigured
+                  ? '${kpi.label}: not measured yet'
+                  : '${kpi.label}: ${kpi.value}',
             ),
           ),
       ],

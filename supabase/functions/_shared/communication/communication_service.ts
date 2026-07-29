@@ -276,6 +276,17 @@ export async function sendDirectMessage(
   return threadToApi(thread, messages, scope);
 }
 
+/**
+ * BUS-002 — audiences whose recipient set is resolved by the CALLING module,
+ * not by {@link resolveBroadcastRecipients}. Transport owns route→student→
+ * guardian resolution (allocations live in the transport store), so it supplies
+ * the cohort explicitly rather than communication reaching across the module
+ * boundary. These tokens MUST be accompanied by `recipientUserIds`; sending one
+ * without an explicit cohort is a caller bug and fails closed (422) instead of
+ * silently degrading to a school-wide blast — the exact defect BUS-002 fixes.
+ */
+export const EXPLICIT_COHORT_AUDIENCES = new Set(["route_parents"]);
+
 export async function sendBroadcastMessage(
   db: TenantQueryClient,
   claims: AccessTokenClaims,
@@ -286,6 +297,13 @@ export async function sendBroadcastMessage(
     audienceClass?: string | null;
     audienceSection?: string | null;
     requiresAck?: boolean;
+    /**
+     * BUS-002 — explicit recipient cohort. When present these user ids ARE the
+     * audience: `resolveBroadcastRecipients` is skipped entirely, so the send
+     * can never widen beyond what the caller resolved. Required for every
+     * {@link EXPLICIT_COHORT_AUDIENCES} token.
+     */
+    recipientUserIds?: string[];
   },
   req?: Request,
 ): Promise<Record<string, unknown>> {
@@ -303,6 +321,15 @@ export async function sendBroadcastMessage(
       "audience_class is required for a class broadcast",
     );
   }
+  // BUS-002: fail closed. An explicit-cohort audience with no cohort must NOT
+  // fall through to resolveBroadcastRecipients (which would return the default
+  // school-wide set for an unknown token).
+  const explicitCohort = input.recipientUserIds;
+  if (EXPLICIT_COHORT_AUDIENCES.has(audience) && explicitCohort === undefined) {
+    throw new CommunicationValidationError(
+      `audience '${audience}' requires an explicit recipient cohort`,
+    );
+  }
   const requiresAck = input.requiresAck === true;
   const broadcast = await createBroadcast(db, {
     organizationId: claims.tenant_id,
@@ -316,13 +343,17 @@ export async function sendBroadcastMessage(
     createdBy: claims.sub,
   });
 
-  const resolved = await resolveBroadcastRecipients(
-    db,
-    claims.tenant_id,
-    schoolId,
-    audience,
-    { className: audienceClass, sectionName: audienceSection },
-  );
+  // BUS-002: an explicit cohort IS the audience — never widened by resolution.
+  // De-duplicated because one guardian may have several children on the route.
+  const resolved = explicitCohort !== undefined
+    ? [...new Set(explicitCohort.filter((id) => id.trim().length > 0))]
+    : await resolveBroadcastRecipients(
+      db,
+      claims.tenant_id,
+      schoolId,
+      audience,
+      { className: audienceClass, sectionName: audienceSection },
+    );
   // PERF-1: bound the cohort, then write recipients + push deliveries in two
   // multi-row INSERTs instead of 2 round-trips per recipient. The actual
   // per-recipient send is NOT done here — deliveries are queued ('pending') and

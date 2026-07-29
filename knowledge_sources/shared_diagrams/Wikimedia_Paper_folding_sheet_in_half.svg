@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20010904//EN"
+  "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd"
+><!--
+
+    Author: Yves Baelde
+
+--><svg width="600" height="750"
+xmlns="http://www.w3.org/2000/svg" viewBox="-400 -525 800 1000"
+preserveAspectRatio="xMinYMin meet" xml:space="preserve"><path
+ d="M-400-525V475H400V-525" fill="#fff"/><g fill="none" stroke="#000"
+ stroke-width="9"><path fill="#c0c0c0" d="m275-250-400-100-150 600 400 100z"
+ stroke-width="2"/><path stroke-width="4" stroke-dasharray="48,27,12,27"
+ d="M122-488-115 460M-388-97 360 90"/><path opacity=".6" stroke="#040"
+ d="m55-50 200 50 75-300-200-50z"/><path opacity=".6" stroke="#900"
+ d="m150 420 75-300-400-100-75 300z"/><path opacity=".5" stroke="#02b"
+ d="m50-370-200-50-150 600 200 50z"/></g><text font-family="serif"
+ font-style="italic" font-size="75" x="-366" y="-117">Δ<tspan
+ x="141" y="-435">d</tspan></text></svg>

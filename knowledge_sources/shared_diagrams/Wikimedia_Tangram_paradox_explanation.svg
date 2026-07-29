@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100%" height="100%" viewBox="-170 -192 480 360">
+ <title>tangram paradox explanation</title>
+ <desc>Explanation of a two-monks tangram paradox by CMG Lee. In figure 1, side lengths are labelled assuming the square has unit sides. In figure 2, overlaying the bodies shows that the footless body is larger by the foot's area. The change in area is often unnoticed as &#8730;2 is close to 1.5.</desc>
+ <style type="text/css">
+.main    { font-size:24px; font-family:Helvetica,Arial,sans-serif; text-anchor:middle;
+           fill:#000000; stroke:#000000; stroke-linejoin:round; }
+text     { stroke:none; cursor:default; }
+.side_07 { stroke-width:1; }
+.side_10 { stroke-width:1; stroke-dasharray:4,4; }
+.side_14 { stroke-width:3; }
+.side_20 { stroke-width:3; stroke-dasharray:4,4; }
+ </style>
+ <defs>
+  <pattern id="pattern" patternUnits="userSpaceOnUse" width="4" height="4">
+   <circle cx="2" cy="2" r="1" fill="#ff6666"/>
+  </pattern>
+  <g id="tri_l">
+   <path class="side_14" d="M 0,0 H 140 V 140"/>
+   <path class="side_20" d="M 0,0 L 140,140"/>
+  </g>
+  <g id="tri_m">
+   <path class="side_10" d="M 0,0 H 99 V 99"/>
+   <path class="side_14" d="M 0,0 L 99,99"/>
+  </g>
+  <g id="tri_s">
+   <path class="side_07" d="M 0,0 H 70 V 70"/>
+   <path class="side_10" d="M 0,0 L 70,70"/>
+  </g>
+  <g id="squar">
+   <path class="side_07" d="M 0,0 H 70 V 70 H 0 Z"/>
+  </g>
+  <g id="paral">
+   <path class="fill"    d="M 0,0 H 70 L 140,70 H 70" stroke="none"/>
+   <path class="side_07" d="M 0,0 H 70 M 70,70 H 140"/>
+   <path class="side_10" d="M 0,0 L 70,70 M 70,0 L 140,70"/>
+  </g>
+ </defs>
+ <circle cx="0" cy="0" r="99999" fill="#ffffff"/>
+ <g class="main">
+  <g transform="rotate(315)" fill="#cccccc">
+   <use xlink:href="#tri_l" transform="translate( 155, -10) rotate(180)"/>
+   <use xlink:href="#tri_l" transform="translate( -15,-150) rotate( 90)"/>
+   <use xlink:href="#paral" transform="translate(-150,   0) rotate(  0)"/>
+   <use xlink:href="#tri_s" transform="translate( -72,   0) rotate(  0)"/>
+   <use xlink:href="#squar" transform="translate(   4,   0) rotate(  0)"/>
+   <use xlink:href="#tri_s" transform="translate(  80,  70) rotate(270)"/>
+   <use xlink:href="#tri_m" transform="translate(  70,  80) rotate(135)"/>
+  </g>
+  <text transform="translate(-145,   0)" y="0.7ex">2&#8730;2</text>
+  <text transform="translate(   0,-135)" y="0.7ex">2&#8730;2</text>
+  <text transform="translate(  -5,  38)" y="0.7ex">&#8730;2</text>
+  <text transform="translate( -60, 125)" y="0.7ex">&#8730;2</text>
+  <text transform="translate(  60, 125)" y="0.7ex">&#8730;2</text>
+  <text transform="translate( 123,  60)" y="0.7ex">&#8730;2</text>
+  <text transform="translate( 123, -60)" y="0.7ex">&#8730;2</text>
+  <text transform="translate( -60, -60)" y="0.7ex">2</text>
+  <text transform="translate(  85, -70)" y="0.7ex">1</text>
+  <text transform="translate(  50,   0)" y="0.7ex">1</text>
+  <text transform="translate( -65,  80)" y="0.7ex">1</text>
+  <text transform="translate(   0,  80)" y="0.7ex">1</text>
+  <text transform="translate(  70,  65)" y="0.7ex">2</text>
+  <text transform="translate(-145,-165)" y="0.7ex" font-size="40">1.</text>
+  <text transform="translate( 155,-165)" y="0.7ex" font-size="40">2.</text>
+  <g transform="translate(300,-190)" stroke-opacity="0.75">
+   <g fill="#0000ff" stroke="#0000ff">
+    <g fill="#66ccff">
+     <use xlink:href="#tri_l" transform="translate(   0, 198) rotate(225)"/>
+     <use xlink:href="#tri_l" transform="translate( -99,  99) rotate( 45)"/>
+     <use xlink:href="#tri_m" transform="translate(   0, 198) rotate( 90)"/>
+     <use xlink:href="#tri_s" transform="translate( -99, 198) rotate(225)"/>
+    </g>
+    <text transform="translate( -65, 40)" y="0.7ex">2</text>
+    <text transform="translate(-135,110)" y="0.7ex">1</text>
+    <text transform="translate(  40,100)" y="0.7ex">2&#8730;2</text>
+    <text transform="translate(  35,120)" y="0.7ex">&#8776;2.8</text>
+    <text transform="translate(  40,250)" y="0.7ex">&#8730;2</text>
+    <text transform="translate(  35,270)" y="0.7ex">&#8776;1.4</text>
+   </g>
+   <g fill="#ff0000" stroke="#ff0000">
+    <g fill="url(#pattern)">
+     <use xlink:href="#tri_l" transform="translate(   0,   0) rotate( 90)"/>
+     <use xlink:href="#tri_l" transform="translate(-140, 140) rotate(  0)"/>
+     <use xlink:href="#tri_m" transform="translate(   0, 282) rotate(180)"/>
+     <use xlink:href="#tri_s" transform="translate( -50, 282) rotate( 90)"/>
+    </g>
+    <text transform="translate(-110, 60)" y="0.7ex">2&#8730;2</text>
+    <text transform="translate(-115, 80)" y="0.7ex">&#8776;2.8</text>
+    <text transform="translate(  20, 70)" y="0.7ex">2</text>
+    <text transform="translate(  20,210)" y="0.7ex">2</text>
+   </g>
+  </g>
+ </g>
+</svg>

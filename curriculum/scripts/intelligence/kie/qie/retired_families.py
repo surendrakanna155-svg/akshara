@@ -45,17 +45,50 @@ def is_retired_question_type(qtype) -> bool:
     return qtype in RETIRED_QUESTION_TYPES
 
 
+def has_computed_key(item: dict) -> bool:
+    """Does this item carry POSITIVE EVIDENCE that its key was computed rather than hard-coded?
+
+    This is the condition R3-8 itself named for lifting the assertion-reason retirement:
+
+        "the family stays quarantined until the frozen engine is re-versioned with a computed key …
+         it is not a claim that assertion-reason is an inherently invalid form"
+
+    The evidence required is deliberately specific, so the exemption cannot be claimed by relabelling.
+    An item qualifies only if it carries BOTH:
+
+      * a `truth_table` recording the three facts the option set turns on — truth(A), truth(R) and
+        whether R explains A; and
+      * a `key_derivation` note stating the key was derived from them.
+
+    `kie.qie.certgen.assertion_reason` produces both, and re-derives the truth table with sympy on every
+    build; the frozen `kie/qpgen/templates.py::_ar_family.build` produces neither and never can, because
+    it returns `_AR_OPTS[0]` without inspecting the statements at all. So the frozen family stays
+    unreachable, which is the whole point of the retirement.
+    """
+    prov = item.get("provenance") or {}
+    tt = prov.get("truth_table")
+    return bool(prov.get("key_derivation")) and isinstance(tt, dict) and {
+        "assertion_true", "reason_true", "reason_explains"} <= set(tt)
+
+
 def is_retired_item(item: dict) -> bool:
     """True when a candidate item belongs to a retired (known-defective) family/archetype and must be
     dropped from a sanctioned caller's REACHABLE pool before selection.
 
     Checks every place a retirement marker can surface on a normalized qie item: the frame/template
     id and the archetype label (top-level or under provenance). Belt-and-suspenders so a future qie
-    composition/generator that ever emitted a retired form could not enter the reachable set."""
+    composition/generator that ever emitted a retired form could not enter the reachable set.
+
+    The ONE exemption is the one R3-8 wrote into its own terms (see `has_computed_key`): an item whose
+    key demonstrably follows from a computed truth table is not the defect this list exists to contain.
+    A retired FAMILY id is never exempt — the frozen builders stay banned no matter what an item claims.
+    """
     frame = item.get("frame_id") or ""
     prov = item.get("provenance") or {}
     template = prov.get("template") or ""
     archetype = item.get("archetype") or prov.get("archetype") or ""
-    return (frame in RETIRED_QPGEN_FAMILIES
-            or template in RETIRED_QPGEN_FAMILIES
-            or archetype in RETIRED_ARCHETYPES)
+    if frame in RETIRED_QPGEN_FAMILIES or template in RETIRED_QPGEN_FAMILIES:
+        return True                       # a frozen defective builder — no exemption, ever
+    if archetype in RETIRED_ARCHETYPES:
+        return not has_computed_key(item)
+    return False

@@ -5,7 +5,7 @@
 > material is archived. For the full active-document list see [`docs/README.md`](docs/README.md).
 > **Never read `docs/archive/` for current decisions** — it is history only.
 >
-> _Last updated: 2026-07-03 (Documentation Cleanup finalized). Branch: `feature/data-reliability-platform`._
+> _Last updated: 2026-07-20 (Repository Hygiene & IA review — entry-point roadmap pointers reconciled). Branch: `feature/qie-question-planning-layer`._
 
 Akshara is a mobile-first, multi-tenant **School ERP** — a Flutter app (iOS/Android) on a
 Supabase/Postgres backend, self-hosted on a VPS for the pilot. The single engineering authority is
@@ -20,9 +20,9 @@ the **Engineering Constitution**, enforced automatically by the **EOS gate**.
 | 1 | [`CLAUDE.md`](CLAUDE.md) | Project instructions + the mandatory EOS engineering gate (overrides defaults). |
 | 2 | [`docs/engineering/AKSHARA_ENGINEERING_CONSTITUTION.md`](docs/engineering/AKSHARA_ENGINEERING_CONSTITUTION.md) | The engineering law. Frozen — never rewrite/move. |
 | 3 | [`docs/ProjectStatus.md`](docs/ProjectStatus.md) | Current state of the project. |
-| 4 | [`docs/FINAL_QA_ROADMAP.md`](docs/FINAL_QA_ROADMAP.md) + [`docs/FINAL_QA_MASTER_TRACKER.md`](docs/FINAL_QA_MASTER_TRACKER.md) | The current roadmap and QA program. |
+| 4 | [`docs/roadmap/AKSHARA_CONSTITUTION_ALIGNED_MASTER_ROADMAP.md`](docs/roadmap/AKSHARA_CONSTITUTION_ALIGNED_MASTER_ROADMAP.md) | **The current forward roadmap (SSOT, 2026-07-20).** QA-wave history: [`docs/FINAL_QA_MASTER_TRACKER.md`](docs/FINAL_QA_MASTER_TRACKER.md). |
 | 5 | [`docs/PRODUCT_ENHANCEMENT_BACKLOG.md`](docs/PRODUCT_ENHANCEMENT_BACKLOG.md) + [`docs/PRODUCT_COMMERCIAL_BACKLOG.md`](docs/PRODUCT_COMMERCIAL_BACKLOG.md) | Scope (product/commercial) source of truth. |
-| 6 | [`docs/README.md`](docs/README.md) | The full active-document index (~204 docs, grouped). |
+| 6 | [`docs/README.md`](docs/README.md) | The full active-document index (grouped). |
 | 7 | The relevant module/architecture spec for your task | See §3.4 / §3.5. |
 
 ---
@@ -33,7 +33,8 @@ the **Engineering Constitution**, enforced automatically by the **EOS gate**.
 Akshara_ERP/
 ├── PROJECT_INDEX.md              ← you are here (repo-wide start-here)
 ├── CLAUDE.md · AGENTS.md · PROJECT_CONTEXT.md · IDEAS_BACKLOG.md   governance / AI context
-├── CLEANUP_REVIEW.md · CLEANUP_COMPLETION_REPORT.md                doc-cleanup audit trail
+├── CLEANUP_REVIEW.md · docs/DOCUMENTATION_CLEANUP_REPORT.md         doc-cleanup audit trail
+│   docs/engineering/REPOSITORY_HYGIENE_AND_IA_PLAN.md               repo hygiene & IA cleanup plan (2026-07-20)
 │
 ├── lib/                          Flutter app (Dart)
 │   ├── main.dart · firebase_options.dart
@@ -76,9 +77,12 @@ Akshara_ERP/
 
 ### 3.3 Status, roadmap & QA program
 - [`docs/ProjectStatus.md`](docs/ProjectStatus.md) — current status.
-- [`docs/FINAL_QA_ROADMAP.md`](docs/FINAL_QA_ROADMAP.md) — **the** current roadmap.
-- [`docs/FINAL_QA_MASTER_TRACKER.md`](docs/FINAL_QA_MASTER_TRACKER.md) · [`docs/FINAL_QA_AUDIT.md`](docs/FINAL_QA_AUDIT.md) — current QA tracker/audit.
-- Current platform work: [`docs/DATA_RELIABILITY_PLATFORM_DESIGN.md`](docs/DATA_RELIABILITY_PLATFORM_DESIGN.md), `…_PHASE0_PROGRESS.md`, `…_CERTIFICATION.md`.
+- **Forward roadmap (SSOT):** [`docs/roadmap/AKSHARA_CONSTITUTION_ALIGNED_MASTER_ROADMAP.md`](docs/roadmap/AKSHARA_CONSTITUTION_ALIGNED_MASTER_ROADMAP.md) (2026-07-20). Execution "now": [`docs/roadmap/NEXT_ACTIVE_WAVE.md`](docs/roadmap/NEXT_ACTIVE_WAVE.md); journal: [`docs/execution/IMPLEMENTATION_PROGRESS.md`](docs/execution/IMPLEMENTATION_PROGRESS.md).
+- **PRA register / execution authority:** [`docs/roadmap/FINAL_EXECUTION_MASTER_ROADMAP.md`](docs/roadmap/FINAL_EXECUTION_MASTER_ROADMAP.md) — superseded *as the forward plan* by the roadmap above; retained as the PRA/traceability authority.
+- **Owner product authority:** [`docs/owner/AKSHARA_MASTER_PRODUCT_CONSTITUTION_v2.0.md`](docs/owner/AKSHARA_MASTER_PRODUCT_CONSTITUTION_v2.0.md).
+- **QA program (frozen QW1–QW8 history):** [`docs/FINAL_QA_ROADMAP.md`](docs/FINAL_QA_ROADMAP.md) · [`docs/FINAL_QA_MASTER_TRACKER.md`](docs/FINAL_QA_MASTER_TRACKER.md) · [`docs/FINAL_QA_AUDIT.md`](docs/FINAL_QA_AUDIT.md).
+- **Question Intelligence (QIE) current lane:** [`docs/question-intelligence-quality/README.md`](docs/question-intelligence-quality/README.md).
+- Data-reliability platform (prior lane): [`docs/DATA_RELIABILITY_PLATFORM_DESIGN.md`](docs/DATA_RELIABILITY_PLATFORM_DESIGN.md), `…_PHASE0_PROGRESS.md`, `…_CERTIFICATION.md`.
 
 ### 3.4 Product scope (source of truth)
 - [`docs/PRODUCT_ENHANCEMENT_BACKLOG.md`](docs/PRODUCT_ENHANCEMENT_BACKLOG.md) — 🔒 FROZEN rev 5.
@@ -106,9 +110,11 @@ Live evidence referenced by the roadmap/tracker/EOS ledger — kept active, not 
 ---
 
 ## 4. Important roadmaps
-- **Current:** [`docs/FINAL_QA_ROADMAP.md`](docs/FINAL_QA_ROADMAP.md) (the only active roadmap).
+- **Current forward roadmap (SSOT):** [`docs/roadmap/AKSHARA_CONSTITUTION_ALIGNED_MASTER_ROADMAP.md`](docs/roadmap/AKSHARA_CONSTITUTION_ALIGNED_MASTER_ROADMAP.md) (2026-07-20) — supersedes `FINAL_EXECUTION_MASTER_ROADMAP.md` as the forward plan.
+- **PRA register / execution authority:** [`docs/roadmap/FINAL_EXECUTION_MASTER_ROADMAP.md`](docs/roadmap/FINAL_EXECUTION_MASTER_ROADMAP.md) — retained for PRA traceability (not the forward plan).
+- **QA-wave history:** [`docs/FINAL_QA_ROADMAP.md`](docs/FINAL_QA_ROADMAP.md) (frozen QW1–QW8).
 - Forward product tracks: [`docs/Vision/ImplementationRoadmap.md`](docs/Vision/ImplementationRoadmap.md) · [`docs/Vision/FutureVision.md`](docs/Vision/FutureVision.md).
-- Superseded roadmaps (history only): [`docs/archive/roadmap/`](docs/archive/roadmap/) (16 files).
+- Superseded roadmaps (history only): [`docs/archive/roadmap/`](docs/archive/roadmap/).
 
 ---
 

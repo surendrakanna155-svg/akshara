@@ -105,6 +105,26 @@ final transportApiEnabledProvider = Provider<bool>((ref) {
   return const bool.fromEnvironment('TRANSPORT_API_ENABLED',
       defaultValue: false);
 });
+
+/// BUS-003 — parent-facing transport capability.
+///
+/// Distinct from [transportApiEnabledProvider], which gates the ERP-side
+/// transport module. Transport reads require `viewTransport` + school scope
+/// (`transport_handlers.ts` / the `transport_entities` RLS policy); the parent
+/// role holds neither and parent tokens carry `scope: "parent"`, so a parent
+/// session calling the transport API gets a 403. Until BUS-095/BUS-096 ship a
+/// parent-scoped read path, the parent transport surface must issue NO request
+/// and render an honest "not enabled" state instead of a failure screen.
+///
+/// Deliberately independent of `ENABLE_API_MODE`: this is a product-capability
+/// gate, not a transport-layer gate. Turning API mode on must not silently
+/// expose parents to an endpoint that rejects them.
+final parentTransportEnabledProvider = Provider<bool>((ref) {
+  return const bool.fromEnvironment(
+    'PARENT_TRANSPORT_ENABLED',
+    defaultValue: false,
+  );
+});
 final hrApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
   return const bool.fromEnvironment('HR_API_ENABLED', defaultValue: false);

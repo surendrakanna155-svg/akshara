@@ -456,6 +456,20 @@ _UNIT_BASE = {
     #    dimensionless count per time). Frequency stays consistent: cycles/s reduces to 1/s == Hz.
     "beat": "1", "beats": "1", "count": "1", "counts": "1", "rev": "1", "revolution": "1", "revolutions": "1",
     "cycle": "1", "cycles": "1", "turn": "1", "turns": "1", "rpm_count": "1",
+    #  * CURRENCY (W10 repair, 2026-07-29): money carries no SI base dimension, so it reduces to "1" exactly
+    #    as a count or a ratio does. Before this, `normalize_unit("Rs")` returned "Rs", `parse_unit` could
+    #    not read it, and `check_relation` reported "unparseable LHS unit" -> QUARANTINE. The effect was that
+    #    COMMERCIAL MATHEMATICS — simple interest (Class 7) and compound interest (Class 8), both core
+    #    syllabus — could not be certified by any lane at all: 6 of 42 Lane C items were blocked solely here.
+    #
+    #    What this DOES check, and what it does not, stated plainly. It verifies that the two sides of a
+    #    money relation reduce to the same dimension, so `A = P*(1+R/100)**n` (money = money x dimensionless)
+    #    passes while `I = P * s` with s in metres now FAILS as money-vs-length, which it could not do before
+    #    (an unparseable unit was never compared to anything). What it cannot do is distinguish rupees from a
+    #    bare ratio, because neither has an SI dimension — the same limitation the already-ratified "%",
+    #    "ratio" and "count" mappings above carry. This is a strictly larger set of checks than the status
+    #    quo of refusing to check at all.
+    "rs": "1", "inr": "1", "rupee": "1", "rupees": "1", "₹": "1", "usd": "1", "paise": "1",
 }
 
 
@@ -509,7 +523,36 @@ _BND_STOP = {
 }
 
 
-def _boundary_checks(banned: List[str], concept_name: str = "") -> Tuple[List[tuple], List[tuple]]:
+def _claim_clause(term: str) -> str:
+    """The part of a boundary record that states WHAT is excluded, dropping the rationale saying WHY.
+
+    W7 REPAIR (2026-07-29). The certified index writes exclusions as `<claim> - <rationale>`:
+
+        "non-uniform (variable) acceleration - these equations are derived for uniformly accelerated
+         motion only, and the average-velocity form (v0 + v)/2 is flagged in the evidence as holding
+         for constant acceleration only"
+
+    Deriving adjacent-content bigrams from the WHOLE record yields eleven labels, most of them fragments
+    of the explanation — `flagged evidence`, `evidence holding`, `holding constant`, `confines itself` —
+    and, fatally, `constant acceleration`, which the SAME certified record lists IN scope as "rectilinear
+    motion with UNIFORM (constant) acceleration". A Class-11 kinematics item was quarantined for containing
+    the phrase its own concept record declares in scope.
+
+    This makes the gate STRICTLY MORE PRECISE, never more permissive: an above-class technique is named in
+    the claim ("non-uniform (variable) acceleration", "motion in two or three dimensions"), which is still
+    derived and still checked. Only the prose ABOUT the exclusion stops generating tokens. A record with no
+    separator is returned unchanged, so single-phrase boundaries behave exactly as before.
+    """
+    s = re.sub(r"\s+", " ", str(term or "").strip())
+    for sep in (" - ", " — ", " – ", ": "):
+        if sep in s:
+            head = s.split(sep, 1)[0].strip()
+            if len(head) >= 8:              # a real claim, not a stray fragment or a numbered prefix
+                return head
+    return s
+
+
+def _boundary_checks(banned: List[str], concept_name="") -> Tuple[List[tuple], List[tuple]]:
     """(evidenced, baseline) -> two lists of (compiled_regex, label).
 
     `evidenced` are checks derived from THIS spec's own curriculum-boundary evidence (forbidden_terms /
@@ -523,7 +566,13 @@ def _boundary_checks(banned: List[str], concept_name: str = "") -> Tuple[List[tu
     a legitimate in-scope item. A derived token whose EVERY content word is part of `concept_name` is the topic
     itself, not a boundary; it is dropped. (An above-class TERM can never consist solely of the concept's own
     words, so this cannot open a leak.)"""
-    concept_words = {w for w in re.findall(r"[a-z][a-z\-]*", (concept_name or "").lower())
+    # `concept_name` accepts a single title OR an iterable of titles. A MULTI-CONCEPT item (the depth tier)
+    # combines several certified concepts, and each one's topic words must be protected from the
+    # "no crying wolf" rule below — otherwise a two-concept item is quarantined for naming its own second
+    # concept, which is what happened to the Class-11 kinematics -> kinetic-energy chain.
+    _titles = [concept_name] if isinstance(concept_name, str) else list(concept_name or [])
+    concept_words = {w for t in _titles
+                     for w in re.findall(r"[a-z][a-z\-]*", (t or "").lower())
                      if len(w) >= 4 and w not in _BND_STOP}
 
     def _is_concept_self(label: str) -> bool:
@@ -554,7 +603,8 @@ def _boundary_checks(banned: List[str], concept_name: str = "") -> Tuple[List[tu
             evidenced.append(c)
 
     for term in banned or []:
-        t = re.sub(r"\s+", " ", str(term or "").strip())
+        # W7: derive from the EXCLUSION CLAIM, not from the prose explaining it (see _claim_clause)
+        t = _claim_clause(term)
         if not t:
             continue
         words = re.findall(r"[a-z][a-z\-]*", t.lower())
@@ -666,9 +716,13 @@ def run_gates(cand: dict, ctx: dict, stage: str = "candidate") -> List[dict]:
     # above-class hit is BLOCKING (QUARANTINE) as before; a boundary that had NOTHING curriculum-evidenced to
     # check is an ADVISORY FAILURE (a gate that checked nothing is not a pass), never a silent clearance.
     banned = ((spec.get("boundary") and json.loads(spec["boundary"])) or {}).get("forbidden_terms") or []
-    # the spec's authoritative in-scope concept — used to drop derived tokens that are the concept's own topic
-    _concept_name = spec.get("concept_title") or spec.get("concept_code") or ""
-    ev_checks, base_checks = _boundary_checks(banned, _concept_name)
+    # The spec's authoritative in-scope concept(s) — used to drop derived tokens that are a concept's own
+    # topic. `concept_titles` (W7) carries EVERY concept of a multi-concept item; without it a depth-tier
+    # question is quarantined for naming its own second concept. Falls back to the single title.
+    _concept_names = spec.get("concept_titles") or [spec.get("concept_title") or spec.get("concept_code") or ""]
+    if isinstance(_concept_names, str):
+        _concept_names = json.loads(_concept_names) if _concept_names.startswith("[") else [_concept_names]
+    ev_checks, base_checks = _boundary_checks(banned, _concept_names)
     hits = sorted({lbl for rx, lbl in (ev_checks + base_checks) if rx.search(stem)})
     if hits:
         add("curriculum_boundary", False, QUARANTINE, f"above-class terms present: {hits}")
@@ -778,9 +832,23 @@ def run_gates(cand: dict, ctx: dict, stage: str = "candidate") -> List[dict]:
         distinct_rel = {s.get("relation") for s in steps if s.get("relation")}
         # a 'multi' claim is backed only by STRUCTURE: >=2 distinct relations actually applied, or a DAG deep
         # enough that a second concept had to feed it. Two concept NAMES in a list is not composition.
-        backed = len(concepts) >= 2 and (len(distinct_rel) >= 2 or (structure_depth(structure) or 0) >= 2)
+        numeric_backed = len(distinct_rel) >= 2 or (structure_depth(structure) or 0) >= 2
+        # NON-NUMERIC BACKING (2026-07-29). A match-the-columns item composes several concepts without any
+        # arithmetic DAG: each of its four pairings is grounded in a DIFFERENT certified concept and the key
+        # is the permutation reproducing all of them, so a wrong pairing anywhere changes the answer. That is
+        # structural composition, and refusing it would have quarantined the single most common composite
+        # form in the measured PYQ corpus (match = 11.0% of NEET) for lacking arithmetic it never has.
+        # The claim is CHECKED, not accepted: the declared components must be >=2 DISTINCT concept ids that
+        # actually appear in the item's own concept_ids. It is not a bypass — the lane that uses it also
+        # faces a FATAL gate proving the key derives from those very pairings (`match_key_verified`).
+        comps = claimed.get("composition_components") or []
+        ids = set(claimed.get("concept_ids") or [])
+        nonnumeric_backed = (isinstance(comps, list) and len(set(comps)) >= 2
+                             and set(comps) <= ids and len(ids) >= 2)
+        backed = len(concepts) >= 2 and (numeric_backed or nonnumeric_backed)
         add("composition_backed", backed, QUARANTINE,
-            f"concepts={len(concepts)} distinct_relations={len(distinct_rel)} depth={structure_depth(structure)}")
+            f"concepts={len(concepts)} distinct_relations={len(distinct_rel)} "
+            f"depth={structure_depth(structure)} nonnumeric_components={len(set(comps))}")
 
     # ── 12. VISUAL SPEC (HARNESS) — a visual claim must carry a STRUCTURED spec, never a prose promise ──
     if spec.get("visual_required"):

@@ -213,7 +213,12 @@ class TestLiveManifestTargets(unittest.TestCase):
         pc = self.summary["promotion_counts"]
         self.assertEqual(pc.get("practice_tier_eligible"), 1434)       # 568 numeric re-verified + 866 honest-null
         self.assertEqual(pc.get("promotable"), 41)                     # governed_relations re-certified
-        self.assertEqual(pc.get("held_qualitative"), 190)              # 62 model-agreement + 128 governed_fact
+        # held_qualitative tracks the LIVE governed_fact bank (grown by the offline examiner), so assert the
+        # cross-source INVARIANT — 62 pilot model-agreement + the live governed_fact count — not a frozen number.
+        import sqlite3
+        gf_n = sqlite3.connect(f"file:{config.KIE_HOME / 'qie.db'}?mode=ro", uri=True).execute(
+            "SELECT COUNT(*) FROM governed_fact WHERE status='verified'").fetchone()[0]
+        self.assertEqual(pc.get("held_qualitative"), 62 + gf_n)        # 62 pilot model-agreement + governed_fact
         self.assertEqual(pc.get("eligible"), 77)                       # kvs assertions with >=2 source refs
 
     def test_no_nondeterministic_promotable_live(self):

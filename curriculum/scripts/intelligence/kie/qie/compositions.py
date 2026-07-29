@@ -203,6 +203,14 @@ def _round(v):
     return Fraction(str(v))
 
 
+def _num_or_none(v):
+    """Float value of a numeric answer/distractor, or None for a string/entity (Biology KB) value."""
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
 def generate(templates: Optional[Dict[str, CompositionTemplate]] = None, per_template: int = 8,
              seed: str = "K1") -> List[dict]:
     tmap = TEMPLATES if templates is None else templates
@@ -219,15 +227,39 @@ def generate(templates: Optional[Dict[str, CompositionTemplate]] = None, per_tem
             if not tmpl.end_to_end(env, params):                   # independent end-to-end check failed
                 continue
             ans_t = fmt(answer)
+            ans_num = _num_or_none(answer)
             opts = [answer]
             for d in tmpl.distractors(env, params):
                 dt = fmt(d)
                 if dt == ans_t:
                     continue
+                # a positive physical magnitude (period, resistance, rate constant, vapour pressure, …)
+                # never has a negative option — drop physically-impossible sign-flip distractors when the
+                # key is positive. Signed quantities (work, acceleration) keep a NEGATIVE key, so their
+                # legitimate sign-error distractors are unaffected.
+                d_num = _num_or_none(d)
+                if ans_num is not None and ans_num > 0 and d_num is not None and d_num < 0:
+                    continue
+                # P1.2 magnitude balance: reject an absurdly off-scale distractor (>100x or <1/100x the key) —
+                # a value a student could never plausibly reach (e.g. 113 among a 1.2e7 answer). Ordinary
+                # order-of-magnitude slips (2x, 10x) are well inside the band and stay.
+                if ans_num not in (None, 0) and d_num not in (None, 0) \
+                        and not (0.01 <= abs(d_num) / abs(ans_num) <= 100):
+                    continue
                 if dt not in {fmt(o) for o in opts}:
                     opts.append(d)
                 if len(opts) == 4:
                     break
+            # backfill to 4 if the impossible-negative filter left a NUMERIC item short: positive, distinct
+            # magnitude-error values keep yield without ever emitting an item with <4 options or a negative one.
+            if len(opts) < 4 and ans_num is not None and ans_num > 0:
+                for f in (1.5, 0.5, 2.0, 0.75, 3.0, 1.25):
+                    if len(opts) == 4:
+                        break
+                    c = ans_num * f
+                    ct = fmt(c)
+                    if c > 0 and ct != ans_t and ct not in {fmt(o) for o in opts}:
+                        opts.append(c)
             if len(opts) < 4:
                 continue
             opts_sorted = sorted(opts, key=lambda e: hashlib.sha256((fmt(e) + s).encode()).hexdigest())

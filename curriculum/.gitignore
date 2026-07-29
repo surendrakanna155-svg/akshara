@@ -68,6 +68,21 @@ SESSION_LOG.md
 # Crawler runtime frontier state (local-only; manifest committed separately once the real crawl runs)
 acquisition/crawler_state.json
 
+# --- Derived acquisition / discovery / reporting artifacts (LOCAL ONLY per owner lock 2026-07-08) ---
+# Regenerable outputs of the acquisition/discovery/report scripts. The rules above anchored
+# reports/*.md + indexes/*.json but let the derived *.json reports/catalogues + dated checkpoints
+# leak through as UNTRACKED working-tree noise (added 2026-07-20, Repository Hygiene review).
+# Already-tracked governed outputs (reports/CANONICAL_CURRICULUM_MATRIX.json,
+# reports/OFFICIAL_UNIVERSE_RECONCILIATION.json, discovery/official_universe.json,
+# reports/qp_audit/*.json) stay tracked — gitignore never untracks a committed file.
+# acquisition/*MANIFEST.json is intentionally specific, NOT a blanket acquisition/*.json, so the
+# future committed crawler_manifest.json (see note above) is not accidentally excluded.
+reports/*.json
+discovery/**/*.json
+acquisition/AGENT_MANIFEST.json
+acquisition/WAVE_*.json
+acquisition/CHECKPOINT_*.md
+
 # --- Non-certified question-corpus staging lane (LOCAL ONLY; overnight extraction) ---
 # RAW DOCUMENT -> LOSS-MINIMISING EXTRACTION -> STRUCTURED STAGING CORPUS. Never certified,
 # never production, never merged into kie.db / Certified Question Bank. Manifests+assets are

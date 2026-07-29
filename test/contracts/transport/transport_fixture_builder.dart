@@ -60,11 +60,30 @@ class TransportFixtureBuilder {
     });
   }
 
+  /// BUS-006 — emits the CANONICAL stop-time keys the backend actually writes
+  /// (`pickupTime` / `dropTime`). This fixture previously emitted
+  /// `scheduledTime`, mirroring the client mapper's mistake rather than the
+  /// server's real payload — so the contract test agreed with the bug and could
+  /// never have caught it.
   Map<String, dynamic> stopItem(TransportStop stop) => {
         'id': stop.id,
         'name': stop.name,
         'sequence': stop.sequence,
-        'scheduledTime': stop.scheduledTime,
+        'pickupTime': stop.pickupTime,
+        'dropTime': stop.dropTime,
+        'status': TransportEnumCodec.stopStatusToApi(stop.status),
+        'latitude': stop.latitude,
+        'longitude': stop.longitude,
+      };
+
+  /// BUS-006 — legacy-shaped stop payload (pre-fix seed rows carry
+  /// `scheduledTime` and no drop time). Used to pin the read-only back-compat
+  /// fallback in the mapper.
+  Map<String, dynamic> legacyStopItem(TransportStop stop) => {
+        'id': stop.id,
+        'name': stop.name,
+        'sequence': stop.sequence,
+        'scheduledTime': stop.pickupTime,
         'status': TransportEnumCodec.stopStatusToApi(stop.status),
         'latitude': stop.latitude,
         'longitude': stop.longitude,

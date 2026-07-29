@@ -256,9 +256,17 @@ def _governed_concepts(subjects, unified_path=None) -> Tuple[Dict[str, object], 
     return out, by_chapter, warnings
 
 
+# Generic head-nouns that must NEVER bind as a mere MODIFIER of a specific concept: "gland" matching
+# "Prostate gland" mislabels an adrenal-medulla item as prostate. A generic target binds only on an EXACT
+# title match (a concept that IS that category), never on a partial/modifier substring. Specific targets
+# ("ohm", "newton", "mendel") are unaffected and still bind within a multi-word title ("Ohm's Law").
+_GENERIC_TARGETS = frozenset({"gland", "hormone", "cell", "tissue", "organ", "system", "acid"})
+
+
 def _bind(item: dict, scope) -> Optional[Tuple[str, str]]:
     """Bind to the first in-scope certified concept matching a target (exact title preferred, then the
-    shortest title CONTAINING the target). Returns None if no precise in-scope concept exists (→ skipped)."""
+    shortest title CONTAINING the target). Returns None if no precise in-scope concept exists (→ skipped).
+    A generic head-noun target binds on EXACT title only, so it can never mislabel via a modifier match."""
     if item["frame_id"].startswith(("kvs_", "relnum_", "chain_")):
         # governed item (verified KVS fact, a CERTIFIED source-recovered relation, or a CERTIFIED depth-4/5
         # chain over them) -> its own verified concept, now first-class in-scope. Exact and subject-safe.
@@ -266,6 +274,7 @@ def _bind(item: dict, scope) -> Optional[Tuple[str, str]]:
         if gc:
             return gc
     for target in _targets(item):
+        generic = target in _GENERIC_TARGETS      # a generic head-noun may only match a concept titled exactly it
         exact = contains = None
         for code, cr in scope.concepts.items():
             if cr.subject != item["subject"]:
@@ -274,7 +283,7 @@ def _bind(item: dict, scope) -> Optional[Tuple[str, str]]:
             if tl == target:
                 exact = (code, cr.title)
                 break
-            if target in tl and (contains is None or len(cr.title) < len(contains[1])):
+            if not generic and target in tl and (contains is None or len(cr.title) < len(contains[1])):
                 contains = (code, cr.title)
         if exact:
             return exact
@@ -293,21 +302,36 @@ def _bloom(depth: int) -> str:
     return Bloom.UNDERSTAND if depth <= 2 else (Bloom.APPLY if depth == 3 else Bloom.ANALYZE)
 
 
+def _norm_opt(v):
+    """P2.4 display normalization: drop a single trailing full-stop from a TEXT option so a paper's options
+    read consistently (some KVS source options end '.', most don't). Numbers and abbreviations are untouched."""
+    t = str(v).strip()
+    return t[:-1].rstrip() if t.endswith(".") and sum(c.isalpha() for c in t) >= 3 else t
+
+
 def _slot(cell, item, code, title, number, exam_profile) -> QuestionSlot:
     is_mcq = cell.question_type in (QuestionType.MCQ, QuestionType.ASSERTION_REASON)
+    options = [_norm_opt(o) for o in item["options"]] if is_mcq and item.get("options") else None
     return QuestionSlot(
         number=number, section=cell.section, concept_code=code, concept_title=title, subject=item["subject"],
         question_type=cell.question_type, marks=cell.marks_each, bloom=_bloom(item["depth"]),
         difficulty=cell.difficulty or _difficulty(item["depth"]), render_mode=RenderMode.DETERMINISTIC,
-        status=SlotStatus.FILLED, stem=item["stem"], options=item["options"] if is_mcq else None,
-        answer=item["answer"], solution=None,
+        status=SlotStatus.FILLED, stem=item["stem"], options=options,
+        answer=_norm_opt(item["answer"]), solution=None,
         # source='template' => machine-verified item, exempt from the free-text grounding check (same rule as
         # solver-verified templates); every other governance check still applies.
         provenance={"source": "template", "exam": exam_profile, "qie_frame": item["frame_id"],
                     "reasoning_depth": item["depth"], "verification": item["provenance"].get("verification", "deterministic")},
         item_model_id=item["item_model_id"], lane=item["provenance"].get("template") or item["frame_id"],
         gate_verdicts=[{"verifier": "qie", "verdict": "agree"}],
-        solution_steps=item["provenance"].get("concepts"))
+        # MISLABEL FIX (architecture verification 2026-07-29, W2). This previously read
+        # `solution_steps=item["provenance"].get("concepts")`, i.e. it wrote the item's CONCEPT LIST into
+        # the field a reader takes to be the worked solution. Any paper assembled from the deterministic
+        # lane therefore carried `solution=None` plus a "solution" that was really a list of concept codes.
+        # The deterministic lane genuinely has no solution to offer (that is defect W2 itself), so the
+        # honest value is None — an absent solution, not a mislabelled one. Lane C items
+        # (`kie.qie.certgen`) do carry a real rendered solution and supply it here.
+        solution_steps=(item.get("solution") or {}).get("steps"))
 
 
 def generate_paper(request: PaperRequest, per: int = 14) -> Tuple[GeneratedPaper, "validate.ValidationReport"]:

@@ -102,9 +102,10 @@ class _StopEditor extends ConsumerWidget {
                         child: ListTile(
                           leading: CircleAvatar(child: Text('${stop.sequence}')),
                           title: Text(stop.name),
-                          subtitle: stop.scheduledTime.isEmpty
-                              ? null
-                              : Text('Pickup ${stop.scheduledTime}'),
+                          // BUS-006/BUS-007: surface BOTH persisted times. Drop
+                          // time was stored by the backend but had no display,
+                          // which is why its silent erasure went unnoticed.
+                          subtitle: Text(_stopTimesLabel(stop)),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -264,6 +265,17 @@ class _StopEditor extends ConsumerWidget {
   }
 }
 
+/// BUS-006/BUS-007 — human-readable summary of a stop's persisted times.
+String _stopTimesLabel(TransportStop stop) {
+  if (stop.hasNoTimes) return 'Time not set';
+  final pickup = stop.pickupTime.trim();
+  final drop = stop.dropTime.trim();
+  return [
+    if (pickup.isNotEmpty) 'Pickup $pickup',
+    if (drop.isNotEmpty) 'Drop $drop',
+  ].join(' · ');
+}
+
 class _StopFormResult {
   const _StopFormResult(this.name, this.pickupTime, this.dropTime);
   final String name;
@@ -271,35 +283,93 @@ class _StopFormResult {
   final String dropTime;
 }
 
-Future<_StopFormResult?> _stopFormDialog(
-  BuildContext context, {
-  TransportStop? stop,
-}) async {
-  final name = TextEditingController(text: stop?.name ?? '');
-  final pickup = TextEditingController(text: stop?.scheduledTime ?? '');
-  final drop = TextEditingController();
+/// BUS-007 — stop add/edit form.
+///
+/// A `StatefulWidget` so its three [TextEditingController]s are disposed; the
+/// previous dialog created them in a bare function and leaked one set per open.
+///
+/// The defect this fixes: in EDIT mode the drop-time controller was constructed
+/// empty (`TextEditingController()`) regardless of the stop's persisted value,
+/// and the result was submitted unconditionally — so editing only a stop's NAME
+/// silently wiped its drop time, with no signal to the admin and no way back.
+/// Both fields now prefill from the persisted stop (BUS-006 made drop time
+/// readable in the first place).
+class _StopFormDialog extends StatefulWidget {
+  const _StopFormDialog({this.stop});
 
-  final saved = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text(stop == null ? 'Add stop' : 'Edit stop'),
+  final TransportStop? stop;
+
+  @override
+  State<_StopFormDialog> createState() => _StopFormDialogState();
+}
+
+class _StopFormDialogState extends State<_StopFormDialog> {
+  late final TextEditingController _name;
+  late final TextEditingController _pickup;
+  late final TextEditingController _drop;
+  String? _nameError;
+
+  @override
+  void initState() {
+    super.initState();
+    final stop = widget.stop;
+    _name = TextEditingController(text: stop?.name ?? '');
+    // BUS-007: prefill BOTH times from the persisted stop — never blank on edit.
+    _pickup = TextEditingController(text: stop?.pickupTime ?? '');
+    _drop = TextEditingController(text: stop?.dropTime ?? '');
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _pickup.dispose();
+    _drop.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (_name.text.trim().isEmpty) {
+      setState(() => _nameError = 'Stop name is required.');
+      return;
+    }
+    Navigator.of(context).pop(
+      _StopFormResult(
+        _name.text.trim(),
+        _pickup.text.trim(),
+        _drop.text.trim(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.stop == null ? 'Add stop' : 'Edit stop'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           TextField(
             key: QaTestKeys.transportStopNameField,
-            controller: name,
-            decoration: const InputDecoration(labelText: 'Stop name'),
+            controller: _name,
+            decoration: InputDecoration(
+              labelText: 'Stop name',
+              errorText: _nameError,
+            ),
+            onChanged: (_) {
+              if (_nameError != null) setState(() => _nameError = null);
+            },
           ),
           TextField(
-            controller: pickup,
+            key: QaTestKeys.transportStopPickupTimeField,
+            controller: _pickup,
             decoration: const InputDecoration(
               labelText: 'Pickup time (optional)',
               hintText: 'e.g. 7:05 AM',
             ),
           ),
           TextField(
-            controller: drop,
+            key: QaTestKeys.transportStopDropTimeField,
+            controller: _drop,
             decoration: const InputDecoration(
               labelText: 'Drop time (optional)',
               hintText: 'e.g. 3:40 PM',
@@ -309,30 +379,25 @@ Future<_StopFormResult?> _stopFormDialog(
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
+          onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
         ),
         FilledButton(
           key: QaTestKeys.transportStopDialogSubmitButton,
-          onPressed: () => Navigator.of(context).pop(true),
+          onPressed: _submit,
           child: const Text('Save'),
         ),
       ],
-    ),
-  );
-
-  if (saved != true) return null;
-  if (name.text.trim().isEmpty) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Stop name is required.')),
-      );
-    }
-    return null;
+    );
   }
-  return _StopFormResult(
-    name.text.trim(),
-    pickup.text.trim(),
-    drop.text.trim(),
+}
+
+Future<_StopFormResult?> _stopFormDialog(
+  BuildContext context, {
+  TransportStop? stop,
+}) {
+  return showDialog<_StopFormResult>(
+    context: context,
+    builder: (context) => _StopFormDialog(stop: stop),
   );
 }

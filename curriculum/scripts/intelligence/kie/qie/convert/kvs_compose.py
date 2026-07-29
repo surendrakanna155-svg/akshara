@@ -11,7 +11,9 @@ Data is loaded READ-ONLY from qie.db at import; if the KVS is empty the template
 """
 from __future__ import annotations
 
+import hashlib
 import json
+import re
 import sqlite3
 from typing import Dict, List, Optional, Tuple
 
@@ -78,8 +80,57 @@ _OPT_NOISE = __import__("re").compile(
 MAX_OPTION_LEN = 130
 _ARTIFACT_MIN_LEN = 8          # sanitize.stem_quality_ok requires >= 8 chars, so short options skip it
 
+# ── lost-space / mangled-word detection the regex above cannot see ──────────────────────────────────────
+# The _OPT_NOISE regex catches a lost space at a CASE boundary ("andY"), but not a lost space between two
+# lowercase words ("greaterthan", "dicotstem") or a word with a garbled short affix ("tmpredictable" =
+# "tm"+"predictable"). These slip verbatim into a student's paper. Detection is measured false-positive-free
+# on the NEET pool: it never fires on a dictionary word or a simple inflection of one (absorbs, molecules,
+# reptiles, isocitrate, eutrophication all survive) — only on a clear concatenation or a mangled affix.
+try:
+    _DICT = frozenset(w.strip().lower() for w in open("/usr/share/dict/words") if w.strip().isalpha())
+except OSError:                                     # graceful degradation if the OS wordlist is absent
+    _DICT = frozenset()
+_VOWELS = frozenset("aeiouy")
+_INFLECT = (("s", ""), ("es", ""), ("ies", "y"), ("ing", ""), ("ing", "e"), ("ed", ""), ("ed", "e"),
+            ("d", ""), ("ly", ""), ("ation", "ate"), ("tion", "te"), ("ted", "t"))
 
-def _option_clean(s: str) -> bool:
+
+def _base_in_dict(w: str) -> bool:
+    """True if w, or a simple morphological base of it, is a dictionary word (so inflections stay clean)."""
+    if w in _DICT:
+        return True
+    return any(w.endswith(suf) and len(w) - len(suf) + len(repl) >= 3 and (w[:len(w) - len(suf)] + repl) in _DICT
+               for suf, repl in _INFLECT)
+
+
+def _garbled_word(w: str, siblings: frozenset = frozenset()) -> bool:
+    """True if a lowercase token looks like an OCR artifact. Conservative: never fires on a dictionary word or
+    a simple inflection; only on (1) two glued dictionary words, (2) two glued SIBLING-option words, or (3) a
+    valid word with a short vowel-free garbled affix."""
+    if len(w) < 8 or not w.isalpha() or _base_in_dict(w):
+        return False
+    for i in range(4, len(w) - 3):                  # (1) "greater"+"than"
+        if w[:i] in _DICT and w[i:] in _DICT:
+            return True
+    for i in range(3, len(w) - 2):                  # (2) "dicot"+"stem" (both appear as separate sibling words)
+        if w[:i] in siblings and w[i:] in siblings:
+            return True
+    for k in (2, 3):                                # (3) "tm"+"predictable": vowel-free affix on a real word
+        if len(w) > k + 5:
+            if not (set(w[:k]) & _VOWELS) and _base_in_dict(w[k:]):
+                return True
+            if not (set(w[-k:]) & _VOWELS) and _base_in_dict(w[:-k]):
+                return True
+    return False
+
+
+def _sibling_words(options) -> frozenset:
+    """Lowercase words (len >= 3) appearing across an item's option strings — the vocabulary a lost-space
+    concatenation is reassembled from."""
+    return frozenset(t for o in options for t in re.findall(r"[a-z]+", (o or "").lower()) if len(t) >= 3)
+
+
+def _option_clean(s: str, siblings: frozenset = frozenset()) -> bool:
     """True if an option string is fit to print VERBATIM to a student."""
     from kie.qpgen import sanitize
     t = (s or "").strip()
@@ -89,6 +140,8 @@ def _option_clean(s: str) -> bool:
         return False
     if _OPT_NOISE.search(t):
         return False
+    if any(_garbled_word(tok, siblings) for tok in re.findall(r"[a-z]+", t.lower())):
+        return False                                # lost-space / mangled OCR word (greaterthan, dicotstem, …)
     # `stem_quality_ok` — NOT `_looks_like_ocr_garbage`. An option is PROSE, like a stem; the garbage detector
     # is the CONCEPT-TITLE gate and its internal-case rule ([a-z][A-Z]) rejects real biochemistry — Acetyl CoA,
     # mRNA, tRNA, NaOH, pH. sanitize says so itself: stem_quality_ok exists "so pH/mRNA/units/maths in a
@@ -102,9 +155,10 @@ def _clean_distractors(distractors: List[str], answer: str) -> List[str]:
     out: List[str] = []
     seen = set()
     a = _norm(answer)
+    sib = _sibling_words([answer] + list(distractors or []))
     for d in distractors or []:
         n = _norm(d)
-        if not n or n == a or n in seen or not _option_clean(d):
+        if not n or n == a or n in seen or not _option_clean(d, sib):
             continue
         seen.add(n)
         out.append(d)
@@ -127,10 +181,10 @@ def _assert_usable(answer: str, subject_term: str, predicate: str, object_term: 
         return False
     if ":" in (answer or "") or " - " in (answer or "") or len(answer) > 60:
         return False                                   # matching-pair / list-style option, not an entity
-    if not _option_clean(answer):
+    if not _option_clean(answer, _sibling_words(distractors)):
         return False        # the ANSWER is an option too: it prints verbatim, so it must be clean as well
         # (regression: an OCR-damaged answer — "real depth of  pond", double space — shipped because only the
-        #  distractors were being quality-gated)
+        #  distractors were being quality-gated; also a lost-space answer like "KP is greaterthan Kc")
     if not _corresponds(answer, subject_term):
         return False                                   # answer does not correspond to the subject term
     stem_words = set(_norm(f"{predicate} {object_term}").split())
@@ -166,7 +220,7 @@ def _assert_object_usable(answer: str, subject_term: str, predicate: str, object
     # No 60-char entity cap here: unlike "what is X?" (whose answer NAMES an entity), the object direction's
     # answer is legitimately a descriptive phrase ("Analogous organs that have evolved due to convergent
     # evolution." = 61 chars). Matching-pair/list markers are still refused — those make an incoherent stem.
-    if ":" in (answer or "") or " - " in (answer or "") or not _option_clean(answer):
+    if ":" in (answer or "") or " - " in (answer or "") or not _option_clean(answer, _sibling_words(distractors)):
         return False
     if not _corresponds(answer, object_term):
         return False                                   # answer does not correspond to the object term
@@ -280,19 +334,49 @@ def _slug(concept: str) -> str:
 def _sf_template(concept: str, facts: List[dict], subject: str) -> Optional[CompositionTemplate]:
     pool = _SF_BY_SUBJECT.get(subject, [])
     all_funcs = [f["function"] for f in pool]
-    if len(all_funcs) < 4:                # need >=4 distinct functions subject-wide for 4 options
+    if len(set(all_funcs)) < 4:           # need >=4 distinct functions subject-wide for 4 options
         return None
 
     def setup(seed):
         f = facts[_si(seed + "s", 0, len(facts) - 1)]
         return {"structure": f["structure"]}, f
 
+    def distractors(env, p):
+        # P1.1 CONCEPT-AWARE distractors: a good wrong option is the function of a DIFFERENT structure the
+        # student might confuse with this one — i.e. from the SAME body system, else the same chapter/concept —
+        # not an unrelated function from across the whole subject ("anchor AV valves" for a pollen grain). We
+        # order the pool by relatedness (same system → same concept → subject-wide) and let the composition
+        # engine take the first distinct ones; the subject-wide tail only fills a gap when a system/chapter has
+        # too few functions, so it never STARVES an item, but related options are always preferred.
+        ans = p["function"]
+
+        def funcs(pred):
+            return [f["function"] for f in pool if f["function"] != ans and pred(f)]
+
+        sys_ = p.get("system")
+        # the subject-wide fallback tail is VARIED per structure so a thin-data item does not reuse the same
+        # two functions on every question (the "germ cells + AV valves on everything" repetition) — each
+        # structure hashes the fallback pool into its own order, giving diverse options across the paper.
+        salt = str(p.get("structure"))
+        wide = sorted(funcs(lambda f: True),
+                      key=lambda fn: hashlib.sha256((salt + "|" + fn).encode()).hexdigest())
+        tiers = [funcs(lambda f: sys_ and f.get("system") == sys_),      # same body system (closest)
+                 funcs(lambda f: f.get("concept") == p.get("concept")),  # same chapter/concept
+                 wide]                                                   # varied subject-wide fallback (last)
+        out, seen = [], set()
+        for tier in tiers:
+            for fn in tier:
+                if fn not in seen:
+                    seen.add(fn)
+                    out.append(fn)
+        return out
+
     return CompositionTemplate(
         f"kvs_sf_{_slug(concept)}", concept, setup,
         [C.Step("ans", "kvs_function_of", ("structure",))], "ans",
         lambda env, p: _SF_FUNC.get(p["structure"]) == env["ans"],       # independent re-derivation
         lambda env, p: f"What is the principal function of {p['structure']}?",
-        lambda env, p: [fn for fn in all_funcs if fn != p["function"]],
+        distractors,
         subject=subject, gen_prefix="GENKVS_", fmt=str)
 
 
@@ -307,7 +391,7 @@ def _seq_next_template(concept: str, facts: List[dict], subject: str) -> Optiona
         f"kvs_seq_{_slug(concept)}", concept, setup,
         [C.Step("ans", "kvs_next_in", ("proc", "step"))], "ans",
         lambda env, p: p["steps"][p["steps"].index(p["step"]) + 1] == env["ans"],
-        lambda env, p: (f"In the correct order for '{p['process']}', which immediately follows "
+        lambda env, p: (f"In the correct order of '{p['process']}', what comes immediately after "
                         f"'{p['step']}'?"),
         lambda env, p: [s for s in p["steps"] if s != p["step"] and s != env["ans"]],
         subject=subject, gen_prefix="GENKVS_", fmt=str)

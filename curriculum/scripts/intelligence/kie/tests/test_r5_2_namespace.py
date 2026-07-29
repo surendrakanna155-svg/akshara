@@ -182,7 +182,11 @@ class TestLiveConvergence(unittest.TestCase):
         rep = NS.convergence_report()
         self.assertGreaterEqual(rep["retired_total"], 3)    # the known OCR-junk codes retired
         gf = summ["by_ontology"]["governed_fact_topic"]
-        self.assertEqual(gf["total"], 128)
+        # the ontology tracks the LIVE governed_fact bank (grown by the offline examiner) — assert it EQUALS the
+        # live governed_fact count rather than a frozen number, so authorized growth never falsely fails.
+        gf_n = sqlite3.connect(f"file:{config.KIE_HOME / 'qie.db'}?mode=ro", uri=True).execute(
+            "SELECT COUNT(*) FROM governed_fact WHERE status='verified'").fetchone()[0]
+        self.assertEqual(gf["total"], gf_n)                 # namespace ontology == live governed_fact count
         self.assertLess(gf["resolution_rate"], 1.0)         # not inflated (topics are fine-grained)
         self.assertEqual(gf["total"], gf["resolved"] + gf["retired"] + gf["honest_null"])
 

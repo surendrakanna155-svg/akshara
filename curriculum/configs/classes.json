@@ -1,7 +1,12 @@
 {
-  "_comment": "Target classes for the acquisition phase (spec Parts 01/03). Classes 6-10, English medium. class_label is the on-disk folder name (Part 04). Config-driven: to add/remove a class, edit here only.",
-  "class_order": ["6", "7", "8", "9", "10"],
+  "_comment": "Target classes for the acquisition phase (spec Parts 01/03). Classes 1-10, English medium. class_label is the on-disk folder name (Part 04). Config-driven: to add/remove a class, edit here only.",
+  "class_order": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
   "classes": {
+    "1":  { "grade": 1,  "class_label": "Class_01", "stage": "primary",       "code": "01" },
+    "2":  { "grade": 2,  "class_label": "Class_02", "stage": "primary",       "code": "02" },
+    "3":  { "grade": 3,  "class_label": "Class_03", "stage": "primary",       "code": "03" },
+    "4":  { "grade": 4,  "class_label": "Class_04", "stage": "primary",       "code": "04" },
+    "5":  { "grade": 5,  "class_label": "Class_05", "stage": "primary",       "code": "05" },
     "6":  { "grade": 6,  "class_label": "Class_06", "stage": "upper_primary", "code": "06" },
     "7":  { "grade": 7,  "class_label": "Class_07", "stage": "upper_primary", "code": "07" },
     "8":  { "grade": 8,  "class_label": "Class_08", "stage": "upper_primary", "code": "08" },

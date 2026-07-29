@@ -20,6 +20,11 @@
         "https://diksha.gov.in"
       ],
       "subjects_by_class": {
+        "1":  ["english", "mathematics"],
+        "2":  ["english", "mathematics"],
+        "3":  ["english", "mathematics", "science"],
+        "4":  ["english", "mathematics", "science"],
+        "5":  ["english", "mathematics", "science", "social_science"],
         "6":  ["mathematics", "science", "social_science", "english"],
         "7":  ["mathematics", "science", "social_science", "english"],
         "8":  ["mathematics", "science", "social_science", "english"],
@@ -43,6 +48,11 @@
         "https://diksha.gov.in"
       ],
       "subjects_by_class": {
+        "1":  ["english", "mathematics"],
+        "2":  ["english", "mathematics"],
+        "3":  ["english", "mathematics", "science"],
+        "4":  ["english", "mathematics", "science"],
+        "5":  ["english", "mathematics", "science", "social_science"],
         "6":  ["mathematics", "science", "social_science", "english"],
         "7":  ["mathematics", "science", "social_science", "english"],
         "8":  ["mathematics", "science", "social_science", "english"],
@@ -65,6 +75,11 @@
         "https://diksha.gov.in"
       ],
       "subjects_by_class": {
+        "1":  ["english", "mathematics"],
+        "2":  ["english", "mathematics"],
+        "3":  ["english", "mathematics", "science"],
+        "4":  ["english", "mathematics", "science"],
+        "5":  ["english", "mathematics", "science", "social_science"],
         "6":  ["mathematics", "science", "social_science", "english"],
         "7":  ["mathematics", "science", "social_science", "english"],
         "8":  ["mathematics", "science", "social_science", "english"],
@@ -86,6 +101,11 @@
         "https://cisce.org"
       ],
       "subjects_by_class": {
+        "1":  ["english", "mathematics"],
+        "2":  ["english", "mathematics"],
+        "3":  ["english", "mathematics", "science"],
+        "4":  ["english", "mathematics", "science"],
+        "5":  ["english", "mathematics", "science", "social_science"],
         "6":  ["mathematics", "science", "social_science", "english"],
         "7":  ["mathematics", "science", "social_science", "english"],
         "8":  ["mathematics", "science", "social_science", "english"],

@@ -48,6 +48,7 @@ class TransportKpi {
     required this.icon,
     required this.accentName,
     this.detail,
+    this.notConfigured = false,
   });
 
   final String id;
@@ -56,6 +57,12 @@ class TransportKpi {
   final IconData icon;
   final String accentName;
   final String? detail;
+
+  /// BUS-004 — true when this KPI has no data source yet, so [value] is an em
+  /// dash rather than a measurement. The dashboard must visibly distinguish
+  /// "not measured" from "measured as zero"; conflating them is how the seeded
+  /// dashboard presented fiction as fact.
+  final bool notConfigured;
 }
 
 @immutable
@@ -90,7 +97,8 @@ class TransportStop {
     required this.id,
     required this.name,
     required this.sequence,
-    required this.scheduledTime,
+    required this.pickupTime,
+    required this.dropTime,
     required this.status,
     required this.latitude,
     required this.longitude,
@@ -99,10 +107,28 @@ class TransportStop {
   final String id;
   final String name;
   final int sequence;
-  final String scheduledTime;
+
+  /// BUS-006 — CANONICAL stop-time field names.
+  ///
+  /// The write path (`handleAddStop` / `handleUpdateStop`) has always persisted
+  /// `pickupTime` + `dropTime`, but the client mapper read `scheduledTime` and
+  /// the model exposed only that one field. The names never matched, so an
+  /// admin's pickup time saved successfully and rendered blank on reload, and
+  /// `dropTime` was persisted but had nowhere to surface — which is also how
+  /// BUS-007's silent drop-time erasure went unnoticed.
+  ///
+  /// These two names are now canonical on BOTH sides. The mapper still tolerates
+  /// the legacy `scheduledTime` key when READING pre-existing seed rows, but
+  /// nothing writes it. BUS-038 replaces these strings with typed TIME values.
+  final String pickupTime;
+  final String dropTime;
+
   final TransportStopStatus status;
   final double latitude;
   final double longitude;
+
+  /// True when neither time has been set (renders as "time not set").
+  bool get hasNoTimes => pickupTime.trim().isEmpty && dropTime.trim().isEmpty;
 }
 
 @immutable

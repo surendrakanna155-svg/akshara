@@ -1,5 +1,11 @@
 # Akshara ERP — FINAL EXECUTION MASTER ROADMAP
 
+> ⏭ **SUPERSEDED AS THE FORWARD PLAN (2026-07-20).** The current forward roadmap is
+> [`AKSHARA_CONSTITUTION_ALIGNED_MASTER_ROADMAP.md`](AKSHARA_CONSTITUTION_ALIGNED_MASTER_ROADMAP.md).
+> **This document is retained as the PRA register and execution-traceability authority** (the P0/P1
+> gap ledger, wave decomposition, and audit-finding links below remain valid REFERENCE). For "what to
+> do next," follow the Constitution-aligned roadmap; use this file for PRA lineage, not forward planning.
+
 **Status:** 🟢 **THE SINGLE AUTHORITATIVE ROADMAP** — the only execution plan from this point onward.
 **Program Manager:** Fable (as CPM) · **Date:** 2026-07-03 · **HEAD:** `68f15cb` · **Executor:** Opus 4.8
 **Consolidates (and supersedes as the forward plan):** `docs/audits/MASTER_EXECUTION_ROADMAP.md`, `docs/audits/FABLE_FINAL_ROADMAP.md`, and the Phase B/C/D of `docs/FINAL_QA_ROADMAP.md`.

@@ -114,8 +114,136 @@ async function handleList(
   }
 }
 
+/**
+ * BUS-004/BUS-005 — the transport dashboard KPI set, computed from live rows.
+ *
+ * The defect this replaces: `snapshot_dashboard` was a static JSONB document
+ * seeded ONCE by migration 20260614100000 and never recomputed by any code path
+ * (grep for `mutateSnapshot` in this module returns zero write-side hits). A
+ * demo/pilot school therefore saw permanently frozen figures — "18 Active
+ * Buses", "94% On-Time", "842 Students Picked" — regardless of reality, while a
+ * genuinely onboarded school got `{}` and read as permanent zeros. Both are
+ * misinformation on the screen most likely to be shown to a principal.
+ *
+ * Two rules here, both from roadmap principle P-1:
+ *   - a KPI backed by real rows shows a real count;
+ *   - a KPI with NO data source yet shows `null` (rendered "—" + "not
+ *     configured"), never a number and never a zero that reads as a measurement.
+ *
+ * BUS-005 specifically drops the fuel-cost KPI, whose seed carried the literal
+ * annotation `"Finance integration placeholder"` while rendering as a live
+ * money figure. It returns in BUS-121 once fuel logs exist.
+ *
+ * On-time / delay KPIs stay `null` until BUS-093 can compute schedule adherence
+ * — impossible before BUS-038 makes stop times arithmetic-capable.
+ */
+export function buildDashboardKpis(counts: {
+  activeVehicles: number;
+  activeRoutes: number;
+  allocatedStudents: number;
+  unallocatedStudents: number | null;
+}): Array<Record<string, unknown>> {
+  const kpi = (
+    id: string,
+    label: string,
+    value: number | null,
+    accentName: string,
+    notConfiguredHint?: string,
+  ) => ({
+    id,
+    label,
+    value: value === null ? null : String(value),
+    accentName,
+    ...(value === null ? { notConfigured: true, detail: notConfiguredHint } : {}),
+  });
+
+  return [
+    kpi("active_buses", "Active Buses", counts.activeVehicles, "primary"),
+    kpi("active_routes", "Active Routes", counts.activeRoutes, "primary"),
+    kpi("allocated_students", "Students Allocated", counts.allocatedStudents, "success"),
+    kpi(
+      "unallocated_students",
+      "Unallocated",
+      counts.unallocatedStudents,
+      "warning",
+    ),
+    // No adherence source yet — BUS-093 (blocked on BUS-038 typed stop times).
+    kpi("on_time", "On-Time Rate", null, "neutral", "Available once trips run"),
+    kpi("delayed", "Delayed Today", null, "neutral", "Available once trips run"),
+    // No boarding source yet — BUS-102 (transport attendance has no student id
+    // and no date, so a "students picked" count cannot be attributed or dated).
+    kpi("picked", "Students Boarded", null, "neutral", "Available once trips run"),
+  ];
+}
+
 export async function handleDashboard(req: Request, config: AppConfig): Promise<Response> {
-  return await handleSnapshot(req, config, "snapshot_dashboard", "Failed to load transport dashboard");
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requireTransportRead(auth.claims);
+  if (denied) return denied;
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const payload = await runTenant(config, auth.claims, async (db) => {
+      const countOf = async (entityType: string, predicate?: (p: Record<string, unknown>) => boolean) => {
+        const rows = await db.queryObject<{ payload: Record<string, unknown> }>(
+          `SELECT payload FROM transport_entities
+           WHERE organization_id = $1 AND school_id = $2 AND entity_type = $3`,
+          [orgId, schoolId, entityType],
+        );
+        const payloads = rows.map((r) => r.payload);
+        return predicate ? payloads.filter(predicate).length : payloads.length;
+      };
+
+      const activeVehicles = await countOf(
+        "vehicle",
+        (p) => String(p.status ?? "active") === "active",
+      );
+      const activeRoutes = await countOf(
+        "route",
+        (p) => String(p.status ?? "") === "active",
+      );
+      const allocatedStudents = await countOf(
+        "allocation",
+        (p) => String(p.routeId ?? "").length > 0,
+      );
+      const unallocatedStudents = await countOf(
+        "allocation",
+        (p) => String(p.routeId ?? "").length === 0,
+      );
+
+      return {
+        kpis: buildDashboardKpis({
+          activeVehicles,
+          activeRoutes,
+          allocatedStudents,
+          unallocatedStudents,
+        }),
+        // Everything below has no computable source yet. Emit EMPTY rather than
+        // seeded fiction; the client renders a "not configured" affordance.
+        vehicleAssignments: [],
+        activeDelays: [],
+        routePerformance: [],
+        occupancy: {
+          totalCapacity: 0,
+          allocatedSeats: allocatedStudents,
+          unassignedStudents: unallocatedStudents,
+          utilizationPercent: 0,
+        },
+        aiInsight: "",
+      };
+    });
+    return jsonResponse(envelope(payload));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    console.error("handleDashboard error:", error);
+    return errorEnvelope("INTERNAL_ERROR", "Failed to load transport dashboard", 500);
+  }
 }
 
 export async function handleRoutes(req: Request, config: AppConfig): Promise<Response> {
