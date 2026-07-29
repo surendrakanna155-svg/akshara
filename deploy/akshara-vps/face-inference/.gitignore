@@ -1,0 +1,2 @@
+# Model weights are fetched at deploy time, never committed. See fetch_model.sh.
+models/
