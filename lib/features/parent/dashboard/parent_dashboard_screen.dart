@@ -409,9 +409,15 @@ class _ChildSummaryKpiRow extends StatelessWidget {
     return AksharaPremiumKpiCard(
       // `—` stays exactly as-is: it means "not measured" and must never be
       // dressed up into something that looks like a value.
+      //
+      // Echo-stripping is keyed on the LONG label, never the displayed one:
+      // the card means "Fees due" whichever variant is on screen, and keying it
+      // on the short label put the qualifier back exactly where space was
+      // tightest — "Fees" does not contain "due", so "₹4,200 due" survived and
+      // rendered as "₹4,20…" on the narrow layout that needed it most.
       value: value == null
           ? '—'
-          : truncateStressLabel(_withoutLabelEcho(value, label)),
+          : truncateStressLabel(_withoutLabelEcho(value, longLabel)),
       label: label,
       accent: accent,
       icon: icon,
