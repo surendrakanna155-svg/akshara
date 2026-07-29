@@ -73,16 +73,28 @@ dev_dependencies:
   #   flutter pub run flutter_launcher_icons
   flutter_launcher_icons: ^0.14.1
 
-# Launcher icon configuration. Run `flutter pub run flutter_launcher_icons`
-# to (re)generate the mipmap resources under android/app/src/main/res/.
+# Launcher icon configuration.
+#
+# The source PNGs in assets/branding/ are BUILD OUTPUTS, generated from the
+# NIKSHA OS vector master by `node brand/build_platform_icons.js`. Never edit
+# them by hand — fix the master and re-run that script, which also writes the
+# Android and iOS icons directly.
+#
+# `flutter pub run flutter_launcher_icons` remains safe to run: it reads the
+# same NIKSHA sources and the same #0B1F4B canvas, so it reproduces the current
+# icons instead of reverting the app to the old Akshara mark. That reversion was
+# live until now — this block still pointed at the pre-rebrand artwork with a
+# #1565C0 background, and `ios: false` is why the iOS set was never rebranded
+# and still held the stock Flutter template icon.
 flutter_launcher_icons:
   android: "ic_launcher"
-  ios: false
+  ios: true
   image_path: "assets/branding/app_icon.png"
   min_sdk_android: 24
   remove_alpha_ios: true
-  # Adaptive icon (Android 8.0+): brand background + transparent foreground.
-  adaptive_icon_background: "#1565C0"
+  # Adaptive icon (Android 8.0+): brand canvas + transparent foreground.
+  # Must match android/app/src/main/res/values/colors.xml ic_launcher_background.
+  adaptive_icon_background: "#0B1F4B"
   adaptive_icon_foreground: "assets/branding/app_icon_foreground.png"
 
 flutter:

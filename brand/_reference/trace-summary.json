@@ -1,0 +1,29 @@
+{
+  "nt": {
+    "src": "296x226",
+    "traced": "1776x1356",
+    "grad": 138,
+    "flat": 223,
+    "dropped": 7446,
+    "flagRemoved": 0,
+    "kb": 299
+  },
+  "os": {
+    "src": "244x269",
+    "traced": "1464x1614",
+    "grad": 97,
+    "flat": 309,
+    "dropped": 14584,
+    "flagRemoved": 51,
+    "kb": 319
+  },
+  "ny": {
+    "src": "232x235",
+    "traced": "1392x1410",
+    "grad": 76,
+    "flat": 478,
+    "dropped": 13265,
+    "flagRemoved": 0,
+    "kb": 290
+  }
+}

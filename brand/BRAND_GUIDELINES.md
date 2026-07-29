@@ -1,12 +1,31 @@
 # NIKSHA — brand system
 
-> Master vector artwork for the three brands. Every mark here was **drawn as
-> vector geometry**, not traced or upscaled from the reference image. No SVG in
-> this package contains raster data, embedded images or stray anchor points.
+> **The source of truth is `brand/_reference/niksha-brand-board.png`** — the
+> approved brand artwork, held in this repository. See
+> `_reference/README.md` for its checksum and the rules that govern it.
+>
+> Every mark is **vectorised from that board** by `brand/trace_from_reference.js`
+> — outlines traced from its pixels, every gradient stop a measured mean of the
+> pixels beneath its region. No shape or hex value was chosen by hand, and the
+> trace is reproducible: re-running it yields byte-identical masters. No SVG here
+> contains raster data or embedded images.
 >
 > Masters live in `brand/<brand>/svg/`. Everything else — PNGs, icons, banners —
-> is **generated** from those masters by `brand/build_assets.js`. Never hand-edit
-> a generated file; fix the master and re-run the build.
+> is **generated** from those masters by `brand/build_assets.js`, and the Android
+> and iOS app icons by `brand/build_platform_icons.js`. Never hand-edit a
+> generated file, and never hand-edit a master: fix the board and re-trace.
+>
+> ```bash
+> npm i sharp imagetracerjs          # tooling only, not repo dependencies
+> node brand/trace_from_reference.js # board  -> masters
+> node brand/build_assets.js         # master -> every derivative
+> node brand/build_platform_icons.js # master -> Android + iOS app icons
+> ```
+>
+> **History.** An earlier revision of this package was drawn by hand rather than
+> traced, and drifted materially from the reference — different letterform
+> construction, different palette. It was replaced wholesale. Do not reintroduce
+> hand-authored geometry: the reference board is the single source of truth.
 
 ---
 
@@ -15,21 +34,26 @@
 | Brand | Purpose | Palette | Mark |
 |---|---|---|---|
 | **NIKSHA Technologies Pvt. Ltd.** | Corporate identity | Blue → violet | N monogram dissolving into data squares |
-| **NIKSHA OS** | School ERP platform | Blue → sky, green accent | N rising from an open book, summit flag |
+| **NIKSHA OS** | School ERP platform | Blue → sky, green accent | N rising from an open book, ascending data squares |
 | **NIKSY** | Personal AI assistant | Teal → green | N inside an open progress ring |
 
 ### What makes them a family
 
-All three share **one skeleton**: the N monogram is built from the same three
-straight prisms — left stem, descending diagonal, right stem — on a shared
-baseline and cap height. Identical construction, different treatment. Put them
-side by side and they are obviously siblings; see any one alone and it is
-unambiguous which brand it is.
+All three carry an **N monogram of the same family** — left stem, descending
+diagonal, right stem — so they read as siblings, while each remains unmistakably
+its own brand.
+
+They are **not the same letterform**, and this is deliberate. In the reference,
+Technologies and NIKSY are drawn as ribbon monograms with rounded stems and
+curled terminals, while the OS monogram is angular and interlocks with the book
+that frames it. Harmonising them was considered and rejected by the brand owner:
+making the three identical would have required redrawing the OS mark, which must
+match the reference exactly apart from the removed flag.
 
 The differentiation is carried by **environment, not by redrawing the letter**:
 
 - **Technologies** — the monogram *dissolves*. Engineering, infrastructure, the thing underneath.
-- **OS** — the monogram *stands on a book* and plants a flag. Education, achievement.
+- **OS** — the monogram *rises from an open book*, data lifting off the page. Education, achievement.
 - **NIKSY** — the monogram is *held inside an open ring*. Personal, in progress, human.
 
 ---
@@ -39,27 +63,30 @@ The differentiation is carried by **environment, not by redrawing the letter**:
 ### NIKSHA Technologies
 | Role | Hex |
 |---|---|
-| Primary | `#2563EB` |
-| Mid | `#4F46E5` |
-| Accent | `#8B5CF6` |
-| Dissolve | `#A78BFA` |
+| Blue stem | `#046AF9` |
+| Mid blue | `#044AE7` |
+| Deep blue | `#0038C7` |
+| Violet stem | `#672BF4` |
+| Dissolve violet | `#A78BFA` |
 | Canvas (dark) | `#0A0F2C` |
 
 ### NIKSHA OS
 | Role | Hex |
 |---|---|
-| Deep | `#1E3A8A` |
-| Primary | `#2563EB` |
-| Light | `#38BDF8` |
-| Growth accent | `#10B981` |
+| Deep | `#022997` |
+| Primary | `#0234B8` |
+| Mid | `#013AC8` |
+| Light | `#0496F3` |
+| Growth accent | `#0AA565` |
 | **App canvas / icon background** | **`#0B1F4B`** |
 
 ### NIKSY
 | Role | Hex |
 |---|---|
-| Deep | `#047857` |
-| Primary | `#10B981` |
-| Light | `#34D399` |
+| Deep | `#047956` |
+| Mid | `#029777` |
+| Primary | `#02A78A` |
+| Light | `#02B695` |
 | Canvas (light) | `#F5FBF7` |
 
 ### Rules
@@ -95,7 +122,7 @@ version must be used:
 | App icon | 48 px (mdpi) |
 
 **Below 24 px use the monochrome symbol.** Gradients band and the fine detail —
-flag, dissolve squares, ring gap — collapses into mud.
+dissolve squares, ring gap, chart bars — collapses into mud.
 
 ---
 
@@ -137,7 +164,9 @@ UI font (SF Pro / Roboto) — never to a display serif.
 - Add drop shadows, outlines, bevels or glows.
 - Place the gradient mark on a mid-tone background where it loses contrast.
 - Recreate the wordmark by typing it — use the vector master, whose tracking is fixed.
-- Use the raster reference image for anything. It is superseded by these masters.
+- Ship the raster reference board itself. It is the source these masters were
+  traced from and the authority for any future revision, but it is not an asset —
+  always ship the vector master or a PNG generated from it.
 
 ---
 
@@ -145,14 +174,20 @@ UI font (SF Pro / Roboto) — never to a display serif.
 
 ```
 brand/
+├── _reference/
+│   ├── niksha-brand-board.png   ← SOURCE OF TRUTH (approved artwork)
+│   └── README.md                ← provenance, checksum, re-trace procedure
 ├── BRAND_GUIDELINES.md          ← this file
-├── build_assets.js              ← generates every derivative from the masters
+├── trace_from_reference.js      ← board → the three masters
+├── build_assets.js              ← masters → every derivative
+├── build_platform_icons.js      ← master → Android + iOS app icons
 ├── niksha-os/
-│   ├── svg/  niksha-os-symbol.svg          ← MASTER
+│   ├── svg/  niksha-os-symbol.svg          ← MASTER (generated by the trace)
 │   ├── png/  (generated)
-│   └── icons/(generated)
+│   ├── icons/(generated)
+│   └── play/ (feature graphic; re-render per play/README.md after a re-trace)
 ├── niksha-technologies/
-│   └── svg/  niksha-technologies-symbol.svg ← MASTER
+│   └── svg/  niksha-technologies-symbol.svg ← MASTER (generated by the trace)
 └── niksy/
-    └── svg/  niksy-symbol.svg               ← MASTER
+    └── svg/  niksy-symbol.svg               ← MASTER (generated by the trace)
 ```

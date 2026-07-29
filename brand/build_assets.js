@@ -63,30 +63,56 @@ function monochrome(svg, colour) {
 }
 
 /**
- * Lifts the gradient's dark end so the mark holds contrast when it sits on the
- * brand's own dark canvas.
+ * Lifts the mark's dark end so it holds contrast on the brand's own dark canvas.
  *
  * Why this exists: the masters are tuned for light backgrounds, where the deep
- * stop (#1E3A8A / #047857 / #2563EB) gives the mark weight. Composited onto the
- * navy icon canvas (#0B1F4B) that same stop is nearly the background colour, so
- * the flag, dissolve squares and ring gap disappeared at icon sizes — exactly
- * where legibility matters most. Icons and dark social surfaces therefore use
- * this lifted variant, not the master directly.
+ * tones give the mark weight. Composited onto the navy icon canvas (#0B1F4B)
+ * those same tones are nearly the background colour, so the dissolve squares and
+ * ring gap disappeared at icon sizes — exactly where legibility matters most.
+ * Icons and dark social surfaces therefore use this lifted variant.
+ *
+ * This used to be a lookup table of six hand-picked hexes. That worked only while
+ * the masters were hand-authored from a fixed palette. The masters are now traced
+ * from the reference artwork and carry several hundred sampled colours, none of
+ * which are in that table — so the table silently did nothing. It is replaced
+ * with a curve that lifts luminance while preserving hue and saturation, which
+ * works for any palette:
+ *
+ *     L' = 1 - (1 - L)^EXP
+ *
+ * Monotonic, fixes both endpoints (black stays darkest, white stays white), and
+ * brightens the low end hardest — which is precisely where the contrast was lost.
  */
-function onDark(svg) {
-  const lift = {
-    '#1E3A8A': '#3B82F6',
-    '#1D4ED8': '#3B82F6',
-    '#2563EB': '#60A5FA',
-    '#047857': '#10B981',
-    '#4F46E5': '#818CF8',
-    '#7C3AED': '#A78BFA',
+const DARK_LIFT_EXP = 1.45;
+
+function liftHex(hexStr) {
+  const r = parseInt(hexStr.slice(1, 3), 16) / 255;
+  const g = parseInt(hexStr.slice(3, 5), 16) / 255;
+  const b = parseInt(hexStr.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const lNew = 1 - Math.pow(1 - l, DARK_LIFT_EXP);
+  if (l <= 0 || l >= 1 || lNew <= l) return hexStr;
+
+  // Scale the channels about the midpoint so hue and saturation are untouched.
+  let k = l < 0.5 ? lNew / l : (1 - lNew) / (1 - l);
+
+  // Cap the scale so no channel clips at 255. A clipped channel is not a
+  // brighter colour — it is a different hue, which is how the NIKSY teal turned
+  // mint on its first pass.
+  if (l < 0.5 && max > 0) k = Math.min(k, 1 / max);
+  else if (l >= 0.5 && min < 1) k = Math.min(k, 1 / (1 - min));
+
+  const map = (c) => {
+    const v = l < 0.5 ? c * k : 1 - (1 - c) * k;
+    return Math.max(0, Math.min(255, Math.round(v * 255)))
+      .toString(16).padStart(2, '0');
   };
-  let out = svg;
-  for (const [from, to] of Object.entries(lift)) {
-    out = out.replaceAll(from, to);
-  }
-  return out;
+  return `#${map(r)}${map(g)}${map(b)}`;
+}
+
+function onDark(svg) {
+  return svg.replace(/#[0-9A-Fa-f]{6}\b/g, (m) => liftHex(m.toLowerCase()));
 }
 
 const ensure = (d) => fs.mkdirSync(d, { recursive: true });
@@ -104,7 +130,9 @@ async function render(svgBuf, out, w, h, bg) {
       ? { create: { width: w, height: h, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } }
       : { create: { width: w, height: h, channels: 4, background: bg } };
   let pipe = sharp(base).composite([{ input: glyph, gravity: 'center' }]);
-  if (bg !== 'transparent') pipe = pipe.flatten({ background: bg });
+  // flatten() makes the pixels opaque but keeps the alpha channel. Play and the
+  // App Store both reject icons that still carry one, so drop it outright.
+  if (bg !== 'transparent') pipe = pipe.flatten({ background: bg }).removeAlpha();
   await pipe.png().toFile(out);
 }
 
