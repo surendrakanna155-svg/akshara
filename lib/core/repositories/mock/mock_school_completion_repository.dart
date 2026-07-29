@@ -53,7 +53,11 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
     ),
   ];
   SchoolBranding _branding = const SchoolBranding(
-    displayName: 'Akshara Demo School',
+    // User-visible: this seed drives schoolDisplayNameProvider, i.e. the login
+    // screen, the splash screen, the app title and the parent shell header in
+    // demo/mock mode — and therefore every store screenshot. It must carry the
+    // NIKSHA brand, not the pre-rename one.
+    displayName: 'NIKSHA Demo School',
     tagline: 'Learning with purpose',
     primaryColor: '#1B4D89',
     secondaryColor: '#F5A623',

@@ -9,6 +9,7 @@ import '../../features/copilot/widgets/copilot_bottom_nav_ai_slot.dart';
 import '../../theme/radius.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
+import '../layout/bottom_chrome_scope.dart';
 import '../widgets/workspace_switcher.dart' show WorkspaceSwitcher;
 
 /// A primary bottom-nav tab for a persona shell.
@@ -84,40 +85,46 @@ class PersonaBottomNav extends ConsumerWidget {
     final location = GoRouterState.of(context).uri.path;
     final selectedIndex = _selectedIndex(location);
 
-    return Stack(
-      clipBehavior: Clip.none,
-      alignment: Alignment.bottomCenter,
-      children: [
-        NavigationBar(
-          height: context.akshara.bottomNavHeight,
-          selectedIndex: selectedIndex,
-          onDestinationSelected: (index) {
-            if (index == spec.primary.length) {
-              _openMoreSheet(context, location);
-              return;
-            }
-            final destination = spec.primary[index];
-            if (!location.startsWith(destination.route)) {
-              context.go(destination.route);
-            }
-          },
-          destinations: [
-            for (final d in spec.primary)
-              NavigationDestination(
-                icon: Icon(d.icon),
-                selectedIcon: Icon(d.selectedIcon),
-                label: d.label,
+    // Publish the bar's real height so a sibling overlay (the floating AI dock)
+    // sits clear of it at EVERY width. These shells have no tablet branch —
+    // they paint this bar on tablets too — which is why an overlay that guessed
+    // "phones only" from a breakpoint landed inside the bar on a tablet.
+    return BottomChromeReporter(
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.bottomCenter,
+        children: [
+          NavigationBar(
+            height: context.akshara.bottomNavHeight,
+            selectedIndex: selectedIndex,
+            onDestinationSelected: (index) {
+              if (index == spec.primary.length) {
+                _openMoreSheet(context, location);
+                return;
+              }
+              final destination = spec.primary[index];
+              if (!location.startsWith(destination.route)) {
+                context.go(destination.route);
+              }
+            },
+            destinations: [
+              for (final d in spec.primary)
+                NavigationDestination(
+                  icon: Icon(d.icon),
+                  selectedIcon: Icon(d.selectedIcon),
+                  label: d.label,
+                ),
+              const NavigationDestination(
+                key: QaTestKeys.moreNavTab,
+                icon: Icon(Icons.grid_view_outlined),
+                selectedIcon: Icon(Icons.grid_view_rounded),
+                label: 'More',
               ),
-            const NavigationDestination(
-              key: QaTestKeys.moreNavTab,
-              icon: Icon(Icons.grid_view_outlined),
-              selectedIcon: Icon(Icons.grid_view_rounded),
-              label: 'More',
-            ),
-          ],
-        ),
-        const CopilotBottomNavAiSlot(),
-      ],
+            ],
+          ),
+          const CopilotBottomNavAiSlot(),
+        ],
+      ),
     );
   }
 
@@ -144,6 +151,12 @@ class PersonaBottomNav extends ConsumerWidget {
     );
   }
 }
+
+/// Widest a "More" tile is allowed to get. Chosen so the phone layout is
+/// unchanged — 3 columns at every phone width (350dp of content at 390dp,
+/// 388dp at 428dp) — while wider surfaces add columns instead of inflating the
+/// tile. See [MoreNavSheet].
+const double _moreTileMaxExtent = 140;
 
 /// Premium "More" overflow sheet. Surfaces the workspace switcher (for multi-hat
 /// users — discoverability decision in UX Batch 2) above a grid of the persona's
@@ -195,8 +208,17 @@ class MoreNavSheet extends ConsumerWidget {
                 ),
                 const SizedBox(height: AksharaSpacing.s4),
               ],
-              GridView.count(
-                crossAxisCount: 3,
+              // Tile-sized, not column-counted. A fixed `crossAxisCount: 3`
+              // reads correctly on a phone but has no tablet behaviour: on a
+              // tablet the sheet widens to its 640dp cap, which stretched each
+              // tile to ~192dp wide and ~209dp tall around a 44dp icon — three
+              // columns of near-empty slabs with the label stranded under a
+              // large gap. Capping the tile EXTENT keeps a phone-sized,
+              // phone-proportioned tile and simply lays out more per row as the
+              // surface grows: 3 columns at 390/428dp (byte-identical to the
+              // old grid), 4 on a tablet.
+              GridView.extent(
+                maxCrossAxisExtent: _moreTileMaxExtent,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 mainAxisSpacing: AksharaSpacing.s3,

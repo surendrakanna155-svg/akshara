@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/layout/bottom_chrome_scope.dart';
 import '../../../theme/breakpoints.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -35,7 +36,22 @@ class CopilotFloatingDock extends ConsumerWidget {
     if (!copilotFloatingDockEnabled(prefs: prefs, breakpoint: breakpoint)) {
       return const SizedBox.shrink();
     }
-    final bottomInset = isMobile ? 88.0 : AksharaSpacing.s6;
+    // Clear the bottom chrome the surrounding shell ACTUALLY paints, as
+    // measured and published by the nav bar itself (BottomChromeScope).
+    //
+    // This used to be `isMobile ? 88 : 24`, which assumed a bottom nav exists
+    // only on phones. The persona shells have no tablet branch and paint their
+    // 80dp NavigationBar at every width, so on a tablet the 24dp inset put this
+    // dock fully INSIDE the bar, covering a primary destination — and next to
+    // the raised centre AI button it read as a duplicated, broken AI control.
+    //
+    // The fallback keeps the previous behaviour for a shell that reports
+    // nothing (the ERP admin shell, whose bottom nav exists on mobile only, and
+    // whose 88/24 values are already correct for both of its layouts).
+    final reportedChrome = BottomChromeScope.maybeHeightOf(context);
+    final bottomInset = reportedChrome != null
+        ? reportedChrome + AksharaSpacing.s2
+        : (isMobile ? 88.0 : AksharaSpacing.s6);
 
     return Positioned(
       right: AksharaSpacing.s4,
