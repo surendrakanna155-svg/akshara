@@ -418,3 +418,96 @@ Deno.test(
     },
   ),
 );
+
+// ── payment.failed: a late failure must never walk back captured money ───────
+//
+// Razorpay does not guarantee webhook ordering, and one order can emit a
+// `payment.failed` for a first attempt and a `payment.captured` for the retry.
+// The failed-branch write was unguarded (`WHERE id = $1`), so a late failure
+// demoted an intent whose money HAD been captured — leaving a 'failed' intent
+// beside a real finance_collection and a credited invoice. The parent then sees
+// "payment failed" for money the school actually took, and reconciliation shows
+// a failed payment that nonetheless cleared a due.
+//
+// This db fake behaves the way Postgres would: it applies the UPDATE only if the
+// statement's own WHERE clause admits the row. So if the guard is ever removed
+// from the SQL, the demotion actually happens here and the test fails.
+
+const CAPTURED_INTENT: PaymentIntentRow = {
+  ...INTENT,
+  status: "captured",
+  collection_id: "col-already-1",
+  receipt_id: "rcpt-already-1",
+  gateway_payment_id: "pay_already_1",
+};
+
+class FailedWebhookDb {
+  demotedToFailed = false;
+
+  constructor(private readonly intent: PaymentIntentRow) {}
+
+  // deno-lint-ignore require-await
+  async queryObject<T>(sql: string, _args: unknown[] = []): Promise<T[]> {
+    if (sql.includes("FROM payment_intents WHERE gateway_order_id")) {
+      return [this.intent] as T[];
+    }
+    if (sql.includes("UPDATE payment_intents") && sql.includes("'failed'")) {
+      const guarded = sql.includes("status NOT IN ('captured', 'settled')");
+      const moneyTerminal = this.intent.status === "captured" ||
+        this.intent.status === "settled";
+      if (guarded && moneyTerminal) return [] as T[]; // no row matched
+      this.demotedToFailed = true;
+      return [{ id: this.intent.id }] as T[];
+    }
+    return [] as T[];
+  }
+}
+
+function failedPayload(orderId: string) {
+  return {
+    payload: { payment: { order_id: orderId, id: "pay_failed_1" } },
+  } as Record<string, unknown>;
+}
+
+Deno.test("payment.failed does NOT demote an already-captured intent", async () => {
+  const spy = new FailedWebhookDb(CAPTURED_INTENT);
+  const result = await processRazorpayWebhook(
+    spy as unknown as TenantQueryClient,
+    webhookClaims(),
+    "evt_late_failure_1",
+    "payment.failed",
+    failedPayload(CAPTURED_INTENT.gateway_order_id!),
+  );
+
+  assertEquals(
+    spy.demotedToFailed,
+    false,
+    "captured money must never be walked back by a late failure webhook",
+  );
+  // Still 'processed': the correct action WAS to ignore it. Reporting failure
+  // would make the gateway redeliver this event indefinitely.
+  assertEquals(result.processed, true);
+  assertEquals(result.intentId, CAPTURED_INTENT.id);
+  assertEquals(
+    result.collectionId,
+    CAPTURED_INTENT.collection_id,
+    "the surviving collection is reported, so the ignore is visible to callers",
+  );
+});
+
+Deno.test("payment.failed DOES mark a genuinely unpaid intent failed", async () => {
+  // The guard must not over-block: an intent that never reached a money state
+  // still records the failure.
+  const spy = new FailedWebhookDb(INTENT); // status 'initiated'
+  const result = await processRazorpayWebhook(
+    spy as unknown as TenantQueryClient,
+    webhookClaims(),
+    "evt_real_failure_1",
+    "payment.failed",
+    failedPayload(INTENT.gateway_order_id!),
+  );
+
+  assertEquals(spy.demotedToFailed, true, "a real failure must be recorded");
+  assertEquals(result.processed, true);
+  assertEquals(result.intentId, INTENT.id);
+});

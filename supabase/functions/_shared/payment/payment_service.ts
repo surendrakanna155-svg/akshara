@@ -474,11 +474,30 @@ export async function processRazorpayWebhook(
   }
 
   if (eventType === "payment.failed") {
-    await db.queryObject(
-      `UPDATE payment_intents SET status = 'failed', updated_at = timezone('utc', now()) WHERE id = $1`,
+    // GUARDED terminal write. Razorpay does not guarantee webhook ordering, and
+    // a single order can produce a `payment.failed` for one attempt and a
+    // `payment.captured` for the retry. An unguarded write here let a late
+    // failure demote an intent whose money HAD been captured — leaving a
+    // 'failed' intent alongside a real collection and a credited invoice, so
+    // the parent sees "payment failed" for money the school actually took.
+    //
+    // Money-terminal states ('captured', 'settled') are never walked back by a
+    // failure event. The capture path is already guarded the same way
+    // (`markPaymentIntentCaptured`); this closes the asymmetry.
+    const failed = await db.queryObject<{ id: string }>(
+      `UPDATE payment_intents SET status = 'failed', updated_at = timezone('utc', now())
+       WHERE id = $1 AND status NOT IN ('captured', 'settled')
+       RETURNING id`,
       [intent.id],
     );
-    return { processed: true, intentId: intent.id };
+    // Zero rows means the intent is money-terminal. Deliberately NOT an error:
+    // throwing would make the gateway redeliver this event forever. It is
+    // correctly processed — the correct action was to ignore it.
+    return {
+      processed: true,
+      intentId: intent.id,
+      collectionId: failed.length === 0 ? intent.collection_id : undefined,
+    };
   }
 
   return { processed: true, intentId: intent.id };
