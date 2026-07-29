@@ -340,48 +340,107 @@ class _ChildSummaryKpiRow extends StatelessWidget {
     final String? homework = homeworkChip ??
         (todaySummary.isEmpty ? null : homeworkRows.toString());
 
-    return Builder(
-      builder: (context) {
-        final narrow = MediaQuery.sizeOf(context).width < 360;
-        // IntrinsicHeight bounds the row to its tallest card so the stretched
-        // children get equal, finite heights inside the scroll view.
-        return IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: AksharaPremiumKpiCard(
-                  value: truncateStressLabel(attendance ?? '—'),
-                  label: 'Attendance',
-                  accent: KpiAccent.success,
-                  icon: Icons.event_available_outlined,
-                ),
-              ),
-              const SizedBox(width: AksharaSpacing.s3),
-              Expanded(
-                child: AksharaPremiumKpiCard(
-                  value: truncateStressLabel(homework ?? '—'),
-                  label: narrow ? 'Homework' : 'Homework pending',
-                  accent: KpiAccent.warning,
-                  icon: Icons.assignment_outlined,
-                ),
-              ),
-              const SizedBox(width: AksharaSpacing.s3),
-              Expanded(
-                child: AksharaPremiumKpiCard(
-                  value: truncateStressLabel(fees ?? '—'),
-                  label: narrow ? 'Fees' : 'Fees due',
-                  accent: KpiAccent.error,
-                  icon: Icons.payments_outlined,
-                ),
-              ),
-            ],
+    // IntrinsicHeight bounds the row to its tallest card so the stretched
+    // children get equal, finite heights inside the scroll view.
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: _kpi(
+              context,
+              value: attendance,
+              longLabel: 'Attendance',
+              shortLabel: 'Attendance',
+              accent: KpiAccent.success,
+              icon: Icons.event_available_outlined,
+            ),
           ),
-        );
-      },
+          const SizedBox(width: AksharaSpacing.s3),
+          Expanded(
+            child: _kpi(
+              context,
+              value: homework,
+              longLabel: 'Homework pending',
+              shortLabel: 'Homework',
+              accent: KpiAccent.warning,
+              icon: Icons.assignment_outlined,
+            ),
+          ),
+          const SizedBox(width: AksharaSpacing.s3),
+          Expanded(
+            child: _kpi(
+              context,
+              value: fees,
+              longLabel: 'Fees due',
+              shortLabel: 'Fees',
+              accent: KpiAccent.error,
+              icon: Icons.payments_outlined,
+            ),
+          ),
+        ],
+      ),
     );
   }
+
+  /// Picks the label that fits the width each card actually gets.
+  ///
+  /// The threshold is on the SCREEN, deliberately, even though the question is
+  /// about one card: these three sit in a Row inside an [IntrinsicHeight], and
+  /// a LayoutBuilder cannot report intrinsic dimensions — putting one here
+  /// silently breaks the intrinsic pass and shifts everything below it.
+  ///
+  /// The previous threshold was 360, which is roughly right for ONE card and
+  /// badly wrong for three across: on an ordinary 411dp phone it reported "not
+  /// narrow" while each card was ~120dp, so "Homework pending" rendered as
+  /// "Homework pe…". Three cards need ~150dp each for a two-word label, hence
+  /// [_kLongLabelMinScreenWidth].
+  Widget _kpi(
+    BuildContext context, {
+    required String? value,
+    required String longLabel,
+    required String shortLabel,
+    required KpiAccent accent,
+    required IconData icon,
+  }) {
+    final label = MediaQuery.sizeOf(context).width >= _kLongLabelMinScreenWidth
+        ? longLabel
+        : shortLabel;
+    return AksharaPremiumKpiCard(
+      // `—` stays exactly as-is: it means "not measured" and must never be
+      // dressed up into something that looks like a value.
+      value: value == null
+          ? '—'
+          : truncateStressLabel(_withoutLabelEcho(value, label)),
+      label: label,
+      accent: accent,
+      icon: icon,
+    );
+  }
+
+  /// Drops trailing words the card's own label already states.
+  ///
+  /// The chips are written to stand alone as pills — "₹4,200 due" reads
+  /// correctly on its own. Inside a card already labelled "Fees due" it says
+  /// "due" twice AND overflows, so the parent saw "₹4,200…": the one number on
+  /// this screen they actually need was the part that got cut off.
+  ///
+  /// Only words the label itself contains are removed, so no information is
+  /// lost — anything the card does not already say is kept.
+  static String _withoutLabelEcho(String value, String label) {
+    final words = value.trim().split(RegExp(r'\s+'));
+    final labelWords =
+        label.toLowerCase().split(RegExp(r'\s+')).toSet();
+    while (words.length > 1 && labelWords.contains(words.last.toLowerCase())) {
+      words.removeLast();
+    }
+    return words.join(' ');
+  }
 }
+
+/// Below this SCREEN width the three-across cards cannot each fit a two-word
+/// label: ~150dp per card, plus the two gaps and the page's own padding.
+const double _kLongLabelMinScreenWidth = 520;
 
 /// Parses a percentage the backend may send as a number, `'92'` or `'92%'`.
 /// Returns null for anything that is not a percentage — including the honest
