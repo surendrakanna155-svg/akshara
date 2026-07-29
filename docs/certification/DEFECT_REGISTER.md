@@ -31,6 +31,8 @@ completes, ahead of ordinary P0 ordering.
 | **WIDGET-001** | `/parent/dashboard` renders `ParentDashboardData.mock()` — "₹4,200 due", "Present · Marked 9:12 AM" — during **every** load, not only on failure. Same class as CERT-001, on a higher-traffic screen, and the skeleton meant to prevent it is unreachable code. |
 | **WIDGET-002** | `/teacher/dashboard` asserts a staff check-in at "9:02 AM · Geo+Face verified" that did not happen, on the record that feeds payroll and the staff-attendance audit trail. |
 | **WIDGET-011** | The principal's "School health score" is blended from hard-coded fallbacks (68 and 31) whenever the real figures are absent, so a school with no data is shown a confident **51**. A fabricated financial claim to the owner. |
+| **JOURNEY-001** | The `/admin` landing hero — the first screen 6 of 15 staff roles see, every day — renders compile-time constants as live KPIs: "1,248 Students · 86 Staff · **96% Attendance**" and "**₹4.2L Collected today** · ₹1.8L Pending". Fabricated attendance and financial data, on day one at an empty school, with no failure required to trigger it. |
+| **JOURNEY-007** | `/parent/payment` falls back to a fabricated payment summary — another child's name, "₹4,000 + ₹200 late fee", a due date — whenever the live summary call fails or is still loading, and sends that fabricated **amount** to `POST /parent/payments/initiate`. Fabricated money on the payment write path. |
 
 ## Severity
 
@@ -50,10 +52,11 @@ Root cause (if known) · Recommended fix · Dependencies · Risk · Evidence`
 
 | Total | P0 | P1 | P2 | P3 |
 |---|---|---|---|---|
-| 79 | 16 | 42 | 18 | 3 |
+| 99 | 19 | 56 | 21 | 3 |
 
 By workstream: **CERT** 6 (1 P0 · 5 P1) · **XMOD** 39 (10 P0 · 22 P1 · 7 P2) ·
-**DAI** 16 (2 P0 · 7 P1 · 5 P2 · 2 P3) · **WIDGET** 18 (3 P0 · 8 P1 · 6 P2 · 1 P3).
+**DAI** 16 (2 P0 · 7 P1 · 5 P2 · 2 P3) · **WIDGET** 18 (3 P0 · 8 P1 · 6 P2 · 1 P3) ·
+**JOURNEY** 16 (3 P0 · 10 P1 · 3 P2) · **SIM** 4 (4 P1).
 
 *(Certification in progress.)*
 
@@ -2474,3 +2477,144 @@ so the capability is not counted as delivered.
 - **Dependencies:** none.
 - **Risk of fixing:** trivial.
 - **Evidence:** `lib/features/management/widgets/management_principal_overview_panel.dart:282-323`.
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SIM — Workstream 3A, Real school simulation (2026-07-29)
+     Full trace: docs/certification/findings/SIM-real-school.md
+     Only defects NOT already covered by XMOD / CERT / JOURNEY are recorded.
+     ═══════════════════════════════════════════════════════════════════════ -->
+
+### SIM-001 · **P1** · Communications / Ops · Nothing monitors the one path that carries every parent message
+
+- **Repro steps:** On the VPS, run `install-communication-cron.sh` but do not
+  complete the separate activation step that sets `INTERNAL_CRON_TOKEN` on the
+  `akshara-edge` container. Mark a student absent, approve a gate pass, send a
+  broadcast. Wait a day. Nothing is delivered, and no alert fires anywhere.
+- **Expected:** A school (or Akshara) is told when parent-facing delivery stops.
+- **Actual:** The failure is completely silent to every human. The cron writes
+  `FAIL run-scheduled http=401` to `/var/log/akshara/communication-cron.log`
+  (`deploy/akshara-vps/communication-cron/akshara-broadcast-cron.sh:47-50`) and
+  the watchdog does not look at it: it checks `/health/ready`, `/health/backup`,
+  `/health/storage` and container health only
+  (`deploy/akshara-vps/monitoring/akshara-watchdog.sh:106-108,140-142`). There is
+  no check on the cron's exit status, no check on `notification_deliveries`
+  queue depth, and no check on the age of the oldest pending delivery. Nothing
+  in the app raises it either.
+- **Root cause / important nuance:** the 5-minute broadcast cron is in fact the
+  **only** scheduled drain of the whole notification queue —
+  `runScheduledBroadcastsForOrg` calls `scheduleNotificationDrain`
+  (`_shared/communication/communication_handlers.ts:739`) →
+  `drainNotificationQueue` (`:104-115`) → `processDeliveryQueue(db, orgId)`
+  (`_shared/communication/notification_service.ts:83`), which claims **every**
+  pending delivery for the org, not just the broadcast's. So all parent
+  notification in the product hangs off one cron whose authentication the
+  installer explicitly does not configure: *"It does NOT set `INTERNAL_CRON_TOKEN`
+  on the akshara-edge container … leaves the cron firing 401s (safe — fails
+  closed) until that step is done"*
+  (`install-communication-cron.sh:6-12`). `verifyInternalCronToken` correctly has
+  no "unset = open" mode (`_shared/communication/communication_cron_auth.ts:14-33`)
+  — the defect is the absence of monitoring, not the fail-closed behaviour.
+- **Recommended fix:** Add a watchdog check that (a) asserts the last
+  `communication-cron.log` line is `OK` within the last 15 minutes, and (b) hits a
+  health endpoint exposing pending-delivery count and oldest-pending age, alerting
+  above a threshold. Surface the same two numbers on the Delivery Console so a
+  school can see it too.
+- **Dependencies:** XMOD-016 (no scheduler) — this is the monitoring half of it.
+  Blocks any confidence in XMOD chain 1 hop 5c.
+- **Risk of fixing:** low — additive ops checks; no product code path changes.
+- **Evidence:** `deploy/akshara-vps/communication-cron/install-communication-cron.sh:6-12,26-38`;
+  `deploy/akshara-vps/communication-cron/akshara-broadcast-cron.sh:29-51`;
+  `deploy/akshara-vps/monitoring/akshara-watchdog.sh:90-108,140-149`;
+  `supabase/functions/_shared/communication/communication_handlers.ts:104-132,710-751`;
+  `supabase/functions/_shared/communication/notification_service.ts:83-130`;
+  `supabase/functions/_shared/communication/communication_cron_auth.ts:1-33`.
+  **Boundary:** whether the token is actually set on the pilot's edge container
+  could not be verified — SSH is owner-bound.
+
+### SIM-002 · **P1** · Attendance · Consecutive-absence and short-attendance alerts are pull-only
+
+- **Repro steps:** Let a student be absent 3+ consecutive days, or fall below the
+  75% threshold. Wait. Check whether the class teacher, the office, the principal
+  or the parent is told.
+- **Expected:** An alert reaches a human — a push, an in-app item, a digest, or at
+  minimum a badge on a screen someone must open daily.
+- **Actual:** Nobody is told. `GET /attendance/alerts/consecutive-absence` and
+  `GET /attendance/alerts/short-attendance` are computed correctly but are read
+  **only** by the office-attendance screen
+  (`lib/features/management/attendance/office_attendance_screen.dart:33-36`) —
+  a `/management/*` route reachable by `viewManagement` holders. There is no
+  notification enqueue on either path, no cron, no digest, and no entry on any
+  teacher or parent surface. A child missing for a week produces a row on a screen
+  nobody is obliged to open.
+- **Root cause:** the alerts were built as a report, not as a signal. Consistent
+  with the XMOD finding that write-time cross-module propagation is absent.
+- **Recommended fix:** Enqueue an `enqueueNotificationRequested` to the class
+  teacher and the guardian when either threshold is first crossed (idempotent per
+  student per threshold per term), and add the count to the teacher's
+  class-teacher dashboard. The notification rail already exists and is used
+  correctly by transport, gate pass and student health.
+- **Dependencies:** SIM-001 (delivery must actually drain); XMOD-002 (an approved
+  leave still counts as an absence, so the alert will fire on children who were
+  legitimately away).
+- **Risk of fixing:** medium — firing retroactively on historical data would flood
+  parents; the first run must be watermarked.
+- **Evidence:** `lib/core/repositories/api/attendance/remote/attendance_api_paths.dart:12-14`;
+  `lib/features/management/attendance/office_attendance_screen.dart:33-36`;
+  grep for `consecutive-absence` / `short-attendance` across `lib/` and
+  `supabase/functions/_shared/` returns no notification or scheduler call site.
+
+### SIM-003 · **P1** · Complaints · The SLA cannot breach into anyone's awareness
+
+- **Repro steps:** Raise a complaint with category `safety`, severity `critical`
+  (1-hour SLA per policy). Assign it. Wait two hours. Check whether the assignee,
+  the module owner, the principal or the reporter was ever told anything.
+- **Expected:** The assignee is notified on assignment; somebody is alerted when
+  `sla_due_at` passes; the reporter is told when it is resolved.
+- **Actual:** No notification is sent at any point in a complaint's life.
+  Grepping `supabase/functions/_shared/complaints/` for
+  `enqueueNotificationRequested`, `processDeliveryQueue`, `scheduleReminder`,
+  `sendSms` or `notification_service` returns **zero** hits — while the sibling
+  desks do it correctly (`gate_pass/gate_pass_repository.ts:21,479-489`;
+  `student_health/student_health_operations.ts:21,174`). On-track/breached is
+  derived at **read** time only, so a breach exists only while somebody has the
+  complaints screen open.
+- **Root cause:** `complaints_sla.ts` is a well-built deterministic policy
+  (`SLA_POLICY_HOURS`, total over the DB's CHECK domain, `sla_due_at` stamped at
+  raise time, `_sla.ts:42-51`) with no delivery half. There is no breach sweep
+  and no cron.
+- **Recommended fix:** Enqueue on raise (to the category owner), on assign (to the
+  assignee) and on resolve (to the reporter); add an SLA-breach sweep to the same
+  periodic lane as the other jobs, alerting the assignee and the principal.
+- **Dependencies:** SIM-001; XMOD-016 (needs a scheduler for the breach sweep).
+- **Risk of fixing:** low-medium.
+- **Evidence:** `supabase/functions/_shared/complaints/complaints_sla.ts:1-60`;
+  `supabase/functions/_shared/complaints/complaints_handlers.ts`,
+  `complaints_repository.ts` (no notification import or call);
+  contrast `supabase/functions/_shared/gate_pass/gate_pass_repository.ts:471-492`.
+
+### SIM-004 · **P1** · Timetable / Substitution · The confirmation message is false on every use
+
+- **Repro steps:** As principal / VP / school admin, open the Substitute Manager,
+  assign a substitute for a period, tick the "notify" checkboxes, and submit.
+- **Expected:** Either the named audience is notified, or the UI does not claim
+  they were.
+- **Actual:** The response reports `timetableUpdated: true` as a **hard-coded
+  literal** and `notifiedAudience` as an **echo of the caller's own three
+  booleans**, plus the literal string *"Substitute assigned and timetable
+  updated."* — and there is **no notification call anywhere in that function**
+  (`_shared/school_completion/timetable_workforce_service.ts:336-347`). The substitute,
+  the class in-charge and the students are told nothing. This is not an edge case:
+  it is what the screen says every single time.
+- **Root cause:** the service composes a success payload describing intent rather
+  than reporting effect.
+- **Recommended fix:** Actually enqueue to the substitute, the class teacher and
+  (optionally) guardians, and derive `notifiedAudience` from the enqueue result.
+  Until that ships, the confirmation copy must not assert notification or a
+  timetable update.
+- **Dependencies:** XMOD-002 — the substitution engine's "teachers on leave" input
+  is structurally empty, so this flow is entered manually today. Fixing the copy
+  is independent and should not wait.
+- **Risk of fixing:** low for the copy; medium for real notification (needs an
+  audience resolver for a period's students/guardians).
+- **Evidence:** `supabase/functions/_shared/school_completion/timetable_workforce_service.ts:326-349`;
+  `lib/features/academics/timetable/substitutions/daily_substitutions_screen.dart:127-142`.
