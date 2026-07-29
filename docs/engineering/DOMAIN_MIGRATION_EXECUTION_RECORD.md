@@ -102,15 +102,25 @@ this migration did not cause.
 |---|---|---|---|
 | `live_cert_red_team_wave1` (money integrity, RLS, constraints) | 26/26 | 26/26 | PARITY |
 | `live_cert_journey_wave2` | 28/28 | — | PASS |
+| `live_cert_journey_wave3` | 30/34 | 30/34 | PARITY |
 | `live_cert_journey_wave4` (incl. **storage round-trip**) | 17/28 | 17/28 | PARITY |
+| `live_cert_journey_wave5` (scoped JWTs, RLS) | 14/24 | 14/24 | PARITY |
 | `live_cert_journey_wave1` | 5/16 | 5/16 | PARITY |
 | `live_cert_fcm_push` (notifications) | 7P/6F | 7P/6F | PARITY |
 | `live_cert_completion_wave1` | 0/2 | 0/2 | PARITY |
 
-**The 11 wave-4 and 11 wave-1 failures reproduce identically on the old host** —
-hostel/alumni 403s, org-builder 500, homework 422. They are pre-existing production
-defects, unrelated to this migration, and are covered by the systemic remediation
-roadmap.
+**Every failure reproduces identically on the old host** — hostel/alumni 403s,
+org-builder 500, homework 422, and wave-5's ten HTTP 500s on scoped-JWT RBAC
+routes. They are pre-existing production defects, unrelated to this migration,
+and are covered by the systemic remediation roadmap. The parity method is what
+distinguishes them from regressions: a migration cannot make a route return 403
+on one hostname and 200 on another when both proxy to the same container.
+
+### Mobile client
+Release APK build **fails by design** — `SEC-2` refuses to build without a real
+keystore (owner-held). A debug build with the same `--dart-define-from-file`
+proves the config pipeline: the binary contains `https://api.nikshaos.in` (×2)
+and `https://nikshaos.in` (×3), and **zero** occurrences of the old host.
 
 ### R1 proof — storage
 `MJ-M7` end-to-end against `api.nikshaos.in`: presign → PUT bytes → confirm →
@@ -129,6 +139,47 @@ GoTrue) · CI (no host refs) · storage URLs generated per-request (no data back
 
 ---
 
+## Phase 5 — Retirement (executed 2026-07-29, after the gate passed)
+
+### `/review/` UXR demo — removed
+Ran the sanctioned `scripts/uxr_review/uxr_review.sh destroy`. It removed the
+nginx review block and the web bundle, then **failed part-way** on its own SQL:
+`teardown.sql` deletes `students` before the `sessions` rows that reference them,
+so the scrub hit `sessions_context_student_id_fkey` and rolled back, and the
+stack-stop step never ran. *(Bug is in the teardown script, in the test tenant
+only — worth fixing if the demo is ever revived.)*
+
+Completed manually: the 3 `*-test` containers removed, `akshara_tenant_test`
+(30 MB, 21 fake schools, 25 demo students) dumped to
+`/opt/akshara/akshara_tenant_test.retired.<ts>.dump` (1.9 MB) and dropped.
+Production verified untouched throughout — `akshara_db` still holds its 5 students.
+
+### `akshara.veloraunisexsalon.com` — retired
+- vhost archived to `/opt/akshara/nginx-akshara.retired.<ts>.conf`, symlink removed, `nginx -t` + reload
+- `certbot delete --cert-name akshara.veloraunisexsalon.com` — renewal config gone
+
+Post-retirement state verified: all three new hosts serving, and the neighbouring
+sites are **byte-identical to their pre-retirement baseline** (velora 200,
+n8n 200, chotu 404). Storage round-trip re-proven *after* retirement — still
+HTTP 200 / 45 bytes.
+
+### ⚠ Consequence worth knowing
+With the vhost gone, the old hostname **falls through to Chotu's server block**
+(presents `CN=chotu.veloraunisexsalon.com`, returns Chotu's response envelope).
+Ordinary HTTPS clients fail on the hostname mismatch; only a client ignoring
+certificate errors reaches it.
+
+Root cause is pre-existing: **nginx declares no `default_server`**, so the
+alphabetically-first enabled site absorbs every unmatched hostname. Removing the
+Akshara vhost simply added one more name to a set that already included every
+other unmatched host. Deliberately **not** changed here — altering
+`default_server` semantics affects `velora-salon`, `n8n` and `chotu-api`, which
+is outside this migration's blast radius. Two clean fixes, owner's call:
+delete the old A record at the registrar (it is not in this Hostinger account),
+and/or add an explicit `default_server` returning 444.
+
+---
+
 ## Open items for the owner
 
 | # | Item | Why it needs you |
@@ -138,6 +189,8 @@ GoTrue) · CI (no host refs) · storage URLs generated per-request (no data back
 | 3 | **No horizontal/vertical lockup master** in `brand/niksha-os/svg/` | BRAND_GUIDELINES §6 mandates a lockup for website headers and §3 assigns it a 120px minimum, but no such file exists. `wordmark`/`suffix`/`tagline` are declared at `build_assets.js:28-30` and **never rendered**, so every generated marketing asset — including `og-image-1200x630.png` — is symbol-only and nameless. Owner authorised typesetting to the §5 spec (Inter 700 / +0.14em) as an interim, isolated in `.wordmark`/`.suffix` (web) and `LogoPlaceholder.tsx` for a one-edit swap. |
 | 4 | **5 legal placeholders** rendered as visible `pending` chips | Registered address, Grievance Officer name + designation, governing-law city + state are legal facts and were not invented. `support@nikshaos.in` was substituted where authorised. Required before public launch under the DPDP Act. |
 | 5 | Two `library_entities` cert artifacts | Host was rewritten, but they are test junk ("Cert Resource …" pointing at `/health`) that may warrant purging from production. |
+| 6 | **Delete the `akshara` A record at the registrar** | `veloraunisexsalon.com` is not in this Hostinger account, so its DNS is out of reach from here. Until the record goes, the retired hostname still resolves to the VPS and falls through to Chotu (see above). |
+| 7 | `teardown.sql` FK-ordering bug | Deletes `students` before the `sessions` referencing them. Only matters if the UXR demo is ever revived. |
 
 ---
 
