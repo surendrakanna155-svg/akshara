@@ -5552,3 +5552,66 @@ so the capability is not counted as delivered.
 - **Risk of fixing:** Medium for Library (re-keying members); low-medium for the
   other two — both are wiring existing, working code.
 - **Evidence:** file:line list above.
+
+---
+
+## FIN-AUDIT — money-terminal state transitions (added 2026-07-29)
+
+Targeted audit of every write that moves a record into a money-terminal state,
+prompted by the recorded recurring pattern for this codebase: *a terminal
+state-write with no status guard double-applies.*
+
+**Overall result: the money-out paths are in good shape.** Refunds
+(`finance_refunds_repository.ts:329,489`) use claim-first writes —
+`AND refund_status = 'pending' RETURNING *` with throw-on-zero-rows — so
+approve and reject cannot both land. Collections serialize on
+`FOR UPDATE OF fi` and refuse to over-credit
+(`finance_collections_repository.ts:471`). Fee reductions use the same proven
+pattern. One outlier was found and fixed; two findings are recorded below.
+
+### FIN-AUDIT-001 — `payment.failed` demoted captured intents — ✅ FIXED
+- **Severity:** P1 (would be P0 with payments live)
+- **Where:** `payment/payment_service.ts` — `processRazorpayWebhook`
+- **What:** the failed branch wrote `SET status='failed' WHERE id = $1` with no
+  status guard, while the capture path directly beside it was correctly guarded.
+  Razorpay does not guarantee webhook ordering and one order can emit
+  `payment.failed` for an attempt and `payment.captured` for the retry, so a
+  late failure demoted an intent whose money had been captured.
+- **Impact:** parent shown "payment failed" for money the school took;
+  reconciliation sees a failed payment that cleared a due. Drives duplicate
+  payment by the parent.
+- **Status:** fixed — guarded with `AND status NOT IN ('captured','settled')`;
+  zero rows treated as processed-and-ignored, not an error, so the gateway does
+  not redeliver forever. Two regression tests added (there were none for
+  `payment.failed` at all); verified to fail without the guard.
+
+### FIN-AUDIT-002 — payment can be initiated for an already-paid installment
+- **Severity:** P1 — NOT release-blocking for V1 (see exposure)
+- **Where:** `payment/payment_service.ts` — `initiatePayment`, and
+  `resolveInstallmentInvoiceId` at `:75`
+- **What:** initiation resolves the installment's invoice but never checks that
+  anything is still outstanding. A gateway order is created for an installment
+  that is already fully paid.
+- **It fails CLOSED, which is why this is P1 and not P0:** the capture path
+  refuses to over-credit (`createCollection` throws when
+  `amountCollected > outstanding`), so the invoice is never double-credited and
+  outstanding cannot go negative. But the refusal happens AFTER the parent has
+  paid — money sits with the gateway, no collection is written, and the intent
+  never reaches `captured`. Recoverable by refund, but only once someone notices.
+- **Recommended fix:** pre-flight the outstanding amount in `initiatePayment`
+  and fail before `provider.createOrder`, with the same typed
+  `PaymentIntentStateError` used for the missing-invoice case at `:139`. Cheap,
+  and it moves the failure to before the money moves.
+- **Exposure today:** none. `RAZORPAY_STUB_MODE` defaults true and no payment
+  SDK ships in V1, so no real money can move. This must be closed before online
+  payments are enabled.
+
+### FIN-AUDIT-003 — `payment_requests.status` can be walked backwards
+- **Severity:** P3 — cosmetic/reporting only
+- **Where:** `payment/payment_repository.ts:197`
+- **What:** `UPDATE payment_requests SET status='initiated' WHERE id = $1`, run
+  from `createPaymentIntent`, has no guard. Re-initiating against a request that
+  reached `captured` walks it back to `initiated`.
+- **Why only P3:** `payment_requests.status` is a coarse tracker; the
+  authoritative money record is the intent plus the finance_collections row,
+  and neither is affected. Worth a guard for consistency, not urgent.
