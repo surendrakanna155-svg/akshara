@@ -35,6 +35,10 @@ import {
   getActiveEnrollment,
 } from "../attendance_auth/face_enrollment_repository.ts";
 import {
+  deriveFaceEmbedding,
+  FaceEmbeddingUnavailableError,
+} from "../attendance_auth/face_embedding_client.ts";
+import {
   parseStaffCheckBody,
   validateLocation,
   verifyFace,
@@ -128,7 +132,17 @@ export async function handleRecordStaffCheckIn(
           "No enrolled reference face — enrol your face before recording attendance",
         );
       }
-      const face = verifyFace(parsed.face, reference);
+
+      // Derive the embedding HERE, from the crop this server received. The
+      // client no longer computes it, so it can no longer forge or replay a
+      // template. Any failure throws (never returns a usable vector), so a
+      // broken or unreachable inference service fails the check-in CLOSED to
+      // the audited manual-attendance request rather than admitting anyone.
+      const derived = await deriveFaceEmbedding(parsed.faceCrop);
+      const face = verifyFace(
+        { ...parsed.face, embedding: derived.embedding, modelTag: derived.modelTag },
+        reference,
+      );
 
       const inserted = await recordStaffCheckIn(db, organizationId, schoolId, {
         userId,
@@ -160,6 +174,18 @@ export async function handleRecordStaffCheckIn(
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse();
     if (error instanceof StaffAttendanceValidationError) return validationResponse(error);
+    // Embedding derivation failed. Surface the real reason rather than a 500:
+    // FACE_CROP_INVALID means capture again (a retry WILL help), whereas
+    // FACE_SERVICE_UNAVAILABLE means the service is down and the staff member
+    // should use the audited manual request. 503 for the latter so monitoring
+    // can tell an outage apart from a bad capture.
+    if (error instanceof FaceEmbeddingUnavailableError) {
+      return errorEnvelope(
+        `STAFF_ATTENDANCE_${error.code}`,
+        error.message,
+        error.code === "FACE_SERVICE_UNAVAILABLE" ? 503 : 422,
+      );
+    }
     throw error;
   }
 }

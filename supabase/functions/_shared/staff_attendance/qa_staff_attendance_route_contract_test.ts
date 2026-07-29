@@ -54,7 +54,7 @@ async function call(
 const validCheck = {
   eventType: "check_in",
   location: { latitude: 17.45, longitude: 78.39, accuracyM: 8, isMock: false, capturedAt: "2026-07-01T10:00:00Z" },
-  face: { embedding: Array.from({ length: 64 }, () => 0.1), livenessPassed: true },
+  face: { crop: "Y3JvcC1ieXRlcw==", livenessPassed: true },
 };
 const validGeofence = { centerLatitude: 17.45, centerLongitude: 78.39, radiusM: 100, maxAccuracyM: 50 };
 
@@ -130,7 +130,7 @@ Deno.test("staff-attendance: SLICE 4 manual-requests is GET-only (POST is the cr
 Deno.test("staff-attendance: SHAPE 422 before DB — missing location, missing face, bad event_type", async () => {
   const noLoc = await call("POST", "/staff-attendance/check", ["markStaffAttendance"], {
     eventType: "check_in",
-    face: { embedding: [0.1, 0.2], livenessPassed: true },
+    face: { crop: "Y3JvcC1ieXRlcw==", livenessPassed: true },
   });
   assertEquals(noLoc?.status, 422);
   assertEquals((await noLoc!.json()).error.code, "STAFF_ATTENDANCE_LOCATION_REQUIRED");

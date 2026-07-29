@@ -159,9 +159,9 @@ Deno.test("verifyFace: a non-finite (overflowed) reference fails CLOSED as FACE_
   assertEquals((e as StaffAttendanceValidationError).code, "FACE_NO_MATCH");
 });
 
-Deno.test("parseStaffCheckBody: rejects missing location / missing face; accepts a full body", () => {
+Deno.test("parseStaffCheckBody: rejects missing location / missing face crop; accepts a full body", () => {
   assertThrows(
-    () => parseStaffCheckBody({ eventType: "check_in", face: { embedding: [1], livenessPassed: true } }),
+    () => parseStaffCheckBody({ eventType: "check_in", face: { crop: "Y3JvcA==", livenessPassed: true } }),
     StaffAttendanceValidationError,
   );
   assertThrows(
@@ -171,10 +171,40 @@ Deno.test("parseStaffCheckBody: rejects missing location / missing face; accepts
   const ok = parseStaffCheckBody({
     eventType: "check_out",
     location: loc(),
-    face: { embedding: [0.1, 0.2, 0.3], livenessPassed: true, captureRef: "cap/1.jpg" },
+    face: { crop: "Y3JvcA==", livenessPassed: true, captureRef: "cap/1.jpg" },
     staffName: "Asha",
   });
   assertEquals(ok.eventType, "check_out");
-  assertEquals(ok.face.embedding.length, 3);
+  assertEquals(ok.faceCrop, "Y3JvcA==");
   assertEquals(ok.face.captureRef, "cap/1.jpg");
+  // The client no longer supplies these — the server fills them after deriving.
+  assertEquals(ok.face.embedding.length, 0);
+  assertEquals(ok.face.modelTag, "");
+});
+
+Deno.test("parseStaffCheckBody: a client-supplied embedding is REFUSED, not ignored", () => {
+  // The forgery hole this architecture closed. Silently dropping the field
+  // would let a stale or tampered client appear to succeed while its embedding
+  // was discarded, and would hide a half-migrated deployment.
+  for (const face of [
+    { embedding: [0.1, 0.2], crop: "Y3JvcA==", livenessPassed: true },
+    { crop: "Y3JvcA==", modelTag: "mobilefacenet-v1", livenessPassed: true },
+    { crop: "Y3JvcA==", model_tag: "mobilefacenet-v1", livenessPassed: true },
+  ]) {
+    const e = assertThrows(
+      () => parseStaffCheckBody({ eventType: "check_in", location: loc(), face }),
+      StaffAttendanceValidationError,
+    );
+    assertEquals((e as StaffAttendanceValidationError).code, "FACE_EMBEDDING_NOT_ACCEPTED");
+  }
+});
+
+Deno.test("parseStaffCheckBody: a blank or whitespace crop is a missing capture", () => {
+  for (const crop of ["", "   "]) {
+    const e = assertThrows(
+      () => parseStaffCheckBody({ eventType: "check_in", location: loc(), face: { crop, livenessPassed: true } }),
+      StaffAttendanceValidationError,
+    );
+    assertEquals((e as StaffAttendanceValidationError).code, "FACE_REQUIRED");
+  }
 });

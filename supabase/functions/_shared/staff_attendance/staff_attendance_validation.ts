@@ -40,7 +40,14 @@ export interface AttendanceFace {
 export interface ParsedStaffCheck {
   eventType: StaffCheckEventType;
   location: AttendanceLocation;
+  /** Populated by the SERVER after deriving the embedding from [faceCrop].
+   * At parse time `embedding` is empty and `modelTag` is blank — the client no
+   * longer supplies either. */
   face: AttendanceFace;
+  /** Base64 aligned 112x112 face crop, as captured live on-device. The server
+   * derives the embedding from this; see
+   * `attendance_auth/face_embedding_client.ts`. */
+  faceCrop: string;
   staffName: string;
   employeeRef: string | null;
 }
@@ -107,20 +114,30 @@ export function parseStaffCheckBody(
   }
 
   const faceObj = (body.face ?? {}) as Record<string, unknown>;
-  const embRaw = faceObj.embedding;
-  if (!Array.isArray(embRaw) || embRaw.length === 0) {
+
+  // A client-supplied embedding is REFUSED, loudly, rather than ignored.
+  //
+  // The whole point of server-side derivation is that a tampered client can no
+  // longer post a stored template and replay it forever. Silently dropping the
+  // field would leave a stale or malicious client appearing to succeed while
+  // its embedding was quietly discarded — and would hide a half-migrated
+  // deployment. Fail so the cause is unambiguous.
+  if (faceObj.embedding !== undefined || faceObj.model_tag !== undefined ||
+      faceObj.modelTag !== undefined) {
     throw new StaffAttendanceValidationError(
-      "FACE_REQUIRED",
-      "face.embedding (live capture) is required — no device-biometric fallback",
+      "FACE_EMBEDDING_NOT_ACCEPTED",
+      "This server derives the face embedding itself — send face.crop, not face.embedding. Update the app.",
     );
   }
-  const embedding = embRaw.map((v) => {
-    const n = num(v);
-    if (n === null) {
-      throw new StaffAttendanceValidationError("FACE_REQUIRED", "face.embedding must be numeric");
-    }
-    return n;
-  });
+
+  const cropRaw = faceObj.crop ?? faceObj.face_crop;
+  const faceCrop = typeof cropRaw === "string" ? cropRaw.trim() : "";
+  if (faceCrop === "") {
+    throw new StaffAttendanceValidationError(
+      "FACE_REQUIRED",
+      "face.crop (live capture) is required — no device-biometric fallback",
+    );
+  }
 
   return {
     eventType: eventTypeRaw as StaffCheckEventType,
@@ -132,13 +149,16 @@ export function parseStaffCheckBody(
       capturedAt,
     },
     face: {
-      embedding,
+      // Both filled by the server once the crop has been embedded. They are
+      // NOT client inputs any more.
+      embedding: [],
+      modelTag: "",
       livenessPassed: faceObj.livenessPassed === true || faceObj.liveness_passed === true,
       captureRef: faceObj.captureRef != null || faceObj.capture_ref != null
         ? String(faceObj.captureRef ?? faceObj.capture_ref)
         : null,
-      modelTag: String(faceObj.modelTag ?? faceObj.model_tag ?? "").trim(),
     },
+    faceCrop,
     staffName: String(body.staffName ?? body.staff_name ?? "").trim(),
     employeeRef: body.employeeRef != null || body.employee_ref != null
       ? String(body.employeeRef ?? body.employee_ref).trim()
