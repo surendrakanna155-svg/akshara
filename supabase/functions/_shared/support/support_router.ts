@@ -15,6 +15,7 @@ import {
   handleListIncidents,
   handlePostMessage,
   handlePresignAttachment,
+  handleReconcileMirrors,
   handleTransitionStatus,
 } from "./support_handlers.ts";
 import {
@@ -48,6 +49,13 @@ export async function routeSupport(
   // /support/platform/* — the Akshara support-console (PLATFORM_ORG) surface.
   if (segs[1] === "platform") {
     return await routeSupportPlatform(req, config, method, path, segs);
+  }
+
+  // /support/mirror/reconcile — RC-5 mirror repair sweep (internal-cron token
+  // or a manageSupport JWT). Idempotent; the periodic trigger is an ops concern.
+  if (segs.length === 3 && segs[1] === "mirror" && segs[2] === "reconcile") {
+    if (method === "POST") return await handleReconcileMirrors(req, config);
+    return errorEnvelope("METHOD_NOT_ALLOWED", `Method not allowed: ${method} ${path}`, 405);
   }
 
   // /support/incidents

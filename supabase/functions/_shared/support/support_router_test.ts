@@ -116,3 +116,57 @@ Deno.test("platform kb article with a bad uuid => 422 (before auth)", async () =
   const res = await routeSupport(req("GET", p), CFG, "GET", p);
   assertEquals(res?.status, 422);
 });
+
+// ─── RC-5 (audit P1-E): the mirror reconcile sweep ───────────────────────────
+
+Deno.test("mirror reconcile requires a credential => 401 with no token", async () => {
+  const p = "/support/mirror/reconcile";
+  const res = await routeSupport(req("POST", p), CFG, "POST", p);
+  assertEquals(res?.status, 401);
+});
+
+Deno.test("mirror reconcile rejects a wrong method => 405", async () => {
+  const p = "/support/mirror/reconcile";
+  const res = await routeSupport(req("GET", p), CFG, "GET", p);
+  assertEquals(res?.status, 405);
+});
+
+Deno.test("mirror reconcile: an unset INTERNAL_CRON_TOKEN must FAIL CLOSED", async () => {
+  // The sweep re-mirrors across an org, so there is no safe "token unset = open"
+  // mode. With no server token configured, presenting any cron header must still
+  // fall through to the JWT path and be rejected — never authenticate.
+  const prior = Deno.env.get("INTERNAL_CRON_TOKEN");
+  Deno.env.delete("INTERNAL_CRON_TOKEN");
+  try {
+    const p = "/support/mirror/reconcile";
+    const r = new Request(`https://x${p}`, {
+      method: "POST",
+      headers: { "x-internal-cron-token": "anything" },
+      body: JSON.stringify({ organizationId: "a1000000-0000-4000-8000-000000000001" }),
+    });
+    const res = await routeSupport(r, CFG, "POST", p);
+    assertEquals(res?.status, 401, "must not authenticate on an unset server token");
+  } finally {
+    if (prior === undefined) Deno.env.delete("INTERNAL_CRON_TOKEN");
+    else Deno.env.set("INTERNAL_CRON_TOKEN", prior);
+  }
+});
+
+Deno.test("mirror reconcile: a valid cron token still requires an organizationId", async () => {
+  const prior = Deno.env.get("INTERNAL_CRON_TOKEN");
+  Deno.env.set("INTERNAL_CRON_TOKEN", "test-cron-token");
+  try {
+    const p = "/support/mirror/reconcile";
+    const r = new Request(`https://x${p}`, {
+      method: "POST",
+      headers: { "x-internal-cron-token": "test-cron-token" },
+      body: JSON.stringify({}),
+    });
+    const res = await routeSupport(r, CFG, "POST", p);
+    // A scheduler has no org, so it must name one explicitly.
+    assertEquals(res?.status, 422);
+  } finally {
+    if (prior === undefined) Deno.env.delete("INTERNAL_CRON_TOKEN");
+    else Deno.env.set("INTERNAL_CRON_TOKEN", prior);
+  }
+});

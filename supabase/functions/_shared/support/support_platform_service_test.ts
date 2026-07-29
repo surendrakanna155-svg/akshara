@@ -4,6 +4,7 @@ import {
   buildEngineeringHandoff,
   clusterFingerprint,
   clusterTitle,
+  hasDiagnosticSignal,
   isSettableSupportStatus,
   deterministicInvestigation,
   diagnosticsFromMirrorEvidence,
@@ -192,4 +193,58 @@ Deno.test("RC-3: unknown statuses are still rejected", () => {
   assert(!isSettableSupportStatus(""));
   assert(!isSettableSupportStatus("closed"));
   assert(!isSettableSupportStatus("RESOLVED"), "must not be case-bypassable");
+});
+
+function diagEvidenceForCluster() {
+  return [{
+    id: "e1",
+    incident_id: "i1",
+    kind: "diagnostics",
+    payload: {
+      signals: ["recent 403 (permission/RBAC)"],
+      apiErrorCount: 1,
+      topErrorStatus: 403,
+      topErrorPath: "/sis/marks",
+      failingCorrelationId: "ak-1",
+    },
+    collected_at: "t",
+    // deno-lint-ignore no-explicit-any
+  }] as any;
+}
+
+// ─── RC-5 (audit P1-E): no clustering on an empty signature ──────────────────
+//
+// The create-time mirror is best-effort, and the old header-only fallback could
+// register an incident with no evidence at all. errorSignature() returns the
+// literal "none" for such an incident, so clusterFingerprint() collapsed to
+// `category|module|none` and every evidence-less incident sharing a category and
+// module landed in ONE cluster — inflating cluster size, the confidence derived
+// from it, and the KB article's schools_seen.
+
+const EMPTY_DIAG: MirrorDiagnostics = {
+  signals: [],
+  apiErrorCount: 0,
+  topErrorStatus: null,
+  topErrorPath: null,
+  failingCorrelationId: null,
+};
+
+Deno.test("RC-5: an empty diagnostics payload carries no clusterable signal", () => {
+  assertEquals(errorSignature(EMPTY_DIAG), "none");
+  assert(!hasDiagnosticSignal(EMPTY_DIAG));
+});
+
+Deno.test("RC-5: a real signal is still clusterable", () => {
+  const diag = diagnosticsFromMirrorEvidence(diagEvidenceForCluster());
+  assert(hasDiagnosticSignal(diag), "403 + path must remain a clusterable signature");
+});
+
+Deno.test("RC-5: evidence-less incidents would otherwise share one fingerprint", () => {
+  // Two unrelated incidents, same category+module, neither with any signal.
+  // Identical fingerprints is exactly why they must not be clustered at all.
+  const a = clusterFingerprint("permission_rbac", "sis", EMPTY_DIAG);
+  const b = clusterFingerprint("permission_rbac", "sis", EMPTY_DIAG);
+  assertEquals(a, b);
+  assert(a.endsWith("|none"), "the collapse is on the 'none' signature");
+  assert(!hasDiagnosticSignal(EMPTY_DIAG), "so autoCluster must decline to cluster them");
 });

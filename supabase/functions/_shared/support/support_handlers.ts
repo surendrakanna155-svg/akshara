@@ -37,6 +37,7 @@ import {
   listAttachments,
   listEvents,
   listIncidents,
+  listIncidentsForMirrorReconcile,
   listLatestEvidence,
   listMessages,
   updateIncidentStatus,
@@ -48,9 +49,16 @@ import {
 } from "./support_service.ts";
 import {
   mirrorIncidentBestEffort,
-  mirrorIncidentHeaderBestEffort,
   reconcileMirrorBestEffort,
 } from "./support_mirror.ts";
+import {
+  INTERNAL_CRON_ACTOR_ID,
+  INTERNAL_CRON_ROLE,
+  INTERNAL_CRON_SESSION_ID,
+  INTERNAL_CRON_TOKEN_HEADER,
+  loadCommunicationCronConfig,
+  verifyInternalCronToken,
+} from "../communication/communication_cron_auth.ts";
 import { categorize } from "./incident_package.ts";
 import {
   ATTACHMENT_KINDS,
@@ -664,7 +672,15 @@ export async function handleTransitionStatus(
         ? "Your reported issue has been resolved."
         : "The status of your reported issue changed.",
     );
-    return { updated };
+
+    // RC-5 (audit P1-E): rebuild the evidence package so the post-commit step can
+    // run a FULL mirror reconcile, not just a header refresh. Read here while the
+    // tenant context is open.
+    const existing = await listLatestEvidence(db, claims, incidentId);
+    const context = reconstructContextFromEvidence(existing, updated);
+    const parts = await buildEvidenceParts(db, claims, context, updated.reporter_user_id);
+
+    return { updated, parts };
   });
 
   if ("notFound" in result) return errorEnvelope("NOT_FOUND", "Incident not found", 404);
@@ -674,8 +690,21 @@ export async function handleTransitionStatus(
   if ("conflict" in result) {
     return errorEnvelope("CONFLICT", "Status changed concurrently; retry", 409);
   }
-  // Keep the platform-support mirror's source_status in step (best-effort).
-  await mirrorIncidentHeaderBestEffort(config, claims, result.updated);
+
+  // RC-5 (audit P1-E): full reconcile, not a header-only refresh.
+  //
+  // This used to call mirrorIncidentHeaderBestEffort, which keeps source_status
+  // in step but creates a mirror row with NO evidence when the create-time mirror
+  // had failed. That left the support console with an incident it could not
+  // diagnose, and auto-clustered it on an empty signature. Reconciling the whole
+  // package instead means a status change REPAIRS a missing mirror. The bridges
+  // are upserts, so this stays a no-op when the mirror is already complete.
+  // `parts` is absent on the idempotent no-op branch (status unchanged), which
+  // returns before rebuilding the evidence package. Nothing transitioned, so
+  // there is nothing to reconcile — the periodic sweep still covers that case.
+  if (result.parts) {
+    await reconcileMirrorBestEffort(config, claims, result.updated, result.parts);
+  }
   return jsonResponse(envelope(result.updated));
 }
 
@@ -708,4 +737,93 @@ function reconstructContextFromEvidence(
     breadcrumbs: Array.isArray(breadcrumbs?.items) ? (breadcrumbs!.items as never[]) : [],
     recentApiCalls: Array.isArray(apiCalls?.items) ? (apiCalls!.items as never[]) : [],
   };
+}
+
+/**
+ * RC-5 (audit P1-E): POST /support/mirror/reconcile — repair support mirrors.
+ *
+ * The create-time mirror is best-effort and, before this, had no retry: a
+ * transient failure left the school's incident permanently invisible in the
+ * support console. `handleCollectEvidence` and `handleTransitionStatus` now
+ * reconcile on the paths a human happens to touch; this sweep covers the rest.
+ *
+ * Idempotent — the mirror bridges are upserts, so re-mirroring an intact
+ * incident is a no-op. As with the scheduled-broadcast runner, the periodic
+ * trigger that calls this is a deployment concern, not application code.
+ *
+ * AUTH, two ways, both credentialed:
+ *   - `x-internal-cron-token` verified against INTERNAL_CRON_TOKEN. A scheduler
+ *     has no user session and therefore no org, so the cron path requires an
+ *     explicit `organizationId`. Verification FAILS CLOSED — an unset or empty
+ *     server token never opens the route.
+ *   - otherwise a full JWT carrying `manageSupport`, scoped to the caller's org.
+ *
+ * The token helpers are imported from `communication_cron_auth.ts` rather than
+ * re-implemented: INTERNAL_CRON_TOKEN is one platform-wide rail, and a
+ * fail-closed auth check is the last thing that should exist in two copies.
+ */
+export async function handleReconcileMirrors(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const body = await readJson<{ organizationId?: string; sinceDays?: number; limit?: number }>(req);
+  const sinceDays = typeof body?.sinceDays === "number" ? body.sinceDays : 7;
+  const limit = typeof body?.limit === "number" ? body.limit : 200;
+
+  const cronToken = req.headers.get(INTERNAL_CRON_TOKEN_HEADER);
+  const isCron = await verifyInternalCronToken(loadCommunicationCronConfig(), cronToken);
+
+  let claims: AccessTokenClaims;
+  if (isCron) {
+    const orgId = body?.organizationId;
+    if (typeof orgId !== "string" || orgId.length === 0) {
+      return errorEnvelope(
+        "VALIDATION",
+        "organizationId is required on the internal-cron path (a scheduler has no org)",
+        422,
+      );
+    }
+    claims = {
+      tenant_id: orgId,
+      organization_id: orgId,
+      school_id: null,
+      sub: INTERNAL_CRON_ACTOR_ID,
+      session_id: INTERNAL_CRON_SESSION_ID,
+      role: INTERNAL_CRON_ROLE,
+      primary_role: INTERNAL_CRON_ROLE,
+      role_slugs: [INTERNAL_CRON_ROLE],
+      permissions: ["manageSupport"],
+      permissions_version: 1,
+      scope: "organization",
+    } as unknown as AccessTokenClaims;
+  } else {
+    const auth = await authenticateRequest(req, config);
+    if (!auth.ok) return auth.response;
+    const denied = requireAnyPermission(auth.claims, ["manageSupport"]);
+    if (denied) return denied;
+    claims = auth.claims;
+  }
+
+  const incidents = await withTenantContext(config, claims, async (db) =>
+    await listIncidentsForMirrorReconcile(db, claims, { sinceDays, limit }));
+
+  let reconciled = 0;
+  for (const incident of incidents) {
+    // Each incident is rebuilt and re-mirrored independently and best-effort, so
+    // one bad row cannot abort the sweep.
+    try {
+      const parts = await withTenantContext(config, claims, async (db) => {
+        const existing = await listLatestEvidence(db, claims, incident.id);
+        const context = reconstructContextFromEvidence(existing, incident);
+        return await buildEvidenceParts(db, claims, context, incident.reporter_user_id);
+      });
+      if (!parts) continue;
+      await reconcileMirrorBestEffort(config, claims, incident, parts);
+      reconciled++;
+    } catch (_err) {
+      // Best-effort per incident; the next sweep retries.
+    }
+  }
+
+  return jsonResponse(envelope({ scanned: incidents.length, reconciled, sinceDays, limit }));
 }

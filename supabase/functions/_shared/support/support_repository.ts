@@ -475,3 +475,31 @@ export async function updateIncidentStatus(
   );
   return rows[0] ?? null;
 }
+
+/**
+ * RC-5 (audit P1-E): incidents in the caller's org that the mirror reconcile
+ * sweep should re-mirror.
+ *
+ * A bounded, most-recent-first window rather than "everything": the sweep exists
+ * to repair mirrors lost to a transient failure at create time, and those are
+ * recent by definition. Re-mirroring is an upsert, so covering already-mirrored
+ * incidents is a harmless no-op — which is what lets this run without reading
+ * across the RLS wall into the platform-support domain (a school session cannot
+ * see the mirror, so it cannot ask which rows are missing).
+ */
+export async function listIncidentsForMirrorReconcile(
+  db: TenantQueryClient,
+  claims: AccessTokenClaims,
+  opts: { sinceDays: number; limit: number },
+): Promise<IncidentRow[]> {
+  const sinceDays = Math.min(Math.max(opts.sinceDays, 1), 90);
+  const limit = Math.min(Math.max(opts.limit, 1), 500);
+  return await db.queryObject<IncidentRow>(
+    `SELECT * FROM support_incident
+      WHERE organization_id = $1
+        AND created_at >= timezone('utc', now()) - ($2 || ' days')::interval
+      ORDER BY created_at DESC
+      LIMIT $3`,
+    [claims.tenant_id, String(sinceDays), limit],
+  );
+}

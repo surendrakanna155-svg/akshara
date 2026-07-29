@@ -119,13 +119,42 @@ export function clusterTitle(
 }
 
 /** Compute the fingerprint, upsert the cluster, link the incident, refresh count. */
+/**
+ * RC-5 (audit P1-E): does this incident carry a real diagnostic signal?
+ *
+ * `errorSignature` returns the literal "none" when there is nothing to key on,
+ * which made `clusterFingerprint` collapse to `category|module|none`. Every
+ * evidence-less incident sharing a category and module therefore landed in ONE
+ * cluster despite having no shared signal — inflating cluster size, the
+ * confidence derived from it, and the KB article's schools_seen.
+ *
+ * Evidence-less mirrors are not hypothetical: the create-time mirror is
+ * best-effort, and the header-only fallback could register an incident with no
+ * evidence at all.
+ */
+export function hasDiagnosticSignal(diag: MirrorDiagnostics): boolean {
+  return errorSignature(diag) !== "none";
+}
+
+/**
+ * Cluster an incident by its signature.
+ *
+ * Returns null — leaving the incident UNCLUSTERED — when there is no diagnostic
+ * signal to cluster on. That is deliberate: a bucket keyed on "no signal" is not
+ * a cluster, it is a junk drawer. The incident is retried on the next support
+ * view (the detail handler clusters lazily whenever cluster_id is null), so once
+ * evidence arrives — including via the RC-5 mirror reconcile — it clusters
+ * properly by itself.
+ */
 export async function autoCluster(
   db: TenantQueryClient,
   claims: AccessTokenClaims,
   incident: PlatformIncidentRow,
   evidence: PlatformEvidenceRow[],
-): Promise<ClusterRow> {
+): Promise<ClusterRow | null> {
   const diag = diagnosticsFromMirrorEvidence(evidence);
+  if (!hasDiagnosticSignal(diag)) return null;
+
   const key = clusterFingerprint(incident.category, incident.module_key, diag);
   const cluster = await upsertCluster(
     db,
