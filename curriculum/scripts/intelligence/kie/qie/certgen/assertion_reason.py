@@ -122,13 +122,24 @@ class ResolvedAR:
 
 # ══ TRUTH, COMPUTED ═══════════════════════════════════════════════════════════════════════════════════
 def _solve(relation: str, params: Dict[str, float], target: str) -> Optional[float]:
-    res = G.independent_solve({"givens": {k: {"value": v} for k, v in params.items()},
-                               "relation": relation, "solve_for": target})
+    """Solve, or return None. NEVER raise.
+
+    A scaling probe can drive a relation outside its domain — scaling the `r` of `n!/(n-r)!` produces a
+    negative factorial argument and mpmath raises `gamma function pole`. That is not an error in the
+    engine; it means the probe does not apply to that relation, and the honest answer is "unverifiable",
+    which every caller already handles. Letting it propagate would crash generation on a perfectly valid
+    binding.
+    """
+    try:
+        res = G.independent_solve({"givens": {k: {"value": v} for k, v in params.items()},
+                                   "relation": relation, "solve_for": target})
+    except Exception:
+        return None
     if res.get("verdict") != "solved":
         return None
     try:
         return float(res["solver_answer"])
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return None
 
 

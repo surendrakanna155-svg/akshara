@@ -922,3 +922,108 @@ class TestPrereqGraphIntegration(unittest.TestCase):
                     "intended_depth": 2, "composition": "multi", "compose_with": ids[1:]}
             v = [x for x in P.check_plan(spec, self.by) if "prerequisite_backed" in x]
             self.assertEqual(v, [], f"{r.chain.binding_id} must remain legal: {v}")
+
+
+@unittest.skipUnless(INDEX.exists(), f"certified knowledge index not found at {INDEX}")
+class TestAnswerFormats(unittest.TestCase):
+    """Integer-entry and multi-correct — the two highest-value missing examined formats."""
+
+    @classmethod
+    def setUpClass(cls):
+        from kie.qie.certgen import answer_formats as AF
+        cls.AF = AF
+        cls.c = _index()
+        cls.rb, _ = B.resolve(cls.c)
+        cls.rc, _ = COMP.resolve(cls.c)
+        cls.ints = AF.generate_integer(cls.rb, 2, "TESTI")
+        cls.msqs = AF.generate_multi_correct(cls.rb, 1, "TESTS")
+        cls.gi = E.gate_items(cls.ints, resolved=cls.rb, resolved_chains=cls.rc)
+        cls.gm = E.gate_items(cls.msqs, resolved=cls.rb, resolved_chains=cls.rc)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.c.close()
+
+    # ── integer entry ──
+    def test_integer_items_clear_the_battery(self):
+        bad = {r["gen_id"]: r["fatal"] + r["quarantine"] for r in self.gi if r["fatal"] or r["quarantine"]}
+        self.assertEqual(bad, {}, f"integer items must be clean: {bad}")
+
+    def test_integer_items_offer_no_options(self):
+        for r in self.gi:
+            self.assertEqual(r["options"], {}, "a numerical-entry item must not print options")
+            self.assertIsNone(r["answer_label"])
+
+    def test_integer_items_declare_a_sane_tolerance(self):
+        for r in self.gi:
+            tol = float(r["answer_tolerance"])
+            key = abs(float(r["answer_value"]))
+            self.assertGreater(tol, 0)
+            self.assertLessEqual(tol, max(0.02 * key, 1e-6),
+                                 "a tolerance wide enough to admit a different answer is not a tolerance")
+
+    def test_integer_key_is_reproducible_from_the_structure(self):
+        for r in self.gi:
+            res = self.AF.verify_integer_key(r)
+            self.assertTrue(res["ok"], f"{r['gen_id']}: {res['detail']}")
+
+    def test_integer_gate_refuses_an_item_that_prints_options(self):
+        cand = {"answer_format": G.INTEGER_ENTRY, "stem": "x" * 40, "claimed": {"archetype": "x"},
+                "answer_value": "12", "answer_tolerance": 0.05, "options": {"a": "1", "b": "2"}}
+        gr = G.run_gates(cand, {"spec": {"subject": "Physics"}})
+        os_gate = [g for g in gr if g["gate"] == "option_structure"]
+        self.assertTrue(os_gate and not os_gate[0]["ok"])
+
+    def test_integer_gate_refuses_a_missing_tolerance(self):
+        cand = {"answer_format": G.INTEGER_ENTRY, "stem": "x" * 40, "claimed": {"archetype": "x"},
+                "answer_value": "12", "options": {}}
+        gr = G.run_gates(cand, {"spec": {"subject": "Physics"}})
+        os_gate = [g for g in gr if g["gate"] == "option_structure"]
+        self.assertTrue(os_gate and not os_gate[0]["ok"], "an undeclared tolerance must be refused")
+
+    # ── multi-correct ──
+    def test_multi_correct_items_clear_the_battery(self):
+        bad = {r["gen_id"]: r["fatal"] + r["quarantine"] for r in self.gm if r["fatal"] or r["quarantine"]}
+        self.assertEqual(bad, {}, f"multi-correct items must be clean: {bad}")
+
+    def test_multi_correct_has_four_options_and_two_or_three_keys(self):
+        for r in self.gm:
+            self.assertEqual(len(r["options"]), 4)
+            self.assertTrue(2 <= len(r["answer_labels"]) <= 3)
+            self.assertTrue(set(r["answer_labels"]) <= set(r["options"]))
+
+    def test_no_option_is_both_correct_and_refuted(self):
+        for r in self.gm:
+            self.assertFalse(set(r["answer_labels"]) & set(r["distractor_rationale"]))
+
+    def test_multi_correct_key_truth_is_recomputable(self):
+        """Every correct option must survive re-derivation from the certified relation."""
+        for r in self.gm:
+            res = self.AF.verify_multi_correct_key(r)
+            self.assertTrue(res["ok"], f"{r['gen_id']}: {res['detail']}")
+
+    def test_multi_correct_gate_refuses_a_single_key(self):
+        cand = {"answer_format": G.MULTI_CORRECT, "stem": "x" * 40, "claimed": {"archetype": "x"},
+                "options": {"a": "1", "b": "2", "c": "3", "d": "4"}, "answer_labels": ["a"]}
+        gr = G.run_gates(cand, {"spec": {"subject": "Physics"}})
+        os_gate = [g for g in gr if g["gate"] == "option_structure"]
+        self.assertTrue(os_gate and not os_gate[0]["ok"],
+                        "one correct option is a single-correct item, not a multi-correct one")
+
+    def test_multi_correct_gate_refuses_all_four_correct(self):
+        cand = {"answer_format": G.MULTI_CORRECT, "stem": "x" * 40, "claimed": {"archetype": "x"},
+                "options": {"a": "1", "b": "2", "c": "3", "d": "4"},
+                "answer_labels": ["a", "b", "c", "d"]}
+        gr = G.run_gates(cand, {"spec": {"subject": "Physics"}})
+        os_gate = [g for g in gr if g["gate"] == "option_structure"]
+        self.assertTrue(os_gate and not os_gate[0]["ok"], "all-correct tests nothing and must be refused")
+
+    # ── the default must be untouched ──
+    def test_absent_answer_format_behaves_exactly_as_single_correct(self):
+        self.assertEqual(G.answer_format_of({}), G.SINGLE_CORRECT)
+        self.assertEqual(G.answer_format_of({"answer_format": "nonsense"}), G.SINGLE_CORRECT)
+        self.assertEqual(G._REQUIRED, ("stem", "options", "answer_label", "claimed"))
+
+    def test_a_scaling_probe_outside_a_relation_domain_returns_none_not_a_crash(self):
+        """Scaling the r of n!/(n-r)! drives mpmath to a gamma pole; the honest answer is 'unverifiable'."""
+        self.assertIsNone(AR._solve("P = factorial(n) / factorial(n - r)", {"n": 5.0, "r": 20.0}, "P"))

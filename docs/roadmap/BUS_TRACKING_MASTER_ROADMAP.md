@@ -248,7 +248,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-010 — Transport domain contract document (SSOT)
-**P0** · **3 d** · **Not Started** · **Deps:** Phase 0 · **Audit:** §2, §7
+**P0** · **3 d** · **Verified** · **Deps:** Phase 0 · **Audit:** §2, §7
 
 - **Description:** Author the single canonical specification for the transport domain: entity definitions, field names, types, enumerations, state machines, API surface, and error taxonomy. All subsequent tasks implement against this document.
 - **Why it matters:** Every integration defect found in the audit traces to the absence of one — `pickupTime` vs `scheduledTime` (BUS-006), stops carrying coordinates in seed data but not in the write path (BUS-037), `assignedBus` read by three subsystems and written by none (BUS-043). These are not coding mistakes; they are the predictable result of handler-by-handler development with no contract.
@@ -259,7 +259,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-011 — Location-source abstraction specification
-**P0** · **2 d** · **Not Started** · **Deps:** BUS-010 · **Audit:** §3, §4; Additional requirement 3
+**P0** · **2 d** · **Verified** · **Deps:** BUS-010 · **Audit:** §3, §4; Additional requirement 3
 
 - **Description:** Define the single ingest contract through which all position fixes enter the system, such that a driver phone and a third-party hardware GPS device are interchangeable implementations.
 - **Why it matters:** **P-2.** Schools split into two camps: those who will run a driver app for free, and those who want tamper-proof hardware and will pay for it. Committing to one now forces a rewrite later. Defining the boundary first means adding a hardware vendor becomes an adapter, not a redesign. This is explicitly listed in the additional requirements as something that must not require re-architecture.
@@ -270,7 +270,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-012 — Transport privacy & visibility model
-**P0** · **2 d** · **Not Started** · **Deps:** BUS-010 · **Audit:** §1.9, §3, §8 Critical #3
+**P0** · **2 d** · **Verified** · **Deps:** BUS-010 · **Audit:** §1.9, §3, §8 Critical #3
 
 - **Description:** Define exactly which actor may see which transport datum, under which conditions, and for how long — before any parent-facing endpoint is built.
 - **Why it matters:** **P-8.** The audit found the parent path would have exposed other children's names, admission numbers, class, bus number, and **pickup stop location** to any parent who opened the screen. Publishing where other people's children stand each morning is a child-safety failure, not merely a privacy one. It happened because visibility was treated as a client-side filter over a broad payload rather than a designed property. This must be settled on paper first.
@@ -281,7 +281,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-013 — Transport permission & role model rework
-**P0** · **2 d** · **Not Started** · **Deps:** BUS-012 · **Audit:** §1.8, §1.9, §2, §13
+**P0** · **2 d** · **Verified** · **Deps:** BUS-012 · **Audit:** §1.8, §1.9, §2, §13
 
 - **Description:** Extend the role/permission model to cover the driver, the attendant, the parent transport view, and the student transport view.
 - **Why it matters:** There is no driver role, so drivers cannot log in, so there is no GPS source — this single gap is the root cause of the entire tracking absence. Parents lack any transport permission. The `student` role currently holds an **empty permission set** (`role_permissions.dart:662`), so no student-facing transport surface is even reachable. Every downstream phase depends on this.
@@ -292,7 +292,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-014 — End-to-end verification harness
-**P0** · **4 d** · **Not Started** · **Deps:** BUS-013 · **Audit:** §2 (root cause), §7
+**P0** · **4 d** · **Verified** · **Deps:** BUS-013 · **Audit:** §2 (root cause), §7
 
 - **Description:** Build a test harness that exercises the full chain — Transport Admin → Driver → Backend → Parent → Student — as a single scenario against a real database.
 - **Why it matters:** This is the roadmap's completion rule made executable. The audit's defining finding is that individually well-engineered handlers were never connected: the race-safe capacity guard is correct code that has never once executed, because no endpoint writes the field it reads. Unit tests stubbed the field. Only a chain test catches this class of defect, and without a harness the rule in §0.3 is unenforceable.
@@ -303,7 +303,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-015 — Transport v2 feature-flag & rollout plan
-**P1** · **1 d** · **Not Started** · **Deps:** BUS-010 · **Audit:** §7
+**P1** · **1 d** · **Verified** · **Deps:** BUS-010 · **Audit:** §7
 
 - **Description:** Define the flag topology and migration path allowing v2 transport to be developed and piloted alongside the existing module without destabilising live pilot schools.
 - **Why it matters:** Phase 2 replaces the storage substrate. Doing that in place on a live pilot without a flag and a rollback is reckless. Also prevents a repeat of `TRANSPORT_API_ENABLED` being flipped on in `config/live_release.json` while the parent path underneath it was never verified.

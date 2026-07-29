@@ -255,6 +255,48 @@ CHAINS: Tuple[Chain, ...] = (
                        "K = m * (u + a) ** 2 / 2", "procedural")),
         "the kinetic energy at the end of the interval",
     ),
+
+    # ── Class 10 · the DEPTH-4 chain: charge -> current -> p.d. -> power -> energy ────────────────────
+    # Authored to reach the `hard` band HONESTLY. No item the engine had ever produced reached it, because
+    # `difficulty.predict` needs depth 4+ and the deepest chain was 3. This adds a fourth dependent step
+    # rather than re-weighting the difficulty model — the band is earned by execution, and `replay_steps`
+    # refuses any padding that does not actually feed the next step.
+    Chain(
+        "CHN_PHY10_CHARGE_TO_ENERGY", "Physics", 10,
+        (ChainStep("I", "I = Q / t", ("Q", "t"), "Electric Current and Circuit", "Physics", 10,
+                   ("electric current as rate of flow of charge (i = q/t)",),
+                   "find the steady current from the charge that flows and the time it takes", "A"),
+         ChainStep("Vp", "Vp = I * R", ("I", "R"), "Ohm's Law", "Physics", 10,
+                   ("v = ir",),
+                   "apply Ohm's law to that current to find the potential difference across the resistor",
+                   "V"),
+         ChainStep("Pw", "Pw = Vp * I", ("Vp", "I"), "Electric Power", "Physics", 10,
+                   ("p = vi = i^2 r = v^2/r",),
+                   "use the potential difference and the current to find the power dissipated", "W"),
+         ChainStep("En", "En = Pw * t", ("Pw", "t"), "Electric Power", "Physics", 10,
+                   ("commercial unit kilowatt-hour (kw h)",),
+                   "multiply that power by the time for which it acts to obtain the energy transferred",
+                   "J")),
+        (Given("Q", "C", 20, 200, step=10), Given("t", "s", 2, 20, step=2),
+         Given("R", "ohm", 2, 30, step=2)),
+        "En", "En = Q ** 2 * R / t",
+        ("A charge of {Q} C passes steadily through a resistor of resistance {R} ohm in {t} s. "
+         "How much electrical energy, in joule, is transferred to the resistor in that time?",
+         "In {t} s a steady flow of {Q} C of charge passes through a heating element of resistance "
+         "{R} ohm. What quantity of electrical energy, in joule, is converted in the element?",
+         "A resistor of {R} ohm carries a steady current such that {Q} C of charge passes through it in "
+         "{t} s. What is the total electrical energy, in joule, transferred during this interval?"),
+        "J",
+        (Misconception("used the charge as though it were the current, skipping I = Q/t",
+                       "En = Q ** 2 * R * t"),
+         Misconception("stopped at the power and reported it as the energy",
+                       "En = Q ** 2 * R / t ** 2"),
+         Misconception("omitted the resistance from the energy expression",
+                       "En = Q ** 2 / t", "procedural"),
+         Misconception("divided by the time twice instead of once",
+                       "En = Q ** 2 * R / t ** 3", "procedural")),
+        "the electrical energy transferred to the resistor",
+    ),
 )
 
 

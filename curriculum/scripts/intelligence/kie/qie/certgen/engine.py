@@ -41,6 +41,7 @@ import sympy
 
 from kie import config
 from kie.qie import relations as R
+from kie.qie.certgen import answer_formats as AF
 from kie.qie.certgen import assertion_reason as AR
 from kie.qie.certgen import conceptual_mcq as CMC
 from kie.qie.certgen import match_columns as MTC
@@ -606,8 +607,12 @@ def to_spec(item: dict) -> dict:
 
 
 def to_candidate(item: dict) -> dict:
-    """The `cand` shape `gates.run_gates` consumes."""
+    """The `cand` shape `gates.run_gates` consumes. `answer_format` selects which schema and
+    option-structure rules apply; absent, the gates default to single-correct as before."""
     return {
+        "answer_format": item.get("answer_format"),
+        "answer_labels": item.get("answer_labels"),
+        "answer_tolerance": item.get("answer_tolerance"),
         "stem": item["stem"],
         "options": item["options"],
         "answer_label": item["answer_label"],
@@ -693,7 +698,18 @@ def gate_items(items: Sequence[dict], resolved: Sequence[ResolvedBinding] = (),
 
         ind: Dict[str, object] = {}
         agree = None
-        if item.get("lane") == CMC.LANE:
+        if item.get("lane") == AF.INTEGER_LANE:
+            # No options exist, so there is nothing to refute. The proof is that the key is re-derivable
+            # from the declared structure AND that the declared tolerance is tight enough that a
+            # materially different answer could not pass as correct.
+            ires = AF.verify_integer_key(item)
+            gr.append({"gate": "integer_key_verified", "ok": bool(ires["ok"]), "severity": G.FATAL,
+                       "detail": ires["detail"][:400]})
+        elif item.get("lane") == AF.MULTI_LANE:
+            mres = AF.verify_multi_correct_key(item)
+            gr.append({"gate": "multi_correct_key_verified", "ok": bool(mres["ok"]), "severity": G.FATAL,
+                       "detail": mres["detail"][:400]})
+        elif item.get("lane") == CMC.LANE:
             # A conceptual MCQ's options are EXPRESSIONS or RESPONSES, not numbers, so the numeric
             # distractor proof cannot apply. The equivalent proof is falsification: every wrong option is
             # refuted both by sympy non-equivalence and by computing a different value at a working point.

@@ -25,6 +25,33 @@ enum Permission {
   viewTransport,
   manageTransport,
 
+  // BUS-013 — transport field + self-service permissions.
+  //
+  // The old model had exactly two transport permissions, both staff-scoped, so
+  // there was no way to express "a driver may see their own trip" or "a parent
+  // may see their own child's bus". That gap is why the parent surface 403'd in
+  // the live build and why no driver could ever log in.
+  //
+  // Scopes are defined in docs/engineering/TRANSPORT_DOMAIN_CONTRACT.md §5.
+
+  /// Driver/attendant: read ONLY today's assigned trip (route, stops, manifest).
+  viewOwnTransportTrip,
+
+  /// Driver: start/end a trip. Attendants deliberately do NOT hold this.
+  operateTransportTrip,
+
+  /// Driver/attendant: record boarding + alighting for today's trip.
+  recordTransportBoarding,
+
+  /// Driver/attendant: raise an SOS.
+  raiseTransportSos,
+
+  /// Parent: read THEIR OWN child's allocation + active trip. Never a list.
+  viewChildTransport,
+
+  /// Student: read their own route/stop/times. Never a manifest.
+  viewOwnTransport,
+
   // HR
   viewHr,
   manageHr,

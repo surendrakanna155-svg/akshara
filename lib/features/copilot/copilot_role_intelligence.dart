@@ -144,6 +144,10 @@ CopilotPersonaRole copilotPersonaForErpRole(ErpRole role) => switch (role) {
       ErpRole.inventoryManager ||
       ErpRole.storekeeper =>
         CopilotPersonaRole.hr,
+      // BUS-013 — transport field roles authenticate into the driver app and
+      // never reach the ERP copilot. They are mapped for exhaustiveness only;
+      // no copilot surface is reachable with their permission set.
+      ErpRole.driver || ErpRole.attendant => CopilotPersonaRole.student,
     };
 
 CopilotAssistantType defaultAssistantForPersona(CopilotPersonaRole persona) =>

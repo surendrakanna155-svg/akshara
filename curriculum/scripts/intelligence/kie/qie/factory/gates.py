@@ -624,7 +624,36 @@ def _boundary_checks(banned: List[str], concept_name="") -> Tuple[List[tuple], L
 
 
 # ── the gate battery ────────────────────────────────────────────────────────────────────────────────
-_REQUIRED = ("stem", "options", "answer_label", "claimed")
+# ANSWER FORMATS. Until now every item was a 4-option single-correct MCQ, and both the schema gate and
+# `option_structure` hard-coded that shape. Two examined formats do not fit it, and neither could be
+# generated at all:
+#
+#   integer        JEE Main sets 5 of 25 questions per subject as numerical-entry: the candidate types a
+#                  value and there are NO options. `option_structure` FATAL-failed such an item for having
+#                  zero options, which is the correct behaviour for an MCQ and wrong for this format.
+#   multi_correct  JEE Advanced's core format: four options of which TWO OR MORE are correct. A single
+#                  `answer_label` cannot express the key.
+#
+# The format is declared per item and each gate branches on it. `single_correct` is the default, so every
+# existing caller and every existing item behaves exactly as before.
+SINGLE_CORRECT = "single_correct"
+INTEGER_ENTRY = "integer"
+MULTI_CORRECT = "multi_correct"
+ANSWER_FORMATS = (SINGLE_CORRECT, INTEGER_ENTRY, MULTI_CORRECT)
+
+_REQUIRED_BY_FORMAT = {
+    SINGLE_CORRECT: ("stem", "options", "answer_label", "claimed"),
+    # an integer item carries a numeric key and a declared tolerance instead of options
+    INTEGER_ENTRY: ("stem", "answer_value", "claimed"),
+    # a multi-correct item carries a SET of correct labels
+    MULTI_CORRECT: ("stem", "options", "answer_labels", "claimed"),
+}
+_REQUIRED = _REQUIRED_BY_FORMAT[SINGLE_CORRECT]      # retained: existing callers import this name
+
+
+def answer_format_of(cand: dict) -> str:
+    fmt = (cand or {}).get("answer_format") or SINGLE_CORRECT
+    return fmt if fmt in ANSWER_FORMATS else SINGLE_CORRECT
 
 
 def run_gates(cand: dict, ctx: dict, stage: str = "candidate") -> List[dict]:
@@ -651,9 +680,12 @@ def run_gates(cand: dict, ctx: dict, stage: str = "candidate") -> List[dict]:
     spec = ctx.get("spec") or {}
     claimed = cand.get("claimed") or {}
 
-    # ── 1. SCHEMA (HARNESS, domain-general) ──
-    missing = [f for f in _REQUIRED if not cand.get(f)]
-    add("schema", not missing, FATAL, f"missing: {missing}" if missing else "all required fields present")
+    # ── 1. SCHEMA (HARNESS, domain-general) — required fields depend on the ANSWER FORMAT ──
+    fmt = answer_format_of(cand)
+    required = _REQUIRED_BY_FORMAT[fmt]
+    missing = [f for f in required if cand.get(f) in (None, "", {}, [])]
+    add("schema", not missing, FATAL,
+        f"format={fmt} missing: {missing}" if missing else f"format={fmt}: all required fields present")
     if missing:
         return out                                    # nothing downstream is meaningful
 
@@ -661,18 +693,51 @@ def run_gates(cand: dict, ctx: dict, stage: str = "candidate") -> List[dict]:
     options = cand.get("options") or {}
     ans_label = cand.get("answer_label")
 
-    # ── 2. OPTION STRUCTURE (HARNESS mirror of qpgen.validate._objective_violations, same rules) ──
+    # ── 2. OPTION STRUCTURE — branches on the declared answer format ──
     viol = []
-    if len(options) != 4:
-        viol.append(f"expected 4 options, got {len(options)}")
-    if any(not str(v).strip() for v in options.values()):
-        viol.append("blank option")
-    vals = [str(v).strip().lower() for v in options.values()]
-    if len(set(vals)) != len(vals):
-        viol.append("duplicate options")
-    if ans_label not in options:
-        viol.append(f"answer_label {ans_label!r} not among options {sorted(options)}")
-    add("option_structure", not viol, FATAL, "; ".join(viol) or "4 distinct options, answer resolves")
+    if fmt == INTEGER_ENTRY:
+        # A numerical-entry item must offer NO options (offering them makes it an MCQ), must carry a
+        # comparable numeric key, and must declare the tolerance a marker will apply. An undeclared
+        # tolerance is not a detail: it decides whether a candidate's 8.33 scores against a key of 8.333.
+        if options:
+            viol.append(f"an integer-entry item must have no options, got {len(options)}")
+        if _num(cand.get("answer_value")) is None:
+            viol.append(f"answer_value {cand.get('answer_value')!r} is not numeric")
+        tol = cand.get("answer_tolerance")
+        if tol is None or _num(tol) is None or float(tol) < 0:
+            viol.append("a numeric answer_tolerance must be declared")
+        add("option_structure", not viol, FATAL,
+            "; ".join(viol) or f"integer entry, key={cand.get('answer_value')!r} tol={cand.get('answer_tolerance')!r}")
+    elif fmt == MULTI_CORRECT:
+        labels = cand.get("answer_labels") or []
+        if len(options) != 4:
+            viol.append(f"expected 4 options, got {len(options)}")
+        if any(not str(v).strip() for v in options.values()):
+            viol.append("blank option")
+        vals = [str(v).strip().lower() for v in options.values()]
+        if len(set(vals)) != len(vals):
+            viol.append("duplicate options")
+        if not isinstance(labels, (list, tuple)) or len(set(labels)) != len(labels):
+            viol.append(f"answer_labels must be a set of distinct labels, got {labels!r}")
+        elif not (2 <= len(labels) <= 3):
+            # 1 correct is a single-correct item wearing the wrong format; 4 correct makes every option
+            # right and tests nothing. JEE Advanced uses two or three.
+            viol.append(f"a multi-correct item needs 2 or 3 correct options, got {len(labels)}")
+        elif any(l not in options for l in labels):
+            viol.append(f"answer_labels {sorted(labels)} not all among options {sorted(options)}")
+        add("option_structure", not viol, FATAL,
+            "; ".join(viol) or f"4 distinct options, {len(labels)} correct")
+    else:
+        if len(options) != 4:
+            viol.append(f"expected 4 options, got {len(options)}")
+        if any(not str(v).strip() for v in options.values()):
+            viol.append("blank option")
+        vals = [str(v).strip().lower() for v in options.values()]
+        if len(set(vals)) != len(vals):
+            viol.append("duplicate options")
+        if ans_label not in options:
+            viol.append(f"answer_label {ans_label!r} not among options {sorted(options)}")
+        add("option_structure", not viol, FATAL, "; ".join(viol) or "4 distinct options, answer resolves")
 
     # ── 3. STEM PROSE QUALITY (REUSED — kie.qpgen.sanitize.stem_quality_ok) ──
     add("stem_quality", stem_quality_ok(stem), FATAL, "qpgen.sanitize.stem_quality_ok")
@@ -866,14 +931,38 @@ def run_gates(cand: dict, ctx: dict, stage: str = "candidate") -> List[dict]:
     final = sol.get("final")
     add("solution_present", steps_ok and final is not None, FATAL,
         f"steps={len(sol.get('steps') or [])} final={final!r}")
-    if final is not None and ans_label in options:
-        fn, on = _num(final), _num(options.get(ans_label))
-        consistent = (fn is not None and on is not None and abs(fn - on) <= max(1e-9, 0.02 * abs(on))) \
-            if (fn is not None and on is not None) \
-            else (str(final).strip().lower() in str(options.get(ans_label)).strip().lower()
-                  or str(options.get(ans_label)).strip().lower() in str(final).strip().lower())
-        add("solution_matches_key", consistent, FATAL,
-            f"solution_final={final!r} keyed_option={options.get(ans_label)!r}")
+    # The solution must terminate on THE KEY, whatever shape the key takes for this answer format.
+    if final is not None:
+        if fmt == INTEGER_ENTRY:
+            # compare against the numeric key using the item's OWN declared tolerance — the same tolerance
+            # a marker would apply, so the gate cannot be stricter or laxer than the paper it models
+            fn, kn = _num(final), _num(cand.get("answer_value"))
+            tol = _num(cand.get("answer_tolerance")) or 0.0
+            consistent = fn is not None and kn is not None and abs(fn - kn) <= max(tol, 1e-9)
+            add("solution_matches_key", consistent, FATAL,
+                f"solution_final={final!r} key={cand.get('answer_value')!r} tol={tol!r}")
+        elif fmt == MULTI_CORRECT:
+            # the solution must name EVERY correct option and no incorrect one — a solution that justifies
+            # two of three correct answers has not solved a multi-correct item
+            labels = list(cand.get("answer_labels") or [])
+            keyed = {l: str(options.get(l, "")).strip().lower() for l in labels}
+            body = str(final).strip().lower()
+            names_all = all(v and v in body for v in keyed.values())
+            wrong = [l for l in options if l not in labels]
+            names_none_wrong = not any(str(options[l]).strip().lower() in body
+                                       and str(options[l]).strip().lower() not in keyed.values()
+                                       for l in wrong)
+            add("solution_matches_key", bool(names_all and names_none_wrong), FATAL,
+                f"solution_final={final!r} keys={sorted(labels)} all_named={names_all} "
+                f"no_wrong_named={names_none_wrong}")
+        elif ans_label in options:
+            fn, on = _num(final), _num(options.get(ans_label))
+            consistent = (fn is not None and on is not None and abs(fn - on) <= max(1e-9, 0.02 * abs(on))) \
+                if (fn is not None and on is not None) \
+                else (str(final).strip().lower() in str(options.get(ans_label)).strip().lower()
+                      or str(options.get(ans_label)).strip().lower() in str(final).strip().lower())
+            add("solution_matches_key", consistent, FATAL,
+                f"solution_final={final!r} keyed_option={options.get(ans_label)!r}")
 
     return out
 

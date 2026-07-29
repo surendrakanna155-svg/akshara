@@ -6,7 +6,16 @@ class RolePermissionMatrix {
   const RolePermissionMatrix._();
 
   /// Roles that are NOT staff and therefore never self-check-in (O5/O4).
-  static const Set<ErpRole> _nonStaffRoles = {ErpRole.parent, ErpRole.student};
+  // BUS-013: driver/attendant are transport FIELD roles, not school staff.
+  // They must not inherit the staff self-check-in grant — staff attendance is a
+  // geofenced+face-verified school-premises flow, which is meaningless for
+  // someone whose whole shift is on a bus.
+  static const Set<ErpRole> _nonStaffRoles = {
+    ErpRole.parent,
+    ErpRole.student,
+    ErpRole.driver,
+    ErpRole.attendant,
+  };
 
   static PermissionSet permissionsFor(ErpRole role) {
     return PermissionSet.from(_withStaffAttendance(role, _permissionsForRole[role] ?? const {}));
@@ -589,6 +598,22 @@ class RolePermissionMatrix {
       Permission.viewTransport,
       Permission.manageTransport,
     },
+    // BUS-013 — driver. Deliberately minimal: no admin hub, no transport
+    // module read, no other driver's trip. Everything is scoped to TODAY'S
+    // assigned trip and enforced in RLS.
+    ErpRole.driver: {
+      Permission.viewOwnTransportTrip,
+      Permission.operateTransportTrip,
+      Permission.recordTransportBoarding,
+      Permission.raiseTransportSos,
+    },
+    // BUS-053 — attendant. Same visibility as the driver MINUS trip control:
+    // the person who marks boarding is not the person who starts the bus.
+    ErpRole.attendant: {
+      Permission.viewOwnTransportTrip,
+      Permission.recordTransportBoarding,
+      Permission.raiseTransportSos,
+    },
     ErpRole.hostelManager: {
       Permission.viewAdminHub,
       Permission.viewHostel,
@@ -652,6 +677,11 @@ class RolePermissionMatrix {
       Permission.createInventoryPo,
     },
     ErpRole.parent: {
+      // BUS-013/BUS-095: a parent may read THEIR OWN child's transport. The
+      // parent role previously held no transport permission at all, while the
+      // client called a school-scoped endpoint — a guaranteed 403 in the live
+      // build. Scope is enforced in RLS, not here (TRANSPORT_DOMAIN_CONTRACT §5).
+      Permission.viewChildTransport,
       Permission.viewParentExperience,
       Permission.viewParentInsights,
       Permission.viewParentAcademicSummary,
@@ -659,6 +689,11 @@ class RolePermissionMatrix {
       Permission.submitStudentLeave,
       Permission.submitAttendanceCorrection,
     },
-    ErpRole.student: {},
+    // BUS-013/BUS-101: the student role held an EMPTY permission set, so no
+    // student-facing surface was reachable at all. Transport self-view only —
+    // never a manifest, never another student.
+    ErpRole.student: {
+      Permission.viewOwnTransport,
+    },
   };
 }
