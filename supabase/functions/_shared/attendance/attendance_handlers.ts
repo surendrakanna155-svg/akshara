@@ -81,11 +81,28 @@ function mapAttendanceError(error: unknown): Response {
   throw error;
 }
 
+/**
+ * Authenticate → authorize → run. The ONLY way a handler in this module reaches
+ * business logic.
+ *
+ * SEC-AUTH-FIRST: `handler` may now return a `Response` instead of a payload, and
+ * it is passed through untouched. That exists so REQUEST VALIDATION can live
+ * inside the callback — i.e. after authentication and the permission check —
+ * rather than above the `withAuth` call.
+ *
+ * It used to live above it, and that is the defect the live pilot exhibited:
+ * `GET /attendance/register/monthly` read its query string and answered
+ * `422 classLabel is required` to a caller with no credentials at all, handing
+ * out the route's parameter contract. The central gate in `api/app.ts` now stops
+ * such a request long before it gets here, but a handler must not depend on
+ * something upstream to make it safe — the pilot is the proof of what happens
+ * when the upstream gate is the only copy of the rule.
+ */
 async function withAuth<T>(
   req: Request,
   config: AppConfig,
   readOnly: boolean,
-  handler: (claims: AuthedClaims) => Promise<T>,
+  handler: (claims: AuthedClaims) => Promise<T | Response>,
 ): Promise<Response> {
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
@@ -97,6 +114,9 @@ async function withAuth<T>(
 
   try {
     const result = await handler(auth.claims);
+    // A validation/short-circuit Response from inside the callback is returned
+    // verbatim; anything else is the success payload.
+    if (result instanceof Response) return result;
     return jsonResponse(envelope(result));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
@@ -212,16 +232,16 @@ export async function handleAttendanceRegister(
   req: Request,
   config: AppConfig,
 ): Promise<Response> {
-  const url = new URL(req.url);
-  const classLabel = (url.searchParams.get("classLabel") ?? "").trim();
-  const date = (url.searchParams.get("date") ?? "").trim();
-  if (!classLabel) {
-    return errorEnvelope("ATTENDANCE_VALIDATION", "classLabel is required", 422);
-  }
-  if (!DATE_RE.test(date)) {
-    return errorEnvelope("ATTENDANCE_VALIDATION", "date (YYYY-MM-DD) is required", 422);
-  }
   return await withAuth(req, config, true, async (claims) => {
+    const url = new URL(req.url);
+    const classLabel = (url.searchParams.get("classLabel") ?? "").trim();
+    const date = (url.searchParams.get("date") ?? "").trim();
+    if (!classLabel) {
+      return errorEnvelope("ATTENDANCE_VALIDATION", "classLabel is required", 422);
+    }
+    if (!DATE_RE.test(date)) {
+      return errorEnvelope("ATTENDANCE_VALIDATION", "date (YYYY-MM-DD) is required", 422);
+    }
     const { organizationId, schoolId } = tenantIds(claims);
     const rows = await withTenantContext(config, claims, (db) =>
       getAttendanceRegister(db, organizationId, schoolId, classLabel, date)
@@ -235,16 +255,16 @@ export async function handleAttendanceMonthlyRegister(
   req: Request,
   config: AppConfig,
 ): Promise<Response> {
-  const url = new URL(req.url);
-  const classLabel = (url.searchParams.get("classLabel") ?? "").trim();
-  const month = (url.searchParams.get("month") ?? "").trim();
-  if (!classLabel) {
-    return errorEnvelope("ATTENDANCE_VALIDATION", "classLabel is required", 422);
-  }
-  if (!MONTH_RE.test(month)) {
-    return errorEnvelope("ATTENDANCE_VALIDATION", "month (YYYY-MM) is required", 422);
-  }
   return await withAuth(req, config, true, async (claims) => {
+    const url = new URL(req.url);
+    const classLabel = (url.searchParams.get("classLabel") ?? "").trim();
+    const month = (url.searchParams.get("month") ?? "").trim();
+    if (!classLabel) {
+      return errorEnvelope("ATTENDANCE_VALIDATION", "classLabel is required", 422);
+    }
+    if (!MONTH_RE.test(month)) {
+      return errorEnvelope("ATTENDANCE_VALIDATION", "month (YYYY-MM) is required", 422);
+    }
     const { organizationId, schoolId } = tenantIds(claims);
     const register = await withTenantContext(config, claims, (db) =>
       getMonthlyRegister(db, organizationId, schoolId, classLabel, month)
@@ -258,12 +278,12 @@ export async function handleAttendancePending(
   req: Request,
   config: AppConfig,
 ): Promise<Response> {
-  const url = new URL(req.url);
-  const date = (url.searchParams.get("date") ?? "").trim();
-  if (!DATE_RE.test(date)) {
-    return errorEnvelope("ATTENDANCE_VALIDATION", "date (YYYY-MM-DD) is required", 422);
-  }
   return await withAuth(req, config, true, async (claims) => {
+    const url = new URL(req.url);
+    const date = (url.searchParams.get("date") ?? "").trim();
+    if (!DATE_RE.test(date)) {
+      return errorEnvelope("ATTENDANCE_VALIDATION", "date (YYYY-MM-DD) is required", 422);
+    }
     const { organizationId, schoolId } = tenantIds(claims);
     const rows = await withTenantContext(config, claims, (db) =>
       getPendingAttendance(db, organizationId, schoolId, date)
@@ -277,12 +297,12 @@ export async function handleAttendanceConsecutiveAbsence(
   req: Request,
   config: AppConfig,
 ): Promise<Response> {
-  const url = new URL(req.url);
-  const days = Number.parseInt(url.searchParams.get("days") ?? "3", 10);
-  if (!Number.isFinite(days) || days < 1 || days > 60) {
-    return errorEnvelope("ATTENDANCE_VALIDATION", "days must be between 1 and 60", 422);
-  }
   return await withAuth(req, config, true, async (claims) => {
+    const url = new URL(req.url);
+    const days = Number.parseInt(url.searchParams.get("days") ?? "3", 10);
+    if (!Number.isFinite(days) || days < 1 || days > 60) {
+      return errorEnvelope("ATTENDANCE_VALIDATION", "days must be between 1 and 60", 422);
+    }
     const { organizationId, schoolId } = tenantIds(claims);
     const rows = await withTenantContext(config, claims, (db) =>
       getConsecutiveAbsences(db, organizationId, schoolId, days)
@@ -296,16 +316,16 @@ export async function handleAttendanceShortAttendance(
   req: Request,
   config: AppConfig,
 ): Promise<Response> {
-  const url = new URL(req.url);
-  const threshold = Number.parseInt(url.searchParams.get("threshold") ?? "75", 10);
-  const windowDays = Number.parseInt(url.searchParams.get("windowDays") ?? "30", 10);
-  if (!Number.isFinite(threshold) || threshold < 1 || threshold > 100) {
-    return errorEnvelope("ATTENDANCE_VALIDATION", "threshold must be between 1 and 100", 422);
-  }
-  if (!Number.isFinite(windowDays) || windowDays < 1 || windowDays > 366) {
-    return errorEnvelope("ATTENDANCE_VALIDATION", "windowDays must be between 1 and 366", 422);
-  }
   return await withAuth(req, config, true, async (claims) => {
+    const url = new URL(req.url);
+    const threshold = Number.parseInt(url.searchParams.get("threshold") ?? "75", 10);
+    const windowDays = Number.parseInt(url.searchParams.get("windowDays") ?? "30", 10);
+    if (!Number.isFinite(threshold) || threshold < 1 || threshold > 100) {
+      return errorEnvelope("ATTENDANCE_VALIDATION", "threshold must be between 1 and 100", 422);
+    }
+    if (!Number.isFinite(windowDays) || windowDays < 1 || windowDays > 366) {
+      return errorEnvelope("ATTENDANCE_VALIDATION", "windowDays must be between 1 and 366", 422);
+    }
     const { organizationId, schoolId } = tenantIds(claims);
     const rows = await withTenantContext(config, claims, (db) =>
       getShortAttendance(db, organizationId, schoolId, threshold, windowDays)

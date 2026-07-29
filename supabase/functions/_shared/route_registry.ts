@@ -21,6 +21,7 @@
 // router is now non-greedy, that order no longer affects which router wins a path.
 
 import type { AppConfig } from "./config.ts";
+import { isPublicModuleSurfaceRoute, PUBLIC_ROUTES } from "./public_routes.ts";
 
 import { routeAdmissions } from "./admissions/admissions_router.ts";
 import { routeFinance } from "./finance/finance_router.ts";
@@ -235,28 +236,20 @@ export const MODULE_ROUTES: readonly ModuleRouteEntry[] = [
 
 /**
  * ICA-F1 — public module routes: the ONLY module routes that legitimately reach a
- * handler WITHOUT a user session, because they authenticate by another means. The
- * central auth chokepoint (`routeModuleRequest`) skips authentication for these and
- * for nothing else, so every other module route is authenticated by construction —
- * no route can be unauthenticated by omission.
+ * handler WITHOUT a user session, because they authenticate by another means.
  *
- * The full set (both HMAC-signature-authed, no bearer JWT):
- *  - `/webhooks/<gateway>` — payment-gateway callbacks (handleRazorpayWebhook). A prefix
- *    so a second gateway's `/webhooks/<gateway>` is covered without a code change.
- *  - `/communications/delivery/webhook` — message-provider delivery-status callback
- *    (handleDeliveryWebhook, verifyCommunicationWebhookSignature).
- * Any addition here is a deliberate decision to expose a route without a session; the
- * ICA-F1 guard test asserts each listed route actually bypasses the gate.
+ * SEC-AUTH-FIRST: this list is no longer declared here. It is DERIVED from the one
+ * allow-list in `_shared/public_routes.ts`, which also drives the central gate in
+ * `api/app.ts`. Two separately-maintained lists could drift apart and make a route
+ * public on one surface but not the other; one table cannot. Add entries there.
  */
-export const PUBLIC_MODULE_ROUTE_PREFIXES: readonly string[] = [
-  "/webhooks/",
-  "/communications/delivery/webhook",
-] as const;
+export const PUBLIC_MODULE_ROUTE_PREFIXES: readonly string[] = PUBLIC_ROUTES
+  .filter((e) => e.surface === "module")
+  .map((e) => e.match.kind === "prefix" ? e.match.path : e.match.path);
 
-/** True when `path` is an explicitly-allowlisted public (non-session) module route. */
+/** True when (method, path) is an explicitly-allowlisted public (non-session) module route. */
 export function isPublicModuleRoute(method: string, path: string): boolean {
-  void method; // reserved: today every public route is method-agnostic (signature-authed)
-  return PUBLIC_MODULE_ROUTE_PREFIXES.some((p) => path === p.replace(/\/$/, "") || path.startsWith(p));
+  return isPublicModuleSurfaceRoute(method, path);
 }
 
 /**

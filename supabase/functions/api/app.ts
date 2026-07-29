@@ -19,6 +19,7 @@ import { handleTenantAccessHealth, handleOperationsHealth, handleStorageHealth, 
 // returns null when no router owns the path; this file turns that single null into the one
 // canonical 404. Every module router is non-greedy (returns null, never its own route-404).
 import { isPublicModuleRoute, matchModuleRoute } from "../_shared/route_registry.ts";
+import { isPublicRoute } from "../_shared/public_routes.ts";
 import { authenticateRequest } from "../_shared/permission_middleware.ts";
 import { bearerToken, verifyAccessToken } from "../_shared/jwt.ts";
 import { errorEnvelope, routePath } from "../_shared/http.ts";
@@ -41,12 +42,19 @@ export async function routeModuleRequest(
   method: string,
   path: string,
 ): Promise<Response> {
-  // ICA-F1: central auth/RBAC chokepoint. Every module route is authenticated HERE,
-  // before dispatch — so no route can be unauthenticated by omission (a handler that
-  // forgets its own `authenticateRequest` is still gated). Only the explicitly
-  // allowlisted public routes (signature-authed webhooks) bypass this. The result is
-  // memoized on the request, so the handlers' own `authenticateRequest` calls (and the
-  // idempotency scope resolver) reuse it with no extra session-validation DB read.
+  // ICA-F1: module-level auth/RBAC chokepoint. Every module route is authenticated
+  // HERE, before dispatch — so no route can be unauthenticated by omission (a handler
+  // that forgets its own `authenticateRequest` is still gated). Only the explicitly
+  // allowlisted public routes (signature-authed webhooks) bypass this.
+  //
+  // SEC-AUTH-FIRST: `handleRequest` now runs the SAME gate one level higher, before it
+  // matches any route at all. This check is therefore normally redundant — deliberately
+  // so. It is kept because `routeModuleRequest` is exported and separately callable, and
+  // because a defence that only exists at one level is one edit away from being gone
+  // (which is exactly how the pilot came to answer an anonymous 422). It costs nothing:
+  // `authenticateRequest` is memoized per Request, so the second call reuses the first
+  // result with no extra session-validation DB read.
+  //
   // Fine-grained RBAC (requirePermission/requireAnyPermission/scope) stays in the
   // handlers, unchanged — this gate guarantees AUTHENTICATION, not authorization.
   if (!isPublicModuleRoute(method, path)) {
@@ -301,7 +309,37 @@ export async function handleRequest(
   try {
     let response: Response;
 
-    if (method === "GET" && path === "/health") {
+    // ── SEC-AUTH-FIRST — authentication precedes validation AND dispatch ──────
+    //
+    // This is the FIRST thing that happens to a request after the correlation id
+    // and config are resolved: before the route table below is consulted, before
+    // any handler runs, and therefore before any body is read or any query
+    // parameter is parsed. An anonymous caller to anything not on the one
+    // declared allow-list gets exactly one answer — 401 — and learns nothing else.
+    //
+    // What this closes (all three confirmed against the live pilot):
+    //   · GET /attendance/register/monthly answered `422 classLabel is required`.
+    //     `handleAttendanceMonthlyRegister` validated its query string before
+    //     calling `withAuth`, so an anonymous caller was handed the route's
+    //     parameter contract. (The handler ordering is fixed too — see
+    //     attendance_handlers.ts — but no gate may depend on ~664 handlers each
+    //     getting their ordering right.)
+    //   · GET /audit/events and GET /identity/roles answered `404 Route not
+    //     found`. 404-vs-401 is route-existence disclosure: it lets an anonymous
+    //     caller map the API surface by diffing status codes. Because this gate
+    //     runs before the route is matched, a non-existent path and a real one
+    //     are now indistinguishable — both 401. (The authenticated 404 is
+    //     unchanged; see eng4_5_forced_auth_test.)
+    //
+    // The allow-list is declared once in `_shared/public_routes.ts`, with a
+    // stated `guardedBy` for every entry, and is proven minimal + sufficient by
+    // `auth_precedes_dispatch_guard_test.ts`.
+    const gate = isPublicRoute(method, path)
+      ? null
+      : await authenticateRequest(req, config);
+    if (gate && !gate.ok) {
+      response = gate.response;
+    } else if (method === "GET" && path === "/health") {
       response = handleHealth();
     } else if (method === "GET" && path === "/health/ready") {
       response = await handleReady(config);

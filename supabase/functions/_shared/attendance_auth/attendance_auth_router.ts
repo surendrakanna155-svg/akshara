@@ -8,6 +8,7 @@
 
 import type { AppConfig } from "../config.ts";
 import { errorEnvelope } from "../http.ts";
+import { authenticateRequest } from "../permission_middleware.ts";
 import {
   handleEnrollFace,
   handleGetEnrollmentStatus,
@@ -43,6 +44,16 @@ export async function routeAttendanceAuth(
   if (!route) {
     return null;
   }
+
+  // SEC-AUTH-FIRST: authenticate BEFORE answering 405. A 405 is a disclosure —
+  // it tells an anonymous caller that this path exists and which method it wants,
+  // which is the same leak as the 422 the live pilot returned from the attendance
+  // register. Every other status this router can produce already required a
+  // session; the method check was the one that did not. `authenticateRequest` is
+  // memoized per Request, so this does not add a second session lookup.
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
   const handler = route[method];
   if (!handler) {
     return errorEnvelope("METHOD_NOT_ALLOWED", `Method not allowed: ${method} ${path}`, 405);
