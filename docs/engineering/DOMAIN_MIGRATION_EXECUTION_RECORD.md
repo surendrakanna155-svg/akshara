@@ -1,7 +1,30 @@
 # Domain Migration — Execution Record
 
+# ✅ WORKSTREAM CLOSED — COMPLETED SUCCESSFULLY (owner-accepted 2026-07-29)
+
 **`akshara.veloraunisexsalon.com` → `nikshaos.in` (NIKSHA OS)**
 **Date:** 2026-07-29 · **Branch:** `release/v1.0-playstore` · **Audit:** [DOMAIN_MIGRATION_AUDIT_2026-07-29.md](DOMAIN_MIGRATION_AUDIT_2026-07-29.md)
+
+> **Owner ruling, 2026-07-29:** Domain Migration is **COMPLETE**. These three hosts
+> are the **permanent canonical domains**. All historical migration evidence in this
+> file and in the audit is to be **preserved exactly as written** — it is dated
+> evidence, not living documentation.
+>
+> | Canonical host | Role |
+> |---|---|
+> | `nikshaos.in` (+ `www` → 301) | Product website + hosted legal documents |
+> | `app.nikshaos.in` | Web ERP |
+> | `api.nikshaos.in` | Backend API + Storage |
+>
+> **No further migration work is required** unless a genuine production issue is
+> discovered. The old host is retired; do not reintroduce it. The remaining
+> owner-gated items in §"Open items" are tracked under **separate workstreams** and
+> are explicitly **not** reopenings of this one.
+>
+> **Final state:** all 6 phases closed · 8/8 live-cert harnesses at host-parity ·
+> storage round-trip proven and re-proven after retirement · Flutter 4473 passed ·
+> Deno 4165 passed / 0 failed · database old-host occurrences **0** ·
+> **EOS gate: CONDITIONAL PASS** (0 P0 in scope; P1s tracked below).
 
 ---
 
@@ -180,7 +203,11 @@ and/or add an explicit `default_server` returning 444.
 
 ---
 
-## Open items for the owner
+## Open items — owner-gated, tracked under SEPARATE workstreams
+
+None of the following blocks the Domain Migration, which is closed. They are
+recorded here because this migration is where they surfaced, not because they
+belong to it.
 
 | # | Item | Why it needs you |
 |---|---|---|
