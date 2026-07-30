@@ -13,6 +13,7 @@ import '../../router/phase4_navigation.dart';
 import '../../router/staff360_navigation.dart';
 import '../copilot/copilot_role_intelligence.dart';
 import 'adaptive_ai_models.dart';
+import 'adaptive_lifecycle.dart';
 
 /// Map a client persona role to the backend feed persona string. The W2.0 feed
 /// route serves the school-operational/aggregate personas today; per-user
@@ -214,6 +215,43 @@ Future<void> recordAdaptiveFeedback(
     itemKey: item.itemKey,
     itemType: item.type,
     action: action,
+  );
+  ref.invalidate(adaptiveRecommendationsProvider(persona));
+  ref.invalidate(adaptivePriorityFeedProvider(persona));
+}
+
+/// Living Dashboard: record a lifecycle change (acknowledge / snooze / complete)
+/// and refresh the persona's feed so the next item is promoted into view.
+///
+/// The watermarks travel with the write: [AdaptivePriorityItem.score] becomes
+/// `scoreAtAction`, which is what lets the backend bring the item back if it
+/// later gets materially worse. Without it the item could only ever return on
+/// the day boundary.
+///
+/// Throws if the write fails. That is deliberate — the caller has already
+/// removed the card optimistically, so a silent failure would leave the user
+/// believing an item is snoozed when the server never recorded it.
+Future<void> recordAdaptiveLifecycle(
+  WidgetRef ref, {
+  required String persona,
+  required AdaptivePriorityItem item,
+  required AdaptiveLifecycleAction action,
+  DateTime? snoozedUntil,
+  AdaptiveFeedbackAction? feedback,
+}) async {
+  final repo = ref.read(adaptiveAiRepositoryProvider);
+  await repo.sendRecommendationFeedback(
+    query: ref.read(repositoryQueryProvider),
+    itemKey: item.itemKey,
+    itemType: item.type,
+    // Snooze sends no learning signal: "not now" must not down-weight the
+    // whole item type the way a dismissal does.
+    action: feedback,
+    lifecycle: AdaptiveLifecycleWrite(
+      action: action,
+      snoozedUntil: snoozedUntil,
+      scoreAtAction: item.score,
+    ),
   );
   ref.invalidate(adaptiveRecommendationsProvider(persona));
   ref.invalidate(adaptivePriorityFeedProvider(persona));

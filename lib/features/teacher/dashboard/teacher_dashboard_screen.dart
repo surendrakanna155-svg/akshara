@@ -244,6 +244,14 @@ class _TabletSplitBody extends StatelessWidget {
           onNavigate: onNavigate,
         ),
         const SizedBox(height: AksharaSpacing.s4),
+        // The priority feed was present on the mobile body but missing here, so
+        // a teacher on a tablet silently lost their "what to do next" list — the
+        // one surface that is supposed to be persona-wide. Self-hides when empty.
+        const AdaptivePriorityFeedSection(
+          persona: 'teacher',
+          onOpenAction: _openTeacherAdaptiveAction,
+        ),
+        const SizedBox(height: AksharaSpacing.s4),
         _QuickActionsSection(
           actions: data.quickActions,
           onNavigate: onNavigate,

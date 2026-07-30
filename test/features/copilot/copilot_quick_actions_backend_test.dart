@@ -3,6 +3,7 @@ import 'package:akshara_erp/core/repositories/repository_providers.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
 import 'package:akshara_erp/core/tenant/tenant_provider.dart';
 import 'package:akshara_erp/features/adaptive_ai/adaptive_ai_models.dart';
+import 'package:akshara_erp/features/adaptive_ai/adaptive_lifecycle.dart';
 import 'package:akshara_erp/features/copilot/widgets/copilot_ai_quick_actions.dart';
 import 'package:akshara_erp/router/route_names.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
@@ -29,7 +30,7 @@ class _FakeQuickActionsRepo implements AdaptiveAiRepository {
   Future<AdaptiveFeed> getRecommendations({required RepositoryQuery query, required String persona, int? limit}) async =>
       AdaptiveFeed.empty(persona);
   @override
-  Future<void> sendRecommendationFeedback({required RepositoryQuery query, required String itemKey, required String itemType, required AdaptiveFeedbackAction action}) async {}
+  Future<void> sendRecommendationFeedback({required RepositoryQuery query, required String itemKey, required String itemType, AdaptiveFeedbackAction? action, AdaptiveLifecycleWrite? lifecycle}) async {}
   @override
   Future<UniversalSearchResult> universalSearch({required RepositoryQuery query, required String term, int? limit, int? offset}) async =>
       UniversalSearchResult.empty(term);

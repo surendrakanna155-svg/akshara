@@ -16,13 +16,24 @@ import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../adaptive_ai_models.dart';
 import '../adaptive_ai_providers.dart';
+import '../adaptive_lifecycle.dart';
 
 /// The overflow-menu choices on a feed row (P2-6 audit). Dismiss folds the
 /// former standalone icon button in here to keep the dense row compact; Mute
 /// records `suppress` (learn not to resurface this item TYPE for the persona).
-enum _FeedItemMenuChoice { dismiss, suppress }
+enum _FeedItemMenuChoice { dismiss, snooze, complete, suppress }
 
-class AdaptivePriorityFeedSection extends ConsumerWidget {
+/// Why a previously put-away item is on the list again, in the user's words.
+/// Null for an item they have never acted on — the common case, which needs no
+/// explanation. Mirrors the `VisibilityReason` values from item_lifecycle.ts.
+String? _resurfacedLabel(AdaptivePriorityItem item) => switch (item.visibilityReason) {
+      'visible_severity_increased' => 'Back — this got more urgent',
+      'visible_deadline_advanced' => 'Back — the deadline is closer',
+      'visible_snooze_elapsed' => 'Back — you asked to be reminded',
+      _ => null,
+    };
+
+class AdaptivePriorityFeedSection extends ConsumerStatefulWidget {
   const AdaptivePriorityFeedSection({
     super.key,
     required this.persona,
@@ -40,12 +51,46 @@ class AdaptivePriorityFeedSection extends ConsumerWidget {
   final int maxItems;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AdaptivePriorityFeedSection> createState() =>
+      _AdaptivePriorityFeedSectionState();
+}
+
+class _AdaptivePriorityFeedSectionState
+    extends ConsumerState<AdaptivePriorityFeedSection> {
+  /// Items the user has just put away, hidden locally until the refetched feed
+  /// agrees. Two reasons this must be local and synchronous:
+  ///
+  ///  1. `Dismissible` asserts the widget leaves the tree in the same frame its
+  ///     `onDismissed` fires. Waiting for the network round-trip and provider
+  ///     invalidation throws "A dismissed Dismissible widget is still part of
+  ///     the tree" — in production, not just in tests.
+  ///  2. It is what makes the next item promote instantly. The feed fetches
+  ///     more than [maxItems], so removing one reveals the next-highest
+  ///     immediately rather than after the server answers.
+  final Set<String> _putAway = {};
+
+  String get persona => widget.persona;
+  int get maxItems => widget.maxItems;
+  String get title => widget.title;
+  void Function(BuildContext, AdaptiveAction)? get onOpenAction => widget.onOpenAction;
+
+  @override
+  Widget build(BuildContext context) {
     final async = ref.watch(adaptiveRecommendationsProvider(persona));
     return async.maybeWhen(
-      data: (feed) => feed.isEmpty
-          ? const SizedBox.shrink()
-          : _section(context, ref, feed.items.take(maxItems).toList(), feed.degraded),
+      data: (feed) {
+        // Once the server stops sending an item, drop it from the local set so
+        // it cannot grow without bound across a long-lived dashboard.
+        final live = feed.items.map((i) => i.itemKey).toSet();
+        _putAway.removeWhere((key) => !live.contains(key));
+
+        final visible = feed.items
+            .where((i) => !_putAway.contains(i.itemKey))
+            .take(maxItems)
+            .toList();
+        if (visible.isEmpty) return const SizedBox.shrink();
+        return _section(context, ref, visible, feed.degraded);
+      },
       orElse: () => const SizedBox.shrink(),
     );
   }
@@ -80,8 +125,29 @@ class AdaptivePriorityFeedSection extends ConsumerWidget {
         ],
         const SizedBox(height: AksharaSpacing.s2),
         for (final item in items) ...[
-          _AdaptiveRecommendationTile(
-            item: item,
+          // Living Dashboard: swipe puts an item away. The card leaves
+          // immediately (optimistic) and the next-highest item is promoted by
+          // the provider invalidation — the feed already fetches more than it
+          // shows, so there is normally something ready to take its place.
+          //
+          // Swipe does NOT delete the underlying work: this records an
+          // `acknowledged` lifecycle row, which is day-scoped and re-surfaces if
+          // the item escalates or its deadline advances a band.
+          Dismissible(
+            key: ValueKey('adaptive-feed-item-${item.itemKey}'),
+            direction: DismissDirection.endToStart,
+            background: _SwipeBackground(colors: context.colors),
+            onDismissed: (_) => _runLifecycle(
+              context,
+              ref,
+              persona: persona,
+              item: item,
+              action: AdaptiveLifecycleAction.acknowledge,
+              feedback: AdaptiveFeedbackAction.dismiss,
+              failureMessage: 'Could not put that away — it is still on your list.',
+            ),
+            child: _AdaptiveRecommendationTile(
+              item: item,
             onOpen: onOpenAction == null || item.action == null
                 ? null
                 : () {
@@ -97,22 +163,147 @@ class AdaptivePriorityFeedSection extends ConsumerWidget {
                     ));
                     onOpenAction!(context, item.action!);
                   },
-            onDismiss: () => recordAdaptiveFeedback(
-              ref,
-              persona: persona,
-              item: item,
-              action: AdaptiveFeedbackAction.dismiss,
-            ),
-            onSuppress: () => recordAdaptiveFeedback(
-              ref,
-              persona: persona,
-              item: item,
-              action: AdaptiveFeedbackAction.suppress,
+              onDismiss: () => _runLifecycle(
+                context,
+                ref,
+                persona: persona,
+                item: item,
+                action: AdaptiveLifecycleAction.acknowledge,
+                feedback: AdaptiveFeedbackAction.dismiss,
+                failureMessage: 'Could not put that away — it is still on your list.',
+              ),
+              onSnooze: () => _promptSnooze(context, ref, persona: persona, item: item),
+              onComplete: () => _runLifecycle(
+                context,
+                ref,
+                persona: persona,
+                item: item,
+                action: AdaptiveLifecycleAction.complete,
+                feedback: AdaptiveFeedbackAction.accept,
+                failureMessage: 'Could not mark that done — it is still on your list.',
+              ),
+              onSuppress: () => recordAdaptiveFeedback(
+                ref,
+                persona: persona,
+                item: item,
+                action: AdaptiveFeedbackAction.suppress,
+              ),
             ),
           ),
           const SizedBox(height: AksharaSpacing.s2),
         ],
       ],
+    );
+  }
+
+  /// Ask which snooze window, then record it. Returns without writing if the
+  /// user backs out of the sheet.
+  Future<void> _promptSnooze(
+    BuildContext context,
+    WidgetRef ref, {
+    required String persona,
+    required AdaptivePriorityItem item,
+  }) async {
+    final option = await showModalBottomSheet<AdaptiveSnoozeOption>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final option in AdaptiveSnoozeOption.values)
+              ListTile(
+                leading: const Icon(Icons.schedule_outlined),
+                title: Text(option.label),
+                onTap: () => Navigator.of(sheetContext).pop(option),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (option == null) return;
+    if (!context.mounted) return;
+    await _runLifecycle(
+      context,
+      ref,
+      persona: persona,
+      item: item,
+      action: AdaptiveLifecycleAction.snooze,
+      // No learning signal: "not now" is not "this was a bad suggestion", so
+      // snoozing must never down-weight the whole item type.
+      feedback: null,
+      snoozedUntil: resolveSnoozeUntil(option, DateTime.now()),
+      failureMessage: 'Could not snooze that — it is still on your list.',
+    );
+  }
+
+  /// Record a lifecycle change, surfacing failure instead of swallowing it.
+  ///
+  /// The card has already left the screen by the time this runs, so a silent
+  /// failure would leave the user believing an item is put away when the server
+  /// never recorded it — and it would reappear later with no explanation. On
+  /// failure we say so and invalidate, which restores the true server state.
+  Future<void> _runLifecycle(
+    BuildContext context,
+    WidgetRef ref, {
+    required String persona,
+    required AdaptivePriorityItem item,
+    required AdaptiveLifecycleAction action,
+    required String failureMessage,
+    AdaptiveFeedbackAction? feedback,
+    DateTime? snoozedUntil,
+  }) async {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    // Hide it in THIS frame — Dismissible requires it, and it is what makes the
+    // next item appear instantly rather than after the server answers.
+    setState(() => _putAway.add(item.itemKey));
+    try {
+      await recordAdaptiveLifecycle(
+        ref,
+        persona: persona,
+        item: item,
+        action: action,
+        snoozedUntil: snoozedUntil,
+        feedback: feedback,
+      );
+    } catch (_) {
+      // The write never landed, so put it back rather than leaving the user
+      // believing it was handled. Saying so matters more than the visual jump:
+      // a silently-returning item later reads as the app ignoring them.
+      if (mounted) setState(() => _putAway.remove(item.itemKey));
+      messenger?.showSnackBar(SnackBar(content: Text(failureMessage)));
+      ref.invalidate(adaptiveRecommendationsProvider(persona));
+      ref.invalidate(adaptivePriorityFeedProvider(persona));
+    }
+  }
+}
+
+/// The reveal behind a swiped card. Reads as "putting away", not "deleting" —
+/// the work is not destroyed, it is just off today's list.
+class _SwipeBackground extends StatelessWidget {
+  const _SwipeBackground({required this.colors});
+
+  final ColorScheme colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      alignment: Alignment.centerRight,
+      padding: const EdgeInsets.symmetric(horizontal: AksharaSpacing.s4),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(AksharaRadius.md),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.check_circle_outline, size: 18, color: colors.onSurfaceVariant),
+          const SizedBox(width: AksharaSpacing.s2),
+          Text(
+            'Put away',
+            style: context.aksharaText.bodySmall.copyWith(color: colors.onSurfaceVariant),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -122,12 +313,16 @@ class _AdaptiveRecommendationTile extends StatefulWidget {
     required this.item,
     required this.onOpen,
     required this.onDismiss,
+    required this.onSnooze,
+    required this.onComplete,
     required this.onSuppress,
   });
 
   final AdaptivePriorityItem item;
   final VoidCallback? onOpen;
   final VoidCallback onDismiss;
+  final VoidCallback onSnooze;
+  final VoidCallback onComplete;
   final VoidCallback onSuppress;
 
   @override
@@ -156,6 +351,16 @@ class _AdaptiveRecommendationTileState extends State<_AdaptiveRecommendationTile
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(item.title, style: context.aksharaText.bodyMedium),
+                    // An item the user already put away does not reappear
+                    // silently — say why it is back, or it reads as the app
+                    // ignoring their dismissal.
+                    if (_resurfacedLabel(item) != null) ...[
+                      const SizedBox(height: AksharaSpacing.s1),
+                      Text(
+                        _resurfacedLabel(item)!,
+                        style: context.aksharaText.labelSmall.copyWith(color: colors.error),
+                      ),
+                    ],
                     const SizedBox(height: AksharaSpacing.s1),
                     Text(
                       item.detail,
@@ -174,6 +379,10 @@ class _AdaptiveRecommendationTileState extends State<_AdaptiveRecommendationTile
                   switch (choice) {
                     case _FeedItemMenuChoice.dismiss:
                       widget.onDismiss();
+                    case _FeedItemMenuChoice.snooze:
+                      widget.onSnooze();
+                    case _FeedItemMenuChoice.complete:
+                      widget.onComplete();
                     case _FeedItemMenuChoice.suppress:
                       widget.onSuppress();
                   }
@@ -181,7 +390,15 @@ class _AdaptiveRecommendationTileState extends State<_AdaptiveRecommendationTile
                 itemBuilder: (context) => const [
                   PopupMenuItem(
                     value: _FeedItemMenuChoice.dismiss,
-                    child: Text('Dismiss'),
+                    child: Text('Put away for today'),
+                  ),
+                  PopupMenuItem(
+                    value: _FeedItemMenuChoice.snooze,
+                    child: Text('Remind me later'),
+                  ),
+                  PopupMenuItem(
+                    value: _FeedItemMenuChoice.complete,
+                    child: Text('Mark done'),
                   ),
                   PopupMenuItem(
                     value: _FeedItemMenuChoice.suppress,

@@ -49,12 +49,22 @@ class AdaptiveAiRemoteDataSource {
     required RepositoryQuery query,
     required String itemKey,
     required String itemType,
-    required String action,
+    String? action,
+    Map<String, dynamic>? lifecycle,
   }) async {
     await _dio.post<Map<String, dynamic>>(
       AdaptiveAiApiPaths.recommendationFeedback,
       queryParameters: _queryParams(query),
-      data: {'itemKey': itemKey, 'itemType': itemType, 'action': action},
+      data: {
+        'itemKey': itemKey,
+        'itemType': itemType,
+        // Both are optional individually, but the route rejects a body with
+        // neither (422). `action` teaches the ranker; `lifecycle` grooms this
+        // user's queue — a snooze deliberately sends only the latter, so that
+        // "not now" never down-weights the whole item type.
+        if (action != null) 'action': action,
+        if (lifecycle != null) 'lifecycle': lifecycle,
+      },
     );
   }
 

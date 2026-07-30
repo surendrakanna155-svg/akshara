@@ -5,6 +5,7 @@ import 'package:akshara_erp/core/security/permissions.dart';
 import 'package:akshara_erp/core/tenant/tenant_provider.dart';
 import 'package:akshara_erp/router/phase4_navigation.dart';
 import 'package:akshara_erp/features/adaptive_ai/adaptive_ai_models.dart';
+import 'package:akshara_erp/features/adaptive_ai/adaptive_lifecycle.dart';
 import 'package:akshara_erp/features/adaptive_ai/adaptive_ai_providers.dart';
 import 'package:akshara_erp/features/adaptive_ai/widgets/adaptive_search_results.dart';
 import 'package:akshara_erp/router/route_names.dart';
@@ -57,7 +58,7 @@ class _FakeAdaptiveAiRepository implements AdaptiveAiRepository {
   Future<AdaptiveFeed> getRecommendations({required RepositoryQuery query, required String persona, int? limit}) async =>
       AdaptiveFeed.empty(persona);
   @override
-  Future<void> sendRecommendationFeedback({required RepositoryQuery query, required String itemKey, required String itemType, required AdaptiveFeedbackAction action}) async {}
+  Future<void> sendRecommendationFeedback({required RepositoryQuery query, required String itemKey, required String itemType, AdaptiveFeedbackAction? action, AdaptiveLifecycleWrite? lifecycle}) async {}
   @override
   Future<List<AdaptiveQuickAction>> getQuickActions({required RepositoryQuery query, required String persona}) async => const [];
 }

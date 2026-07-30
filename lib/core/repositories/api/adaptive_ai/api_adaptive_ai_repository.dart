@@ -1,6 +1,7 @@
 // Adaptive AI (P3-AI-2 / W2) — API repository: remote datasource + mapper.
 
 import '../../../../features/adaptive_ai/adaptive_ai_models.dart';
+import '../../../../features/adaptive_ai/adaptive_lifecycle.dart';
 import '../../interfaces/adaptive_ai_repository.dart';
 import '../../repository_query.dart';
 import 'mapper/adaptive_ai_mapper.dart';
@@ -41,13 +42,15 @@ class ApiAdaptiveAiRepository implements AdaptiveAiRepository {
     required RepositoryQuery query,
     required String itemKey,
     required String itemType,
-    required AdaptiveFeedbackAction action,
+    AdaptiveFeedbackAction? action,
+    AdaptiveLifecycleWrite? lifecycle,
   }) {
     return _remote.sendFeedback(
       query: query,
       itemKey: itemKey,
       itemType: itemType,
-      action: action.name,
+      action: action?.name,
+      lifecycle: lifecycle?.toJson(),
     );
   }
 

@@ -58,6 +58,8 @@ class AdaptivePriorityItem {
     required this.reason,
     this.action,
     this.factorBreakdown,
+    this.lifecycleState,
+    this.visibilityReason,
   });
 
   final String itemKey;
@@ -78,7 +80,26 @@ class AdaptivePriorityItem {
   /// (envelope/mock) didn't carry one; the UI hides the expandable detail then.
   final AdaptiveFactorBreakdown? factorBreakdown;
 
+  /// Living Dashboard: this user's stored state for the item, when they have
+  /// acted on it — `acknowledged` | `snoozed` | `completed` | `escalated` | …
+  /// Null means never acted on (the common case). Mirrors the wire value; the
+  /// vocabulary is owned by `item_lifecycle.ts`.
+  final String? lifecycleState;
+
+  /// Why the backend's overlay showed this item — e.g.
+  /// `visible_severity_increased` when it climbed back on its own. Lets the UI
+  /// say "this came back because it got worse" instead of silently reappearing.
+  final String? visibilityReason;
+
   bool get isCritical => score >= 75;
+
+  /// True when this item returned on its own rather than being newly surfaced —
+  /// worth badging, because an item the user already put away reappearing is a
+  /// signal, not noise.
+  bool get hasResurfaced =>
+      visibilityReason == 'visible_severity_increased' ||
+      visibilityReason == 'visible_deadline_advanced' ||
+      visibilityReason == 'visible_snooze_elapsed';
 }
 
 /// A per-persona feed (priorities or recommendations).

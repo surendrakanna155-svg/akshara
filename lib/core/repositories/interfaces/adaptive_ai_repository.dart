@@ -5,6 +5,7 @@
 // copilot elsewhere.
 
 import '../../../features/adaptive_ai/adaptive_ai_models.dart';
+import '../../../features/adaptive_ai/adaptive_lifecycle.dart';
 import '../repository_query.dart';
 
 abstract class AdaptiveAiRepository {
@@ -22,12 +23,22 @@ abstract class AdaptiveAiRepository {
     int? limit,
   });
 
-  /// Record accept/dismiss/suppress feedback on a recommendation (learning loop).
+  /// Record feedback and/or a lifecycle change on a recommendation.
+  ///
+  /// [action] drives the learning loop (accept/dismiss/suppress reweights the
+  /// item TYPE). [lifecycle] drives the Living Dashboard queue for this ONE item
+  /// (acknowledge/snooze/complete). They are separable because snoozing means
+  /// "not now", not "this was a bad suggestion" — sending a learning signal for
+  /// it would wrongly down-weight every item of that type.
+  ///
+  /// At least one must be supplied; the route returns 422 for a body with
+  /// neither.
   Future<void> sendRecommendationFeedback({
     required RepositoryQuery query,
     required String itemKey,
     required String itemType,
-    required AdaptiveFeedbackAction action,
+    AdaptiveFeedbackAction? action,
+    AdaptiveLifecycleWrite? lifecycle,
   });
 
   /// The RBAC-filtered quick actions for a persona (action-first surface).

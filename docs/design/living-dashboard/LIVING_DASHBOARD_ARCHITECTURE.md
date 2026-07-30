@@ -238,8 +238,8 @@ Each phase is independently shippable and EOS-gated. Migration band starts at **
 | # | Phase | Scope | Done-when |
 |---|---|---|---|
 | **0** | **Truth** | ✅ **DONE before this lane opened** — closed by `80a2cd8d` (see §2.1). Verify only. | WIDGET‑001/002/011 closed; no dashboard renders demo data on any path |
-| **1** | **Lifecycle core** | `dashboard_item_state` migration + repo; `resolveVisibility` pure fn + tests; engine switches from pre-filter to post-score overlay; migrate `dismissedKeys`; snooze/ack/complete API | Dismissed item reappears when score crosses the delta; snooze expires at read time; determinism + purity tests still green |
-| **2** | **Living feed UI** | Swipe-to-dismiss (`Dismissible`), snooze sheet (30m / tomorrow / today), promote-next animation, lifecycle state chips; fix teacher tablet omission; consolidate 5 deep-link resolvers into one pure resolver | Swipe removes + promotes next; snoozed item returns; every item taps through to its module |
+| **1** | **Lifecycle core** | ✅ **DONE** (`88e67712`). `dashboard_item_state` migration + repo; `resolveVisibility` pure fn; engine inverted to score-then-overlay; `dismissedKeys` backfilled; snooze/ack/complete on the feedback route | Met. 28 backend tests; migration validated on real PG (re-runnable, RLS proven, constraints enforced) |
+| **2** | **Living feed UI** | ✅ **DONE.** Swipe-to-dismiss, snooze sheet (30m / tomorrow / today), promote-next, "came back" badge, teacher-tablet feed fix | Met. 45 Flutter tests. **Deferred:** consolidating the 5 ad-hoc deep-link resolvers → Phase 4 (it is composition work, not lifecycle) |
 | **3** | **Liveness & honesty** | Resume-refresh, foreground interval invalidate, `AksharaFreshnessChip` on dashboards wired to the existing cache header | Dashboard refreshes on resume; stale data is visibly labelled stale |
 | **4** | **Composition** | Re-skin `dynamic_widgets` renderer with DSV2; priority strip + stable body; user pinning on `dashboard_layouts` | A role dashboard renders from layout data; pins never move; ≤1 organic reposition/day |
 | **5** | **Copilot hand-off** | Persona-memory/lifecycle context slot; persist `screenContext`; dismissed-item rehydration; clear `copilotPendingNavigationContextProvider` | Dismiss a widget → ask Copilot → full context restored |
@@ -268,9 +268,27 @@ Inherited from the existing test suite — these are load-bearing:
 
 ## 5. Open decisions (owner)
 
-| # | Decision | Recommendation |
+| # | Decision | Status |
 |---|---|---|
-| D1 | Liveness transport | Resume-refresh + foreground poll now; FCM later. Realtime: no. |
+| D1 | Liveness transport | ✅ Owner chose resume-refresh + foreground poll (Phase 3). FCM later; Realtime: no. |
 | D2 | Reorder stability | Volatile strip + stable body (§3.4) — honours both the mission and doc 04 |
-| D3 | Phase 0 first? | Yes — fabrication P0s before any Living Dashboard work |
-| D4 | Branch | Separate branch/worktree; `feature/bus-tracking-module` is active |
+| D3 | Phase 0 first? | ✅ Moot — already closed by `80a2cd8d` (§2.1) |
+| D4 | Branch | ✅ `feature/living-dashboard`. ⚠️ See §6 — a branch did not isolate the lanes. |
+
+---
+
+## 6. Lane contamination (open, owner-frozen)
+
+A parallel bus-tracking session commits in the **same working directory**, so a
+branch alone did not isolate the lanes — only a worktree would have. Two commits
+mix both lanes:
+
+- `7c1b209a` — bus-tracking work + this design doc. On **both** branches.
+- `89dafc97` — bus-tracking work + 5 Living Dashboard files. On
+  `feature/living-dashboard` **only**, so that lane's own P0 content is currently
+  off its branch.
+
+**Owner ruling (2026-07-30): freeze. No rebase, reset, force-push, or amend.**
+Cleanup happens after both workstreams finish. Until then every commit in this
+lane must be staged by explicit path and its staged diff verified to contain zero
+`transport/` or `bus` paths. Nothing is lost; the history is just muddled.

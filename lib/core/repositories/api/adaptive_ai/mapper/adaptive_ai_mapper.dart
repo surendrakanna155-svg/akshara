@@ -30,6 +30,8 @@ class AdaptiveAiMapper {
         action: dto.action == null ? null : toAction(dto.action!),
         factorBreakdown:
             dto.factorBreakdown == null ? null : toFactorBreakdown(dto.factorBreakdown!),
+        lifecycleState: dto.lifecycleState,
+        visibilityReason: dto.visibilityReason,
       );
 
   AdaptiveFeed toFeed(AdaptiveFeedDto dto) => AdaptiveFeed(

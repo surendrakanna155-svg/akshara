@@ -3,11 +3,23 @@
 // is turned on, mirroring how the other Mock repositories seed realistic data.
 
 import '../../../features/adaptive_ai/adaptive_ai_models.dart';
+import '../../../features/adaptive_ai/adaptive_lifecycle.dart';
 import '../interfaces/adaptive_ai_repository.dart';
 import '../repository_query.dart';
 
 class MockAdaptiveAiRepository implements AdaptiveAiRepository {
   final Set<String> _dismissed = {};
+
+  /// Living Dashboard: itemKey → the instant a snoozed item returns. Kept
+  /// separate from [_dismissed] so the mock reproduces the real behaviour that
+  /// a snooze EXPIRES, rather than hiding the item forever like a dismissal.
+  final Map<String, DateTime> _snoozedUntil = {};
+
+  bool _isHidden(String itemKey, DateTime now) {
+    final until = _snoozedUntil[itemKey];
+    if (until != null) return now.isBefore(until);
+    return _dismissed.contains(itemKey);
+  }
 
   @override
   Future<AdaptiveFeed> getPriorityFeed({
@@ -16,7 +28,7 @@ class MockAdaptiveAiRepository implements AdaptiveAiRepository {
     int? limit,
   }) async {
     final items = _seedItems(persona, withActions: false)
-        .where((i) => !_dismissed.contains(i.itemKey))
+        .where((i) => !_isHidden(i.itemKey, DateTime.now().toUtc()))
         .toList();
     return AdaptiveFeed(
       persona: persona,
@@ -32,7 +44,7 @@ class MockAdaptiveAiRepository implements AdaptiveAiRepository {
     int? limit,
   }) async {
     final items = _seedItems(persona, withActions: true)
-        .where((i) => !_dismissed.contains(i.itemKey))
+        .where((i) => !_isHidden(i.itemKey, DateTime.now().toUtc()))
         .toList();
     return AdaptiveFeed(
       persona: persona,
@@ -46,11 +58,25 @@ class MockAdaptiveAiRepository implements AdaptiveAiRepository {
     required RepositoryQuery query,
     required String itemKey,
     required String itemType,
-    required AdaptiveFeedbackAction action,
+    AdaptiveFeedbackAction? action,
+    AdaptiveLifecycleWrite? lifecycle,
   }) async {
+    if (lifecycle != null) {
+      switch (lifecycle.action) {
+        case AdaptiveLifecycleAction.snooze:
+          _snoozedUntil[itemKey] = lifecycle.snoozedUntil!.toUtc();
+          _dismissed.remove(itemKey);
+        case AdaptiveLifecycleAction.acknowledge:
+        case AdaptiveLifecycleAction.complete:
+          _snoozedUntil.remove(itemKey);
+          _dismissed.add(itemKey);
+      }
+      return;
+    }
     if (action == AdaptiveFeedbackAction.accept) {
       _dismissed.remove(itemKey);
-    } else {
+      _snoozedUntil.remove(itemKey);
+    } else if (action != null) {
       _dismissed.add(itemKey);
     }
   }

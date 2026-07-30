@@ -8,6 +8,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../../features/adaptive_ai/adaptive_ai_models.dart';
+import '../../../../features/adaptive_ai/adaptive_lifecycle.dart';
 import '../../interfaces/adaptive_ai_repository.dart';
 import '../../repository_query.dart';
 import 'api_adaptive_ai_repository.dart';
@@ -64,7 +65,8 @@ class HybridAdaptiveAiRepository implements AdaptiveAiRepository {
     required RepositoryQuery query,
     required String itemKey,
     required String itemType,
-    required AdaptiveFeedbackAction action,
+    AdaptiveFeedbackAction? action,
+    AdaptiveLifecycleWrite? lifecycle,
   }) async {
     try {
       await _api.sendRecommendationFeedback(
@@ -72,10 +74,16 @@ class HybridAdaptiveAiRepository implements AdaptiveAiRepository {
         itemKey: itemKey,
         itemType: itemType,
         action: action,
+        lifecycle: lifecycle,
       );
     } catch (error, stack) {
-      // Best-effort learning — a lost tick is non-critical, but still observable.
       _logFailure('sendRecommendationFeedback', error, stack);
+      // A lost LEARNING tick is non-critical — the ranker just misses one
+      // signal. A lost LIFECYCLE write is not: the user watched the card leave
+      // the screen, so swallowing the failure would leave them believing an
+      // item is snoozed when the server never recorded it, and it would silently
+      // return. Rethrow so the caller can undo the optimistic removal and say so.
+      if (lifecycle != null) rethrow;
     }
   }
 

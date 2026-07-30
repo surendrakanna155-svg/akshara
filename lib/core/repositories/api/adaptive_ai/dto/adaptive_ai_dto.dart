@@ -90,6 +90,8 @@ class AdaptivePriorityItemDto {
     required this.reason,
     required this.action,
     required this.factorBreakdown,
+    this.lifecycleState,
+    this.visibilityReason,
   });
 
   factory AdaptivePriorityItemDto.fromJson(Map<String, dynamic> json) {
@@ -106,6 +108,15 @@ class AdaptivePriorityItemDto {
       factorBreakdown: json['factorBreakdown'] is Map<String, dynamic>
           ? AdaptiveFactorBreakdownDto.fromJson(json['factorBreakdown'] as Map<String, dynamic>)
           : null,
+      // Living Dashboard overlay. Absent on a backend that predates it and on
+      // the mock repository, so both stay null rather than defaulting to a
+      // state the user never actually set.
+      lifecycleState: json['lifecycleState'] is String
+          ? json['lifecycleState'] as String
+          : null,
+      visibilityReason: json['visibilityReason'] is String
+          ? json['visibilityReason'] as String
+          : null,
     );
   }
 
@@ -117,6 +128,8 @@ class AdaptivePriorityItemDto {
   final String reason;
   final AdaptiveActionDto? action;
   final AdaptiveFactorBreakdownDto? factorBreakdown;
+  final String? lifecycleState;
+  final String? visibilityReason;
 }
 
 class AdaptiveFeedDto {
