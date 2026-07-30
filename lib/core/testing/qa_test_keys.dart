@@ -2153,6 +2153,59 @@ abstract final class QaTestKeys {
   static const parentTransportNotEnabledState =
       ValueKey<String>('parent_transport_not_enabled_state');
 
+  // ─── Transport v2 (BUS-033…042) ───────────────────────────────────────────
+  static const transportV2NotEnabledState =
+      ValueKey<String>('transport_v2_not_enabled_state');
+  static const transportV2StaleBanner =
+      ValueKey<String>('transport_v2_stale_banner');
+  static const transportV2UnstaffedBanner =
+      ValueKey<String>('transport_v2_unstaffed_banner');
+  static const transportV2CreateRouteButton =
+      ValueKey<String>('transport_v2_create_route_button');
+  static const transportV2RouteFormDialog =
+      ValueKey<String>('transport_v2_route_form_dialog');
+  static const transportV2RouteFormSubmitButton =
+      ValueKey<String>('transport_v2_route_form_submit_button');
+  static const transportV2RouteNameField =
+      ValueKey<String>('transport_v2_route_name_field');
+  static const transportV2RouteCodeField =
+      ValueKey<String>('transport_v2_route_code_field');
+  static const transportV2RouteShiftField =
+      ValueKey<String>('transport_v2_route_shift_field');
+  static const transportV2RouteDirectionField =
+      ValueKey<String>('transport_v2_route_direction_field');
+  static const transportV2RouteDepartureField =
+      ValueKey<String>('transport_v2_route_departure_field');
+  static const transportV2RouteReturnField =
+      ValueKey<String>('transport_v2_route_return_field');
+  static const transportV2RouteDistanceField =
+      ValueKey<String>('transport_v2_route_distance_field');
+  static const transportV2ReadinessDialog =
+      ValueKey<String>('transport_v2_readiness_dialog');
+  static const transportV2DeleteRouteConfirmButton =
+      ValueKey<String>('transport_v2_delete_route_confirm_button');
+  static const transportV2SuccessSnackbar =
+      ValueKey<String>('transport_v2_success_snackbar');
+  static const transportV2ErrorSnackbar =
+      ValueKey<String>('transport_v2_error_snackbar');
+  static const transportV2DeactivateWarningSnackbar =
+      ValueKey<String>('transport_v2_deactivate_warning_snackbar');
+
+  static ValueKey<String> transportV2RouteCard(String id) =>
+      ValueKey<String>('transport_v2_route_card_$id');
+  static ValueKey<String> transportV2EditRouteButton(String id) =>
+      ValueKey<String>('transport_v2_edit_route_$id');
+  static ValueKey<String> transportV2ActivateRouteButton(String id) =>
+      ValueKey<String>('transport_v2_activate_route_$id');
+  static ValueKey<String> transportV2DeactivateRouteButton(String id) =>
+      ValueKey<String>('transport_v2_deactivate_route_$id');
+  static ValueKey<String> transportV2ReadinessButton(String id) =>
+      ValueKey<String>('transport_v2_readiness_$id');
+  static ValueKey<String> transportV2DeleteRouteButton(String id) =>
+      ValueKey<String>('transport_v2_delete_route_$id');
+  static ValueKey<String> transportV2SubstituteChip(String id) =>
+      ValueKey<String>('transport_v2_substitute_chip_$id');
+
   /// BUS-006/BUS-007 — stop form time fields (drop time was previously
   /// unreachable in tests, which is how its silent erasure survived).
   static const transportStopPickupTimeField =

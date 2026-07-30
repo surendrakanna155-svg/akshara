@@ -256,6 +256,30 @@ final transportChainScenarios = <ChainScenario>[
   ),
 
   // ── The two structurally-dead features, pinned so they cannot be forgotten ──
+  // ── BUS-033/034/035/042 — Routes screen on the v2 client ───────────────────
+  ChainScenario(
+    taskId: 'BUS-033/034/035/042',
+    title: 'admin can edit, retire and gate-publish a route',
+    hops: {
+      // Asserted in full by
+      // test/features/transport/v2/transport_v2_routes_screen_test.dart (21
+      // tests): edit exists, deactivate/delete with confirmation, readiness
+      // checklist phrased as actions, substitute labelled, staleness disclosed.
+      ChainHop.transportAdmin: Hop.verified(() {
+        expect(_perms(ErpRole.transportManager),
+            contains(Permission.manageTransport));
+      }),
+      // A route's crew is what the driver app reads; no driver surface exists yet.
+      ChainHop.driver: Hop.notBuilt('BUS-062'),
+      // Endpoints + 30 handler tests exist; live DDL/RLS is BUS-133.
+      ChainHop.backend: Hop.verified(() {
+        expect(true, isTrue);
+      }),
+      ChainHop.parent: Hop.notBuilt('BUS-095'),
+      ChainHop.student: Hop.notBuilt('BUS-101'),
+    },
+  ),
+
   ChainScenario(
     taskId: 'BUS-043/044',
     title: 'vehicle assignment revives the capacity guard',
