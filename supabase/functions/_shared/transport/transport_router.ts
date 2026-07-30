@@ -14,6 +14,16 @@ import {
   handleVehicles,
 } from "./transport_handlers.ts";
 import {
+  handleCancelSubstituteV2,
+  handleDeleteDriverV2,
+  handleDeleteVehicleV2,
+  handleRouteCapacityV2,
+  handleSetDriverAvailabilityV2,
+  handleSetRouteAssignmentV2,
+  handleSubstituteAssignmentV2,
+  handleUnstaffedRoutesV2,
+} from "./transport_v2_assignment_handlers.ts";
+import {
   handleActivateRouteV2,
   handleAttachStopV2,
   handleCreateRouteV2,
@@ -101,12 +111,32 @@ function matchTransportV2Route(
     if (/^\/transport\/v2\/routes\/[^/]+\/readiness$/.test(path)) {
       return { handler: handleRouteReadinessV2 };
     }
+    // BUS-051/046 — bounded substitution; the permanent assignment is untouched.
+    if (/^\/transport\/v2\/routes\/[^/]+\/substitute$/.test(path)) {
+      return { handler: handleSubstituteAssignmentV2 };
+    }
+    // BUS-044 — the revived capacity guard, exposed so the UI can warn early.
+    if (/^\/transport\/v2\/routes\/[^/]+\/capacity-check$/.test(path)) {
+      return { handler: handleRouteCapacityV2 };
+    }
+    // BUS-050 — routes with no resolvable crew for a date.
+    if (path === "/transport/v2/routes/unstaffed") {
+      return { handler: handleUnstaffedRoutesV2 };
+    }
+    if (/^\/transport\/v2\/drivers\/[^/]+\/availability$/.test(path)) {
+      return { handler: handleSetDriverAvailabilityV2 };
+    }
     return null;
   }
 
   if (method === "PUT") {
     if (/^\/transport\/v2\/routes\/[^/]+\/stops\/[^/]+$/.test(path)) {
       return { handler: handleUpdateRouteStopV2 };
+    }
+    // BUS-043/048 — THE endpoint that did not exist. Sets the permanent
+    // vehicle + driver by ID, reviving the capacity guard and both delete guards.
+    if (/^\/transport\/v2\/routes\/[^/]+\/assignment$/.test(path)) {
+      return { handler: handleSetRouteAssignmentV2 };
     }
     if (/^\/transport\/v2\/routes\/[^/]+$/.test(path)) {
       return { handler: handleUpdateRouteV2 };
@@ -121,6 +151,15 @@ function matchTransportV2Route(
     // More specific route-stop path before the bare route delete.
     if (/^\/transport\/v2\/routes\/[^/]+\/stops\/[^/]+$/.test(path)) {
       return { handler: handleDetachStopV2 };
+    }
+    if (/^\/transport\/v2\/assignments\/[^/]+$/.test(path)) {
+      return { handler: handleCancelSubstituteV2 };
+    }
+    if (/^\/transport\/v2\/vehicles\/[^/]+$/.test(path)) {
+      return { handler: handleDeleteVehicleV2 };
+    }
+    if (/^\/transport\/v2\/drivers\/[^/]+$/.test(path)) {
+      return { handler: handleDeleteDriverV2 };
     }
     if (/^\/transport\/v2\/routes\/[^/]+$/.test(path)) {
       return { handler: handleDeleteRouteV2 };

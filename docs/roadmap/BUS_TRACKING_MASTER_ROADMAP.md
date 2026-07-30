@@ -646,7 +646,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-043 — Vehicle↔route assignment endpoint
-**P0** · **2 d** · **Not Started** · **Deps:** BUS-022 · **Audit:** §2, §8 Critical #2
+**P0** · **2 d** · **In Progress** _(backend assignment endpoint + tests done; admin assign UI pending)_ · **Deps:** BUS-022 · **Audit:** §2, §8 Critical #2
 
 - **Description:** Assign a vehicle to a route by **id**, creating a dated permanent assignment.
 - **Why it matters:** **There is no way to assign a bus to a route.** `assignedBus` is set to `""` at creation and no endpoint anywhere writes it. This is one of the two most fundamental operations in a transport module, and it silently disables three other features (BUS-044, BUS-045, and the parent's bus number). The audit identified this as the **highest value-per-line-of-code fix in the module**.
@@ -657,7 +657,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-044 — Reactivate the capacity guard
-**P0** · **1 d** · **Not Started** · **Deps:** BUS-043 · **Audit:** §2, §8 Critical #2
+**P0** · **1 d** · **In Progress** _(capacity guard REVIVED + exposed; allocation-UI warning pending)_ · **Deps:** BUS-043 · **Audit:** §2, §8 Critical #2
 
 - **Description:** Wire the existing race-safe capacity guard to the real vehicle assignment.
 - **Why it matters:** TRN-7 is **correct, well-engineered, and has never once executed.** It resolves capacity from the route's assigned vehicle; `assignedBus` is always `""`, so capacity resolves to `null` and the guard returns early. The result is **unlimited over-allocation of a 48-seat bus.** The row locking, the concurrency handling, and the separate override audit trail are all already right — only the input is missing.
@@ -668,7 +668,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-045 — Vehicle-in-use deletion guard on foreign keys
-**P0** · **0.5 d** · **Not Started** · **Deps:** BUS-043 · **Audit:** §2, §8 Critical #2
+**P0** · **0.5 d** · **In Progress** _(FK-based vehicle delete guard done; admin UI pending)_ · **Deps:** BUS-043 · **Audit:** §2, §8 Critical #2
 
 - **Description:** Block deletion of a vehicle that is assigned, on the FK relationship.
 - **Why it matters:** The current guard matches `route.assignedBus` against the registration string. Since `assignedBus` is always empty, it never matches — **you can delete a bus that 45 children ride to school**, with no warning.
@@ -679,7 +679,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-046 — Temporary vehicle replacement
-**P1** · **1.5 d** · **Not Started** · **Deps:** BUS-043, BUS-024 · **Audit:** §2; Additional requirement 3
+**P1** · **1.5 d** · **In Progress** _(temporary vehicle replacement via substitute rows done; admin UI pending)_ · **Deps:** BUS-043, BUS-024 · **Audit:** §2; Additional requirement 3
 
 - **Description:** Assign a different vehicle for a single day or date range without disturbing the permanent assignment.
 - **Why it matters:** Breakdowns and servicing are routine. The additional requirements explicitly demand temporary vehicle replacement without re-architecture. **P-3** makes this a normal dated row rather than a special case.
@@ -690,7 +690,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-047 — Vehicle identity change safety
-**P1** · **0.5 d** · **Not Started** · **Deps:** BUS-017, BUS-043 · **Audit:** §7
+**P1** · **0.5 d** · **Verified** · **Deps:** BUS-017, BUS-043 · **Audit:** §7
 
 - **Description:** Ensure changing a vehicle's registration cannot break any relationship.
 - **Why it matters:** Today `PUT /transport/vehicles/{id}` may change a registration while routes reference vehicles **by that string** — silently orphaning the link with no error and no cascade. Moving to FKs removes the failure mode; this task verifies it and adds an audit trail for a legally-significant identifier change.
@@ -712,7 +712,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-048 — Driver↔route assignment endpoint
-**P0** · **1.5 d** · **Not Started** · **Deps:** BUS-022, BUS-018 · **Audit:** §2, §8 Critical #2
+**P0** · **1.5 d** · **In Progress** _(backend driver assignment done; admin UI pending)_ · **Deps:** BUS-022, BUS-018 · **Audit:** §2, §8 Critical #2
 
 - **Description:** Assign a driver to a route as a dated permanent assignment.
 - **Why it matters:** The second of the two missing fundamental operations. `assignedDriverId` is **read** by the driver-delete guard and **written by nothing**. Without driver assignment there is no trip owner, no GPS source, and no driver app content.
@@ -723,7 +723,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-049 — Driver-in-use deletion guard on foreign keys
-**P0** · **0.5 d** · **Not Started** · **Deps:** BUS-048 · **Audit:** §2, §8 Critical #2
+**P0** · **0.5 d** · **In Progress** _(FK-based driver delete guard done (counts attendant refs too); UI pending)_ · **Deps:** BUS-048 · **Audit:** §2, §8 Critical #2
 
 - **Description:** Block deletion of an assigned driver, on the FK relationship.
 - **Why it matters:** The existing guard matches `assignedDriverId`, which nothing writes — dead code, third of three.
@@ -734,7 +734,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-050 — Driver availability & leave model
-**P0** · **2 d** · **Not Started** · **Deps:** BUS-018 · **Audit:** §2; Additional requirement 1
+**P0** · **2 d** · **In Progress** _(availability model + unstaffed-route detection done; dashboard UI pending)_ · **Deps:** BUS-018 · **Audit:** §2; Additional requirement 1
 
 - **Description:** Record driver availability — leave, sick days, rest days — as dated records that drive substitution.
 - **Why it matters:** The substitute-driver requirement begins with the system knowing the regular driver is unavailable. Without an availability model, substitution is a manual override with no audit trail and no ability to warn about an unstaffed route.
@@ -745,7 +745,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-051 — Substitute driver for today's trip
-**P0** · **2.5 d** · **Not Started** · **Deps:** BUS-050, BUS-024 · **Audit:** Additional requirement 1
+**P0** · **2.5 d** · **In Progress** _(substitute endpoint + trip re-binding done; admin substitute UI pending)_ · **Deps:** BUS-050, BUS-024 · **Audit:** Additional requirement 1
 
 - **Description:** Assign a different driver for a specific date's trip **without altering the permanent route assignment**.
 - **Why it matters:** Directly implements the owner's first additional requirement. **P-3** makes it a dated substitute assignment row rather than a mutation of the route, so the permanent arrangement is never lost and tomorrow reverts automatically with no cleanup step an admin could forget.
@@ -778,7 +778,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-054 — Compliance gate on assignment
-**P1** · **1 d** · **Not Started** · **Deps:** BUS-048, BUS-043 · **Audit:** §5 (strength to extend)
+**P1** · **1 d** · **In Progress** _(compliance gate + separate override audit done; UI pending)_ · **Deps:** BUS-048, BUS-043 · **Audit:** §5 (strength to extend)
 
 - **Description:** Block assignment of a driver with an expired licence or a vehicle with expired statutory documents.
 - **Why it matters:** The existing document-expiry tracking with strict ISO validation and the staff digest is one of the module's genuine strengths — but today it only *reports*. Turning it into a gate converts a report into a control, which is what a school actually needs when an inspector asks.
