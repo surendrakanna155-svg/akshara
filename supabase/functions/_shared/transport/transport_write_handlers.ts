@@ -15,6 +15,7 @@ import {
 } from "./transport_allocation_history_repository.ts";
 import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
 import { guardianUserIdsForStudents } from "../communication/guardian_recipients.ts";
+import { sendBroadcastMessage } from "../communication/communication_service.ts";
 import { enqueueDeliveriesBatch } from "../communication/communication_repository.ts";
 import { processDeliveryQueue } from "../communication/notification_service.ts";
 import { scheduleReminder } from "../reminders/reminders_service.ts";
@@ -672,62 +673,6 @@ export async function handleRemoveStudentTransport(
 }
 
 /**
- * BUS-002 — resolve the guardian user ids for a set of transport allocations.
- *
- * Allocations store `sisStudentId`, which may be a students.id UUID, a
- * `student_code`, or an admission number (the same tolerance
- * {@link resolveStudentId} implements for a single id). This resolves the whole
- * cohort in ONE query rather than N round-trips, then maps to active guardians.
- *
- * Returns `null` when the cohort is non-empty but NO guardian could be
- * resolved — the caller must fail closed rather than fall back to a wider
- * audience. An empty cohort (no students on the route) returns `[]`.
- */
-export async function resolveRouteGuardianRecipients(
-  db: TenantQueryClient,
-  organizationId: string,
-  schoolId: string,
-  allocations: Array<Record<string, unknown>>,
-): Promise<string[] | null> {
-  const studentRefs = [
-    ...new Set(
-      allocations
-        .map((a) => String(a.sisStudentId ?? "").trim())
-        .filter((s) => s.length > 0),
-    ),
-  ];
-  if (studentRefs.length === 0) return [];
-
-  const rows = await db.queryObject<{ guardian_user_id: string }>(
-    `SELECT DISTINCT sg.guardian_user_id
-       FROM students s
-       LEFT JOIN student_profiles sp
-         ON sp.student_id = s.id
-        AND sp.organization_id = s.organization_id
-        AND sp.school_id = s.school_id
-       JOIN student_guardians sg
-         ON sg.student_id = s.id
-        AND sg.organization_id = s.organization_id
-      WHERE s.organization_id = $1
-        AND s.school_id = $2
-        AND sg.status = 'active'
-        AND (
-          s.id::text = ANY($3::text[])
-          OR s.student_code = ANY($3::text[])
-          OR sp.admission_number = ANY($3::text[])
-        )`,
-    [organizationId, schoolId, studentRefs],
-  );
-
-  const guardians = rows
-    .map((r) => r.guardian_user_id)
-    .filter((id) => (id ?? "").trim().length > 0);
-
-  // Students on the route but not one resolvable guardian → fail closed.
-  return guardians.length > 0 ? guardians : null;
-}
-
-/**
  * POST /transport/notify-delay — notify the parents of students on ONE route
  * that the route is delayed. Reuses the Communication broadcast pipeline
  * ({@link sendBroadcastMessage}), which queues push deliveries out of the
@@ -769,17 +714,6 @@ export async function handleNotifyRouteDelay(
 
     const allocations = await writeStore.findAll(db, organizationId, schoolId, "allocation");
     const affected = allocations.filter((a) => String(a.routeId ?? "") === routeId);
-    const sisStudentIds = affected
-      .map((a) => String(a.sisStudentId ?? ""))
-      .filter((s) => s.length > 0);
-
-    // Resolve only THIS route's affected students' active guardians.
-    const guardianIds = await guardianUserIdsForStudents(
-      db,
-      organizationId,
-      schoolId,
-      sisStudentIds,
-    );
 
     // Nobody rides this route — notifying the school would be pure noise.
     if (affected.length === 0) {
@@ -807,13 +741,29 @@ export async function handleNotifyRouteDelay(
       };
     }
 
-    const recipients = await resolveRouteGuardianRecipients(
+    // Resolve ONLY this route's affected students' active guardians.
+    //
+    // CONVERGENCE NOTE: two lanes fixed the BUS-002 mis-targeting defect
+    // independently. This handler briefly called BOTH resolvers after the DSV2
+    // merge — duplicated work with a broken import. It now uses the SHARED
+    // `guardianUserIdsForStudents` helper from the communication module, which
+    // is precisely the reusable route-cohort targeting infrastructure BUS-107
+    // specifies; the transport-local resolver was documented from the start as
+    // an interim stand-in for exactly that. One implementation, in the module
+    // that owns recipient resolution.
+    const recipients = await guardianUserIdsForStudents(
       db,
       organizationId,
       schoolId,
-      affected,
+      affected
+        .map((a) => String(a.sisStudentId ?? ""))
+        .filter((s) => s.length > 0),
     );
-    if (recipients === null) {
+
+    // FAIL CLOSED. Students ride this route but no guardian is contactable, so
+    // there is no honest way to notify anyone — and widening the audience to
+    // compensate is the exact defect BUS-002 fixed.
+    if (recipients.length === 0) {
       throw new WriteValidationError(
         `No contactable guardian found for the ${affected.length} student(s) on route ${routeName}. ` +
           `Link guardians before sending a transport alert.`,
@@ -827,6 +777,10 @@ export async function handleNotifyRouteDelay(
       db,
       claims,
       {
+        // `route_parents` is an EXPLICIT_COHORT audience: the broadcast service
+        // refuses to send it without a cohort rather than degrading to the
+        // school-wide set. That guarantee is what makes the mis-target
+        // structurally unreachable, not merely absent.
         audience: TRANSPORT_ROUTE_AUDIENCE,
         title,
         body: message,
@@ -834,8 +788,9 @@ export async function handleNotifyRouteDelay(
       },
       request,
     );
-    // Report what was ENQUEUED, not what we hoped to reach: the broadcast
-    // service caps very large cohorts, and the audit must not overstate reach.
+    // Report what was ENQUEUED, not what we hoped to reach. The original defect
+    // audited a filtered cohort count while broadcasting school-wide, so the
+    // audit trail did not describe what actually happened.
     const enqueued = Number(sent.recipientCount ?? recipients.length);
 
     await emitMutationAudit(

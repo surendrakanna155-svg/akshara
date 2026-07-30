@@ -6,7 +6,7 @@ import { assert } from "https://deno.land/std@0.224.0/assert/mod.ts";
 // no-DELETE grant + COALESCE identity index), mirroring education_ci_b12_e1b_migration_validation_test.ts.
 
 const PATH = new URL(
-  "../../../migrations/20260877000000_edu_concept_vocabulary.sql",
+  "../../../migrations/20260920000210_edu_concept_vocabulary.sql",
   import.meta.url,
 );
 const MIGRATIONS_DIR = new URL("../../../migrations/", import.meta.url);
@@ -66,5 +66,5 @@ Deno.test("M0.2 migration file exists in the migrations directory", async () => 
   for await (const entry of Deno.readDir(MIGRATIONS_DIR)) {
     if (entry.name.endsWith(".sql")) names.push(entry.name);
   }
-  assert(names.includes("20260877000000_edu_concept_vocabulary.sql"));
+  assert(names.includes("20260920000210_edu_concept_vocabulary.sql"));
 });

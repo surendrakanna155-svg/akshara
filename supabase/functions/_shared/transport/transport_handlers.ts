@@ -177,7 +177,20 @@ export function buildDashboardKpis(counts: {
     // No boarding source yet — BUS-102 (transport attendance has no student id
     // and no date, so a "students picked" count cannot be attributed or dated).
     kpi("picked", "Students Boarded", null, "neutral", "Available once trips run"),
+    // BUS-005/BUS-121 — the fuel KPI is emitted as NOT-CONFIGURED here and
+    // overlaid with the live month-to-date figure by withLiveFuelKpi below.
+    //
+    // Two lanes fixed the same defect independently: BUS-005 removed the
+    // fabricated "₹84K — Finance integration placeholder" seed outright, while
+    // the release lane built a real `transport_expenses` source. The release
+    // lane's approach is strictly better — it satisfies BUS-005's requirement
+    // (never a fabricated money figure) AND pre-delivers BUS-121 — so it wins.
+    // The KPI must EXIST here for the overlay to have a target; without it the
+    // live-fuel work is orphaned, which is how the merge left it.
+    kpi("fuel", "Fuel Cost (MTD)", null, "neutral", "No fuel expense recorded"),
   ];
+}
+
 /** Format a rupee amount in the compact style the dashboard KPIs use (₹84K/₹1.2L).
  * Exported for unit testing. */
 export function formatInr(n: number): string {
@@ -251,13 +264,24 @@ export async function handleDashboard(req: Request, config: AppConfig): Promise<
         (p) => String(p.routeId ?? "").length === 0,
       );
 
+      // BUS-005/BUS-121: overlay the LIVE month-to-date fuel spend from
+      // transport_expenses. Zero recorded spend renders "No fuel expense
+      // recorded", never a figure — the KPI is honest in both directions.
+      const mtdFuel = await getMonthToDateFuel(db, orgId, schoolId);
+      const kpis = withLiveFuelKpi(
+        {
+          kpis: buildDashboardKpis({
+            activeVehicles,
+            activeRoutes,
+            allocatedStudents,
+            unallocatedStudents,
+          }),
+        },
+        mtdFuel,
+      );
+
       return {
-        kpis: buildDashboardKpis({
-          activeVehicles,
-          activeRoutes,
-          allocatedStudents,
-          unallocatedStudents,
-        }),
+        kpis: (kpis as { kpis: unknown }).kpis,
         // Everything below has no computable source yet. Emit EMPTY rather than
         // seeded fiction; the client renders a "not configured" affordance.
         vehicleAssignments: [],

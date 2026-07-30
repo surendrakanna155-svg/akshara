@@ -20,10 +20,8 @@ import {
   assertRejects,
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
-import {
-  resolveRouteGuardianRecipients,
-  TRANSPORT_ROUTE_AUDIENCE,
-} from "./transport_write_handlers.ts";
+import { TRANSPORT_ROUTE_AUDIENCE } from "./transport_write_handlers.ts";
+import { guardianUserIdsForStudents } from "../communication/guardian_recipients.ts";
 import {
   EXPLICIT_COHORT_AUDIENCES,
   normalizeBroadcastAudience,
@@ -52,7 +50,7 @@ class MockGuardianDb {
   // deno-lint-ignore no-explicit-any
   queryObject<T>(sql: string, args: any[] = []): Promise<T[]> {
     if (!sql.includes("student_guardians")) return Promise.resolve([] as T[]);
-    const refs = (args[2] ?? []) as string[];
+    const refs = (args[2] ?? []) as string[];  // $3 = student codes
     this.lastRefs = refs;
     const guardians = new Set<string>();
     for (const ref of refs) {
@@ -74,6 +72,11 @@ class MockNoGuardianDb {
 
 function alloc(routeId: string, sisStudentId: string) {
   return { id: `${routeId}:${sisStudentId}`, routeId, sisStudentId };
+}
+
+/** The student codes a route's allocations contribute to cohort resolution. */
+function codesFor(allocs: Array<{ sisStudentId: string }>): string[] {
+  return allocs.map((a) => a.sisStudentId);
 }
 
 function schoolClaims(): AccessTokenClaims {
@@ -103,16 +106,16 @@ Deno.test(
     const db = new MockGuardianDb();
     const routeTwelve = [alloc("route-12", "SIS-STU-A"), alloc("route-12", "SIS-STU-B")];
 
-    const recipients = await resolveRouteGuardianRecipients(
+    const recipients = await guardianUserIdsForStudents(
       db as unknown as TenantQueryClient,
       ORG,
       SCHOOL_A,
-      routeTwelve,
+      codesFor(routeTwelve),
     );
 
-    assertEquals(recipients?.sort(), ["guardian-a", "guardian-b"]);
+    assertEquals(recipients.sort(), ["guardian-a", "guardian-b"]);
     // The regression that shipped: guardian-z rides route-08 and must not be reached.
-    assertEquals(recipients?.includes("guardian-z"), false);
+    assertEquals(recipients.includes("guardian-z"), false);
     // Only the affected students were ever looked up.
     assertEquals(db.lastRefs.sort(), ["SIS-STU-A", "SIS-STU-B"]);
   },
@@ -124,11 +127,11 @@ Deno.test("BUS-002: one guardian with two children on the route is addressed onc
   GUARDIAN_BY_STUDENT["SIS-STU-TWIN1"] = ["guardian-a"];
   GUARDIAN_BY_STUDENT["SIS-STU-TWIN2"] = ["guardian-a"];
 
-  const recipients = await resolveRouteGuardianRecipients(
+  const recipients = await guardianUserIdsForStudents(
     db as unknown as TenantQueryClient,
     ORG,
     SCHOOL_A,
-    [alloc("route-12", "SIS-STU-TWIN1"), alloc("route-12", "SIS-STU-TWIN2")],
+    codesFor([alloc("route-12", "SIS-STU-TWIN1"), alloc("route-12", "SIS-STU-TWIN2")]),
   );
 
   assertEquals(recipients, ["guardian-a"]);
@@ -139,7 +142,7 @@ Deno.test("BUS-002: one guardian with two children on the route is addressed onc
 
 Deno.test("BUS-002: an empty route yields an empty cohort, never a wider audience", async () => {
   const db = new MockGuardianDb();
-  const recipients = await resolveRouteGuardianRecipients(
+  const recipients = await guardianUserIdsForStudents(
     db as unknown as TenantQueryClient,
     ORG,
     SCHOOL_A,
@@ -151,18 +154,18 @@ Deno.test("BUS-002: an empty route yields an empty cohort, never a wider audienc
 // ── 2. fail closed when no guardian is contactable ───────────────────────────
 
 Deno.test(
-  "BUS-002: students on the route but NO active guardian returns null (caller must fail closed)",
+  "BUS-002: students on the route but NO active guardian returns empty (caller must fail closed)",
   async () => {
     const db = new MockNoGuardianDb();
-    const recipients = await resolveRouteGuardianRecipients(
+    const recipients = await guardianUserIdsForStudents(
       db as unknown as TenantQueryClient,
       ORG,
       SCHOOL_A,
-      [alloc("route-12", "SIS-STU-A")],
+      codesFor([alloc("route-12", "SIS-STU-A")]),
     );
-    // null — NOT [] — so the handler raises 422 instead of sending to nobody
-    // (or, as before, silently falling back to the whole school).
-    assertEquals(recipients, null);
+    // Empty — so the handler raises 422 (NO_ROUTE_RECIPIENTS) instead of
+    // sending to nobody, and never falls back to the whole school as before.
+    assertEquals(recipients, []);
   },
 );
 
@@ -217,7 +220,7 @@ Deno.test(
     // production, which is exactly how TRN-8's 'staff' bug reached live.
     const migration = await Deno.readTextFile(
       new URL(
-        "../../../migrations/20260881000000_transport_route_parents_audience.sql",
+        "../../../migrations/20260920000250_transport_route_parents_audience.sql",
         import.meta.url,
       ),
     );

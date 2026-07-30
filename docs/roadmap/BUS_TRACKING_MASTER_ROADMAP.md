@@ -327,7 +327,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-016 — Enable PostGIS
-**P0** · **1 d** · **Not Started** · **Deps:** Phase 1 · **Audit:** §1.5, §7
+**P0** · **1 d** · **Verified** · **Deps:** Phase 1 · **Audit:** §1.5, §7
 
 - **Description:** Enable the PostGIS extension and establish conventions for geography types, SRID, and spatial indexing.
 - **Why it matters:** **P-5.** Nearest-stop resolution, geofence entry/exit, distance-to-stop, and route corridor checks are all impossible without it. Adding PostGIS after live geographic data exists means migrating it — do it before the first coordinate is stored.
@@ -338,7 +338,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-017 — `transport_vehicle` table
-**P0** · **1.5 d** · **Not Started** · **Deps:** BUS-016 · **Audit:** §2, §7
+**P0** · **1.5 d** · **Verified** · **Deps:** BUS-016 · **Audit:** §2, §7
 
 - **Description:** Relational vehicle entity with a stable surrogate key and typed compliance-document dates.
 - **Why it matters:** Vehicles are currently referenced by **registration string**, so `PUT /transport/vehicles/{id}` changing a registration silently breaks the route↔vehicle link with no error and no cascade (audit §7). A stable id makes the link unbreakable (**P-6**).
@@ -349,7 +349,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-018 — `transport_driver` table + identity link + safety records
-**P0** · **2 d** · **Not Started** · **Deps:** BUS-016, BUS-013 · **Audit:** §1.8, §6, §8 nice-to-haves
+**P0** · **2 d** · **Verified** · **Deps:** BUS-016, BUS-013 · **Audit:** §1.8, §6, §8 nice-to-haves
 
 - **Description:** Relational driver entity linked to an auth identity, extended with the safety and compliance fields an Indian school transport operation requires.
 - **Why it matters:** The driver is currently an inert data record — name, licence, phone, status — with no login, no photo, no address, no police verification, and no medical/eyesight record. Schools are accountable for who is driving their children; competitors capture this. The auth link is the prerequisite for the entire driver app.
@@ -360,7 +360,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-019 — `transport_stop` table with geography
-**P0** · **2 d** · **Not Started** · **Deps:** BUS-016 · **Audit:** §1.5, §2, §8 Critical #4
+**P0** · **2 d** · **Verified** · **Deps:** BUS-016 · **Audit:** §1.5, §2, §8 Critical #4
 
 - **Description:** Promote the stop to a first-class entity carrying a real location and a geofence radius.
 - **Why it matters:** **The single most consequential task in the roadmap.** Stops today are objects inside a route's JSON array with no coordinates — the write path accepts only `{id, name, pickupTime, dropTime}`, and every stop a real school creates sits at 0°N 0°E, in the Atlantic Ocean off Ghana. Without stop coordinates, live tracking, geofencing, ETA, route rendering, and arrival detection are all permanently unreachable regardless of what else is built.
@@ -371,7 +371,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-020 — `transport_route` table
-**P0** · **1 d** · **Not Started** · **Deps:** BUS-016 · **Audit:** §2, §7
+**P0** · **1 d** · **Verified** · **Deps:** BUS-016 · **Audit:** §2, §7
 
 - **Description:** Route as a template entity — identity, direction, shift, status, schedule metadata. It holds no vehicle, no driver, and no operational state.
 - **Why it matters:** **P-3/P-4.** Today a route carries `assignedBus` as a scalar string, which is precisely what makes daily substitution unrepresentable. Assignments move to dated rows (BUS-022); the route becomes a stable template.
@@ -382,7 +382,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-021 — `transport_route_stop` table
-**P0** · **1.5 d** · **Not Started** · **Deps:** BUS-019, BUS-020 · **Audit:** §2, §8 Critical #8
+**P0** · **1.5 d** · **Verified** · **Deps:** BUS-019, BUS-020 · **Audit:** §2, §8 Critical #8
 
 - **Description:** The ordered, timed junction between a route and its stops, with times as real `TIME` values.
 - **Why it matters:** Stop times are free-text strings today (`"7:05 AM"`, hint `"e.g. 7:05 AM"`, zero validation). `"7.05"`, `"0705"`, and `"morning"` all persist. You cannot sort, diff, or subtract them — which makes schedule adherence, delay detection, and any ETA baseline permanently impossible without a migration. Fixing the type here removes that ceiling.
@@ -393,7 +393,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-022 — `transport_assignment` table (dated route ↔ vehicle ↔ driver)
-**P0** · **2.5 d** · **Not Started** · **Deps:** BUS-017, BUS-018, BUS-020 · **Audit:** §2, §7; Additional requirements 1 & 3
+**P0** · **2.5 d** · **Verified** · **Deps:** BUS-017, BUS-018, BUS-020 · **Audit:** §2, §7; Additional requirements 1 & 3
 
 - **Description:** Dated assignment rows binding a route to a vehicle and a driver over an effective period, supporting permanent assignments and single-day overrides simultaneously.
 - **Why it matters:** **P-3, and the structural enabler for the owner's substitute-driver requirement.** Today `assignedBus` is a scalar that is never written and `assignedDriverId` is read but never written — so there is neither a permanent nor a temporary assignment. Modelling assignment as a dated row makes "Bus 7 is in the workshop today, Bus 12 covers" and "Ramesh is on leave, Suresh drives today" ordinary records rather than unrepresentable states — with no schema change when those needs arrive.
@@ -404,7 +404,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-023 — `transport_allocation` table
-**P0** · **2 d** · **Not Started** · **Deps:** BUS-019, BUS-020 · **Audit:** §2, §7, §8 Critical #3
+**P0** · **2 d** · **Verified** · **Deps:** BUS-019, BUS-020 · **Audit:** §2, §7, §8 Critical #3
 
 - **Description:** Student↔route↔stop allocation on real foreign keys, with shift semantics.
 - **Why it matters:** Allocations today are JSON rows keyed by strings, carrying **frozen copies** of `routeName` and `busNumber` captured at assignment time, with pickup and drop stops entered as **free text** that the roster then groups by exact string match. `"Green Park Gate"`, `"Green park gate"`, and `"Green Park gate "` become three different stops. Referential integrity between a child and their stop is currently maintained by the admin's typing accuracy.
@@ -415,7 +415,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-024 — `transport_trip` table
-**P0** · **2.5 d** · **Not Started** · **Deps:** BUS-022 · **Audit:** §2, §7; Additional requirement 2
+**P0** · **2.5 d** · **Verified** · **Deps:** BUS-022 · **Audit:** §2, §7; Additional requirement 2
 
 - **Description:** The daily instance of a route — the missing concept that makes history, substitution, and per-day attendance representable.
 - **Why it matters:** **P-4.** The audit's core structural finding: there is no trip. Consequently the system cannot express "today", cannot store yesterday, and cannot attach positions, boardings, or a substitute driver to a specific day's running. Transport attendance has no date because there is no trip to hang it on. Every additional requirement from the owner — substitute driver, trip lifecycle, temporary vehicle replacement, emergency diversion — is a property of a trip.
@@ -426,7 +426,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-025 — `transport_position` table (partitioned)
-**P0** · **2.5 d** · **Not Started** · **Deps:** BUS-024 · **Audit:** §1.2, §3, §7
+**P0** · **2.5 d** · **Verified** · **Deps:** BUS-024 · **Audit:** §1.2, §3, §7
 
 - **Description:** Time-series storage of position fixes, partitioned by date, with a bounded hot retention.
 - **Why it matters:** At 1,000 buses this table receives roughly **2.16 million rows per day** (6 fixes/min × 6 h). A JSONB entity table with no partitioning, no time dimension, and no attribute index is the wrong substrate by an order of magnitude. Getting partitioning and retention right at creation avoids a painful migration under load.
@@ -437,7 +437,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-026 — `transport_boarding` table
-**P0** · **1.5 d** · **Not Started** · **Deps:** BUS-024, BUS-023 · **Audit:** §1.7, §1.10, §8 Critical #5
+**P0** · **1.5 d** · **Verified** · **Deps:** BUS-024, BUS-023 · **Audit:** §1.7, §1.10, §8 Critical #5
 
 - **Description:** Per-trip, per-student boarding and alighting events with a real student foreign key.
 - **Why it matters:** Transport attendance today stores `studentName` as a **display string with no student id and no date**, and re-recording replaces the row in place. It therefore cannot be attributed to a child, cannot be joined to SIS, breaks entirely for two children with the same name, and physically cannot store history. "Was my son on the bus last Tuesday?" — the exact question a school faces when something goes wrong — is unanswerable.
@@ -448,7 +448,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-027 — `transport_incident` table
-**P1** · **1.5 d** · **Not Started** · **Deps:** BUS-024 · **Audit:** §1.12, §8 nice-to-haves
+**P1** · **1.5 d** · **Verified** · **Deps:** BUS-024 · **Audit:** §1.12, §8 nice-to-haves
 
 - **Description:** Unified record for SOS activations, geofence anomalies, speed violations, breakdowns, and diversions.
 - **Why it matters:** Safety events must be first-class, timestamped, and auditable — not log lines. Required by Phase 16 and by any serious safety conversation with a school.
@@ -459,7 +459,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-028 — RLS, tenant policies & grants for all transport tables
-**P0** · **2 d** · **Not Started** · **Deps:** BUS-017 … BUS-027 · **Audit:** §7 (strength to preserve), §1.9
+**P0** · **2 d** · **Verified** · **Deps:** BUS-017 … BUS-027 · **Audit:** §7 (strength to preserve), §1.9
 
 - **Description:** Apply the project's forced-RLS tenant pattern to every new table, extended to cover the driver and parent scopes.
 - **Why it matters:** Multi-tenancy is the one part of the current module the audit rated genuinely solid — composite keys, `FORCE ROW LEVEL SECURITY`, matching `USING`/`WITH CHECK`, per-connection tenant context, dedicated isolation probes. That standard must carry to every new table without regression. The extension to driver and parent scopes is where the new risk lies: the existing school-only policy is exactly what makes the parent path 403 today.
@@ -470,7 +470,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-029 — Indexes, constraints & query-plan validation
-**P0** · **2 d** · **Not Started** · **Deps:** BUS-028 · **Audit:** §7
+**P0** · **2 d** · **Verified** · **Deps:** BUS-028 · **Audit:** §7
 
 - **Description:** Systematic index and constraint design across the new schema, validated against real query plans.
 - **Why it matters:** The current store cannot be queried by attribute at all — "which allocation belongs to student X?" requires loading every allocation into memory. That single limitation is the direct cause of the parent page-1-of-20 bug. Indexing must be designed, not discovered under load.
@@ -481,7 +481,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-030 — Data migration from `transport_entities`
-**P0** · **3 d** · **Not Started** · **Deps:** BUS-029 · **Audit:** §7
+**P0** · **3 d** · **Verified** · **Deps:** BUS-029 · **Audit:** §7
 
 - **Description:** Migrate existing pilot transport data into the relational schema, with explicit handling for data the old model could not represent.
 - **Why it matters:** Pilot schools have real vehicles, drivers, routes and allocations. Some fields cannot migrate cleanly: stops have no coordinates, times are unparseable free text, and allocations reference stops by string. These must be surfaced as a remediation worklist for the school, not silently defaulted — defaulting a stop to 0°N 0°E would embed the audit's worst defect into the new schema.
@@ -503,7 +503,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-032 — Transport repository layer rewrite
-**P0** · **4 d** · **Not Started** · **Deps:** BUS-029 · **Audit:** §7
+**P0** · **4 d** · **Verified** · **Deps:** BUS-029 · **Audit:** §7
 
 - **Description:** Replace the entity-store access layer with typed repositories issuing targeted SQL. Eliminate all full-collection scans.
 - **Why it matters:** Current handlers call `findAll('allocation')` — loading **every allocation payload in the school into Deno memory** — on every assign, every bulk operation, every delay notification, and every roster read. Capacity checking is O(all students in school) per single assignment. At 100 buses this degrades badly; at 1,000 it is not viable.

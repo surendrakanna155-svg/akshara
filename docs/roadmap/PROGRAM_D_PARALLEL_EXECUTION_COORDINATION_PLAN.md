@@ -20,7 +20,7 @@ committed, verified** (KIE suite 1281 green; ERP fixtures + migration-validation
 | Milestone | State | Commit | Owns (locked — do not re-touch) |
 |---|---|---|---|
 | **M0.1** fixture harness | ✅ DONE + verified | `627145b0` | `qie/export/fixtures.py`, `qie/export/__init__.py`, `kie/tests/test_export_fixtures.py`, `supabase/functions/_shared/education/__tests__/fixtures/*` |
-| **M0.2** KC_↔UUID vocabulary | ✅ DONE + verified | `2e16d215` | `qie/export/vocabulary.py`, `migrations/20260877000000_edu_concept_vocabulary.sql`, `kie/tests/test_concept_vocabulary.py`, `.../edu_concept_vocabulary_migration_validation_test.ts` |
+| **M0.2** KC_↔UUID vocabulary | ✅ DONE + verified | `2e16d215` | `qie/export/vocabulary.py`, `migrations/20260920000210_edu_concept_vocabulary.sql`, `kie/tests/test_concept_vocabulary.py`, `.../edu_concept_vocabulary_migration_validation_test.ts` |
 
 These two files (`fixtures.py`, `vocabulary.py`) and the committed **golden corpus** are **read-only inputs**
 for every downstream lane. The golden certified corpus (`__tests__/fixtures/certified_corpus.json`) and
@@ -145,8 +145,8 @@ baseline, self-certified, then merged by the Coordinator (§6). Effort: S/M/L en
   M1.4 (union view), M3.x flag-store table.
 - **Dependencies:** M0.2 (band `20260877` used); Contract-2 frozen.
 - **Output interfaces:** **Contract-2** (table + view column shape matching `QuestionBankItemRow`).
-- **Owns:** `migrations/20260878000000_edu_platform_question_bank.sql`,
-  `migrations/20260879000000_edu_bank_union_view.sql`, `migrations/20260880000000_edu_program_d_settings.sql`
+- **Owns:** `migrations/20260920000220_edu_platform_question_bank.sql`,
+  `migrations/20260920000230_edu_bank_union_view.sql`, `migrations/20260920000240_edu_program_d_settings.sql`
   (flag store); their `*_migration_validation_test.ts` (new, in `_shared/education/`).
 - **MUST NOT modify:** any existing migration; any non-migration code; `migrations/20260877*` (done).
 - **Acceptance:** FORCE RLS + `_school_scope` + `_platform_read` + no-DELETE grant + COALESCE identity; CHECK

@@ -741,6 +741,10 @@ def gate_items(items: Sequence[dict], resolved: Sequence[ResolvedBinding] = (),
             mres = MTC.verify_key(item)
             gr.append({"gate": "match_key_verified", "ok": bool(mres["ok"]), "severity": G.FATAL,
                        "detail": mres["detail"][:400]})
+        elif item.get("lane") == AR.STATEMENT_LANE:
+            sres = AR.verify_statement_options(item)
+            gr.append({"gate": "statement_options_verified", "ok": bool(sres["ok"]), "severity": G.FATAL,
+                       "detail": sres["detail"][:400]})
         elif item.get("archetype") == "assertion_reason":
             # An AR option is a SENTENCE about a truth table, not a number, so the numeric distractor proof
             # cannot apply. `assertion_reason.verify_options` is its counterpart: every wrong option asserts
@@ -770,6 +774,24 @@ def gate_items(items: Sequence[dict], resolved: Sequence[ResolvedBinding] = (),
                 agree, why = False, ind.get("reason", ind.get("verdict"))
             gr.append({"gate": "independent_solve", "ok": bool(agree), "severity": G.FATAL,
                        "detail": str(why)})
+
+        # DIFFICULTY RECOMPUTABILITY (added after the final audit caught 12 mislabelled items).
+        # A band is only meaningful if it can be re-derived from the item's OWN declared drivers. The
+        # assertion-reason lane hardcoded concept_count=2 where the item used 1, inflating the score across
+        # the easy/moderate threshold. A stamped band is exactly what this architecture refuses elsewhere,
+        # so it is now checked on every item, in every lane.
+        _d = item.get("difficulty") or {}
+        _drv = _d.get("drivers") or {}
+        _cc = len(set(item.get("claimed", {}).get("concept_ids") or [])) or 1
+        _re = DIFF.predict(item.get("reasoning_depth") or 1, _cc,
+                           misconception_pressure=_drv.get("misconception_pressure", 0.0),
+                           calculation_load=_drv.get("calculation_load", 0.0))
+        _ok = (abs(_re["score"] - _d.get("score", -1)) <= 1e-9 and _re["band"] == _d.get("band")
+               and _drv.get("concept_count") == _cc)
+        gr.append({"gate": "difficulty_recomputable", "ok": bool(_ok), "severity": G.QUARANTINE,
+                   "detail": (f"stored={_d.get('band')}/{_d.get('score')} "
+                              f"recomputed={_re['band']}/{_re['score']} "
+                              f"concept_count stored={_drv.get('concept_count')} actual={_cc}")})
 
         status, reason = G.verdict(gr)
         fatal = [g["gate"] for g in gr if not g["ok"] and g["severity"] == G.FATAL]

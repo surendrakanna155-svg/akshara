@@ -8,7 +8,7 @@ import { assert } from "https://deno.land/std@0.224.0/assert/mod.ts";
 // values — mirroring edu_concept_vocabulary_migration_validation_test.ts.
 
 const PATH = new URL(
-  "../../../migrations/20260878000000_edu_platform_question_bank.sql",
+  "../../../migrations/20260920000220_edu_platform_question_bank.sql",
   import.meta.url,
 );
 const MIGRATIONS_DIR = new URL("../../../migrations/", import.meta.url);
@@ -149,5 +149,5 @@ Deno.test("M1.1 migration file exists in the migrations directory", async () => 
   for await (const entry of Deno.readDir(MIGRATIONS_DIR)) {
     if (entry.name.endsWith(".sql")) names.push(entry.name);
   }
-  assert(names.includes("20260878000000_edu_platform_question_bank.sql"));
+  assert(names.includes("20260920000220_edu_platform_question_bank.sql"));
 });

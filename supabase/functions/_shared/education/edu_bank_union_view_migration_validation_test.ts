@@ -7,7 +7,7 @@ import { assert } from "https://deno.land/std@0.224.0/assert/mod.ts";
 // (security_invoker=true, no policy of its own — inherits base-table RLS).
 
 const PATH = new URL(
-  "../../../migrations/20260879000000_edu_bank_union_view.sql",
+  "../../../migrations/20260920000230_edu_bank_union_view.sql",
   import.meta.url,
 );
 const MIGRATIONS_DIR = new URL("../../../migrations/", import.meta.url);
@@ -126,5 +126,5 @@ Deno.test("M1.4 migration file exists in the migrations directory", async () => 
   for await (const entry of Deno.readDir(MIGRATIONS_DIR)) {
     if (entry.name.endsWith(".sql")) names.push(entry.name);
   }
-  assert(names.includes("20260879000000_edu_bank_union_view.sql"));
+  assert(names.includes("20260920000230_edu_bank_union_view.sql"));
 });

@@ -25,7 +25,7 @@
 --      view only surfaces adopted items whose platform row is still 'active'.
 --
 -- Governance mirrors the certified edu_* platform-read catalogue shape EXACTLY
--- (20260877000000_edu_concept_vocabulary / 20260859000000_edu_canonical_concept_graph):
+-- (20260920000210_edu_concept_vocabulary / 20260859000000_edu_canonical_concept_graph):
 -- FORCE RLS + _school_scope FOR ALL + _platform_read FOR SELECT (org NULL) + narrow
 -- GRANT SELECT, INSERT, UPDATE (no DELETE — recall by tombstone, never delete) +
 -- COALESCE identity index. The adoption table is a tenant-owned record (school-scope

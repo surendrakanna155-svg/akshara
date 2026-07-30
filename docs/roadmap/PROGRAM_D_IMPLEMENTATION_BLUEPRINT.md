@@ -79,7 +79,7 @@ no request-path AI introduced.*
 **M0.2 — KC_↔UUID vocabulary map (R5-3 D2).**
 - **Objective:** the bridge table `edu_concept_vocabulary(kc_id TEXT UNIQUE, concept_uuid UUID, subject,
   canonical_name, frozen_version)` seeded from R5-2 `concept_namespace` + `canonical_concepts`.
-- **Deps:** M0.1. **Owner-gated migration.** **Files:** new migration `20260877000000_edu_concept_vocabulary.sql`
+- **Deps:** M0.1. **Owner-gated migration.** **Files:** new migration `20260920000210_edu_concept_vocabulary.sql`
   (dormant); seed job (offline, deterministic).
 - **Interfaces:** `resolve_kc(kc_id) -> uuid | None` (honest-null on unmapped — never a guess).
 - **Tests:** round-trip KC_↔UUID; honest-null on unmapped; freeze-fingerprint pin; 0 guessed UUIDs.
@@ -94,7 +94,7 @@ no request-path AI introduced.*
   `edu_school_adopted_items(school_id, platform_item_id)` + RLS **reusing the existing `_platform_read` catalogue
   pattern** (all-tenant read, platform-service-role write) as on `edu_question_templates`/`canonical_concepts`.
   Extend `question_type` CHECK to include `numerical` (a widening, never a weakening).
-- **Deps:** M0.2. **Files:** migration `20260878000000_edu_platform_question_bank.sql`.
+- **Deps:** M0.2. **Files:** migration `20260920000220_edu_platform_question_bank.sql`.
 - **Tests:** RLS "school cannot write platform rows"; "every tenant can read platform rows"; adopted-items scope;
   CHECK accepts `numerical`; a school's own bank untouched.
 - **DoD:** platform bank exists, all-tenant-readable, platform-write-only; migration validation (§5) green.
@@ -129,7 +129,7 @@ no request-path AI introduced.*
 **M1.4 — Adoption + union read model.**
 - **Objective:** a school reads the **union (adopted platform items ∪ own items)** through ONE RLS-safe view;
   adoption is **by reference** (never a row copy), so recall/re-cert at the platform propagates.
-- **Deps:** M1.1. **Files:** migration `20260879000000_edu_bank_union_view.sql` (view + RLS); repo read helper in
+- **Deps:** M1.1. **Files:** migration `20260920000230_edu_bank_union_view.sql` (view + RLS); repo read helper in
   `education_repository.ts` (additive query).
 - **Tests:** union returns adopted ∪ own; a non-adopted platform item is invisible to a school; recall removes an
   adopted item from the union; RLS isolation across two tenants.
@@ -258,9 +258,9 @@ no request-path AI introduced.*
 | QIE exporter | `curriculum/.../kie/qie/export/erp_promote.py`, `manifest.py`, `fixtures.py` | NEW (offline) | M0.1,M1.2,M4.3 |
 | QIE exporter test | `curriculum/.../kie/tests/test_erp_promote.py` | NEW | M1.2 |
 | QIE certified bank | `curriculum/.../kie/qie/factory/corpus.py` (`certified_bank`) | UNCHANGED (read-only consumer) | — |
-| ERP migration — vocab | `supabase/migrations/20260877000000_edu_concept_vocabulary.sql` | MIGRATION (dormant) | M0.2 |
-| ERP migration — platform bank | `20260878000000_edu_platform_question_bank.sql` (+ CHECK extend `numerical`, `difficulty_calibration`) | MIGRATION | M1.1,M2.1 |
-| ERP migration — union view | `20260879000000_edu_bank_union_view.sql` | MIGRATION | M1.4 |
+| ERP migration — vocab | `supabase/migrations/20260920000210_edu_concept_vocabulary.sql` | MIGRATION (dormant) | M0.2 |
+| ERP migration — platform bank | `20260920000220_edu_platform_question_bank.sql` (+ CHECK extend `numerical`, `difficulty_calibration`) | MIGRATION | M1.1,M2.1 |
+| ERP migration — union view | `20260920000230_edu_bank_union_view.sql` | MIGRATION | M1.4 |
 | ERP importer | `supabase/functions/_shared/education/education_platform_import.ts` (+ test) | NEW (edge, service role) | M1.3 |
 | ERP paper service | `.../education/education_question_paper_service.ts` (`generateQuestionPaper` pool source; telemetry; gap-fill flag) | EXTEND | M3.1,M3.2,M3.3,M4.1 |
 | ERP solver | `.../education/education_blueprint_solver.ts` (+ golden test) | **UNCHANGED** (authoritative) | — |

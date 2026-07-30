@@ -8,7 +8,7 @@ import { assert } from "https://deno.land/std@0.224.0/assert/mod.ts";
 // Contract-2 §2.4 is normative.
 
 const PATH = new URL(
-  "../../../migrations/20260880000000_edu_program_d_settings.sql",
+  "../../../migrations/20260920000240_edu_program_d_settings.sql",
   import.meta.url,
 );
 const MIGRATIONS_DIR = new URL("../../../migrations/", import.meta.url);
@@ -75,5 +75,5 @@ Deno.test("M3.x migration file exists in the migrations directory", async () => 
   for await (const entry of Deno.readDir(MIGRATIONS_DIR)) {
     if (entry.name.endsWith(".sql")) names.push(entry.name);
   }
-  assert(names.includes("20260880000000_edu_program_d_settings.sql"));
+  assert(names.includes("20260920000240_edu_program_d_settings.sql"));
 });

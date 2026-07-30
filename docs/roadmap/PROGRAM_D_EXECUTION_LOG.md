@@ -61,7 +61,7 @@ corpus, so the entire pipeline is buildable/testable before any real certified c
 resolves to exactly one ERP UUID — or is explicitly unmapped (honest-null, never a guessed UUID).
 
 **Delivered:**
-- `supabase/migrations/20260877000000_edu_concept_vocabulary.sql` — DORMANT additive table, platform-read
+- `supabase/migrations/20260920000210_edu_concept_vocabulary.sql` — DORMANT additive table, platform-read
   catalogue governance (FORCE RLS + `_school_scope` + `_platform_read` + no-DELETE grant + COALESCE
   identity index). **Written + locally validated; APPLY is owner-gated** (band `20260877000000`, next free).
 - `curriculum/scripts/intelligence/kie/qie/export/vocabulary.py` — `mint_uuid` (deterministic uuid5),
