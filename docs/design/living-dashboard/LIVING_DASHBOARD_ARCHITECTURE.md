@@ -240,10 +240,24 @@ Each phase is independently shippable and EOS-gated. Migration band starts at **
 | **0** | **Truth** | ✅ **DONE before this lane opened** — closed by `80a2cd8d` (see §2.1). Verify only. | WIDGET‑001/002/011 closed; no dashboard renders demo data on any path |
 | **1** | **Lifecycle core** | ✅ **DONE** (`88e67712`). `dashboard_item_state` migration + repo; `resolveVisibility` pure fn; engine inverted to score-then-overlay; `dismissedKeys` backfilled; snooze/ack/complete on the feedback route | Met. 28 backend tests; migration validated on real PG (re-runnable, RLS proven, constraints enforced) |
 | **2** | **Living feed UI** | ✅ **DONE.** Swipe-to-dismiss, snooze sheet (30m / tomorrow / today), promote-next, "came back" badge, teacher-tablet feed fix | Met. 45 Flutter tests. **Deferred:** consolidating the 5 ad-hoc deep-link resolvers → Phase 4 (it is composition work, not lifecycle) |
-| **3** | **Liveness & honesty** | Resume-refresh, foreground interval invalidate, `AksharaFreshnessChip` on dashboards wired to the existing cache header | Dashboard refreshes on resume; stale data is visibly labelled stale |
+| **3** | **Liveness & honesty** | 🟡 **Liveness DONE; honesty half deferred.** `LiveRefreshScope` + pure `LiveRefreshPolicy` on 5 dashboards (management, parent, teacher, student, director). **Deferred:** the payload-age label — see below | Dashboards refresh on resume + foreground tick, and provably do NOT while offline/backgrounded. 15 tests |
 | **4** | **Composition** | Re-skin `dynamic_widgets` renderer with DSV2; priority strip + stable body; user pinning on `dashboard_layouts` | A role dashboard renders from layout data; pins never move; ≤1 organic reposition/day |
 | **5** | **Copilot hand-off** | Persona-memory/lifecycle context slot; persist `screenContext`; dismissed-item rehydration; clear `copilotPendingNavigationContextProvider` | Dismiss a widget → ask Copilot → full context restored |
 | **6** | **Deadline & coverage debt** | `due_at`/`sla_due_at` on the approval spine; wire `approval` + `opportunity` generators; populate `waitingDays` to make `ageBoost` live | `urgency` computed from real deadlines; "N approvals ≥48h old" exists; all four factors variable |
+
+### Open follow-up: the payload-age label (Phase 3's honesty half)
+
+`LiveRefreshScope` records the last refresh **attempt**, to rate-limit itself.
+That value must **not** drive a "Updated 5m ago" label: if the fetch failed, the
+attempt time would claim a freshness the data does not have — the same class of
+defect as the fabricated-data P0s in §2.1, and it would be harder to spot.
+
+The honest source already exists and is still unread: the offline read-cache
+interceptor sets **`X-NIKSHA-Offline-Cache: <updatedAt>`** on every replayed
+response, and nothing in `lib/` consumes it. Wiring that header through the
+repository chain into `AksharaFreshnessChip` is what closes this — the chip today
+reports connectivity only, so a 23-hour-old cached fee balance still reads as
+"Live". Tracked, not silently dropped.
 
 ### Sequencing notes
 

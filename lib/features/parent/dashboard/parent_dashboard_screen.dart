@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/liveness/live_refresh_scope.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/layout/mobile_dashboard_layout.dart';
@@ -65,7 +66,12 @@ class ParentDashboardScreen extends ConsumerWidget {
         onNotificationsTap: () => _navigate('notifications'),
         onProfileTap: () => _navigate('profile'),
       ),
-      body: MobileAsyncBody.fromState(
+      // Living Dashboard §3.5 — refresh on resume and on a slow
+      // foreground tick; never while offline or backgrounded.
+      body: LiveRefreshScope(
+        surfaceKey: 'parent-dashboard',
+        onRefresh: () => ref.invalidate(parentDashboardFutureProvider),
+        child: MobileAsyncBody.fromState(
         state,
         loadingLabel: 'Loading dashboard',
         emptyMessage: 'Your child\'s day will appear here once the school '
@@ -236,6 +242,7 @@ class ParentDashboardScreen extends ConsumerWidget {
             );
           },
         ),
+      ),
       ),
     );
   }

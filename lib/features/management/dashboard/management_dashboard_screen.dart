@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/liveness/live_refresh_scope.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/security/rbac_service.dart';
 import '../../../core/school_config/school_configuration_provider.dart';
@@ -106,15 +107,23 @@ class ManagementDashboardScreen extends ConsumerWidget {
           label: const Text('Export'),
         ),
       ),
-      body: ErpAsyncBody<ManagementDashboardData>(
-        state: viewState,
-        loadingLabel: 'Loading management dashboard',
-        emptyMessage: 'No management data for the selected filters.',
-        emptyIcon: Icons.dashboard_outlined,
-        onRetry: () => retryErpFuture(ref, managementDashboardFutureProvider),
-        skeleton: AksharaSkeleton.dashboard(),
-        builder: (data) =>
-            _buildDashboardContent(context, ref, data, filterIndex),
+      // Living Dashboard §3.5 — the dashboard keeps itself current instead of
+      // waiting to be dragged. Refreshes on app resume and on a slow foreground
+      // tick, and deliberately does neither while offline or backgrounded (the
+      // policy is pure and unit-tested next to the widget).
+      body: LiveRefreshScope(
+        surfaceKey: 'management-dashboard',
+        onRefresh: () => ref.invalidate(managementDashboardFutureProvider),
+        child: ErpAsyncBody<ManagementDashboardData>(
+          state: viewState,
+          loadingLabel: 'Loading management dashboard',
+          emptyMessage: 'No management data for the selected filters.',
+          emptyIcon: Icons.dashboard_outlined,
+          onRetry: () => retryErpFuture(ref, managementDashboardFutureProvider),
+          skeleton: AksharaSkeleton.dashboard(),
+          builder: (data) =>
+              _buildDashboardContent(context, ref, data, filterIndex),
+        ),
       ),
     );
   }

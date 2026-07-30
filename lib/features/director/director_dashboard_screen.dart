@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/liveness/live_refresh_scope.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../router/route_names.dart';
 import '../adaptive_ai/adaptive_ai_models.dart';
@@ -37,13 +38,20 @@ class DirectorDashboardScreen extends ConsumerWidget {
         ),
         body: KeyedSubtree(
           key: QaTestKeys.directorDashboardScreen,
-          child: ErpAsyncBody<DirectorDashboardData>(
-            state: resolveErpAsync(state, isDataEmpty: (_) => false),
-            loadingLabel: 'Loading',
-            emptyMessage: 'No dashboard data available.',
-            onRetry: () => ref.invalidate(directorExecutiveDashboardProvider),
-            builder: (data) => SingleChildScrollView(
-              child: _DashboardBody(data: data),
+          // Living Dashboard §3.5 — this screen has no pull-to-refresh at all,
+          // so before this it could only ever be refreshed by navigating away
+          // and back.
+          child: LiveRefreshScope(
+            surfaceKey: 'director-dashboard',
+            onRefresh: () => ref.invalidate(directorExecutiveDashboardProvider),
+            child: ErpAsyncBody<DirectorDashboardData>(
+              state: resolveErpAsync(state, isDataEmpty: (_) => false),
+              loadingLabel: 'Loading',
+              emptyMessage: 'No dashboard data available.',
+              onRetry: () => ref.invalidate(directorExecutiveDashboardProvider),
+              builder: (data) => SingleChildScrollView(
+                child: _DashboardBody(data: data),
+              ),
             ),
           ),
         ),

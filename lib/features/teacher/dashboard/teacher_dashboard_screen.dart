@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/liveness/live_refresh_scope.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
@@ -50,7 +52,12 @@ class TeacherDashboardScreen extends ConsumerWidget {
         onNotificationsTap: () => _navigate('notifications'),
         onProfileTap: () => _navigate('profile'),
       ),
-      body: MobileAsyncBody.fromState(
+      // Living Dashboard §3.5 — refresh on resume and on a slow
+      // foreground tick; never while offline or backgrounded.
+      body: LiveRefreshScope(
+        surfaceKey: 'teacher-dashboard',
+        onRefresh: () => ref.invalidate(teacherDashboardFutureProvider),
+        child: MobileAsyncBody.fromState(
         state,
         loadingLabel: 'Loading dashboard',
         emptyMessage:
@@ -115,6 +122,7 @@ class TeacherDashboardScreen extends ConsumerWidget {
             );
           },
         ),
+      ),
       ),
     );
   }

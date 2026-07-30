@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/liveness/live_refresh_scope.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/layout/mobile_dashboard_layout.dart';
@@ -64,7 +65,12 @@ class StudentDashboardScreen extends ConsumerWidget {
         onNotificationsTap: () => _navigate(onNavigate, 'notifications'),
         onProfileTap: () => _navigate(onNavigate, 'profile'),
       ),
-      body: MobileAsyncBody(
+      // Living Dashboard §3.5 — refresh on resume and on a slow
+      // foreground tick; never while offline or backgrounded.
+      body: LiveRefreshScope(
+        surfaceKey: 'student-dashboard',
+        onRefresh: () => ref.invalidate(studentDashboardFutureProvider),
+        child: MobileAsyncBody(
         isLoading: isLoading,
         hasError: hasError,
         isEmpty: isEmpty,
@@ -212,6 +218,7 @@ class StudentDashboardScreen extends ConsumerWidget {
             );
           },
         ),
+      ),
       ),
     );
   }
