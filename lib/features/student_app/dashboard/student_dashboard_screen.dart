@@ -69,6 +69,7 @@ class StudentDashboardScreen extends ConsumerWidget {
       // foreground tick; never while offline or backgrounded.
       body: LiveRefreshScope(
         surfaceKey: 'student-dashboard',
+            surfacePath: '/student/dashboard',
         onRefresh: () => ref.invalidate(studentDashboardFutureProvider),
         child: MobileAsyncBody(
         isLoading: isLoading,

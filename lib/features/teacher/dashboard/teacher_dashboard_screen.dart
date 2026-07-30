@@ -56,6 +56,7 @@ class TeacherDashboardScreen extends ConsumerWidget {
       // foreground tick; never while offline or backgrounded.
       body: LiveRefreshScope(
         surfaceKey: 'teacher-dashboard',
+            surfacePath: '/teacher/dashboard',
         onRefresh: () => ref.invalidate(teacherDashboardFutureProvider),
         child: MobileAsyncBody.fromState(
         state,

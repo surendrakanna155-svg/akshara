@@ -113,6 +113,7 @@ class ManagementDashboardScreen extends ConsumerWidget {
       // policy is pure and unit-tested next to the widget).
       body: LiveRefreshScope(
         surfaceKey: 'management-dashboard',
+        surfacePath: '/management/dashboard',
         onRefresh: () => ref.invalidate(managementDashboardFutureProvider),
         child: ErpAsyncBody<ManagementDashboardData>(
           state: viewState,

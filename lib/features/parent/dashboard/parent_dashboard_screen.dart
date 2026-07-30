@@ -70,6 +70,7 @@ class ParentDashboardScreen extends ConsumerWidget {
       // foreground tick; never while offline or backgrounded.
       body: LiveRefreshScope(
         surfaceKey: 'parent-dashboard',
+            surfacePath: '/parent/dashboard',
         onRefresh: () => ref.invalidate(parentDashboardFutureProvider),
         child: MobileAsyncBody.fromState(
         state,

@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 
 import '../../reliability/model/cache_record.dart';
 import '../../reliability/sync/reliability_clock.dart';
+import '../../liveness/data_freshness.dart';
+import '../../liveness/data_freshness_recorder.dart';
 import '../../reliability/store/reliability_store.dart';
 import '../api_config.dart';
 
@@ -36,12 +38,31 @@ class OfflineReadCacheInterceptor extends Interceptor {
     ReliabilityClock clock = const SystemReliabilityClock(),
     bool Function(RequestOptions options)? shouldCache,
     this.cacheTtl = defaultCacheTtl,
+    DataFreshnessRecorder? freshnessRecorder,
   })  : _clock = clock,
+        _freshness = freshnessRecorder,
         _shouldCache = shouldCache ?? _defaultShouldCache;
 
   final ReliabilityStore _store;
   final ReliabilityClock _clock;
   final bool Function(RequestOptions options) _shouldCache;
+
+  /// Living Dashboard: where this interceptor reports whether a body came off
+  /// the wire or out of the cache. Optional so every existing construction site
+  /// (and test) keeps working; when absent, nothing is recorded and freshness
+  /// simply stays unknown rather than guessing.
+  final DataFreshnessRecorder? _freshness;
+
+  /// Report an observation without ever letting bookkeeping break a real read.
+  void _observe(RequestOptions options, DataOrigin origin, DateTime at) {
+    final recorder = _freshness;
+    if (recorder == null) return;
+    try {
+      recorder.record(options.uri.path, origin, at);
+    } catch (_) {
+      // Freshness is a nicety; the response is not.
+    }
+  }
 
   /// REL-7 — maximum age an offline-cached read may be served at. A body older
   /// than this is treated as a cache miss (the error surfaces instead) so the UI
@@ -95,6 +116,14 @@ class OfflineReadCacheInterceptor extends Interceptor {
           ))
           .catchError((Object _) {});
     }
+    // A real 2xx off the wire. Only for cacheable GETs — the surfaces that read
+    // freshness are exactly those, and recording writes would be noise.
+    if (_shouldCache(options) &&
+        (response.statusCode ?? 0) >= 200 &&
+        (response.statusCode ?? 0) < 300 &&
+        response.extra[offlineCacheExtraKey] != true) {
+      _observe(options, DataOrigin.network, _clock.now());
+    }
     handler.next(response);
   }
 
@@ -102,11 +131,13 @@ class OfflineReadCacheInterceptor extends Interceptor {
   void onError(DioException err, ErrorInterceptorHandler handler) async {
     final RequestOptions options = err.requestOptions;
     if (!_shouldCache(options) || !_isConnectivityFailure(err)) {
+      if (_shouldCache(options)) _observe(options, DataOrigin.failure, _clock.now());
       handler.next(err);
       return;
     }
     final CacheRecord? cached = await _store.getCache(_cacheKey(options));
     if (cached == null) {
+      _observe(options, DataOrigin.failure, _clock.now());
       handler.next(err);
       return;
     }
@@ -114,6 +145,7 @@ class OfflineReadCacheInterceptor extends Interceptor {
     // it stops occupying the LRU) and let the original connectivity error stand.
     if (_clock.now().difference(cached.updatedAt) > cacheTtl) {
       _store.deleteCache(_cacheKey(options)).catchError((Object _) {});
+      _observe(options, DataOrigin.failure, _clock.now());
       handler.next(err);
       return;
     }
@@ -131,6 +163,9 @@ class OfflineReadCacheInterceptor extends Interceptor {
         },
       ),
     );
+    // The body's own age, NOT the moment we replayed it — that distinction is
+    // what stops a 23-hour-old payload rendering as seconds old.
+    _observe(options, DataOrigin.cache, cached.updatedAt);
   }
 
   /// A failure with no HTTP response and a transport-level type — i.e. the

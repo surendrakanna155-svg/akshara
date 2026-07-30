@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/liveness/data_freshness.dart';
+import '../../core/liveness/data_freshness_providers.dart';
 import '../../core/reliability/reliability_providers.dart';
 import '../../theme/radius.dart';
 import '../../theme/spacing.dart';
@@ -33,20 +35,62 @@ class AksharaFreshnessChip extends ConsumerWidget {
   const AksharaFreshnessChip({
     super.key,
     this.showWhenLive = true,
+    this.surfacePath,
   });
 
   /// When false, the chip is invisible while online and only appears offline.
   final bool showWhenLive;
 
+  /// The API path whose freshness this chip reports, e.g.
+  /// `/management/dashboard`.
+  ///
+  /// When null the chip falls back to the old connectivity-only behaviour.
+  /// Supply it wherever the distinction matters — connectivity answers "can we
+  /// reach the server?", which is NOT the same question as "is what you are
+  /// looking at current?". A device can be online while the screen shows a body
+  /// replayed from a 23-hour-old cache entry.
+  final String? surfacePath;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final online = ref.watch(aksharaFreshnessOnlineProvider);
+    final ext = context.akshara;
+
+    // Freshness-aware path: five honest states, driven by what the network
+    // layer actually observed (see core/liveness/data_freshness.dart).
+    if (surfacePath != null) {
+      final state = ref.watch(dataFreshnessProvider(surfacePath!));
+      if (!state.isStale &&
+          state.freshness == DataFreshness.live &&
+          !showWhenLive) {
+        return const SizedBox.shrink();
+      }
+      final p = presentFreshness(state);
+      final (Color fg2, Color bg2, IconData icon2) = switch (p.tone) {
+        FreshnessTone.good => (
+            ext.success,
+            ext.successContainer.withValues(alpha: 0.6),
+            Icons.cloud_done_outlined,
+          ),
+        FreshnessTone.neutral => (
+            context.colors.onSurfaceVariant,
+            context.colors.surfaceContainerHighest,
+            Icons.schedule_outlined,
+          ),
+        FreshnessTone.warning => (
+            ext.warning,
+            ext.warningContainer.withValues(alpha: 0.7),
+            state.freshness == DataFreshness.refreshFailed
+                ? Icons.sync_problem_outlined
+                : Icons.cloud_off_outlined,
+          ),
+      };
+      return _chip(context, fg2, bg2, icon2, p.label, p.semanticLabel);
+    }
 
     if (online && !showWhenLive) {
       return const SizedBox.shrink();
     }
-
-    final ext = context.akshara;
 
     final (Color fg, Color bg, IconData icon, String label) = online
         ? (
@@ -62,8 +106,26 @@ class AksharaFreshnessChip extends ConsumerWidget {
             'Offline · saved data',
           );
 
+    return _chip(
+      context,
+      fg,
+      bg,
+      icon,
+      label,
+      online ? 'Data is live' : 'Offline — showing saved data',
+    );
+  }
+
+  Widget _chip(
+    BuildContext context,
+    Color fg,
+    Color bg,
+    IconData icon,
+    String label,
+    String semanticLabel,
+  ) {
     return Semantics(
-      label: online ? 'Data is live' : 'Offline — showing saved data',
+      label: semanticLabel,
       container: true,
       child: Container(
         padding: const EdgeInsets.symmetric(

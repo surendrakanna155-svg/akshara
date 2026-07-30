@@ -6,6 +6,7 @@ import '../config/environment_provider.dart';
 import '../network/interceptors/error_reporting_interceptor.dart';
 import '../observability/incident_api_call_interceptor.dart';
 import '../observability/incident_context_providers.dart';
+import '../liveness/data_freshness_providers.dart';
 import '../reliability/reliability_providers.dart';
 import '../tenant/tenant_provider.dart';
 import '../../features/auth/auth_provider.dart';
@@ -30,6 +31,9 @@ final dioProvider = Provider<Dio>((ref) {
       // QA-X-004: reuse the platform's encrypted on-device store so reads are
       // cached and served offline. The store is bound once at bootstrap.
       readCacheStore: ref.read(reliabilityStoreProvider),
+      // Living Dashboard: one sink for "did this body come off the wire or out
+      // of the cache?" — the question the freshness chip answers.
+      freshnessRecorder: ref.read(dataFreshnessRecorderProvider),
     ),
   );
 

@@ -43,6 +43,7 @@ class DirectorDashboardScreen extends ConsumerWidget {
           // and back.
           child: LiveRefreshScope(
             surfaceKey: 'director-dashboard',
+            surfacePath: '/director/dashboard',
             onRefresh: () => ref.invalidate(directorExecutiveDashboardProvider),
             child: ErpAsyncBody<DirectorDashboardData>(
               state: resolveErpAsync(state, isDataEmpty: (_) => false),

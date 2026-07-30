@@ -10,6 +10,7 @@ import 'interceptors/offline_read_cache_interceptor.dart';
 import 'interceptors/retry_interceptor.dart';
 import 'interceptors/tenant_interceptor.dart';
 import '../../features/auth/auth_token_models.dart';
+import '../liveness/data_freshness_recorder.dart';
 import '../reliability/store/reliability_store.dart';
 import '../tenant/tenant_context.dart';
 
@@ -24,6 +25,7 @@ class DioClientDependencies {
     this.onSessionExpired,
     this.allowAnonymous = true,
     this.readCacheStore,
+    this.freshnessRecorder,
   });
 
   final Environment environment;
@@ -38,6 +40,11 @@ class DioClientDependencies {
   /// served back offline (QA-X-004). Omit it (tests / auth-only clients) to skip
   /// offline read caching entirely.
   final ReliabilityStore? readCacheStore;
+
+  /// Living Dashboard: sink the offline read-cache interceptor reports to, so
+  /// the UI can tell a live body from a replayed cached one. Optional — without
+  /// it freshness stays unknown rather than being guessed at.
+  final DataFreshnessRecorder? freshnessRecorder;
 }
 
 /// Factory for a configured [Dio] instance with standard interceptors.
@@ -81,7 +88,10 @@ Dio createDioClient({DioClientDependencies? dependencies}) {
     // has given up on a connectivity failure, serves the last good copy back —
     // *before* ApiErrorInterceptor maps the raw DioException away.
     if (deps.readCacheStore != null)
-      OfflineReadCacheInterceptor(deps.readCacheStore!),
+      OfflineReadCacheInterceptor(
+        deps.readCacheStore!,
+        freshnessRecorder: deps.freshnessRecorder,
+      ),
     ApiErrorInterceptor(),
     // Method + path + status only. Headers and bodies are NEVER logged.
     //

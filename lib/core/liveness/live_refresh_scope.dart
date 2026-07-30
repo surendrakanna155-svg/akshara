@@ -17,6 +17,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/widgets/akshara_freshness_chip.dart';
+import 'data_freshness_providers.dart';
 import 'live_refresh_policy.dart';
 
 /// The instant this surface last ATTEMPTED a refresh, keyed per surface.
@@ -25,10 +26,10 @@ import 'live_refresh_policy.dart';
 /// safe direction (a hung request must not trigger an immediate retry).
 ///
 /// Do NOT drive a "last updated" label from this: if the fetch failed, the
-/// attempt time would claim a freshness the data does not have. The honest
-/// source for payload age is the `X-NIKSHA-Offline-Cache` header the read-cache
-/// interceptor already sets and nothing yet reads — wiring that is the follow-up
-/// that completes the freshness half of §3.5.
+/// attempt time would claim a freshness the data does not have. Payload age has
+/// its own honest source — `DataFreshnessRecorder`, fed by the read-cache
+/// interceptor, which knows whether a body came off the wire or out of the
+/// cache. Use `dataFreshnessProvider` for anything user-facing.
 final lastRefreshAttemptProvider =
     StateProvider.family<DateTime?, String>((ref, surfaceKey) => null);
 
@@ -41,6 +42,7 @@ class LiveRefreshScope extends ConsumerStatefulWidget {
     this.policy = const LiveRefreshPolicy(),
     this.enabled = true,
     this.now = DateTime.now,
+    this.surfacePath,
   });
 
   /// The clock, injected for the same reason the backend resolver injects
@@ -62,6 +64,14 @@ class LiveRefreshScope extends ConsumerStatefulWidget {
 
   /// Escape hatch for tests and for surfaces that must never self-refresh.
   final bool enabled;
+
+  /// The API path this surface reads, e.g. `/management/dashboard`.
+  ///
+  /// When supplied, a freshness chip is shown above the child WHENEVER the data
+  /// is stale — cached, offline, or a failed refresh — so the user is never left
+  /// to assume a saved copy is current. Omit it to keep the scope purely a
+  /// refresher with no visual footprint.
+  final String? surfacePath;
 
   @override
   ConsumerState<LiveRefreshScope> createState() => _LiveRefreshScopeState();
@@ -151,5 +161,29 @@ class _LiveRefreshScopeState extends ConsumerState<LiveRefreshScope>
   }
 
   @override
-  Widget build(BuildContext context) => widget.child;
+  Widget build(BuildContext context) {
+    final path = widget.surfacePath;
+    if (path == null) return widget.child;
+
+    final freshness = ref.watch(dataFreshnessProvider(path));
+    // Only ever appears when the data is NOT current. Two reasons: a permanent
+    // "Live" badge is noise the user learns to ignore (and would then miss the
+    // one time it mattered), and rendering nothing in the healthy case means no
+    // dashboard's layout — or golden — changes for fresh data.
+    if (!freshness.isStale) return widget.child;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: AksharaFreshnessChip(surfacePath: path),
+          ),
+        ),
+        Expanded(child: widget.child),
+      ],
+    );
+  }
 }
