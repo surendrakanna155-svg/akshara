@@ -223,4 +223,4 @@ entirely). Goals we promise:
 
 > Dependency note: this assumes the live backend keeps maturing. It builds on the
 > current VPS stack (Supabase Postgres + edge function) already running at
-> akshara.veloraunisexsalon.com. Reuse that docker-compose as the golden-image base.
+> api.nikshaos.in. Reuse that docker-compose as the golden-image base.

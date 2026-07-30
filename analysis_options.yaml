@@ -1,5 +1,17 @@
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  # Generated and vendored trees are not our source. `build/` in particular holds
+  # the iOS SwiftPM checkouts (build/ios/SourcePackages/**), which are full
+  # third-party Dart packages analysed against the wrong pubspec — that alone
+  # reported >13,000 errors and made `flutter analyze` useless as a release gate.
+  # Excluding them means a clean analyze run is a real signal, not a filtered one.
+  exclude:
+    - build/**
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "**/*.mocks.dart"
+
 linter:
   rules:
     prefer_const_constructors: true

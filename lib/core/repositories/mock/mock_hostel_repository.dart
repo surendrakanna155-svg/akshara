@@ -449,7 +449,7 @@ class MockHostelRepository implements HostelRepository {
       ],
       costMtd: '₹1.2L',
       financeIntegrationNote:
-          'Mess expenses post to Finance FN-05 expense ledger (placeholder)',
+          'Mess expenses are tracked in the Hostel module and are NOT posted to the Finance ledger; record against the FN-05 head manually if needed',
     );
   }
 

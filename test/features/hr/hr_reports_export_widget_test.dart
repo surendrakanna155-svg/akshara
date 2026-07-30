@@ -74,6 +74,10 @@ Future<void> _pump(
   List<String> calls,
 ) async {
   _desktop(tester);
+  // The attendance screen renders network-backed widgets (manual-request queue)
+  // at build → dioProvider → SharedPreferences; init the test prefs so the
+  // provider overrides stub that stack instead of throwing "uninitialized".
+  await initProviderTestPrefs();
   await tester.pumpWidget(
     ProviderScope(
       overrides: erpWidgetTestOverrides([

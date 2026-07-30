@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/widgets/akshara_section_empty.dart';
 import '../../../../shared/widgets/akshara_status_chip.dart';
 import '../../../../theme/spacing.dart';
 import '../../../../theme/theme_extensions.dart';
@@ -17,6 +18,16 @@ class FinanceRecentPaymentsTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // No payments is a real day-one state, not a rendering failure — an empty
+    // table body under "Recent payments" reads as money gone missing.
+    if (payments.isEmpty) {
+      return const AksharaSectionEmpty(
+        message: 'No payments collected yet. Receipts appear here as fees are '
+            'paid.',
+        icon: Icons.receipt_long_outlined,
+      );
+    }
+
     if (AdminLayout.useCardLayout(context)) {
       return Column(
         children: [

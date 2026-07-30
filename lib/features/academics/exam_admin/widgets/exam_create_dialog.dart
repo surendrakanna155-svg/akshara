@@ -116,7 +116,9 @@ Future<void> showExamCreateDialog(BuildContext context, WidgetRef ref) async {
                   .map(
                     (type) => DropdownMenuItem(
                       value: type,
-                      child: Text(type.name),
+                      // examTypeLabel, not type.name — `.name` renders raw
+                      // camelCase ('halfYearly') into a teacher-facing dropdown.
+                      child: Text(examTypeLabel(type)),
                     ),
                   )
                   .toList(),

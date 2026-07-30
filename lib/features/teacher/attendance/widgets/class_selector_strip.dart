@@ -18,16 +18,37 @@ class ClassSelectorStrip extends StatelessWidget {
   final String selectedClassId;
   final ValueChanged<String> onClassSelected;
 
+  /// Fixed chrome inside a card: `EdgeInsets.all(s3)` top + bottom.
+  static const double _cardVerticalPadding = AksharaSpacing.s3 * 2;
+
+  /// Height of the two-line text block at the default 1.0× font scale.
+  /// `_cardVerticalPadding + _textBlockHeight` == the original hard 72.
+  static const double _textBlockHeight = 48;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = context.aksharaText;
 
+    // A11y-P1: the strip used a hard `SizedBox(height: 72)` around a Column
+    // whose natural height is 56dp. Past roughly 1.5× system font scale the
+    // Column no longer fitted and the teacher attendance screen threw a
+    // RenderFlex overflow — the yellow/black overflow banner, in production.
+    //
+    // A horizontal ListView needs a BOUNDED cross-axis extent, so a plain
+    // minHeight constraint is not available here (it would leave the viewport
+    // unbounded). Instead the height is composed: fixed card padding plus a
+    // text block that scales with the system font setting. At 1.0× this is
+    // exactly 72 — pixel-identical to before — and it grows only as the text
+    // does.
+    final stripHeight = _cardVerticalPadding +
+        MediaQuery.textScalerOf(context).scale(_textBlockHeight);
+
     return Semantics(
       container: true,
       label: 'Class selector',
       child: SizedBox(
-        height: 72,
+        height: stripHeight,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           itemCount: classes.length,

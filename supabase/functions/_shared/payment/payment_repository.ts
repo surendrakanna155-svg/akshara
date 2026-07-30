@@ -164,20 +164,27 @@ export async function createPaymentIntent(
     gatewayOrderId: string;
     idempotencyKey: string | null;
     expiresAt: Date;
+    /**
+     * The provider id that created this order. Persisted so confirm/webhook
+     * resolve the SAME provider that opened the intent. Defaults to 'razorpay'
+     * (the column default) to preserve prior behaviour.
+     */
+    gateway?: string;
   },
 ): Promise<PaymentIntentRow> {
   const rows = await db.queryObject<PaymentIntentRow>(
     `INSERT INTO payment_intents (
        organization_id, school_id, request_id, payer_user_id,
-       amount, payment_method, invoice_id, gateway_order_id,
+       gateway, amount, payment_method, invoice_id, gateway_order_id,
        status, idempotency_key, expires_at
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'initiated', $9, $10)
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'initiated', $10, $11)
      RETURNING *`,
     [
       input.organizationId,
       input.schoolId,
       input.requestId,
       input.payerUserId,
+      input.gateway ?? "razorpay",
       input.amount,
       input.paymentMethod,
       input.invoiceId,
@@ -212,7 +219,7 @@ export async function markIntentCaptured(
          collection_id = COALESCE($4, collection_id),
          receipt_id = COALESCE($5, receipt_id),
          updated_at = timezone('utc', now())
-     WHERE id = $1
+     WHERE id = $1 AND status <> 'captured'
      RETURNING *`,
     [
       intentId,
@@ -224,6 +231,18 @@ export async function markIntentCaptured(
   );
   const row = rows[0];
   if (!row) {
+    // PRA-M-2 (S1): the guarded write matched no row — distinguish an already-
+    // captured intent (a duplicate capture attempt) from a genuinely missing one,
+    // so a double-capture surfaces as a clear state error rather than "not found".
+    const existing = await db.queryObject<{ status: string }>(
+      `SELECT status FROM payment_intents WHERE id = $1`,
+      [intentId],
+    );
+    if (existing[0]?.status === "captured") {
+      throw new PaymentIntentStateError(
+        `Payment intent already captured: ${intentId}`,
+      );
+    }
     throw new PaymentIntentNotFoundError(intentId);
   }
   await db.queryObject(
@@ -253,21 +272,25 @@ export async function recordWebhookEvent(
   organizationId: string | null,
   schoolId: string | null = null,
 ): Promise<boolean> {
-  const existing = await db.queryObject<{ id: string }>(
-    `SELECT id FROM payment_webhook_events WHERE id = $1`,
-    [eventId],
-  );
-  if (existing.length > 0) {
-    return false;
-  }
-  await db.queryObject(
+  // PRC-A Batch 5 — atomic replay guard (owner-idea 25). The old SELECT-then-INSERT
+  // was check-then-act: two concurrent deliveries of the SAME webhook could both
+  // see zero rows and both proceed to process the event (e.g. credit a payment)
+  // twice; and the loser's bare INSERT would raise a PK violation that surfaces as
+  // a 500, provoking yet another provider retry. `id` is the primary key, so
+  // Postgres already serialises concurrent inserts — `ON CONFLICT DO NOTHING
+  // RETURNING id` lets it pick the single winner in ONE statement. A returned row
+  // means WE claimed this event first (process it); no row means a concurrent or
+  // earlier delivery already claimed it (skip, cleanly, no throw).
+  const inserted = await db.queryObject<{ id: string }>(
     `INSERT INTO payment_webhook_events (
        id, organization_id, event_type, payload,
        resolved_organization_id, resolved_school_id
-     ) VALUES ($1, $2, $3, $4::jsonb, $5, $6)`,
+     ) VALUES ($1, $2, $3, $4::jsonb, $5, $6)
+     ON CONFLICT (id) DO NOTHING
+     RETURNING id`,
     [eventId, organizationId, eventType, JSON.stringify(payload), organizationId, schoolId],
   );
-  return true;
+  return inserted.length > 0;
 }
 
 export async function findRequestByInstallment(

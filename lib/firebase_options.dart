@@ -1,4 +1,4 @@
-// Firebase configuration for Akshara ERP.
+// Firebase configuration for NIKSHA OS.
 //
 // Hand-authored from android/app/google-services.json (Firebase project
 // `akshara-erp`). Equivalent to the FlutterFire-CLI output, but only the
@@ -19,7 +19,7 @@ class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
       throw UnsupportedError(
-        'Firebase is not configured for web — Akshara ships Android/iOS only.',
+        'Firebase is not configured for web — NIKSHA OS ships Android/iOS only.',
       );
     }
     switch (defaultTargetPlatform) {

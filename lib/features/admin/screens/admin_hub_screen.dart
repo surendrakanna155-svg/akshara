@@ -55,11 +55,13 @@ class AdminHubScreen extends ConsumerWidget {
               const WorkspaceSwitcher(),
               const SizedBox(height: AksharaSpacing.s6),
             ],
+            // JOURNEY-001 — name-only hero. Headline figures are only ever
+            // passed here from a real per-workspace summary provider; there is
+            // no compile-time stats table to fall back on.
             AksharaWorkspaceLanding(
               workspaceName: title,
               motif: landing?.motif ?? AksharaMotif.graduationCap,
               eyebrow: landing?.eyebrow ?? 'WORKSPACE',
-              stats: landing?.stats ?? const <AksharaWorkspaceStat>[],
             ),
             const SizedBox(height: AksharaSpacing.s4),
             Text(
@@ -67,16 +69,35 @@ class AdminHubScreen extends ConsumerWidget {
               style: context.aksharaText.bodyMedium,
             ),
             const SizedBox(height: AksharaSpacing.s6),
-            Wrap(
-              spacing: AksharaSpacing.s4,
-              runSpacing: AksharaSpacing.s4,
-              children: [
-                for (final destination in modules)
-                  _ModuleCard(
-                    destination: destination,
-                    onTap: () => context.go(destination.route),
-                  ),
-              ],
+            // The cards used to be a fixed 220dp wide. A typical phone is ~411dp
+            // of logical width, so two cards plus the gap (456dp) never fit —
+            // every row held ONE 220dp card and left ~46% of the screen as dead
+            // gutter, on the first screen a principal sees. Size the column to
+            // the space actually available: two-up (or more) on a wide screen,
+            // full-bleed when only one fits.
+            LayoutBuilder(
+              builder: (context, constraints) {
+                const double spacing = AksharaSpacing.s4;
+                const double minCardWidth = 220;
+                final int columns = ((constraints.maxWidth + spacing) /
+                        (minCardWidth + spacing))
+                    .floor()
+                    .clamp(1, 4);
+                final double cardWidth =
+                    (constraints.maxWidth - spacing * (columns - 1)) / columns;
+                return Wrap(
+                  spacing: spacing,
+                  runSpacing: spacing,
+                  children: [
+                    for (final destination in modules)
+                      _ModuleCard(
+                        destination: destination,
+                        width: cardWidth,
+                        onTap: () => context.go(destination.route),
+                      ),
+                  ],
+                );
+              },
             ),
           ],
         ),
@@ -88,17 +109,22 @@ class AdminHubScreen extends ConsumerWidget {
 class _ModuleCard extends StatelessWidget {
   const _ModuleCard({
     required this.destination,
+    required this.width,
     required this.onTap,
   });
 
   final AdminNavDestination destination;
+
+  /// Computed by the parent from the available width, so a card never leaves a
+  /// dead gutter beside it on a phone.
+  final double width;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     return SizedBox(
-      width: 220,
+      width: width,
       child: Material(
         key: QaTestKeys.adminHubModuleCard(destination.label),
         color: colors.surface,

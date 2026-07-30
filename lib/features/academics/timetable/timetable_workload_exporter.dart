@@ -4,7 +4,7 @@ import 'timetable_models.dart';
 /// Roadmap gap #9 — turns the unified workload rollup into the shared XCT-1 grid
 /// shape (headers + string rows) and drives CSV / PDF exports through
 /// [AksharaReportExportService]. No bespoke CSV/PDF layout — it rides the same
-/// grid primitive every other Akshara report uses.
+/// grid primitive every other NIKSHA report uses.
 class TimetableWorkloadExporter {
   const TimetableWorkloadExporter(this._service);
 

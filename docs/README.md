@@ -1,4 +1,4 @@
-# Akshara ERP — Active Documentation Index
+# NIKSHA OS — Active Documentation Index
 
 > **This is the authoritative entry point.** Every document listed here is current and required for day-to-day engineering. Read these — *not* `docs/archive/`.
 
@@ -85,7 +85,7 @@
 - [`docs/ClientBackendAlignment.md`](ClientBackendAlignment.md)
 - [`docs/DEPLOYMENT_MODEL_AND_DR_PLAN.md`](DEPLOYMENT_MODEL_AND_DR_PLAN.md)
 - [`docs/DatabaseArchitecture.md`](DatabaseArchitecture.md)
-- [`docs/DeploymentArchitecture.md`](DeploymentArchitecture.md)
+- [`docs/DeploymentArchitecture.md`](DeploymentArchitecture.md) — ⚠️ aspirational spec (Cloudflare / hosted-Supabase multi-AZ / PITR). None of it is deployed; see the VPS runbook for reality.
 - [`docs/RBACArchitecture.md`](RBACArchitecture.md)
 - [`docs/TechnicalArchitecture.md`](TechnicalArchitecture.md)
 - [`docs/TenantArchitecture.md`](TenantArchitecture.md)
@@ -169,10 +169,17 @@
 
 ## Operations runbooks & pilot guides
 
+> **Deploying? Read [`docs/Operations/VPS-Deployment-Runbook.md`](Operations/VPS-Deployment-Runbook.md) — it is the only accurate one.**
+> `DeploymentArchitecture.md` describes infrastructure that was never deployed, and
+> `Operations/Deployment-Guide.md` targets a hosted Supabase project that is not in
+> the production path. Both are kept as historical record only.
+
+
 - [`docs/Operations/Backup-Runbook.md`](Operations/Backup-Runbook.md)
 - [`docs/Operations/Customer-Readiness-Report.md`](Operations/Customer-Readiness-Report.md)
 - [`docs/Operations/Demo-School-Validation-Plan.md`](Operations/Demo-School-Validation-Plan.md)
-- [`docs/Operations/Deployment-Guide.md`](Operations/Deployment-Guide.md)
+- [`docs/Operations/Deployment-Guide.md`](Operations/Deployment-Guide.md) — ⚠️ **stale**: targets hosted Supabase, not the VPS
+- [`docs/Operations/VPS-Deployment-Runbook.md`](Operations/VPS-Deployment-Runbook.md) — ✅ **canonical deployment runbook**
 - [`docs/Operations/Disaster-Recovery-Checklist.md`](Operations/Disaster-Recovery-Checklist.md)
 - [`docs/Operations/First-Day-Go-Live-Checklist.md`](Operations/First-Day-Go-Live-Checklist.md)
 - [`docs/Operations/Go-Live-Checklist.md`](Operations/Go-Live-Checklist.md)

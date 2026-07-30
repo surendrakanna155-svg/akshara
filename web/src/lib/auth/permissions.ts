@@ -43,3 +43,32 @@ export function useGrantedModules(): string[] | null {
   }
   return null;
 }
+
+export interface PermissionCheck {
+  /** True only when the live grant set is present AND contains the slug. */
+  granted: boolean;
+  loading: boolean;
+  /** No live backend configured (demo mode) — cannot determine the grant. */
+  unavailable: boolean;
+}
+
+/**
+ * Live RBAC single-permission check against the same `/auth/permissions` grant
+ * set the nav uses (react-query dedupes the fetch). Used to gate cross-tenant
+ * platform-support surfaces on a flat permission slug (e.g. `platformSupport`)
+ * that carries no module key. Returns `granted:false` with `unavailable:true` in
+ * demo mode so callers render an honest "requires a live session" state rather
+ * than a false deny.
+ */
+export function useHasPermission(slug: string): PermissionCheck {
+  const q = useModuleQuery<PermissionsResponse>(['auth', 'permissions'], () =>
+    apiFetch<PermissionsResponse>('/auth/permissions'),
+  );
+  const unavailable = q.unavailable;
+  if (!q.data) return { granted: false, loading: q.isLoading, unavailable };
+  const names = Array.isArray(q.data.permissions)
+    ? q.data.permissions.map(permissionName).filter((n): n is string => n !== null)
+    : [];
+  const modules = Array.isArray(q.data.modules) ? q.data.modules : [];
+  return { granted: names.includes(slug) || modules.includes(slug), loading: q.isLoading, unavailable };
+}

@@ -1,9 +1,11 @@
 // QW4 · QA-B-023 — Library module ROUTE + RBAC + entitlement contract (DB-free).
 //
 // Proven without a live Postgres:
-//   1. PATH-MATCH: every registered library route (10 GET + 9 POST + 2 PUT +
-//      1 DELETE = 22) resolves to a handler (status !== 404); unregistered under
+//   1. PATH-MATCH: every registered library route (12 GET + 12 POST + 2 PUT +
+//      1 DELETE = 27) resolves to a handler (status !== 404); unregistered under
 //      /library 404s; outside the prefix returns null.
+//      (+5 vs the original 22: PRA-P1-41 accession register — register/list/
+//       lookup + lost/withdraw status transitions.)
 //   2. module.library 402 gate wired via withEntitlement on the /library prefix
 //      (DB-free 503; pure 402 in qw4_entitlement_402_matrix_test.ts).
 //   3. POST /library/issues (issue book) and POST /library/returns (return book)
@@ -60,6 +62,9 @@ const REGISTERED: Array<[string, string]> = [
   ["GET", "/library/reports"],
   ["GET", "/library/overdue"],
   ["GET", "/library/settings"],
+  // PRA-P1-41 accession register reads.
+  ["GET", "/library/accessions"],
+  ["GET", "/library/accessions/1"],
   ["POST", "/library/catalog"],
   ["POST", "/library/catalog/import"],
   ["POST", "/library/issues"],
@@ -69,24 +74,28 @@ const REGISTERED: Array<[string, string]> = [
   ["POST", "/library/digital-resources"],
   ["POST", "/library/reminders/overdue"],
   ["POST", "/library/fines/fine-1/waive"],
+  // PRA-P1-41 accession register writes.
+  ["POST", "/library/accessions"],
+  ["POST", "/library/accessions/acc-1/lost"],
+  ["POST", "/library/accessions/acc-1/withdraw"],
   ["PUT", "/library/catalog/book-1"],
   ["PUT", "/library/settings"],
   ["DELETE", "/library/catalog/book-1"],
 ];
 
-Deno.test("QA-B-023: all 22 library routes path-match to a handler (not 404)", async () => {
+Deno.test("QA-B-023: all 27 library routes path-match to a handler (not 404)", async () => {
   const perms = ["viewLibrary", "manageLibrary"];
   for (const [method, path] of REGISTERED) {
     const res = await call(routeLibrary, method, path, perms);
     assertEquals(res !== null, true, `${method} ${path} returned null`);
     assertEquals(res!.status !== 404, true, `${method} ${path} unexpectedly 404'd`);
   }
-  assertEquals(REGISTERED.length, 22);
+  assertEquals(REGISTERED.length, 27);
 });
 
-Deno.test("QA-B-023: unregistered path under /library 404s; path outside prefix is null", async () => {
+Deno.test("QA-B-023: unregistered path under /library returns null (central dispatcher 404s); path outside prefix is null", async () => {
   const under = await call(routeLibrary, "GET", "/library/not-a-route", ["viewLibrary"]);
-  assertEquals(under?.status, 404);
+  assertEquals(under, null);
   const outside = await call(routeLibrary, "GET", "/hostel/dashboard", ["viewLibrary"]);
   assertEquals(outside, null);
 });
@@ -135,6 +144,10 @@ const NEW_WRITE_ROUTES: Array<[string, string, unknown]> = [
   ["PUT", "/library/catalog/book-1", { title: "New" }],
   ["PUT", "/library/settings", { maxBooksPerMember: 3 }],
   ["DELETE", "/library/catalog/book-1", undefined],
+  // PRA-P1-41 accession writes.
+  ["POST", "/library/accessions", { catalogId: "cat-1" }],
+  ["POST", "/library/accessions/acc-1/lost", {}],
+  ["POST", "/library/accessions/acc-1/withdraw", {}],
 ];
 
 Deno.test("QA-B-023: new library WRITES are 403 without manageLibrary, 503 with it", async () => {
@@ -147,15 +160,19 @@ Deno.test("QA-B-023: new library WRITES are 403 without manageLibrary, 503 with 
   }
 });
 
-Deno.test("QA-B-023: new library READS (overdue, settings) are 403 without viewLibrary", async () => {
-  for (const path of ["/library/overdue", "/library/settings"]) {
+Deno.test("QA-B-023: new library READS (overdue, settings, accessions) are 403 without viewLibrary", async () => {
+  for (
+    const path of ["/library/overdue", "/library/settings", "/library/accessions", "/library/accessions/1"]
+  ) {
     const denied = await call(routeLibrary, "GET", path, ["manageFinance"]);
     assertEquals(denied?.status, 403, `GET ${path} should 403 without viewLibrary`);
   }
 });
 
 Deno.test("QA-B-023: new library READS are 503 for a viewLibrary holder (DB-free)", async () => {
-  for (const path of ["/library/overdue", "/library/settings"]) {
+  for (
+    const path of ["/library/overdue", "/library/settings", "/library/accessions", "/library/accessions/1"]
+  ) {
     const allowed = await call(routeLibrary, "GET", path, ["viewLibrary"]);
     assertEquals(allowed?.status, 503, `GET ${path} should 503 for a viewLibrary holder`);
   }

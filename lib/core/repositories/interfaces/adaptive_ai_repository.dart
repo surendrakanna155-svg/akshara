@@ -37,9 +37,12 @@ abstract class AdaptiveAiRepository {
   });
 
   /// Universal School Search — deterministic, RBAC-scoped entity resolver.
+  /// `offset` pages through a category's matches (default 0) — used by the
+  /// "Show more" per-category pagination.
   Future<UniversalSearchResult> universalSearch({
     required RepositoryQuery query,
     required String term,
     int? limit,
+    int? offset,
   });
 }

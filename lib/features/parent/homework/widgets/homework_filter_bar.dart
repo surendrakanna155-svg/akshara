@@ -39,8 +39,16 @@ class HomeworkFilterBar extends StatelessWidget {
               selectedColor: colors.primaryContainer,
               backgroundColor: colors.surface,
               side: BorderSide(color: colors.outlineVariant),
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              visualDensity: const VisualDensity(horizontal: -1, vertical: -2),
+              // A11y-P1 tap target: `MaterialTapTargetSize.shrinkWrap` plus a
+              // vertical density of -2 shrank this to roughly 24dp against
+              // Flutter's 32dp `_kChipHeight`, on the primary filter row of a
+              // high-frequency list screen. Both are removed: the theme's
+              // `padded` default now wraps the chip in a >=48dp redirecting hit
+              // target (`_ChipRedirectingHitDetectionWidget`), which is why the
+              // vertical density had to go too — `padded` subtracts the density
+              // adjustment from the 48dp minimum, so -2 would have capped the
+              // target at 40dp. Horizontal compaction is kept.
+              visualDensity: const VisualDensity(horizontal: -1),
             ),
             if (filter != HomeworkFilter.values.last)
               const SizedBox(width: AksharaSpacing.s2),

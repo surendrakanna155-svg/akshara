@@ -66,6 +66,13 @@ class TransportAllocationScreen extends ConsumerWidget {
                     label: const Text('Bulk allocate'),
                   ),
                   OutlinedButton.icon(
+                    key: QaTestKeys.transportRaiseDemandButton,
+                    onPressed: () =>
+                        showRaiseDemandForUnbilledDialog(context, ref),
+                    icon: const Icon(Icons.request_quote_outlined, size: 18),
+                    label: const Text('Raise demand (unbilled)'),
+                  ),
+                  OutlinedButton.icon(
                     onPressed: () => context.go(RouteNames.sisStudents),
                     icon: const Icon(Icons.badge_outlined, size: 18),
                     label: const Text('SIS registry'),
@@ -179,6 +186,7 @@ class _AllocationTable extends ConsumerWidget {
               DataColumn(label: Text('Route')),
               DataColumn(label: Text('Bus')),
               DataColumn(label: Text('SIS ID')),
+              DataColumn(label: Text('Billed')),
               DataColumn(label: Text('Actions')),
             ],
             rows: [
@@ -194,6 +202,7 @@ class _AllocationTable extends ConsumerWidget {
                     DataCell(Text(alloc.routeName)),
                     DataCell(Text(alloc.busNumber)),
                     DataCell(Text(alloc.sisStudentId)),
+                    DataCell(_BilledStatus(allocation: alloc)),
                     DataCell(_AllocationActions(allocation: alloc)),
                   ],
                 ),
@@ -234,11 +243,49 @@ class _AllocationCard extends ConsumerWidget {
                 '${allocation.routeName} · ${allocation.busNumber}',
                 style: text.bodySmall,
               ),
+              if (allocation.isAssigned) ...[
+                const SizedBox(height: AksharaSpacing.s2),
+                _BilledStatus(allocation: allocation),
+              ],
               const SizedBox(height: AksharaSpacing.s3),
               _AllocationActions(allocation: allocation),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// PRA-P0-20 — per-row transport-fee billed status. Assigned students show
+/// Billed / Unbilled (derived `demandRaised`); unassigned rows show a dash.
+class _BilledStatus extends StatelessWidget {
+  const _BilledStatus({required this.allocation});
+
+  final StudentTransportAllocation allocation;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.aksharaText;
+    if (!allocation.isAssigned) {
+      return Text('—', style: text.bodySmall);
+    }
+    final billed = allocation.demandRaised;
+    final scheme = Theme.of(context).colorScheme;
+    final color = billed ? scheme.primary : scheme.outline;
+    return Semantics(
+      label: billed ? 'Transport fee billed' : 'Transport fee not billed',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            billed ? Icons.check_circle_outline : Icons.pending_outlined,
+            size: 16,
+            color: color,
+          ),
+          const SizedBox(width: 4),
+          Text(billed ? 'Billed' : 'Unbilled', style: text.bodySmall),
+        ],
       ),
     );
   }

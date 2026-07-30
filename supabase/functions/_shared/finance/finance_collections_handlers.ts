@@ -10,6 +10,7 @@ import {
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { emitMutationAudit, financeAudit } from "../audit/mutation_audit_catalog.ts";
+import { recordMutationAudit } from "../audit/audit_repository.ts";
 import {
   CancellationReasonRequiredError,
   CollectionAmountError,
@@ -25,6 +26,7 @@ import {
   getCollection,
   getDailySummary,
   getReceipt,
+  getReceiptSmsRecipient,
   getStudentAccountById,
   listAllCollectionsForAccount,
   listCancelledCollections,
@@ -33,6 +35,7 @@ import {
 } from "./finance_collections_repository.ts";
 import { getInvoice } from "./finance_invoices_repository.ts";
 import { isSmsConfigured, sendTransactionalSms, type SmsConfig } from "../sms_provider.ts";
+import { enforceSmsQuota } from "../entitlements/entitlement_limits.ts";
 import {
   cancelledCollectionToApi,
   collectionCreateToApi,
@@ -86,22 +89,20 @@ async function notifyParentOfReceipt(
     fast2smsMessageId: config.smsFast2smsMessageId,
   };
   if (!isSmsConfigured(smsConfig)) return;
+  // W4 (owner decision #1): per-plan monthly SMS quota — pre-send check. Deploy-
+  // dark behind ENTITLEMENT_ENFORCEMENT and fail-open (returns null unless the
+  // org is genuinely at its plan cap), so this is a no-op today. When on and the
+  // month's SMS is used up, the discretionary receipt SMS is skipped rather than
+  // pushing the org past its plan's SMS budget; the collection response itself is
+  // never affected (this hook is best-effort).
+  if (await enforceSmsQuota(config, claims)) return;
   try {
     const target = await runTenant(config, claims, (db) =>
-      db.queryObject<{ phone: string; name: string }>(
-        `SELECT u.phone AS phone, s.display_name AS name
-           FROM finance_invoices fi
-           JOIN students s ON s.id = fi.student_id
-           JOIN student_guardians sg ON sg.student_id = s.id
-           JOIN users u ON u.id = sg.guardian_user_id
-          WHERE fi.id = $1 AND u.phone IS NOT NULL
-          LIMIT 1`,
-        [invoiceId],
-      ).then((rows) => rows[0] ?? null)
+      getReceiptSmsRecipient(db, invoiceId)
     );
     if (!target?.phone) return;
     const msg =
-      `Akshara: Payment of Rs ${amount} received for ${target.name}. Receipt available in the app.`;
+      `NIKSHA: Payment of Rs ${amount} received for ${target.name}. Receipt available in the app.`;
     const result = await sendTransactionalSms(smsConfig, target.phone, msg);
     if (!result.ok) {
       console.error(`receipt SMS not sent (${result.code}): ${result.detail}`);
@@ -311,7 +312,6 @@ export async function handleCreateCollection(
         idempotencyKey: req.headers.get("Idempotency-Key") ??
           req.headers.get("idempotency-key") ?? undefined,
       });
-      const { recordMutationAudit } = await import("../audit/audit_repository.ts");
       await recordMutationAudit(
         db,
         auth.claims,

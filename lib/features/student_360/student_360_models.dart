@@ -15,6 +15,8 @@ class Student360Profile {
     this.behaviour = const {},
     this.transport = const {},
     this.documents = const {},
+    this.care = const {},
+    this.leave = const {},
   });
 
   final Map<String, dynamic> identity;
@@ -32,6 +34,15 @@ class Student360Profile {
   final Map<String, dynamic> behaviour;
   final Map<String, dynamic> transport;
   final Map<String, dynamic> documents;
+
+  /// Minimum actionable health flags — allergies, conditions and what to do
+  /// about them. NEVER clinical detail (diagnoses, medication, treatment
+  /// notes): the owner decision of 2026-07-15 keeps that off broad profile
+  /// surfaces, behind the health module's own permission + audit path.
+  final Map<String, dynamic> care;
+
+  /// Leave requests raised for this student, newest first.
+  final Map<String, dynamic> leave;
 }
 
 class StudentTimelineEvent {

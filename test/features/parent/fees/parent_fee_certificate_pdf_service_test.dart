@@ -5,7 +5,7 @@ import 'package:akshara_erp/features/parent/fees/parent_fee_certificate_pdf_serv
 import 'package:flutter_test/flutter_test.dart';
 
 const _certificate = FeeCertificateData(
-  schoolName: 'Akshara Public School',
+  schoolName: 'NIKSHA Public School',
   guardianName: 'Suresh Kumar',
   studentName: 'Ravi Kumar',
   publicStudentId: 'AKPS-0042',
@@ -32,7 +32,7 @@ const _certificate = FeeCertificateData(
 );
 
 const _emptyCertificate = FeeCertificateData(
-  schoolName: 'Akshara Public School',
+  schoolName: 'NIKSHA Public School',
   guardianName: 'Suresh Kumar',
   studentName: 'Ravi Kumar',
   academicYear: '2024-2025',

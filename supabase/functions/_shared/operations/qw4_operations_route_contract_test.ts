@@ -89,7 +89,7 @@ Deno.test("QA-B-033: an unauthenticated caller is rejected on operations routes 
   }
 });
 
-Deno.test("QA-B-033: an unregistered /operations path returns 404", async () => {
+Deno.test("QA-B-033: an unregistered /operations path returns null (central dispatcher 404s)", async () => {
   const token = await signAccessToken(SECRET, claims(), 900);
   const res = await routeOperations(
     get(token, "/operations/nope"),
@@ -97,7 +97,7 @@ Deno.test("QA-B-033: an unregistered /operations path returns 404", async () => 
     "GET",
     "/operations/nope",
   );
-  assertEquals(res?.status, 404);
+  assertEquals(res, null);
 });
 
 Deno.test("QA-B-033: a non-/operations path returns null (no match)", async () => {

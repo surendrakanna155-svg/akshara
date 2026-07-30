@@ -56,6 +56,17 @@ void main() {
     ErpRole.hostelManager,
     ErpRole.inventoryManager,
     ErpRole.storekeeper,
+    // JOURNEY-002 — the five school roles the server seeds, mapped in the same
+    // change as the fail-closed default. Each is exercised below on its own
+    // module (allow) and on a module it must never reach (deny).
+    ErpRole.hrManager,
+    ErpRole.officeStaff,
+    ErpRole.healthStaff,
+    ErpRole.classTeacher,
+    ErpRole.coordinator,
+    // JOURNEY-002 — the fail-closed sentinel. It holds NOTHING, so every case
+    // for it is a deny; that is exactly the property worth pinning here.
+    ErpRole.unsupported,
   };
 
   // ---- Representative manage-permission grid (one allow + denies per role) --
@@ -123,6 +134,61 @@ void main() {
         RouteNames.inventory, true), // view-route allowed (holds viewInventory)
     _Case(ErpRole.storekeeper, Permission.manageFinance, false,
         RouteNames.finance, false),
+
+    // ─── JOURNEY-002 · the five newly mapped school roles ───────────────────
+    // Each holds exactly what the server seeds for its slug and nothing more.
+    // The deny cases are the ones the old `?? ErpRole.superAdmin` fallback
+    // silently ALLOWED, so they are the cases that matter.
+
+    // HR Manager — HR yes; Finance and SIS denied.
+    _Case(ErpRole.hrManager, Permission.manageHr, true, RouteNames.hr, true),
+    _Case(ErpRole.hrManager, Permission.manageFinance, false,
+        RouteNames.finance, false),
+    _Case(ErpRole.hrManager, Permission.manageSis, false, RouteNames.sis, false),
+
+    // Office Staff — the front-desk clerk. Admissions yes; SIS is READ-only and
+    // Finance is denied outright. This is the persona the defect named.
+    _Case(ErpRole.officeStaff, Permission.manageAdmissions, true,
+        RouteNames.admissions, true),
+    _Case(ErpRole.officeStaff, Permission.manageSis, false,
+        RouteNames.sis, true), // can VIEW SIS, cannot MANAGE it
+    _Case(ErpRole.officeStaff, Permission.manageFinance, false,
+        RouteNames.finance, false),
+
+    // Health Staff — the school nurse. Nothing outside the infirmary.
+    _Case(ErpRole.healthStaff, Permission.manageStudentHealth, true,
+        RouteNames.studentHealth, true),
+    _Case(ErpRole.healthStaff, Permission.manageFinance, false,
+        RouteNames.finance, false),
+    _Case(ErpRole.healthStaff, Permission.manageSis, false,
+        RouteNames.sis, false),
+
+    // Class Teacher — teaching hat: marks/homework yes; Finance and Admissions
+    // denied.
+    _Case(ErpRole.classTeacher, Permission.manageHomework, true,
+        RouteNames.sis, true), // holds viewSis
+    _Case(ErpRole.classTeacher, Permission.manageFinance, false,
+        RouteNames.finance, false),
+    _Case(ErpRole.classTeacher, Permission.manageAdmissions, false,
+        RouteNames.admissions, false),
+
+    // Coordinator — teaching + admissions; still no finance authority.
+    _Case(ErpRole.coordinator, Permission.manageAdmissions, true,
+        RouteNames.admissions, true),
+    _Case(ErpRole.coordinator, Permission.manageFinance, false,
+        RouteNames.finance, false),
+
+    // ─── JOURNEY-002 · the fail-closed sentinel grants NOTHING ──────────────
+    // Before the fix an unmappable server role became superAdmin and every one
+    // of these was an ALLOW.
+    _Case(ErpRole.unsupported, Permission.manageFinance, false,
+        RouteNames.finance, false),
+    _Case(ErpRole.unsupported, Permission.manageSis, false,
+        RouteNames.sis, false),
+    _Case(ErpRole.unsupported, Permission.manageControlCenter, false,
+        RouteNames.controlCenter, false),
+    _Case(ErpRole.unsupported, Permission.manageAdmissions, false,
+        RouteNames.admissions, false),
   ];
 
   // ---- Approve-permission slice (drives ApprovePermissionGuard) ------------
@@ -146,6 +212,20 @@ void main() {
     // Storekeeper can create POs but CANNOT approve them (manage ≠ approve, and
     // approve stays with the Inventory Manager).
     _ApproveCase(ErpRole.storekeeper, Permission.approvePurchaseOrder, false),
+
+    // JOURNEY-002 — of the newly mapped school roles only hrManager holds an
+    // approve slug (approveStaffAttendance, matching the server seed); none of
+    // them reaches a finance/admissions/education approval, and the sentinel
+    // reaches nothing at all.
+    _ApproveCase(ErpRole.hrManager, Permission.approveStaffAttendance, true),
+    _ApproveCase(ErpRole.hrManager, Permission.approveRefunds, false),
+    _ApproveCase(ErpRole.officeStaff, Permission.approveAdmissions, false),
+    _ApproveCase(ErpRole.healthStaff, Permission.approveRefunds, false),
+    _ApproveCase(ErpRole.classTeacher, Permission.approveEducation, false),
+    _ApproveCase(ErpRole.coordinator, Permission.approveAdmissions, false),
+    _ApproveCase(ErpRole.unsupported, Permission.approveRefunds, false),
+    _ApproveCase(ErpRole.unsupported, Permission.approveEducation, false),
+    _ApproveCase(ErpRole.unsupported, Permission.approvePurchaseOrder, false),
   ];
 
   late SharedPreferences prefs;
@@ -176,7 +256,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        // Real Akshara theme so the production AccessDeniedScreen (which uses
+        // Real NIKSHA theme so the production AccessDeniedScreen (which uses
         // AksharaErrorState → aksharaText) renders instead of throwing.
         child: MaterialApp(
           theme: AksharaAppTheme.light(),

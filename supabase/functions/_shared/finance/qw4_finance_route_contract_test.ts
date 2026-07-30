@@ -14,8 +14,9 @@
 // The permission slug for each route was read directly from the handler's
 // `requirePermission(claims, "…")` call (never guessed). Read routes gate on
 // viewFinance, write routes on manageFinance, refund approve/reject on
-// approveRefunds, intelligence on viewFinanceIntelligence / executive, and
-// inventory-reconciliation on viewFinance.
+// approveRefunds, intelligence on viewFinanceIntelligence / executive.
+// (ICA-F6: the inventory-reconciliation reads moved to routeInventoryFinance;
+// their contract now lives in the inventory_finance route-contract test.)
 //
 // What this does NOT prove (live/RLS remainder, covered by the live cert):
 // real 200 payloads, persisted rows, and per-tenant row isolation.
@@ -94,13 +95,12 @@ const routes: RouteCase[] = [
   { method: "GET", path: "/finance/intelligence/executive", holder: ["viewFinanceIntelligence"], other: ["viewFinance"] },
   // FIN-9: head-wise dues analytics (read → viewFinance)
   { method: "GET", path: "/finance/analytics/head-wise-dues", holder: ["viewFinance"], other: ["viewInventory"] },
-  // inventory-reconciliation (gate: viewFinance)
-  { method: "GET", path: "/finance/inventory-reconciliation/dashboard", holder: ["viewFinance"], other: ["viewInventory"] },
-  { method: "GET", path: "/finance/inventory-reconciliation/timeline", holder: ["viewFinance"], other: ["viewInventory"] },
-  { method: "GET", path: "/finance/inventory-reconciliation/goods-receipts", holder: ["viewFinance"], other: ["viewInventory"] },
-  { method: "GET", path: "/finance/inventory-reconciliation/postings", holder: ["viewFinance"], other: ["viewInventory"] },
-  { method: "GET", path: `/finance/inventory-reconciliation/goods-receipts/${ID}`, holder: ["viewFinance"], other: ["viewInventory"] },
-  { method: "GET", path: `/finance/inventory-reconciliation/vendors/${ID}/transactions`, holder: ["viewFinance"], other: ["viewInventory"] },
+  // ICA-F6: the /finance/inventory-reconciliation/* reads moved out of routeFinance
+  // into the unified inventory_finance router; their route/RBAC contract now lives
+  // in inventory_finance/inventory_finance_route_contract_test.ts (dispatched
+  // through routeInventoryFinance). routeFinance no longer owns them (it now 404s
+  // them in isolation — they resolve in production because routeInventoryFinance is
+  // matched before routeFinance in the api/app.ts scan).
   // fee structures
   { method: "GET", path: "/finance/fee-structures", holder: ["viewFinance"], other: ["viewInventory"] },
   { method: "POST", path: "/finance/fee-structures", holder: ["manageFinance"], other: ["viewFinance"] },
@@ -206,12 +206,9 @@ Deno.test("QA-B-013: every registered finance route resolves to a handler and en
   }
 });
 
-Deno.test("QA-B-013: an unregistered finance path returns 404 NOT_FOUND", async () => {
+Deno.test("QA-B-013: an unregistered finance path returns null (central dispatcher 404s)", async () => {
   const res = await call("GET", "/finance/not-a-real-route", ["viewFinance", "manageFinance"]);
-  assertEquals(res?.status, 404);
-  const env = await res!.json();
-  assertEquals(env.error.code, "NOT_FOUND");
-  assertEquals(env.data, null);
+  assertEquals(res, null);
 });
 
 Deno.test("QA-B-013: a non-finance prefix is not owned by the finance router (returns null)", async () => {
@@ -310,4 +307,29 @@ Deno.test("QA-B-016: GET /finance/settings is readable by a viewFinance holder (
   assertEquals(ok?.status, 503);
   const denied = await call("GET", "/finance/settings", ["viewInventory"]);
   assertEquals(denied?.status, 403);
+});
+
+// ── ICA-F8: legacy (non-UUID) id segments still route to their handler ─────────
+// `routeFinance` previously ran a no-op `for (const arg of match.args)` loop that
+// tested `!UUID_SEGMENT.test(arg)` but did nothing in its body — dead code that
+// merely *looked* like it validated/allowed legacy ids. It was deleted. This is
+// the behavioural guard that the deletion changed nothing: the id-segment routes
+// use `([^/]+)` (never a UUID-constrained pattern), so a non-UUID legacy id like
+// `legacy-mock-0001` (contains "-", is not a UUID) must still resolve to its
+// handler and reach the permission gate — holder → 503, non-holder → 403 — never
+// a 404/route-miss from any id-shape rejection.
+Deno.test("ICA-F8: a finance route with a non-UUID legacy id segment still routes to its handler (no dead-loop id gating)", async () => {
+  const legacyId = "legacy-mock-0001";
+  const holder = await call("GET", `/finance/receipts/${legacyId}`, ["viewFinance"]);
+  assertEquals(
+    holder?.status,
+    503,
+    `legacy id should route + pass the gate (503), got ${holder?.status}`,
+  );
+  const denied = await call("GET", `/finance/receipts/${legacyId}`, ["viewInventory"]);
+  assertEquals(
+    denied?.status,
+    403,
+    `legacy id should still reach the gate and be denied (403), got ${denied?.status}`,
+  );
 });

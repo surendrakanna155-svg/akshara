@@ -27,4 +27,16 @@ abstract class StudentRepository {
     required RepositoryQuery query,
     required StudentHomeworkSubmitRequest request,
   });
+
+  /// PRA-P1-30 — submit with a REAL uploaded attachment: presign → PUT [bytes] →
+  /// submit with the resulting storage_path. Replaces the old label-only
+  /// attachment (which stored no file). The API impl performs the upload; the
+  /// mock persists metadata.
+  Future<StudentHomeworkItem> submitHomeworkFile({
+    required RepositoryQuery query,
+    required StudentHomeworkSubmitRequest request,
+    required String fileName,
+    required List<int> bytes,
+    required String contentType,
+  });
 }

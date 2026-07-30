@@ -7,7 +7,7 @@ class MockMultiSchoolOperationsRepository
   final List<SchoolLifecycleRecord> _schools = [
     SchoolLifecycleRecord(
       schoolId: 'sch_101',
-      schoolName: 'Akshara Green Valley',
+      schoolName: 'NIKSHA Green Valley',
       status: SchoolLifecycleStatus.active,
       planName: 'Enterprise',
       region: 'Bengaluru',
@@ -23,7 +23,7 @@ class MockMultiSchoolOperationsRepository
     ),
     SchoolLifecycleRecord(
       schoolId: 'sch_102',
-      schoolName: 'Akshara City Central',
+      schoolName: 'NIKSHA City Central',
       status: SchoolLifecycleStatus.trial,
       planName: 'Growth',
       region: 'Hyderabad',
@@ -39,7 +39,7 @@ class MockMultiSchoolOperationsRepository
     ),
     SchoolLifecycleRecord(
       schoolId: 'sch_103',
-      schoolName: 'Akshara Horizon Campus',
+      schoolName: 'NIKSHA Horizon Campus',
       status: SchoolLifecycleStatus.churnRisk,
       planName: 'Growth',
       region: 'Chennai',
@@ -59,10 +59,10 @@ class MockMultiSchoolOperationsRepository
     PortfolioAlert(
       id: 'msa_alert_1',
       title: 'Activation lag',
-      message: 'Parent app activation below 30% for Akshara City Central.',
+      message: 'Parent app activation below 30% for NIKSHA City Central.',
       severity: 'medium',
       schoolId: 'sch_102',
-      schoolName: 'Akshara City Central',
+      schoolName: 'NIKSHA City Central',
       createdAt: DateTime(2026, 6, 14, 9, 0),
     ),
     PortfolioAlert(
@@ -71,7 +71,7 @@ class MockMultiSchoolOperationsRepository
       message: 'Usage and engagement trends indicate churn risk.',
       severity: 'high',
       schoolId: 'sch_103',
-      schoolName: 'Akshara Horizon Campus',
+      schoolName: 'NIKSHA Horizon Campus',
       createdAt: DateTime(2026, 6, 14, 9, 30),
     ),
   ];
@@ -80,9 +80,9 @@ class MockMultiSchoolOperationsRepository
     PortfolioAction(
       id: 'msa_action_1',
       title: 'Schedule executive review',
-      description: 'Book QBR with Akshara Horizon Campus leadership.',
+      description: 'Book QBR with NIKSHA Horizon Campus leadership.',
       schoolId: 'sch_103',
-      schoolName: 'Akshara Horizon Campus',
+      schoolName: 'NIKSHA Horizon Campus',
       dueAt: DateTime(2026, 6, 20),
     ),
     PortfolioAction(
@@ -90,7 +90,7 @@ class MockMultiSchoolOperationsRepository
       title: 'Complete onboarding checklist',
       description: 'Finalize integrations and role setup.',
       schoolId: 'sch_102',
-      schoolName: 'Akshara City Central',
+      schoolName: 'NIKSHA City Central',
       dueAt: DateTime(2026, 6, 18),
     ),
   ];

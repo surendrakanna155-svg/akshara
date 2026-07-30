@@ -30,7 +30,7 @@ Writes are additive pilot records; they neither delete nor corrupt prior data.
 """
 import json, os, subprocess, time, urllib.request, urllib.error
 
-BASE = "https://akshara.veloraunisexsalon.com"
+BASE = os.environ.get("API_BASE_URL", "https://api.nikshaos.in")
 ADMIN = "+919876543210"
 ORG = "a1000000-0000-4000-8000-000000000001"
 USER = "a3000000-0000-4000-8000-000000000001"

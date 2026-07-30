@@ -125,7 +125,7 @@ for (
         date_of_birth: "2014-05-02",
         blood_group: "O+",
       },
-      schoolName: "Akshara Public School",
+      schoolName: "NIKSHA Public School",
       guardians: [
         { name: "Rao Kumar", relation: "father", phone: "9800000000", email: "rao@example.com" },
       ],
@@ -171,7 +171,7 @@ Deno.test("buildDefaultStudentSnapshot(snapshot_dashboard): matches student_mapp
     admissionNo: "ADM-0001",
     dateOfBirth: "2012-01-01",
     bloodGroup: "B+",
-    schoolName: "Akshara Public School",
+    schoolName: "NIKSHA Public School",
     parentContacts: [],
   };
   const snapshot = buildDefaultStudentSnapshot("snapshot_dashboard", context);
@@ -267,7 +267,7 @@ Deno.test("buildDefaultStudentSnapshot(snapshot_profile): fixes the seed-contrac
     admissionNo: "ADM-0001",
     dateOfBirth: "2012-01-01",
     bloodGroup: "B+",
-    schoolName: "Akshara Public School",
+    schoolName: "NIKSHA Public School",
     parentContacts: [
       { name: "Suresh Kumar", relation: "father", phoneLabel: "9800000000", email: "" },
     ],
@@ -281,7 +281,7 @@ Deno.test("buildDefaultStudentSnapshot(snapshot_profile): fixes the seed-contrac
   assertEquals(snapshot.admissionNo, "ADM-0001");
   assertEquals(snapshot.dateOfBirth, "2012-01-01");
   assertEquals(snapshot.bloodGroup, "B+");
-  assertEquals(snapshot.schoolName, "Akshara Public School");
+  assertEquals(snapshot.schoolName, "NIKSHA Public School");
   assertEquals(Array.isArray(snapshot.parentContacts), true);
   assertEquals((snapshot.parentContacts as unknown[]).length, 1);
   assertEquals(Array.isArray(snapshot.academicSummary), true);
@@ -300,7 +300,7 @@ Deno.test("loadStudentSnapshotContext: resolves real name/class/roll-number from
       date_of_birth: "2014-05-02",
       blood_group: "O+",
     },
-    schoolName: "Akshara Public School",
+    schoolName: "NIKSHA Public School",
     guardians: [
       { name: "Rao Kumar", relation: "father", phone: "9800000000", email: "rao@example.com" },
     ],
@@ -314,7 +314,7 @@ Deno.test("loadStudentSnapshotContext: resolves real name/class/roll-number from
   assertEquals(context.admissionNo, "ADM-0099");
   assertEquals(context.dateOfBirth, "2014-05-02");
   assertEquals(context.bloodGroup, "O+");
-  assertEquals(context.schoolName, "Akshara Public School");
+  assertEquals(context.schoolName, "NIKSHA Public School");
   assertEquals(context.parentContacts.length, 1);
   assertEquals(context.parentContacts[0]!.name, "Rao Kumar");
 });

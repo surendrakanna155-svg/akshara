@@ -33,7 +33,7 @@ Writes are additive pilot records; they neither delete nor corrupt prior data.
 """
 import json, os, subprocess, time, urllib.request, urllib.error
 
-BASE = "https://akshara.veloraunisexsalon.com"
+BASE = os.environ.get("API_BASE_URL", "https://api.nikshaos.in")
 ADMIN = "+919876543210"
 ORG = "a1000000-0000-4000-8000-000000000001"
 USER = "a3000000-0000-4000-8000-000000000001"
@@ -241,7 +241,7 @@ s, b = http("POST", "/library/issues", token=admin,
 rec("MJ-H21 issue REJECTS a non-existent member (no phantom loan)", s in (400, 404, 422),
     f"HTTP {s} (expect 4xx)")
 # Digital resource now stores a real, retrievable URL (vs metadata-only).
-rurl = "https://akshara.veloraunisexsalon.com/health"
+rurl = "https://api.nikshaos.in/health"
 s, b = http("POST", "/library/digital-resources", token=admin,
             body={"title": f"Cert Resource {TS}", "type": "pdf", "resourceUrl": rurl})
 rec("MJ-H21 POST /library/digital-resources stores a real URL",

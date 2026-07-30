@@ -101,6 +101,16 @@ class ParentMapper {
     );
   }
 
+  /// Honest-state contract for money fields.
+  ///
+  /// [ParentFeesData] carries non-nullable `int`s, so an ABSENT amount (no fee
+  /// structure published for this student yet) is indistinguishable from a
+  /// measured zero at this layer — both arrive as `0`. The presentation layer
+  /// therefore treats `annualAmount <= 0` as "no published fee structure" and
+  /// suppresses the derived collection percentage (a percentage against a zero
+  /// denominator is undefined, not 0%) — see `FeeSummaryHero` /
+  /// `FeeCollectionProgress`. Do NOT synthesize a `progressPercent` here from
+  /// paid/annual: the backend owns that arithmetic.
   ParentFeesData toFees(ParentFeesResponseDto dto) {
     final raw = dto.raw;
     return ParentFeesData(
@@ -135,7 +145,7 @@ class ParentMapper {
       childClass: raw['childClass'] as String? ?? '',
       category: raw['category'] as String? ?? '',
       lineItems: _mapReceiptLineItems(raw['lineItems'] as List<dynamic>? ?? const []),
-      schoolName: raw['schoolName'] as String? ?? 'Akshara Public School',
+      schoolName: raw['schoolName'] as String? ?? 'NIKSHA Public School',
     );
   }
 
@@ -144,7 +154,7 @@ class ParentMapper {
     final psid = raw['publicStudentId'] as String?;
     final admission = raw['admissionNumber'] as String?;
     return FeeCertificateData(
-      schoolName: raw['schoolName'] as String? ?? 'Akshara Public School',
+      schoolName: raw['schoolName'] as String? ?? 'NIKSHA Public School',
       guardianName: raw['guardianName'] as String? ?? '',
       studentName: raw['studentName'] as String? ?? 'Student',
       publicStudentId: (psid == null || psid.isEmpty) ? null : psid,
@@ -310,8 +320,21 @@ class ParentMapper {
           DashboardStatusChip(
             label: item['label'] as String? ?? '',
             tone: ParentEnumCodec.parseDashboardChipTone(item['tone'] as String?),
+            // Typed when the server sends it; otherwise classified once, here,
+            // rather than sniffed at every render site.
+            kind: _chipKind(item),
           ),
     ];
+  }
+
+  DashboardChipKind _chipKind(Map<String, dynamic> item) {
+    final raw = (item['kind'] ?? item['id']) as String?;
+    if (raw != null) {
+      for (final kind in DashboardChipKind.values) {
+        if (kind.name == raw) return kind;
+      }
+    }
+    return classifyDashboardChip(item['label'] as String? ?? '');
   }
 
   List<DashboardQuickAction> _mapQuickActions(List<dynamic> items) {

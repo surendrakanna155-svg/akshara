@@ -66,17 +66,16 @@ Deno.test("management router still matches GET /management/settings", async () =
   assertEquals(response!.status, 401);
 });
 
-Deno.test("management router 404s an unsupported method on /management/settings", async () => {
+Deno.test("management router returns null for an unsupported method on /management/settings (central dispatcher 404s)", async () => {
   const response = await routeManagement(
     mockRequest("DELETE", "/management/settings"),
     config,
     "DELETE",
     "/management/settings",
   );
-  // Path is under /management so routeManagement returns a 404 envelope (not
-  // null) for a method/route it does not recognise.
-  assertEquals(response != null, true);
-  assertEquals(response!.status, 404);
+  // Path is under /management but the method/route is not recognised, so the
+  // router returns null and the central dispatcher owns the route-level 404.
+  assertEquals(response, null);
 });
 
 Deno.test("management router returns null for unrelated paths", async () => {

@@ -36,7 +36,7 @@ final operationsActionsProvider = FutureProvider<List<OperationsActionItem>>((re
 final setupWizardProvider = FutureProvider<SetupWizardSession>((ref) async {
   return ref.read(evolutionRepositoryProvider).createSetupWizard(
         query: ref.watch(evolutionQueryProvider),
-        inputs: const {'schoolName': 'Akshara Demo School', 'studentCount': 200, 'teacherCount': 12},
+        inputs: const {'schoolName': 'NIKSHA Demo School', 'studentCount': 200, 'teacherCount': 12},
       );
 });
 

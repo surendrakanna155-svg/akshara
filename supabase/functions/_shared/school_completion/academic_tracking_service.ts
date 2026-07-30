@@ -76,14 +76,54 @@ export async function completeTopic(
   }
 }
 
+/** A syllabus topic row as needed to compute the teacher progress dashboard. */
+export interface ProgressTopicRow {
+  id: string;
+  status: string;
+  topic_name: string;
+  class_name: string;
+  subject_id: string;
+  created_at: string;
+}
+
+/**
+ * Days a topic has been outstanding, measured from when it entered the
+ * syllabus (`created_at`) to `now`. This is the best real signal available —
+ * there is no separate "expected completion date" column — and replaces the
+ * previous hardcoded `daysPending: 7` constant (P1 fix, cap 65).
+ */
+export function computeDaysPending(createdAt: string, now: Date = new Date()): number {
+  const created = new Date(createdAt);
+  const diffMs = now.getTime() - created.getTime();
+  return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+}
+
+/** Pure, DB-free builder for the teacher's pending-topic alert list. */
+export function buildPendingAlerts(
+  topics: ProgressTopicRow[],
+  completedIds: Set<string>,
+  now: Date = new Date(),
+): PendingSyllabusAlert[] {
+  return topics
+    .filter((t) => !completedIds.has(t.id) && t.status !== "completed")
+    .slice(0, 10)
+    .map((t) => ({
+      className: t.class_name,
+      subjectId: t.subject_id,
+      chapterName: null,
+      topicName: t.topic_name,
+      daysPending: computeDaysPending(t.created_at, now),
+    }));
+}
+
 export async function buildTeacherProgressDashboard(
   db: TenantQueryClient,
   orgId: string,
   schoolId: string,
   teacherUserId: string,
 ): Promise<TeacherProgressDashboard> {
-  const topics = await db.queryObject<{ id: string; status: string; topic_name: string; class_name: string; subject_id: string }>(
-    `SELECT t.id, t.status, t.topic_name, t.class_name, t.subject_id
+  const topics = await db.queryObject<ProgressTopicRow>(
+    `SELECT t.id, t.status, t.topic_name, t.class_name, t.subject_id, t.created_at
      FROM syllabus_topics t
      WHERE t.organization_id = $1 AND t.school_id = $2`,
     [orgId, schoolId],
@@ -105,16 +145,7 @@ export async function buildTeacherProgressDashboard(
   const topicsPending = topics.length - topicsCompleted;
   const chaptersCompleted = chapters.filter((c) => c.status === "completed").length;
 
-  const pendingAlerts: PendingSyllabusAlert[] = topics
-    .filter((t) => !completedIds.has(t.id) && t.status !== "completed")
-    .slice(0, 10)
-    .map((t) => ({
-      className: t.class_name,
-      subjectId: t.subject_id,
-      chapterName: null,
-      topicName: t.topic_name,
-      daysPending: 7,
-    }));
+  const pendingAlerts = buildPendingAlerts(topics, completedIds);
 
   const coveragePercent = topics.length > 0
     ? Math.round((topicsCompleted / topics.length) * 100)

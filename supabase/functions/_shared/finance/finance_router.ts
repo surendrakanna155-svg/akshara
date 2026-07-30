@@ -21,11 +21,13 @@ import {
 import { handleStudentLedger } from "./finance_ledger_handlers.ts";
 import {
   handleAssignFeePlan,
+  handleBulkAssignFeeStructures,
   handleCancelFeeAssignment,
   handleCreateFeeAssignment,
   handleGetFeeAssignment,
   handleGetStudentAccount,
   handleListFeeAssignments,
+  handleListStudentAccounts,
 } from "./finance_assignments_handlers.ts";
 import {
   handleArchiveFeeStructure,
@@ -47,14 +49,8 @@ import {
 } from "./finance_intelligence_handlers.ts";
 import { handleListInvoiceInstallments } from "./finance_installments_handlers.ts";
 import { handleHeadWiseDues } from "./finance_analytics_handlers.ts";
-import {
-  handleGetGoodsReceipt,
-  handleInventoryFinanceTimeline,
-  handleListGoodsReceipts,
-  handleListInventoryFinancePostings,
-  handleReconciliationDashboard,
-  handleVendorTransactions,
-} from "../inventory_finance/inventory_finance_reconciliation_handlers.ts";
+// ICA-F6: the /finance/inventory-reconciliation/* reads moved to the unified
+// inventory_finance router (routeInventoryFinance, registered in api/app.ts).
 import {
   handleApproveRefund,
   handleCreateRefund,
@@ -63,6 +59,7 @@ import {
   handleRejectRefund,
 } from "./finance_refunds_handlers.ts";
 import {
+  handleApplyDiscountRule,
   handleCreateDiscountRule,
   handleDiscountsDashboard,
   handleUpdateDiscountRule,
@@ -92,10 +89,16 @@ import {
 } from "./finance_recovery_handlers.ts";
 import { handleFinanceReports } from "./finance_reports_handlers.ts";
 import {
+  handleGetTallyLedgerMap,
+  handleTallyExport,
+  handleUpsertTallyLedgerMap,
+} from "./finance_tally_handlers.ts";
+import {
   handleGetSettings,
   handleUpdateSettings,
 } from "./finance_settings_handlers.ts";
 import {
+  handleAwardScholarship,
   handleCreateScholarship,
   handleUpdateScholarship,
 } from "./finance_scholarships_handlers.ts";
@@ -107,9 +110,6 @@ import {
   handleRejectFeeReduction,
   handleReverseFeeReduction,
 } from "./finance_fee_reductions_handlers.ts";
-
-const UUID_SEGMENT =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function matchFinanceRoute(
   method: string,
@@ -131,32 +131,9 @@ export function matchFinanceRoute(
     return { handler: handleHeadWiseDues, args: [] };
   }
 
-  if (path === "/finance/inventory-reconciliation/dashboard" && method === "GET") {
-    return { handler: handleReconciliationDashboard, args: [] };
-  }
-  if (path === "/finance/inventory-reconciliation/timeline" && method === "GET") {
-    return { handler: handleInventoryFinanceTimeline, args: [] };
-  }
-  if (path === "/finance/inventory-reconciliation/goods-receipts" && method === "GET") {
-    return { handler: handleListGoodsReceipts, args: [] };
-  }
-  if (path === "/finance/inventory-reconciliation/postings" && method === "GET") {
-    return { handler: handleListInventoryFinancePostings, args: [] };
-  }
-
-  const goodsReceiptMatch = path.match(
-    /^\/finance\/inventory-reconciliation\/goods-receipts\/([^/]+)$/,
-  );
-  if (goodsReceiptMatch && method === "GET") {
-    return { handler: handleGetGoodsReceipt, args: [goodsReceiptMatch[1]!] };
-  }
-
-  const vendorTxMatch = path.match(
-    /^\/finance\/inventory-reconciliation\/vendors\/([^/]+)\/transactions$/,
-  );
-  if (vendorTxMatch && method === "GET") {
-    return { handler: handleVendorTransactions, args: [vendorTxMatch[1]!] };
-  }
+  // ICA-F6: /finance/inventory-reconciliation/* reads are now owned by the unified
+  // inventory_finance router (routeInventoryFinance), matched BEFORE routeFinance
+  // in api/app.ts so they resolve there rather than falling through to this 404.
 
   if (path === "/finance/fee-structures" && method === "GET") {
     return { handler: handleListFeeStructures, args: [] };
@@ -187,6 +164,12 @@ export function matchFinanceRoute(
   if (path === "/finance/fee-assignments" && method === "POST") {
     return { handler: handleCreateFeeAssignment, args: [] };
   }
+
+  // PRC-A gap fix: bulk/class-wide assignment — a literal path checked BEFORE
+  // the /fee-assignments/:id regexes below so "bulk" is never treated as an id.
+  if (path === "/finance/fee-assignments/bulk" && method === "POST") {
+    return { handler: handleBulkAssignFeeStructures, args: [] };
+  }
   if (path === "/finance/fee-assignment/assign" && method === "POST") {
     return { handler: handleAssignFeePlan, args: [] };
   }
@@ -208,6 +191,12 @@ export function matchFinanceRoute(
   );
   if (studentLedgerMatch && method === "GET") {
     return { handler: handleStudentLedger, args: [studentLedgerMatch[1]!] };
+  }
+
+  // WEB-007: LIST is the bare collection path — registered BEFORE the /{id}
+  // regex so the single-segment matcher can't swallow it.
+  if (path === "/finance/student-accounts" && method === "GET") {
+    return { handler: handleListStudentAccounts, args: [] };
   }
 
   const studentAccountMatch = path.match(/^\/finance\/student-accounts\/([^/]+)$/);
@@ -311,6 +300,13 @@ export function matchFinanceRoute(
     return { handler: handleCreateDiscountRule, args: [] };
   }
 
+  // PRA-P1-10 (S1): apply an approved rule to a student's invoice → emits a
+  // guarded (maker-checker) fee-reduction; approval is what reduces the payable.
+  const applyDiscountMatch = path.match(/^\/finance\/discounts\/([^/]+)\/apply$/);
+  if (applyDiscountMatch && method === "POST") {
+    return { handler: handleApplyDiscountRule, args: [applyDiscountMatch[1]!] };
+  }
+
   const discountMatch = path.match(/^\/finance\/discounts\/([^/]+)$/);
   if (discountMatch && method === "PUT") {
     return { handler: handleUpdateDiscountRule, args: [discountMatch[1]!] };
@@ -409,6 +405,16 @@ export function matchFinanceRoute(
   if (path === "/finance/reports" && method === "GET") {
     return { handler: handleFinanceReports, args: [] };
   }
+  // Batch 7: Tally accounting export (owner-idea 11).
+  if (path === "/finance/reports/tally-export" && method === "GET") {
+    return { handler: handleTallyExport, args: [] };
+  }
+  if (path === "/finance/tally-ledger-map" && method === "GET") {
+    return { handler: handleGetTallyLedgerMap, args: [] };
+  }
+  if (path === "/finance/tally-ledger-map" && method === "PUT") {
+    return { handler: handleUpsertTallyLedgerMap, args: [] };
+  }
   if (path === "/finance/settings" && method === "GET") {
     return { handler: handleGetSettings, args: [] };
   }
@@ -420,6 +426,13 @@ export function matchFinanceRoute(
   if (path === "/finance/scholarships" && method === "POST") {
     return { handler: handleCreateScholarship, args: [] };
   }
+  // PRA-P1-10 (S1): award an active scholarship to a student's invoice → emits a
+  // guarded (maker-checker) fee-reduction; approval is what reduces the payable.
+  const awardScholarshipMatch = path.match(/^\/finance\/scholarships\/([^/]+)\/award$/);
+  if (awardScholarshipMatch && method === "POST") {
+    return { handler: handleAwardScholarship, args: [awardScholarshipMatch[1]!] };
+  }
+
   const scholarshipMatch = path.match(/^\/finance\/scholarships\/([^/]+)$/);
   if (scholarshipMatch && method === "PUT") {
     return { handler: handleUpdateScholarship, args: [scholarshipMatch[1]!] };
@@ -463,13 +476,7 @@ export async function routeFinance(
 
   const match = matchFinanceRoute(method, path);
   if (!match) {
-    return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
-  }
-
-  for (const arg of match.args) {
-    if (arg.includes("-") && !UUID_SEGMENT.test(arg)) {
-      // Allow non-UUID legacy mock ids in path for compatibility
-    }
+    return null;
   }
 
   return await match.handler(req, config, ...match.args);

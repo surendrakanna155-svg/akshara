@@ -72,20 +72,46 @@ void main() {
       );
     });
 
-    test('generic role-dashboard entries stay visible to everyone', () {
-      // Parent/teacher/student dashboards carry no requiredPermission.
-      final results = GlobalSearchRegistry.search(
+    // P1-7 (2026-07-28) — replaces 'generic role-dashboard entries stay visible
+    // to everyone'. The Parent/Teacher/Student Dashboard entries were the only
+    // ones with no requiredPermission, so isVisibleTo() showed them to every
+    // staff user of this sheet — but the sheet only renders inside the admin
+    // ERP shell, and the persona shells are closed to staff by ROLE (not by
+    // permission). Tapping bounced the user to /admin AND wrote the dead route
+    // into Recents, so it resurfaced at the top of the sheet forever. They were
+    // removed: no permission can express "holds ErpRole.teacher", and a tile
+    // that silently bounces is worse than no tile.
+    test('no search entry is an unreachable persona-shell destination', () {
+      final everything = GlobalSearchRegistry.search(
         '',
         hasPermission: granting(const {}),
       );
-      expect(
-        results.any((e) => e.route == RouteNames.parentDashboard),
-        isTrue,
-      );
-      expect(
-        results.any((e) => e.route == RouteNames.teacherDashboard),
-        isTrue,
-      );
+      for (final route in const [
+        RouteNames.parentDashboard,
+        RouteNames.teacherDashboard,
+        RouteNames.studentDashboard,
+      ]) {
+        expect(
+          everything.any((e) => e.route == route),
+          isFalse,
+          reason: '$route cannot be entered from the admin shell — offering it '
+              'in global search is a guaranteed dead link',
+        );
+      }
+    });
+
+    test('every search entry declares the permission that guards it', () {
+      // With the persona dashboards gone, EVERY remaining entry must carry a
+      // requiredPermission — otherwise it is visible to staff who cannot open
+      // it. (The stronger parity assertion lives in the test below.)
+      for (final entry in GlobalSearchRegistry.entries) {
+        expect(
+          entry.requiredPermission,
+          isNotNull,
+          reason: 'search entry "${entry.label}" (${entry.route}) has no '
+              'requiredPermission, so it is offered to every staff user',
+        );
+      }
     });
 
     test('disabling a module hides its entries from search (gap G6)', () {

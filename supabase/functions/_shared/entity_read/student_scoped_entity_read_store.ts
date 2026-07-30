@@ -1,6 +1,9 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
 import {
   clampPageSize,
+  keysetPageOf,
+  type KeysetParams,
+  type KeysetResult,
   offsetFor,
   type PaginationParams,
   type PaginationResult,
@@ -25,6 +28,15 @@ export interface StudentScopedEntityReadStore {
     entityType: string,
     pagination: PaginationParams,
   ) => Promise<PaginationResult<Record<string, unknown>>>;
+  // ICA-C7: keyset (cursor) alternative to listEntities — O(pageSize) at any depth.
+  listEntitiesKeyset: (
+    db: TenantQueryClient,
+    organizationId: string,
+    schoolId: string,
+    studentId: string,
+    entityType: string,
+    params: KeysetParams,
+  ) => Promise<KeysetResult<Record<string, unknown>>>;
   getEntity: (
     db: TenantQueryClient,
     organizationId: string,
@@ -125,6 +137,40 @@ export function createStudentScopedEntityReadStore(
     };
   }
 
+  // ICA-C7: keyset pagination on the `id` order (no COUNT, no OFFSET scan).
+  async function listEntitiesKeyset(
+    db: TenantQueryClient,
+    organizationId: string,
+    schoolId: string,
+    studentId: string,
+    entityType: string,
+    params: KeysetParams,
+  ): Promise<KeysetResult<Record<string, unknown>>> {
+    const pageSize = clampPageSize(params.pageSize);
+    const cursor = params.cursor ?? null;
+
+    const rows = await db.queryObject<{ id: string; payload: Record<string, unknown> }>(
+      `SELECT id, payload
+       FROM ${tableName}
+       WHERE organization_id = $1
+         AND school_id = $2
+         AND student_id = $3
+         AND entity_type = $4
+         AND ($5::text IS NULL OR id > $5)
+       ORDER BY id
+       LIMIT $6`,
+      [organizationId, schoolId, studentId, entityType, cursor, pageSize + 1],
+    );
+
+    const { rows: pageRows, nextCursor, hasMore } = keysetPageOf(rows, pageSize, (r) => r.id);
+    return {
+      items: pageRows.map((row) => row.payload),
+      pageSize,
+      nextCursor,
+      hasMore,
+    };
+  }
+
   async function getEntity(
     db: TenantQueryClient,
     organizationId: string,
@@ -164,6 +210,7 @@ export function createStudentScopedEntityReadStore(
     moduleLabel,
     getSnapshot,
     listEntities,
+    listEntitiesKeyset,
     getEntity,
     SnapshotNotFoundError,
     EntityNotFoundError,

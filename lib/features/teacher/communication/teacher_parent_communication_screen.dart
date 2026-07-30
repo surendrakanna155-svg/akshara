@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/communication/parent_communication_models.dart';
 import '../../../core/communication/teacher_parent_templates.dart';
+import '../../../core/errors/error_text.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -21,244 +22,293 @@ class TeacherParentCommunicationScreen extends ConsumerWidget {
     final reason = ref.watch(teacherCommunicationReasonProvider);
     final tone = ref.watch(teacherCommunicationToneProvider);
     final channels = ref.watch(teacherCommunicationChannelsProvider);
-    final translation = ref.watch(teacherCommunicationTranslationPreviewProvider);
+    final translation =
+        ref.watch(teacherCommunicationTranslationPreviewProvider);
     final sendState = ref.watch(sendTeacherParentCommunicationProvider);
     final canSend = ref.watch(teacherCanSendParentCommunicationProvider);
     final teachingContext = ref.watch(resolvedTeacherTeachingContextProvider);
-    final pendingConcerns = ref.watch(pendingSubjectConcernsProvider).valueOrNull ??
-        const [];
+    final pendingConcerns =
+        ref.watch(pendingSubjectConcernsProvider).valueOrNull ?? const [];
 
     return Scaffold(
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: canSend ? 'Parent communication' : 'Flag concern',
         subtitle: canSend
             ? 'Class teacher · ${teachingContext.classTeacherClassLabel ?? ''}'
             : '${teachingContext.primarySubject} teacher',
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(AksharaSpacing.s4),
-        children: [
-          if (!canSend)
-            const AksharaWarningBanner(
-              message:
-                  'Subject teachers escalate concerns to the class teacher. Parents are contacted only after class teacher review.',
-              actionLabel: '',
-              compactMessage: true,
-            ),
-          if (!canSend) const SizedBox(height: AksharaSpacing.s3),
-          if (canSend && pendingConcerns.isNotEmpty) ...[
-            const AksharaSectionHeader(title: 'Pending subject teacher flags'),
-            for (final concern in pendingConcerns)
-              Card(
-                child: ListTile(
-                  title: Text('${concern.studentName} · ${concern.subject}'),
-                  subtitle: Text(concern.observation),
-                  trailing: FilledButton(
-                    onPressed: () {
-                      ref
-                          .read(teacherCommunicationSelectedStudentProvider
-                              .notifier)
-                          .state = concern.sisStudentId;
-                      ref
-                          .read(teacherCommunicationReasonProvider.notifier)
-                          .state = concern.category.suggestedReason;
-                      ref
-                          .read(teacherCommunicationSourceConcernProvider
-                              .notifier)
-                          .state = concern.id;
-                    },
-                    child: const Text('Review'),
+      // DS V2 P4 — premium persona canvas behind the communication workflow.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: ListView(
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
+          children: [
+            if (!canSend)
+              const AksharaWarningBanner(
+                message:
+                    'Subject teachers escalate concerns to the class teacher. Parents are contacted only after class teacher review.',
+                actionLabel: '',
+                compactMessage: true,
+              ),
+            if (!canSend) const SizedBox(height: AksharaSpacing.s3),
+            if (canSend && pendingConcerns.isNotEmpty) ...[
+              const AksharaSectionHeader(
+                  title: 'Pending subject teacher flags'),
+              for (final concern in pendingConcerns)
+                Card(
+                  child: ListTile(
+                    title: Text('${concern.studentName} · ${concern.subject}'),
+                    subtitle: Text(concern.observation),
+                    trailing: FilledButton(
+                      onPressed: () {
+                        ref
+                            .read(teacherCommunicationSelectedStudentProvider
+                                .notifier)
+                            .state = concern.sisStudentId;
+                        ref
+                            .read(teacherCommunicationReasonProvider.notifier)
+                            .state = concern.category.suggestedReason;
+                        ref
+                            .read(teacherCommunicationSourceConcernProvider
+                                .notifier)
+                            .state = concern.id;
+                      },
+                      child: const Text('Review'),
+                    ),
                   ),
                 ),
-              ),
-            const SizedBox(height: AksharaSpacing.s3),
-          ],
-          const AksharaSectionHeader(title: '1. Select student'),
-          const SizedBox(height: AksharaSpacing.s2),
-          DropdownButtonFormField<String>(
-            initialValue: selectedId,
-            decoration: const InputDecoration(
-              labelText: 'Student',
-              border: OutlineInputBorder(),
-            ),
-            items: [
-              for (final student in students)
-                DropdownMenuItem(
-                  value: student.sisStudentId,
-                  child: Text('${student.studentName} · ${student.classLabel}'),
-                ),
+              const SizedBox(height: AksharaSpacing.s3),
             ],
-            onChanged: (value) => ref
-                .read(teacherCommunicationSelectedStudentProvider.notifier)
-                .state = value,
-          ),
-          const SizedBox(height: AksharaSpacing.s4),
-          const AksharaSectionHeader(title: '2. Select reason'),
-          const SizedBox(height: AksharaSpacing.s2),
-          Wrap(
-            spacing: AksharaSpacing.s2,
-            runSpacing: AksharaSpacing.s2,
-            children: [
-              for (final item in ParentCommunicationReason.values)
-                ChoiceChip(
-                  label: Text(item.label),
-                  selected: reason == item,
-                  onSelected: (_) => ref
-                      .read(teacherCommunicationReasonProvider.notifier)
-                      .state = item,
-                ),
-            ],
-          ),
-          const SizedBox(height: AksharaSpacing.s4),
-          const AksharaSectionHeader(title: '3. Template tone'),
-          const SizedBox(height: AksharaSpacing.s2),
-          _ToneSelector(reason: reason, selected: tone),
-          const SizedBox(height: AksharaSpacing.s4),
-          const AksharaSectionHeader(title: '4. Review & translate'),
-          const SizedBox(height: AksharaSpacing.s2),
-          AksharaSurfaceCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('English', style: context.aksharaText.labelMedium),
-                Text(translation.original),
-                const Divider(),
-                Text(
-                  translation.targetLanguage.displayName,
-                  style: context.aksharaText.labelMedium,
-                ),
-                Text(translation.translated),
-              ],
-            ),
-          ),
-          const SizedBox(height: AksharaSpacing.s4),
-          if (canSend) ...[
-            const AksharaSectionHeader(title: '5. Delivery channels'),
-          const SizedBox(height: AksharaSpacing.s2),
-          CheckboxListTile(
-            value: channels.contains(ParentCommunicationChannel.inApp),
-            onChanged: (checked) => _toggleChannel(
-              ref,
-              ParentCommunicationChannel.inApp,
-              checked ?? false,
-            ),
-            title: const Text('In-App (default)'),
-            subtitle: const Text('Parent notification center & inbox'),
-          ),
-          CheckboxListTile(
-            value: channels.contains(ParentCommunicationChannel.push),
-            onChanged: (checked) => _toggleChannel(
-              ref,
-              ParentCommunicationChannel.push,
-              checked ?? false,
-            ),
-            title: const Text('Push notification'),
-          ),
-          CheckboxListTile(
-            value: channels.contains(ParentCommunicationChannel.whatsApp),
-            onChanged: (checked) => _toggleChannel(
-              ref,
-              ParentCommunicationChannel.whatsApp,
-              checked ?? false,
-            ),
-            title: const Text('WhatsApp'),
-            subtitle: const Text('Opens with parent number preloaded'),
-          ),
-          const SizedBox(height: AksharaSpacing.s4),
-          OutlinedButton.icon(
-            onPressed: selectedId == null
-                ? null
-                : () => _sendCustomAi(context, ref),
-            icon: const Icon(Icons.auto_awesome_outlined),
-            label: const Text('Generate custom message (AI)'),
-          ),
-          const SizedBox(height: AksharaSpacing.s2),
-          FilledButton.icon(
-            onPressed: selectedId == null ||
-                    channels.isEmpty ||
-                    sendState.isLoading
-                ? null
-                : () => _send(ref, context),
-            icon: sendState.isLoading
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.send_outlined),
-            label: const Text('Send to parent'),
-          ),
-          if (selectedId != null) ...[
-            const SizedBox(height: AksharaSpacing.s4),
-            const AksharaSectionHeader(title: 'Delivery status'),
+            const AksharaSectionHeader(title: '1. Select student'),
             const SizedBox(height: AksharaSpacing.s2),
-            ..._timelineTiles(ref, selectedId),
-          ],
-          ] else ...[
-            const AksharaSectionHeader(title: 'Subject observation'),
-            TextField(
+            DropdownButtonFormField<String>(
+              // Long "Name · Class" labels overflowed the field by a few px at
+              // narrow widths; expand + ellipsis (matches the homework dropdown).
+              isExpanded: true,
+              initialValue: selectedId,
               decoration: const InputDecoration(
-                labelText: 'Observation for class teacher',
+                labelText: 'Student',
                 border: OutlineInputBorder(),
               ),
-              maxLines: 3,
+              items: [
+                for (final student in students)
+                  DropdownMenuItem(
+                    value: student.sisStudentId,
+                    child: Text(
+                      '${student.studentName} · ${student.classLabel}',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
               onChanged: (value) => ref
-                  .read(_subjectObservationProvider.notifier)
+                  .read(teacherCommunicationSelectedStudentProvider.notifier)
                   .state = value,
             ),
-            const SizedBox(height: AksharaSpacing.s3),
-            DropdownButtonFormField<SubjectConcernCategory>(
-              decoration: const InputDecoration(
-                labelText: 'Concern type',
-                border: OutlineInputBorder(),
-              ),
-              initialValue: ref.watch(_subjectConcernCategoryProvider),
-              items: [
-                for (final cat in SubjectConcernCategory.values)
-                  DropdownMenuItem(value: cat, child: Text(cat.label)),
+            const SizedBox(height: AksharaSpacing.s4),
+            const AksharaSectionHeader(title: '2. Select reason'),
+            const SizedBox(height: AksharaSpacing.s2),
+            Wrap(
+              spacing: AksharaSpacing.s2,
+              runSpacing: AksharaSpacing.s2,
+              children: [
+                for (final item in ParentCommunicationReason.values)
+                  ChoiceChip(
+                    label: Text(item.label),
+                    selected: reason == item,
+                    onSelected: (_) => ref
+                        .read(teacherCommunicationReasonProvider.notifier)
+                        .state = item,
+                  ),
               ],
-              onChanged: (value) {
-                if (value != null) {
-                  ref.read(_subjectConcernCategoryProvider.notifier).state =
-                      value;
-                }
-              },
             ),
             const SizedBox(height: AksharaSpacing.s4),
-            FilledButton.icon(
-              onPressed: selectedId == null
-                  ? null
-                  : () => _flagConcern(ref, context),
-              icon: const Icon(Icons.flag_outlined),
-              label: const Text('Flag for class teacher'),
+            const AksharaSectionHeader(title: '3. Template tone'),
+            const SizedBox(height: AksharaSpacing.s2),
+            _ToneSelector(reason: reason, selected: tone),
+            const SizedBox(height: AksharaSpacing.s4),
+            const AksharaSectionHeader(title: '4. Review & translate'),
+            const SizedBox(height: AksharaSpacing.s2),
+            AksharaSurfaceCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('English', style: context.aksharaText.labelMedium),
+                  Text(translation.original),
+                  const Divider(),
+                  Text(
+                    translation.targetLanguage.displayName,
+                    style: context.aksharaText.labelMedium,
+                  ),
+                  Text(translation.translated),
+                ],
+              ),
             ),
+            const SizedBox(height: AksharaSpacing.s4),
+            if (canSend) ...[
+              const AksharaSectionHeader(title: '5. Delivery channels'),
+              const SizedBox(height: AksharaSpacing.s2),
+              CheckboxListTile(
+                value: channels.contains(ParentCommunicationChannel.inApp),
+                onChanged: (checked) => _toggleChannel(
+                  ref,
+                  ParentCommunicationChannel.inApp,
+                  checked ?? false,
+                ),
+                title: const Text('In-App (default)'),
+                subtitle: const Text('Parent notification center & inbox'),
+              ),
+              CheckboxListTile(
+                value: channels.contains(ParentCommunicationChannel.push),
+                onChanged: (checked) => _toggleChannel(
+                  ref,
+                  ParentCommunicationChannel.push,
+                  checked ?? false,
+                ),
+                title: const Text('Push notification'),
+              ),
+              CheckboxListTile(
+                value: channels.contains(ParentCommunicationChannel.whatsApp),
+                onChanged: (checked) => _toggleChannel(
+                  ref,
+                  ParentCommunicationChannel.whatsApp,
+                  checked ?? false,
+                ),
+                title: const Text('WhatsApp'),
+                subtitle: const Text('Opens with parent number preloaded'),
+              ),
+              const SizedBox(height: AksharaSpacing.s4),
+              OutlinedButton.icon(
+                onPressed: selectedId == null
+                    ? null
+                    : () => _sendCustomAi(context, ref),
+                icon: const Icon(Icons.auto_awesome_outlined),
+                label: const Text('Generate custom message (AI)'),
+              ),
+              const SizedBox(height: AksharaSpacing.s2),
+              FilledButton.icon(
+                onPressed: selectedId == null ||
+                        channels.isEmpty ||
+                        sendState.isLoading
+                    ? null
+                    : () => _send(ref, context),
+                icon: sendState.isLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.send_outlined),
+                label: const Text('Send to parent'),
+              ),
+              if (selectedId != null) ...[
+                const SizedBox(height: AksharaSpacing.s4),
+                const AksharaSectionHeader(title: 'Delivery status'),
+                const SizedBox(height: AksharaSpacing.s2),
+                ..._timelineTiles(context, ref, selectedId),
+              ],
+            ] else ...[
+              const AksharaSectionHeader(title: 'Subject observation'),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Observation for class teacher',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+                onChanged: (value) => ref
+                    .read(_subjectObservationProvider.notifier)
+                    .state = value,
+              ),
+              const SizedBox(height: AksharaSpacing.s3),
+              DropdownButtonFormField<SubjectConcernCategory>(
+                decoration: const InputDecoration(
+                  labelText: 'Concern type',
+                  border: OutlineInputBorder(),
+                ),
+                initialValue: ref.watch(_subjectConcernCategoryProvider),
+                items: [
+                  for (final cat in SubjectConcernCategory.values)
+                    DropdownMenuItem(value: cat, child: Text(cat.label)),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    ref.read(_subjectConcernCategoryProvider.notifier).state =
+                        value;
+                  }
+                },
+              ),
+              const SizedBox(height: AksharaSpacing.s4),
+              FilledButton.icon(
+                onPressed: selectedId == null
+                    ? null
+                    : () => _flagConcern(ref, context),
+                icon: const Icon(Icons.flag_outlined),
+                label: const Text('Flag for class teacher'),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
 
-  List<Widget> _timelineTiles(WidgetRef ref, String selectedId) {
-    final timeline = ref.watch(studentCommunicationTimelineProvider(selectedId));
-    if (timeline.isEmpty) {
-      return [
-        const Text('No messages sent to this parent yet.'),
-      ];
-    }
-    return [
-      for (final record in timeline)
-        Card(
-          child: ListTile(
-            title: Text(record.reason.label),
-            subtitle: Text(record.deliveryStatusLabel),
-            trailing: Text(
-              record.channelsLabel,
-              style: const TextStyle(fontSize: 12),
+  List<Widget> _timelineTiles(
+    BuildContext context,
+    WidgetRef ref,
+    String selectedId,
+  ) {
+    // PRA-P0-17 (S0/T2-F): the delivery timeline is a live async read. Loading
+    // and error must stay DISTINCT from a genuinely empty timeline — telling a
+    // teacher "no messages sent yet" on a failed read invites a duplicate
+    // contact on the parent channel.
+    final text = context.aksharaText;
+    final colors = context.colors;
+    return ref.watch(studentCommunicationTimelineProvider(selectedId)).when(
+          loading: () => [
+            Text(
+              'Checking delivery status…',
+              style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
             ),
-          ),
-        ),
-    ];
+            const SizedBox(height: AksharaSpacing.s2),
+            const LinearProgressIndicator(),
+          ],
+          error: (error, _) => [
+            Text(
+              "Couldn't load delivery status. Earlier messages to this parent "
+              'may not be listed — check before sending again.',
+              style: text.bodyMedium.copyWith(color: colors.error),
+            ),
+            const SizedBox(height: AksharaSpacing.s1),
+            Text(
+              aksharaErrorMessage(error),
+              style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: () => ref.invalidate(
+                  studentCommunicationTimelineProvider(selectedId),
+                ),
+                child: const Text('Try again'),
+              ),
+            ),
+          ],
+          data: (timeline) => timeline.isEmpty
+              ? [const Text('No messages sent to this parent yet.')]
+              : [
+                  for (final record in timeline)
+                    Card(
+                      child: ListTile(
+                        title: Text(record.reason.label),
+                        subtitle: Text(record.deliveryStatusLabel),
+                        trailing: Text(
+                          record.channelsLabel,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ),
+                ],
+        );
   }
 
   void _toggleChannel(
@@ -354,8 +404,7 @@ class TeacherParentCommunicationScreen extends ConsumerWidget {
 }
 
 final _subjectObservationProvider = StateProvider<String>((ref) => '');
-final _subjectConcernCategoryProvider =
-    StateProvider<SubjectConcernCategory>(
+final _subjectConcernCategoryProvider = StateProvider<SubjectConcernCategory>(
   (ref) => SubjectConcernCategory.lowMarks,
 );
 

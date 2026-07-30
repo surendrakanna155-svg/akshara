@@ -10,6 +10,7 @@ import {
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { emitMutationAudit, sisAudit } from "../audit/mutation_audit_catalog.ts";
+import { recordMutationAudit } from "../audit/audit_repository.ts";
 import { enforceStudentLimit } from "../entitlements/entitlement_limits.ts";
 import {
   InvalidStudentStatusError,
@@ -44,6 +45,7 @@ import {
   loadStudentDocumentsByIdOrCode,
 } from "./sis_student_lookup.ts";
 import { resolveStudentId } from "./sis_student_resolver.ts";
+import { ClearanceDuesBlockedError } from "../clearance/clearance_gate.ts";
 
 function parsePagination(url: URL): { page: number; pageSize: number } {
   const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
@@ -187,6 +189,11 @@ function mapWriteError(error: unknown): Response | null {
   }
   if (error instanceof InvalidStudentStatusTransitionError) {
     return errorEnvelope("VALIDATION_ERROR", error.message, 422);
+  }
+  if (error instanceof ClearanceDuesBlockedError) {
+    // Same 409 DUES_PENDING contract as the TC engine's NoDuesPendingError —
+    // the raw status endpoint no longer bypasses the no-dues law (SCE-1).
+    return errorEnvelope("DUES_PENDING", error.message, 409);
   }
   return null;
 }
@@ -353,7 +360,6 @@ export async function handleCreateStudent(
   try {
     const detail = await runTenant(config, auth.claims, async (db) => {
       const created = await createStudent(db, orgId, schoolId, input);
-      const { recordMutationAudit } = await import("../audit/audit_repository.ts");
       await recordMutationAudit(
         db,
         auth.claims,

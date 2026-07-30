@@ -44,6 +44,7 @@ from demo_school_lib import (
     api_data,
     import_preview_commit,
     list_students,
+    login_phone,
     request,
     resolve_academic_year,
     sleep_brief,
@@ -594,6 +595,164 @@ def seed_communications(token: str, report: RunReport) -> None:
     )
 
 
+# ── Student 360 dossier data ─────────────────────────────────────────────────
+# The seeder covered academics, attendance, fees, homework and inventory, but
+# not the three sections a principal actually opens Student 360 for during a
+# parent meeting: what to watch out for (care alerts), how the child gets to
+# school (transport) and why they were away (leave). Without these the dossier
+# demos with three empty sections.
+
+# Spread over the roster so a demo lands on real variety rather than every
+# student looking identical. (index_modulo, label, action_note, severity)
+CARE_ALERT_TEMPLATES = [
+    (7, "Severe peanut allergy",
+     "Epipen kept in the infirmary. Call the infirmary immediately; do not move the child.",
+     "critical"),
+    (11, "Asthma — inhaler carried in school bag",
+     "Allow the child to use their inhaler. Call the infirmary if breathing does not settle.",
+     "important"),
+    (13, "Wears spectacles — seat in the front row",
+     "Check the child can read the board from their seat.",
+     "info"),
+]
+
+
+def seed_care_alerts(token: str, report: RunReport) -> None:
+    """Minimum actionable health flags for a slice of the roster.
+
+    Care alerts ONLY — never clinical detail. The clinical tables (incidents /
+    medication authorizations) are deliberately left empty by the seeder: they
+    hold children's medical records and have no place in demo fixtures.
+    """
+    students = list_students(token)
+    if not students:
+        report.add("care alerts", False, "no students to attach alerts to")
+        return
+
+    created = 0
+    for index, student in enumerate(students):
+        sid = _entity_id(student, "studentId", "id")
+        if not sid:
+            continue
+        for modulo, label, note, severity in CARE_ALERT_TEMPLATES:
+            if index % modulo:
+                continue
+            code, resp = request(
+                "POST",
+                "/student-health/care-alerts",
+                token=token,
+                body={
+                    "studentId": sid,
+                    "label": label,
+                    "actionNote": note,
+                    "severity": severity,
+                },
+            )
+            if code in (200, 201):
+                created += 1
+            elif code == 404:
+                report.add("care alerts", False, "Route not mounted — deploy student-health bundle")
+                return
+            sleep_brief(0.05)
+
+    report.add("care alerts", created > 0, f"created={created}")
+
+
+def seed_transport_allocations(token: str, report: RunReport) -> None:
+    """Put a slice of the roster on a bus so the Transport section is real."""
+    code, resp = request("GET", "/transport/routes", token=token)
+    if code == 404:
+        report.add("transport allocations", False, "Route not mounted — deploy transport bundle")
+        return
+    routes = (api_data(resp) or {}).get("items", []) if code == 200 else []
+    if not routes:
+        report.add("transport allocations", False, "no transport routes configured")
+        return
+
+    students = list_students(token)
+    allocated = 0
+    for index, student in enumerate(students):
+        # Roughly every third child rides the bus — matches a real day school.
+        if index % 3:
+            continue
+        sid = _entity_id(student, "studentId", "id")
+        if not sid:
+            continue
+        route = routes[index % len(routes)]
+        stops = route.get("stops") or []
+        stop = stops[index % len(stops)] if stops else {}
+        code, _ = request(
+            "POST",
+            "/transport/allocations",
+            token=token,
+            body={
+                "sisStudentId": sid,
+                "routeId": _entity_id(route, "routeId", "id"),
+                "routeName": route.get("name") or route.get("routeName") or "",
+                "stopName": stop.get("name") or "",
+                "shift": "both",
+            },
+        )
+        if code in (200, 201):
+            allocated += 1
+        sleep_brief(0.05)
+
+    report.add("transport allocations", allocated > 0, f"allocated={allocated}")
+
+
+def seed_student_leave(report: RunReport) -> None:
+    """A short leave history, written as the PARENT — the real write path.
+
+    `/parent/leave` authorises against the caller's own `child_ids`, so this
+    cannot be seeded with the admin token; it logs in as demo parents exactly
+    the way a real guardian would.
+    """
+    samples = [
+        ("sick", "2026-07-08", "2026-07-10", "Viral fever — doctor advised three days rest."),
+        ("casual", "2026-06-19", "2026-06-19", "Family function."),
+    ]
+
+    created = 0
+    # A handful of families is plenty for a demo; every parent login is an OTP
+    # round-trip, so keep this small and fast.
+    for offset in range(10):
+        phone = str(PARENT_PHONE_START + offset)
+        try:
+            parent_token = login_phone(phone, scope="parent", school_id=SCHOOL_ID)
+        except RuntimeError:
+            continue
+
+        code, resp = request("GET", "/parent/children", token=parent_token)
+        children = (api_data(resp) or {}).get("items", []) if code == 200 else []
+        if not children:
+            continue
+        child_id = _entity_id(children[0], "studentId", "id", "childId")
+        if not child_id:
+            continue
+
+        for type_label, from_date, to_date, reason in samples:
+            code, _ = request(
+                "POST",
+                "/parent/leave",
+                token=parent_token,
+                body={
+                    "child_id": child_id,
+                    "type_label": type_label,
+                    "from_date_label": from_date,
+                    "to_date_label": to_date,
+                    "reason": reason,
+                },
+            )
+            if code in (200, 201):
+                created += 1
+            elif code == 404:
+                report.add("student leave", False, "Route not mounted — deploy pilot bundle")
+                return
+            sleep_brief(0.05)
+
+    report.add("student leave", created > 0, f"requests={created}")
+
+
 def main() -> int:
     import argparse
 
@@ -657,6 +816,16 @@ def main() -> int:
 
     token = admin_token()
     seed_communications(token, report)
+
+    # Student 360 dossier sections — without these the flagship principal screen
+    # demos with empty Care / Transport / Leave blocks.
+    token = admin_token()
+    seed_care_alerts(token, report)
+
+    token = admin_token()
+    seed_transport_allocations(token, report)
+
+    seed_student_leave(report)
 
     manifest = report.to_dict()
     manifest["schoolId"] = SCHOOL_ID

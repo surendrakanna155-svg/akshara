@@ -211,7 +211,7 @@ void main() {
               id: 'qr_1',
               invoiceId: 'inv_1',
               amount: '4500',
-              upiPayload: 'upi://pay?pa=school@upi&pn=Akshara&am=4500&tr=qr_1',
+              upiPayload: 'upi://pay?pa=school@upi&pn=NIKSHA&am=4500&tr=qr_1',
               status: QrPaymentSessionStatus.pending,
               expiresAt: DateTime.utc(2026, 6, 15, 9, 0, 0),
             ),

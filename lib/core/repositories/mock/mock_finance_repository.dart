@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../features/finance/finance_fee_proration.dart';
 import '../../../features/finance/finance_models.dart';
 import '../../../features/finance/finance_requests.dart';
 import '../../../features/finance/intelligence/finance_intelligence_models.dart';
@@ -15,9 +16,21 @@ double _parseFinanceAmount(String value) =>
 
 String _formatFinanceAmount(double value) => '₹${value.round()}';
 
+/// Plain (no currency symbol) numeric string for fee-reduction percent /
+/// fixed-amount fields — mirrors the backend's `String(row.percent)`.
+String _plainNumber(double value) =>
+    value == value.roundToDouble() ? value.toStringAsFixed(0) : value.toString();
+
 /// In-memory finance data for MVP and Phase 2 screens.
 class MockFinanceRepository implements FinanceRepository {
   final _FinanceMutableStore _store = _FinanceMutableStore();
+
+  // PRC-A gap fix — bulk/class-wide assignment: tracks "$studentId|
+  // $feeStructureId|$academicYear" tuples already bulk-assigned in this mock
+  // session so a repeat call reports the same skip-a-duplicate semantics as
+  // the real backend (mock has no per-student-id-keyed account row to check
+  // against directly — see bulkAssignFeeStructure below).
+  final Set<String> _bulkAssignedKeys = {};
 
   // FIN-R1..R5 — fee-recovery CRM in-memory state.
   final List<PromiseToPay> _promises = [
@@ -486,7 +499,7 @@ class MockFinanceRepository implements FinanceRepository {
       id: sessionId,
       invoiceId: request.invoiceId,
       amount: amount,
-      upiPayload: 'upi://pay?pa=school@upi&pn=Akshara&am=$amount&tr=$sessionId',
+      upiPayload: 'upi://pay?pa=school@upi&pn=NIKSHA&am=$amount&tr=$sessionId',
       status: QrPaymentSessionStatus.pending,
       expiresAt: DateTime.now().add(const Duration(minutes: 10)),
     );
@@ -1178,6 +1191,266 @@ class MockFinanceRepository implements FinanceRepository {
     return _store.discountsDashboard;
   }
 
+  // ── STEP-5: fee reductions (scholarship awards + discount applications) ───
+  // In-memory mirror of finance_fee_reductions_{repository,handlers}.ts: a
+  // reduction is born `pending` (no money moves); only [approveFeeReduction]
+  // (mirroring the real backend's checker step) reduces the invoice's
+  // outstanding + the linked student account's balance, in lockstep — the same
+  // simplification `_applyRefundReversal` above uses (outstanding + status
+  // only; this mock never modelled `totalAmount`/`discountAmount` deltas).
+  @override
+  Future<List<FeeReduction>> listFeeReductions({
+    required RepositoryQuery query,
+    FeeReductionStatus? status,
+    String? invoiceId,
+    String? studentId,
+    FeeReductionSourceKind? sourceKind,
+  }) async {
+    return _store.feeReductions.where((r) {
+      if (status != null && r.status != status) return false;
+      if (invoiceId != null && invoiceId.isNotEmpty && r.invoiceId != invoiceId) {
+        return false;
+      }
+      if (studentId != null && studentId.isNotEmpty && r.studentId != studentId) {
+        return false;
+      }
+      if (sourceKind != null && r.sourceKind != sourceKind) return false;
+      return true;
+    }).toList(growable: false);
+  }
+
+  @override
+  Future<FeeReduction> proposeScholarshipAward({
+    required RepositoryQuery query,
+    required String scholarshipId,
+    required String invoiceId,
+    required String reason,
+    double? percent,
+    double? amount,
+  }) {
+    if (!_store.scholarships.any((s) => s.id == scholarshipId)) {
+      throw StateError('Scholarship not found: $scholarshipId');
+    }
+    return _proposeFeeReduction(
+      sourceKind: FeeReductionSourceKind.scholarship,
+      sourceId: scholarshipId,
+      invoiceId: invoiceId,
+      reason: reason,
+      percent: percent,
+      amount: amount,
+    );
+  }
+
+  @override
+  Future<FeeReduction> proposeDiscountApplication({
+    required RepositoryQuery query,
+    required String discountRuleId,
+    required String invoiceId,
+    required String reason,
+    double? percent,
+    double? amount,
+  }) {
+    if (!_store.discountRules.any((r) => r.id == discountRuleId)) {
+      throw StateError('Discount rule not found: $discountRuleId');
+    }
+    return _proposeFeeReduction(
+      sourceKind: FeeReductionSourceKind.discount,
+      sourceId: discountRuleId,
+      invoiceId: invoiceId,
+      reason: reason,
+      percent: percent,
+      amount: amount,
+    );
+  }
+
+  Future<FeeReduction> _proposeFeeReduction({
+    required FeeReductionSourceKind sourceKind,
+    required String sourceId,
+    required String invoiceId,
+    required String reason,
+    double? percent,
+    double? amount,
+  }) async {
+    final invoice = _store.invoices.cast<FinanceInvoice?>().firstWhere(
+          (item) => item?.id == invoiceId,
+          orElse: () => null,
+        );
+    if (invoice == null) {
+      throw StateError('Invoice not found: $invoiceId');
+    }
+    if (invoice.invoiceStatus == InvoiceStatus.cancelled) {
+      throw StateError('Cannot reduce a cancelled invoice');
+    }
+    if ((percent == null) == (amount == null)) {
+      throw StateError('Send exactly one of percent or amount');
+    }
+    final account = _store.studentAccounts.cast<StudentFeeAccount?>().firstWhere(
+          (item) =>
+              item?.feeAssignmentId != null &&
+              item!.feeAssignmentId == invoice.feeAssignmentId,
+          orElse: () => null,
+        );
+    final reduction = FeeReduction(
+      id: _store.nextId('fred_'),
+      sourceKind: sourceKind,
+      scholarshipId: sourceKind == FeeReductionSourceKind.scholarship ? sourceId : '',
+      discountRuleId: sourceKind == FeeReductionSourceKind.discount ? sourceId : '',
+      studentId: invoice.studentId,
+      invoiceId: invoice.id,
+      studentAccountId: account?.id ?? '',
+      reductionKind:
+          percent != null ? FeeReductionKind.percent : FeeReductionKind.fixed,
+      percent: percent != null ? _plainNumber(percent) : '',
+      fixedAmount: amount != null ? _plainNumber(amount) : '',
+      status: FeeReductionStatus.pending,
+      reason: reason,
+      createdBy: 'finance_demo',
+      createdAt: 'Today',
+      updatedAt: 'Today',
+    );
+    _store.feeReductions.insert(0, reduction);
+    return reduction;
+  }
+
+  @override
+  Future<FeeReduction> approveFeeReduction({
+    required RepositoryQuery query,
+    required String reductionId,
+  }) async {
+    final index = _store.feeReductions.indexWhere((r) => r.id == reductionId);
+    if (index < 0) throw StateError('Fee reduction not found: $reductionId');
+    final current = _store.feeReductions[index];
+    if (current.status != FeeReductionStatus.pending) {
+      throw StateError(
+          'Cannot approve fee reduction in status: ${current.status.name}');
+    }
+
+    final applied = _applyFeeReductionDelta(current, reverse: false);
+
+    final updated = current.copyWith(
+      status: FeeReductionStatus.approved,
+      appliedAmount: _plainNumber(applied),
+      approvedBy: 'finance_checker',
+      appliedAt: 'Today',
+      updatedAt: 'Today',
+    );
+    _store.feeReductions[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<FeeReduction> rejectFeeReduction({
+    required RepositoryQuery query,
+    required String reductionId,
+  }) async {
+    final index = _store.feeReductions.indexWhere((r) => r.id == reductionId);
+    if (index < 0) throw StateError('Fee reduction not found: $reductionId');
+    final current = _store.feeReductions[index];
+    if (current.status != FeeReductionStatus.pending) {
+      throw StateError(
+          'Cannot reject fee reduction in status: ${current.status.name}');
+    }
+    final updated = current.copyWith(
+      status: FeeReductionStatus.rejected,
+      approvedBy: 'finance_checker',
+      updatedAt: 'Today',
+    );
+    _store.feeReductions[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<FeeReduction> reverseFeeReduction({
+    required RepositoryQuery query,
+    required String reductionId,
+  }) async {
+    final index = _store.feeReductions.indexWhere((r) => r.id == reductionId);
+    if (index < 0) throw StateError('Fee reduction not found: $reductionId');
+    final current = _store.feeReductions[index];
+    if (current.status != FeeReductionStatus.approved) {
+      throw StateError(
+          'Cannot reverse fee reduction in status: ${current.status.name}');
+    }
+
+    _applyFeeReductionDelta(current, reverse: true);
+
+    final updated = current.copyWith(
+      status: FeeReductionStatus.reversed,
+      reversedBy: 'finance_checker',
+      reversedAt: 'Today',
+      updatedAt: 'Today',
+    );
+    _store.feeReductions[index] = updated;
+    return updated;
+  }
+
+  /// Applies (or reverses) `reduction`'s money effect on the linked invoice +
+  /// student account, in lockstep — mirrors [_applyRefundReversal]. Returns the
+  /// clamped amount actually applied (only meaningful on the forward path).
+  double _applyFeeReductionDelta(FeeReduction reduction, {required bool reverse}) {
+    final invoiceIndex =
+        _store.invoices.indexWhere((item) => item.id == reduction.invoiceId);
+    if (invoiceIndex < 0) return _parseFinanceAmount(reduction.appliedAmount);
+
+    final invoice = _store.invoices[invoiceIndex];
+    final outstanding = _parseFinanceAmount(invoice.outstandingAmount);
+    final total = _parseFinanceAmount(invoice.totalAmount);
+    final subtotal = _parseFinanceAmount(invoice.subtotalAmount);
+
+    final applied = reverse
+        ? _parseFinanceAmount(reduction.appliedAmount)
+        : (reduction.reductionKind == FeeReductionKind.fixed
+                ? _parseFinanceAmount(reduction.fixedAmount)
+                : subtotal * (_parseFinanceAmount(reduction.percent) / 100))
+            .clamp(0, outstanding)
+            .clamp(0, total)
+            .toDouble();
+    if (applied <= 0) return applied;
+
+    final newOutstanding = reverse ? outstanding + applied : outstanding - applied;
+    final clampedOutstanding = newOutstanding.clamp(0, double.infinity).toDouble();
+    final newStatus = clampedOutstanding <= 0
+        ? InvoiceStatus.paid
+        : (clampedOutstanding < total
+            ? InvoiceStatus.partiallyPaid
+            : InvoiceStatus.issued);
+    _store.invoices[invoiceIndex] = invoice.copyWith(
+      outstandingAmount: clampedOutstanding.toStringAsFixed(0),
+      invoiceStatus: newStatus,
+    );
+
+    final accountIndex = _store.studentAccounts.indexWhere(
+      (item) => item.id == reduction.studentAccountId,
+    );
+    if (accountIndex >= 0) {
+      final account = _store.studentAccounts[accountIndex];
+      final balance = _parseFinanceAmount(account.balance);
+      final totalDue = _parseFinanceAmount(account.totalDue);
+      final newBalance = (reverse ? balance + applied : balance - applied)
+          .clamp(0, double.infinity)
+          .toDouble();
+      final newTotalDue = (reverse ? totalDue + applied : totalDue - applied)
+          .clamp(0, double.infinity)
+          .toDouble();
+      _store.studentAccounts[accountIndex] = StudentFeeAccount(
+        id: account.id,
+        studentName: account.studentName,
+        admissionNumber: account.admissionNumber,
+        classLabel: account.classLabel,
+        feeStructureName: account.feeStructureName,
+        totalDue: _formatFinanceAmount(newTotalDue),
+        totalPaid: account.totalPaid,
+        balance: _formatFinanceAmount(newBalance),
+        status: account.status,
+        lastPaymentDate: account.lastPaymentDate,
+        installmentPlan: account.installmentPlan,
+        feeAssignmentId: account.feeAssignmentId,
+      );
+    }
+
+    return applied;
+  }
+
   @override
   Future<FinanceReportsData> getReportsData(
       {required RepositoryQuery query}) async {
@@ -1253,6 +1526,14 @@ class MockFinanceRepository implements FinanceRepository {
       categories: request.categories,
       status: request.status,
       installmentOptions: request.installmentOptions,
+      // Cap 67 — real class/section binding; mock has no separate class/
+      // section catalog to resolve a label against, so a label-only request
+      // is stored as-is (best-effort demo continuity — the real backend does
+      // the authoritative id-or-label resolution).
+      classId: request.classId,
+      className: request.className,
+      sectionId: request.sectionId,
+      sectionName: request.sectionName,
     );
     _store.feeStructures.insert(0, structure);
     return structure;
@@ -1268,6 +1549,24 @@ class MockFinanceRepository implements FinanceRepository {
         _store.feeStructures.indexWhere((item) => item.id == feeStructureId);
     if (index < 0) throw StateError('Fee structure not found: $feeStructureId');
     final current = _store.feeStructures[index];
+    // Cap 67 — same "undefined on all four = unchanged, unbindClass = clear"
+    // contract as the real backend's updateFeeStructure.
+    final bindingProvided = request.classId != null ||
+        request.className != null ||
+        request.sectionId != null ||
+        request.sectionName != null;
+    final classId = request.unbindClass
+        ? null
+        : (bindingProvided ? request.classId : current.classId);
+    final className = request.unbindClass
+        ? null
+        : (bindingProvided ? request.className : current.className);
+    final sectionId = request.unbindClass
+        ? null
+        : (bindingProvided ? request.sectionId : current.sectionId);
+    final sectionName = request.unbindClass
+        ? null
+        : (bindingProvided ? request.sectionName : current.sectionName);
     final updated = FinanceFeeStructure(
       id: current.id,
       name: request.name ?? current.name,
@@ -1278,6 +1577,10 @@ class MockFinanceRepository implements FinanceRepository {
       status: request.status ?? current.status,
       installmentOptions:
           request.installmentOptions ?? current.installmentOptions,
+      classId: classId,
+      className: className,
+      sectionId: sectionId,
+      sectionName: sectionName,
     );
     _store.feeStructures[index] = updated;
     return updated;
@@ -1371,6 +1674,13 @@ class MockFinanceRepository implements FinanceRepository {
     required RepositoryQuery query,
     required AssignFeePlanRequest request,
   }) async {
+    final structure = _store.findFeeStructure(request.feeStructureId);
+    final proration = _computeMockProration(
+      structure: structure,
+      admissionDate: request.admissionDate,
+      prorationPolicyOverride: request.prorationPolicyOverride,
+      prorationOverrideReason: request.prorationOverrideReason,
+    );
     final account = await createStudentAccount(
       query: query,
       request: CreateStudentAccountRequest(
@@ -1379,12 +1689,167 @@ class MockFinanceRepository implements FinanceRepository {
         classLabel: request.classLabel,
         feeStructureId: request.feeStructureId,
         installmentPlanId: request.installmentPlanId,
-        totalDue: _store.findFeeStructure(request.feeStructureId).totalAnnual,
+        totalDue: _formatFinanceAmount(proration.chargedAmount),
         installmentPlanLabel: _store.planLabel(request.installmentPlanId),
       ),
     );
-    _syncInvoiceForFeeAccount(account);
-    return account;
+    final withProration = _attachProration(account, proration);
+    _replaceStoredAccount(withProration);
+    _syncInvoiceForFeeAccount(withProration);
+    return withProration;
+  }
+
+  /// Cap 73 (owner decision #5) — mock-mode mid-year admission proration.
+  /// Uses the SAME month-basis calculation as the real backend
+  /// (finance_fee_proration.dart mirrors finance_fee_proration.ts exactly),
+  /// but has no real academic-years catalog to resolve bounds from — it
+  /// derives an April-start window from the structure's `academicYear` label
+  /// (best-effort, demo-only; falls back to full_annual, same as the server,
+  /// when that can't be parsed). Mock has no finance_settings-equivalent
+  /// wiring for ANY other setting either, so — unlike the real backend —
+  /// there is no "school-configured default" here: proration only ever
+  /// applies via an explicit per-call override, otherwise full_annual.
+  FeeProrationResult _computeMockProration({
+    required FinanceFeeStructure structure,
+    required String? admissionDate,
+    required FeeProrationPolicy? prorationPolicyOverride,
+    required String? prorationOverrideReason,
+  }) {
+    if (prorationPolicyOverride != null &&
+        (prorationOverrideReason == null ||
+            prorationOverrideReason.trim().isEmpty)) {
+      throw FeeProrationOverrideReasonRequiredError();
+    }
+    final policy = prorationPolicyOverride ?? FeeProrationPolicy.fullAnnual;
+    final referenceDate =
+        (admissionDate != null && admissionDate.isNotEmpty)
+            ? admissionDate
+            : DateTime.now().toIso8601String().substring(0, 10);
+    return computeFeeProration(
+      policy: policy,
+      annualAmount: _parseFinanceAmount(structure.totalAnnual),
+      referenceDate: referenceDate,
+      yearBounds: deriveAprilStartYearBounds(structure.academicYear),
+      isOverride: prorationPolicyOverride != null,
+      overrideReason: prorationOverrideReason,
+    );
+  }
+
+  FeeProrationInfo _toProrationInfo(FeeProrationResult result) {
+    return FeeProrationInfo(
+      policy: result.policy,
+      basis: 'month',
+      totalMonths: result.totalMonths,
+      monthsCharged: result.monthsCharged,
+      referenceDate: result.referenceDate,
+      annualAmount: _formatFinanceAmount(result.annualAmount),
+      chargedAmount: _formatFinanceAmount(result.chargedAmount),
+      isOverride: result.isOverride,
+      fallbackReason: result.fallbackReason,
+      overrideReason: result.overrideReason,
+    );
+  }
+
+  StudentFeeAccount _attachProration(
+    StudentFeeAccount account,
+    FeeProrationResult proration,
+  ) {
+    return StudentFeeAccount(
+      id: account.id,
+      studentName: account.studentName,
+      admissionNumber: account.admissionNumber,
+      classLabel: account.classLabel,
+      feeStructureName: account.feeStructureName,
+      totalDue: account.totalDue,
+      totalPaid: account.totalPaid,
+      balance: account.balance,
+      status: account.status,
+      lastPaymentDate: account.lastPaymentDate,
+      installmentPlan: account.installmentPlan,
+      feeAssignmentId: account.feeAssignmentId,
+      proration: _toProrationInfo(proration),
+    );
+  }
+
+  void _replaceStoredAccount(StudentFeeAccount account) {
+    final idx = _store.studentAccounts.indexWhere((a) => a.id == account.id);
+    if (idx >= 0) _store.studentAccounts[idx] = account;
+  }
+
+  // PRC-A gap fix — bulk/class-wide fee-structure assignment. The mock has no
+  // per-student-id-keyed account row (accounts are display-string based, not
+  // UUID-joined to a real student), so duplicate detection here is a local
+  // (studentId, feeStructureId, academicYear) set rather than a real DB
+  // lookup — good enough for offline/demo continuity. The important,
+  // certified skip-a-duplicate/abort-on-real-error semantics live server-side
+  // and are proven in finance_assignments_repository_test.ts.
+  //
+  // Cap 67 — the real API auto-resolves an empty studentIds[] from the fee
+  // structure's class/section binding; the mock has no separate SIS roster
+  // to resolve against here, so an empty list is a clear, explicit error
+  // rather than a silent no-op — the app's own bulk-assign screen always
+  // resolves and sends a concrete list before calling this (see
+  // finance_bulk_assign_dialog.dart), so this path isn't exercised in
+  // practice, only guarded against.
+  @override
+  Future<BulkFeeAssignmentResult> bulkAssignFeeStructure({
+    required RepositoryQuery query,
+    required BulkAssignFeePlanRequest request,
+  }) async {
+    if (request.studentIds.isEmpty) {
+      throw StateError(
+        'Bulk assign requires an explicit student list in mock/offline mode',
+      );
+    }
+    final structure = _store.findFeeStructure(request.feeStructureId);
+    final proration = _computeMockProration(
+      structure: structure,
+      admissionDate: request.admissionDate,
+      prorationPolicyOverride: request.prorationPolicyOverride,
+      prorationOverrideReason: request.prorationOverrideReason,
+    );
+    final chargedAmountLabel = _formatFinanceAmount(proration.chargedAmount);
+    final assigned = <StudentFeeAccount>[];
+    final skipped = <BulkFeeAssignmentSkip>[];
+
+    for (final studentId in request.studentIds) {
+      final key =
+          '$studentId|${request.feeStructureId}|${request.academicYear}';
+      if (!_bulkAssignedKeys.add(key)) {
+        skipped.add(
+          BulkFeeAssignmentSkip(
+            studentId: studentId,
+            reason: 'already_assigned',
+          ),
+        );
+        continue;
+      }
+      final accountId = _store.nextId('acct_');
+      final account = StudentFeeAccount(
+        id: accountId,
+        studentName: 'Student $studentId',
+        admissionNumber: studentId,
+        classLabel: '',
+        feeStructureName: structure.name,
+        totalDue: chargedAmountLabel,
+        totalPaid: '₹0',
+        balance: chargedAmountLabel,
+        status: FeeAccountStatus.pending,
+        lastPaymentDate: '—',
+        installmentPlan: '',
+        feeAssignmentId: accountId,
+        proration: _toProrationInfo(proration),
+      );
+      _store.studentAccounts.insert(0, account);
+      _syncInvoiceForFeeAccount(account);
+      assigned.add(account);
+    }
+
+    return BulkFeeAssignmentResult(
+      assigned: assigned,
+      skipped: skipped,
+      total: request.studentIds.length,
+    );
   }
 
   // #6 — mirrors the real cancelAssignment: closes the account (mock has no
@@ -2233,6 +2698,7 @@ class _FinanceMutableStore {
             .map((item) => item.id)
             .toList(),
         qrPaymentSessions = <QrPaymentSession>[],
+        feeReductions = <FeeReduction>[],
         settings = _seedSettings;
 
   List<FinanceFeeStructure> feeStructures;
@@ -2245,6 +2711,8 @@ class _FinanceMutableStore {
   List<OfflinePaymentRecord> offlinePayments;
   List<String> pendingOfflinePaymentQueue;
   List<QrPaymentSession> qrPaymentSessions;
+  // STEP-5 — fee reductions (scholarship awards + discount applications).
+  List<FeeReduction> feeReductions;
   FinanceSettingsData settings;
   final Map<String, String> invoiceIdByFeeAccountId = {};
   int _counter = 100;
@@ -2506,6 +2974,11 @@ class _FinanceMutableStore {
       status: FeeAccountStatus.active,
       lastPaymentDate: 'Today',
       installmentPlan: '3-term quarterly',
+      // STEP-5 — joins finance_fee_reductions' invoice lookup the same way the
+      // real backend does: invoice.feeAssignmentId == account.feeAssignmentId.
+      // Linked to inv_1 (issued, open) so the award dialog has a real student
+      // with a real open invoice in mock/demo mode.
+      feeAssignmentId: 'assign_1',
     ),
     const StudentFeeAccount(
       id: 'acct_2',
@@ -2519,6 +2992,8 @@ class _FinanceMutableStore {
       status: FeeAccountStatus.pending,
       lastPaymentDate: '—',
       installmentPlan: '3-term quarterly',
+      // Linked to inv_4 (issued, open, unpaid) — a second open-invoice example.
+      feeAssignmentId: 'assign_4',
     ),
     const StudentFeeAccount(
       id: 'acct_3',
@@ -2532,6 +3007,9 @@ class _FinanceMutableStore {
       status: FeeAccountStatus.active,
       lastPaymentDate: '2 days ago',
       installmentPlan: '4-term termly',
+      // Linked to inv_3 (draft — NOT open) so the picker demonstrates the
+      // "no open invoices for this student" case.
+      feeAssignmentId: 'assign_3',
     ),
     const StudentFeeAccount(
       id: 'acct_4',
@@ -2545,6 +3023,9 @@ class _FinanceMutableStore {
       status: FeeAccountStatus.overdue,
       lastPaymentDate: '45 days ago',
       installmentPlan: '3-term quarterly',
+      // Linked to inv_2 (fully paid — NOT open) — another "no open invoices"
+      // example.
+      feeAssignmentId: 'assign_2',
     ),
   ];
 
@@ -2717,6 +3198,28 @@ class _FinanceMutableStore {
       createdBy: 'staff_1',
       createdAt: '2026-06-10T00:00:00.000Z',
       updatedAt: '2026-06-10T00:00:00.000Z',
+    ),
+    // STEP-5 — a second open (issued, unpaid) invoice so the fee-reduction
+    // award dialog has more than one real student/invoice pairing in
+    // mock/demo mode (linked to acct_2 via feeAssignmentId).
+    FinanceInvoice(
+      id: 'inv_4',
+      studentId: 'stu_4',
+      feeAssignmentId: 'assign_4',
+      academicYear: '2026-27',
+      invoiceNumber: 'INV-2026-M3N4O5P6',
+      invoiceDate: '2026-06-01',
+      dueDate: '2026-07-15',
+      subtotalAmount: '215000',
+      discountAmount: '0',
+      totalAmount: '215000',
+      outstandingAmount: '215000',
+      paidAmount: '0',
+      invoiceStatus: InvoiceStatus.issued,
+      termLabel: 'Annual',
+      createdBy: 'staff_1',
+      createdAt: '2026-06-01T00:00:00.000Z',
+      updatedAt: '2026-06-01T00:00:00.000Z',
     ),
   ];
 

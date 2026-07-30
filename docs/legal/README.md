@@ -1,7 +1,7 @@
-# Akshara ERP — Legal & Compliance
+# NIKSHA OS — Legal & Compliance
 
-This folder holds Akshara ERP's legal and compliance documents. They are written for
-Akshara's **actual functionality** and aligned to India's **Digital Personal Data
+This folder holds NIKSHA OS's legal and compliance documents. They are written for
+NIKSHA OS's **actual functionality** and aligned to India's **Digital Personal Data
 Protection Act, 2023** and the **DPDP Rules, 2025**, the **IT Act, 2000**, and Google
 Play requirements. They are **drafts for the owner to review, complete and (ideally)
 have a lawyer confirm** before public release — they are not legal advice.
@@ -43,7 +43,7 @@ Terms & Conditions  (umbrella)
 ## Who is responsible for data (in one line)
 
 The **school (Institution) is the Data Fiduciary** for student/parent/staff data;
-**Akshara is the Data Processor** acting on the school's instructions; Akshara is the
+**NIKSHA OS is the Data Processor** acting on the school's instructions; NIKSHA OS is the
 **Data Fiduciary** only for the minimal account/device data it needs to run the app.
 
 ## In-app acceptance

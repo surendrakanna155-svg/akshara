@@ -190,24 +190,25 @@ abstract final class GlobalSearchRegistry {
       keywords: ['at-risk', 'success'],
       requiredPermission: Permission.viewStudentSuccessIntelligence,
     ),
-    GlobalSearchEntry(
-      label: 'Parent Dashboard',
-      route: RouteNames.parentDashboard,
-      module: 'Parent',
-      keywords: ['home', 'child'],
-    ),
-    GlobalSearchEntry(
-      label: 'Teacher Dashboard',
-      route: RouteNames.teacherDashboard,
-      module: 'Teacher',
-      keywords: ['classes', 'attendance'],
-    ),
-    GlobalSearchEntry(
-      label: 'Student Dashboard',
-      route: RouteNames.studentDashboard,
-      module: 'Student',
-      keywords: ['homework', 'exams'],
-    ),
+    // P1-7 (2026-07-28) — the Parent / Teacher / Student Dashboard entries were
+    // REMOVED, not gated.
+    //
+    // They were the only entries without a `requiredPermission`, so
+    // `isVisibleTo()` showed them to every staff user of this sheet. But this
+    // registry is only ever rendered inside the admin ERP shell
+    // (admin_content_scaffold.dart → showGlobalSearchOverlay), and the persona
+    // shells are closed to staff by ROLE, not by permission
+    // (`_canAccessRoute` in app_router.dart): a staff user can never enter
+    // /parent/* or /student/*, and reaches /teacher/* only when their claims
+    // carry ErpRole.teacher. Tapping any of the three therefore bounced the
+    // user to /admin — and wrote the dead route into Recents, so it resurfaced
+    // at the top of the sheet forever.
+    //
+    // A permission cannot express "holds the teacher role", and adding one
+    // would also break the registry↔guard parity test (these routes resolve to
+    // no `erpRoutePermissionFor`). Multi-hat staff switch personas through the
+    // workspace switcher in the admin chrome, which is the supported path — so
+    // the correct fix is no tile rather than a tile that silently bounces.
   ];
 
   /// Entries matching [query]. When [hasPermission] is provided, entries the

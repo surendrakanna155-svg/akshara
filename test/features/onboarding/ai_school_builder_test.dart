@@ -24,13 +24,13 @@ void main() {
   group('SchoolBrief.toJson', () {
     test('drops empty values and keeps provided ones', () {
       final json = const SchoolBrief(
-        schoolName: 'Akshara Public',
+        schoolName: 'NIKSHA Public',
         board: 'CBSE',
         lowestGrade: '',
         estimatedStudents: 400,
         languages: ['Hindi'],
       ).toJson();
-      expect(json['schoolName'], 'Akshara Public');
+      expect(json['schoolName'], 'NIKSHA Public');
       expect(json['board'], 'CBSE');
       expect(json['estimatedStudents'], 400);
       expect(json['languages'], ['Hindi']);

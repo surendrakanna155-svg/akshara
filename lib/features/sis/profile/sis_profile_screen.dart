@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/security/permissions.dart';
+import '../../../core/security/rbac_service.dart';
 import '../../../core/testing/qa_test_keys.dart';
+import '../../clearance/widgets/clearance_report_dialog.dart';
+import '../../clearance/widgets/clearance_waiver_queue_dialog.dart';
 import '../../../router/route_names.dart';
 import '../../../router/student360_navigation.dart';
 import '../../../shared/widgets/akshara_manage_action.dart';
@@ -135,6 +138,30 @@ class SisStudentProfileScreen extends ConsumerWidget {
                 label: const Text('Transfer certificate'),
               ),
             ),
+            // SCE-1: the cross-module no-dues clearance report (+ dues-waiver
+            // request when blocked). Same manageSis gate as the TC it precedes.
+            AksharaManageAction(
+              permission: Permission.manageSis,
+              child: OutlinedButton.icon(
+                key: const Key('sis-clearance-report-button'),
+                onPressed: () => ClearanceReportDialog.show(
+                  context,
+                  studentId: student.id,
+                  studentName: student.studentName,
+                ),
+                icon: const Icon(Icons.fact_check_outlined),
+                label: const Text('Clearance'),
+              ),
+            ),
+            // SCE-1: the dues-waiver approver queue (checker side of the maker-
+            // checker). Visible only to holders of approveClearanceWaiver.
+            if (ref.watch(rbacServiceProvider).hasPermission(Permission.approveClearanceWaiver))
+              OutlinedButton.icon(
+                key: const Key('sis-clearance-waivers-button'),
+                onPressed: () => ClearanceWaiverQueueDialog.show(context),
+                icon: const Icon(Icons.gavel_outlined),
+                label: const Text('Waivers'),
+              ),
           ],
         ),
         const SizedBox(height: AksharaSpacing.s4),

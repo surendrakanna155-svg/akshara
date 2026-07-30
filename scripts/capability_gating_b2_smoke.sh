@@ -9,7 +9,7 @@
 # Requires ENTITLEMENT_ENFORCEMENT=true on the edge for the 402 checks.
 #
 # Usage:
-#   API_BASE_URL=https://akshara.veloraunisexsalon.com ADMIN_PHONE=<superadmin> \
+#   API_BASE_URL=https://api.nikshaos.in ADMIN_PHONE=<superadmin> \
 #     scripts/capability_gating_b2_smoke.sh
 #   FINAL_PLAN=professional  # plan to leave the org on at the end (default professional)
 set -euo pipefail

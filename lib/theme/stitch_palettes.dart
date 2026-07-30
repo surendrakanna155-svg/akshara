@@ -74,7 +74,7 @@ abstract final class AksharaStitchPalettes {
     );
   }
 
-  /// Akshara Parent — warm light portal (#f8f9ff, friendly blue actions).
+  /// NIKSHA Parent — warm light portal (#f8f9ff, friendly blue actions).
   static AksharaColorTokens _aksharaParent() {
     return AksharaColorTokens(
       primary: _hex('#0058BE'),

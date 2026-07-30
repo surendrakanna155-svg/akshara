@@ -36,9 +36,26 @@ export interface ReservationLimits {
   userCallsPerHour: number;
   schoolCallsPerDay: number;
   monthlySpendCapMicros: number;
+  /**
+   * PRC-A Batch 3 — AI credit wallet (owner decision #3). When false the wallet
+   * clause is inert and this behaves exactly as before, byte for byte: the
+   * wallet ships dark until AI_WALLET_ENFORCEMENT=true (see
+   * ai_wallet_enforcement.ts — a 0 balance would otherwise deny every call for
+   * every org that has never been granted credit).
+   *
+   * Deliberately a separate boolean rather than a sentinel value: unlike the
+   * three limits above, 0 is a MEANINGFUL wallet balance (empty), so "<= 0 means
+   * unlimited" — the idiom the other gates use — would invert the wallet's
+   * safest state into its most permissive one.
+   */
+  walletEnforced: boolean;
 }
 
-export type ReserveDenyReason = "rate_user" | "rate_school" | "spend_cap";
+export type ReserveDenyReason =
+  | "rate_user"
+  | "rate_school"
+  | "spend_cap"
+  | "wallet_empty";
 
 export type ReserveResult =
   | { allow: true; reservationId: string }
@@ -49,6 +66,13 @@ export interface ReserveArgs {
   userId: string | null;
   surface: string;
   estimatedCostMicros: number;
+  /**
+   * Product credits this call will consume (integer). Held on the reservation
+   * row while pending, so a concurrent admit sees it immediately and the wallet
+   * cannot be double-spent. Settled to `ai_call_log.credits_debited` on consume,
+   * dropped on release.
+   */
+  creditsRequired: number;
   limits: ReservationLimits;
   now: Date;
 }
@@ -105,7 +129,7 @@ export async function runReservation(
   exec: ReservationExec,
   args: ReserveArgs,
 ): Promise<ReserveResult> {
-  const { scope, userId, surface, estimatedCostMicros, limits, now } = args;
+  const { scope, userId, surface, estimatedCostMicros, creditsRequired, limits, now } = args;
   const since1h = isoBefore(now, 3_600_000);
   const since24h = isoBefore(now, 24 * 3_600_000);
   const monthStart = monthStartIso(now);
@@ -121,10 +145,21 @@ export async function runReservation(
   );
 
   const inserted = await exec.queryObject<{ id: string }>(
+    // The wallet clause ($13/$14) is a FOURTH AND-term inside this SAME atomic
+    // INSERT..SELECT — not a separate check. That is the whole point: this
+    // statement already runs under a pg_advisory_xact_lock and commits
+    // immediately, so admitting the wallet here means a concurrent call sees the
+    // hold instantly and the balance cannot be double-spent. A balance read done
+    // outside this statement would be check-then-act — exactly the TOCTOU this
+    // primitive exists to close.
+    //
+    // Wallet arithmetic mirrors the spend-cap term above (committed + pending +
+    // this <= cap), inverted: granted - committed - pending >= this.
     `INSERT INTO ai_call_reservations (
-       organization_id, school_id, user_id, surface, estimated_cost_micros
+       organization_id, school_id, user_id, surface, estimated_cost_micros,
+       credits_reserved
      )
-     SELECT $1::uuid, $2::uuid, $3::uuid, $4, $5::bigint
+     SELECT $1::uuid, $2::uuid, $3::uuid, $4, $5::bigint, $14::bigint
       WHERE ($6::int <= 0 OR $3::uuid IS NULL OR (
               (SELECT count(*) FROM ai_call_log
                 WHERE organization_id = $1 AND school_id IS NOT DISTINCT FROM $2
@@ -151,6 +186,23 @@ export async function runReservation(
                 WHERE organization_id = $1 AND school_id IS NOT DISTINCT FROM $2
                   AND status = 'pending' AND created_at >= $12)
             ) + $5::bigint <= $8::bigint)
+        -- Wallet (org-scoped: credits are bought by the ORG, and org-scoped
+        -- surfaces legitimately call with school_id NULL, so this term must NOT
+        -- be school-filtered like the rate/spend terms above).
+        -- NB: pending holds are counted WITHOUT a created_at floor, unlike the
+        -- rate/spend terms which ignore holds older than PENDING_TTL. A stale
+        -- hold makes a rate window slightly permissive (harmless, self-healing);
+        -- ignoring a stale hold here would let the same credits be spent twice.
+        -- The TTL sweep at the top of this function deletes truly abandoned
+        -- pending rows, so this cannot leak holds forever.
+        AND (NOT $13::boolean OR (
+              (SELECT coalesce(sum(units), 0) FROM ai_credit_entries
+                WHERE organization_id = $1)
+            - (SELECT coalesce(sum(credits_debited), 0) FROM ai_call_log
+                WHERE organization_id = $1)
+            - (SELECT coalesce(sum(credits_reserved), 0) FROM ai_call_reservations
+                WHERE organization_id = $1 AND status = 'pending')
+            ) >= $14::bigint)
      RETURNING id`,
     [
       scope.organizationId,
@@ -165,6 +217,8 @@ export async function runReservation(
       since24h,
       monthStart,
       pendingSince,
+      limits.walletEnforced,
+      Math.max(0, Math.trunc(creditsRequired)),
     ],
   );
   const id = inserted[0]?.id;
@@ -214,6 +268,31 @@ export async function runReservation(
   }
   if (limits.schoolCallsPerDay > 0 && schoolCalls >= limits.schoolCallsPerDay) {
     return { allow: false, reason: "rate_school" };
+  }
+  // Distinguish "we hit OUR cost governance" (spend_cap) from "the school ran out
+  // of what it bought" (wallet_empty). Collapsing them would tell a school its
+  // paid credits failed when in fact we throttled ourselves — and would make the
+  // cost panel lie about why users were refused.
+  //
+  // Ordered AFTER spend_cap to match the admit clause's evaluation order, so the
+  // named reason is the same gate that actually rejected the INSERT. Only claim
+  // wallet_empty when the wallet is the gate that could plausibly have failed:
+  // re-derive the balance rather than assume, since spend_cap is the historical
+  // catch-all and a wrong attribution here is a support nightmare.
+  if (limits.walletEnforced) {
+    const wallet = await exec.queryObject<{ available: string | number }>(
+      `SELECT (
+           (SELECT coalesce(sum(units), 0) FROM ai_credit_entries WHERE organization_id = $1)
+         - (SELECT coalesce(sum(credits_debited), 0) FROM ai_call_log WHERE organization_id = $1)
+         - (SELECT coalesce(sum(credits_reserved), 0) FROM ai_call_reservations
+             WHERE organization_id = $1 AND status = 'pending')
+       )::bigint AS available`,
+      [scope.organizationId],
+    );
+    const available = Number(wallet[0]?.available ?? 0);
+    if (available < Math.max(0, Math.trunc(creditsRequired))) {
+      return { allow: false, reason: "wallet_empty" };
+    }
   }
   return { allow: false, reason: "spend_cap" };
 }

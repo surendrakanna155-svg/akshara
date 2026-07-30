@@ -378,6 +378,54 @@ export const financeAudit = {
       idempotencyKey: `finance.fee_assignment.cancelled:${assignmentId}`,
     },
   }),
+  // PRC-A gap fix — a bulk/class-wide fee-structure assignment ran (summary of
+  // how many assigned vs skipped-as-duplicate). Mirrors lateFeesAccrued's batch
+  // shape: there is no single entity id for "assigned N students", so
+  // schoolId + feeStructureId + a call-scoped nonce keys idempotency instead.
+  feeAssignmentBulkAssigned: (
+    schoolId: string,
+    feeStructureId: string,
+    assignedCount: number,
+    skippedCount: number,
+    nonce: string,
+  ): MutationAuditSpec => ({
+    ...workflow("financeFeeAssignmentBulkAssigned", "finance_school", schoolId, {
+      schoolId,
+      feeStructureId,
+      assignedCount,
+      skippedCount,
+    }),
+    domain: {
+      eventType: "finance.fee_assignment.bulk_assigned",
+      payload: { schoolId, feeStructureId, assignedCount, skippedCount },
+      sourceModule: "finance",
+      idempotencyKey:
+        `finance.fee_assignment.bulk_assigned:${schoolId}:${feeStructureId}:${nonce}`,
+    },
+  }),
+  // Cap 73 (owner decision #5) — an authorized user overrode the school's
+  // configured mid-year admission proration policy for ONE assignment.
+  // `emitMutationAudit`'s underlying audit row already stamps actor
+  // (claims.sub) + timestamp; `policy` + `reason` travel in the metadata/
+  // payload so the override is independently queryable (distinct eventType)
+  // rather than folded into the generic "assignment created" event.
+  feeProrationOverridden: (
+    assignmentId: string,
+    policy: string,
+    reason: string,
+  ): MutationAuditSpec => ({
+    ...workflow("feeProrationOverridden", "fee_assignment", assignmentId, {
+      assignmentId,
+      policy,
+      reason,
+    }),
+    domain: {
+      eventType: "finance.fee_assignment.proration_overridden",
+      payload: { assignmentId, policy, reason },
+      sourceModule: "finance",
+      idempotencyKey: `finance.fee_assignment.proration_overridden:${assignmentId}`,
+    },
+  }),
   // FIN-D3: cancellation now carries the mandatory reason for the register/trail.
   collectionCancelled: (collectionId: string, reason = ""): MutationAuditSpec => ({
     ...workflow("collectionCancelled", "finance_collection", collectionId, {
@@ -727,6 +775,47 @@ export const sisAudit = {
       payload: { issueId, studentId, serial },
       sourceModule: "sis",
       idempotencyKey: `sis.transfer_certificate.issued:${serial}`,
+    },
+  }),
+};
+
+// ─── SCE-1 clearance dues-waivers (maker-checker) ────────────────────────────
+
+export const clearanceWaiverAudit = {
+  requested: (
+    waiverId: string,
+    studentId: string,
+    lifecycle: string,
+    amount: number,
+  ): MutationAuditSpec => ({
+    ...workflow("clearanceWaiverRequested", "student_clearance_waiver", waiverId, {
+      waiverId,
+      studentId,
+      lifecycle,
+      amount,
+    }),
+    domain: {
+      eventType: "clearance.waiver.requested",
+      payload: { waiverId, studentId, lifecycle, amount },
+      sourceModule: "sis",
+      idempotencyKey: `clearance.waiver.requested:${waiverId}`,
+    },
+  }),
+  decided: (
+    waiverId: string,
+    checkerId: string,
+    status: string,
+  ): MutationAuditSpec => ({
+    ...workflow("clearanceWaiverDecided", "student_clearance_waiver", waiverId, {
+      waiverId,
+      checkerId,
+      status,
+    }),
+    domain: {
+      eventType: "clearance.waiver.decided",
+      payload: { waiverId, checkerId, status },
+      sourceModule: "sis",
+      idempotencyKey: `clearance.waiver.decided:${waiverId}`,
     },
   }),
 };
@@ -1134,6 +1223,26 @@ export const educationAudit = {
       payload: { remarkId },
       sourceModule: "education",
       idempotencyKey: `education.report_remark.published:${remarkId}`,
+    },
+  }),
+  // EIP-6 — a learning-evidence item interaction was recorded on the spine.
+  // idempotencyKey is the response row id (stable per attempt), so an idempotent
+  // re-record does not enqueue a second domain event.
+  itemResponseRecorded: (
+    responseId: string,
+    source: string,
+    studentId: string,
+  ): MutationAuditSpec => ({
+    ...workflow("learningEvidenceRecorded", "student_item_response", responseId, {
+      responseId,
+      source,
+      studentId,
+    }),
+    domain: {
+      eventType: "education.learning_evidence.recorded",
+      payload: { responseId, source, studentId },
+      sourceModule: "education",
+      idempotencyKey: `education.learning_evidence:${responseId}`,
     },
   }),
 };
@@ -1897,6 +2006,223 @@ export const staffAttendanceAudit = {
       payload: { requestId, approverId, status },
       sourceModule: "staff_attendance",
       idempotencyKey: `staff_attendance.manual_request.decided:${requestId}:${status}`,
+    },
+  }),
+};
+
+// ─── P1-PROD-22 SLICE 1 — Staff Face ID enrollment backend ───────────────────
+//
+// Distinct from staffAttendanceAudit.faceEnrolled (the original self-only B4
+// enrol-face path): this backs the governed /attendance-auth/face/* routes,
+// which additionally allow an HR-managed enrollment/revocation of ANOTHER
+// user's reference face — so every event carries both the enrollment's OWNER
+// (userId) and the ACTING user (actorUserId), which are the same value on a
+// self-service call and differ only on a manageHr-gated call.
+
+export const attendanceAuthAudit = {
+  faceEnrolled: (
+    enrollmentId: string,
+    userId: string,
+    actorUserId: string,
+  ): MutationAuditSpec => ({
+    ...workflow("attendanceAuthFaceEnrolled", "staff_face_enrollment", enrollmentId, {
+      userId,
+      actorUserId,
+    }),
+    domain: {
+      eventType: "attendance_auth.face.enrolled",
+      payload: { enrollmentId, userId, actorUserId },
+      sourceModule: "attendance_auth",
+      idempotencyKey: `attendance_auth.face.enrolled:${enrollmentId}`,
+    },
+  }),
+  faceRevoked: (
+    enrollmentId: string,
+    userId: string,
+    actorUserId: string,
+  ): MutationAuditSpec => ({
+    ...workflow("attendanceAuthFaceRevoked", "staff_face_enrollment", enrollmentId, {
+      userId,
+      actorUserId,
+    }),
+    domain: {
+      eventType: "attendance_auth.face.revoked",
+      payload: { enrollmentId, userId, actorUserId },
+      sourceModule: "attendance_auth",
+      idempotencyKey: `attendance_auth.face.revoked:${enrollmentId}`,
+    },
+  }),
+};
+
+// ─── Student attendance corrections ──────────────────────────────────────────
+//
+// P1 (observability): the student-attendance correction routes mutated the
+// record of a child's attendance with NO audit row at all, so the support
+// question "who changed my child's mark, when, and on whose authority?" was
+// unanswerable from the server. These specs back the three correction
+// mutations in `_shared/attendance/attendance_handlers.ts`:
+//
+//   • POST /attendance/corrections               (staff files a request)
+//   • POST /parent/attendance/corrections        (parent files a request)
+//   • PATCH /attendance/corrections/:id/status   (staff approves / rejects)
+//
+// Modelled on `examAudit.markUpdated` — the fully forensic example — so each
+// event carries a real BEFORE→AFTER, not just "something changed":
+//   actor      → bound on emit from the verified claims (user_id, user_role)
+//   timestamp  → audit_events.created_at (DB default, server clock)
+//   before/after → the mark change requested (request) / the status transition
+//                  plus the mark change it authorises (decision)
+//   source     → the API route that produced the mutation. Distinct from the
+//                `audit_events.source` COLUMN, which is always 'server' here;
+//                this is the *functional* origin, and it is what separates a
+//                parent-filed request from a staff-filed one.
+//   reason     → the requester's stated reason, where one exists.
+//
+// PRIVACY (DPDP): ids only — `student_name` is deliberately NOT copied into the
+// audit metadata (it is derivable from studentId/sisStudentId, and duplicating a
+// child's name into a second store widens the personal-data surface for no
+// forensic gain). The free-text `reason` IS kept in the audit metadata — it is
+// the whole point of the record, is already stored on `attendance_corrections`
+// in the same tenant DB under the same RLS, and cannot be reconstructed later —
+// but it is deliberately kept OUT of the `domain_events` payload, which is a
+// fan-out channel feeding subscribers/notifications rather than a governance
+// record. Downstream consumers get `hasReason` instead.
+
+/** The mark a correction moves an attendance record from → to. */
+export interface AttendanceMarkChange {
+  from: string;
+  to: string;
+}
+
+export const attendanceAudit = {
+  /**
+   * A student-attendance correction was FILED (staff or parent). This does not
+   * change the live attendance record — it opens a request — but it is the
+   * origin of the eventual change, so the trail starts here.
+   *
+   * `correctionId` is unique per row (uuid-suffixed), so it also keys the outbox.
+   */
+  correctionRequested: (
+    correctionId: string,
+    input: {
+      sisStudentId: string;
+      /** Resolved SIS uuid; null when the student could not be resolved. */
+      studentId: string | null;
+      dateLabel: string;
+      /** The mark this correction asks to change (before → after). */
+      markChange: AttendanceMarkChange;
+      reason: string;
+      requesterId: string;
+      requesterRole: string;
+      /** API route that produced the mutation, e.g. "POST /attendance/corrections". */
+      source: string;
+    },
+  ): MutationAuditSpec => ({
+    ...workflow(
+      "attendanceCorrectionRequested",
+      "attendance_correction",
+      correctionId,
+      {
+        correctionId,
+        sisStudentId: input.sisStudentId,
+        studentId: input.studentId,
+        dateLabel: input.dateLabel,
+        before: { mark: input.markChange.from },
+        after: { mark: input.markChange.to },
+        reason: input.reason,
+        requesterId: input.requesterId,
+        requesterRole: input.requesterRole,
+        source: input.source,
+        status: "pending",
+      },
+    ),
+    domain: {
+      eventType: "attendance.correction.requested",
+      payload: {
+        correctionId,
+        sisStudentId: input.sisStudentId,
+        studentId: input.studentId,
+        dateLabel: input.dateLabel,
+        before: { mark: input.markChange.from },
+        after: { mark: input.markChange.to },
+        requesterRole: input.requesterRole,
+        source: input.source,
+        hasReason: input.reason.trim().length > 0,
+      },
+      sourceModule: "attendance",
+      idempotencyKey: `attendance.correction.requested:${correctionId}`,
+    },
+  }),
+
+  /**
+   * A correction request was APPROVED / REJECTED / CANCELLED by a staff actor
+   * holding `approveAttendanceCorrection`. before/after are the correction's
+   * STATUS transition — which is what this route actually mutates. The mark
+   * change the decision authorises is carried alongside as `markChange`; the
+   * live `attendance_records` flip is performed by the approval workflow
+   * (`applyAttendanceCorrection`), which has its own trail.
+   *
+   * `nonce` keys the outbox so a legitimate re-decision of the same correction
+   * (e.g. approved → rejected → approved) is recorded rather than deduped away;
+   * pass the updated row's `updated_at`.
+   */
+  correctionDecided: (
+    correctionId: string,
+    input: {
+      sisStudentId: string;
+      studentId: string | null;
+      dateLabel: string;
+      /** Status transition actually performed by this route. */
+      before: { status: string };
+      after: { status: string };
+      /** The mark change the request asks for (unchanged by a rejection). */
+      markChange: AttendanceMarkChange;
+      /** The REQUESTER's stated reason. The decision itself carries no note —
+       * the PATCH body has no such field — so there is no decision reason to
+       * record; that gap is stated rather than faked. */
+      requestReason: string;
+      requesterId: string;
+      requesterRole: string;
+      source: string;
+      nonce: string;
+    },
+  ): MutationAuditSpec => ({
+    ...workflow(
+      "attendanceCorrectionDecided",
+      "attendance_correction",
+      correctionId,
+      {
+        correctionId,
+        sisStudentId: input.sisStudentId,
+        studentId: input.studentId,
+        dateLabel: input.dateLabel,
+        before: input.before,
+        after: input.after,
+        markChange: input.markChange,
+        requestReason: input.requestReason,
+        decisionReason: null,
+        requesterId: input.requesterId,
+        requesterRole: input.requesterRole,
+        source: input.source,
+      },
+    ),
+    domain: {
+      eventType: "attendance.correction.decided",
+      payload: {
+        correctionId,
+        sisStudentId: input.sisStudentId,
+        studentId: input.studentId,
+        dateLabel: input.dateLabel,
+        before: input.before,
+        after: input.after,
+        markChange: input.markChange,
+        requesterRole: input.requesterRole,
+        source: input.source,
+        hasReason: input.requestReason.trim().length > 0,
+      },
+      sourceModule: "attendance",
+      idempotencyKey:
+        `attendance.correction.decided:${correctionId}:${input.after.status}:${input.nonce}`,
     },
   }),
 };

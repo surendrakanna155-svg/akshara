@@ -1,10 +1,10 @@
-# Akshara ERP — AI Usage & Disclaimer
+# NIKSHA OS — AI Usage & Disclaimer
 
 **Document version:** 1.0
 **Status:** Draft for owner sign-off (see [PLACEHOLDERS.md](PLACEHOLDERS.md))
-**Operator:** **[LEGAL ENTITY NAME]** ("Akshara", "we", "us").
+**Operator:** **NIKSHA Technologies Pvt. Ltd.** ("NIKSHA OS", "we", "us").
 
-> This document explains, in plain language, how Akshara uses artificial
+> This document explains, in plain language, how NIKSHA OS uses artificial
 > intelligence (AI), what AI does and does not do with your data, and the limits of
 > AI output. It supports the [Privacy Policy](PRIVACY_POLICY.md) and the
 > [Acceptable Use Policy](ACCEPTABLE_USE_POLICY.md).
@@ -13,7 +13,7 @@
 
 ## 1. Where AI is used
 
-Akshara offers **optional** AI-assisted features that help staff and parents work
+NIKSHA OS offers **optional** AI-assisted features that help staff and parents work
 faster. These currently include:
 
 - An **assistant / copilot** that answers questions and drafts text within the app.

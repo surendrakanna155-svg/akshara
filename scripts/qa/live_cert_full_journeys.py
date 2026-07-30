@@ -14,8 +14,9 @@ No mocks, no route-existence-only checks.
 Run:  python3 scripts/qa/live_cert_full_journeys.py
 """
 import json, time, urllib.request, urllib.error
+import os
 
-BASE = "https://akshara.veloraunisexsalon.com"
+BASE = os.environ.get("API_BASE_URL", "https://api.nikshaos.in")
 SCHOOL = "a2000000-0000-4000-8000-000000000001"
 ADMIN, TEACHER, PARENT = "+919876543210", "+919876543213", "+919876543211"
 TS = str(int(time.time()))

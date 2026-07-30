@@ -9,7 +9,6 @@ import {
   handleHomework,
   handleLeave,
   handleLeaveBalance,
-  handleMessages,
   handleTimetable,
 } from "./teacher_handlers.ts";
 // MJ-C5: the teacher exam workflow reuses the certified exam-administration
@@ -88,7 +87,8 @@ function matchTeacherRoute(method: string, path: string): { handler: TeacherHand
     "/teacher/timetable": handleTimetable,
     "/teacher/leave": handleLeave,
     "/teacher/leave/balance": handleLeaveBalance,
-    "/teacher/messages": handleMessages,
+    // PRA-N-13 (S0/T1a): "/teacher/messages" removed — owned by routeCommunication
+    // (dispatched first) via the governed handleTeacherMessageThreads.
   };
 
   const handler = routes[path] as TeacherHandler | undefined;
@@ -105,7 +105,7 @@ export async function routeTeacher(
 
   const match = matchTeacherRoute(method, path);
   if (!match) {
-    return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+    return null;
   }
 
   return await match.handler(req, config);

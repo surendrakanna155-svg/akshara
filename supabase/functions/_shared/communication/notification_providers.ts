@@ -1,5 +1,7 @@
 import type { NotificationChannel, NotificationProviderConfig } from "./notification_provider_config.ts";
 import { sendFcmV1 } from "./fcm_v1_client.ts";
+import type { WhatsAppProviderConfig } from "../school_completion/whatsapp_providers.ts";
+import { sendWhatsAppMessage } from "../school_completion/whatsapp_providers.ts";
 
 export interface DeliveryPayload {
   channel: NotificationChannel;
@@ -13,6 +15,14 @@ export interface DeliveryPayload {
   category?: string | null;
   childContext?: string | null;
   route?: string | null;
+  // Batch 6: the recipient's WhatsApp destination (phone). When the channel is
+  // 'whatsapp' the drain resolves the delivery to a phone number and passes the
+  // per-school provider config below.
+  recipientPhone?: string | null;
+  // Batch 6: per-school WhatsApp provider config, loaded by the drain from
+  // whatsapp_provider_configs. Absent/unconfigured schools resolve to a 'stub'
+  // config whose send honestly returns success:false ("not configured").
+  whatsappConfig?: WhatsAppProviderConfig | null;
 }
 
 export interface DeliveryResult {
@@ -32,7 +42,25 @@ export async function sendViaProvider(
       return await sendEmail(config, payload);
     case "push":
       return await sendPush(config, payload);
+    case "whatsapp":
+      return await sendWhatsApp(payload);
   }
+}
+
+async function sendWhatsApp(payload: DeliveryPayload): Promise<DeliveryResult> {
+  // Batch 6: route WhatsApp through the EXISTING school_completion provider
+  // (msg91/gupshup). The per-school config is threaded in by the drain; an
+  // unconfigured school arrives here with a 'stub' config, and
+  // sendWhatsAppMessage returns its honest "not configured" failure — never a
+  // fabricated success. The template body is the already-rendered delivery body.
+  if (!payload.whatsappConfig) {
+    return { success: false, providerRef: null, error: "WhatsApp provider config missing" };
+  }
+  return await sendWhatsAppMessage(payload.whatsappConfig, {
+    toPhone: payload.recipientPhone ?? payload.recipientUserId,
+    templateId: payload.category ?? "notification",
+    body: payload.body,
+  });
 }
 
 async function sendSms(
@@ -95,7 +123,7 @@ async function sendEmail(
     body: JSON.stringify({
       personalizations: [{ to: [{ email: payload.recipientUserId }] }],
       from: { email: config.email.fromEmail },
-      subject: payload.subject ?? "Akshara ERP",
+      subject: payload.subject ?? "NIKSHA OS",
       content: [{ type: "text/plain", value: payload.body }],
     }),
   });
@@ -133,7 +161,7 @@ async function sendPush(
 
   const result = await sendFcmV1({
     token: payload.deviceToken,
-    title: payload.subject ?? "Akshara ERP",
+    title: payload.subject ?? "NIKSHA OS",
     body: payload.body,
     data,
   });

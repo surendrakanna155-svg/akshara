@@ -9,7 +9,15 @@ import {
   parseApiStatus,
   statusToDb,
 } from "./sis_status_codec.ts";
-import { allocatePublicStudentId } from "./sis_public_student_id.ts";
+import {
+  allocateAndInsertStudentProfile,
+  insertStudentIdentityRow,
+} from "./sis_student_identity.ts";
+import {
+  ClearanceDuesBlockedError,
+  resolveClearanceDecision,
+} from "../clearance/clearance_gate.ts";
+import { consumeWaiver } from "../clearance/clearance_waiver_repository.ts";
 
 export interface StudentListFilters {
   search?: string;
@@ -645,15 +653,15 @@ export async function createStudent(
     const studentCode = await generateStudentCode(db, schoolId);
     await db.queryObject("SAVEPOINT sis_student_code");
     try {
-      const studentRows = await db.queryObject<{ id: string }>(
-        `INSERT INTO students (
-          organization_id, school_id, student_code, display_name, status, created_by
-        ) VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING id`,
-        [organizationId, schoolId, studentCode, displayName, dbStatus, input.createdBy],
-      );
+      // ICA-F2: identity-table row via the single SIS-owned writer.
+      const studentRow = await insertStudentIdentityRow(db, organizationId, schoolId, {
+        studentCode,
+        displayName,
+        status: dbStatus,
+        createdBy: input.createdBy,
+      });
       await db.queryObject("RELEASE SAVEPOINT sis_student_code");
-      studentId = studentRows[0]!.id;
+      studentId = studentRow!.id;
       break;
     } catch (error) {
       await db.queryObject("ROLLBACK TO SAVEPOINT sis_student_code");
@@ -665,44 +673,29 @@ export async function createStudent(
     throw new ValidationError("Could not allocate a unique student code; please retry");
   }
 
-  // PSID: allocate the permanent Public Student ID for this new profile. Set-once
-  // at creation; the counter is never-reused/gapped and concurrency-safe. Fails
+  // PSID + profile: allocate the permanent Public Student ID and write the
+  // identity profile via the single SIS-owned writer (ICA-F2). Set-once at
+  // creation; the counter is never-reused/gapped and concurrency-safe. Fails
   // loudly if the school has no code (PSID requires it).
-  const publicStudentId = await allocatePublicStudentId(db, organizationId, schoolId);
-
+  //
   // RT-02: the admissionNumberExists() check above is TOCTOU-racy. The DB now
   // enforces UNIQUE(school_id, admission_number); map the violation to the same
   // DuplicateAdmissionNumberError (409) so a concurrent duplicate is rejected
   // cleanly instead of 500ing. The whole transaction rolls back (no orphan
   // students row).
   try {
-    await db.queryObject(
-      `INSERT INTO student_profiles (
-        organization_id, school_id, student_id, admission_number, public_student_id,
-        date_of_birth, gender, blood_group, address, city, state, postal_code, country,
-        created_by
-      ) VALUES (
-        $1, $2, $3, $4, $5,
-        $6::date, $7, $8, $9, $10, $11, $12, $13,
-        $14
-      )`,
-      [
-        organizationId,
-        schoolId,
-        studentId,
-        admissionNumber,
-        publicStudentId,
-        input.dateOfBirth || null,
-        input.gender ?? null,
-        input.bloodGroup ?? null,
-        input.address ?? null,
-        input.city ?? null,
-        input.state ?? null,
-        input.postalCode ?? null,
-        input.country ?? null,
-        input.createdBy,
-      ],
-    );
+    await allocateAndInsertStudentProfile(db, organizationId, schoolId, studentId, {
+      admissionNumber,
+      dateOfBirth: input.dateOfBirth || null,
+      gender: input.gender ?? null,
+      bloodGroup: input.bloodGroup ?? null,
+      address: input.address ?? null,
+      city: input.city ?? null,
+      state: input.state ?? null,
+      postalCode: input.postalCode ?? null,
+      country: input.country ?? null,
+      createdBy: input.createdBy,
+    });
   } catch (error) {
     if (
       String(error).includes("duplicate key") &&
@@ -749,6 +742,16 @@ export async function updateStudent(
 
   if (input.status !== undefined) {
     assertValidStatusTransition(existing.student.status, input.status);
+    // SCE-1 (audit F1 P0): the general update is a second writer of
+    // status='transferred' — it must enforce the SAME no-dues gate as
+    // PATCH /status and the TC engine, or the bypass stays open here.
+    await enforceTransferClearance(
+      db,
+      organizationId,
+      schoolId,
+      studentId,
+      parseApiStatus(input.status),
+    );
   }
 
   if (input.displayName !== undefined || input.status !== undefined) {
@@ -816,6 +819,53 @@ export async function updateStudent(
   return detail;
 }
 
+/**
+ * SCE-1 (owner-approved 2026-07-12): EVERY transition to `transferred` — whoever
+ * writes the status — must clear the SAME no-dues gate as the TC engine, so no
+ * status-writing endpoint can bypass the Transfer-Certificate law. Shared by
+ * `updateStudentStatus` (PATCH /status) AND `updateStudent` (PUT /students/:id).
+ * Consults the clearance gate on lifecycle 'transfer_certificate' (identical
+ * finance-blocking policy AND the shared waiver pool), fails CLOSED on unwaived
+ * dues (→ ClearanceDuesBlockedError → 409 DUES_PENDING), and CONSUMES a covering
+ * approved waiver single-use (no TC issue row, so consumed_by_issue_id null;
+ * re-blocks on a lost consume race). No-op for any target other than
+ * `transferred` — `graduated` is DELIBERATELY NOT gated (open owner policy on
+ * cohort-graduation dues-blocking). MUST run inside the caller's transaction,
+ * BEFORE the status UPDATE, so a block rolls the whole change back.
+ */
+export async function enforceTransferClearance(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  studentId: string,
+  targetStatus: string,
+): Promise<void> {
+  if (targetStatus !== "transferred") return;
+  const decision = await resolveClearanceDecision(
+    db,
+    { organizationId, schoolId },
+    studentId,
+    "transfer_certificate",
+  );
+  if (decision.blocked) {
+    throw new ClearanceDuesBlockedError(decision.blockingAmount);
+  }
+  if (decision.waiver) {
+    const consumed = await consumeWaiver(
+      db,
+      { organizationId, schoolId },
+      studentId,
+      "transfer_certificate",
+      null,
+    );
+    // Single-use guard (mirrors the TC path): a concurrent exit may have already
+    // consumed the covering waiver → it can't clear THIS transfer → fail closed.
+    if (!consumed) {
+      throw new ClearanceDuesBlockedError(decision.duesAtGate);
+    }
+  }
+}
+
 export async function updateStudentStatus(
   db: TenantQueryClient,
   organizationId: string,
@@ -827,7 +877,10 @@ export async function updateStudentStatus(
   if (!existing) throw new StudentNotFoundError(studentId);
 
   assertValidStatusTransition(existing.student.status, input.status);
-  const dbStatus = statusToDb(parseApiStatus(input.status));
+  const targetStatus = parseApiStatus(input.status);
+  const dbStatus = statusToDb(targetStatus);
+
+  await enforceTransferClearance(db, organizationId, schoolId, studentId, targetStatus);
 
   await db.queryObject(
     `UPDATE students SET

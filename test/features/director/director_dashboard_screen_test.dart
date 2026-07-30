@@ -89,7 +89,7 @@ class _FakeDirectorRepository implements DirectorRepository {
       schoolRows: [
         DirectorSchoolRow(
           schoolId: 'd1',
-          schoolName: 'Akshara North Campus',
+          schoolName: 'NIKSHA North Campus',
           location: 'Hyderabad',
           students: 1200,
           revenueCr: 2.2,
@@ -219,7 +219,7 @@ void main() {
 
     expect(find.text('Total Schools'), findsOneWidget);
     expect(find.text(kDirectorPrivacyBannerMessage), findsOneWidget);
-    expect(find.text('Akshara North Campus'), findsOneWidget);
+    expect(find.text('NIKSHA North Campus'), findsOneWidget);
     expect(find.text('Director AI Assistant'), findsOneWidget);
     expect(find.byType(DirectorDashboardScreen), findsOneWidget);
     expect(RouteNames.directorDashboard, isNotEmpty);

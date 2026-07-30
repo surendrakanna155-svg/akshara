@@ -6,8 +6,12 @@ import {
   handleListAdmissionsConversion,
 } from "./sis_conversion_handlers.ts";
 import {
+  handleAcademicAssignment,
+  handleBulkPromotion,
   handleCreateEnrollment,
   handleListEnrollments,
+  handleReshuffle,
+  handleSectionBalance,
   handleUpdateEnrollment,
 } from "./sis_enrollment_handlers.ts";
 import {
@@ -19,7 +23,9 @@ import {
   handleUpdateStudentStatus,
 } from "./sis_handlers.ts";
 import {
+  handleDownloadStudentDocument,
   handleListStudentDocuments,
+  handlePresignStudentDocumentUpload,
   handleUploadStudentDocument,
   handleVerifyStudentDocument,
 } from "./sis_document_handlers.ts";
@@ -33,9 +39,19 @@ import {
   handleGetStudentTimeline,
 } from "./sis_student_360_handlers.ts";
 import { handleListStudentSiblings } from "./sis_sibling_handlers.ts";
-
-const UUID_SEGMENT =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// PRA-P1-01 / PRA-P1-02 (S2) — guardian link management.
+import {
+  handleAddGuardian,
+  handleRemoveGuardian,
+} from "./sis_guardian_handlers.ts";
+// SCE-1 — student clearance / no-dues + dues-waiver handlers (cross-module).
+import { handleStudentClearance } from "../clearance/clearance_handlers.ts";
+import {
+  handleCreateClearanceWaiver,
+  handleDecideClearanceWaiver,
+  handleListPendingClearanceWaivers,
+  handleRevokeClearanceWaiver,
+} from "../clearance/clearance_waiver_handlers.ts";
 
 export function matchSisRoute(
   method: string,
@@ -63,11 +79,40 @@ export function matchSisRoute(
     return { handler: handleCreateEnrollment, args: [] };
   }
 
+  // WEB-005: registrar class-management workflows.
+  if (path === "/sis/academic-assignment" && method === "GET") {
+    return { handler: handleAcademicAssignment, args: [] };
+  }
+  if (path === "/sis/promotion" && method === "POST") {
+    return { handler: handleBulkPromotion, args: [] };
+  }
+  if (path === "/sis/reshuffle" && method === "POST") {
+    return { handler: handleReshuffle, args: [] };
+  }
+  if (path === "/sis/section-balance" && method === "POST") {
+    return { handler: handleSectionBalance, args: [] };
+  }
+
   if (path === "/sis/admissions-conversion" && method === "GET") {
     return { handler: handleListAdmissionsConversion, args: [] };
   }
   if (path === "/sis/admissions-conversion" && method === "POST") {
     return { handler: handleAdmissionsConversion, args: [] };
+  }
+
+  // SCE-1 slice 3 — clearance dues-waivers (maker-checker). The approver queue
+  // + decide are school-wide (not student-scoped); the raise is student-scoped
+  // (matched below with the other /sis/students/:id/* routes).
+  if (path === "/sis/clearance/waivers" && method === "GET") {
+    return { handler: handleListPendingClearanceWaivers, args: [] };
+  }
+  const waiverDecideMatch = path.match(/^\/sis\/clearance\/waivers\/([^/]+)\/decide$/);
+  if (waiverDecideMatch && method === "POST") {
+    return { handler: handleDecideClearanceWaiver, args: [waiverDecideMatch[1]!] };
+  }
+  const waiverRevokeMatch = path.match(/^\/sis\/clearance\/waivers\/([^/]+)\/revoke$/);
+  if (waiverRevokeMatch && method === "POST") {
+    return { handler: handleRevokeClearanceWaiver, args: [waiverRevokeMatch[1]!] };
   }
 
   const enrollmentMatch = path.match(/^\/sis\/enrollments\/([^/]+)$/);
@@ -90,6 +135,29 @@ export function matchSisRoute(
     };
   }
 
+  // PRA-P1-19 — presign a real document upload (static "presign" segment; more
+  // specific than the /documents/:docId/download route below).
+  const documentPresignMatch = path.match(
+    /^\/sis\/students\/([^/]+)\/documents\/presign$/,
+  );
+  if (documentPresignMatch && method === "POST") {
+    return {
+      handler: handlePresignStudentDocumentUpload,
+      args: [documentPresignMatch[1]!],
+    };
+  }
+
+  // PRA-P1-19 — short-lived signed download URL for a stored document.
+  const documentDownloadMatch = path.match(
+    /^\/sis\/students\/([^/]+)\/documents\/([^/]+)\/download$/,
+  );
+  if (documentDownloadMatch && method === "GET") {
+    return {
+      handler: handleDownloadStudentDocument,
+      args: [documentDownloadMatch[1]!, documentDownloadMatch[2]!],
+    };
+  }
+
   const documentsMatch = path.match(/^\/sis\/students\/([^/]+)\/documents$/);
   if (documentsMatch) {
     if (method === "GET") {
@@ -98,6 +166,19 @@ export function matchSisRoute(
     if (method === "POST") {
       return { handler: handleUploadStudentDocument, args: [documentsMatch[1]!] };
     }
+  }
+
+  // SCE-1 — Student Clearance / No-Dues report (read-only, cross-module).
+  // Matched before the generic /certificates route so the specific path wins.
+  const clearanceMatch = path.match(/^\/sis\/students\/([^/]+)\/clearance$/);
+  if (clearanceMatch && method === "GET") {
+    return { handler: handleStudentClearance, args: [clearanceMatch[1]!] };
+  }
+  // SCE-1 slice 3 — a maker raises a dues-waiver for the student (more specific
+  // than /clearance, so match first).
+  const waiverCreateMatch = path.match(/^\/sis\/students\/([^/]+)\/clearance\/waivers$/);
+  if (waiverCreateMatch && method === "POST") {
+    return { handler: handleCreateClearanceWaiver, args: [waiverCreateMatch[1]!] };
   }
 
   // SIS-D1 — transfer certificate (TC) engine. Matched BEFORE the generic
@@ -128,6 +209,25 @@ export function matchSisRoute(
   const siblingsMatch = path.match(/^\/sis\/students\/([^/]+)\/siblings$/);
   if (siblingsMatch && method === "GET") {
     return { handler: handleListStudentSiblings, args: [siblingsMatch[1]!] };
+  }
+
+  // PRA-P1-02 (S2) — DELETE a specific guardian link (deactivate). The
+  // two-segment guardians path is more specific than the single-segment
+  // guardians collection and the generic student route, so it is matched first.
+  const guardianLinkMatch = path.match(
+    /^\/sis\/students\/([^/]+)\/guardians\/([^/]+)$/,
+  );
+  if (guardianLinkMatch && method === "DELETE") {
+    return {
+      handler: handleRemoveGuardian,
+      args: [guardianLinkMatch[1]!, guardianLinkMatch[2]!],
+    };
+  }
+
+  // PRA-P1-01 (S2) — add a guardian link to an existing student.
+  const guardiansMatch = path.match(/^\/sis\/students\/([^/]+)\/guardians$/);
+  if (guardiansMatch && method === "POST") {
+    return { handler: handleAddGuardian, args: [guardiansMatch[1]!] };
   }
 
   const profile360Match = path.match(/^\/sis\/students\/([^/]+)\/360$/);
@@ -164,13 +264,7 @@ export async function routeSis(
 
   const match = matchSisRoute(method, path);
   if (!match) {
-    return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
-  }
-
-  for (const arg of match.args) {
-    if (arg.includes("-") && !UUID_SEGMENT.test(arg)) {
-      // Allow non-UUID legacy mock ids in path for compatibility
-    }
+    return null;
   }
 
   return await match.handler(req, config, ...match.args);

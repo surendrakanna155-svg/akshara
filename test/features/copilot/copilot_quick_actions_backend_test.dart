@@ -31,7 +31,7 @@ class _FakeQuickActionsRepo implements AdaptiveAiRepository {
   @override
   Future<void> sendRecommendationFeedback({required RepositoryQuery query, required String itemKey, required String itemType, required AdaptiveFeedbackAction action}) async {}
   @override
-  Future<UniversalSearchResult> universalSearch({required RepositoryQuery query, required String term, int? limit}) async =>
+  Future<UniversalSearchResult> universalSearch({required RepositoryQuery query, required String term, int? limit, int? offset}) async =>
       UniversalSearchResult.empty(term);
 }
 

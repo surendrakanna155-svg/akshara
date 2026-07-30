@@ -3,8 +3,8 @@ export const snapshot = {};
 snapshot[`CI-C3 golden: buildPaperDocumentV2 (A/B/C) is byte-stable 1`] = `
 {
   branding: {
-    logoText: "AV",
-    schoolName: "Akshara Vidyalaya",
+    logoText: "NV",
+    schoolName: "NIKSHA Vidyalaya",
   },
   durationMinutes: 60,
   format: "akshara-education-paper-v2",

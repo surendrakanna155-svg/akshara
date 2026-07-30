@@ -1,5 +1,8 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
-import { allocatePublicStudentId } from "../sis/sis_public_student_id.ts";
+import {
+  allocateAndInsertStudentProfile,
+  insertStudentIdentityRow,
+} from "../sis/sis_student_identity.ts";
 
 export interface StudentImportRow {
   studentName: string;
@@ -250,42 +253,25 @@ export async function createImportedStudent(
     aadhaarHash = await hashAadhaar(row.aadhaar);
   }
 
-  const inserted = await db.queryObject<{ id: string }>(
-    `INSERT INTO students (
-       organization_id, school_id, user_id, student_code, display_name, status,
-       is_placeholder, aadhaar, aadhaar_hash
-     ) VALUES ($1, $2, $3, $4, $5, 'active', false, $6, $7)
-     RETURNING id`,
-    [
-      organizationId,
-      schoolId,
-      studentUserId,
-      studentCode,
-      row.studentName.trim(),
-      aadhaarMasked,
-      aadhaarHash,
-    ],
-  );
-  const studentId = inserted[0]!.id;
+  // ICA-F2: identity-table row via the single SIS-owned writer.
+  const inserted = await insertStudentIdentityRow(db, organizationId, schoolId, {
+    userId: studentUserId,
+    studentCode,
+    displayName: row.studentName.trim(),
+    isPlaceholder: false,
+    aadhaarMasked,
+    aadhaarHash,
+  });
+  const studentId = inserted!.id;
 
-  // PSID: permanent Public Student ID for the imported student's profile (set-once).
-  const publicStudentId = await allocatePublicStudentId(db, organizationId, schoolId);
-  await db.queryObject(
-    `INSERT INTO student_profiles (
-       student_id, organization_id, school_id, admission_number, public_student_id,
-       gender, date_of_birth, mother_name
-     ) VALUES ($1, $2, $3, $4, $5, $6, NULLIF($7, '')::date, $8)`,
-    [
-      studentId,
-      organizationId,
-      schoolId,
-      row.admissionNumber.trim(),
-      publicStudentId,
-      row.gender ?? null,
-      row.dateOfBirth ?? null,
-      row.motherName ?? null,
-    ],
-  );
+  // PSID + profile: permanent Public Student ID for the imported student's
+  // profile (set-once) via the single SIS-owned identity writer.
+  await allocateAndInsertStudentProfile(db, organizationId, schoolId, studentId, {
+    admissionNumber: row.admissionNumber.trim(),
+    gender: row.gender ?? null,
+    dateOfBirth: (row.dateOfBirth ?? "").trim() || null,
+    motherName: row.motherName ?? null,
+  });
 
   await db.queryObject(
     `INSERT INTO sis_student_enrollments (
@@ -363,16 +349,15 @@ export async function createPlaceholderStudent(
     return { studentId: existing[0].id, created: false };
   }
 
-  const inserted = await db.queryObject<{ id: string }>(
-    `INSERT INTO students (
-       organization_id, school_id, user_id, student_code, display_name, status,
-       is_placeholder
-     ) VALUES ($1, $2, NULL, $3, $4, 'active', true)
-     ON CONFLICT (school_id, student_code) DO NOTHING
-     RETURNING id`,
-    [organizationId, schoolId, studentCode, studentName],
-  );
-  if (!inserted[0]) {
+  // ICA-F2: identity-table row via the single SIS-owned writer. Placeholder
+  // idempotency keeps its deterministic student_code + ON CONFLICT reuse.
+  const inserted = await insertStudentIdentityRow(db, organizationId, schoolId, {
+    studentCode,
+    displayName: studentName,
+    isPlaceholder: true,
+    reuseOnStudentCodeConflict: true,
+  });
+  if (!inserted) {
     // Lost a race; fetch the row that won.
     const winner = await db.queryObject<{ id: string }>(
       `SELECT id FROM students WHERE school_id = $1 AND student_code = $2 LIMIT 1`,
@@ -380,17 +365,14 @@ export async function createPlaceholderStudent(
     );
     return { studentId: winner[0]!.id, created: false };
   }
-  const studentId = inserted[0].id;
+  const studentId = inserted.id;
 
-  // PSID: permanent Public Student ID for the placeholder's profile (set-once).
-  const publicStudentId = await allocatePublicStudentId(db, organizationId, schoolId);
-  await db.queryObject(
-    `INSERT INTO student_profiles (
-       student_id, organization_id, school_id, admission_number, public_student_id
-     ) VALUES ($1, $2, $3, $4, $5)
-     ON CONFLICT (student_id) DO NOTHING`,
-    [studentId, organizationId, schoolId, admissionNumber, publicStudentId],
-  );
+  // PSID + profile: permanent Public Student ID for the placeholder's profile
+  // (set-once) via the single SIS-owned identity writer.
+  await allocateAndInsertStudentProfile(db, organizationId, schoolId, studentId, {
+    admissionNumber,
+    reuseOnStudentConflict: true,
+  });
 
   await db.queryObject(
     `INSERT INTO sis_student_enrollments (

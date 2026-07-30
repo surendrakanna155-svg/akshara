@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 /// Long-string stress data for UI layout validation.
 abstract final class StressFixtures {
   static const longSchoolName =
-      'Akshara International Residential Public School and Junior College Campus North Block';
+      'NIKSHA International Residential Public School and Junior College Campus North Block';
   static const longPersonName =
       'Venkataramana Subrahmanyam Chidambaram Iyer Kumaraswamy';
   static const longSubjectName =

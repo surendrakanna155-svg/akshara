@@ -43,10 +43,9 @@ void main() {
         AdminModule.hr,
         AdminModule.management,
         AdminModule.transport,
-        AdminModule.hostel,
+        AdminModule.hostel, // CODE-7: module stays (residence-lite); only leave/gate-pass routes hidden
         AdminModule.library,
         AdminModule.inventory,
-        AdminModule.alumni,
         AdminModule.controlCenter, // multi-school: KEPT
         AdminModule.director, // multi-school: KEPT
       ]) {
@@ -55,6 +54,30 @@ void main() {
           isFalse,
           reason: '$module must stay visible in the school build',
         );
+      }
+    });
+
+    test('owner scope deferrals (CODE-7/8, 2026-07-13): Alumni hidden; Hostel leave/gate-pass hidden',
+        () {
+      // CODE-8: Alumni deferred for pilot — module dropped from nav, whole
+      // /alumni/* surface route-hidden.
+      expect(SchoolBuildScope.isModuleHidden(AdminModule.alumni), isTrue);
+      expect(SchoolBuildScope.isRouteHidden(RouteNames.alumni), isTrue);
+      expect(SchoolBuildScope.isRouteHidden(RouteNames.alumniRegistry), isTrue,
+          reason: 'nested /alumni/* sub-routes must also be blocked');
+      // CODE-7: Hostel residence-lite — leave-management + visitor/gate-pass
+      // sub-features hidden, but the occupancy core stays reachable.
+      expect(SchoolBuildScope.isRouteHidden(RouteNames.hostelLeave), isTrue);
+      expect(SchoolBuildScope.isRouteHidden(RouteNames.hostelVisitors), isTrue);
+      for (final kept in [
+        RouteNames.hostelDashboard,
+        RouteNames.hostelStudents,
+        RouteNames.hostelRooms,
+        RouteNames.hostelAttendance,
+        RouteNames.hostelReports,
+      ]) {
+        expect(SchoolBuildScope.isRouteHidden(kept), isFalse,
+            reason: '$kept is residence-lite occupancy — must stay reachable');
       }
     });
 
@@ -119,6 +142,46 @@ void main() {
           reason: '$route is chain-gated, not build-hidden',
         );
       }
+    });
+
+    group('V1-SCOPE-1 — Education Suite (Question Paper / QIE) deferred to V2',
+        () {
+      test('the /education route and every sub-route are hidden in V1', () {
+        for (final route in [
+          RouteNames.education,
+          '${RouteNames.education}/paper',
+          '${RouteNames.education}/bank',
+        ]) {
+          expect(
+            SchoolBuildScope.isRouteHidden(route),
+            isTrue,
+            reason:
+                '$route exposes the incomplete Question Paper / QIE engine and '
+                'must stay hidden until V2 ships it',
+          );
+        }
+      });
+
+      test(
+          'hiding Education removes NO working capability — homework keeps its '
+          'own persona routes', () {
+        // The Education Suite's two complete tabs (Homework, Report Remarks)
+        // are reachable per-persona, so V1-SCOPE-1 costs users nothing. If this
+        // fails, hiding /education has started removing real functionality.
+        for (final route in [
+          RouteNames.teacherHomework,
+          RouteNames.parentHomework,
+          RouteNames.studentHomework,
+        ]) {
+          expect(
+            SchoolBuildScope.isRouteHidden(route),
+            isFalse,
+            reason:
+                '$route must stay reachable — it is how homework survives the '
+                'Education Suite being hidden in V1',
+          );
+        }
+      });
     });
   });
 }

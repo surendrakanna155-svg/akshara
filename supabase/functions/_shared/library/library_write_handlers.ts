@@ -9,6 +9,7 @@ import {
   WriteValidationError,
 } from "../entity_write/module_write_handlers.ts";
 import { createEntityWriteStore } from "../entity_write/entity_write_store.ts";
+import { releaseSavepoint, rollbackToSavepoint, savepoint } from "../db_savepoint.ts";
 import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
 import { scheduleReminder } from "../reminders/reminders_service.ts";
 import type { AccessTokenClaims } from "../jwt.ts";
@@ -38,27 +39,61 @@ export const LIBRARY_OVERDUE_AUDIENCE = "all_parents";
 /** Library member roles a caller may enrol. */
 const MEMBER_TYPES = new Set(["student", "staff", "teacher"]);
 
+/** The three enrollable library member roles (P2-12 per-type loan caps). */
+export type LibraryMemberType = "student" | "staff" | "teacher";
+const MEMBER_TYPE_KEYS: LibraryMemberType[] = ["student", "staff", "teacher"];
+
 /**
  * LIB-D1 — configurable circulation guardrails, stored as a single
  * `snapshot_settings` entity row (no migration; row-locked via mutateSnapshot).
  * Defaults are the owner-agreed values: at most 2 concurrent loans / member,
  * up to 2 renewals per loan, and issue blocked once a member's outstanding
  * un-waived fine total exceeds ₹100.
+ *
+ * PRA-P2-12: the loan cap is no longer one global number for everyone —
+ * `maxBooksByMemberType` gives students/teachers/staff distinct caps (a teacher
+ * legitimately holds more than a student). `maxBooksPerMember` is kept as the
+ * global fallback for an unknown member type (and for back-compat with schools
+ * that only ever set the single global number).
+ * PRA-P1-42: `lostBookReplacementFee` is the flat replacement charge levied when
+ * a book is returned `lost` (the copy never comes back to stock).
  */
 export interface LibrarySettings {
   maxBooksPerMember: number;
+  maxBooksByMemberType: Record<LibraryMemberType, number>;
   maxRenewals: number;
   blockOnFineThreshold: number;
-  /** All settings are numeric; the index signature lets a settings object
-   * satisfy the generic `Record<string, unknown>` payload/read contracts. */
-  [key: string]: number;
+  lostBookReplacementFee: number;
+  /** Settings are numbers, plus the one per-type numeric map; the index
+   * signature lets a settings object satisfy the generic
+   * `Record<string, unknown>` payload/read contracts. */
+  [key: string]: number | Record<string, number>;
 }
 
 export const DEFAULT_LIBRARY_SETTINGS: LibrarySettings = {
   maxBooksPerMember: 2,
+  maxBooksByMemberType: { student: 2, teacher: 5, staff: 5 },
   maxRenewals: 2,
   blockOnFineThreshold: 100,
+  lostBookReplacementFee: 300,
 };
+
+/** The valid return conditions (PRA-P1-42 adds `lost`, mirroring the Dart
+ * `LibraryReturnCondition` enum). A `lost` return levies the replacement fee
+ * and does NOT restock the copy. */
+export const RETURN_CONDITIONS = new Set(["good", "fair", "damaged", "lost"]);
+
+/** PRA-P1-42 — conditions under which the returned copy does NOT go back to
+ * stock and a replacement charge is raised. Kept as a set so the policy is easy
+ * to extend (e.g. if `damaged` later becomes non-restockable by owner policy). */
+export const NON_RESTOCK_CONDITIONS = new Set(["lost"]);
+
+/** The effective concurrent-loan cap for a member of `memberType`: the per-type
+ * cap when configured, else the global fallback (PRA-P2-12). */
+export function capForMemberType(settings: LibrarySettings, memberType: string): number {
+  const perType = settings.maxBooksByMemberType?.[memberType as LibraryMemberType];
+  return typeof perType === "number" && perType >= 0 ? perType : settings.maxBooksPerMember;
+}
 
 export const SETTINGS_ENTITY = "snapshot_settings";
 
@@ -71,11 +106,37 @@ function nonNegInt(value: unknown, fallback: number): number {
 /** Normalise a raw settings snapshot payload into a fully-defaulted object. */
 export function normalizeSettings(raw: Record<string, unknown> | null): LibrarySettings {
   const src = raw ?? {};
+  const maxBooksPerMember = nonNegInt(
+    src.maxBooksPerMember ?? (src as Record<string, unknown>).max_books_per_member,
+    DEFAULT_LIBRARY_SETTINGS.maxBooksPerMember,
+  );
+
+  // PRA-P2-12 per-type caps. Precedence per type: an explicit per-type value →
+  // the school's stored GLOBAL cap (back-compat: a library that only ever set
+  // `maxBooksPerMember` keeps it applied to every type) → the built-in per-type
+  // default (a brand-new library, with no global stored, gets the sensible
+  // student=2 / teacher=staff=5 defaults).
+  const globalPresent = "maxBooksPerMember" in src || "max_books_per_member" in src;
+  const perTypeRaw = src.maxBooksByMemberType ??
+    (src as Record<string, unknown>).max_books_by_member_type;
+  const perTypeSrc = (perTypeRaw && typeof perTypeRaw === "object")
+    ? perTypeRaw as Record<string, unknown>
+    : {};
+  const maxBooksByMemberType = {
+    student: 0,
+    staff: 0,
+    teacher: 0,
+  } as Record<LibraryMemberType, number>;
+  for (const type of MEMBER_TYPE_KEYS) {
+    const fallback = globalPresent
+      ? maxBooksPerMember
+      : DEFAULT_LIBRARY_SETTINGS.maxBooksByMemberType[type];
+    maxBooksByMemberType[type] = nonNegInt(perTypeSrc[type], fallback);
+  }
+
   return {
-    maxBooksPerMember: nonNegInt(
-      src.maxBooksPerMember ?? (src as Record<string, unknown>).max_books_per_member,
-      DEFAULT_LIBRARY_SETTINGS.maxBooksPerMember,
-    ),
+    maxBooksPerMember,
+    maxBooksByMemberType,
     maxRenewals: nonNegInt(
       src.maxRenewals ?? (src as Record<string, unknown>).max_renewals,
       DEFAULT_LIBRARY_SETTINGS.maxRenewals,
@@ -83,6 +144,10 @@ export function normalizeSettings(raw: Record<string, unknown> | null): LibraryS
     blockOnFineThreshold: nonNegInt(
       src.blockOnFineThreshold ?? (src as Record<string, unknown>).block_on_fine_threshold,
       DEFAULT_LIBRARY_SETTINGS.blockOnFineThreshold,
+    ),
+    lostBookReplacementFee: nonNegInt(
+      src.lostBookReplacementFee ?? (src as Record<string, unknown>).lost_book_replacement_fee,
+      DEFAULT_LIBRARY_SETTINGS.lostBookReplacementFee,
     ),
   };
 }
@@ -144,8 +209,10 @@ export function buildMemberPayload(
 }
 
 /**
- * Build a `fine` entity payload raised when an overdue book is returned.
- * `amount` is stored as a number (rupees); the read layer formats it. Pure for
+ * Build a `fine` entity payload raised when a book is returned overdue or lost.
+ * `amount` is stored as a number (rupees); the read layer formats it. `reason`
+ * distinguishes an overdue-day fine from a PRA-P1-42 lost-book replacement
+ * charge (default "overdue" so existing overdue callers are unchanged). Pure for
  * unit-testing.
  */
 export function buildReturnFinePayload(
@@ -154,6 +221,7 @@ export function buildReturnFinePayload(
   amount: number,
   daysOverdue: number,
   now: Date,
+  reason = "overdue",
 ): Record<string, unknown> {
   return {
     id: fineId,
@@ -162,10 +230,46 @@ export function buildReturnFinePayload(
     isbn: (issue.isbn as string | undefined) ?? "",
     amount,
     daysOverdue,
+    reason,
     status: "outstanding",
     sisStudentId: (issue.sisStudentId as string | undefined) ?? null,
     raisedDate: isoDate(now),
     issueId: String(issue.id ?? ""),
+  };
+}
+
+/** The outcome of the pure return charge/stock decision (PRA-P1-42). */
+export interface ReturnChargeOutcome {
+  overdueFine: number;
+  replacementFee: number;
+  totalCharge: number;
+  /** True when the copy is returned to stock; false for a lost (non-restock) copy. */
+  restocked: boolean;
+  /** "lost" when a replacement charge applies, else "overdue". */
+  fineReason: string;
+}
+
+/**
+ * PRA-P1-42 — the pure charge + restock decision for a returned book. A `lost`
+ * (non-restock) condition levies the flat replacement fee ON TOP of any overdue
+ * accrued and keeps the copy OUT of stock; every other condition is overdue-only
+ * and restocks. Exported for DB-free unit tests.
+ */
+export function computeReturnCharge(
+  condition: string,
+  daysOverdue: number,
+  settings: LibrarySettings,
+): ReturnChargeOutcome {
+  const overdueFine = Math.max(0, daysOverdue) * FINE_PER_DAY;
+  const nonRestock = NON_RESTOCK_CONDITIONS.has(condition);
+  const replacementFee = nonRestock ? Math.max(0, settings.lostBookReplacementFee) : 0;
+  const totalCharge = overdueFine + replacementFee;
+  return {
+    overdueFine,
+    replacementFee,
+    totalCharge,
+    restocked: !nonRestock,
+    fineReason: replacementFee > 0 ? "lost" : "overdue",
   };
 }
 
@@ -181,9 +285,14 @@ type Row = Record<string, unknown>;
  * zero stock. `issues`/`fines` are ALL rows for the school; `book` is the
  * matched catalog row (undefined when the ISBN is not in the catalogue —
  * availability is only enforced for a known book).
+ *
+ * PRA-P2-12: the loan cap is per member type — the caller passes the member's
+ * `memberType` so a teacher/staff cap can differ from a student cap (the cap was
+ * previously one global number for everyone).
  */
 export function assertIssueAllowed(
   memberName: string,
+  memberType: string,
   isbn: string,
   issues: Row[],
   fines: Row[],
@@ -201,9 +310,10 @@ export function assertIssueAllowed(
       "This member already has an active loan for this book — renew or return it first",
     );
   }
-  if (openForMember.length >= settings.maxBooksPerMember) {
+  const cap = capForMemberType(settings, memberType);
+  if (openForMember.length >= cap) {
     throw new WriteValidationError(
-      `Loan limit reached — a member may hold at most ${settings.maxBooksPerMember} book(s) at a time`,
+      `Loan limit reached — a ${memberType} may hold at most ${cap} book(s) at a time`,
     );
   }
   const outstanding = outstandingFineForMember(memberName, issues, fines, now);
@@ -483,7 +593,7 @@ export async function handleBulkImportBooks(
       }
       // Per-row SAVEPOINT so a single bad insert rolls back only that row and
       // does NOT poison the outer tenant transaction (onboarding import pattern).
-      await db.queryObject(`SAVEPOINT library_import_row`);
+      await savepoint(db, "library_import_row");
       try {
         await writeStore.insert(
           db,
@@ -493,11 +603,11 @@ export async function handleBulkImportBooks(
           plan.payload.id as string,
           plan.payload,
         );
-        await db.queryObject(`RELEASE SAVEPOINT library_import_row`);
+        await releaseSavepoint(db, "library_import_row");
         if (plan.isbn.length > 0) seenIsbns.add(plan.isbn);
         imported++;
       } catch (error) {
-        await db.queryObject(`ROLLBACK TO SAVEPOINT library_import_row`);
+        await rollbackToSavepoint(db, "library_import_row");
         failed.push({
           row: rowNum,
           reason: error instanceof Error ? error.message : "Import failed",
@@ -534,6 +644,7 @@ export async function handleIssueBook(req: Request, config: AppConfig): Promise<
       throw new WriteNotFoundError(`Library member not found: ${memberId}`);
     }
     const memberName = member.name as string;
+    const memberType = (member.memberType as string | undefined) ?? "student";
     const books = await writeStore.findAll(db, organizationId, schoolId, "catalog");
     const book = findCatalogByIsbn(books, isbn);
 
@@ -545,11 +656,11 @@ export async function handleIssueBook(req: Request, config: AppConfig): Promise<
     ]);
     const now = new Date();
 
-    // P0 + LIB-D1 integrity guards (duplicate-active loan, per-member loan cap,
-    // outstanding-fine threshold, zero-stock). Pure + DB-free; see
+    // P0 + LIB-D1 integrity guards (duplicate-active loan, PER-TYPE loan cap
+    // (PRA-P2-12), outstanding-fine threshold, zero-stock). Pure + DB-free; see
     // assertIssueAllowed. The zero-stock check here is a fast reject; the
     // authoritative last-copy check is re-done under the row lock below.
-    assertIssueAllowed(memberName, isbn, issues, fines, book, settings, now);
+    assertIssueAllowed(memberName, memberType, isbn, issues, fines, book, settings, now);
 
     const due = new Date(now.getTime() + LOAN_DAYS * 24 * 60 * 60 * 1000);
     const id = crypto.randomUUID();
@@ -623,7 +734,12 @@ export async function handleReturnBook(req: Request, config: AppConfig): Promise
   return await runWrite(req, config, async (ctx) => {
     const { db, organizationId, schoolId, body, claims, req: request } = ctx;
     const issueId = requireStr(body, "issueId", "issue_id");
-    const condition = str(body, "condition") ?? "good";
+    const condition = (str(body, "condition") ?? "good").toLowerCase();
+    if (!RETURN_CONDITIONS.has(condition)) {
+      throw new WriteValidationError(
+        "condition must be one of: good, fair, damaged, lost",
+      );
+    }
 
     const issue = await writeStore.find(db, organizationId, schoolId, "issue", issueId);
     if (!issue) {
@@ -636,6 +752,7 @@ export async function handleReturnBook(req: Request, config: AppConfig): Promise
     // handleWaiveFine).
     assertReturnAllowed(issue);
 
+    const settings = await readSettings(db, organizationId, schoolId);
     const now = new Date();
     const dueRaw = issue.dueDate as string | undefined;
     const due = dueRaw ? new Date(dueRaw) : now;
@@ -643,7 +760,18 @@ export async function handleReturnBook(req: Request, config: AppConfig): Promise
       0,
       Math.floor((now.getTime() - due.getTime()) / (24 * 60 * 60 * 1000)),
     );
-    const fineAmount = daysOverdue * FINE_PER_DAY;
+    // PRA-P1-42 — lost-book workflow. A `lost` return levies a flat replacement
+    // charge (settings.lostBookReplacementFee) ON TOP of any overdue accrued, and
+    // the copy is NOT returned to stock (skip the availableCopies increment
+    // below). The total is persisted as ONE `fine` entity so it survives the
+    // closed loan and can be waived, exactly like an overdue fine.
+    const { replacementFee, totalCharge, restocked, fineReason } = computeReturnCharge(
+      condition,
+      daysOverdue,
+      settings,
+    );
+    const nonRestock = !restocked;
+
     const memberName = (issue.memberName as string | undefined) ?? "";
     const id = crypto.randomUUID();
     const payload = {
@@ -653,7 +781,9 @@ export async function handleReturnBook(req: Request, config: AppConfig): Promise
       isbn: (issue.isbn as string | undefined) ?? "",
       returnedDate: isoDate(now),
       condition,
-      fineAmount: fineAmount > 0 ? `₹${fineAmount}` : "₹0",
+      fineAmount: totalCharge > 0 ? `₹${totalCharge}` : "₹0",
+      replacementFee,
+      restocked,
       daysOverdue,
     };
     const saved = await writeStore.insert(
@@ -665,10 +795,10 @@ export async function handleReturnBook(req: Request, config: AppConfig): Promise
       payload,
     );
 
-    // Persist an outstanding fine entity so an overdue charge survives the
-    // return (and can later be waived) instead of vanishing with the closed
-    // loan (LIBRA-2 / LIBRA-6).
-    if (fineAmount > 0) {
+    // Persist an outstanding fine entity so an overdue / lost-replacement charge
+    // survives the return (and can later be waived) instead of vanishing with
+    // the closed loan (LIBRA-2 / LIBRA-6 / PRA-P1-42).
+    if (totalCharge > 0) {
       const fineId = crypto.randomUUID();
       await writeStore.insert(
         db,
@@ -676,11 +806,12 @@ export async function handleReturnBook(req: Request, config: AppConfig): Promise
         schoolId,
         "fine",
         fineId,
-        buildReturnFinePayload(fineId, issue, fineAmount, daysOverdue, now),
+        buildReturnFinePayload(fineId, issue, totalCharge, daysOverdue, now, fineReason),
       );
     }
 
-    // Close the loan and return the copy to the catalogue.
+    // Close the loan. (A lost copy still closes the loan so it stops counting as
+    // an active/overdue holding; the physical copy simply never re-enters stock.)
     await writeStore.replace(db, organizationId, schoolId, "issue", issueId, {
       ...issue,
       status: "returned",
@@ -698,8 +829,11 @@ export async function handleReturnBook(req: Request, config: AppConfig): Promise
       });
     }
 
+    // PRA-P1-42: a lost (non-restock) copy is NOT returned to the catalogue — it
+    // is gone, so availableCopies stays reduced. Only a physically-returned copy
+    // is restocked.
     const isbn = String(issue.isbn ?? "");
-    if (isbn) {
+    if (isbn && !nonRestock) {
       const books = await writeStore.findAll(db, organizationId, schoolId, "catalog");
       const book = findCatalogByIsbn(books, isbn);
       if (book) {
@@ -724,7 +858,12 @@ export async function handleReturnBook(req: Request, config: AppConfig): Promise
     await emitMutationAudit(
       db,
       claims,
-      moduleEntityAudit("library.book.returned", "library_return", id, { issueId, daysOverdue }),
+      moduleEntityAudit("library.book.returned", "library_return", id, {
+        issueId,
+        daysOverdue,
+        condition,
+        replacementFee,
+      }),
       request,
     );
     return { payload: saved, status: 201 };
@@ -955,17 +1094,53 @@ export async function handleUpdateSettings(req: Request, config: AppConfig): Pro
   return await runWrite(req, config, async (ctx) => {
     const { db, organizationId, schoolId, body, claims, req: request } = ctx;
     const current = await readSettings(db, organizationId, schoolId);
+
+    // PRA-P2-12 — resolve one per-type cap: an explicit nested
+    // `maxBooksByMemberType.<type>`, else a flat `maxBooks<Type>` /
+    // `max_books_<type>` key, else keep the current per-type value. Clamped to
+    // ≥1 so a misconfig can never lock a whole member class out of borrowing.
+    const nestedRaw = (body.maxBooksByMemberType ??
+      (body as Record<string, unknown>).max_books_by_member_type);
+    const nestedSrc = (nestedRaw && typeof nestedRaw === "object")
+      ? nestedRaw as Record<string, unknown>
+      : {};
+    const perTypeCap = (
+      type: LibraryMemberType,
+      flatCamel: string,
+      flatSnake: string,
+    ): number => {
+      if (type in nestedSrc && nestedSrc[type] != null) {
+        return Math.max(1, intFromString(nestedSrc[type], current.maxBooksByMemberType[type]));
+      }
+      if (flatCamel in body || flatSnake in body) {
+        return Math.max(1, intOr(body, current.maxBooksByMemberType[type], flatCamel, flatSnake));
+      }
+      return current.maxBooksByMemberType[type];
+    };
+
     // Only overwrite fields explicitly present in the body; keep the rest.
     const next: LibrarySettings = {
       maxBooksPerMember: "maxBooksPerMember" in body || "max_books_per_member" in body
         ? Math.max(1, intOr(body, current.maxBooksPerMember, "maxBooksPerMember", "max_books_per_member"))
         : current.maxBooksPerMember,
+      maxBooksByMemberType: {
+        student: perTypeCap("student", "maxBooksStudent", "max_books_student"),
+        teacher: perTypeCap("teacher", "maxBooksTeacher", "max_books_teacher"),
+        staff: perTypeCap("staff", "maxBooksStaff", "max_books_staff"),
+      },
       maxRenewals: "maxRenewals" in body || "max_renewals" in body
         ? Math.max(0, intOr(body, current.maxRenewals, "maxRenewals", "max_renewals"))
         : current.maxRenewals,
       blockOnFineThreshold: "blockOnFineThreshold" in body || "block_on_fine_threshold" in body
         ? Math.max(0, intOr(body, current.blockOnFineThreshold, "blockOnFineThreshold", "block_on_fine_threshold"))
         : current.blockOnFineThreshold,
+      lostBookReplacementFee:
+        "lostBookReplacementFee" in body || "lost_book_replacement_fee" in body
+          ? Math.max(
+            0,
+            intOr(body, current.lostBookReplacementFee, "lostBookReplacementFee", "lost_book_replacement_fee"),
+          )
+          : current.lostBookReplacementFee,
     };
     const saved = await writeStore.mutateSnapshot(
       db,

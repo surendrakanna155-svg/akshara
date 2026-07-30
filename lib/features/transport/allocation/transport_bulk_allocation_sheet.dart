@@ -52,7 +52,7 @@ class _BulkAllocationFormState extends ConsumerState<_BulkAllocationForm> {
   String? _className;
   String? _section;
   final _pickup = TextEditingController();
-  final _drop = TextEditingController(text: 'Akshara Main Gate');
+  final _drop = TextEditingController(text: 'NIKSHA Main Gate');
   bool _busy = false;
 
   @override

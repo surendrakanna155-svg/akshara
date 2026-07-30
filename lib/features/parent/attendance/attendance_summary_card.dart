@@ -72,15 +72,17 @@ class AttendanceSummaryCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  // A11y-P1 tap target: the local `IconButton.styleFrom`
+                  // override pinned this to 40×40 with
+                  // `MaterialTapTargetSize.shrinkWrap`, cancelling the 48dp
+                  // minimum the app theme guarantees globally. The override is
+                  // gone; the theme's 48×48 target applies. The PAINTED glyph
+                  // is unchanged at 20px — only the hit area grew.
                   IconButton(
                     onPressed: onInfoTap,
                     icon: const Icon(Icons.info_outline),
                     iconSize: 20,
                     tooltip: 'Day details',
-                    style: IconButton.styleFrom(
-                      minimumSize: const Size(40, 40),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
                   ),
                 ],
               ),

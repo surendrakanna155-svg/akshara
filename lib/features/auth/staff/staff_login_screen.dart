@@ -65,6 +65,9 @@ class _StaffLoginScreenState extends ConsumerState<StaffLoginScreen> {
         title: const Text('Staff Portal'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
+          // A11y-P2: without a label this icon-only button announces as just
+          // "button". The tooltip becomes the accessible name.
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
           onPressed: () => context.go(RouteNames.login),
         ),
       ),
@@ -199,11 +202,21 @@ class _StaffLoginScreenState extends ConsumerState<StaffLoginScreen> {
                                 borderRadius: AksharaRadius.inputBorder,
                               ),
                             ),
+                            // The role list is data-driven, so a longer label
+                            // (e.g. "Health / Infirmary Staff") must reflow, not
+                            // overflow the row.
+                            isExpanded: true,
                             items: [
-                              for (final role in ErpRole.values)
+                              // JOURNEY-002: `supportedValues`, not `values` —
+                              // the fail-closed sentinel is not a role anyone can
+                              // be assigned, so it must never be offered.
+                              for (final role in ErpRole.supportedValues)
                                 DropdownMenuItem(
                                   value: role,
-                                  child: Text(role.label),
+                                  child: Text(
+                                    role.label,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
                             ],
                             onChanged: (role) {

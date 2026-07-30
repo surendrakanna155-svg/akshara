@@ -11,6 +11,7 @@ import '../features/management/analytics/management_analytics_screen.dart';
 import '../features/management/dashboard/management_dashboard_screen.dart';
 import '../features/management/finance/management_finance_screen.dart';
 import '../features/management/performance/management_performance_screen.dart';
+import '../features/management/school_calendar/school_calendar_screen.dart';
 import '../features/management/settings/management_settings_screen.dart';
 import '../features/management/approval/principal_approval_center_screen.dart';
 import '../features/management/tasks/management_tasks_screen.dart';
@@ -99,6 +100,14 @@ Widget managementSettingsRouteBuilder(
   GoRouterState state,
 ) {
   return const ManagementSettingsScreen();
+}
+
+/// PRA-P1-17 — holiday/event calendar (gated on `viewSchoolCalendar`).
+Widget managementSchoolCalendarRouteBuilder(
+  BuildContext context,
+  GoRouterState state,
+) {
+  return const SchoolCalendarScreen();
 }
 
 Widget managementWorkflowAutomationRouteBuilder(

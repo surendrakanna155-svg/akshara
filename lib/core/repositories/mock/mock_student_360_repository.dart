@@ -38,7 +38,18 @@ class MockStudent360Repository implements Student360Repository {
       risk: {'riskScore': 78, 'riskLevel': 'high', 'reasons': []},
       parentInformation: {
         'guardians': [
-          {'name': 'Parent Reddy', 'relationship': 'father', 'isPrimary': true},
+          {
+            'name': 'Venkat Reddy',
+            'relationship': 'father',
+            'isPrimary': true,
+            'phone': '+91 98490 11234',
+          },
+          {
+            'name': 'Lakshmi Reddy',
+            'relationship': 'mother',
+            'isPrimary': false,
+            'phone': '+91 98490 11235',
+          },
         ],
       },
       behaviour: {
@@ -59,6 +70,46 @@ class MockStudent360Repository implements Student360Repository {
         'items': [
           {'name': 'Birth certificate', 'status': 'verified', 'uploadedAt': '2024-06-01'},
           {'name': 'Transfer certificate', 'status': 'pending', 'uploadedAt': null},
+        ],
+      },
+      // Minimum actionable health flags only — the same shape the backend's
+      // student_care_alerts read returns. No clinical detail here by design.
+      care: {
+        'alerts': [
+          {
+            'label': 'Severe peanut allergy',
+            'actionNote':
+                'Epipen kept in the infirmary. Call the infirmary immediately; '
+                    'do not move the child.',
+            'severity': 'critical',
+          },
+          {
+            'label': 'Wears spectacles — seat in the front row',
+            // Deliberately NOT clinical: no prescription, diagnosis or
+            // treatment wording belongs on a care alert.
+            'actionNote': 'Check the child can read the board from their seat.',
+            'severity': 'info',
+          },
+        ],
+      },
+      leave: {
+        'items': [
+          {
+            'type': 'sick',
+            'fromDate': '2026-07-08',
+            'toDate': '2026-07-10',
+            'reason': 'Viral fever — doctor advised three days rest.',
+            'status': 'approved',
+            'requestedAt': '2026-07-07T18:20:00Z',
+          },
+          {
+            'type': 'casual',
+            'fromDate': '2026-06-19',
+            'toDate': '2026-06-19',
+            'reason': 'Family function.',
+            'status': 'approved',
+            'requestedAt': '2026-06-17T09:05:00Z',
+          },
         ],
       },
     );

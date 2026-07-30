@@ -1,10 +1,10 @@
-# Akshara ERP — Data Backup & Recovery Policy
+# NIKSHA OS — Data Backup & Recovery Policy
 
 **Document version:** 1.0
 **Status:** Draft for owner sign-off (see [PLACEHOLDERS.md](PLACEHOLDERS.md))
-**Operator:** **[LEGAL ENTITY NAME]** ("Akshara", "we", "us").
+**Operator:** **NIKSHA Technologies Pvt. Ltd.** ("NIKSHA OS", "we", "us").
 
-> This policy explains how Akshara protects against data loss through backups, and
+> This policy explains how NIKSHA OS protects against data loss through backups, and
 > how it restores service after an incident. It supports the
 > [Security Policy](SECURITY_AND_RESPONSIBLE_DISCLOSURE.md) and the
 > [Privacy Policy](PRIVACY_POLICY.md).
@@ -62,9 +62,9 @@ matures:
 
 ## 7. Responsibilities
 
-- **Akshara** maintains backups and runs recovery of the central service.
+- **NIKSHA OS** maintains backups and runs recovery of the central service.
 - **Schools** remain responsible for data they choose to export and hold outside
-  Akshara, and for following their own continuity practices.
+  NIKSHA OS, and for following their own continuity practices.
 - Backups are subject to the same **security and access controls** as production
   data; only authorised operations personnel can access them.
 

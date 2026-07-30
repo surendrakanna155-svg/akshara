@@ -72,7 +72,7 @@ export function LoginPage() {
           </div>
         </div>
         <Text variant="body-sm" className="relative z-10 text-white">
-          © {new Date().getFullYear()} Akshara. Multi-tenant school platform.
+          © {new Date().getFullYear()} NIKSHA Technologies Pvt. Ltd. Multi-tenant school platform.
         </Text>
       </div>
 
@@ -91,7 +91,7 @@ export function LoginPage() {
             Welcome back
           </Text>
           <Text variant="body-md" className="mt-s1 text-on-surface-variant">
-            Sign in to your Akshara workspace.
+            Sign in to your NIKSHA OS workspace.
           </Text>
 
           <div className="mt-s6 inline-flex w-full rounded-lg border border-outline-variant bg-surface-low p-[3px]">

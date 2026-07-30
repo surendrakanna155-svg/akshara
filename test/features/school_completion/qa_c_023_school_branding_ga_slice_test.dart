@@ -124,18 +124,18 @@ void main() {
 
   group('QA-C-023 GA slice — safe defaults when branding is absent/invalid',
       () {
-    test('no branding loaded -> default "Akshara ERP" name + no theme override',
+    test('no branding loaded -> default "NIKSHA OS" name + no theme override',
         () {
       // Branding future unresolved (valueOrNull == null) -> safe defaults.
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      expect(container.read(schoolDisplayNameProvider), 'Akshara ERP');
+      expect(container.read(schoolDisplayNameProvider), 'NIKSHA OS');
       expect(container.read(schoolBrandingThemeProvider), isNull,
           reason: 'no override until branding is actually configured');
       expect(container.read(schoolLogoUrlProvider), isNull);
 
-      // Theme with a null config falls back to the default Akshara palette
+      // Theme with a null config falls back to the default NIKSHA palette
       // (no crash, no enforced brand colour).
       final theme = AksharaAppTheme.light(
         whiteLabel: container.read(schoolBrandingThemeProvider),

@@ -93,8 +93,8 @@ export async function handleListFeeStructures(
     return jsonResponse(
       envelope(
         listEnvelope(
-          result.items.map(({ structure, items }) =>
-            feeStructureToApi(structure, items)
+          result.items.map(({ structure, items, classBinding }) =>
+            feeStructureToApi(structure, items, classBinding)
           ),
           {
             page: result.page,
@@ -135,7 +135,9 @@ export async function handleGetFeeStructure(
     if (!result) {
       return errorEnvelope("NOT_FOUND", `Fee structure not found: ${structureId}`, 404);
     }
-    return jsonResponse(envelope(feeStructureToApi(result.structure, result.items)));
+    return jsonResponse(
+      envelope(feeStructureToApi(result.structure, result.items, result.classBinding)),
+    );
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
       return tenantDbNotConfiguredResponse(error);
@@ -177,6 +179,13 @@ export async function handleCreateFeeStructure(
     null;
   const status = normalizeStatus(optionalStr(body, "status", "status"));
   const items = parseItemInputsFromBody(body);
+  // Cap 67 — OPTIONAL class/section binding; either id resolves directly, or
+  // a label is resolved against the structure's academic year (same
+  // id-or-label contract as academic_year_id/academic_year above).
+  const classId = optionalStr(body, "class_id", "classId") ?? null;
+  const className = optionalStr(body, "class_name", "className") ?? null;
+  const sectionId = optionalStr(body, "section_id", "sectionId") ?? null;
+  const sectionName = optionalStr(body, "section_name", "sectionName") ?? null;
   const orgId = organizationIdFromClaims(auth.claims);
   const schoolId = schoolIdFromClaims(auth.claims);
 
@@ -186,6 +195,10 @@ export async function handleCreateFeeStructure(
         name,
         academicYear,
         academicYearId: academicYearId || null,
+        classId,
+        className,
+        sectionId,
+        sectionName,
         description,
         status,
         createdBy: auth.claims.sub,
@@ -195,7 +208,7 @@ export async function handleCreateFeeStructure(
       return created;
     });
     return jsonResponse(
-      envelope(feeStructureToApi(result.structure, result.items)),
+      envelope(feeStructureToApi(result.structure, result.items, result.classBinding)),
       { status: 201 },
     );
   } catch (error) {
@@ -251,6 +264,23 @@ export async function handleUpdateFeeStructure(
   if ("items" in body || "categories" in body) {
     updateInput.items = parseItemInputsFromBody(body);
   }
+  // Cap 67 — class/section (re)binding. An explicit `unbind_class: true`
+  // clears the binding; otherwise any of the four fields present triggers a
+  // re-resolve, and none present leaves the existing binding untouched (a
+  // status-only/name-only PATCH must never silently touch it).
+  const unbindClass = body["unbind_class"] === true || body["unbindClass"] === true;
+  if (unbindClass) {
+    updateInput.classId = null;
+  } else {
+    const classId = optionalStr(body, "class_id", "classId");
+    if (classId !== undefined) updateInput.classId = classId;
+    const className = optionalStr(body, "class_name", "className");
+    if (className !== undefined) updateInput.className = className;
+    const sectionId = optionalStr(body, "section_id", "sectionId");
+    if (sectionId !== undefined) updateInput.sectionId = sectionId;
+    const sectionName = optionalStr(body, "section_name", "sectionName");
+    if (sectionName !== undefined) updateInput.sectionName = sectionName;
+  }
 
   try {
     const result = await runTenant(config, auth.claims, async (db) => {
@@ -262,7 +292,9 @@ export async function handleUpdateFeeStructure(
     if (!result) {
       return errorEnvelope("NOT_FOUND", `Fee structure not found: ${structureId}`, 404);
     }
-    return jsonResponse(envelope(feeStructureToApi(result.structure, result.items)));
+    return jsonResponse(
+      envelope(feeStructureToApi(result.structure, result.items, result.classBinding)),
+    );
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
       return tenantDbNotConfiguredResponse(error);
@@ -302,7 +334,9 @@ export async function handleArchiveFeeStructure(
     if (!result) {
       return errorEnvelope("NOT_FOUND", `Fee structure not found: ${structureId}`, 404);
     }
-    return jsonResponse(envelope(feeStructureToApi(result.structure, result.items)));
+    return jsonResponse(
+      envelope(feeStructureToApi(result.structure, result.items, result.classBinding)),
+    );
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
       return tenantDbNotConfiguredResponse(error);

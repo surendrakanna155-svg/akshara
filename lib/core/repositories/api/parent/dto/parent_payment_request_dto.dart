@@ -37,6 +37,15 @@ class ParentPaymentConfirmRequestDto {
       raw: {
         'payment_intent_id': request.paymentIntentId,
         'transaction_ref': request.transactionRef,
+        // PRA-P0-02 (client half): forward the VERIFIED gateway proof under the
+        // exact snake_case keys `payment_service.ts` reads in its live
+        // verification path (`razorpay_payment_id` / `razorpay_signature`). Only
+        // emitted when present, so the contract is ready the moment a real
+        // gateway SDK supplies them; today they are absent (no SDK wired).
+        if (request.razorpayPaymentId != null)
+          'razorpay_payment_id': request.razorpayPaymentId,
+        if (request.razorpaySignature != null)
+          'razorpay_signature': request.razorpaySignature,
       },
     );
   }

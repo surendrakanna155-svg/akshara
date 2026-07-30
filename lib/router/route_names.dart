@@ -63,6 +63,23 @@ abstract final class RouteNames {
   static const String teacherLeave = '/teacher/leave';
   static const String teacherSettings = '/teacher/settings';
   static const String teacherProfile = '/teacher/profile';
+  // F-128 — teacher-scoped notifications inbox. Renders the same role-neutral
+  // NotificationsScreen the other personas use, but under a teacher-owned path
+  // so the teacher bell no longer borrows the parent persona's route.
+  static const String teacherNotifications = '/teacher/notifications';
+
+  // SEC/NAV fix (2026-07-28) — teacher-shell entry points for the syllabus
+  // daily-capture (Lesson Logs) and coverage (Syllabus Progress) surfaces.
+  //
+  // The teacher "More" sheet used to point straight at the ADMIN-shell routes
+  // `/school/lesson-logs` and `/school/academic/progress`. Those require
+  // `canAccessAdminErpShell` (auth.role == UserRole.staff); a teacher is
+  // UserRole.teacher, so both tiles silently bounced back to the dashboard even
+  // though the teacher DOES hold viewLessonLogs / viewAcademicProgress.
+  // Registering teacher-owned siblings inside TeacherShell keeps the admin wall
+  // intact (no role widened, no permission weakened) while making the tiles work.
+  static const String teacherLessonLogs = '/teacher/lesson-logs';
+  static const String teacherSyllabusProgress = '/teacher/syllabus-progress';
 
   static String teacherConversation(String threadId) =>
       '$teacherMessages/$threadId';
@@ -80,12 +97,26 @@ abstract final class RouteNames {
   static const String studentProfile = '/student/profile';
 
   // Web ERP admin shell (desktop / tablet / mobile drawer)
+  // ASIP Phase 1 — platform support ("Report an issue to NIKSHA Support").
+  // Available to ANY authenticated school user (all personas), so these are
+  // top-level auth-gated routes, not part of the admin ERP shell.
+  static const String support = '/support';
+  static const String supportNew = '/support/new';
+  static const String supportIncidentDetailPattern = '/support/:id';
+  static String supportIncidentDetail(String incidentId) =>
+      '$support/$incidentId';
+
   static const String admin = '/admin';
   static const String copilot = '/copilot';
   static const String aiAssistant = '/ai-assistant';
   static const String aiAssistantSettings = '/settings/ai-assistant';
   static const String appearanceSettings = '/settings/appearance';
   static const String syncCenter = '/sync-center';
+  // Attendance auth device layer (Slice 3) — full-screen flows pushed via
+  // GoRouter from non-widget code (MlkitFaceCaptureSource), mirroring the
+  // goRouterProvider.push(...) pattern used for syncCenter above.
+  static const String staffFaceCapture = '/staff-attendance/face-capture';
+  static const String staffFaceEnrollment = '/staff-attendance/face-enrollment';
   static const String education = '/education';
   static const String intelligence = '/intelligence';
   static const String aiPredictions = '/intelligence/predictions';
@@ -94,6 +125,8 @@ abstract final class RouteNames {
   static const String examIntelligence = '/intelligence/exam';
   static const String homeworkIntelligence = '/homework-intelligence';
   static const String student360 = '/student-360';
+  /// Staff 360 dossier — the employee counterpart to Student 360.
+  static const String staff360 = '/staff-360';
   static const String employees = '/employees';
   static const String inventoryDistribution = '/inventory/distribution';
   static const String inventoryReplacements = '/inventory/replacements';
@@ -113,6 +146,20 @@ abstract final class RouteNames {
   static const String dynamicWidgets = '/dynamic-widgets';
   static const String dynamicWidgetLayout = '/dynamic-widgets/layout';
   static const String dynamicWidgetRuntime = '/dynamic-widgets/runtime';
+  // PRC-A Batch 2 — request desk / gate pass / complaints / health.
+  // Staff-facing desks under the admin hub. Only the four LIST screens are
+  // routed: the complaint detail and the student health record are pushed as
+  // dialogs/routes from inside their own screens, so they need no route entry.
+  // Parent-facing raise surfaces are NOT built yet (the API supports parent
+  // scope; the parent UI is tracked residue) — no parent route constants until
+  // there is a screen behind them.
+  static const String certificateRequests = '/certificate-requests';
+  static const String gatePasses = '/gate-passes';
+  static const String complaints = '/complaints';
+  // `/student-health`, mirroring the API prefix — NOT `/health`, which is a
+  // system endpoint namespace.
+  static const String studentHealth = '/student-health';
+
   static const String teacherAssistant = '/teacher-assistant';
   static const String parentInsights = '/parent/insights';
   static const String principalCommand = '/principal-command';
@@ -323,6 +370,10 @@ abstract final class RouteNames {
   static const String hrReports = '/hr/reports';
   static const String hrSettings = '/hr/settings';
 
+  // PRA-P0-15 — audited manual-attendance fallback (staff request + approver queue).
+  static const String hrStaffManualRequest = '/hr/attendance/manual-request';
+  static const String hrStaffManualRequestQueue = '/hr/attendance/requests';
+
   static String hrEmployeeDetail(String employeeId) =>
       '$hrEmployees/$employeeId';
 
@@ -357,6 +408,9 @@ abstract final class RouteNames {
       '/management/workflow-automation';
   static const String managementSettings = '/management/settings';
 
+  /// PRA-P1-17 — holiday/event calendar (perm `viewSchoolCalendar`).
+  static const String managementSchoolCalendar = '/management/school-calendar';
+
   /// All management module routes (MG-01 → MG-08).
   static const List<String> managementRoutes = [
     managementDashboard,
@@ -373,6 +427,7 @@ abstract final class RouteNames {
     managementOfficeAttendance,
     managementWorkflowAutomation,
     managementSettings,
+    managementSchoolCalendar,
   ];
   static const String transport = '/transport';
   static const String transportDashboard = '/transport/dashboard';
@@ -566,6 +621,16 @@ abstract final class RouteNames {
   ];
 
   /// All module groups wrapped by [AdminShell].
+  ///
+  /// ⚠ SECURITY-CRITICAL — this is the ONLY list both route gates key off:
+  ///   • `_isProtectedRoute` (app_router.dart) — the AUTHENTICATION gate, and
+  ///   • `canAccessErpRoute` (route_guards.dart) — the RBAC gate, which starts
+  ///     `if (!isAdminErpRoute(location)) return true;`.
+  /// A route that declares a [Permission] in `kErpRouteViewPermissions` but is
+  /// missing here therefore gets NEITHER gate — it fails OPEN, admitting an
+  /// unauthenticated caller straight into the admin console. Keep this list and
+  /// `kErpRouteViewPermissions` in lock-step; the invariant is enforced by
+  /// `test/router/route_gate_invariants_test.dart`.
   static const List<String> adminErpRoutes = [
     admin,
     planEntitlements,
@@ -577,6 +642,12 @@ abstract final class RouteNames {
     examIntelligence,
     homeworkIntelligence,
     student360,
+    // SEC P0-2 (2026-07-28) — `/staff-360/:employeeId` renders an employee's
+    // full dossier (employment, contact, leave). It declared viewHr in
+    // kErpRouteViewPermissions but was absent here, so BOTH gates were skipped:
+    // any authenticated parent/student/teacher could deep-link to any
+    // employee's record inside the admin chrome.
+    staff360,
     employees,
     inventoryDistribution,
     inventoryReplacements,
@@ -629,6 +700,19 @@ abstract final class RouteNames {
     library,
     inventory,
     alumni,
+    // SEC P0-1 / P0-2 (2026-07-28) — the four PRC-A Batch 2 staff desks. Each
+    // already declared its permission in kErpRouteViewPermissions but was never
+    // listed here, so neither gate ran.
+    //   • the three request desks were reachable UNAUTHENTICATED;
+    //   • `/student-health` additionally matched `_isProtectedRoute` by
+    //     accident through the bare `startsWith('/student')` prefix, and the
+    //     student arm of `_canAccessRoute` was the same bare prefix — handing a
+    //     logged-in STUDENT the whole-school Infirmary console, while staff who
+    //     legitimately hold viewStudentHealthRecord were bounced to /admin.
+    certificateRequests,
+    gatePasses,
+    complaints,
+    studentHealth,
     controlCenter,
     director,
     parentMeetings,

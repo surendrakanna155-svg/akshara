@@ -17,7 +17,7 @@ import 'package:flutter_test/flutter_test.dart';
 ///   - test/features/entitlements/entitlement_locked_ux_test.dart
 ///
 /// What is MISSING (Phase-2, owner decision O10 — NOT built, asserted honestly
-/// below): tier-SPECIFIC BRANDING, i.e. a "Powered by Akshara" footer on lower
+/// below): tier-SPECIFIC BRANDING, i.e. a "Powered by NIKSHA" footer on lower
 /// tiers that is REMOVED on the Enterprise tier. No code path, permission, or
 /// provider for that footer/removal exists in the repo today.
 ///

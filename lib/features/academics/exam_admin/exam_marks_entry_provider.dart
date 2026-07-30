@@ -236,7 +236,13 @@ class ExamMarksMutationNotifier extends AsyncNotifier<void> {
     late String approvalId;
     state = await AsyncValue.guard(() async {
       final auth = ref.read(authProvider);
-      final adapter = ExamResultsApprovalAdapter();
+      // PRA-P0-05 (S0/T2-C): inject the live exam repository. Without this the
+      // adapter defaulted to MockExamAdministrationRepository, whose store only
+      // holds the two seeded demo exams — so `getExam` returned EXAM_NOT_FOUND for
+      // every real exam and results could never be submitted for approval.
+      final adapter = ExamResultsApprovalAdapter(
+        repository: ref.read(examAdministrationRepositoryProvider),
+      );
       final approval = await adapter.submitForApproval(
         service: ref.read(approvalCenterServiceProvider),
         query: ref.read(repositoryQueryProvider),

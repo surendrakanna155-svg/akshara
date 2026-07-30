@@ -17,6 +17,22 @@ import { attendanceDenominatorSql, attendedDaysSql } from "../attendance/attenda
 const CRORE = 10_000_000; // 1 Cr = 1e7
 const LAKH = 100_000; // 1 L = 1e5
 
+// ICA-C2 (perf) — the academic dashboard aggregates (attendance %, pass rate)
+// are meant to reflect the CURRENT academic year, not an ever-growing all-time
+// scan of every record a chain has ever produced. We bound the attendance_records
+// and exam_mark_entries aggregates to a trailing 12-month window — the SAME
+// "current-year" convention getGrowth already uses for new enrollments
+// (`now() - interval '365 days'`, see :303-307) — so the aggregated working set
+// stays bounded as pilot data accumulates year over year.
+//
+// Deliberately NOT windowed (each is a lifetime figure by design, not a period
+// aggregate): the active-student roster count (point-in-time state), and the
+// finance_collections / finance_invoices money totals (total revenue realised and
+// total receivable outstanding). Admissions already carries its own 90-day QTD
+// window. A precise per-school academic_years join is a matview follow-up; this
+// self-contained window matches the file's existing precedent with no migration.
+const CURRENT_ACADEMIC_YEAR_INTERVAL = "365 days";
+
 export type DirectorSchoolStatus =
   | "topPerformer"
   | "onTrack"
@@ -128,18 +144,29 @@ export async function getSchoolRows(
   // denom = total_marked − excused — see attendance/attendance_percentage.ts. This
   // used to count anything non-'absent' as fully present and included excused
   // days in the denominator, diverging from every other attendance-% surface.
+  // ICA-C2: bounded to the current academic year (trailing 365 days on
+  // created_at) — the dashboard attendance % reflects THIS year, and the scan no
+  // longer grows without limit as historical records pile up.
   const attendanceRows = await db.queryObject<{ school_id: string; attended: number; denom: number }>(
     `SELECT school_id,
             ${attendedDaysSql("mark")}::float8 AS attended,
             ${attendanceDenominatorSql("mark")}::int AS denom
-     FROM attendance_records WHERE organization_id = $1 GROUP BY school_id`,
+     FROM attendance_records
+     WHERE organization_id = $1
+       AND created_at >= now() - interval '${CURRENT_ACADEMIC_YEAR_INTERVAL}'
+     GROUP BY school_id`,
     [orgId],
   );
+  // ICA-C2: bounded to the current academic year (trailing 365 days). exam_mark_entries
+  // has no created_at, so we bound on updated_at (the mark's last-touched/publish time).
   const academicRows = await db.queryObject<{ school_id: string; pass: number; total: number }>(
     `SELECT school_id,
             count(*) FILTER (WHERE marks_obtained >= max_marks * 0.4)::int AS pass,
             count(*)::int AS total
-     FROM exam_mark_entries WHERE organization_id = $1 GROUP BY school_id`,
+     FROM exam_mark_entries
+     WHERE organization_id = $1
+       AND updated_at >= now() - interval '${CURRENT_ACADEMIC_YEAR_INTERVAL}'
+     GROUP BY school_id`,
     [orgId],
   );
 
@@ -718,16 +745,23 @@ export async function getSchoolSnapshot(
   );
   // CANONICAL attendance-% (2026-07-09) — same divergent present<>'absent'/total
   // formula as getSchoolRows above, now routed through the shared fragments.
+  // ICA-C2: same current-academic-year (trailing 365-day) bound as getSchoolRows,
+  // so the drill-down attendance % / pass rate match the portfolio row for this
+  // school instead of diverging (one all-time, one windowed).
   const [attendance] = await db.queryObject<{ attended: number; denom: number }>(
     `SELECT ${attendedDaysSql("mark")}::float8 AS attended,
             ${attendanceDenominatorSql("mark")}::int AS denom
-     FROM attendance_records WHERE organization_id = $1 AND school_id = $2`,
+     FROM attendance_records
+     WHERE organization_id = $1 AND school_id = $2
+       AND created_at >= now() - interval '${CURRENT_ACADEMIC_YEAR_INTERVAL}'`,
     [orgId, schoolId],
   );
   const [academic] = await db.queryObject<{ pass: number; total: number }>(
     `SELECT count(*) FILTER (WHERE marks_obtained >= max_marks * 0.4)::int AS pass,
             count(*)::int AS total
-     FROM exam_mark_entries WHERE organization_id = $1 AND school_id = $2`,
+     FROM exam_mark_entries
+     WHERE organization_id = $1 AND school_id = $2
+       AND updated_at >= now() - interval '${CURRENT_ACADEMIC_YEAR_INTERVAL}'`,
     [orgId, schoolId],
   );
   const [funnel] = await db.queryObject<{

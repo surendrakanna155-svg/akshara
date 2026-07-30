@@ -12,7 +12,7 @@
 #
 # Usage:
 #   API_BASE_URL=http://127.0.0.1:54321/functions/v1/api scripts/admissions_assistant_b4_smoke.sh
-#   API_BASE_URL=https://akshara.veloraunisexsalon.com    scripts/admissions_assistant_b4_smoke.sh
+#   API_BASE_URL=https://api.nikshaos.in    scripts/admissions_assistant_b4_smoke.sh
 set -euo pipefail
 
 BASE="${API_BASE_URL:-http://127.0.0.1:54321/functions/v1/api}"

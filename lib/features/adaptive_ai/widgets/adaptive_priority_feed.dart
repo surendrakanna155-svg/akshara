@@ -212,9 +212,19 @@ class _AdaptiveRecommendationTileState extends State<_AdaptiveRecommendationTile
                     color: colors.onSurfaceVariant,
                   ),
                 if (widget.onOpen != null && item.action != null)
-                  TextButton(
-                    onPressed: widget.onOpen,
-                    child: Text(item.action!.label),
+                  // Flexible + ellipsis: a long action label ("Open recovery
+                  // call queue") must shrink at narrow widths instead of
+                  // overflowing the row (caught by router_smoke_test).
+                  Flexible(
+                    child: TextButton(
+                      onPressed: widget.onOpen,
+                      child: Text(
+                        item.action!.label,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ),
               ],
             ),

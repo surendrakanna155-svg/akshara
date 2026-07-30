@@ -101,6 +101,19 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
       final auth = ref.read(authProvider);
       context.go(homeRouteForRole(auth.role));
     } else {
+      // JOURNEY-002: an OTP that verified but whose server role this app version
+      // cannot render is NOT "invalid OTP". Saying so would send a school chasing
+      // a phone-number problem that does not exist. Name the real reason.
+      final refusedRole = ref.read(unsupportedServerRoleProvider);
+      if (refusedRole != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(unsupportedRoleMessage(refusedRole)),
+            duration: const Duration(seconds: 8),
+          ),
+        );
+        return;
+      }
       final demoAuth = ref.read(isDemoAuthEnabledProvider);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -159,6 +172,11 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
+          // A11y-P2: an icon-only button with no label announces as just
+          // "button" to TalkBack. The tooltip IS the accessible name (IconButton
+          // wraps it in a Tooltip, which contributes a Semantics label), and
+          // MaterialLocalizations supplies the localized string.
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
           onPressed: _returnToLogin,
         ),
       ),
@@ -210,27 +228,34 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                           ),
                         ),
                       const SizedBox(height: AksharaSpacing.s8),
-                      TextFormField(
-                        key: QaTestKeys.otpField,
-                        controller: _otpController,
-                        keyboardType: TextInputType.number,
-                        textInputAction: TextInputAction.done,
-                        textAlign: TextAlign.center,
-                        style: text.headlineSmall.copyWith(
-                          letterSpacing: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(6),
-                        ],
-                        decoration: InputDecoration(
-                          hintText: '••••••',
-                          border: OutlineInputBorder(
-                            borderRadius: AksharaRadius.inputBorder,
+                      AutofillGroup(
+                        child: Semantics(
+                          label: 'One-time password',
+                          textField: true,
+                          child: TextFormField(
+                            key: QaTestKeys.otpField,
+                            controller: _otpController,
+                            keyboardType: TextInputType.number,
+                            textInputAction: TextInputAction.done,
+                            textAlign: TextAlign.center,
+                            autofillHints: const [AutofillHints.oneTimeCode],
+                            style: text.headlineSmall.copyWith(
+                              letterSpacing: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(6),
+                            ],
+                            decoration: InputDecoration(
+                              hintText: '••••••',
+                              border: OutlineInputBorder(
+                                borderRadius: AksharaRadius.inputBorder,
+                              ),
+                            ),
+                            onFieldSubmitted: (_) => _verify(),
                           ),
                         ),
-                        onFieldSubmitted: (_) => _verify(),
                       ),
                       const SizedBox(height: AksharaSpacing.s6),
                       FilledButton(

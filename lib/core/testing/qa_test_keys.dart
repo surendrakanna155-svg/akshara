@@ -277,6 +277,13 @@ abstract final class QaTestKeys {
   // EXM-1 — fast bulk marks entry: Save-all button on the marks grid.
   static const examAdminMarksSaveAllButton =
       ValueKey<String>('exam_admin_marks_save_all_button');
+  // UXR-D5 — direct "Publish results" button + its pre-publish confirmation.
+  static const examAdminPublishResultsButton =
+      ValueKey<String>('exam_admin_publish_results_button');
+  static const examAdminPublishConfirmDialog =
+      ValueKey<String>('exam_admin_publish_confirm_dialog');
+  static const examAdminPublishConfirmButton =
+      ValueKey<String>('exam_admin_publish_confirm_button');
   // EXM-2 — marks-entry progress board.
   static const examMarksProgressButton =
       ValueKey<String>('exam_marks_progress_button');
@@ -336,6 +343,9 @@ abstract final class QaTestKeys {
       ValueKey<String>('finance_assign_concession_success_snackbar');
   static const financeCreateFeeStructureSubmitButton =
       ValueKey<String>('finance_create_fee_structure_submit_button');
+  // Cap 67 — real class/section binding picker (create/edit fee structure).
+  static const financeFeeStructureClassField =
+      ValueKey<String>('finance_fee_structure_class_field');
 
   // FIN-R1..R5 — fee-recovery CRM.
   static ValueKey<String> financeLogContactButton(String defaulterId) =>
@@ -567,6 +577,26 @@ abstract final class QaTestKeys {
 
   static const financeFeeAccountCreatedSnackbar =
       ValueKey<String>('finance_fee_account_created_snackbar');
+
+  // PRC-A gap fix — bulk/class-wide fee-structure assignment.
+  static const financeBulkAssignButton =
+      ValueKey<String>('finance_bulk_assign_button');
+  static const financeBulkAssignStructureField =
+      ValueKey<String>('finance_bulk_assign_structure_field');
+  static const financeBulkAssignYearField =
+      ValueKey<String>('finance_bulk_assign_year_field');
+  static const financeBulkAssignClassField =
+      ValueKey<String>('finance_bulk_assign_class_field');
+  static const financeBulkAssignSelectAllCheckbox =
+      ValueKey<String>('finance_bulk_assign_select_all_checkbox');
+  static ValueKey<String> financeBulkAssignStudentCheckbox(String studentId) =>
+      ValueKey<String>('finance_bulk_assign_student_checkbox_$studentId');
+  static const financeBulkAssignSubmitButton =
+      ValueKey<String>('finance_bulk_assign_submit_button');
+  static const financeBulkAssignReportDoneButton =
+      ValueKey<String>('finance_bulk_assign_report_done_button');
+  static const financeBulkAssignSuccessSnackbar =
+      ValueKey<String>('finance_bulk_assign_success_snackbar');
 
   static const financeRecordCollectionButton =
       ValueKey<String>('finance_record_collection_button');
@@ -1343,6 +1373,9 @@ abstract final class QaTestKeys {
       ValueKey<String>('exam_submit_verification_button');
 
   /// Student 360 tab bar (Phase C).
+  /// Staff 360 one-screen dossier body.
+  static const Key staff360Body = Key('staff_360_body');
+
   static const student360TabBar = ValueKey<String>('student_360_tab_bar');
   static const student360ExportButton =
       ValueKey<String>('student_360_export_button');
@@ -1547,6 +1580,28 @@ abstract final class QaTestKeys {
   static const teacherSettingsScreen =
       ValueKey<String>('teacher_settings_screen');
 
+  // ASIP — "Report an issue to NIKSHA Support" surface.
+  static const supportEntryLink = ValueKey<String>('support_entry_link');
+  static const supportReportScreen =
+      ValueKey<String>('support_report_screen');
+  static const supportReportTitleField =
+      ValueKey<String>('support_report_title_field');
+  static const supportReportDescriptionField =
+      ValueKey<String>('support_report_description_field');
+  static const supportReportSubmitButton =
+      ValueKey<String>('support_report_submit_button');
+  static const supportMyIssuesScreen =
+      ValueKey<String>('support_my_issues_screen');
+  static const supportReportIssueButton =
+      ValueKey<String>('support_report_issue_button');
+  static const supportIncidentDetailScreen =
+      ValueKey<String>('support_incident_detail_screen');
+  static const supportReplyField = ValueKey<String>('support_reply_field');
+  static const supportReplySendButton =
+      ValueKey<String>('support_reply_send_button');
+  static ValueKey<String> supportIncidentCard(String id) =>
+      ValueKey<String>('support_incident_card_$id');
+
   static const teacherProfileScreen =
       ValueKey<String>('teacher_profile_screen');
 
@@ -1565,6 +1620,31 @@ abstract final class QaTestKeys {
   static ValueKey<String> financeDiscountRuleEditButton(String ruleId) =>
       ValueKey<String>('finance_discount_rule_edit_button_$ruleId');
 
+  // STEP-5 — fee reductions (scholarship awards + discount applications):
+  // the award (maker) dialog's picker fields.
+  static const financeAwardSourceKindField =
+      ValueKey<String>('finance_award_source_kind_field');
+  static const financeAwardSourceField =
+      ValueKey<String>('finance_award_source_field');
+  static const financeAwardStudentField =
+      ValueKey<String>('finance_award_student_field');
+  static const financeAwardInvoiceField =
+      ValueKey<String>('finance_award_invoice_field');
+  static const financeAwardReductionKindField =
+      ValueKey<String>('finance_award_reduction_kind_field');
+  static const financeAwardValueField =
+      ValueKey<String>('finance_award_value_field');
+  static const financeAwardReasonField =
+      ValueKey<String>('finance_award_reason_field');
+
+  // STEP-5 — the checker (pending awards) actions.
+  static ValueKey<String> financeFeeReductionApproveButton(String id) =>
+      ValueKey<String>('finance_fee_reduction_approve_$id');
+  static ValueKey<String> financeFeeReductionRejectButton(String id) =>
+      ValueKey<String>('finance_fee_reduction_reject_$id');
+  static ValueKey<String> financeFeeReductionReverseButton(String id) =>
+      ValueKey<String>('finance_fee_reduction_reverse_$id');
+
   static const subjectAddButton =
       ValueKey<String>('subject_add_button');
 
@@ -1579,6 +1659,12 @@ abstract final class QaTestKeys {
 
   static ValueKey<String> subjectEditButton(String subjectId) =>
       ValueKey<String>('subject_edit_button_$subjectId');
+
+  static const lessonLogCreateSubmitButton =
+      ValueKey<String>('lesson_log_create_submit_button');
+
+  static const lessonLogTopicLinkSubmitButton =
+      ValueKey<String>('lesson_log_topic_link_submit_button');
 
   static ValueKey<String> atRiskStudentRow(String studentId) =>
       ValueKey<String>('at_risk_student_$studentId');

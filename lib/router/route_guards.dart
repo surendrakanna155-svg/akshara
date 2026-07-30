@@ -24,6 +24,27 @@ import 'route_names.dart';
 
 /// Required [Permission] for each admin ERP route prefix.
 const Map<String, Permission> kErpRouteViewPermissions = {
+  // ─── PRC-A Batch 2 ──────────────────────────────────────────────────────
+  // One permission per route prefix (longest-prefix match), so each is the
+  // BROADEST permission that should reach the screen; narrower affordances
+  // inside are gated per-widget.
+  //
+  // certificate-requests -> requestStudentCertificate: the desk is for raising
+  // and tracking. Approvers (management/superAdmin/org admins hold
+  // approveCertificateRequest but NOT requestStudentCertificate) decide in the
+  // Approval Center, not here — so they are deliberately not routed to the desk.
+  RouteNames.certificateRequests: Permission.requestStudentCertificate,
+  RouteNames.gatePasses: Permission.requestGatePass,
+  RouteNames.complaints: Permission.raiseComplaint,
+  // student-health -> viewStudentHealthRecord (owner decision #1: health staff +
+  // explicitly authorised leadership ONLY — principal/vicePrincipal can read the
+  // console; the record/manage/administer affordances inside are separately
+  // gated on manageStudentHealth / administerStudentMedication, which only
+  // healthStaff holds). A teacher holds ONLY viewStudentCareAlert and therefore
+  // can never reach this route at all — the care alert is surfaced to them
+  // elsewhere, never here.
+  RouteNames.studentHealth: Permission.viewStudentHealthRecord,
+  // ─── end PRC-A Batch 2 ──────────────────────────────────────────────────
   RouteNames.admin: Permission.viewAdminHub,
   RouteNames.admissions: Permission.viewAdmissions,
   RouteNames.finance: Permission.viewFinance,
@@ -38,6 +59,11 @@ const Map<String, Permission> kErpRouteViewPermissions = {
   RouteNames.inventory: Permission.viewInventory,
   RouteNames.alumni: Permission.viewAlumni,
   RouteNames.controlCenter: Permission.viewControlCenter,
+  // ASIP: the Phase-2 NIKSHA support-staff view maps here. The Phase-1 reporter
+  // route (`/support`) is auth-gated for every persona (see _isSharedSettingsRoute
+  // in app_router.dart) and is intentionally NOT part of the admin ERP shell, so
+  // this entry never gates the reporter — it documents the support-view contract.
+  RouteNames.support: Permission.viewSupport,
   RouteNames.director: Permission.viewDirectorPortal,
   RouteNames.copilot: Permission.viewAiCopilot,
   RouteNames.education: Permission.viewEducation,
@@ -47,6 +73,9 @@ const Map<String, Permission> kErpRouteViewPermissions = {
   RouteNames.examIntelligence: Permission.viewExamIntelligence,
   RouteNames.homeworkIntelligence: Permission.viewHomeworkIntelligence,
   RouteNames.student360: Permission.viewStudent360,
+  // Staff 360 shows employment, contact and leave data — gate it on the
+  // same permission that guards the HR employee record it is built from.
+  RouteNames.staff360: Permission.viewHr,
   RouteNames.employees: Permission.viewEmployees,
   RouteNames.inventoryDistribution: Permission.viewInventoryDistribution,
   RouteNames.inventoryReplacements: Permission.viewInventoryDistribution,

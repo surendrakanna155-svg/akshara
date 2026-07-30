@@ -24,7 +24,8 @@ class TeacherMessagesScreen extends ConsumerWidget {
   final void Function(MessageThread thread)? onThreadTap;
 
   static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
-  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
+  static const double _tabletMaxContentWidth =
+      AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -36,7 +37,7 @@ class TeacherMessagesScreen extends ConsumerWidget {
     final teaching = ref.watch(resolvedTeacherTeachingContextProvider);
 
     return Scaffold(
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'Messages',
         subtitle: teaching.teacherName,
@@ -44,28 +45,33 @@ class TeacherMessagesScreen extends ConsumerWidget {
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,
       ),
-      body: isLoading
-          ? const AksharaLoadingState()
-          : hasError
-              ? AksharaErrorState(
-                  message: 'Unable to load messages.',
-                  onRetry: () => ref
-                      .read(teacherMessagesErrorProvider.notifier)
-                      .state = false,
-                )
-              : LayoutBuilder(
-                  builder: (context, constraints) {
-                    final isTablet =
-                        constraints.maxWidth >= _tabletBreakpoint;
-                    final pad = isTablet
-                        ? AksharaSpacing.tabletMargin
-                        : AksharaSpacing.mobileMargin;
+      // DS V2 P4 — premium persona canvas behind the messages inbox/compose
+      // (the conversation/chat screen stays plain — a canvas hurts pale
+      // chat-bubble contrast).
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: isLoading
+            ? const AksharaLoadingState()
+            : hasError
+                ? AksharaErrorState(
+                    message: 'Unable to load messages.',
+                    onRetry: () => ref
+                        .read(teacherMessagesErrorProvider.notifier)
+                        .state = false,
+                  )
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isTablet =
+                          constraints.maxWidth >= _tabletBreakpoint;
+                      final pad = isTablet
+                          ? AksharaSpacing.tabletMargin
+                          : AksharaSpacing.mobileMargin;
 
-                    return MobileDashboardLayout.boundedShellBody(
-                      constraints: constraints,
-                      maxContentWidth:
-                          isTablet ? _tabletMaxContentWidth : null,
-                      child: Column(
+                      return MobileDashboardLayout.boundedShellBody(
+                        constraints: constraints,
+                        maxContentWidth:
+                            isTablet ? _tabletMaxContentWidth : null,
+                        child: Column(
                           children: [
                             Padding(
                               padding: EdgeInsets.fromLTRB(
@@ -107,33 +113,41 @@ class TeacherMessagesScreen extends ConsumerWidget {
                                           message: 'No messages yet.',
                                           icon: Icons.forum_outlined,
                                         )
-                                      : ListView.separated(
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: pad,
+                                      : RefreshIndicator(
+                                          onRefresh: () async => ref.invalidate(
+                                              teacherMessageThreadsFutureProvider),
+                                          child: ListView.separated(
+                                            physics:
+                                                const AlwaysScrollableScrollPhysics(),
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: pad,
+                                            ),
+                                            itemCount: threads.length,
+                                            separatorBuilder: (_, __) =>
+                                                Divider(
+                                              color:
+                                                  context.colors.outlineVariant,
+                                            ),
+                                            itemBuilder: (context, index) {
+                                              final thread = threads[index];
+                                              return _ThreadRow(
+                                                thread: thread,
+                                                onTap: onThreadTap == null
+                                                    ? null
+                                                    : () =>
+                                                        onThreadTap!(thread),
+                                              );
+                                            },
                                           ),
-                                          itemCount: threads.length,
-                                          separatorBuilder: (_, __) => Divider(
-                                            color:
-                                                context.colors.outlineVariant,
-                                          ),
-                                          itemBuilder: (context, index) {
-                                            final thread = threads[index];
-                                            return _ThreadRow(
-                                              thread: thread,
-                                              onTap: onThreadTap == null
-                                                  ? null
-                                                  : () =>
-                                                      onThreadTap!(thread),
-                                            );
-                                          },
                                         ),
                               },
                             ),
                           ],
                         ),
-                    );
-                  },
-                ),
+                      );
+                    },
+                  ),
+      ),
     );
   }
 }
@@ -187,7 +201,8 @@ class _ComposePane extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(pad, AksharaSpacing.s0, pad, AksharaSpacing.s6),
+      padding:
+          EdgeInsets.fromLTRB(pad, AksharaSpacing.s0, pad, AksharaSpacing.s6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -229,7 +244,7 @@ class _ComposePane extends ConsumerWidget {
             phone: draft.recipient.trim(),
             label: 'Open in WhatsApp',
             message: draft.body.trim().isEmpty
-                ? 'Hello from Akshara School'
+                ? 'Hello from NIKSHA School'
                 : draft.body.trim(),
             unavailableMessage:
                 'Enter parent phone number in To field (E.164 or 10-digit).',

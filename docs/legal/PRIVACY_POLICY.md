@@ -1,9 +1,9 @@
-# Akshara ERP — Privacy Policy
+# NIKSHA OS — Privacy Policy
 
 **Document version:** 2.0
 **Last updated:** 27 June 2026
-**Applies to:** the Akshara ERP mobile application (Android) and related services
-operated by **[LEGAL ENTITY NAME]** ("Akshara", "we", "us", "our").
+**Applies to:** the NIKSHA OS mobile application (Android) and related services
+operated by **NIKSHA Technologies Pvt. Ltd.** ("NIKSHA OS", "we", "us", "our").
 
 > OWNER ACTION: Before publishing on the Play Store, (1) fill in every placeholder
 > from [PLACEHOLDERS.md](PLACEHOLDERS.md), (2) host this document at a public HTTPS
@@ -16,16 +16,16 @@ operated by **[LEGAL ENTITY NAME]** ("Akshara", "we", "us", "our").
 
 ## 1. Who we are and our role
 
-Akshara ERP is a school-management platform used by schools ("Institutions") to run
+NIKSHA OS is a school-management platform used by schools ("Institutions") to run
 admissions, attendance, examinations, fees, transport, hostel, library, HR and
 parent communication.
 
 - For most personal data of students, parents and staff, the **Institution is the
-  Data Fiduciary** (controller). Akshara acts as a **Data Processor**, processing
+  Data Fiduciary** (controller). NIKSHA OS acts as a **Data Processor**, processing
   that data on the Institution's documented instructions (see the
   [Institution Agreement / DPA](INSTITUTION_AGREEMENT.md)).
 - For account, device and diagnostic data we collect to operate the app itself,
-  **Akshara is the Data Fiduciary**.
+  **NIKSHA OS is the Data Fiduciary**.
 
 This policy is written to be consistent with India's **Digital Personal Data
 Protection Act, 2023 (DPDP Act)** and the **Digital Personal Data Protection Rules,
@@ -33,7 +33,7 @@ Protection Act, 2023 (DPDP Act)** and the **Digital Personal Data Protection Rul
 **13 May 2027**), the **Information Technology Act, 2000** and its rules, and the
 Google Play Developer Program / Data safety requirements.
 
-**Operator / contact:** [LEGAL ENTITY NAME], [REGISTERED ADDRESS]
+**Operator / contact:** NIKSHA Technologies Pvt. Ltd., [REGISTERED ADDRESS]
 **Privacy / Data Protection contact:** [PRIVACY EMAIL]
 **Grievance Officer:** [GRIEVANCE OFFICER NAME], [GRIEVANCE EMAIL]
 
@@ -208,7 +208,7 @@ latest version.
 
 ## 14. Contact
 
-**[LEGAL ENTITY NAME]**
+**NIKSHA Technologies Pvt. Ltd.**
 [REGISTERED ADDRESS]
 Privacy: **[PRIVACY EMAIL]** · Support: **[SUPPORT EMAIL]**
 Grievance Officer: **[GRIEVANCE OFFICER NAME]**, **[GRIEVANCE OFFICER DESIGNATION]**,

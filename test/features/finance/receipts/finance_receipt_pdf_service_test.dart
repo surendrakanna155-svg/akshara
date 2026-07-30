@@ -7,7 +7,7 @@ void main() {
 
     final bytes = await service.buildReceiptPdf(
       receiptNumber: 'RCP-2026-8841',
-      schoolName: 'Akshara Public School',
+      schoolName: 'NIKSHA Public School',
       title: 'Term 1 Fee',
       dateLabel: '15 Apr 2026',
       paymentMethod: 'UPI',

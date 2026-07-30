@@ -120,6 +120,45 @@ Deno.test("parent insight enrichment falls back when the model returns junk", as
   }
 });
 
+Deno.test("RT-4-1: enrichment DROPS a reply that fabricates a number (guard) → deterministic snapshot", async () => {
+  clearAiKeyEnv();
+  Deno.env.set("ANTHROPIC_API_KEY", "sk-ant-test");
+  const original = globalThis.fetch;
+  // The model disobeys "never change numbers": snapshot attendance is 85%, this
+  // reply says 95% — a percent NOT present in the injected snapshot. The output
+  // guard (guard:true) must discard the whole reply so no fabricated figure ever
+  // reaches the parent; the accurate deterministic snapshot stands.
+  globalThis.fetch = (() =>
+    Promise.resolve(
+      new Response(
+        JSON.stringify({
+          model: "claude-opus-4-8",
+          stop_reason: "end_turn",
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              progressSummary: "marks 70%.",
+              strengths: ["good participation"],
+              weaknesses: ["time management"],
+              attendanceInsights: ["Attendance is 95% — excellent"],
+              homeworkInsights: ["Homework 80%"],
+              improvementSuggestions: ["daily revision"],
+              teacherRemarksSummary: "steady effort.",
+            }),
+          }],
+        }),
+        { status: 200 },
+      ),
+    )) as typeof fetch;
+  try {
+    const result = await enrichParentInsightWithClaude(baseSnapshot, governance());
+    assertEquals(result, baseSnapshot, "fabricated-95% reply must be dropped, snapshot preserved");
+  } finally {
+    globalThis.fetch = original;
+    clearAiKeyEnv();
+  }
+});
+
 Deno.test("parent insight enrichment falls back on refusal", async () => {
   clearAiKeyEnv();
   Deno.env.set("ANTHROPIC_API_KEY", "sk-ant-test");

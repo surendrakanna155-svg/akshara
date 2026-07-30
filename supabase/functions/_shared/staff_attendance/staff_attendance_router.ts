@@ -4,6 +4,7 @@
 //   GET  /staff-attendance/geofence                  read the school geofence config
 //   PUT  /staff-attendance/geofence                  set the school geofence config (admin)
 //   POST /staff-attendance/manual-request            raise an audited manual attendance request
+//   GET  /staff-attendance/manual-requests            SLICE 4: own requests (?mine=true) / pending queue (approver)
 //   POST /staff-attendance/manual-request/decide     approve/reject a manual request (approver)
 //   GET  /staff-attendance/my-history                TCH-9: read-only OWN attendance history
 
@@ -12,6 +13,7 @@ import { errorEnvelope } from "../http.ts";
 import {
   handleCreateManualRequest,
   handleDecideManualRequest,
+  handleListManualRequests,
   handleEnrollFace,
   handleGetGeofence,
   handleMyAttendanceHistory,
@@ -40,6 +42,9 @@ export function matchStaffAttendanceRoute(
   if (path === "/staff-attendance/manual-request" && method === "POST") {
     return { handler: handleCreateManualRequest, args: [] };
   }
+  if (path === "/staff-attendance/manual-requests" && method === "GET") {
+    return { handler: handleListManualRequests, args: [] };
+  }
   if (path === "/staff-attendance/manual-request/decide" && method === "POST") {
     return { handler: handleDecideManualRequest, args: [] };
   }
@@ -59,7 +64,7 @@ export async function routeStaffAttendance(
 
   const match = matchStaffAttendanceRoute(method, path);
   if (!match) {
-    return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+    return null;
   }
   return await match.handler(req, config, ...match.args);
 }

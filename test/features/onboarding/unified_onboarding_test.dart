@@ -27,14 +27,14 @@ void main() {
       final store = TenantOnboardingStore.instance;
       store.save(
         tenantA,
-        UnifiedOnboardingState.initial().copyWith(schoolName: 'Akshara Demo'),
+        UnifiedOnboardingState.initial().copyWith(schoolName: 'NIKSHA Demo'),
       );
       store.save(
         tenantB,
         UnifiedOnboardingState.initial().copyWith(schoolName: 'Other School'),
       );
 
-      expect(store.load(tenantA).schoolName, 'Akshara Demo');
+      expect(store.load(tenantA).schoolName, 'NIKSHA Demo');
       expect(store.load(tenantB).schoolName, 'Other School');
     });
 
@@ -193,7 +193,7 @@ void main() {
 
 UnifiedOnboardingState _completeState() {
   return UnifiedOnboardingState.initial().copyWith(
-    schoolName: 'Akshara International',
+    schoolName: 'NIKSHA International',
     board: 'CBSE',
     curriculum: 'CBSE',
     address: '123 School Road',

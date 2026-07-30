@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../features/school_completion/school_branding_theme_provider.dart';
@@ -6,7 +7,9 @@ import '../../../router/route_names.dart';
 import '../../../shared/navigation/persona_nav.dart';
 import '../../auth/qa_visual_switcher.dart';
 import '../../../theme/app_theme.dart';
-import '../../../theme/stitch_palettes.dart';
+import '../../../theme/persona_accents.dart';
+import '../../../theme/theme_mode_provider.dart';
+import '../../copilot/widgets/bottom_nav_ai_scope.dart';
 
 /// Teacher mobile shell with bottom navigation (Home · Classes · Teach · Messages).
 class TeacherShell extends ConsumerWidget {
@@ -64,6 +67,28 @@ class TeacherShell extends ConsumerWidget {
         label: 'Parent Concerns',
         icon: Icons.forum_outlined,
       ),
+      // P1 fix — the syllabus daily-capture UI (Lesson Logs) and the teacher's
+      // own coverage dashboard (Academic Progress) had routes + real screens
+      // but NO inbound navigation for the teacher persona; un-buried here.
+      //
+      // P1-4 (2026-07-28): these pointed at RouteNames.lessonLogs
+      // (`/school/lesson-logs`) and RouteNames.academicProgress
+      // (`/school/academic/progress`) — ADMIN-shell routes gated on
+      // `canAccessAdminErpShell` (auth.role == UserRole.staff). A teacher is
+      // UserRole.teacher, so both tiles silently redirected to the dashboard
+      // with no message: dead tiles. The teacher already holds viewLessonLogs /
+      // viewAcademicProgress — it was the SHELL wall, not the permission. They
+      // now point at teacher-shell siblings rendering the same screens.
+      MoreNavDestination(
+        route: RouteNames.teacherLessonLogs,
+        label: 'Lesson Logs',
+        icon: Icons.history_edu_outlined,
+      ),
+      MoreNavDestination(
+        route: RouteNames.teacherSyllabusProgress,
+        label: 'Syllabus Progress',
+        icon: Icons.track_changes_outlined,
+      ),
       MoreNavDestination(
         route: RouteNames.teacherProfile,
         label: 'Profile',
@@ -81,20 +106,33 @@ class TeacherShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final whiteLabel = ref.watch(schoolBrandingThemeProvider);
 
+    final themeMode = ref.watch(themeModeProvider);
+    final brightness = resolveEffectiveBrightness(
+      themeMode,
+      MediaQuery.platformBrightnessOf(context),
+    );
+
     return Theme(
-      data: AksharaAppTheme.stitch(
-        StitchPersonaPalette.classroomCommand,
+      data: AksharaAppTheme.persona(
+        brightness: brightness,
+        accent: AksharaPersonaAccent.teacher,
         whiteLabel: whiteLabel,
       ),
-      child: Scaffold(
-      body: Column(
-        children: [
-          const QaPersonaSwitcherBar(),
-          Expanded(child: child),
-        ],
+      // Marks everything below as living under a bottom nav that carries the
+      // raised centre AI button, so a screen with its own fixed action bar can
+      // reserve that band instead of being painted over by it.
+      child: BottomNavAiScope(
+        reservedHeight: BottomNavAiScope.resolveHeight(context, ref),
+        child: Scaffold(
+          body: Column(
+            children: [
+              const QaPersonaSwitcherBar(),
+              Expanded(child: child),
+            ],
+          ),
+          bottomNavigationBar: const PersonaBottomNav(spec: navSpec),
+        ),
       ),
-      bottomNavigationBar: const PersonaBottomNav(spec: navSpec),
-    ),
     );
   }
 }

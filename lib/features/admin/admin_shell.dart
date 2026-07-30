@@ -6,7 +6,8 @@ import '../../features/school_completion/school_branding_theme_provider.dart';
 import '../../router/route_guards.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/breakpoints.dart';
-import '../../theme/stitch_palettes.dart';
+import '../../theme/persona_accents.dart';
+import '../../theme/theme_mode_provider.dart';
 import '../auth/qa_visual_switcher.dart';
 import 'admin_bottom_nav.dart';
 import 'admin_navigation_rail.dart';
@@ -33,13 +34,20 @@ class _AdminShellState extends ConsumerState<AdminShell> {
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
     final whiteLabel = ref.watch(schoolBrandingThemeProvider);
-    final stitchTheme = AksharaAppTheme.stitch(
-      StitchPersonaPalette.obsidianEnterprise,
+
+    final themeMode = ref.watch(themeModeProvider);
+    final brightness = resolveEffectiveBrightness(
+      themeMode,
+      MediaQuery.platformBrightnessOf(context),
+    );
+    final personaTheme = AksharaAppTheme.persona(
+      brightness: brightness,
+      accent: AksharaPersonaAccent.admin,
       whiteLabel: whiteLabel,
     );
 
     return Theme(
-      data: stitchTheme,
+      data: personaTheme,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

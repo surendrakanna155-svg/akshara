@@ -9,6 +9,10 @@ import {
 } from "../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
+import { enforceStorageQuota } from "../storage/storage_quota_enforcement.ts";
+import { recordStorageUsage } from "../storage/storage_quota_repository.ts";
+import { enforceUploadScanGate, recordUploadScan } from "../storage/upload_scan_repository.ts";
+import { initialScanStatus } from "../storage/upload_scan_service.ts";
 import { emitMutationAudit, schoolMemoriesAudit } from "../audit/mutation_audit_catalog.ts";
 import {
   buildMemoryAnalytics,
@@ -16,6 +20,7 @@ import {
   createMemoryAlbum,
   createMemoryEvent,
   getMediaByShareToken,
+  getMediaStoragePath,
   getMemoryEvent,
   listAlbumsForEvent,
   listMediaForAlbum,
@@ -238,6 +243,13 @@ export async function handleMemoryUploadPresign(
   if (uploadError) {
     return errorEnvelope("VALIDATION_ERROR", uploadError, 422);
   }
+  // PRC-A Batch 4 — cumulative storage quota (caps 31–36). validateUpload above
+  // is the PER-FILE cap; this is the ORG-cumulative cap. Inert unless
+  // STORAGE_QUOTA_ENFORCEMENT=true AND the plan sets a limit (both dark today),
+  // so this is a no-op on the current deploy. Uses the client-declared size, the
+  // same value validateUpload already trusts.
+  const quotaDenied = await enforceStorageQuota(config, auth.claims, body.sizeBytes ?? 0);
+  if (quotaDenied) return quotaDenied;
 
   const orgId = organizationIdFromClaims(auth.claims);
   const schoolId = schoolIdFromClaims(auth.claims);
@@ -288,6 +300,11 @@ export async function handleMemoryUploadConfirm(
     storagePath?: string;
     title?: string;
     mediaType?: string;
+    // PRC-A Batch 4 — the client echoes the size it declared at presign so the
+    // durable upload is counted against the org storage quota. Optional: a
+    // missing/zero value simply records nothing (fail-open under-count, never a
+    // crash) rather than blocking a confirm.
+    sizeBytes?: number;
   }>(req);
   if (!body) {
     return errorEnvelope("VALIDATION_ERROR", "Request body required", 422);
@@ -313,6 +330,43 @@ export async function handleMemoryUploadConfirm(
       await emitMutationAudit(db, auth.claims, schoolMemoriesAudit.mediaUploaded(row.id), req);
       return row;
     });
+    // PRC-A Batch 4 — count the durable upload against the org storage quota, in a
+    // SEPARATE best-effort transaction. It is deliberately NOT folded into the
+    // confirm txn above: a failed INSERT aborts a Postgres transaction, so an
+    // in-txn recording error would roll back the (already successful) media row +
+    // audit. Recording is always on (usage is real before enforcement flips on);
+    // a zero/absent size records nothing. Must never fail a confirm → fail-open.
+    try {
+      await withTenantContext(config, auth.claims, (db) =>
+        recordStorageUsage(db, { organizationId: orgId, schoolId }, {
+          deltaBytes: body.sizeBytes ?? 0,
+          category: "memories",
+          objectKey: body.storagePath!,
+          actorId: auth.claims.sub,
+        }));
+    } catch (recErr) {
+      console.error("storage usage record (memories) failed:", recErr);
+    }
+    // PRC-A Batch 9 — record the malware-scan status for the durable object, in a
+    // SEPARATE best-effort transaction (same reasoning as the usage recording). With
+    // no AV configured the status is an HONEST 'skipped' (not scanned) — never a
+    // fabricated 'clean'. Must never fail a confirm → fail-open.
+    try {
+      const { status, engine } = initialScanStatus();
+      await withTenantContext(config, auth.claims, (db) =>
+        recordUploadScan(db, {
+          organizationId: orgId,
+          schoolId,
+          bucket: "school-memories",
+          objectKey: body.storagePath!,
+          module: "memories",
+          status,
+          engine,
+          requestedBy: auth.claims.sub,
+        }));
+    } catch (scanErr) {
+      console.error("upload scan record (memories) failed:", scanErr);
+    }
     const downloadUrl = await createMemoryDownloadUrl(config, body.storagePath!);
     return jsonResponse(envelope({
       id: media.id,
@@ -336,17 +390,16 @@ export async function handleMemoryMediaDownload(
   if (denied) return denied;
 
   try {
-    const url = await withTenantContext(config, auth.claims, async (db) => {
-      const rows = await db.queryObject<{ storage_path: string }>(
-        `SELECT storage_path FROM school_memory_media WHERE id = $1`,
-        [mediaId],
-      );
-      const path = rows[0]?.storage_path;
-      if (!path) throw new Error("Media not found");
+    const path = await withTenantContext(config, auth.claims, async (db) => {
+      const p = await getMediaStoragePath(db, mediaId);
+      if (!p) throw new Error("Media not found");
       await emitMutationAudit(db, auth.claims, schoolMemoriesAudit.mediaDownloaded(mediaId), req);
-      return await createMemoryDownloadUrl(config, path);
+      return p;
     });
-    return jsonResponse(envelope({ downloadUrl: url }));
+    // PRC-A Batch 9 — malware-scan serving gate (default OFF → null → no change).
+    const gate = await enforceUploadScanGate(config, auth.claims, path);
+    if (gate) return gate;
+    return jsonResponse(envelope({ downloadUrl: await createMemoryDownloadUrl(config, path) }));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
     return errorEnvelope("MEMORIES_ERROR", "Download URL failed", 500);
@@ -364,7 +417,7 @@ export async function handleMemoryShareLink(
   if (denied) return denied;
 
   try {
-    const result = await withTenantContext(config, auth.claims, async (db) => {
+    const resolved = await withTenantContext(config, auth.claims, async (db) => {
       const media = await getMediaByShareToken(db, shareToken);
       if (!media?.storage_path) throw new Error("Share link not found");
       await emitMutationAudit(
@@ -373,10 +426,13 @@ export async function handleMemoryShareLink(
         schoolMemoriesAudit.shareResolved(shareToken, media.id),
         req,
       );
-      const downloadUrl = await createMemoryDownloadUrl(config, media.storage_path);
-      return { mediaId: media.id, eventId: media.event_id, downloadUrl };
+      return { mediaId: media.id, eventId: media.event_id, storagePath: media.storage_path };
     });
-    return jsonResponse(envelope(result));
+    // PRC-A Batch 9 — malware-scan serving gate (default OFF → null → no change).
+    const gate = await enforceUploadScanGate(config, auth.claims, resolved.storagePath);
+    if (gate) return gate;
+    const downloadUrl = await createMemoryDownloadUrl(config, resolved.storagePath);
+    return jsonResponse(envelope({ mediaId: resolved.mediaId, eventId: resolved.eventId, downloadUrl }));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
     return errorEnvelope("MEMORIES_ERROR", "Share link failed", 500);

@@ -2,6 +2,7 @@ import { assert, assertEquals } from "https://deno.land/std@0.224.0/assert/mod.t
 import type { TenantQueryClient } from "../tenant_db.ts";
 import { attendancePercentSql } from "../attendance/attendance_percentage.ts";
 import {
+  computeAndStoreRiskSnapshots,
   INTEL_RISK_API_PROBE_SQL,
   INTEL_RISK_PROBE_SCHOOL_A,
   INTEL_RISK_PROBE_SCHOOL_B,
@@ -132,13 +133,161 @@ Deno.test("loadStudentSignals: canonical attendance treats late as present and e
   assertEquals(signals[0].attendance_percent, 80); // CANONICAL — was 84 under the old formula
 });
 
-Deno.test("loadStudentSignals: no usable attendance data defaults to 92, not 0 or null", async () => {
-  // attendancePercentSql() returns SQL NULL when the denominator is 0 (no
-  // marked days at all, or every marked day was excused). The risk engine
-  // consumes attendance_percent as a plain number, so the mapper falls back
-  // to 92 — the SAME default the old total_attendance===0 branch used —
-  // so risk scores do not shift for students with no/no-usable data.
-  const db = new SignalsMockDb({}, { absent_count: 0, attendance_percent: null });
+// ─── SAFEGUARDING (ICA-H4) ───────────────────────────────────────────────────
+// Missing attendance/homework is an ABSENCE OF MONITORING DATA, not evidence of
+// good standing. The old mapper coerced it into optimistic constants (92 / 85),
+// scoring a newly-enrolled or unmonitored student as low-risk and hiding exactly
+// the students no one is watching. It now records explicit data-provenance flags
+// and never fabricates an optimistic percentage.
+
+// A store-aware mock DB: routes DELETE / the loadStudentSignals SELECT / the
+// snapshot INSERT, capturing each INSERT's bound params so a test can assert the
+// stored risk_score / risk_level / reasons / inputs.
+function studentRow(overrides: Record<string, unknown> = {}) {
+  return {
+    student_id: "st-1",
+    student_name: "Asha",
+    class_name: "Grade 5",
+    section_name: "A",
+    absent_count: 0,
+    attendance_percent: 100,
+    hw_submitted: 10,
+    hw_total: 10,
+    avg_marks_pct: 80,
+    behavior_incidents: 0,
+    fee_outstanding: 0,
+    fee_overdue_days: 0,
+    ...overrides,
+  };
+}
+
+class StoreMockDb {
+  insertArgs: unknown[][] = [];
+  constructor(private row: Record<string, unknown>) {}
+  // deno-lint-ignore require-await
+  async queryObject<T>(sql: string, args: unknown[] = []): Promise<T[]> {
+    if (sql.includes("DELETE")) return [] as T[];
+    if (sql.includes("INSERT INTO intel_student_risk_snapshots")) {
+      this.insertArgs.push(args);
+      return [{
+        id: "snap-1",
+        risk_score: args[6],
+        risk_level: args[7],
+        reasons: args[8],
+        inputs: args[12],
+      }] as unknown as T[];
+    }
+    return [this.row] as T[]; // the loadStudentSignals SELECT
+  }
+  // deno-lint-ignore require-await
+  async queryCount(): Promise<number> {
+    return 0;
+  }
+  get raw(): never {
+    throw new Error("unused");
+  }
+}
+
+function parseInsert(args: unknown[]) {
+  return {
+    riskScore: args[6] as number,
+    riskLevel: args[7] as string,
+    reasons: JSON.parse(args[8] as string) as Array<{ code: string; severity: string }>,
+    inputs: JSON.parse(args[12] as string) as Record<string, unknown>,
+  };
+}
+
+Deno.test("loadStudentSignals: no attendance + no homework is flagged UNMONITORED, never faked to 92/85", async () => {
+  const db = new StoreMockDb(studentRow({ attendance_percent: null, hw_total: 0, hw_submitted: 0 }));
   const signals = await loadStudentSignals(db as unknown as TenantQueryClient, ORG, SCHOOL);
-  assertEquals(signals[0].attendance_percent, 92);
+  const s = signals[0];
+  // the fabricated optimistic constants are GONE
+  assertEquals(s.attendance_percent === 92, false);
+  assertEquals(s.homework_completion_rate === 85, false);
+  // explicit data-provenance flags instead
+  assertEquals(s.attendance_has_data, false);
+  assertEquals(s.homework_has_data, false);
+  assertEquals(s.data_completeness, "none");
+  assertEquals(s.unmonitored, true);
+});
+
+Deno.test("loadStudentSignals: partial data (attendance present, homework null) is not inflated by a fabricated 85", async () => {
+  const db = new StoreMockDb(studentRow({ attendance_percent: 88, hw_total: 0, hw_submitted: 0 }));
+  const signals = await loadStudentSignals(db as unknown as TenantQueryClient, ORG, SCHOOL);
+  const s = signals[0];
+  assertEquals(s.attendance_percent, 88); // real attendance preserved
+  assertEquals(s.homework_completion_rate === 85, false); // NOT the fabricated optimistic default
+  assertEquals(s.attendance_has_data, true);
+  assertEquals(s.homework_has_data, false);
+  assertEquals(s.data_completeness, "partial");
+  assertEquals(s.unmonitored, false); // dominant signal (attendance) is present
+});
+
+Deno.test("loadStudentSignals: full data computes the real homework rate and is not flagged", async () => {
+  const db = new StoreMockDb(studentRow({ attendance_percent: 90, hw_total: 10, hw_submitted: 8 }));
+  const signals = await loadStudentSignals(db as unknown as TenantQueryClient, ORG, SCHOOL);
+  const s = signals[0];
+  assertEquals(s.homework_completion_rate, 80);
+  assertEquals(s.attendance_has_data, true);
+  assertEquals(s.homework_has_data, true);
+  assertEquals(s.data_completeness, "full");
+  assertEquals(s.unmonitored, false);
+});
+
+Deno.test("computeAndStoreRiskSnapshots: unmonitored student is stored NEEDS-REVIEW, never low-risk-by-default", async () => {
+  // No attendance marked, no homework rows: the old code stored this as ~low.
+  const db = new StoreMockDb(studentRow({ attendance_percent: null, hw_total: 0, hw_submitted: 0 }));
+  const stored = await computeAndStoreRiskSnapshots(db as unknown as TenantQueryClient, ORG, SCHOOL, "2025-26");
+  assertEquals(stored.length, 1);
+  assertEquals(db.insertArgs.length, 1);
+  const ins = parseInsert(db.insertArgs[0]);
+
+  // the exit requirement: NEVER low-risk-by-default
+  assertEquals(ins.riskLevel === "low", false);
+  assertEquals(ins.riskLevel, "medium"); // floored to the "needs review" band
+  assertEquals(ins.riskScore >= 40, true); // surfaces in a score-ordered list
+  // explicit caveat reason, and the misleading "stable" reason is gone
+  assertEquals(ins.reasons.some((r) => r.code === "no_monitoring_data"), true);
+  assertEquals(ins.reasons.some((r) => r.code === "stable"), false);
+  // machine-readable flag persisted in the snapshot inputs for the UI
+  assertEquals(ins.inputs.unmonitored, true);
+  assertEquals(ins.inputs.data_completeness, "none");
+});
+
+Deno.test("computeAndStoreRiskSnapshots: a student with REAL low attendance is still scored high-risk", async () => {
+  // Real monitoring data present and bad — the fix must not weaken this path.
+  const db = new StoreMockDb(studentRow({
+    attendance_percent: 30,
+    absent_count: 10,
+    hw_total: 10,
+    hw_submitted: 1,
+    avg_marks_pct: 25,
+    behavior_incidents: 3,
+    fee_outstanding: 50000,
+    fee_overdue_days: 70,
+  }));
+  await computeAndStoreRiskSnapshots(db as unknown as TenantQueryClient, ORG, SCHOOL, "2025-26");
+  const ins = parseInsert(db.insertArgs[0]);
+
+  assertEquals(ins.riskLevel === "high" || ins.riskLevel === "critical", true);
+  assertEquals(ins.reasons.some((r) => r.code === "low_attendance"), true);
+  // real data present => NOT treated as unmonitored
+  assertEquals(ins.reasons.some((r) => r.code === "no_monitoring_data"), false);
+  assertEquals(ins.inputs.unmonitored, false);
+});
+
+Deno.test("computeAndStoreRiskSnapshots: partial student keeps its honest (low) band + a caveat, not a fabricated 85", async () => {
+  // attendance present and healthy (95%), homework simply not tracked yet.
+  const db = new StoreMockDb(studentRow({ attendance_percent: 95, hw_total: 0, hw_submitted: 0, avg_marks_pct: 80 }));
+  await computeAndStoreRiskSnapshots(db as unknown as TenantQueryClient, ORG, SCHOOL, "2025-26");
+  const ins = parseInsert(db.insertArgs[0]);
+
+  // honest low band preserved (real attendance is good) — behavior for students
+  // WHO DO have (good) data is unchanged
+  assertEquals(ins.riskLevel, "low");
+  // the missing homework dimension is excluded, not fabricated as 85%
+  assertEquals(ins.inputs.homework_completion_rate === 85, false);
+  assertEquals(ins.inputs.data_completeness, "partial");
+  assertEquals(ins.reasons.some((r) => r.code === "partial_monitoring_data"), true);
+  assertEquals(ins.reasons.some((r) => r.code === "no_monitoring_data"), false);
 });

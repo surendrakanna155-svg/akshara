@@ -91,7 +91,7 @@ export async function routeOnboarding(
   if (!path.startsWith("/onboarding")) return null;
   const match = matchOnboardingRoute(method, path);
   if (!match) {
-    return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+    return null;
   }
   return await match.handler(req, config, ...match.args);
 }

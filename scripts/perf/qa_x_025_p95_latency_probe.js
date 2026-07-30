@@ -14,7 +14,7 @@
 //   scheduled run that breaches it is a latency regression.
 //
 // Run (live VPS only):
-//   API_BASE_URL=https://akshara.veloraunisexsalon.com/functions/v1/api \
+//   API_BASE_URL=https://api.nikshaos.in/functions/v1/api \
 //   ADMIN_PHONE=9876543210 \
 //   k6 run scripts/perf/qa_x_025_p95_latency_probe.js
 //

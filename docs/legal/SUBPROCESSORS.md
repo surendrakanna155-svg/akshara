@@ -1,10 +1,10 @@
-# Akshara ERP — Third-Party Services & Sub-processors
+# NIKSHA OS — Third-Party Services & Sub-processors
 
 **Document version:** 1.0
 **Status:** Draft for owner sign-off (see [PLACEHOLDERS.md](PLACEHOLDERS.md))
-**Operator:** **[LEGAL ENTITY NAME]** ("Akshara", "we", "us").
+**Operator:** **NIKSHA Technologies Pvt. Ltd.** ("NIKSHA OS", "we", "us").
 
-> This page lists the third-party services Akshara uses to deliver the platform,
+> This page lists the third-party services NIKSHA OS uses to deliver the platform,
 > what each one does, and whether it processes data **outside India**. It supports
 > the [Privacy Policy](PRIVACY_POLICY.md) and the
 > [Institution Agreement](INSTITUTION_AGREEMENT.md). When we add or change a
@@ -29,7 +29,7 @@
 | **PostgreSQL (self-hosted)** | Primary database | All service data | India / operator-controlled | **Active** |
 | **Supabase Storage (self-hosted)** | File/photo/document storage; expiring signed URLs | Uploaded media & documents | India / operator-controlled | **Active** |
 
-> Note: Akshara runs a **self-hosted** stack (PostgreSQL, REST gateway, storage,
+> Note: NIKSHA OS runs a **self-hosted** stack (PostgreSQL, REST gateway, storage,
 > edge runtime) on the operator's own VPS. It does **not** use a third-party managed
 > "Supabase Cloud", AWS RDS, Vercel or Netlify for production data.
 
@@ -37,12 +37,12 @@
 
 | Service | Provider | Function | Personal data shared | Processes data outside India? | Status |
 |---|---|---|---|---|---|
-| **Razorpay** | Razorpay (India) | Online fee payment processing (order creation, payment, signature/webhook verification) | Payer/parent identity context and payment amount; **card details are handled by Razorpay, not stored by Akshara** | India-based gateway (may process via international card networks) | **Active** |
+| **Razorpay** | Razorpay (India) | Online fee payment processing (order creation, payment, signature/webhook verification) | Payer/parent identity context and payment amount; **card details are handled by Razorpay, not stored by NIKSHA OS** | India-based gateway (may process via international card networks) | **Active** |
 | **Fast2SMS** | Fast2SMS (India) | Sends one-time passwords (OTP) by SMS for login | Mobile number + OTP message | India-based | **Active** |
 | **Anthropic (Claude)** | Anthropic (USA) | Optional AI features (assistant, parent insights, question-paper assistance, summaries, predictions, captions) | The minimum text needed for the feature, from data the user can already see; **not used to train the provider's models** | **Yes — USA** | **Active when enabled** (deterministic fallback when not) |
 | **Firebase Cloud Messaging (FCM)** | Google (USA) | Delivers push notifications to devices | Device push token + notification title/body | **Yes — USA** | **Active** |
 | **Google OAuth (service account)** | Google (USA) | Mints short-lived tokens so the server can call FCM | Server-to-server only (no user data) | **Yes — USA** | **Active** (supports FCM) |
-| **WhatsApp deep-links (`wa.me`)** | Meta | Opens a pre-filled WhatsApp chat **on the user's own device** when a user taps "contact on WhatsApp" | None sent by Akshara — the user composes/sends the message themselves | Meta servers (user-initiated) | **Active** (link-only; **no** WhatsApp Business API, **no** Meta data integration) |
+| **WhatsApp deep-links (`wa.me`)** | Meta | Opens a pre-filled WhatsApp chat **on the user's own device** when a user taps "contact on WhatsApp" | None sent by NIKSHA OS — the user composes/sends the message themselves | Meta servers (user-initiated) | **Active** (link-only; **no** WhatsApp Business API, **no** Meta data integration) |
 
 ## 4. Optional integrations (disabled by default — no data sent unless enabled)
 

@@ -63,6 +63,7 @@ class AdaptiveAiMapper {
         label: dto.label,
         results: dto.results.map(toSearchResult).toList(),
         total: dto.total,
+        offset: dto.offset,
       );
 
   UniversalSearchResult toSearchResultSet(UniversalSearchResultDto dto) => UniversalSearchResult(

@@ -11,6 +11,7 @@ import '../fees/fees_provider.dart';
 import 'parent_receipts_provider.dart';
 import 'receipt_models.dart';
 import '../../../theme/breakpoints.dart';
+import '../../copilot/widgets/bottom_nav_ai_scope.dart';
 
 /// PA-11 receipt detail with download and share actions.
 class ParentReceiptDetailScreen extends ConsumerWidget {
@@ -28,7 +29,8 @@ class ParentReceiptDetailScreen extends ConsumerWidget {
   final void Function(FeeReceipt receipt)? onShare;
 
   static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
-  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
+  static const double _tabletMaxContentWidth =
+      AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -37,7 +39,7 @@ class ParentReceiptDetailScreen extends ConsumerWidget {
     final hasError = ref.watch(parentReceiptsErrorProvider);
 
     return Scaffold(
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'Receipt',
         subtitle: receipt?.receiptNumber,
@@ -45,33 +47,37 @@ class ParentReceiptDetailScreen extends ConsumerWidget {
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,
       ),
-      body: isLoading
-          ? const AksharaLoadingState(semanticLabel: 'Loading receipt')
-          : hasError
-              ? AksharaErrorState(
-                  message: 'Unable to load receipt details.',
-                  onRetry: () => ref
-                      .read(parentReceiptsErrorProvider.notifier)
-                      .state = false,
-                )
-              : receipt == null
-                  ? const AksharaEmptyState(
-                      message: 'Receipt not found.',
-                      icon: Icons.receipt_long_outlined,
-                    )
-                  : _ReceiptDetailBody(
-                      receipt: receipt,
-                      // Default to generating/sharing a receipt PDF when the
-                      // caller doesn't supply its own handler.
-                      onDownload: onDownload ??
-                          (r) => ref
-                              .read(aksharaReportExportServiceProvider)
-                              .shareReceiptPdf(receipt: r),
-                      onShare: onShare ??
-                          (r) => ref
-                              .read(aksharaReportExportServiceProvider)
-                              .shareReceiptPdf(receipt: r),
-                    ),
+      // DS V2 P4 — premium persona canvas behind the receipt detail.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: isLoading
+            ? const AksharaLoadingState(semanticLabel: 'Loading receipt')
+            : hasError
+                ? AksharaErrorState(
+                    message: 'Unable to load receipt details.',
+                    onRetry: () => ref
+                        .read(parentReceiptsErrorProvider.notifier)
+                        .state = false,
+                  )
+                : receipt == null
+                    ? const AksharaEmptyState(
+                        message: 'Receipt not found.',
+                        icon: Icons.receipt_long_outlined,
+                      )
+                    : _ReceiptDetailBody(
+                        receipt: receipt,
+                        // Default to generating/sharing a receipt PDF when the
+                        // caller doesn't supply its own handler.
+                        onDownload: onDownload ??
+                            (r) => ref
+                                .read(aksharaReportExportServiceProvider)
+                                .shareReceiptPdf(receipt: r),
+                        onShare: onShare ??
+                            (r) => ref
+                                .read(aksharaReportExportServiceProvider)
+                                .shareReceiptPdf(receipt: r),
+                      ),
+      ),
     );
   }
 }
@@ -95,8 +101,8 @@ class _ReceiptDetailBody extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isTablet = constraints.maxWidth >=
-            ParentReceiptDetailScreen._tabletBreakpoint;
+        final isTablet =
+            constraints.maxWidth >= ParentReceiptDetailScreen._tabletBreakpoint;
         final horizontalPadding = isTablet
             ? AksharaSpacing.tabletMargin
             : AksharaSpacing.mobileMargin;
@@ -204,11 +210,12 @@ class _ReceiptDetailBody extends StatelessWidget {
                 SafeArea(
                   top: false,
                   child: Padding(
+                    // Reserve the raised centre AI button's band.
                     padding: EdgeInsets.fromLTRB(
                       horizontalPadding,
                       AksharaSpacing.s3,
                       horizontalPadding,
-                      AksharaSpacing.s3,
+                      AksharaSpacing.s3 + BottomNavAiScope.reservedHeightOf(context),
                     ),
                     child: Row(
                       children: [

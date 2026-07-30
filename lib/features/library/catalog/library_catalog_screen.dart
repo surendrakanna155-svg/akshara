@@ -292,6 +292,7 @@ class _BookStatusChip extends StatelessWidget {
       LibraryBookStatus.issued => ('Issued', KpiAccent.primary),
       LibraryBookStatus.reserved => ('Reserved', KpiAccent.warning),
       LibraryBookStatus.damaged => ('Damaged', KpiAccent.error),
+      LibraryBookStatus.lost => ('Lost', KpiAccent.error),
     };
 
     return AksharaStatusChip(

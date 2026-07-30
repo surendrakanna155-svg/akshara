@@ -155,9 +155,9 @@ Deno.test("QA-B-007: memories rejects an unauthenticated caller (401)", async ()
   assertEquals(res!.status, 401);
 });
 
-Deno.test("QA-B-007: an unregistered memories path returns 404", async () => {
+Deno.test("QA-B-007: an unregistered memories path returns null (central dispatcher 404s)", async () => {
   const res = await call("GET", "/memories/unknown", ["viewSchoolMemories"]);
-  assertEquals(res!.status, 404);
+  assertEquals(res, null);
 });
 
 Deno.test("QA-B-007: a non-memories path is not claimed by the router (null)", async () => {

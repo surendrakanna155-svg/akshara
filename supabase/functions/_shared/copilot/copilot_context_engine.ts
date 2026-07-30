@@ -3,6 +3,13 @@ import type { TenantQueryClient } from "../tenant_db.ts";
 import { claimsHasPermission } from "./copilot_repository.ts";
 import type { CopilotAssistantType } from "./copilot_types.ts";
 import { loadAdmissionsIntelligence } from "../admissions/admissions_intelligence_repository.ts";
+import { computeAnalyticsBundle } from "../analytics/analytics_repository.ts";
+import {
+  getSchoolConflicts,
+  getSchoolWorkload,
+  getTimetableSummary,
+} from "../timetable/timetable_repository.ts";
+import { buildSchedulingRecommendations } from "../timetable/timetable_scheduling_advisor.ts";
 
 export interface CopilotContextBundle {
   school: Record<string, unknown>;
@@ -258,15 +265,9 @@ async function loadTimetableContext(
     return { access: "granted", configured: false };
   }
 
-  const { getTimetableSummary, getSchoolConflicts, getSchoolWorkload } = await import(
-    "../timetable/timetable_repository.ts"
-  );
   const summary = await getTimetableSummary(db, organizationId, schoolId, academicYearId);
   const conflicts = await getSchoolConflicts(db, organizationId, schoolId, academicYearId);
   const workload = await getSchoolWorkload(db, organizationId, schoolId, academicYearId);
-  const { buildSchedulingRecommendations } = await import(
-    "../timetable/timetable_scheduling_advisor.ts"
-  );
   const recommendations = buildSchedulingRecommendations({
     validation: {
       valid: conflicts.length === 0 && summary.gapCount === 0,
@@ -295,7 +296,6 @@ async function loadAnalyticsContext(
   organizationId: string,
   schoolId: string,
 ): Promise<Record<string, unknown>> {
-  const { computeAnalyticsBundle } = await import("../analytics/analytics_repository.ts");
   const bundle = await computeAnalyticsBundle(db, organizationId, schoolId);
   return {
     access: "granted",

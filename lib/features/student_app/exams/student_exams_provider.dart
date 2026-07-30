@@ -25,8 +25,13 @@ final studentExamsProvider = Provider<StudentExamsData>((ref) {
     manualError: ref.watch(studentExamsErrorProvider),
     manualEmpty: ref.watch(studentExamsEmptyProvider),
   );
+  // `AsyncValue.value` RETHROWS on an AsyncError, which made this provider —
+  // and therefore every screen that reads it — blow up on a failed fetch
+  // instead of letting the screen render its error state. `valueOrNull` yields
+  // null on error, so the fallback below applies and the screens' explicit
+  // `studentExamsErrorProvider` / `AsyncValue.hasError` branches take over.
   final resolved = data ??
-      ref.watch(studentExamsFutureProvider).value ??
+      ref.watch(studentExamsFutureProvider).valueOrNull ??
       const StudentExamsData(
         studentName: '',
         classLabel: '',

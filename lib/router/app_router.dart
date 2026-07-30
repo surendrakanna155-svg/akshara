@@ -1,5 +1,11 @@
 import 'dart:async';
 
+// PRC-A Batch 2 — request desk / gate pass / complaints / student health.
+import '../features/certificate_desk/certificate_requests_screen.dart';
+import '../features/complaints/complaints_screen.dart';
+import '../features/gate_pass/gate_passes_screen.dart';
+import '../features/student_health/infirmary/student_health_infirmary_screen.dart';
+
 import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,6 +24,9 @@ import '../features/auth/staff/staff_otp_screen.dart';
 import '../features/auth/staff/staff_login_provider.dart';
 import '../features/legal/legal_acceptance_screen.dart';
 import '../features/notifications/notifications_screen.dart';
+import '../features/support/report_issue_screen.dart';
+import '../features/support/my_reported_issues_screen.dart';
+import '../features/support/support_incident_detail_screen.dart';
 import '../features/finance/finance_models.dart';
 import '../features/parent/attendance/parent_attendance_screen.dart';
 import '../features/parent/academics/parent_academic_report_screen.dart';
@@ -86,10 +95,13 @@ import 'admissions_navigation.dart';
 import 'finance_navigation.dart';
 import '../features/settings/appearance_settings_screen.dart';
 import '../core/reliability/sync_center/sync_center_screen.dart';
+import '../features/staff_attendance/device/mlkit_face_capture.dart';
+import '../features/staff_attendance/face_enrollment_screen.dart';
 import 'copilot_navigation.dart';
 import 'education_navigation.dart';
 import 'intelligence_navigation.dart';
 import 'phase4_navigation.dart';
+import 'staff360_navigation.dart';
 import 'phase5_navigation.dart';
 import 'branch_navigation.dart';
 import 'franchise_navigation.dart';
@@ -132,6 +144,7 @@ GoRouter createAppRouter({
   required AuthState Function() readAuth,
   bool Function()? readQaLoginEnabled,
   bool Function()? readLegalBlocked,
+  List<NavigatorObserver> observers = const [],
 }) {
   final rootNavigatorKey = GlobalKey<NavigatorState>();
   String authEntryRoute() => (readQaLoginEnabled?.call() ?? false)
@@ -142,6 +155,7 @@ GoRouter createAppRouter({
     navigatorKey: rootNavigatorKey,
     initialLocation: RouteNames.splash,
     refreshListenable: refreshListenable,
+    observers: observers,
     debugLogDiagnostics: true,
     redirect: (context, state) {
       final auth = readAuth();
@@ -242,6 +256,20 @@ GoRouter createAppRouter({
         name: 'syncCenter',
         builder: (context, state) => const SyncCenterScreen(),
       ),
+      // Attendance auth device layer (Slice 3). Pushed both from non-widget
+      // code (MlkitFaceCaptureSource, via goRouterProvider.push — see
+      // lib/app/app.dart's SyncBanner for the same pattern) and directly from
+      // FaceEnrollmentScreen's own onPressed via context.push.
+      GoRoute(
+        path: RouteNames.staffFaceCapture,
+        name: 'staffFaceCapture',
+        builder: (context, state) => const FaceCaptureScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.staffFaceEnrollment,
+        name: 'staffFaceEnrollment',
+        builder: (context, state) => const FaceEnrollmentScreen(),
+      ),
       GoRoute(
         path: RouteNames.aiAssistant,
         name: 'aiAssistant',
@@ -251,6 +279,38 @@ GoRouter createAppRouter({
         path: RouteNames.parentNotifications,
         name: 'parentNotifications',
         builder: (context, state) => const NotificationsScreen(),
+      ),
+      // F-128 — teacher-scoped notifications inbox. Same role-neutral
+      // NotificationsScreen, under a teacher-owned path so the teacher bell no
+      // longer routes into the parent persona's route.
+      GoRoute(
+        path: RouteNames.teacherNotifications,
+        name: 'teacherNotifications',
+        builder: (context, state) => const NotificationsScreen(),
+      ),
+      // ASIP Phase 1 — "Report an issue to NIKSHA Support". Top-level, auth-gated
+      // for every persona (see _isSharedSettingsRoute). `/support/new` is declared
+      // before `/support/:id` so the literal wins over the id parameter.
+      GoRoute(
+        path: RouteNames.support,
+        name: 'support',
+        builder: (context, state) =>
+            const AuthenticatedGuard(child: MyReportedIssuesScreen()),
+      ),
+      GoRoute(
+        path: RouteNames.supportNew,
+        name: 'supportNew',
+        builder: (context, state) =>
+            const AuthenticatedGuard(child: ReportIssueScreen()),
+      ),
+      GoRoute(
+        path: RouteNames.supportIncidentDetailPattern,
+        name: 'supportIncidentDetail',
+        builder: (context, state) => AuthenticatedGuard(
+          child: SupportIncidentDetailScreen(
+            incidentId: state.pathParameters['id'] ?? '',
+          ),
+        ),
       ),
       ShellRoute(
         builder: (context, state, child) =>
@@ -280,107 +340,77 @@ GoRouter createAppRouter({
           GoRoute(
             path: RouteNames.parentTimetable,
             name: 'parentTimetable',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: parentTimetableRouteBuilder(context, state),
-            ),
+            builder: (context, state) => parentTimetableRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.parentHomework,
             name: 'parentHomework',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: parentHomeworkRouteBuilder(context, state),
-            ),
+            builder: (context, state) => parentHomeworkRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.parentExams,
             name: 'parentExams',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: parentExamsRouteBuilder(context, state),
-            ),
+            builder: (context, state) => parentExamsRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.parentNotices,
             name: 'parentNotices',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: parentNoticesRouteBuilder(context, state),
-            ),
+            builder: (context, state) => parentNoticesRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.parentEvents,
             name: 'parentEvents',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: parentEventsRouteBuilder(context, state),
-            ),
+            builder: (context, state) => parentEventsRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.parentTransport,
             name: 'parentTransport',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: parentTransportRouteBuilder(context, state),
-            ),
+            builder: (context, state) => parentTransportRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.parentPtm,
             name: 'parentPtm',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: parentPtmRouteBuilder(context, state),
-            ),
+            builder: (context, state) => parentPtmRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.parentFamily,
             name: 'parentFamily',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: parentFamilyRouteBuilder(context, state),
-            ),
+            builder: (context, state) => parentFamilyRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.parentActionInbox,
             name: 'parentActionInbox',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: parentActionInboxRouteBuilder(context, state),
-            ),
+            builder: (context, state) => parentActionInboxRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.parentProfile,
             name: 'parentProfile',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: parentProfileRouteBuilder(context, state),
-            ),
+            builder: (context, state) => parentProfileRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.parentExperience,
             name: 'parentExperience',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: parentExperienceHubRouteBuilder(context, state),
-            ),
+            builder: (context, state) => parentExperienceHubRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.parentAcademicReport,
             name: 'parentAcademicReport',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: parentAcademicReportRouteBuilder(context, state),
-            ),
+            builder: (context, state) => parentAcademicReportRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.parentInsights,
             name: 'parentInsights',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: parentInsightsRouteBuilder(context, state),
-            ),
+            builder: (context, state) => parentInsightsRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.parentPayment,
             name: 'parentPayment',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: parentPaymentRouteBuilder(context, state),
-            ),
+            builder: (context, state) => parentPaymentRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.parentLeave,
             name: 'parentLeave',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: parentLeaveRouteBuilder(context, state),
-            ),
+            builder: (context, state) => parentLeaveRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.parentMessages,
@@ -392,32 +422,24 @@ GoRouter createAppRouter({
               GoRoute(
                 path: 'comm/:messageId',
                 name: 'parentCommunicationMessage',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: parentCommunicationDetailRouteBuilder(context, state),
-                ),
+                builder: (context, state) => parentCommunicationDetailRouteBuilder(context, state),
               ),
               GoRoute(
                 path: ':threadId',
                 name: 'parentConversation',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: parentConversationRouteBuilder(context, state),
-                ),
+                builder: (context, state) => parentConversationRouteBuilder(context, state),
               ),
             ],
           ),
           GoRoute(
             path: RouteNames.parentReceipts,
             name: 'parentReceipts',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: parentReceiptsRouteBuilder(context, state),
-            ),
+            builder: (context, state) => parentReceiptsRouteBuilder(context, state),
             routes: [
               GoRoute(
                 path: ':receiptId',
                 name: 'parentReceiptDetail',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: parentReceiptDetailRouteBuilder(context, state),
-                ),
+                builder: (context, state) => parentReceiptDetailRouteBuilder(context, state),
               ),
             ],
           ),
@@ -441,9 +463,7 @@ GoRouter createAppRouter({
           GoRoute(
             path: RouteNames.teacherClassTeacherDashboard,
             name: 'teacherClassTeacherDashboard',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: TeacherClassTeacherDashboardScreen(),
-            ),
+            builder: (context, state) => const TeacherClassTeacherDashboardScreen(),
           ),
           GoRoute(
             path: RouteNames.teacherAttendance,
@@ -455,16 +475,12 @@ GoRouter createAppRouter({
           GoRoute(
             path: RouteNames.teacherMyAttendance,
             name: 'teacherMyAttendance',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: teacherMyAttendanceRouteBuilder(context, state),
-            ),
+            builder: (context, state) => teacherMyAttendanceRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.teacherTimetable,
             name: 'teacherTimetable',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: teacherTimetableRouteBuilder(context, state),
-            ),
+            builder: (context, state) => teacherTimetableRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.teacherHomework,
@@ -476,60 +492,44 @@ GoRouter createAppRouter({
           GoRoute(
             path: RouteNames.teacherHomeworkCreate,
             name: 'teacherHomeworkCreate',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: TeacherHomeworkCreateScreen(),
-            ),
+            builder: (context, state) => const TeacherHomeworkCreateScreen(),
           ),
           GoRoute(
             path: RouteNames.teacherHomeworkHistory,
             name: 'teacherHomeworkHistory',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: TeacherHomeworkHistoryScreen(),
-            ),
+            builder: (context, state) => const TeacherHomeworkHistoryScreen(),
           ),
           GoRoute(
             path: RouteNames.teacherExams,
             name: 'teacherExams',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: teacherExamsRouteBuilder(context, state),
-            ),
+            builder: (context, state) => teacherExamsRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.teacherParentCommunication,
             name: 'teacherParentCommunication',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: TeacherParentCommunicationScreen(),
-            ),
+            builder: (context, state) => const TeacherParentCommunicationScreen(),
           ),
           GoRoute(
             path: '${RouteNames.teacher}/student-risk/:sisStudentId',
             name: 'teacherStudentRisk',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: TeacherStudentRiskScreen(
-                sisStudentId: state.pathParameters['sisStudentId'] ?? '',
-              ),
+            builder: (context, state) => TeacherStudentRiskScreen(
+              sisStudentId: state.pathParameters['sisStudentId'] ?? '',
             ),
           ),
           GoRoute(
             path: RouteNames.teacherLeave,
             name: 'teacherLeave',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: teacherLeaveRouteBuilder(context, state),
-            ),
+            builder: (context, state) => teacherLeaveRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.teacherSettings,
             name: 'teacherSettings',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: TeacherSettingsScreen(),
-            ),
+            builder: (context, state) => const TeacherSettingsScreen(),
           ),
           GoRoute(
             path: RouteNames.teacherProfile,
             name: 'teacherProfile',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: TeacherProfileScreen(),
-            ),
+            builder: (context, state) => const TeacherProfileScreen(),
           ),
           GoRoute(
             path: RouteNames.teacherMessages,
@@ -541,11 +541,29 @@ GoRouter createAppRouter({
               GoRoute(
                 path: ':threadId',
                 name: 'teacherConversation',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: teacherConversationRouteBuilder(context, state),
-                ),
+                builder: (context, state) => teacherConversationRouteBuilder(context, state),
               ),
             ],
+          ),
+          // P1-4 (2026-07-28) — teacher-shell entry points for Lesson Logs and
+          // Syllabus Progress. The "More" tiles used to jump straight to the
+          // ADMIN-shell routes `/school/lesson-logs` and
+          // `/school/academic/progress`, which require
+          // canAccessAdminErpShell (auth.role == UserRole.staff). A teacher is
+          // UserRole.teacher, so both tiles silently bounced home — even though
+          // the teacher DOES hold viewLessonLogs / viewAcademicProgress. These
+          // siblings render the SAME screens inside TeacherShell; the admin
+          // wall is untouched and no permission was widened.
+          GoRoute(
+            path: RouteNames.teacherLessonLogs,
+            name: 'teacherLessonLogs',
+            builder: (context, state) => lessonLogsRouteBuilder(context, state),
+          ),
+          GoRoute(
+            path: RouteNames.teacherSyllabusProgress,
+            name: 'teacherSyllabusProgress',
+            builder: (context, state) =>
+                academicProgressRouteBuilder(context, state),
           ),
         ],
       ),
@@ -567,100 +585,77 @@ GoRouter createAppRouter({
           GoRoute(
             path: RouteNames.unifiedOnboarding,
             name: 'unifiedOnboarding',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: UnifiedOnboardingFlowScreen(),
-            ),
+            builder: (context, state) => const UnifiedOnboardingFlowScreen(),
           ),
           GoRoute(
             path: RouteNames.studentOnboarding,
             name: 'studentOnboarding',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: StudentOnboardingScreen(),
-            ),
+            builder: (context, state) => const StudentOnboardingScreen(),
           ),
           GoRoute(
             path: RouteNames.backupRestore,
             name: 'backupRestore',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: BackupRestoreScreen(),
-            ),
+            builder: (context, state) => const BackupRestoreScreen(),
           ),
           GoRoute(
             path: RouteNames.planEntitlements,
             name: 'planEntitlements',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: PlanEntitlementsScreen(),
-            ),
+            builder: (context, state) => const PlanEntitlementsScreen(),
           ),
           GoRoute(
             path: RouteNames.planAssignment,
             name: 'planAssignment',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: OrganizationPlanAssignmentScreen(),
-            ),
+            builder: (context, state) => const OrganizationPlanAssignmentScreen(),
           ),
           GoRoute(
             path: RouteNames.copilot,
             name: 'copilot',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: copilotRouteBuilder(context, state),
-            ),
+            builder: (context, state) => copilotRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.education,
             name: 'education',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: educationRouteBuilder(context, state),
-            ),
+            builder: (context, state) => educationRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.intelligence,
             name: 'intelligence',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: intelligenceRouteBuilder(context, state),
-            ),
+            builder: (context, state) => intelligenceRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.aiPredictions,
             name: 'aiPredictions',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: PredictionsScreen(),
-            ),
+            builder: (context, state) => const PredictionsScreen(),
           ),
           GoRoute(
             path: RouteNames.studentSuccessIntelligence,
             name: 'studentSuccessIntelligence',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: studentSuccessIntelligenceRouteBuilder(context, state),
-            ),
+            builder: (context, state) => studentSuccessIntelligenceRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.examIntelligence,
             name: 'examIntelligence',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: examIntelligenceRouteBuilder(context, state),
-            ),
+            builder: (context, state) => examIntelligenceRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.teacherEffectiveness,
             name: 'teacherEffectiveness',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: teacherEffectivenessRouteBuilder(context, state),
-            ),
+            builder: (context, state) => teacherEffectivenessRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.homeworkIntelligence,
             name: 'homeworkIntelligence',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: homeworkIntelligenceRouteBuilder(context, state),
-            ),
+            builder: (context, state) => homeworkIntelligenceRouteBuilder(context, state),
           ),
           GoRoute(
             path: '${RouteNames.student360}/:studentId',
             name: 'student360',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: student360RouteBuilder(context, state),
-            ),
+            builder: (context, state) => student360RouteBuilder(context, state),
+          ),
+          GoRoute(
+            path: '${RouteNames.staff360}/:employeeId',
+            name: 'staff360',
+            builder: (context, state) => staff360RouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.employees,
@@ -672,107 +667,77 @@ GoRouter createAppRouter({
           GoRoute(
             path: RouteNames.inventoryDistribution,
             name: 'inventoryDistribution',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: inventoryDistributionRouteBuilder(context, state),
-            ),
+            builder: (context, state) => inventoryDistributionRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.inventoryReplacements,
             name: 'inventoryReplacements',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: inventoryReplacementsRouteBuilder(context, state),
-            ),
+            builder: (context, state) => inventoryReplacementsRouteBuilder(context, state),
           ),
           GoRoute(
             path: '${RouteNames.employee360}/:employeeId',
             name: 'employee360',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: employee360RouteBuilder(context, state),
-            ),
+            builder: (context, state) => employee360RouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.operationsHub,
             name: 'operationsHub',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: operationsHubRouteBuilder(context, state),
-            ),
+            builder: (context, state) => operationsHubRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.resourceOptimization,
             name: 'resourceOptimization',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: resourceOptimizationRouteBuilder(context, state),
-            ),
+            builder: (context, state) => resourceOptimizationRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.aiContent,
             name: 'aiContent',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: aiContentRouteBuilder(context, state),
-            ),
+            builder: (context, state) => aiContentRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.organizationIntelligence,
             name: 'organizationIntelligence',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: organizationIntelligenceRouteBuilder(context, state),
-            ),
+            builder: (context, state) => organizationIntelligenceRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.branches,
             name: 'branches',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: branchRouteBuilder(context, state),
-            ),
+            builder: (context, state) => branchRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.franchise,
             name: 'franchise',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: franchiseRouteBuilder(context, state),
-            ),
+            builder: (context, state) => franchiseRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.schoolMemories,
             name: 'schoolMemories',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: schoolMemoriesRouteBuilder(context, state),
-            ),
+            builder: (context, state) => schoolMemoriesRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.achievementPromotion,
             name: 'achievementPromotion',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: achievementPromotionRouteBuilder(context, state),
-            ),
+            builder: (context, state) => achievementPromotionRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.setupWizard,
             name: 'setupWizard',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: setupWizardRouteBuilder(context, state),
-            ),
+            builder: (context, state) => setupWizardRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.dynamicDashboard,
             name: 'dynamicDashboard',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: dynamicDashboardRouteBuilder(context, state),
-            ),
+            builder: (context, state) => dynamicDashboardRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.teacherAssistant,
             name: 'teacherAssistant',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: teacherAssistantRouteBuilder(context, state),
-            ),
+            builder: (context, state) => teacherAssistantRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.principalCommand,
             name: 'principalCommand',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: principalCommandRouteBuilder(context, state),
-            ),
+            builder: (context, state) => principalCommandRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.growthPlatform,
@@ -791,9 +756,7 @@ GoRouter createAppRouter({
           GoRoute(
             path: RouteNames.subjectsManagement,
             name: 'subjectsManagement',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: subjectsManagementRouteBuilder(context, state),
-            ),
+            builder: (context, state) => subjectsManagementRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.examAdministration,
@@ -805,172 +768,124 @@ GoRouter createAppRouter({
               GoRoute(
                 path: 'reports',
                 name: 'examReports',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: examReportsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => examReportsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: ':examId/marks',
                 name: 'examAdministrationMarks',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: examMarksEntryRouteBuilder(context, state),
-                ),
+                builder: (context, state) => examMarksEntryRouteBuilder(context, state),
               ),
             ],
           ),
           GoRoute(
             path: RouteNames.lessonLogs,
             name: 'lessonLogs',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: lessonLogsRouteBuilder(context, state),
-            ),
+            builder: (context, state) => lessonLogsRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.timetableAutomation,
             name: 'timetableAutomation',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: timetableAutomationRouteBuilder(context, state),
-            ),
+            builder: (context, state) => timetableAutomationRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.schoolBranding,
             name: 'schoolBranding',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: schoolBrandingRouteBuilder(context, state),
-            ),
+            builder: (context, state) => schoolBrandingRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.whatsAppProvider,
             name: 'whatsAppProvider',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: whatsAppProviderRouteBuilder(context, state),
-            ),
+            builder: (context, state) => whatsAppProviderRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.subjectAssignments,
             name: 'subjectAssignments',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: subjectAssignmentsRouteBuilder(context, state),
-            ),
+            builder: (context, state) => subjectAssignmentsRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.lessonAnalytics,
             name: 'lessonAnalytics',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: lessonAnalyticsRouteBuilder(context, state),
-            ),
+            builder: (context, state) => lessonAnalyticsRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.timetableOptimization,
             name: 'timetableOptimization',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: timetableOptimizationRouteBuilder(context, state),
-            ),
+            builder: (context, state) => timetableOptimizationRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.substituteManager,
             name: 'substituteManager',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: substituteManagerRouteBuilder(context, state),
-            ),
+            builder: (context, state) => substituteManagerRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.teacherReassignment,
             name: 'teacherReassignment',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: teacherReassignmentRouteBuilder(context, state),
-            ),
+            builder: (context, state) => teacherReassignmentRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.classTeacherAssignments,
             name: 'classTeacherAssignments',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: classTeacherAssignmentsRouteBuilder(context, state),
-            ),
+            builder: (context, state) => classTeacherAssignmentsRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.communicationDelivery,
             name: 'communicationDelivery',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: communicationDeliveryRouteBuilder(context, state),
-            ),
+            builder: (context, state) => communicationDeliveryRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.communicationBroadcastAdmin,
             name: 'communicationBroadcastAdmin',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: communicationBroadcastAdminRouteBuilder(context, state),
-            ),
+            builder: (context, state) => communicationBroadcastAdminRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.communicationAnalytics,
             name: 'communicationAnalytics',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: communicationAnalyticsRouteBuilder(context, state),
-            ),
+            builder: (context, state) => communicationAnalyticsRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.pilotDashboard,
             name: 'pilotDashboard',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: pilotDashboardRouteBuilder(context, state),
-            ),
+            builder: (context, state) => pilotDashboardRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.parentActivationDashboard,
             name: 'parentActivationDashboard',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: parentActivationDashboardRouteBuilder(context, state),
-            ),
+            builder: (context, state) => parentActivationDashboardRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.roomAllocation,
             name: 'roomAllocation',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: roomAllocationRouteBuilder(context, state),
-            ),
+            builder: (context, state) => roomAllocationRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.syllabusAutomation,
             name: 'syllabusAutomation',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: syllabusAutomationRouteBuilder(context, state),
-            ),
+            builder: (context, state) => syllabusAutomationRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.academicProgress,
             name: 'academicProgress',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: academicProgressRouteBuilder(context, state),
-            ),
+            builder: (context, state) => academicProgressRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.timetableIntelligence,
             name: 'timetableIntelligence',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: timetableIntelligenceRouteBuilder(context, state),
-            ),
+            builder: (context, state) => timetableIntelligenceRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.parentMeetings,
             name: 'parentMeetings',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: parentMeetingsRouteBuilder(context, state),
-            ),
+            builder: (context, state) => parentMeetingsRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.multiSchoolPortfolio,
             name: 'multiSchoolPortfolio',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: multiSchoolPortfolioRouteBuilder(context, state),
-            ),
+            builder: (context, state) => multiSchoolPortfolioRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.multiSchoolOnboarding,
             name: 'multiSchoolOnboarding',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: multiSchoolOnboardingRouteBuilder(context, state),
-            ),
+            builder: (context, state) => multiSchoolOnboardingRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.organizationBuilder,
@@ -982,30 +897,22 @@ GoRouter createAppRouter({
           GoRoute(
             path: RouteNames.organizationBuilderInterview,
             name: 'organizationBuilderInterview',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: organizationBuilderInterviewRouteBuilder(context, state),
-            ),
+            builder: (context, state) => organizationBuilderInterviewRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.organizationBuilderPreview,
             name: 'organizationBuilderPreview',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: organizationBuilderPreviewRouteBuilder(context, state),
-            ),
+            builder: (context, state) => organizationBuilderPreviewRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.organizationBuilderProvisioning,
             name: 'organizationBuilderProvisioning',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: organizationBuilderProvisioningRouteBuilder(context, state),
-            ),
+            builder: (context, state) => organizationBuilderProvisioningRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.schoolDiscovery,
             name: 'schoolDiscovery',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: schoolDiscoveryRouteBuilder(context, state),
-            ),
+            builder: (context, state) => schoolDiscoveryRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.platformOperations,
@@ -1017,30 +924,22 @@ GoRouter createAppRouter({
           GoRoute(
             path: RouteNames.platformOperationsAlerts,
             name: 'platformOperationsAlerts',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: platformOperationsHubRouteBuilder(context, state),
-            ),
+            builder: (context, state) => platformOperationsHubRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.platformOperationsSecurity,
             name: 'platformOperationsSecurity',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: platformOperationsHubRouteBuilder(context, state),
-            ),
+            builder: (context, state) => platformOperationsHubRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.platformOperationsTenantIsolation,
             name: 'platformOperationsTenantIsolation',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: platformOperationsHubRouteBuilder(context, state),
-            ),
+            builder: (context, state) => platformOperationsHubRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.platformOperationsReadiness,
             name: 'platformOperationsReadiness',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: platformOperationsHubRouteBuilder(context, state),
-            ),
+            builder: (context, state) => platformOperationsHubRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.industry,
@@ -1052,9 +951,7 @@ GoRouter createAppRouter({
           GoRoute(
             path: RouteNames.industryFramework,
             name: 'industryFramework',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: industryFrameworkRouteBuilder(context, state),
-            ),
+            builder: (context, state) => industryFrameworkRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.healthcare,
@@ -1066,30 +963,22 @@ GoRouter createAppRouter({
           GoRoute(
             path: RouteNames.healthcarePatients,
             name: 'healthcarePatients',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: healthcarePatientRouteBuilder(context, state),
-            ),
+            builder: (context, state) => healthcarePatientRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.healthcareAppointments,
             name: 'healthcareAppointments',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: healthcareAppointmentRouteBuilder(context, state),
-            ),
+            builder: (context, state) => healthcareAppointmentRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.healthcarePractitioners,
             name: 'healthcarePractitioners',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: healthcarePractitionerRouteBuilder(context, state),
-            ),
+            builder: (context, state) => healthcarePractitionerRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.healthcareIntelligence,
             name: 'healthcareIntelligence',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: healthcareIntelligenceRouteBuilder(context, state),
-            ),
+            builder: (context, state) => healthcareIntelligenceRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.salon,
@@ -1101,30 +990,22 @@ GoRouter createAppRouter({
           GoRoute(
             path: RouteNames.salonCustomers,
             name: 'salonCustomers',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: salonSalonCustomerRouteBuilder(context, state),
-            ),
+            builder: (context, state) => salonSalonCustomerRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.salonAppointments,
             name: 'salonAppointments',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: salonSalonAppointmentRouteBuilder(context, state),
-            ),
+            builder: (context, state) => salonSalonAppointmentRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.salonServices,
             name: 'salonServices',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: salonSalonServiceRouteBuilder(context, state),
-            ),
+            builder: (context, state) => salonSalonServiceRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.salonIntelligence,
             name: 'salonIntelligence',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: salonIntelligenceRouteBuilder(context, state),
-            ),
+            builder: (context, state) => salonIntelligenceRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.restaurant,
@@ -1136,30 +1017,22 @@ GoRouter createAppRouter({
           GoRoute(
             path: RouteNames.restaurantTables,
             name: 'restaurantTables',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: restaurantRestaurantTableRouteBuilder(context, state),
-            ),
+            builder: (context, state) => restaurantRestaurantTableRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.restaurantOrders,
             name: 'restaurantOrders',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: restaurantRestaurantOrderRouteBuilder(context, state),
-            ),
+            builder: (context, state) => restaurantRestaurantOrderRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.restaurantKitchen,
             name: 'restaurantKitchen',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: restaurantKitchenTicketRouteBuilder(context, state),
-            ),
+            builder: (context, state) => restaurantKitchenTicketRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.restaurantIntelligence,
             name: 'restaurantIntelligence',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: restaurantIntelligenceRouteBuilder(context, state),
-            ),
+            builder: (context, state) => restaurantIntelligenceRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.accommodation,
@@ -1171,30 +1044,22 @@ GoRouter createAppRouter({
           GoRoute(
             path: RouteNames.accommodationResidents,
             name: 'accommodationResidents',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: accommodationResidentRouteBuilder(context, state),
-            ),
+            builder: (context, state) => accommodationResidentRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.accommodationOccupancy,
             name: 'accommodationOccupancy',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: accommodationRoomOccupancyRouteBuilder(context, state),
-            ),
+            builder: (context, state) => accommodationRoomOccupancyRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.accommodationAllocations,
             name: 'accommodationAllocations',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: accommodationAccommodationAllocationRouteBuilder(context, state),
-            ),
+            builder: (context, state) => accommodationAccommodationAllocationRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.accommodationIntelligence,
             name: 'accommodationIntelligence',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: accommodationIntelligenceRouteBuilder(context, state),
-            ),
+            builder: (context, state) => accommodationIntelligenceRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.whiteLabel,
@@ -1206,30 +1071,22 @@ GoRouter createAppRouter({
           GoRoute(
             path: RouteNames.whiteLabelBranding,
             name: 'whiteLabelBranding',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: whiteLabelBrandingRouteBuilder(context, state),
-            ),
+            builder: (context, state) => whiteLabelBrandingRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.whiteLabelTheme,
             name: 'whiteLabelTheme',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: whiteLabelThemeRouteBuilder(context, state),
-            ),
+            builder: (context, state) => whiteLabelThemeRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.whiteLabelLogo,
             name: 'whiteLabelLogo',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: whiteLabelLogoRouteBuilder(context, state),
-            ),
+            builder: (context, state) => whiteLabelLogoRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.whiteLabelDeployment,
             name: 'whiteLabelDeployment',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: whiteLabelDeploymentRouteBuilder(context, state),
-            ),
+            builder: (context, state) => whiteLabelDeploymentRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.dynamicWidgets,
@@ -1241,16 +1098,12 @@ GoRouter createAppRouter({
           GoRoute(
             path: RouteNames.dynamicWidgetLayout,
             name: 'dynamicWidgetLayout',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: dynamicWidgetLayoutRouteBuilder(context, state),
-            ),
+            builder: (context, state) => dynamicWidgetLayoutRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.dynamicWidgetRuntime,
             name: 'dynamicWidgetRuntime',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: dynamicWidgetRuntimeRouteBuilder(context, state),
-            ),
+            builder: (context, state) => dynamicWidgetRuntimeRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.admissions,
@@ -1267,67 +1120,49 @@ GoRouter createAppRouter({
               GoRoute(
                 path: 'leads',
                 name: 'admissionsLeads',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: admissionsLeadsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => admissionsLeadsRouteBuilder(context, state),
                 routes: [
                   GoRoute(
                     path: ':leadId',
                     name: 'admissionsLeadDetail',
-                    pageBuilder: (context, state) => NoTransitionPage(
-                      child: admissionsLeadDetailRouteBuilder(context, state),
-                    ),
+                    builder: (context, state) => admissionsLeadDetailRouteBuilder(context, state),
                   ),
                 ],
               ),
               GoRoute(
                 path: 'applications',
                 name: 'admissionsApplications',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: admissionsApplicationsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => admissionsApplicationsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'enrollment',
                 name: 'admissionsEnrollment',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: admissionsEnrollmentRouteBuilder(context, state),
-                ),
+                builder: (context, state) => admissionsEnrollmentRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'documents',
                 name: 'admissionsDocuments',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: admissionsDocumentsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => admissionsDocumentsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'approval',
                 name: 'admissionsApproval',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: admissionsApprovalRouteBuilder(context, state),
-                ),
+                builder: (context, state) => admissionsApprovalRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'fee-handoff',
                 name: 'admissionsFeeHandoff',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: admissionsFeeHandoffRouteBuilder(context, state),
-                ),
+                builder: (context, state) => admissionsFeeHandoffRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'reports',
                 name: 'admissionsReports',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: admissionsReportsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => admissionsReportsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'settings',
                 name: 'admissionsSettings',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: admissionsSettingsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => admissionsSettingsRouteBuilder(context, state),
               ),
             ],
           ),
@@ -1346,110 +1181,79 @@ GoRouter createAppRouter({
               GoRoute(
                 path: 'fee-structures',
                 name: 'financeFeeStructures',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: financeFeeStructuresRouteBuilder(context, state),
-                ),
+                builder: (context, state) => financeFeeStructuresRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'student-accounts',
                 name: 'financeStudentAccounts',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: financeStudentAccountsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => financeStudentAccountsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'fee-assignment',
                 name: 'financeFeeAssignment',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: financeFeeAssignmentRouteBuilder(context, state),
-                ),
+                builder: (context, state) => financeFeeAssignmentRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'collections',
                 name: 'financeCollections',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: financeCollectionsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => financeCollectionsRouteBuilder(context, state),
                 routes: [
                   GoRoute(
                     path: ':collectionId',
                     name: 'financeCollectionDetail',
-                    pageBuilder: (context, state) => NoTransitionPage(
-                      child:
-                          financeCollectionDetailRouteBuilder(context, state),
-                    ),
+                    builder: (context, state) => financeCollectionDetailRouteBuilder(context, state),
                   ),
                 ],
               ),
               GoRoute(
                 path: 'payments/qr',
                 name: 'financeQrPayment',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: financeQrPaymentRouteBuilder(context, state),
-                ),
+                builder: (context, state) => financeQrPaymentRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'payments/offline',
                 name: 'financeOfflinePayments',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: financeOfflinePaymentsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => financeOfflinePaymentsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'defaulters',
                 name: 'financeDefaulters',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: financeDefaultersRouteBuilder(context, state),
-                ),
+                builder: (context, state) => financeDefaultersRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'refunds',
                 name: 'financeRefunds',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: financeRefundsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => financeRefundsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'discounts',
                 name: 'financeDiscounts',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: financeDiscountsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => financeDiscountsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'reports',
                 name: 'financeReports',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: financeReportsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => financeReportsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'reconciliation',
                 name: 'financeReconciliation',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: financeReconciliationRouteBuilder(context, state),
-                ),
+                builder: (context, state) => financeReconciliationRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'settings',
                 name: 'financeSettings',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: financeSettingsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => financeSettingsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'intelligence',
                 name: 'financeIntelligence',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: financeIntelligenceRouteBuilder(context, state),
-                ),
+                builder: (context, state) => financeIntelligenceRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'executive',
                 name: 'financeExecutiveDashboard',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: financeExecutiveDashboardRouteBuilder(context, state),
-                ),
+                builder: (context, state) => financeExecutiveDashboardRouteBuilder(context, state),
               ),
             ],
           ),
@@ -1468,74 +1272,54 @@ GoRouter createAppRouter({
               GoRoute(
                 path: 'students',
                 name: 'sisStudents',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: sisStudentsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => sisStudentsRouteBuilder(context, state),
                 routes: [
                   GoRoute(
                     path: ':studentId',
                     name: 'sisStudentDetail',
-                    pageBuilder: (context, state) => NoTransitionPage(
-                      child: sisStudentDetailRouteBuilder(context, state),
-                    ),
+                    builder: (context, state) => sisStudentDetailRouteBuilder(context, state),
                   ),
                 ],
               ),
               GoRoute(
                 path: 'academic-assignment',
                 name: 'sisAcademicAssignment',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: sisAcademicAssignmentRouteBuilder(context, state),
-                ),
+                builder: (context, state) => sisAcademicAssignmentRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'admissions-conversion',
                 name: 'sisAdmissionsConversion',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: sisAdmissionsConversionRouteBuilder(context, state),
-                ),
+                builder: (context, state) => sisAdmissionsConversionRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'promotion',
                 name: 'sisPromotion',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: sisPromotionRouteBuilder(context, state),
-                ),
+                builder: (context, state) => sisPromotionRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'reshuffle',
                 name: 'sisReshuffle',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: sisReshuffleRouteBuilder(context, state),
-                ),
+                builder: (context, state) => sisReshuffleRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'section-balance',
                 name: 'sisSectionBalance',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: sisSectionBalanceRouteBuilder(context, state),
-                ),
+                builder: (context, state) => sisSectionBalanceRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'continuity',
                 name: 'sisContinuity',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: sisContinuityRouteBuilder(context, state),
-                ),
+                builder: (context, state) => sisContinuityRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'transfers',
                 name: 'sisTransfers',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: sisTransfersRouteBuilder(context, state),
-                ),
+                builder: (context, state) => sisTransfersRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'onboarding',
                 name: 'sisOnboarding',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: sisOnboardingRouteBuilder(context, state),
-                ),
+                builder: (context, state) => sisOnboardingRouteBuilder(context, state),
               ),
             ],
           ),
@@ -1554,67 +1338,62 @@ GoRouter createAppRouter({
               GoRoute(
                 path: 'employees',
                 name: 'hrEmployees',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: hrEmployeesRouteBuilder(context, state),
-                ),
+                builder: (context, state) => hrEmployeesRouteBuilder(context, state),
                 routes: [
                   GoRoute(
                     path: ':employeeId',
                     name: 'hrEmployeeDetail',
-                    pageBuilder: (context, state) => NoTransitionPage(
-                      child: hrEmployeeDetailRouteBuilder(context, state),
-                    ),
+                    builder: (context, state) => hrEmployeeDetailRouteBuilder(context, state),
                   ),
                 ],
               ),
               GoRoute(
                 path: 'attendance',
                 name: 'hrAttendance',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: hrAttendanceRouteBuilder(context, state),
-                ),
+                builder: (context, state) => hrAttendanceRouteBuilder(context, state),
+                routes: [
+                  // PRA-P0-15 — audited manual-attendance fallback.
+                  GoRoute(
+                    path: 'manual-request',
+                    name: 'hrStaffManualRequest',
+                    builder: (context, state) => hrStaffManualRequestRouteBuilder(context, state),
+                  ),
+                  GoRoute(
+                    path: 'requests',
+                    name: 'hrStaffManualRequestQueue',
+                    builder: (context, state) => hrStaffManualRequestQueueRouteBuilder(context, state),
+                  ),
+                ],
               ),
               GoRoute(
                 path: 'leave',
                 name: 'hrLeave',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: hrLeaveRouteBuilder(context, state),
-                ),
+                builder: (context, state) => hrLeaveRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'payroll',
                 name: 'hrPayroll',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: hrPayrollRouteBuilder(context, state),
-                ),
+                builder: (context, state) => hrPayrollRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'recruitment',
                 name: 'hrRecruitment',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: hrRecruitmentRouteBuilder(context, state),
-                ),
+                builder: (context, state) => hrRecruitmentRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'performance',
                 name: 'hrPerformance',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: hrPerformanceRouteBuilder(context, state),
-                ),
+                builder: (context, state) => hrPerformanceRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'reports',
                 name: 'hrReports',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: hrReportsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => hrReportsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'settings',
                 name: 'hrSettings',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: hrSettingsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => hrSettingsRouteBuilder(context, state),
               ),
             ],
           ),
@@ -1633,100 +1412,78 @@ GoRouter createAppRouter({
               GoRoute(
                 path: 'analytics',
                 name: 'managementAnalytics',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: managementAnalyticsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => managementAnalyticsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'admissions',
                 name: 'managementAdmissions',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: managementAdmissionsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => managementAdmissionsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'finance',
                 name: 'managementFinance',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: managementFinanceRouteBuilder(context, state),
-                ),
+                builder: (context, state) => managementFinanceRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'academics',
                 name: 'managementAcademics',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: managementAcademicsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => managementAcademicsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'timetable',
                 name: 'managementTimetable',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: managementTimetableRouteBuilder(context, state),
-                ),
+                builder: (context, state) => managementTimetableRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'intelligence',
                 name: 'managementIntelligence',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: managementIntelligenceRouteBuilder(context, state),
-                ),
+                builder: (context, state) => managementIntelligenceRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'performance',
                 name: 'managementPerformance',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: managementPerformanceRouteBuilder(context, state),
-                ),
+                builder: (context, state) => managementPerformanceRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'tasks',
                 name: 'managementTasks',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: managementTasksRouteBuilder(context, state),
-                ),
+                builder: (context, state) => managementTasksRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'approvals',
                 name: 'managementApprovals',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: managementApprovalsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => managementApprovalsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'attendance-corrections',
                 name: 'managementAttendanceCorrections',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: managementAttendanceCorrectionsRouteBuilder(
-                    context,
-                    state,
-                  ),
+                builder: (context, state) => managementAttendanceCorrectionsRouteBuilder(
+                  context,
+                  state,
                 ),
               ),
               GoRoute(
                 path: 'office-attendance',
                 name: 'managementOfficeAttendance',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: managementOfficeAttendanceRouteBuilder(
-                    context,
-                    state,
-                  ),
+                builder: (context, state) => managementOfficeAttendanceRouteBuilder(
+                  context,
+                  state,
                 ),
               ),
               GoRoute(
                 path: 'workflow-automation',
                 name: 'managementWorkflowAutomation',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child:
-                      managementWorkflowAutomationRouteBuilder(context, state),
-                ),
+                builder: (context, state) => managementWorkflowAutomationRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'settings',
                 name: 'managementSettings',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: managementSettingsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => managementSettingsRouteBuilder(context, state),
+              ),
+              GoRoute(
+                path: 'school-calendar',
+                name: 'managementSchoolCalendar',
+                builder: (context, state) => managementSchoolCalendarRouteBuilder(context, state),
               ),
             ],
           ),
@@ -1745,61 +1502,80 @@ GoRouter createAppRouter({
               GoRoute(
                 path: 'routes',
                 name: 'transportRoutes',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: transportRoutesRouteBuilder(context, state),
-                ),
+                builder: (context, state) => transportRoutesRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'vehicles',
                 name: 'transportVehicles',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: transportVehiclesRouteBuilder(context, state),
-                ),
+                builder: (context, state) => transportVehiclesRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'drivers',
                 name: 'transportDrivers',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: transportDriversRouteBuilder(context, state),
-                ),
+                builder: (context, state) => transportDriversRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'allocation',
                 name: 'transportAllocation',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: transportAllocationRouteBuilder(context, state),
-                ),
+                builder: (context, state) => transportAllocationRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'attendance',
                 name: 'transportAttendance',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: transportAttendanceRouteBuilder(context, state),
-                ),
+                builder: (context, state) => transportAttendanceRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'tracking',
                 name: 'transportTracking',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: transportTrackingRouteBuilder(context, state),
-                ),
+                builder: (context, state) => transportTrackingRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'reports',
                 name: 'transportReports',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: transportReportsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => transportReportsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'settings',
                 name: 'transportSettings',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: transportSettingsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => transportSettingsRouteBuilder(context, state),
               ),
             ],
           ),
+          // ─── PRC-A Batch 2 ────────────────────────────────────────────────
+          // Single-screen desks — no sub-routes: the complaint detail and the
+          // student health record are pushed from inside their own screens.
+          // Route-level RBAC is centralized in kErpRouteViewPermissions
+          // (route_guards.dart), which the admin shell's ErpRouteGuard applies —
+          // NOT per-GoRoute.
+          GoRoute(
+            path: RouteNames.certificateRequests,
+            name: 'certificateRequests',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: CertificateRequestsScreen(),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.gatePasses,
+            name: 'gatePasses',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: GatePassesScreen(),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.complaints,
+            name: 'complaints',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: ComplaintsScreen(),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.studentHealth,
+            name: 'studentHealth',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: StudentHealthInfirmaryScreen(),
+            ),
+          ),
+          // ─── end PRC-A Batch 2 ────────────────────────────────────────────
           GoRoute(
             path: RouteNames.hostel,
             name: 'hostel',
@@ -1815,51 +1591,37 @@ GoRouter createAppRouter({
               GoRoute(
                 path: 'students',
                 name: 'hostelStudents',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: hostelStudentsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => hostelStudentsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'rooms',
                 name: 'hostelRooms',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: hostelRoomsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => hostelRoomsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'attendance',
                 name: 'hostelAttendance',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: hostelAttendanceRouteBuilder(context, state),
-                ),
+                builder: (context, state) => hostelAttendanceRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'leave',
                 name: 'hostelLeave',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: hostelLeaveRouteBuilder(context, state),
-                ),
+                builder: (context, state) => hostelLeaveRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'mess',
                 name: 'hostelMess',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: hostelMessRouteBuilder(context, state),
-                ),
+                builder: (context, state) => hostelMessRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'visitors',
                 name: 'hostelVisitors',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: hostelVisitorsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => hostelVisitorsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'reports',
                 name: 'hostelReports',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: hostelReportsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => hostelReportsRouteBuilder(context, state),
               ),
             ],
           ),
@@ -1878,58 +1640,42 @@ GoRouter createAppRouter({
               GoRoute(
                 path: 'catalog',
                 name: 'libraryCatalog',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: libraryCatalogRouteBuilder(context, state),
-                ),
+                builder: (context, state) => libraryCatalogRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'issues',
                 name: 'libraryIssues',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: libraryIssuesRouteBuilder(context, state),
-                ),
+                builder: (context, state) => libraryIssuesRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'returns',
                 name: 'libraryReturns',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: libraryReturnsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => libraryReturnsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'members',
                 name: 'libraryMembers',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: libraryMembersRouteBuilder(context, state),
-                ),
+                builder: (context, state) => libraryMembersRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'fines',
                 name: 'libraryFines',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: libraryFinesRouteBuilder(context, state),
-                ),
+                builder: (context, state) => libraryFinesRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'resources',
                 name: 'libraryResources',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: libraryResourcesRouteBuilder(context, state),
-                ),
+                builder: (context, state) => libraryResourcesRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'reports',
                 name: 'libraryReports',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: libraryReportsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => libraryReportsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'overdue',
                 name: 'libraryOverdue',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: libraryOverdueRouteBuilder(context, state),
-                ),
+                builder: (context, state) => libraryOverdueRouteBuilder(context, state),
               ),
             ],
           ),
@@ -1948,79 +1694,57 @@ GoRouter createAppRouter({
               GoRoute(
                 path: 'assets',
                 name: 'inventoryAssets',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: inventoryAssetsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => inventoryAssetsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'categories',
                 name: 'inventoryCategories',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: inventoryCategoriesRouteBuilder(context, state),
-                ),
+                builder: (context, state) => inventoryCategoriesRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'allocation',
                 name: 'inventoryAllocation',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: inventoryAllocationRouteBuilder(context, state),
-                ),
+                builder: (context, state) => inventoryAllocationRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'maintenance',
                 name: 'inventoryMaintenance',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: inventoryMaintenanceRouteBuilder(context, state),
-                ),
+                builder: (context, state) => inventoryMaintenanceRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'procurement',
                 name: 'inventoryProcurement',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: inventoryProcurementRouteBuilder(context, state),
-                ),
+                builder: (context, state) => inventoryProcurementRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'vendors',
                 name: 'inventoryVendors',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: inventoryVendorsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => inventoryVendorsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'stock',
                 name: 'inventoryStock',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: inventoryStockRouteBuilder(context, state),
-                ),
+                builder: (context, state) => inventoryStockRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'stock-approvals',
                 name: 'inventoryStockApprovals',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: inventoryStockApprovalsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => inventoryStockApprovalsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'reports',
                 name: 'inventoryReports',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: inventoryReportsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => inventoryReportsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'copilot',
                 name: 'inventoryCopilot',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: inventoryCopilotRouteBuilder(context, state),
-                ),
+                builder: (context, state) => inventoryCopilotRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'lifecycle',
                 name: 'inventoryLifecycle',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: inventoryLifecycleRouteBuilder(context, state),
-                ),
+                builder: (context, state) => inventoryLifecycleRouteBuilder(context, state),
               ),
             ],
           ),
@@ -2039,58 +1763,42 @@ GoRouter createAppRouter({
               GoRoute(
                 path: 'registry',
                 name: 'alumniRegistry',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: alumniRegistryRouteBuilder(context, state),
-                ),
+                builder: (context, state) => alumniRegistryRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'profile/:alumniId',
                 name: 'alumniProfile',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: alumniProfileRouteBuilder(context, state),
-                ),
+                builder: (context, state) => alumniProfileRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'events',
                 name: 'alumniEvents',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: alumniEventsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => alumniEventsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'donations',
                 name: 'alumniDonations',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: alumniDonationsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => alumniDonationsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'campaigns',
                 name: 'alumniCampaigns',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: alumniCampaignsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => alumniCampaignsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'mentorship',
                 name: 'alumniMentorship',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: alumniMentorshipRouteBuilder(context, state),
-                ),
+                builder: (context, state) => alumniMentorshipRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'reports',
                 name: 'alumniReports',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: alumniReportsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => alumniReportsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'settings',
                 name: 'alumniSettings',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: alumniSettingsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => alumniSettingsRouteBuilder(context, state),
               ),
             ],
           ),
@@ -2109,100 +1817,72 @@ GoRouter createAppRouter({
               GoRoute(
                 path: 'intelligence',
                 name: 'controlCenterIntelligence',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: controlCenterIntelligenceRouteBuilder(context, state),
-                ),
+                builder: (context, state) => controlCenterIntelligenceRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'schools',
                 name: 'controlCenterSchools',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: controlCenterSchoolsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => controlCenterSchoolsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'subscriptions',
                 name: 'controlCenterSubscriptions',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: controlCenterSubscriptionsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => controlCenterSubscriptionsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'billing',
                 name: 'controlCenterBilling',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: controlCenterBillingRouteBuilder(context, state),
-                ),
+                builder: (context, state) => controlCenterBillingRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'crm',
                 name: 'controlCenterCrm',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: controlCenterCrmRouteBuilder(context, state),
-                ),
+                builder: (context, state) => controlCenterCrmRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'support',
                 name: 'controlCenterSupport',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: controlCenterSupportRouteBuilder(context, state),
-                ),
+                builder: (context, state) => controlCenterSupportRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'success',
                 name: 'controlCenterSuccess',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: controlCenterSuccessRouteBuilder(context, state),
-                ),
+                builder: (context, state) => controlCenterSuccessRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'white-label',
                 name: 'controlCenterWhiteLabel',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: controlCenterWhiteLabelRouteBuilder(context, state),
-                ),
+                builder: (context, state) => controlCenterWhiteLabelRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'analytics',
                 name: 'controlCenterAnalytics',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: controlCenterAnalyticsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => controlCenterAnalyticsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'monitoring',
                 name: 'controlCenterMonitoring',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: controlCenterMonitoringRouteBuilder(context, state),
-                ),
+                builder: (context, state) => controlCenterMonitoringRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'roles',
                 name: 'controlCenterRoles',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: controlCenterRolesRouteBuilder(context, state),
-                ),
+                builder: (context, state) => controlCenterRolesRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'settings',
                 name: 'controlCenterSettings',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: controlCenterSettingsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => controlCenterSettingsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'providers',
                 name: 'controlCenterProviders',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: controlCenterProvidersRouteBuilder(context, state),
-                ),
+                builder: (context, state) => controlCenterProvidersRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'features',
                 name: 'controlCenterFeatures',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: controlCenterFeaturesRouteBuilder(context, state),
-                ),
+                builder: (context, state) => controlCenterFeaturesRouteBuilder(context, state),
               ),
             ],
           ),
@@ -2221,66 +1901,48 @@ GoRouter createAppRouter({
               GoRoute(
                 path: 'schools',
                 name: 'directorSchools',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: directorSchoolsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => directorSchoolsRouteBuilder(context, state),
               ),
               // DIR-D1 — audited, read-only per-school drill-down.
               GoRoute(
                 path: 'schools/:id',
                 name: 'directorSchoolSnapshot',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: directorSchoolSnapshotRouteBuilder(context, state),
-                ),
+                builder: (context, state) => directorSchoolSnapshotRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'portfolio',
                 name: 'directorPortfolio',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: directorPortfolioRouteBuilder(context, state),
-                ),
+                builder: (context, state) => directorPortfolioRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'revenue',
                 name: 'directorRevenue',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: directorRevenueRouteBuilder(context, state),
-                ),
+                builder: (context, state) => directorRevenueRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'growth',
                 name: 'directorGrowth',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: directorGrowthRouteBuilder(context, state),
-                ),
+                builder: (context, state) => directorGrowthRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'marketing',
                 name: 'directorMarketing',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: directorMarketingRouteBuilder(context, state),
-                ),
+                builder: (context, state) => directorMarketingRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'admissions',
                 name: 'directorAdmissions',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: directorAdmissionsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => directorAdmissionsRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'compliance',
                 name: 'directorCompliance',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: directorComplianceRouteBuilder(context, state),
-                ),
+                builder: (context, state) => directorComplianceRouteBuilder(context, state),
               ),
               GoRoute(
                 path: 'reports',
                 name: 'directorReports',
-                pageBuilder: (context, state) => NoTransitionPage(
-                  child: directorReportsRouteBuilder(context, state),
-                ),
+                builder: (context, state) => directorReportsRouteBuilder(context, state),
               ),
             ],
           ),
@@ -2300,9 +1962,7 @@ GoRouter createAppRouter({
           GoRoute(
             path: RouteNames.studentAttendance,
             name: 'studentAttendance',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: studentAttendanceRouteBuilder(context, state),
-            ),
+            builder: (context, state) => studentAttendanceRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.studentTimetable,
@@ -2328,41 +1988,89 @@ GoRouter createAppRouter({
           GoRoute(
             path: RouteNames.studentReportCard,
             name: 'studentReportCard',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: studentReportCardRouteBuilder(context, state),
-            ),
+            builder: (context, state) => studentReportCardRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.studentProgress,
             name: 'studentProgress',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: studentProgressRouteBuilder(context, state),
-            ),
+            builder: (context, state) => studentProgressRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.studentNotices,
             name: 'studentNotices',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: studentNoticesRouteBuilder(context, state),
-            ),
+            builder: (context, state) => studentNoticesRouteBuilder(context, state),
           ),
           GoRoute(
             path: RouteNames.studentProfile,
             name: 'studentProfile',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: studentProfileRouteBuilder(context, state),
-            ),
+            builder: (context, state) => studentProfileRouteBuilder(context, state),
           ),
         ],
       ),
     ],
-    errorBuilder: (context, state) => Scaffold(
-      appBar: AppBar(title: const Text('Page not found')),
-      body: Center(
-        child: Text('No route for: ${state.uri}'),
-      ),
-    ),
+    // SEC P2-8 (2026-07-28): the error page used to be a raw
+    // `Text('No route for: ${state.uri}')` with no back arrow and no home
+    // action. Because a bad deep-link arrives via `go()` (which REPLACES the
+    // stack) the user was stranded with force-quit as the only exit — and the
+    // unsanitised server-supplied URL was echoed to screen. Now: no raw URL,
+    // and always a way home for whoever is signed in.
+    errorBuilder: (context, state) => _RouteNotFoundScreen(readAuth: readAuth),
   );
+}
+
+/// Fallback for an unmatched location. Always offers a route home.
+class _RouteNotFoundScreen extends StatelessWidget {
+  const _RouteNotFoundScreen({required this.readAuth});
+
+  final AuthState Function() readAuth;
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = readAuth();
+    final home =
+        auth.isAuthenticated ? homeRouteForAuth(auth) : RouteNames.login;
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Page not found'),
+        automaticallyImplyLeading: false,
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.explore_off_outlined, size: 48),
+              const SizedBox(height: 16),
+              const Text(
+                "We couldn't open that link.",
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'It may have moved, or it may no longer be available.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go(home);
+                  }
+                },
+                icon: const Icon(Icons.home_outlined),
+                label: Text(
+                  context.canPop() ? 'Go back' : 'Go to home',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 String? _authRedirect(AuthState auth, String location, String entryRoute) {
@@ -2389,9 +2097,9 @@ String? _authRedirect(AuthState auth, String location, String entryRoute) {
   }
 
   final isAuthenticated = auth.isAuthenticated;
-  final isProtectedRoute = _isProtectedRoute(location);
+  final isProtected = isProtectedRoute(location);
 
-  if (!isAuthenticated && isProtectedRoute) {
+  if (!isAuthenticated && isProtected) {
     return entryRoute;
   }
 
@@ -2408,7 +2116,7 @@ String? _authRedirect(AuthState auth, String location, String entryRoute) {
     return RouteNames.splash;
   }
 
-  if (isAuthenticated && isProtectedRoute && !_canAccessRoute(auth, location)) {
+  if (isAuthenticated && isProtected && !_canAccessRoute(auth, location)) {
     return homeRouteForRole(auth.role);
   }
 
@@ -2434,6 +2142,43 @@ String? legalGateRedirect(AuthState auth, bool blocked, String location) {
   return null;
 }
 
+/// Whether [route] is a location this app can actually serve.
+///
+/// SEC P2-8 (2026-07-28): push payloads carry a SERVER-SUPPLIED `data.route`
+/// that was previously validated only by `startsWith('/')` and handed straight
+/// to `go()`. `go()` REPLACES the navigation stack, so one stale or malformed
+/// payload dropped the user on the error page with no way back. This validates
+/// the payload against the router's REAL route table (a single source of truth
+/// that cannot drift from the registered routes), so an unknown deep link is
+/// dropped instead of navigated to.
+///
+/// Only the shape of the link is checked here — authentication and RBAC are
+/// still enforced by the router redirect once navigation proceeds.
+bool isKnownAppRoute(GoRouter router, String route) {
+  if (!route.startsWith('/')) return false;
+  // Reject dot-segment traversal on the RAW string — `Uri.parse` (and GoRouter)
+  // silently canonicalise `..` away, so `/teacher/../admin` would resolve to
+  // `/admin`. A payload must state its destination plainly, not disguise it.
+  // Checked before parsing precisely because parsing destroys the evidence.
+  final segments = route.split('/');
+  if (segments.contains('..') || segments.contains('.')) return false;
+  final Uri uri;
+  try {
+    uri = Uri.parse(route);
+  } on FormatException {
+    return false;
+  }
+  // Reject absolute/scheme-bearing or host-bearing links: a push payload must
+  // address THIS app's route table, never an external destination.
+  if (uri.hasScheme || uri.hasAuthority) return false;
+  try {
+    return !router.configuration.findMatch(uri).isError;
+  } catch (_) {
+    // A malformed location must never crash the notification handler.
+    return false;
+  }
+}
+
 bool _isAiAssistantRoute(String location) {
   return location == RouteNames.aiAssistant ||
       location == RouteNames.aiAssistantSettings ||
@@ -2444,15 +2189,69 @@ bool _isAiAssistantRoute(String location) {
 /// (e.g. Appearance / theme). Not an admin ERP route — authorized on
 /// authentication alone, like AI Assistant settings.
 bool _isSharedSettingsRoute(String location) {
-  return location == RouteNames.appearanceSettings;
+  return location == RouteNames.appearanceSettings ||
+      // ASIP: "Report an issue" is a shared, persona-agnostic surface — every
+      // authenticated school user may reach it (auth-gated, no RBAC permission).
+      location == RouteNames.support ||
+      location.startsWith('${RouteNames.support}/') ||
+      // SEC P0-2 (2026-07-28): `/sync-center` had NO gate at all — an
+      // unauthenticated caller could open the offline queue screen. It is
+      // legitimately persona-agnostic (the app-wide SyncBanner in app.dart
+      // pushes it for parent/student/teacher/staff alike), so the correct gate
+      // is authentication, NOT the staff-only admin ERP shell.
+      location == RouteNames.syncCenter;
 }
 
-bool _isProtectedRoute(String location) {
-  return location.startsWith('/parent') ||
-      location.startsWith('/teacher') ||
-      location.startsWith('/student') ||
+/// Whether [location] is a route the given persona [role] owns.
+///
+/// SEC P0-1 (2026-07-28): this used to be a bare `location.startsWith('/student')`
+/// (and the parent/teacher equivalents). String-prefix matching is NOT path
+/// ownership: `/student-health` (the whole-school Infirmary console) and
+/// `/student-360` (a full student dossier) both begin with `/student`, so the
+/// student arm granted them to any logged-in student. Ownership is a path
+/// SEGMENT fact — `/student` itself, or anything under `/student/`. Any future
+/// `/student*`, `/parent*` or `/teacher*` admin route is now safe by default.
+bool isPersonaOwnedRoute(UserRole? role, String location) {
+  final String? prefix = switch (role) {
+    UserRole.parent => RouteNames.parent,
+    UserRole.teacher => RouteNames.teacher,
+    UserRole.student => RouteNames.student,
+    UserRole.staff => null,
+    null => null,
+  };
+  if (prefix == null) return false;
+  return _isUnderPathSegment(location, prefix);
+}
+
+/// True when [location] is exactly [prefix] or a descendant path of it.
+/// Never a bare `startsWith`, which would also match a sibling such as
+/// `/student-health` for the prefix `/student`.
+bool _isUnderPathSegment(String location, String prefix) =>
+    location == prefix || location.startsWith('$prefix/');
+
+/// The standalone staff Face ID capture/enrolment routes (audit R3): they are
+/// pushed from the HR attendance screen (admin ERP shell) but registered as
+/// top-level routes, so they must carry the same wall themselves — otherwise a
+/// parent/student could deep-link into staff-only camera UI by URL. Server
+/// RBAC already denies the writes; this closes the client-side exposure.
+bool _isStaffAttendanceDeviceRoute(String location) {
+  return location == RouteNames.staffFaceCapture ||
+      location == RouteNames.staffFaceEnrollment;
+}
+
+/// Whether [location] requires an authenticated session.
+///
+/// Public (not `_`-private) so `test/router/route_gate_invariants_test.dart` can
+/// assert the auth gate actually covers every permissioned route — the drift
+/// that let `/certificate-requests`, `/gate-passes`, `/complaints`,
+/// `/staff-360/:id` and `/sync-center` ship with no auth gate at all.
+bool isProtectedRoute(String location) {
+  return _isUnderPathSegment(location, RouteNames.parent) ||
+      _isUnderPathSegment(location, RouteNames.teacher) ||
+      _isUnderPathSegment(location, RouteNames.student) ||
       _isAiAssistantRoute(location) ||
       _isSharedSettingsRoute(location) ||
+      _isStaffAttendanceDeviceRoute(location) ||
       isAdminErpRoute(location);
 }
 
@@ -2460,21 +2259,27 @@ bool _canAccessRoute(AuthState auth, String location) {
   if (_isAiAssistantRoute(location) || _isSharedSettingsRoute(location)) {
     return auth.isAuthenticated;
   }
+  // Same wall as the HR attendance screen these are pushed from.
+  if (_isStaffAttendanceDeviceRoute(location)) {
+    return canAccessAdminErpShell(auth);
+  }
 
   if (isAdminErpRoute(location)) {
     return canAccessAdminErpShell(auth);
   }
 
+  // SEC P0-1: segment-precise persona ownership — see [isPersonaOwnedRoute].
   return switch (auth.role) {
-    UserRole.parent => location.startsWith('/parent'),
-    UserRole.teacher => location.startsWith('/teacher'),
-    UserRole.student => location.startsWith('/student'),
+    UserRole.parent ||
+    UserRole.teacher ||
+    UserRole.student =>
+      isPersonaOwnedRoute(auth.role, location),
     // Cross-shell fix (UX Batch 1, Step 5): admin ERP routes are already handled
     // above. Here (non-admin routes) a staff user may enter /teacher ONLY if they
     // actually hold the teacher role (a multi-hat user such as Teacher +
     // Inventory Manager). A non-teaching staff member (e.g. a librarian) — and
     // staff in general — can no longer reach teacher/parent/student shells.
-    UserRole.staff => location.startsWith('/teacher') &&
+    UserRole.staff => isPersonaOwnedRoute(UserRole.teacher, location) &&
         (auth.claims?.hasRole(ErpRole.teacher) ?? false),
     null => false,
   };
@@ -2784,8 +2589,9 @@ Widget teacherDashboardRouteBuilder(BuildContext context, GoRouterState state) {
   );
 }
 
+// F-128 — the teacher bell opens the teacher-scoped notifications inbox.
 VoidCallback _teacherNotificationsTap(BuildContext context) =>
-    () => context.push(RouteNames.parentNotifications);
+    () => context.push(RouteNames.teacherNotifications);
 
 Widget teacherAttendanceRouteBuilder(
     BuildContext context, GoRouterState state) {

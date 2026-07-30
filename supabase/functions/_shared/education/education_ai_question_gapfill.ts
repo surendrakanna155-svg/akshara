@@ -46,7 +46,7 @@ export interface AiQuestionCandidate {
 }
 
 const SYSTEM_PROMPT = `
-You are Akshara's exam-question author for an Indian school. You write ONLY the
+You are NIKSHA's exam-question author for an Indian school. You write ONLY the
 specific questions you are asked for, strictly inside the given subject, class,
 and chapter scope. Hard rules:
 - Stay within the listed chapters. Never introduce out-of-syllabus content.

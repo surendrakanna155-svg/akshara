@@ -44,6 +44,25 @@ void main() {
       expect(json.containsKey('due_label'), isFalse);
       // No student name → whole-class delivery (key omitted).
       expect(json.containsKey('student_name'), isFalse);
+      // PRA-P1-30 — no attachment uploaded → storage path key omitted.
+      expect(json.containsKey('attachment_storage_path'), isFalse);
+    });
+
+    test('PRA-P1-30 homework create serializes attachment_storage_path when set',
+        () {
+      final json = TeacherHomeworkCreateRequestDto.fromDomain(
+        const TeacherHomeworkCreateRequest(
+          classLabel: '8-A',
+          subject: 'Mathematics',
+          title: 'Algebra worksheet',
+          dueDate: '2026-07-10',
+          attachmentName: 'worksheet.pdf',
+          attachmentStoragePath: 'org/school/teacher-1/uuid_worksheet.pdf',
+        ),
+      ).toJson();
+      expect(json['attachment_name'], 'worksheet.pdf');
+      expect(json['attachment_storage_path'],
+          'org/school/teacher-1/uuid_worksheet.pdf');
     });
 
     test('homework create request keeps an explicit due_label + student_name', () {

@@ -44,7 +44,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Akshara ERP'), findsOneWidget);
+      expect(find.text('NIKSHA OS'), findsOneWidget);
     });
   });
 

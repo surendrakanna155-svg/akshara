@@ -41,7 +41,7 @@ class MockResourceOptimizationRepository
         AiInferenceRequest(
           prompt: _buildPrompt(domain: domain, query: query),
           taskType: aiTaskTypeName(AiInferenceTaskType.resourceOptimization),
-          systemPrompt: 'Akshara ERP resource optimization engine',
+          systemPrompt: 'NIKSHA OS resource optimization engine',
           context: {
             'module': 'resource_optimization',
             'domain': domain.name,

@@ -10,7 +10,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../test_helpers.dart';
-import '../../../helpers/provider_test_overrides.dart';
 
 /// QW3 · QA-F-042 — Student homework submit flow + error surface.
 /// `student_homework_screen.dart` (ST-04) was never widget-pumped. Demo data

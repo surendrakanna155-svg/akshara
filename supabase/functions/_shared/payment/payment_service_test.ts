@@ -160,6 +160,116 @@ Deno.test("payment.captured webhook creates finance collection when invoice link
   assertEquals(spy.auditWritten, true);
 });
 
+// --- ICA-A6: paise are preserved through the capture path (NUMERIC amount) ---
+
+// A ₹1500.50 intent. With the pre-fix INTEGER `amount` column the 0.50 was
+// truncated at persistence; migration 20260920000062 retypes payment_requests/
+// payment_intents.amount to NUMERIC(12,2). This asserts the SERVICE passes the
+// exact decimal into finance_collections.amount_collected (already NUMERIC(12,2)),
+// so with the NUMERIC column the ₹1500.50 round-trips end-to-end.
+const PAISE_INTENT: PaymentIntentRow = {
+  ...INTENT,
+  id: "d0000000-0000-4000-8000-0000000000aa",
+  gateway_order_id: "order_paise_1",
+  amount: 1500.5,
+};
+
+class WebhookPaiseCaptureDb {
+  capturedCollectionAmount: string | null = null;
+  intentCaptured = false;
+
+  async queryObject<T>(sql: string, args: unknown[] = []): Promise<T[]> {
+    if (sql.includes("FROM payment_intents WHERE gateway_order_id")) {
+      return [PAISE_INTENT] as T[];
+    }
+    if (sql.includes("FROM finance_invoices fi")) {
+      return [{
+        id: PAISE_INTENT.invoice_id,
+        organization_id: PAISE_INTENT.organization_id,
+        school_id: PAISE_INTENT.school_id,
+        student_id: "a4000000-0000-4000-8000-000000000001",
+        student_account_id: "acct-1",
+        invoice_status: "issued",
+        outstanding_amount: "1500.50",
+        total_amount: "1500.50",
+        fee_assignment_id: "fa-1",
+      }] as T[];
+    }
+    if (sql.includes("INSERT INTO finance_collections")) {
+      this.capturedCollectionAmount = String(args[9]); // amount_collected arg
+      return [{
+        id: "col-paise-1",
+        organization_id: PAISE_INTENT.organization_id,
+        school_id: PAISE_INTENT.school_id,
+        student_id: "a4000000-0000-4000-8000-000000000001",
+        invoice_id: PAISE_INTENT.invoice_id,
+        student_account_id: "acct-1",
+        receipt_number: "APS-PAISE",
+        collection_date: "2026-06-10",
+        payment_method: "upi",
+        reference_number: args[8] ?? null,
+        amount_collected: String(args[9]),
+        notes: null,
+        collection_status: "completed",
+        collected_by: args[11],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }] as T[];
+    }
+    if (sql.includes("INSERT INTO finance_receipts")) {
+      return [{
+        id: "rcpt-paise-1",
+        organization_id: PAISE_INTENT.organization_id,
+        school_id: PAISE_INTENT.school_id,
+        collection_id: "col-paise-1",
+        receipt_number: "APS-PAISE",
+        receipt_date: "2026-06-10",
+        amount: "1500.50",
+        generated_by: args[6],
+        created_at: new Date().toISOString(),
+      }] as T[];
+    }
+    if (sql.includes("UPDATE finance_invoices")) return [] as T[];
+    if (sql.includes("UPDATE payment_intents") && sql.includes("captured")) {
+      this.intentCaptured = true;
+      return [{
+        ...PAISE_INTENT,
+        status: "captured",
+        collection_id: "col-paise-1",
+        receipt_id: "rcpt-paise-1",
+      }] as T[];
+    }
+    if (sql.includes("INSERT INTO audit_events")) return [{ id: crypto.randomUUID() }] as T[];
+    if (sql.includes("INSERT INTO domain_events")) return [{ id: crypto.randomUUID() }] as T[];
+    if (sql.includes("FROM domain_events")) return [] as T[];
+    return [] as T[];
+  }
+}
+
+Deno.test("ICA-A6: a ₹1500.50 capture posts amount_collected = 1500.50 (paise preserved, no INTEGER truncation)", async () => {
+  const spy = new WebhookPaiseCaptureDb();
+  const db = spy as unknown as TenantQueryClient;
+  const result = await processRazorpayWebhook(
+    db,
+    webhookClaims(),
+    "evt_paise_1",
+    "payment.captured",
+    {
+      payload: {
+        payment: {
+          id: "pay_paise_1",
+          order_id: PAISE_INTENT.gateway_order_id,
+        },
+      },
+    },
+  );
+  assertEquals(result.processed, true);
+  assertEquals(spy.intentCaptured, true);
+  // The exact decimal reaches the (NUMERIC) collection — 0.50 is NOT truncated.
+  assertEquals(spy.capturedCollectionAmount, "1500.5");
+  assertEquals(Number(spy.capturedCollectionAmount), 1500.5);
+});
+
 // --- confirmPayment fail-closed gateway verification (MJ-H11) ---
 
 const CONFIRM_INTENT: PaymentIntentRow = {
@@ -270,7 +380,7 @@ Deno.test(
 );
 
 Deno.test(
-  "confirmPayment in stub mode still captures without a gateway signature",
+  "PRA-P0-02: stub mode skips the signature check but FAILS CLOSED without an invoice",
   withRazorpayEnv(
     {
       RAZORPAY_KEY_ID: undefined,
@@ -278,16 +388,126 @@ Deno.test(
       RAZORPAY_STUB_MODE: "true",
     },
     async () => {
+      // A null-invoice intent must no longer "capture" by fabricating a receipt
+      // while writing nothing to the books. Reaching the invoice check (rather
+      // than throwing a signature error) also proves stub mode skipped signature
+      // verification.
       const spy = new ConfirmSpyDb(false);
       const db = spy as unknown as TenantQueryClient;
 
-      const result = await confirmPayment(db, parentClaims(), {
-        paymentIntentId: CONFIRM_INTENT.id,
-        transactionRef: "TXN-STUB",
-      });
+      await assertRejects(
+        () =>
+          confirmPayment(db, parentClaims(), {
+            paymentIntentId: CONFIRM_INTENT.id,
+            transactionRef: "TXN-STUB",
+          }),
+        Error,
+        "no invoice",
+      );
 
-      assertEquals(spy.intentCaptured, true, "stub mode should still capture");
-      assertEquals(result.paidAmount, CONFIRM_INTENT.amount);
+      assertEquals(
+        spy.collectionCreated,
+        false,
+        "must not record a collection without an invoice",
+      );
+      assertEquals(
+        spy.intentCaptured,
+        false,
+        "must not mark captured without recording a collection",
+      );
     },
   ),
 );
+
+// ── payment.failed: a late failure must never walk back captured money ───────
+//
+// Razorpay does not guarantee webhook ordering, and one order can emit a
+// `payment.failed` for a first attempt and a `payment.captured` for the retry.
+// The failed-branch write was unguarded (`WHERE id = $1`), so a late failure
+// demoted an intent whose money HAD been captured — leaving a 'failed' intent
+// beside a real finance_collection and a credited invoice. The parent then sees
+// "payment failed" for money the school actually took, and reconciliation shows
+// a failed payment that nonetheless cleared a due.
+//
+// This db fake behaves the way Postgres would: it applies the UPDATE only if the
+// statement's own WHERE clause admits the row. So if the guard is ever removed
+// from the SQL, the demotion actually happens here and the test fails.
+
+const CAPTURED_INTENT: PaymentIntentRow = {
+  ...INTENT,
+  status: "captured",
+  collection_id: "col-already-1",
+  receipt_id: "rcpt-already-1",
+  gateway_payment_id: "pay_already_1",
+};
+
+class FailedWebhookDb {
+  demotedToFailed = false;
+
+  constructor(private readonly intent: PaymentIntentRow) {}
+
+  // deno-lint-ignore require-await
+  async queryObject<T>(sql: string, _args: unknown[] = []): Promise<T[]> {
+    if (sql.includes("FROM payment_intents WHERE gateway_order_id")) {
+      return [this.intent] as T[];
+    }
+    if (sql.includes("UPDATE payment_intents") && sql.includes("'failed'")) {
+      const guarded = sql.includes("status NOT IN ('captured', 'settled')");
+      const moneyTerminal = this.intent.status === "captured" ||
+        this.intent.status === "settled";
+      if (guarded && moneyTerminal) return [] as T[]; // no row matched
+      this.demotedToFailed = true;
+      return [{ id: this.intent.id }] as T[];
+    }
+    return [] as T[];
+  }
+}
+
+function failedPayload(orderId: string) {
+  return {
+    payload: { payment: { order_id: orderId, id: "pay_failed_1" } },
+  } as Record<string, unknown>;
+}
+
+Deno.test("payment.failed does NOT demote an already-captured intent", async () => {
+  const spy = new FailedWebhookDb(CAPTURED_INTENT);
+  const result = await processRazorpayWebhook(
+    spy as unknown as TenantQueryClient,
+    webhookClaims(),
+    "evt_late_failure_1",
+    "payment.failed",
+    failedPayload(CAPTURED_INTENT.gateway_order_id!),
+  );
+
+  assertEquals(
+    spy.demotedToFailed,
+    false,
+    "captured money must never be walked back by a late failure webhook",
+  );
+  // Still 'processed': the correct action WAS to ignore it. Reporting failure
+  // would make the gateway redeliver this event indefinitely.
+  assertEquals(result.processed, true);
+  assertEquals(result.intentId, CAPTURED_INTENT.id);
+  assertEquals(
+    result.collectionId,
+    CAPTURED_INTENT.collection_id,
+    "the surviving collection is reported, so the ignore is visible to callers",
+  );
+});
+
+Deno.test("payment.failed DOES mark a genuinely unpaid intent failed", async () => {
+  // The guard must not over-block: an intent that never reached a money state
+  // still records the failure.
+  const spy = new FailedWebhookDb(INTENT); // status 'initiated'
+  const result = await processRazorpayWebhook(
+    spy as unknown as TenantQueryClient,
+    webhookClaims(),
+    "evt_real_failure_1",
+    "payment.failed",
+    failedPayload(INTENT.gateway_order_id!),
+  );
+
+  assertEquals(spy.demotedToFailed, true, "a real failure must be recorded");
+  assertEquals(result.processed, true);
+  assertEquals(result.intentId, INTENT.id);
+});

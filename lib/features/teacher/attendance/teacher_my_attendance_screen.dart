@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../../theme/premium_tokens.dart';
 import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -24,21 +25,25 @@ class TeacherMyAttendanceScreen extends ConsumerWidget {
 
     return Scaffold(
       key: QaTestKeys.teacherMyAttendanceScreen,
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'My Attendance',
         subtitle: 'Your own check-in history',
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,
       ),
-      body: async.when(
-        loading: () =>
-            const AksharaLoadingState(semanticLabel: 'Loading my attendance'),
-        error: (_, __) => AksharaErrorState(
-          message: 'Unable to load your attendance history.',
-          onRetry: () => ref.invalidate(myAttendanceHistoryProvider(month)),
+      // DS V2 P4 — premium persona canvas behind the self-history.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: async.when(
+          loading: () =>
+              const AksharaLoadingState(semanticLabel: 'Loading my attendance'),
+          error: (_, __) => AksharaErrorState(
+            message: 'Unable to load your attendance history.',
+            onRetry: () => ref.invalidate(myAttendanceHistoryProvider(month)),
+          ),
+          data: (history) => _MyAttendanceBody(history: history),
         ),
-        data: (history) => _MyAttendanceBody(history: history),
       ),
     );
   }
@@ -56,6 +61,10 @@ class _MyAttendanceBody extends ConsumerWidget {
       padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         _MonthSwitcher(month: history.month),
+        const SizedBox(height: AksharaSpacing.s4),
+        // DS V2 P4 — signature monthly attendance-rate ring (present + late over
+        // working days). The count chips below carry the raw breakdown.
+        _MonthAttendanceRingCard(summary: summary),
         const SizedBox(height: AksharaSpacing.s4),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -93,6 +102,98 @@ class _MyAttendanceBody extends ConsumerWidget {
             const SizedBox(height: AksharaSpacing.s2),
           ],
       ],
+    );
+  }
+}
+
+/// DS V2 P4 — the month's attendance rate as a signature persona-accent
+/// progress **ring** (attended = present + late, over working days). Honest:
+/// derived only from data already loaded; contextualises the count chips below.
+class _MonthAttendanceRingCard extends StatelessWidget {
+  const _MonthAttendanceRingCard({required this.summary});
+
+  final MyAttendanceSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    final premium = context.premium;
+    final text = context.aksharaText;
+    final colors = context.colors;
+
+    final attended = summary.presentDays + summary.lateDays;
+    final working = summary.workingDaysInMonth;
+    final rate = working > 0 ? attended / working : 0.0;
+    final percent = (rate * 100).round();
+
+    return Semantics(
+      container: true,
+      label: 'Attendance $percent percent this month, '
+          '$attended of $working working days attended',
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: premium.premiumSurface,
+          borderRadius: BorderRadius.circular(AksharaRadius.xl),
+          border: Border.all(color: premium.premiumBorder),
+          boxShadow: premium.softShadow,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AksharaSpacing.s5),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              AksharaProgressRing(
+                value: rate,
+                size: 92,
+                strokeWidth: 9,
+                color: premium.brandStart,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '$percent%',
+                      style: text.titleMedium.copyWith(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
+                        height: 1.0,
+                      ),
+                    ),
+                    Text(
+                      'Attendance',
+                      style: text.labelSmall.copyWith(
+                        color: colors.onSurfaceVariant,
+                        fontSize: 10,
+                        height: 1.1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AksharaSpacing.s5),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'This month',
+                      style: text.titleMedium.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: AksharaSpacing.s1),
+                    Text(
+                      'Present on $attended of $working working days',
+                      style: text.bodySmall.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

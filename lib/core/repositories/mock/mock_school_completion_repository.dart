@@ -53,7 +53,11 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
     ),
   ];
   SchoolBranding _branding = const SchoolBranding(
-    displayName: 'Akshara Demo School',
+    // User-visible: this seed drives schoolDisplayNameProvider, i.e. the login
+    // screen, the splash screen, the app title and the parent shell header in
+    // demo/mock mode — and therefore every store screenshot. It must carry the
+    // NIKSHA brand, not the pre-rename one.
+    displayName: 'NIKSHA Demo School',
     tagline: 'Learning with purpose',
     primaryColor: '#1B4D89',
     secondaryColor: '#F5A623',
@@ -63,8 +67,43 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
   WhatsAppProviderConfig _whatsApp = const WhatsAppProviderConfig(
     provider: 'stub',
     isActive: true,
-    senderId: 'AKSHARA',
+    senderId: 'NIKSHA',
   );
+
+  // Class names use the same convention as MockAcademicRepository's catalog
+  // ('1'..'12', not 'Grade 1'..'Grade 12') so the daily-capture dialog's class
+  // picker (sourced from the real academic catalog) actually matches these
+  // topics in demo/mock mode too.
+  final List<SyllabusTopic> _syllabusTopics = [
+    const SyllabusTopic(
+      id: 'top_1',
+      subjectId: 'sub_1',
+      className: '7',
+      chapterId: 'ch_1',
+      topicName: 'Linear equations',
+      sequenceOrder: 0,
+      status: 'pending',
+    ),
+    const SyllabusTopic(
+      id: 'top_2',
+      subjectId: 'sub_1',
+      className: '7',
+      chapterId: 'ch_1',
+      topicName: 'Quadratic expressions',
+      sequenceOrder: 1,
+      status: 'pending',
+    ),
+    const SyllabusTopic(
+      id: 'top_3',
+      subjectId: 'sub_2',
+      className: '5',
+      chapterId: null,
+      topicName: 'Fractions introduction',
+      sequenceOrder: 0,
+      status: 'pending',
+    ),
+  ];
+  final Set<String> _completedTopicIds = {};
 
   final List<ClassSubjectAssignment> _classSubjects = [];
   final List<TeacherSubjectAssignment> _teacherSubjects = [];
@@ -841,11 +880,42 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
       ];
 
   @override
+  Future<List<SyllabusTopic>> listSyllabusTopics({
+    required RepositoryQuery query,
+    String? className,
+    String? subjectId,
+    String? chapterId,
+  }) async {
+    return _syllabusTopics
+        .where((t) => className == null || t.className == className)
+        .where((t) => subjectId == null || t.subjectId == subjectId)
+        .where((t) => chapterId == null || t.chapterId == chapterId)
+        .map((t) => _completedTopicIds.contains(t.id)
+            ? SyllabusTopic(
+                id: t.id,
+                subjectId: t.subjectId,
+                className: t.className,
+                chapterId: t.chapterId,
+                topicName: t.topicName,
+                sequenceOrder: t.sequenceOrder,
+                status: 'completed',
+              )
+            : t)
+        .toList();
+  }
+
+  @override
   Future<void> completeTopic({
     required RepositoryQuery query,
     required String topicId,
     String? lessonLogId,
-  }) async {}
+  }) async {
+    final exists = _syllabusTopics.any((t) => t.id == topicId);
+    if (!exists) {
+      throw StateError('Syllabus topic not found: $topicId');
+    }
+    _completedTopicIds.add(topicId);
+  }
 
   @override
   Future<TeacherProgressDashboard> getTeacherProgress({

@@ -10,6 +10,7 @@ import {
 } from "../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
+import { getParentActivationStats } from "../parent_experience/parent_experience_service.ts";
 import {
   buildAnalyticsDelivery,
   buildCampaignAnalytics,
@@ -178,7 +179,6 @@ export async function handleGetParentActivationDashboard(
   if (denied) return denied;
 
   try {
-    const { getParentActivationStats } = await import("../parent_experience/parent_experience_service.ts");
     const stats = await withTenantContext(config, auth.claims, (db) =>
       getParentActivationStats(db, schoolIdFromClaims(auth.claims))
     );

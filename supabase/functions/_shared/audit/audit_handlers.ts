@@ -3,13 +3,17 @@ import { envelope, errorEnvelope, jsonResponse, readJson } from "../http.ts";
 import {
   authenticateRequest,
   organizationIdFromClaims,
+  requirePermission,
 } from "../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import {
+  type AuditEventFilters,
   type ClientAuditEventInput,
   correlationIdFromRequest,
   ingestClientAuditBatch,
+  listAuditEvents,
+  sizeAuditRetention,
 } from "./audit_repository.ts";
 
 interface BatchUploadBody {
@@ -64,6 +68,126 @@ export async function handleAuditBatchUpload(
     }
     console.error("audit batch upload error:", error);
     return errorEnvelope("INTERNAL_ERROR", "Failed to ingest audit batch", 500);
+  }
+}
+
+// PRA-P1-53 (S2): permission-gated read route for the forensic audit trail.
+// Gated on `viewManagement` — an existing school-scoped leadership permission
+// (schoolAdmin / principal / vicePrincipal / management / organization*), the
+// same population that owns the Management dashboard; it is NOT held by
+// teachers, clerks, parents, or students. No new slug is minted and no RBAC seed
+// is touched (owned by another worker). The read runs under `withTenantContext`
+// so the `audit_events_tenant_read` RLS policy scopes rows to the caller's
+// org/school automatically.
+const AUDIT_MAX_PAGE_SIZE = 100;
+
+function firstParam(params: URLSearchParams, keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = params.get(key);
+    if (value !== null && value.trim() !== "") return value.trim();
+  }
+  return undefined;
+}
+
+function parseAuditFilters(params: URLSearchParams): AuditEventFilters {
+  return {
+    actor: firstParam(params, ["actor", "userId", "user_id"]),
+    entityType: firstParam(params, ["entityType", "entity_type"]),
+    entityId: firstParam(params, ["entityId", "entity_id"]),
+    eventType: firstParam(params, ["eventType", "action", "event_type"]),
+    fromDate: firstParam(params, ["fromDate", "from", "from_date"]),
+    toDate: firstParam(params, ["toDate", "to", "to_date"]),
+  };
+}
+
+function parseAuditPagination(params: URLSearchParams): { page: number; pageSize: number } {
+  const page = Math.max(1, parseInt(params.get("page") ?? "1", 10) || 1);
+  const pageSize = Math.min(
+    AUDIT_MAX_PAGE_SIZE,
+    Math.max(1, parseInt(params.get("pageSize") ?? "20", 10) || 20),
+  );
+  return { page, pageSize };
+}
+
+export async function handleListAuditEvents(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requirePermission(auth.claims, "viewManagement");
+  if (denied) return denied;
+
+  organizationIdFromClaims(auth.claims);
+
+  const params = new URL(req.url).searchParams;
+  const filters = parseAuditFilters(params);
+  const pagination = parseAuditPagination(params);
+
+  try {
+    const result = await withTenantContext(config, auth.claims, (db) =>
+      listAuditEvents(db, auth.claims, filters, pagination));
+
+    return jsonResponse(
+      envelope({
+        items: result.items,
+        pagination: {
+          page: result.page,
+          pageSize: result.pageSize,
+          total: result.total,
+          hasMore: result.hasMore,
+        },
+      }),
+    );
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    console.error("audit events list error:", error);
+    return errorEnvelope("INTERNAL_ERROR", "Failed to list audit events", 500);
+  }
+}
+
+// P0-RETENTION — read-only retention sizing.
+//
+// `AUDIT_RETENTION_DAYS` was parsed into config and consumed by NOTHING: the
+// retention seam (`auditRetentionCutoff` / `countAuditEventsBeyondRetention`)
+// had zero callers, so the published retention policy described a horizon the
+// running system never applied. This route consumes the config and reports what
+// a purge WOULD remove. It still deletes nothing — `audit_events` is
+// append-only, and the destructive half is an explicitly-invoked ops script
+// (deploy/akshara-vps/backup/akshara-retention-purge.sh --force) run under a
+// privileged role, never a client-reachable path.
+//
+// Gated on `viewManagement`, matching the sibling GET /audit/events read: this
+// endpoint returns strictly LESS information (two counts and a cutoff) than the
+// full trail that population can already read, so it mints no new slug and
+// widens no audience. GET keeps it out of the mutating-route audit catalog
+// (QA-R-008), which is correct — it mutates nothing.
+export async function handleAuditRetentionPreview(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requirePermission(auth.claims, "viewManagement");
+  if (denied) return denied;
+
+  organizationIdFromClaims(auth.claims);
+
+  try {
+    const sizing = await withTenantContext(config, auth.claims, (db) =>
+      sizeAuditRetention(db, auth.claims, config.auditRetentionDays));
+
+    return jsonResponse(envelope(sizing));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    console.error("audit retention preview error:", error);
+    return errorEnvelope("INTERNAL_ERROR", "Failed to size audit retention", 500);
   }
 }
 

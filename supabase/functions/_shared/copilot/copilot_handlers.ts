@@ -10,6 +10,7 @@ import {
 } from "../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
+import { releaseSavepoint, rollbackToSavepoint, savepoint } from "../db_savepoint.ts";
 import { loadCopilotContext } from "./copilot_context_engine.ts";
 import { generateCopilotResponse } from "./copilot_llm_client.ts";
 import { classifyDomain, SCHOOL_ASSISTANT_REFUSAL } from "../ai/domain_gate.ts";
@@ -398,7 +399,7 @@ export async function handleSendMessage(
       // ONLY the summary and never the already-persisted (and possibly billed)
       // reply/message/telemetry in this same transaction (H1).
       if (generation.summarizedCount && generation.summarizedCount > 0) {
-        await db.queryObject("SAVEPOINT copilot_summary");
+        await savepoint(db, "copilot_summary");
         try {
           await updateSessionRollingSummary(
             db,
@@ -406,9 +407,9 @@ export async function handleSendMessage(
             generation.rollingSummary ?? "",
             generation.summarizedCount,
           );
-          await db.queryObject("RELEASE SAVEPOINT copilot_summary");
+          await releaseSavepoint(db, "copilot_summary");
         } catch {
-          await db.queryObject("ROLLBACK TO SAVEPOINT copilot_summary");
+          await rollbackToSavepoint(db, "copilot_summary");
         }
       }
 

@@ -6,7 +6,10 @@ import 'package:akshara_erp/core/teaching/teacher_assignment_registry.dart';
 import 'package:akshara_erp/core/tenant/tenant_provider.dart';
 import 'package:akshara_erp/core/testing/qa_test_keys.dart';
 import 'package:akshara_erp/features/teacher/communication/teacher_teaching_context_provider.dart';
+import 'package:akshara_erp/features/teacher/exams/exam_models.dart';
+import 'package:akshara_erp/features/teacher/exams/teacher_exams_provider.dart';
 import 'package:akshara_erp/features/teacher/exams/teacher_exams_screen.dart';
+import 'package:akshara_erp/shared/marks_grid/marks_grid.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -34,7 +37,7 @@ void main() {
     testPrefs = await resetExamAdministrationForTest();
   });
 
-  Widget buildScreen() {
+  Widget buildScreen({List<Override> overrides = const []}) {
     return ProviderScope(
       overrides: [
         sharedPreferencesTestOverride(testPrefs),
@@ -48,6 +51,7 @@ void main() {
             teacherName: 'Priya Sharma',
           ),
         ),
+        ...overrides,
       ],
       child: MaterialApp(
         theme: AksharaAppTheme.light(),
@@ -56,8 +60,11 @@ void main() {
     );
   }
 
-  Future<void> openMarksEntry(WidgetTester tester) async {
-    await tester.pumpWidget(buildScreen());
+  Future<void> openMarksEntry(
+    WidgetTester tester, {
+    List<Override> overrides = const [],
+  }) async {
+    await tester.pumpWidget(buildScreen(overrides: overrides));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Marks entry'));
     await tester.pumpAndSettle();
@@ -129,9 +136,6 @@ void main() {
         (tester) async {
       await openMarksEntry(tester);
 
-      // The shared column-stats footer is present (same component the admin uses).
-      expect(find.byKey(QaTestKeys.marksColumnStats), findsOneWidget);
-
       // Save-all appears only once a row is dirty (a typed, unsaved value).
       expect(find.byKey(QaTestKeys.teacherExamSaveAllButton), findsNothing);
       final field = find.byKey(QaTestKeys.teacherExamMarkField(firstEntryId));
@@ -144,6 +148,60 @@ void main() {
       await tester.tap(find.byKey(QaTestKeys.teacherExamSaveAllButton));
       await tester.pumpAndSettle();
       expect(find.byKey(QaTestKeys.teacherExamSaveAllButton), findsNothing);
+
+      // The shared column-stats footer sits at the foot of the roster (same
+      // component the admin uses). The roster is a lazily-built sliver list
+      // now — it is mounted when it enters the viewport, so scroll to it
+      // rather than asserting on an eagerly-mounted off-screen widget.
+      await tester.scrollUntilVisible(
+        find.byKey(QaTestKeys.marksColumnStats),
+        300,
+        scrollable: find
+            .descendant(
+              of: find.byType(CustomScrollView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      expect(find.byKey(QaTestKeys.marksColumnStats), findsOneWidget);
+    });
+
+    testWidgets('RC perf — a full class builds its rows lazily, not all at once',
+        (tester) async {
+      // The roster used to be a `for` loop inside a Column: a 40–60 student
+      // class eagerly mounted (and kept mounted) 40–60 live TextFields with no
+      // viewport recycling. It is a SliverList now — only the rows in/near the
+      // viewport are built.
+      const rosterSize = 60;
+      final roster = [
+        for (var i = 1; i <= rosterSize; i++)
+          ExamMarkEntry(
+            id: 'perf_roster_$i',
+            sisStudentId: 'SIS-PERF-$i',
+            studentName: 'Student $i',
+            rollNo: i.toString().padLeft(2, '0'),
+            marksObtained: null,
+            maxMarks: maxMarks,
+          ),
+      ];
+
+      await openMarksEntry(
+        tester,
+        overrides: [
+          teacherExamMarksForActiveProvider.overrideWith((ref) async => roster),
+          teacherExamMarksFutureProvider.overrideWith((ref) async => roster),
+        ],
+      );
+
+      final mountedFields = find.byType(MarksEntryField).evaluate().length;
+      expect(mountedFields, greaterThan(0),
+          reason: 'the visible rows must still render an editable cell');
+      expect(
+        mountedFields,
+        lessThan(rosterSize),
+        reason: 'a $rosterSize-student roster must NOT mount $rosterSize '
+            'TextFields up front — the list has to recycle with the viewport',
+      );
     });
   });
 }

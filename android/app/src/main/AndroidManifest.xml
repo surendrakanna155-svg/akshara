@@ -9,9 +9,36 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <!-- Staff Face ID / fingerprint self check-in (O5, local_auth). -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
+    <!-- Attendance auth device layer (Slice 3, docs/ATTENDANCE_AUTH_DESIGN_DECISION.md):
+         a fresh, high-accuracy GPS geofence fix (ACCESS_FINE_LOCATION, with
+         ACCESS_COARSE_LOCATION as the platform-required companion permission)
+         and a live front-camera face capture (CAMERA). Neither is the
+         attendance PROOF by itself — both feed the GPS+face verification
+         chain; there is no device-biometric fallback for attendance. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <!--
+      allowBackup=false is deliberate, and load-bearing for two reasons.
+
+      1. CORRECTNESS. The drafts/outbox database is encrypted with SQLCipher
+         using a key held in the OS keystore. App data is backed up; keystore
+         keys are deliberately NOT transferable. So a restore onto a new device
+         hands the app a database it can never decrypt — observed on-device as
+         `SQLiteNotADatabaseException: file is not a database (code 26)`. The
+         opener now rebuilds such a file rather than degrading forever, but the
+         cleanest fix is not to create the situation.
+
+      2. PRIVACY. This database holds student marks, attendance, fee and health
+         drafts. Auto-backup would copy that to the signed-in user's PERSONAL
+         Google Drive — school data belonging to the institution, leaving the
+         institution's control silently and with no consent step. Under DPDP the
+         school is the Data Fiduciary; this is not ours to export.
+    -->
     <application
-        android:label="Akshara ERP"
+        android:label="NIKSHA OS"
         android:name="${applicationName}"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round">
         <activity

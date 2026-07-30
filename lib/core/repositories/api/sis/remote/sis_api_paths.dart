@@ -21,6 +21,14 @@ abstract final class SisApiPaths {
   static String studentDocuments(String studentId) =>
       '$base/students/$studentId/documents';
 
+  /// PRA-P1-19 — POST presign a real document upload (before confirm).
+  static String studentDocumentsPresign(String studentId) =>
+      '$base/students/$studentId/documents/presign';
+
+  /// PRA-P1-19 — GET a short-lived signed download URL for a stored document.
+  static String studentDocumentDownload(String studentId, String documentId) =>
+      '$base/students/$studentId/documents/$documentId/download';
+
   /// SIS-4 — GET a student's siblings / family (read-only).
   static String studentSiblings(String studentId) =>
       '$base/students/$studentId/siblings';

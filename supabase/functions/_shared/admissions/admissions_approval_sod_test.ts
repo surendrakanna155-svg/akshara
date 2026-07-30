@@ -83,6 +83,9 @@ class MockApprovalDb {
       sql.includes("UPDATE admissions_approvals SET") &&
       sql.includes("decision = $4")
     ) {
+      // Honor the terminal `AND decision = 'pending'` guard (RT round-3 S4): an
+      // already-decided approval matches 0 rows → no re-decide / flip.
+      if (this.approval.decision !== "pending") return [] as T[];
       this.approvalUpdateCount += 1;
       this.approval.decision = args[3];
       this.approval.decided_by = args[4];
@@ -138,6 +141,26 @@ Deno.test("SoD: submitter approving their own application → SELF_APPROVE_DENIE
   assertEquals(db.applicationStatusUpdateCount, 0, "application never flipped");
   assertEquals(db.approval.decision, "pending");
   assertEquals(db.application.status, "submitted");
+});
+
+Deno.test("RT round-3 S4: an already-decided approval cannot be re-decided or flipped (pending guard → null, no application flip)", async () => {
+  const db = new MockApprovalDb();
+  // A first checker already approved it; a concurrent/late second decide arrives.
+  db.approval.decision = "approved";
+  db.approval.decided_by = OTHER;
+
+  const result = await setApprovalDecision(
+    db as unknown as TenantQueryClient,
+    ORG,
+    SCHOOL,
+    APPROVAL,
+    "rejected", // an attempted flip approved → rejected
+    "checker-3",
+  );
+
+  assertEquals(result, null, "a decided approval is not re-decidable (0 rows via the pending guard)");
+  assertEquals(db.approval.decision, "approved", "decision NOT flipped to rejected");
+  assertEquals(db.applicationStatusUpdateCount, 0, "no application status change on a no-op decide");
 });
 
 Deno.test("SoD: a DIFFERENT approver approves successfully → application approved + checker recorded", async () => {

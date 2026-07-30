@@ -15,7 +15,7 @@ class MockAlumniRepository implements AlumniRepository {
       id: 'evt_1',
       title: 'Annual Alumni Reunion 2026',
       date: '15 Aug 2026',
-      venue: 'Akshara Main Campus',
+      venue: 'NIKSHA Main Campus',
       registrations: 156,
       capacity: 200,
       status: AlumniEventStatus.upcoming,
@@ -202,7 +202,7 @@ class MockAlumniRepository implements AlumniRepository {
               period: '2024 — Present',
             ),
             AlumniEmploymentHistory(
-              organization: 'Akshara Internship',
+              organization: 'NIKSHA Internship',
               role: 'Tech Intern',
               period: '2023 — 2024',
             ),
@@ -272,7 +272,7 @@ class MockAlumniRepository implements AlumniRepository {
       id: 'evt_1',
       title: 'Annual Alumni Reunion 2026',
       date: '15 Aug 2026',
-      venue: 'Akshara Main Campus',
+      venue: 'NIKSHA Main Campus',
       registrations: 156,
       capacity: 200,
       status: AlumniEventStatus.upcoming,
@@ -587,8 +587,8 @@ class MockAlumniRepository implements AlumniRepository {
             AlumniSettingItem(
               id: 'donation_posting',
               label: 'Donation ledger posting',
-              value: 'Linked to FN-05 collections',
-              description: 'AL-05 donations post to Finance receipt ledger',
+              value: 'Manual (FN-05 head)',
+              description: 'AL-05 donations tracked in Alumni — not posted to Finance',
               editable: false,
             ),
             AlumniSettingItem(

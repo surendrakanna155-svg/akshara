@@ -1,4 +1,4 @@
-// Firebase Cloud Messaging integration for Akshara ERP.
+// Firebase Cloud Messaging integration for NIKSHA OS.
 //
 // This is the *device* half of the existing notification pipeline — it does NOT
 // replace the Communication Hub. The backend already owns templates, the
@@ -24,6 +24,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/auth/auth_models.dart';
 import '../../features/auth/auth_provider.dart';
 import '../../features/notifications/notifications_provider.dart';
+import '../../router/app_router.dart';
 import '../providers/router_provider.dart';
 import '../repositories/repository_providers.dart';
 import '../tenant/tenant_provider.dart';
@@ -65,7 +66,7 @@ class PushMessagingService {
         sound: true,
       );
     } catch (error) {
-      debugPrint('PushMessaging: permission request failed: $error');
+      if (!kReleaseMode) debugPrint('PushMessaging: permission request failed: $error');
     }
 
     // 2. Token refresh → re-register with the backend.
@@ -82,7 +83,7 @@ class PushMessagingService {
         _onNotificationTapped(initial);
       }
     } catch (error) {
-      debugPrint('PushMessaging: getInitialMessage failed: $error');
+      if (!kReleaseMode) debugPrint('PushMessaging: getInitialMessage failed: $error');
     }
 
     // 5. Register the current token now (if already logged in) and again
@@ -106,7 +107,7 @@ class PushMessagingService {
         await _registerToken(token);
       }
     } catch (error) {
-      debugPrint('PushMessaging: getToken failed: $error');
+      if (!kReleaseMode) debugPrint('PushMessaging: getToken failed: $error');
     }
   }
 
@@ -122,7 +123,7 @@ class PushMessagingService {
           );
     } catch (error) {
       // Best-effort: a failed registration must not disrupt the session.
-      debugPrint('PushMessaging: token registration failed: $error');
+      if (!kReleaseMode) debugPrint('PushMessaging: token registration failed: $error');
     }
   }
 
@@ -181,20 +182,49 @@ class PushMessagingService {
 
   void _navigate(String route) {
     try {
-      _ref.read(goRouterProvider).go(route);
+      final router = _ref.read(goRouterProvider);
+      // SEC P2-8: never `go()` to an unvalidated server-supplied location —
+      // `_deepLink` already rejected anything the route table cannot serve, but
+      // re-check here so the direct-call path (SnackBar action) is covered too.
+      if (!isKnownAppRoute(router, route)) {
+        if (!kReleaseMode) {
+          debugPrint('PushMessaging: dropped unknown deep link "$route"');
+        }
+        return;
+      }
+      router.go(route);
     } catch (error) {
-      debugPrint('PushMessaging: navigation to "$route" failed: $error');
+      if (!kReleaseMode) debugPrint('PushMessaging: navigation to "$route" failed: $error');
     }
   }
 
   /// Deep-link target from the message data. The backend sends it as `route`;
   /// `deep_link` is accepted as an alias.
+  ///
+  /// SEC P2-8 (2026-07-28): the payload is attacker-influenced input. A
+  /// `startsWith('/')` check is NOT validation — any string passed it, and
+  /// `go()` (which replaces the stack) then stranded the user on the error
+  /// page. The link is now matched against the router's real route table and
+  /// dropped when it resolves to nothing, so a stale push simply shows the
+  /// notification with no "View" action instead of trapping the user.
   String? _deepLink(RemoteMessage message) {
     final raw = message.data['route'] ?? message.data['deep_link'];
-    if (raw is String && raw.startsWith('/')) {
-      return raw;
+    if (raw is! String || !raw.startsWith('/')) return null;
+    try {
+      if (!isKnownAppRoute(_ref.read(goRouterProvider), raw)) {
+        if (!kReleaseMode) {
+          debugPrint('PushMessaging: rejected unknown deep link "$raw"');
+        }
+        return null;
+      }
+    } catch (error) {
+      // Router not available (e.g. very early startup) — fail closed.
+      if (!kReleaseMode) {
+        debugPrint('PushMessaging: could not validate deep link: $error');
+      }
+      return null;
     }
-    return null;
+    return raw;
   }
 
   String _platformLabel() {

@@ -78,7 +78,7 @@ class AlumniReportsScreen extends ConsumerWidget {
         const SizedBox(height: AksharaSpacing.s6),
         if (isMobile) ...[
           AlumniTrendChart(
-            title: 'Donation trend (₹L) — Finance placeholder',
+            title: 'Donation trend (₹L)',
             points: data.donationTrend,
             height: chartHeight,
           ),
@@ -95,7 +95,7 @@ class AlumniReportsScreen extends ConsumerWidget {
               Expanded(
                 flex: 3,
                 child: AlumniTrendChart(
-                  title: 'Donation trend (₹L) — Finance placeholder',
+                  title: 'Donation trend (₹L)',
                   points: data.donationTrend,
                   height: chartHeight,
                 ),

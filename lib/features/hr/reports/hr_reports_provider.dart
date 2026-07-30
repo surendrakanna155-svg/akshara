@@ -10,10 +10,14 @@ final hrReportsErrorProvider = StateProvider<bool>((ref) => false);
 final hrReportsEmptyProvider = StateProvider<bool>((ref) => false);
 final hrSelectedReportIdProvider = StateProvider<String>((ref) => 'hr_headcount');
 
-/// STF-7: HR reports now derive their headline metric from the LIVE HR
+/// STF-7 + CERT-006: HR reports derive their headline metric from the LIVE HR
 /// dashboard (active staff + attendance %), using the same repository/tenant
-/// scope as every other HR provider. The static report-tile catalog is reused
-/// from [HrReportsData.mock]; only the headline is rewired to real data.
+/// scope as every other HR provider. When either KPI is absent the headline is
+/// **null** — the screen renders "Not available yet" rather than another
+/// school's `142 active staff · 96.2% attendance MTD`.
+///
+/// The report *catalog* ([kHrReportCatalog]) is static product configuration —
+/// the list of report types the module can produce — and carries no figures.
 final hrReportsFutureProvider = FutureProvider<HrReportsData>((ref) async {
   final dashboard = await ref
       .read(hrRepositoryProvider)
@@ -31,11 +35,11 @@ final hrReportsFutureProvider = FutureProvider<HrReportsData>((ref) async {
 
   final headline = (activeStaff != null && attendance != null)
       ? '$activeStaff active staff · $attendance attendance MTD'
-      : HrReportsData.mock().headlineMetric;
+      : null;
 
   return HrReportsData(
     headlineMetric: headline,
-    catalog: HrReportsData.mock().catalog,
+    catalog: kHrReportCatalog,
   );
 });
 

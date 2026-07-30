@@ -1,13 +1,27 @@
 // Discount rules — full CRUD (this file) + a live admin screen
-// (`finance_discounts_screen.dart`), but NOT-YET-APPLIED to live payable: no
-// fee-structure/invoice/assignment code path reads `finance_discount_rules` to
-// reduce a student's fee. Marking a rule "active" here only records intent —
-// it does NOT change any invoice/outstanding amount. Same not-yet-applied
-// caveat as FIN-D4 fee concessions (`finance_fee_concessions_repository.ts`);
-// wiring the actual reduction into invoice/assignment totals is a documented,
-// owner-gated follow-up.
+// (`finance_discounts_screen.dart`).
+//
+// A discount RULE is a template (name, percent, scope, status). Marking a rule
+// "approved"/"active" is a GOVERNANCE state — by itself it still changes no
+// money (a template is not a per-student charge).
+//
+// PRA-P1-10 (S1): the missing link — actually reducing a student's payable — is
+// now wired through the certified fee-reduction maker-checker
+// (`finance_fee_reductions_repository.ts`), NOT a parallel mechanism.
+// `applyDiscountRuleToInvoice` takes an approved/active rule + a student's
+// invoice and emits a PENDING fee-reduction (money-neutral) whose percent is
+// derived from the RULE (authoritative, never client-supplied). A second person
+// (never the proposer) then approves it via /finance/fee-reductions/:id/approve,
+// which is the only step that reduces the invoice + account payable, in
+// lockstep, self-approval-blocked. Applying a rule to EVERY matching student in
+// bulk (eligibility matching against `applies_to`) remains a documented,
+// owner-gated follow-up — this closes the per-student reduction path only.
 
 import type { TenantQueryClient } from "../tenant_db.ts";
+import {
+  type FinanceFeeReductionRow,
+  proposeFeeReduction,
+} from "./finance_fee_reductions_repository.ts";
 
 export type DiscountRuleStatus = "pending" | "approved" | "rejected" | "active";
 
@@ -151,4 +165,66 @@ export async function updateDiscountRule(
     ],
   );
   return rows[0]!;
+}
+
+// PRA-P1-10 (S1): raised when a rule cannot legitimately reduce a live payable —
+// it is not governance-approved (still pending/rejected) or has no usable
+// percent. Surfaced as a 422, never a 500.
+export class DiscountRuleNotApplicableError extends Error {
+  constructor(id: string, detail: string) {
+    super(`Discount rule ${id} cannot be applied to a payable (${detail})`);
+    this.name = "DiscountRuleNotApplicableError";
+  }
+}
+
+export interface ApplyDiscountRuleInput {
+  /** Discount rule to apply (its own discount_percent is authoritative). */
+  ruleId: string;
+  /** Target student invoice — student + account are resolved FROM the invoice. */
+  invoiceId: string;
+  reason?: string;
+  /** MAKER (server-set to claims.sub). Cannot later approve their own reduction. */
+  createdBy: string;
+}
+
+// PRA-P1-10 (S1): apply an approved/active discount rule to a student's invoice
+// by emitting a PENDING fee-reduction through the certified maker-checker path.
+// This changes NO money on its own — it only records the proposal, with the
+// percent taken from the RULE (never the client). The reduction becomes real
+// only when a DIFFERENT user approves it (self-approval blocked inside
+// approveFeeReduction), which reduces the invoice + account in lockstep.
+export async function applyDiscountRuleToInvoice(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  input: ApplyDiscountRuleInput,
+): Promise<FinanceFeeReductionRow> {
+  const rule = await getDiscountRule(db, organizationId, schoolId, input.ruleId);
+  if (!rule) {
+    throw new DiscountRuleNotFoundError(input.ruleId);
+  }
+  // Only a governance-approved (or active) rule may reduce a live payable — a
+  // pending/rejected rule must never touch a student's fee.
+  if (rule.status !== "approved" && rule.status !== "active") {
+    throw new DiscountRuleNotApplicableError(input.ruleId, `status=${rule.status}`);
+  }
+  const percent = Number(rule.discount_percent);
+  if (!(percent > 0 && percent <= 100)) {
+    throw new DiscountRuleNotApplicableError(
+      input.ruleId,
+      `discount_percent=${rule.discount_percent}`,
+    );
+  }
+  // Reuse the certified guarded MAKER step — do NOT duplicate its SQL/guards.
+  return await proposeFeeReduction(db, organizationId, schoolId, {
+    sourceKind: "discount",
+    sourceId: rule.id,
+    invoiceId: input.invoiceId,
+    reductionKind: "percent",
+    percent,
+    reason: input.reason && input.reason.length > 0
+      ? input.reason
+      : `Discount rule: ${rule.name}`,
+    createdBy: input.createdBy,
+  });
 }

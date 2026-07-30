@@ -83,12 +83,31 @@ Dio createDioClient({DioClientDependencies? dependencies}) {
     if (deps.readCacheStore != null)
       OfflineReadCacheInterceptor(deps.readCacheStore!),
     ApiErrorInterceptor(),
+    // Method + path + status only. Headers and bodies are NEVER logged.
+    //
+    // This used to log `requestHeader: true, requestBody: true,
+    // responseBody: true`, gated on `enableLogging` — which is false for
+    // production but TRUE for staging and development. `scripts/run_live.sh`
+    // runs a staging-configured DEBUG build against the LIVE pilot backend, so
+    // that combination printed, to the device log:
+    //   · the `Authorization: Bearer <accessToken>` header (AuthInterceptor is
+    //     registered earlier, so the token is already attached)
+    //   · the OTP itself, in the /auth/verify-otp request body
+    //   · access + refresh tokens, parent phone numbers and linked-child
+    //     profiles in the response body
+    // On a physical Android device anything able to read logcat could collect
+    // those. The release guard makes this unshippable in a store build, but the
+    // pilot/dev lane runs against real children's data, so "it can't reach
+    // production" is not the same as "it is safe".
+    //
+    // A request line is enough to debug routing and status; a body is not worth
+    // a token or a child's record.
     if (deps.environment.enableLogging)
       LogInterceptor(
-        requestHeader: true,
-        requestBody: true,
+        requestHeader: false,
+        requestBody: false,
         responseHeader: false,
-        responseBody: true,
+        responseBody: false,
       ),
   ]);
 

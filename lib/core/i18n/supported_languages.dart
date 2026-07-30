@@ -1,4 +1,4 @@
-/// Supported parent-facing languages in Akshara.
+/// Supported parent-facing languages in NIKSHA.
 enum AksharaLanguage {
   english('en', 'English'),
   telugu('te', 'Telugu'),

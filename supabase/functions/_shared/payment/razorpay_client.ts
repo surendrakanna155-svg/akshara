@@ -1,4 +1,5 @@
 import type { RazorpayConfig } from "./razorpay_config.ts";
+import { hmacSha256Hex, timingSafeEqualHex } from "../webhook_hmac.ts";
 
 export interface RazorpayOrder {
   id: string;
@@ -84,28 +85,24 @@ export async function verifyRazorpayWebhookSignature(
   body: string,
   signature: string | null,
 ): Promise<boolean> {
-  if (config.stubMode) {
-    return signature === "stub_signature" || signature === null;
-  }
-  if (!config.webhookSecret || !signature) {
+  // ICA-A5: an absent signature is unauthenticated and is NEVER valid, in any
+  // mode. The handler's RAZORPAY_ALLOW_UNSIGNED flag is the sole, off-by-default
+  // dev escape hatch. Previously `signature === null` returned true under stub
+  // mode, letting any public caller forge a payment.captured webhook.
+  if (!signature) {
     return false;
   }
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(config.webhookSecret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const digest = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    new TextEncoder().encode(body),
-  );
-  const expected = [...new Uint8Array(digest)]
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-  return expected === signature;
+  if (config.stubMode) {
+    return signature === "stub_signature";
+  }
+  if (!config.webhookSecret) {
+    return false;
+  }
+  // PRC-A Batch 5 — was `expected === signature` (timing-unsafe, a money-path
+  // side channel). Now constant-time via the shared verifier. Razorpay sends the
+  // webhook signature as lowercase hex, so compare directly against the hex digest.
+  const expected = await hmacSha256Hex(config.webhookSecret, body);
+  return timingSafeEqualHex(expected, signature);
 }
 
 export async function verifyRazorpayPaymentSignature(
@@ -120,21 +117,10 @@ export async function verifyRazorpayPaymentSignature(
   if (!config.keySecret) {
     return false;
   }
+  // PRC-A Batch 5 — constant-time (was `expected === signature`). This gate
+  // confirms a completed payment (order|payment), so a forgeable signature would
+  // let an attacker mark an order paid.
   const payload = `${orderId}|${paymentId}`;
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(config.keySecret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const digest = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    new TextEncoder().encode(payload),
-  );
-  const expected = [...new Uint8Array(digest)]
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-  return expected === signature;
+  const expected = await hmacSha256Hex(config.keySecret, payload);
+  return timingSafeEqualHex(expected, signature);
 }

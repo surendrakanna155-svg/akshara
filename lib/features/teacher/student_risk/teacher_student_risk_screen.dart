@@ -42,7 +42,24 @@ class TeacherStudentRiskScreen extends ConsumerWidget {
           ),
         ),
       ),
-      data: (snapshot) => _buildContent(context, ref, snapshot),
+      // E2E-011 — no live dossier means no dossier. The screen says so instead
+      // of rendering a fixture-composed attendance / marks / homework / fees
+      // profile for a student it knows nothing about.
+      data: (snapshot) => snapshot == null
+          ? Scaffold(
+              appBar: const AksharaAppBar(titleText: 'Student risk'),
+              body: AksharaEmptyState(
+                title: 'Risk profile not available',
+                message:
+                    'This student has no risk profile from the intelligence '
+                    'service yet. Attendance, marks, homework and fee details '
+                    'will appear here once they are published.',
+                icon: Icons.insights_outlined,
+                actionLabel: 'Open Student 360',
+                onAction: () => openStudent360(context, sisStudentId),
+              ),
+            )
+          : _buildContent(context, ref, snapshot),
     );
   }
 
@@ -51,127 +68,175 @@ class TeacherStudentRiskScreen extends ConsumerWidget {
     WidgetRef ref,
     TeacherStudentRiskSnapshot snapshot,
   ) {
-    final timeline = ref.watch(studentCommunicationTimelineProvider(sisStudentId));
-    final concerns = ref.watch(
-      pendingSubjectConcernsProvider,
-    ).valueOrNull?.where((c) => c.sisStudentId == sisStudentId).toList() ??
+    // PRA-P0-17 (S0/T2-F): provider is now async (live endpoint).
+    final timeline = ref
+            .watch(studentCommunicationTimelineProvider(sisStudentId))
+            .valueOrNull ??
+        const [];
+    final concerns = ref
+            .watch(
+              pendingSubjectConcernsProvider,
+            )
+            .valueOrNull
+            ?.where((c) => c.sisStudentId == sisStudentId)
+            .toList() ??
         const [];
 
     return Scaffold(
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
-        titleText: snapshot.studentName,
-        subtitle: '${snapshot.classLabel} · Roll ${snapshot.rollNo}',
+        titleText: snapshot.studentName.isEmpty
+            ? 'Student risk'
+            : snapshot.studentName,
+        subtitle: _identitySubtitle(snapshot),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(AksharaSpacing.s4),
-        children: [
-          AksharaSurfaceCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Risk: ${snapshot.riskLevel.name}',
-                    style: context.aksharaText.titleMedium),
-                Text(snapshot.riskFactors.join(' · ')),
-              ],
-            ),
-          ),
-          const SizedBox(height: AksharaSpacing.s3),
-          _Row('Attendance', '${snapshot.attendancePercent}% · ${snapshot.attendanceTrend}'),
-          _Row('Homework', '${snapshot.homeworkCompletionPercent}% completion'),
-          _Row('Behaviour', '${snapshot.behaviorIncidentCount} incident(s)'),
-          _Row('Fees', snapshot.feePendingLabel),
-          const SizedBox(height: AksharaSpacing.s2),
-          const AksharaSectionHeader(title: 'Subject performance'),
-          for (final entry in snapshot.subjectPerformance.entries)
-            _Row(entry.key, entry.value),
-          const SizedBox(height: AksharaSpacing.s3),
-          const AksharaSectionHeader(title: 'Communication history'),
-          Text('${snapshot.communicationHistoryCount} sent · ${concerns.length} pending review'),
-          for (final record in timeline.take(3))
-            ListTile(
-              dense: true,
-              title: Text(record.originalMessage, maxLines: 2),
-              subtitle: Text('${record.senderName} · ${record.sentAt}'),
-            ),
-          if (concerns.isNotEmpty) ...[
-            const SizedBox(height: AksharaSpacing.s3),
-            const AksharaSectionHeader(title: 'Subject teacher flags'),
-            for (final concern in concerns)
-              ListTile(
-                title: Text('${concern.subject}: ${concern.category.label}'),
-                subtitle: Text(concern.observation),
+      // DS V2 P4 — premium persona canvas behind the risk 360. The headline is a
+      // categorical risk LEVEL (not a %), so no ring — attendance/homework %s are
+      // secondary detail rows.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: ListView(
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
+          children: [
+            AksharaSurfaceCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Risk: ${snapshot.riskLevel.name}',
+                      style: context.aksharaText.titleMedium),
+                  Text(snapshot.riskFactors.join(' · ')),
+                ],
               ),
+            ),
+            const SizedBox(height: AksharaSpacing.s3),
+            // E2E-011 — every row is an honest unknown until its real source is
+            // wired. `_Row` renders "Not available" for a null value; it never
+            // shows a constant.
+            _Row('Attendance', _attendanceLabel(snapshot)),
+            _Row(
+              'Homework',
+              snapshot.homeworkCompletionPercent == null
+                  ? null
+                  : '${snapshot.homeworkCompletionPercent}% completion',
+            ),
+            _Row(
+              'Behaviour',
+              snapshot.behaviorIncidentCount == null
+                  ? null
+                  : '${snapshot.behaviorIncidentCount} incident(s)',
+            ),
+            _Row('Fees', snapshot.feePendingLabel),
+            const SizedBox(height: AksharaSpacing.s2),
+            const AksharaSectionHeader(title: 'Subject performance'),
+            if (snapshot.subjectPerformance.isEmpty)
+              const _Row('Subject marks', null)
+            else
+              for (final entry in snapshot.subjectPerformance.entries)
+                _Row(entry.key, entry.value),
+            const SizedBox(height: AksharaSpacing.s3),
+            const AksharaSectionHeader(title: 'Communication history'),
+            Text(
+                '${snapshot.communicationHistoryCount} sent · ${concerns.length} pending review'),
+            for (final record in timeline.take(3))
+              ListTile(
+                dense: true,
+                title: Text(record.originalMessage, maxLines: 2),
+                subtitle: Text('${record.senderName} · ${record.sentAt}'),
+              ),
+            if (concerns.isNotEmpty) ...[
+              const SizedBox(height: AksharaSpacing.s3),
+              const AksharaSectionHeader(title: 'Subject teacher flags'),
+              for (final concern in concerns)
+                ListTile(
+                  title: Text('${concern.subject}: ${concern.category.label}'),
+                  subtitle: Text(concern.observation),
+                ),
+            ],
+            const SizedBox(height: AksharaSpacing.s4),
+            const AksharaSectionHeader(title: 'Suggested templates'),
+            _TemplateChip(
+              label: 'Attendance',
+              onTap: () => _openComms(
+                ref,
+                context,
+                ParentCommunicationReason.attendanceLow,
+                ParentCommunicationTone.concerned,
+              ),
+            ),
+            _TemplateChip(
+              label: 'Low marks',
+              onTap: () => _openComms(
+                ref,
+                context,
+                ParentCommunicationReason.marksLow,
+                ParentCommunicationTone.encouragement,
+              ),
+            ),
+            _TemplateChip(
+              label: 'Homework',
+              onTap: () => _openComms(
+                ref,
+                context,
+                ParentCommunicationReason.homeworkMissing,
+                ParentCommunicationTone.gentleReminder,
+              ),
+            ),
+            _TemplateChip(
+              label: 'Appreciation',
+              onTap: () => _openComms(
+                ref,
+                context,
+                ParentCommunicationReason.appreciation,
+                ParentCommunicationTone.goodPerformance,
+              ),
+            ),
+            _TemplateChip(
+              label: 'Discipline',
+              onTap: () => _openComms(
+                ref,
+                context,
+                ParentCommunicationReason.disciplineIssue,
+                ParentCommunicationTone.informational,
+              ),
+            ),
+            const SizedBox(height: AksharaSpacing.s4),
+            AksharaViewAction(
+              permission: Permission.viewStudent360,
+              child: OutlinedButton.icon(
+                onPressed: () => openStudent360(context, sisStudentId),
+                icon: const Icon(Icons.hub_outlined),
+                label: const Text('Open Student 360'),
+              ),
+            ),
+            const SizedBox(height: AksharaSpacing.s3),
+            FilledButton(
+              onPressed: () => _openComms(
+                ref,
+                context,
+                ParentCommunicationReason.generalProgress,
+                ParentCommunicationTone.goodPerformance,
+              ),
+              child: const Text('Communicate with parent'),
+            ),
           ],
-          const SizedBox(height: AksharaSpacing.s4),
-          const AksharaSectionHeader(title: 'Suggested templates'),
-          _TemplateChip(
-            label: 'Attendance',
-            onTap: () => _openComms(
-              ref,
-              context,
-              ParentCommunicationReason.attendanceLow,
-              ParentCommunicationTone.concerned,
-            ),
-          ),
-          _TemplateChip(
-            label: 'Low marks',
-            onTap: () => _openComms(
-              ref,
-              context,
-              ParentCommunicationReason.marksLow,
-              ParentCommunicationTone.encouragement,
-            ),
-          ),
-          _TemplateChip(
-            label: 'Homework',
-            onTap: () => _openComms(
-              ref,
-              context,
-              ParentCommunicationReason.homeworkMissing,
-              ParentCommunicationTone.gentleReminder,
-            ),
-          ),
-          _TemplateChip(
-            label: 'Appreciation',
-            onTap: () => _openComms(
-              ref,
-              context,
-              ParentCommunicationReason.appreciation,
-              ParentCommunicationTone.goodPerformance,
-            ),
-          ),
-          _TemplateChip(
-            label: 'Discipline',
-            onTap: () => _openComms(
-              ref,
-              context,
-              ParentCommunicationReason.disciplineIssue,
-              ParentCommunicationTone.informational,
-            ),
-          ),
-          const SizedBox(height: AksharaSpacing.s4),
-          AksharaViewAction(
-            permission: Permission.viewStudent360,
-            child: OutlinedButton.icon(
-              onPressed: () => openStudent360(context, sisStudentId),
-              icon: const Icon(Icons.hub_outlined),
-              label: const Text('Open Student 360'),
-            ),
-          ),
-          const SizedBox(height: AksharaSpacing.s3),
-          FilledButton(
-            onPressed: () => _openComms(
-              ref,
-              context,
-              ParentCommunicationReason.generalProgress,
-              ParentCommunicationTone.goodPerformance,
-            ),
-            child: const Text('Communicate with parent'),
-          ),
-        ],
+        ),
       ),
     );
+  }
+
+  static String? _identitySubtitle(TeacherStudentRiskSnapshot snapshot) {
+    final parts = <String>[
+      if (snapshot.classLabel.isNotEmpty) snapshot.classLabel,
+      if (snapshot.rollNo.isNotEmpty) 'Roll ${snapshot.rollNo}',
+    ];
+    return parts.isEmpty ? null : parts.join(' · ');
+  }
+
+  static String? _attendanceLabel(TeacherStudentRiskSnapshot snapshot) {
+    final percent = snapshot.attendancePercent;
+    if (percent == null) return null;
+    final trend = snapshot.attendanceTrend;
+    return trend == null ? '$percent%' : '$percent% · $trend';
   }
 
   void _openComms(
@@ -191,14 +256,25 @@ class TeacherStudentRiskScreen extends ConsumerWidget {
 class _Row extends StatelessWidget {
   const _Row(this.label, this.value);
   final String label;
-  final String value;
+
+  /// Null renders the honest unknown, never a placeholder figure.
+  final String? value;
 
   @override
   Widget build(BuildContext context) {
+    final value = this.value;
     return ListTile(
       dense: true,
       title: Text(label),
-      trailing: Text(value, style: context.aksharaText.bodyMedium),
+      trailing: value == null
+          ? Text(
+              'Not available',
+              style: context.aksharaText.bodyMedium.copyWith(
+                color: context.colors.onSurfaceVariant,
+                fontStyle: FontStyle.italic,
+              ),
+            )
+          : Text(value, style: context.aksharaText.bodyMedium),
     );
   }
 }

@@ -142,7 +142,7 @@ Deno.test("QA-B-008: setup-wizard rejects an unauthenticated caller (401)", asyn
   assertEquals(res!.status, 401);
 });
 
-Deno.test("QA-B-008: an unregistered setup-wizard path returns 404", async () => {
+Deno.test("QA-B-008: an unregistered setup-wizard path returns null (central dispatcher 404s)", async () => {
   const res = await call("GET", "/setup-wizard/unknown", ["viewSchoolSetup"]);
-  assertEquals(res!.status, 404);
+  assertEquals(res, null);
 });

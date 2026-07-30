@@ -15,6 +15,14 @@ class AssignFeePlanRequestDto {
         if (request.admissionNumber.isNotEmpty)
           'admission_number': request.admissionNumber,
         if (request.classLabel.isNotEmpty) 'class_label': request.classLabel,
+        // Cap 73 — mid-year admission proration inputs.
+        if (request.admissionDate?.isNotEmpty ?? false)
+          'admission_date': request.admissionDate,
+        if (request.prorationPolicyOverride != null)
+          'proration_policy_override':
+              request.prorationPolicyOverride!.apiValue,
+        if (request.prorationOverrideReason?.isNotEmpty ?? false)
+          'proration_override_reason': request.prorationOverrideReason,
       },
     );
   }

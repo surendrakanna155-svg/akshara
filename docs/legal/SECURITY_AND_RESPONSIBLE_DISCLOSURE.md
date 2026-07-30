@@ -1,10 +1,10 @@
-# Akshara ERP — Security & Responsible Disclosure Policy
+# NIKSHA OS — Security & Responsible Disclosure Policy
 
 **Document version:** 1.0
 **Status:** Draft for owner sign-off (see [PLACEHOLDERS.md](PLACEHOLDERS.md))
-**Operator:** **[LEGAL ENTITY NAME]** ("Akshara", "we", "us").
+**Operator:** **NIKSHA Technologies Pvt. Ltd.** ("NIKSHA OS", "we", "us").
 
-> This document describes the security measures protecting Akshara ERP, how we
+> This document describes the security measures protecting NIKSHA OS, how we
 > handle data breaches, and how security researchers can report vulnerabilities
 > safely. It supports the [Privacy Policy](PRIVACY_POLICY.md).
 

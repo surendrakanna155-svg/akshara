@@ -183,7 +183,7 @@ void main() {
 
     expect(find.byKey(QaTestKeys.organizationBuilderHubScreen), findsOneWidget);
     expect(find.text('Education'), findsOneWidget);
-    // Akshara is education-only: the salon/hospital/restaurant packs are gated
+    // NIKSHA is education-only: the salon/hospital/restaurant packs are gated
     // out of the picker even when the repository returns them (hide-first).
     expect(find.text('Salon'), findsNothing);
     // Existing interview drafts are NOT gated — only the pack picker is — so a

@@ -5,7 +5,7 @@
 #
 # Usage:
 #   API_BASE_URL=http://127.0.0.1:54321/functions/v1/api scripts/admissions_crm_b1_smoke.sh   # local
-#   API_BASE_URL=https://akshara.veloraunisexsalon.com    scripts/admissions_crm_b1_smoke.sh   # live VPS (root)
+#   API_BASE_URL=https://api.nikshaos.in    scripts/admissions_crm_b1_smoke.sh   # live VPS (root)
 set -euo pipefail
 
 BASE="${API_BASE_URL:-http://127.0.0.1:54321/functions/v1/api}"

@@ -73,6 +73,7 @@ class AdaptiveAiRemoteDataSource {
     required RepositoryQuery query,
     required String term,
     int? limit,
+    int? offset,
   }) async {
     final response = await _dio.get<Map<String, dynamic>>(
       AdaptiveAiApiPaths.search,
@@ -80,6 +81,7 @@ class AdaptiveAiRemoteDataSource {
         ..._queryParams(query),
         'q': term,
         if (limit != null) 'limit': limit,
+        if (offset != null) 'offset': offset,
       },
     );
     return UniversalSearchResultDto.fromEnvelopeData(parseAdaptiveEnvelope(_responseMap(response)));

@@ -126,7 +126,7 @@ Deno.test("QA-B-031: POST /legal/accept persists a valid acceptance (binds calle
       "/legal/accept",
       token,
       { acceptances: [{ key: SAMPLE_KEY, version: SAMPLE_VERSION }], device_id: "dev-xyz" },
-      { "x-forwarded-for": "203.0.113.7", "user-agent": "Akshara/1.0" },
+      { "x-forwarded-for": "203.0.113.7", "user-agent": "NIKSHA/1.0" },
     ),
     config,
     "POST",
@@ -192,10 +192,10 @@ Deno.test("QA-B-031: POST /legal/accept rejects a stale policy version (409 POLI
   assertEquals(env.error.code, "POLICY_VERSION_MISMATCH");
 });
 
-Deno.test("QA-B-031: an unregistered /legal path returns 404; a foreign path returns null", async () => {
+Deno.test("QA-B-031: an unregistered /legal path returns null (central dispatcher 404s); a foreign path returns null", async () => {
   const token = await signAccessToken(SECRET, claims(), 900);
   const notFound = await routeLegal(req("GET", "/legal/nope", token), config, "GET", "/legal/nope");
-  assertEquals(notFound?.status, 404);
+  assertEquals(notFound, null);
   const foreign = await routeLegal(req("GET", "/student/exams", null), config, "GET", "/student/exams");
   assertEquals(foreign, null);
 });

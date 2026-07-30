@@ -7,12 +7,15 @@ import type { TenantQueryClient } from "../tenant_db.ts";
 import { InvalidStudentStatusTransitionError } from "./sis_status_codec.ts";
 import { StudentNotFoundError } from "./sis_students_repository.ts";
 import {
+  certificateDataToApi,
   formatTcSerial,
   InvalidCertificateTypeError,
   issueCertificate,
   issueTransferCertificate,
   NoDuesPendingError,
   outstandingForStudent,
+  SIMPLE_CERTIFICATE_TYPES,
+  TC_FINANCE_CLEARANCE_STATEMENT,
 } from "./sis_certificates_repository.ts";
 
 const ORG = "a1000000-0000-4000-8000-000000000001";
@@ -35,6 +38,14 @@ interface StudentSeed {
   guardianName?: string;
 }
 
+interface FeeAccountSeed {
+  academicYear: string;
+  totalFee: number;
+  amountPaid: number;
+  outstandingAmount: number;
+  status: string;
+}
+
 /**
  * Faithful in-memory model of the exact SQL the certificates repository issues.
  * Reproduces: getStudent's three SELECTs (students / student_profiles /
@@ -53,12 +64,31 @@ class CertMockDb {
   tcCounters = new Map<string, number>();
   issues: Row[] = [];
   statusUpdates: Array<{ id: string; status: string }> = [];
+  // SCE-1 slice 3: student_id -> an approved waiver's covered amount (or absent).
+  approvedWaivers = new Map<string, number>();
+  waiverConsumed: Array<{ studentId: string; issueId: string }> = [];
+  clearanceSnapshots: Array<{ issueId: string; amount: number; waiverId: string | null }> = [];
+  // "fee" certificate — student_id -> per-academic-year finance_student_accounts rows.
+  feeAccounts = new Map<string, FeeAccountSeed[]>();
+  // PRA-P1-20: student_code -> library obligations (un-waived fines + unreturned books).
+  libraryDues = new Map<string, { fine: number; unreturned: number }>();
 
   seedStudent(seed: StudentSeed) {
     this.students.set(seed.id, seed);
   }
   seedOpenAccounts(studentId: string, amounts: number[]) {
     this.openAccounts.set(studentId, amounts);
+  }
+  seedApprovedWaiver(studentId: string, coveredAmount: number) {
+    this.approvedWaivers.set(studentId, coveredAmount);
+  }
+  seedFeeAccount(studentId: string, account: FeeAccountSeed) {
+    const existing = this.feeAccounts.get(studentId) ?? [];
+    existing.push(account);
+    this.feeAccounts.set(studentId, existing);
+  }
+  seedLibraryDues(studentCode: string, dues: { fine: number; unreturned: number }) {
+    this.libraryDues.set(studentCode, dues);
   }
 
   // deno-lint-ignore require-await
@@ -141,6 +171,53 @@ class CertMockDb {
       const sum = amounts.reduce((a, b) => a + b, 0);
       return [{ outstanding: String(sum) }] as T[];
     }
+    // PRA-P1-20: library dues (fine total + unreturned-book count) keyed by code.
+    if (sql.includes("FROM library_entities") && sql.includes("entity_type = 'fine'")) {
+      const dues = this.libraryDues.get(String(args[2])) ?? { fine: 0, unreturned: 0 };
+      return [{ fine: String(dues.fine), unreturned: String(dues.unreturned) }] as T[];
+    }
+    // "fee" certificate — single-year finance_student_accounts pull (real data,
+    // never fabricated). Preferred-year lookup carries `academic_year = $4`;
+    // the fallback (no current enrollment / no row for that year) omits it and
+    // picks the most recent account by academic_year.
+    if (sql.includes("FROM finance_student_accounts") && sql.includes("total_fee::text")) {
+      const accounts = this.feeAccounts.get(String(args[2])) ?? [];
+      if (accounts.length === 0) return [] as T[];
+      const toRow = (a: FeeAccountSeed) => ({
+        academic_year: a.academicYear,
+        total_fee: String(a.totalFee),
+        amount_paid: String(a.amountPaid),
+        outstanding_amount: String(a.outstandingAmount),
+        status: a.status,
+      });
+      if (sql.includes("academic_year = $4")) {
+        const match = accounts.find((a) => a.academicYear === String(args[3]));
+        return match ? [toRow(match)] as T[] : [] as T[];
+      }
+      const sorted = [...accounts].sort((a, b) => b.academicYear.localeCompare(a.academicYear));
+      return [toRow(sorted[0]!)] as T[];
+    }
+    // SCE-1 slice 3 — the gate's approved-waiver lookup.
+    if (sql.includes("FROM student_clearance_waivers") && sql.includes("status = 'approved'")) {
+      const covered = this.approvedWaivers.get(String(args[2]));
+      return covered === undefined
+        ? [] as T[]
+        : [{ id: "waiver-1", blocking_amount: String(covered) }] as T[];
+    }
+    // SCE-1 slice 3 — consume the covering waiver on issue.
+    if (sql.includes("UPDATE student_clearance_waivers") && sql.includes("status = 'consumed'")) {
+      this.waiverConsumed.push({ studentId: String(args[2]), issueId: String(args[4]) });
+      return [{ id: "waiver-1", status: "consumed" }] as T[];
+    }
+    // SCE-1 slice 3 — the clearance snapshot onto the issue row.
+    if (sql.includes("UPDATE sis_certificate_issues") && sql.includes("clearance_snapshot_amount")) {
+      this.clearanceSnapshots.push({
+        issueId: String(args[2]),
+        amount: Number(args[0]),
+        waiverId: args[1] === null ? null : String(args[1]),
+      });
+      return [] as T[];
+    }
     // TC serial ON CONFLICT counter — mirrors allocatePublicStudentId arithmetic
     if (sql.includes("INSERT INTO school_tc_counters")) {
       const key = `${args[0]}|${args[1]}`;
@@ -179,10 +256,15 @@ class CertMockDb {
     }
     // status UPDATE
     if (sql.includes("UPDATE students SET") && sql.includes("status = $1")) {
-      this.statusUpdates.push({ id: String(args[1]), status: String(args[0]) });
       const s = this.students.get(String(args[1]));
-      if (s) s.status = String(args[0]);
-      return [] as T[];
+      // Honor the terminal `AND status = $5` guard: the transition applies only
+      // while the student is still in the status we read+validated. A concurrent
+      // TC issuance that already flipped it yields zero rows → the repository
+      // throws + rolls back, so no duplicate certificate is minted.
+      if (!s || s.status !== String(args[4])) return [] as T[];
+      this.statusUpdates.push({ id: String(args[1]), status: String(args[0]) });
+      s.status = String(args[0]);
+      return [{ id: String(args[1]) }] as T[];
     }
     return [] as T[];
   }
@@ -269,6 +351,125 @@ Deno.test("issueCertificate: 'transfer' is rejected here (must use the TC engine
   assertEquals(mock.issues.length, 0);
 });
 
+Deno.test("SIMPLE_CERTIFICATE_TYPES includes 'fee' (a plain recorded issuance, no status change)", () => {
+  assertEquals(SIMPLE_CERTIFICATE_TYPES.includes("fee"), true);
+  assertEquals(SIMPLE_CERTIFICATE_TYPES.includes("transfer"), false);
+});
+
+Deno.test("issueCertificate: fee — pulls the REAL finance summary for the current-enrollment academic year", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({
+    id: STUDENT,
+    status: "active",
+    displayName: "Meera Iyer",
+    className: "Grade 10",
+    academicYear: "2026-2027",
+  });
+  mock.seedFeeAccount(STUDENT, {
+    academicYear: "2026-2027",
+    totalFee: 50000,
+    amountPaid: 30000,
+    outstandingAmount: 20000,
+    status: "open",
+  });
+  // A prior year's account must NOT be picked when the current year matches.
+  mock.seedFeeAccount(STUDENT, {
+    academicYear: "2025-2026",
+    totalFee: 45000,
+    amountPaid: 45000,
+    outstandingAmount: 0,
+    status: "closed",
+  });
+  const client = mock as unknown as TenantQueryClient;
+
+  const data = await issueCertificate(client, ORG, SCHOOL, {
+    studentId: STUDENT,
+    type: "fee",
+    reason: "income tax filing",
+    issuedBy: STAFF,
+  });
+
+  // Simple issuance: no serial, no status change.
+  assertEquals(mock.issues.length, 1);
+  assertEquals(mock.issues[0]?.certificate_type, "fee");
+  assertEquals(data.serialNo, null);
+  assertEquals(mock.statusUpdates.length, 0);
+  // The real finance pull — the CURRENT year's account, not the prior one.
+  assertEquals(data.fee, {
+    academicYear: "2026-2027",
+    totalFee: 50000,
+    amountPaid: 30000,
+    outstanding: 20000,
+    accountStatus: "open",
+  });
+});
+
+Deno.test("issueCertificate: fee — falls back to the most recent account when there is no current enrollment", async () => {
+  const mock = new CertMockDb();
+  // No className -> getStudent's enrollment mock returns no current enrollment.
+  mock.seedStudent({ id: STUDENT, status: "alumni" });
+  mock.seedFeeAccount(STUDENT, {
+    academicYear: "2024-2025",
+    totalFee: 40000,
+    amountPaid: 40000,
+    outstandingAmount: 0,
+    status: "closed",
+  });
+  mock.seedFeeAccount(STUDENT, {
+    academicYear: "2025-2026",
+    totalFee: 42000,
+    amountPaid: 42000,
+    outstandingAmount: 0,
+    status: "closed",
+  });
+  const client = mock as unknown as TenantQueryClient;
+
+  const data = await issueCertificate(client, ORG, SCHOOL, {
+    studentId: STUDENT,
+    type: "fee",
+    issuedBy: STAFF,
+  });
+
+  assertEquals(data.fee?.academicYear, "2025-2026", "picks the most recent account, not the oldest");
+  assertEquals(data.fee?.totalFee, 42000);
+});
+
+Deno.test("issueCertificate: fee — no finance account at all -> fee is null, NEVER fabricated", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({ id: STUDENT, status: "active", className: "Grade 3", academicYear: "2026-2027" });
+  // No seedFeeAccount call at all.
+  const client = mock as unknown as TenantQueryClient;
+
+  const data = await issueCertificate(client, ORG, SCHOOL, {
+    studentId: STUDENT,
+    type: "fee",
+    issuedBy: STAFF,
+  });
+
+  assertEquals(data.fee, null);
+  assertEquals(mock.issues.length, 1, "the certificate is still recorded even with no finance data");
+});
+
+Deno.test("issueCertificate: non-fee types never carry a fee summary", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({ id: STUDENT, status: "active", className: "Grade 5" });
+  mock.seedFeeAccount(STUDENT, {
+    academicYear: "2026-2027",
+    totalFee: 10000,
+    amountPaid: 10000,
+    outstandingAmount: 0,
+    status: "closed",
+  });
+  const client = mock as unknown as TenantQueryClient;
+
+  const data = await issueCertificate(client, ORG, SCHOOL, {
+    studentId: STUDENT,
+    type: "bonafide",
+    issuedBy: STAFF,
+  });
+  assertEquals(data.fee, null);
+});
+
 Deno.test("issueCertificate: an unknown type is a validation error", async () => {
   const mock = new CertMockDb();
   mock.seedStudent({ id: STUDENT, status: "active" });
@@ -337,6 +538,284 @@ Deno.test("issueTransferCertificate: outstanding>0 -> 409 DUES_PENDING, NOTHING 
   assertEquals(mock.peekTcCounter(), undefined);
   assertEquals(mock.issues.length, 0);
   assertEquals(mock.statusUpdates.length, 0);
+});
+
+// ── PRA-P1-20: library dues also block the TC (no false "dues cleared") ────────
+
+Deno.test("PRA-P1-20: an unpaid LIBRARY FINE (fees clear) blocks the TC, nothing written", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({ id: STUDENT, status: "active", className: "Grade 8" });
+  mock.seedOpenAccounts(STUDENT, []); // fees clear
+  mock.seedLibraryDues("STU-2026-00001", { fine: 120, unreturned: 0 });
+  const client = mock as unknown as TenantQueryClient;
+
+  const error = await assertRejects(
+    () => issueTransferCertificate(client, ORG, SCHOOL, {
+      studentId: STUDENT,
+      reason: "relocation",
+      issuedBy: STAFF,
+    }),
+    NoDuesPendingError,
+  );
+  assertEquals(error.libraryFine, 120);
+  assertStringIncludes(error.message, "library fines");
+  // Gate blocks BEFORE any write — the TC would have lied "dues cleared".
+  assertEquals(mock.peekTcCounter(), undefined);
+  assertEquals(mock.issues.length, 0);
+  assertEquals(mock.statusUpdates.length, 0);
+});
+
+Deno.test("PRA-P1-20: an UNRETURNED BOOK (fees + fines clear) blocks the TC", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({ id: STUDENT, status: "active", className: "Grade 8" });
+  mock.seedOpenAccounts(STUDENT, []);
+  mock.seedLibraryDues("STU-2026-00001", { fine: 0, unreturned: 1 });
+  const client = mock as unknown as TenantQueryClient;
+
+  const error = await assertRejects(
+    () => issueTransferCertificate(client, ORG, SCHOOL, {
+      studentId: STUDENT,
+      reason: "relocation",
+      issuedBy: STAFF,
+    }),
+    NoDuesPendingError,
+  );
+  assertEquals(error.unreturnedBooks, 1);
+  assertStringIncludes(error.message, "unreturned library book");
+  assertEquals(mock.issues.length, 0);
+});
+
+Deno.test("PRA-P1-20: fees + library both clear -> TC issues normally (control)", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({ id: STUDENT, status: "active", className: "Grade 8", academicYear: "2026-2027" });
+  mock.seedOpenAccounts(STUDENT, []);
+  mock.seedLibraryDues("STU-2026-00001", { fine: 0, unreturned: 0 });
+  const client = mock as unknown as TenantQueryClient;
+
+  const result = await issueTransferCertificate(client, ORG, SCHOOL, {
+    studentId: STUDENT,
+    reason: "relocation",
+    issuedBy: STAFF,
+  });
+  assertEquals(mock.issues.length, 1);
+  assertEquals(result.certificate.student.status, "transferred");
+});
+
+// ── ICA-H2: the TC asserts ONLY finance clearance, never a blanket "all dues" ──
+
+Deno.test("ICA-H2: an issued TC carries a FINANCE-scoped clearance statement, never 'all dues'", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({ id: STUDENT, status: "active", className: "Grade 8", academicYear: "2026-2027" });
+  mock.seedOpenAccounts(STUDENT, []); // finance clear → gate passes
+  const client = mock as unknown as TenantQueryClient;
+
+  const result = await issueTransferCertificate(client, ORG, SCHOOL, {
+    studentId: STUDENT,
+    reason: "relocation",
+    issuedBy: STAFF,
+  });
+
+  // The statement is present and scoped to the ONLY gate-verified source: finance.
+  assertEquals(result.certificate.clearanceStatement, TC_FINANCE_CLEARANCE_STATEMENT);
+  assertStringIncludes(result.certificate.clearanceStatement ?? "", "financial dues");
+  // It must NOT over-claim clearance of advisory (inventory/library) dues.
+  assertEquals(
+    (result.certificate.clearanceStatement ?? "").toLowerCase().includes("all dues have been cleared"),
+    false,
+    "the TC must never assert an unconditional 'all dues have been cleared'",
+  );
+
+  // The API projection the client PDF reads carries the same truthful sentence.
+  const api = certificateDataToApi(result.certificate);
+  assertEquals(api.clearanceStatement, TC_FINANCE_CLEARANCE_STATEMENT);
+});
+
+Deno.test("ICA-H2: a non-transfer certificate makes NO dues claim (clearanceStatement null)", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({ id: STUDENT, status: "active", className: "Grade 5" });
+  const client = mock as unknown as TenantQueryClient;
+
+  const data = await issueCertificate(client, ORG, SCHOOL, {
+    studentId: STUDENT,
+    type: "bonafide",
+    issuedBy: STAFF,
+  });
+
+  assertEquals(data.clearanceStatement, null);
+  assertEquals(certificateDataToApi(data).clearanceStatement, null);
+});
+
+Deno.test("issueTransferCertificate (SCE-1): a net-zero balance (due offset by a credit) CLEARS — the engine blocks on the authoritative NET, not per-account", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({ id: STUDENT, status: "active", className: "Grade 8" });
+  // +5000 owed in one open account, -5000 credit in another → net 0 → clears.
+  // (A per-account >0 list would have wrongly blocked on the 5000 line.)
+  mock.seedOpenAccounts(STUDENT, [5000, -5000]);
+  const client = mock as unknown as TenantQueryClient;
+
+  const result = await issueTransferCertificate(client, ORG, SCHOOL, {
+    studentId: STUDENT,
+    reason: "relocation",
+    issuedBy: STAFF,
+  });
+  // The TC is issued (net dues are zero): serial burned, status flipped.
+  assertEquals(result.serialNo.length > 0, true);
+  assertEquals(mock.statusUpdates.at(-1)?.status, "transferred");
+});
+
+Deno.test("issueTransferCertificate (SCE-1 slice 3): an APPROVED waiver covering the dues clears the block — TC issued, waiver consumed, decision snapshotted", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({ id: STUDENT, status: "active", className: "Grade 8" });
+  mock.seedOpenAccounts(STUDENT, [200]);       // ₹200 blocking dues
+  mock.seedApprovedWaiver(STUDENT, 200);        // an approved waiver covering ₹200
+  const client = mock as unknown as TenantQueryClient;
+
+  const result = await issueTransferCertificate(client, ORG, SCHOOL, {
+    studentId: STUDENT,
+    reason: "waived at exit",
+    issuedBy: STAFF,
+  });
+
+  // The TC issued despite the dues (the waiver covered them).
+  assertEquals(result.serialNo.length > 0, true);
+  assertEquals(mock.statusUpdates.at(-1)?.status, "transferred");
+  // The waiver was consumed (single-use) against this issue.
+  assertEquals(mock.waiverConsumed.length, 1);
+  assertEquals(mock.waiverConsumed[0].studentId, STUDENT);
+  // The clearance decision is snapshotted: the pre-waiver dues + the waiver id.
+  assertEquals(mock.clearanceSnapshots.length, 1);
+  assertEquals(mock.clearanceSnapshots[0].amount, 200);
+  assertEquals(mock.clearanceSnapshots[0].waiverId, "waiver-1");
+});
+
+Deno.test("issueTransferCertificate (SCE-1 slice 3): a covering waiver ALREADY CONSUMED by a concurrent issue re-blocks (fail closed, no second TC, no dishonest snapshot)", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({ id: STUDENT, status: "active", className: "Grade 8" });
+  mock.seedOpenAccounts(STUDENT, [200]);
+  mock.seedApprovedWaiver(STUDENT, 200);
+  // Simulate the race: findActiveWaiver still returns the approved row (this txn
+  // read before the other committed), but consumeWaiver finds nothing 'approved'
+  // to claim (the other txn consumed it) → returns null.
+  const raced = {
+    // deno-lint-ignore require-await
+    async queryObject<T>(sql: string, args: unknown[] = []): Promise<T[]> {
+      if (sql.includes("UPDATE student_clearance_waivers") && sql.includes("status = 'consumed'")) {
+        return [] as T[]; // nothing approved to consume — lost the race
+      }
+      return mock.queryObject<T>(sql, args);
+    },
+    queryCount: () => Promise.resolve(0),
+  } as unknown as TenantQueryClient;
+
+  const error = await assertRejects(
+    () => issueTransferCertificate(raced, ORG, SCHOOL, {
+      studentId: STUDENT,
+      reason: "waived at exit",
+      issuedBy: STAFF,
+    }),
+    NoDuesPendingError,
+  );
+  assertEquals(error.outstanding, 200, "re-blocks with the pre-waiver dues");
+  // Fail closed: the throw is at the consume step, BEFORE the status flip and
+  // snapshot — neither ran. (The serial/issue inserted just before are rolled
+  // back by the enclosing withTenantContext txn in production — the mock can't
+  // model rollback, so we assert the post-throw steps that provably never ran.)
+  assertEquals(mock.statusUpdates.length, 0, "student was NOT flipped to transferred");
+  assertEquals(mock.clearanceSnapshots.length, 0, "no dishonest snapshot written");
+});
+
+Deno.test("issueTransferCertificate: a concurrent TC on the ZERO-dues path fails closed (RT-10-1 — no duplicate certificate)", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({ id: STUDENT, status: "active", className: "Grade 8" });
+  // No open accounts, no waiver → the common no-dues path, where the waiver
+  // single-use consume guard does NOT run. Simulate a concurrent TC that already
+  // flipped the student to 'transferred' between our read and our write: the
+  // terminal `UPDATE students ... AND status = $5` matches 0 rows.
+  const raced = {
+    // deno-lint-ignore require-await
+    async queryObject<T>(sql: string, args: unknown[] = []): Promise<T[]> {
+      if (sql.includes("UPDATE students SET") && sql.includes("status = $1")) {
+        return [] as T[]; // the winner already transferred this student
+      }
+      return mock.queryObject<T>(sql, args);
+    },
+    queryCount: () => Promise.resolve(0),
+  } as unknown as TenantQueryClient;
+
+  await assertRejects(
+    () =>
+      issueTransferCertificate(raced, ORG, SCHOOL, {
+        studentId: STUDENT,
+        reason: "relocation",
+        issuedBy: STAFF,
+      }),
+    InvalidStudentStatusTransitionError,
+  );
+  // The status flip provably never committed; in production the enclosing
+  // withTenantContext txn rolls back the just-inserted issue row + serial, so no
+  // second serially-numbered legal document is minted.
+  assertEquals(mock.statusUpdates.length, 0, "no second transfer committed");
+});
+
+Deno.test("issueTransferCertificate (SCE-1 slice 3): a waiver that NO LONGER covers grown dues does NOT clear — still 409, no write", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({ id: STUDENT, status: "active", className: "Grade 8" });
+  mock.seedOpenAccounts(STUDENT, [900]);        // dues grew to ₹900
+  mock.seedApprovedWaiver(STUDENT, 200);         // waiver only covers ₹200
+  const client = mock as unknown as TenantQueryClient;
+
+  const error = await assertRejects(
+    () => issueTransferCertificate(client, ORG, SCHOOL, {
+      studentId: STUDENT,
+      reason: "relocation",
+      issuedBy: STAFF,
+    }),
+    NoDuesPendingError,
+  );
+  assertEquals(error.outstanding, 900);
+  assertEquals(mock.issues.length, 0);
+  assertEquals(mock.waiverConsumed.length, 0);   // an insufficient waiver is NOT consumed
+  assertEquals(mock.statusUpdates.length, 0);
+});
+
+Deno.test("issueTransferCertificate (SCE-1): 0-dues TC snapshots amount 0 with no waiver", async () => {
+  const mock = new CertMockDb();
+  mock.seedStudent({ id: STUDENT, status: "active", className: "Grade 8" });
+  mock.seedOpenAccounts(STUDENT, []);
+  const client = mock as unknown as TenantQueryClient;
+  await issueTransferCertificate(client, ORG, SCHOOL, { studentId: STUDENT, issuedBy: STAFF });
+  assertEquals(mock.clearanceSnapshots.length, 1);
+  assertEquals(mock.clearanceSnapshots[0].amount, 0);
+  assertEquals(mock.clearanceSnapshots[0].waiverId, null);
+  assertEquals(mock.waiverConsumed.length, 0);
+});
+
+Deno.test("issueTransferCertificate (SCE-1): the gate FAILS CLOSED — a finance read error rolls back with NO write, never an un-gated TC", async () => {
+  const base = new CertMockDb();
+  base.seedStudent({ id: STUDENT, status: "active", className: "Grade 8" });
+  // Wrap the mock so the finance no-dues SUM throws (a DB outage on the gate).
+  const client = {
+    // deno-lint-ignore require-await
+    async queryObject<T>(sql: string, args: unknown[] = []): Promise<T[]> {
+      if (sql.includes("SUM(outstanding_amount)")) throw new Error("finance db unavailable");
+      return base.queryObject<T>(sql, args);
+    },
+    queryCount: () => Promise.resolve(0),
+  } as unknown as TenantQueryClient;
+
+  await assertRejects(
+    () => issueTransferCertificate(client, ORG, SCHOOL, {
+      studentId: STUDENT,
+      reason: "relocation",
+      issuedBy: STAFF,
+    }),
+    Error,
+    "finance db unavailable",
+  );
+  // Fail-closed: nothing was written (no serial, no issue row, no status change).
+  assertEquals(base.peekTcCounter(), undefined);
+  assertEquals(base.issues.length, 0);
+  assertEquals(base.statusUpdates.length, 0);
 });
 
 Deno.test("issueTransferCertificate: already-transferred student -> status-codec rejection (no write)", async () => {

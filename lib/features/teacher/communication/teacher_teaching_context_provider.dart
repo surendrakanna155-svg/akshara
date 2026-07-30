@@ -48,12 +48,6 @@ final resolvedTeacherTeachingContextProvider =
       ref.watch(teacherTeachingContextProvider);
 });
 
-final classStudentsNeedingAttentionProvider =
-    Provider<List<StudentAttentionItem>>((ref) {
-  final context = ref.watch(resolvedTeacherTeachingContextProvider);
-  return TeacherStudentRiskService.attentionForClass(context);
-});
-
 final pendingSubjectConcernsProvider =
     FutureProvider<List<SubjectTeacherConcern>>((ref) async {
   final context = ref.watch(resolvedTeacherTeachingContextProvider);
@@ -63,58 +57,50 @@ final pendingSubjectConcernsProvider =
       );
 });
 
-/// Class-teacher 360 risk snapshot.
+/// Class-teacher 360 risk snapshot — **live only** (E2E-011).
 ///
-/// When the live Intelligence backend is enabled (INTELLIGENCE_API_ENABLED) the
-/// authoritative risk verdict (level + reasons + score) is sourced from
-/// `/intelligence/risk/*` via [intelligenceRepositoryProvider]; the locally
-/// computed snapshot supplies the per-metric display rows. On any live failure
-/// (or when the module is off) it falls back to the deterministic mock snapshot.
+/// The dossier is sourced from `/intelligence/risk/*` via
+/// [intelligenceRepositoryProvider]. It returns `null` when the intelligence
+/// module is off, when the call fails, or when the student is not in the live
+/// feed — the screen then renders an honest "not available" state.
+///
+/// It used to fall back to `TeacherStudentRiskService.snapshotForStudent`, a
+/// fixture composition that fabricated attendance (92), marks (75), homework
+/// (80) and a fee statement (`₹4,200 due` for `acct_ravi`, else `No dues`).
+/// The live merge replaced only the risk level/score/reasons, so every metric
+/// row a class teacher read before a parent meeting was fabricated. That base
+/// is gone; the four metrics stay `null` until each is wired to its real source
+/// (`/attendance/*`, the exams feed, the homework store,
+/// `/finance/student-accounts`).
 final teacherStudentRiskSnapshotProvider =
-    FutureProvider.family<TeacherStudentRiskSnapshot, String>(
+    FutureProvider.family<TeacherStudentRiskSnapshot?, String>(
         (ref, sisStudentId) async {
-  final base = TeacherStudentRiskService.snapshotForStudent(sisStudentId);
+  if (!isModuleApiEnabled(ref, intelligenceApiEnabledProvider)) return null;
 
-  if (!isModuleApiEnabled(ref, intelligenceApiEnabledProvider)) {
-    return base;
-  }
-
-  try {
-    final repo = ref.read(intelligenceRepositoryProvider);
-    final query = ref.read(repositoryQueryProvider);
-    final risks = await repo.listStudentRisks(query: query);
-    final live = _matchLiveRisk(risks, base);
-    if (live == null) return base;
-    return _mergeLiveRisk(base, live);
-  } catch (_) {
-    // Live unavailable (no backend / network / key) — graceful mock fallback.
-    return base;
-  }
+  final repo = ref.read(intelligenceRepositoryProvider);
+  final query = ref.read(repositoryQueryProvider);
+  final risks = await repo.listStudentRisks(query: query);
+  final live = _matchLiveRisk(risks, sisStudentId);
+  if (live == null) return null;
+  return _snapshotFromLive(sisStudentId, live);
 });
 
-/// Matches a live risk snapshot to the resolved student. The live backend keys
-/// on the DB student UUID while the UI carries the SIS id, so we match on the
-/// student name as the stable cross-source identifier, falling back to the id.
+/// Matches a live risk snapshot to the student id the UI carries.
 intel.StudentRiskSnapshot? _matchLiveRisk(
   List<intel.StudentRiskSnapshot> risks,
-  TeacherStudentRiskSnapshot base,
+  String sisStudentId,
 ) {
   for (final r in risks) {
-    if (r.studentId == base.sisStudentId) return r;
-  }
-  for (final r in risks) {
-    if (r.studentName != null &&
-        r.studentName!.trim().toLowerCase() ==
-            base.studentName.trim().toLowerCase()) {
-      return r;
-    }
+    if (r.studentId == sisStudentId) return r;
   }
   return null;
 }
 
-/// Overlays the authoritative live risk verdict on the locally-computed snapshot.
-TeacherStudentRiskSnapshot _mergeLiveRisk(
-  TeacherStudentRiskSnapshot base,
+/// Builds the dossier from the live verdict ONLY. Attendance / homework /
+/// behaviour / fees are deliberately left null — the backend does not carry
+/// them yet and the screen must say so rather than invent them.
+TeacherStudentRiskSnapshot _snapshotFromLive(
+  String sisStudentId,
   intel.StudentRiskSnapshot live,
 ) {
   final factors = live.reasons
@@ -122,22 +108,16 @@ TeacherStudentRiskSnapshot _mergeLiveRisk(
       .where((s) => s.isNotEmpty && s.toLowerCase() != 'stable profile')
       .toList();
   return TeacherStudentRiskSnapshot(
-    sisStudentId: base.sisStudentId,
+    sisStudentId: sisStudentId,
     studentName: live.studentName?.trim().isNotEmpty == true
         ? live.studentName!.trim()
-        : base.studentName,
-    classLabel: live.className.isNotEmpty ? live.className : base.classLabel,
-    rollNo: base.rollNo,
-    attendancePercent: base.attendancePercent,
-    attendanceTrend: base.attendanceTrend,
-    subjectPerformance: base.subjectPerformance,
-    homeworkCompletionPercent: base.homeworkCompletionPercent,
-    behaviorIncidentCount: base.behaviorIncidentCount,
-    feePendingLabel: base.feePendingLabel,
+        : '',
+    classLabel: live.className,
+    rollNo: '',
     riskLevel: _riskLevelFromLive(live.riskLevel),
-    riskFactors: factors.isNotEmpty ? factors : base.riskFactors,
-    communicationHistoryCount: base.communicationHistoryCount,
-    pendingConcernCount: base.pendingConcernCount,
+    riskFactors: factors,
+    communicationHistoryCount: 0,
+    pendingConcernCount: 0,
   );
 }
 

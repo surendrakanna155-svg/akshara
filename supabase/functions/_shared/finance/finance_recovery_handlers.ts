@@ -43,10 +43,17 @@ function optUuid(body: Record<string, unknown>, key: string): string | null {
   return v === "" ? null : v;
 }
 
-function amountMinor(body: Record<string, unknown>, key: string): number {
+// ICA-A1 (P0) money-unit fix. `_minor` columns are BIGINT integer paise, so a
+// rupee input must be SCALED ×100 here. The prior body did
+// `Math.round(x*100)/100` then `Math.trunc(x)` — the ×100 and ÷100 cancelled and
+// it stored RUPEE-magnitude values into paise columns, understating the recovery
+// dashboard (promise-to-pay, targets, recovered) 100×. This now matches the
+// concession reference (finance_fee_concessions_repository.parseAmountMinor):
+// rupees → integer paise, paise-exact (₹1500.50 → 150050).
+export function amountMinor(body: Record<string, unknown>, key: string): number {
   const raw = String(body[key] ?? "").replace(/[^\d.-]/g, "");
-  const n = Math.round(parseFloat(raw) * 100) / 100;
-  return Number.isFinite(n) ? Math.trunc(n) : 0;
+  const n = parseFloat(raw);
+  return Number.isFinite(n) ? Math.round(n * 100) : 0;
 }
 
 function monthStartIso(): string {
@@ -575,7 +582,8 @@ export async function handleListRecoveryTargets(
 }
 
 // ── mappers ────────────────────────────────────────────────────────────────
-function minorToRupees(minor: string): string {
+// ICA-A1: BIGINT paise (`_minor`) → rupee string at the API boundary (÷100).
+export function minorToRupees(minor: string): string {
   const n = parseInt(minor, 10) || 0;
   return (n / 100).toFixed(2);
 }

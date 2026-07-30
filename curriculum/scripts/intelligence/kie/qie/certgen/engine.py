@@ -42,6 +42,8 @@ import sympy
 from kie import config
 from kie.qie import relations as R
 from kie.qie.certgen import answer_formats as AF
+from kie.qie.certgen import case_study as CS
+from kie.qie.certgen import statement_based as SB
 from kie.qie.certgen import assertion_reason as AR
 from kie.qie.certgen import conceptual_mcq as CMC
 from kie.qie.certgen import match_columns as MTC
@@ -698,7 +700,23 @@ def gate_items(items: Sequence[dict], resolved: Sequence[ResolvedBinding] = (),
 
         ind: Dict[str, object] = {}
         agree = None
-        if item.get("lane") == AF.INTEGER_LANE:
+        if item.get("lane") == SB.LANE:
+            sres = SB.verify_options(item)
+            gr.append({"gate": "statement_options_verified", "ok": bool(sres["ok"]), "severity": G.FATAL,
+                       "detail": sres["detail"][:400]})
+        elif item.get("lane") == CS.LANE:
+            # A case sub-question's key is the value the parent chain produced at that step, and that
+            # chain was already verified by two independent routes. What must be checked HERE is that the
+            # option set is sound and every wrong option names the slip that produces it.
+            ok_case = (len(item["options"]) == 4
+                       and len(set(item["options"].values())) == 4
+                       and item["answer_label"] in item["options"]
+                       and len(item["distractor_rationale"]) == 3
+                       and all(v.get("misconception") for v in item["distractor_rationale"].values()))
+            gr.append({"gate": "case_option_verified", "ok": bool(ok_case), "severity": G.FATAL,
+                       "detail": f"case={item.get('case_id')} part={item.get('sub_index')}/"
+                                 f"{item.get('sub_total')} refuted={len(item['distractor_rationale'])}"})
+        elif item.get("lane") == AF.INTEGER_LANE:
             # No options exist, so there is nothing to refute. The proof is that the key is re-derivable
             # from the declared structure AND that the declared tolerance is tight enough that a
             # materially different answer could not pass as correct.

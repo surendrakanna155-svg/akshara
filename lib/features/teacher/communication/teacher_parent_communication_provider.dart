@@ -136,7 +136,16 @@ final sendTeacherParentCommunicationProvider = AsyncNotifierProvider<
     SendTeacherParentCommunicationNotifier,
     ParentCommunicationSendResult?>(SendTeacherParentCommunicationNotifier.new);
 
+/// PRA-P0-17 (S0/T2-F): the teacher→parent communication timeline now reads the
+/// live `GET /teacher/parent-communication` endpoint via the active repository
+/// (mock store only in local/dev), instead of the in-memory
+/// ParentCommunicationStore that is never populated in API mode — which made the
+/// timeline render permanently empty in production.
 final studentCommunicationTimelineProvider =
-    Provider.family<List<ParentCommunicationRecord>, String>((ref, studentId) {
-  return ParentCommunicationStore.instance.timelineForStudent(studentId);
+    FutureProvider.family<List<ParentCommunicationRecord>, String>(
+        (ref, studentId) async {
+  return ref.watch(teacherRepositoryProvider).listParentCommunications(
+        query: ref.watch(repositoryQueryProvider),
+        sisStudentId: studentId,
+      );
 });

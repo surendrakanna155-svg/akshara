@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/security/permissions.dart';
 import '../features/hr/attendance/hr_attendance_screen.dart';
 import '../features/hr/dashboard/hr_dashboard_screen.dart';
 import '../features/hr/employees/hr_employee_profile_screen.dart';
@@ -11,6 +12,9 @@ import '../features/hr/performance/hr_performance_screen.dart';
 import '../features/hr/recruitment/hr_recruitment_screen.dart';
 import '../features/hr/reports/hr_reports_screen.dart';
 import '../features/hr/settings/hr_settings_screen.dart';
+import '../features/staff_attendance/manual_attendance_approver_screen.dart';
+import '../features/staff_attendance/manual_attendance_request_screen.dart';
+import 'route_guards.dart';
 import 'route_names.dart';
 
 String? hrRootRedirect(BuildContext context, GoRouterState state) {
@@ -35,6 +39,34 @@ Widget hrEmployeeDetailRouteBuilder(BuildContext context, GoRouterState state) {
 
 Widget hrAttendanceRouteBuilder(BuildContext context, GoRouterState state) {
   return const HrAttendanceScreen();
+}
+
+/// PRA-P0-15 — staff-facing manual-attendance request (audited fallback).
+Widget hrStaffManualRequestRouteBuilder(
+  BuildContext context,
+  GoRouterState state,
+) {
+  return const ManualAttendanceRequestScreen();
+}
+
+/// PRA-P0-15 — approver queue for manual-attendance requests.
+///
+/// Guarded on `approveStaffAttendance`, the exact slug the server enforces on
+/// the decide endpoint, and matching `canApproveManualAttendanceProvider` which
+/// gates the button that leads here.
+///
+/// It must be an [ApprovePermissionGuard], not a [ManagePermissionGuard]:
+/// `hasManagePermission` requires the permission NAME to start with `manage`
+/// (see `isManagePermission`), so a manage-guard holding an `approve*` slug
+/// denies every role unconditionally.
+Widget hrStaffManualRequestQueueRouteBuilder(
+  BuildContext context,
+  GoRouterState state,
+) {
+  return const ApprovePermissionGuard(
+    permission: Permission.approveStaffAttendance,
+    child: ManualAttendanceApproverScreen(),
+  );
 }
 
 Widget hrLeaveRouteBuilder(BuildContext context, GoRouterState state) {

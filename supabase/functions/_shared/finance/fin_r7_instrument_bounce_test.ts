@@ -80,6 +80,7 @@ class MockOfflinePaymentsDb {
       row.reconciled_at = (args[3] as string | null) ?? "2026-06-30T12:00:00.000Z";
       row.reconciled_by = (args[4] as string | null) ?? null;
       if (args[5] != null) row.notes = String(args[5]);
+      if (args[6] != null) row.collection_id = String(args[6]); // PRA-P1-09
       return [structuredClone(row) as T];
     }
 
@@ -94,7 +95,35 @@ class MockOfflinePaymentsDb {
       return [structuredClone(row) as T];
     }
 
-    throw new Error(`Unhandled SQL in MockOfflinePaymentsDb: ${s.slice(0, 80)}`);
+    // PRA-P1-09 (S1): reconcile now posts a collection via createCollection.
+    if (s.includes("FROM finance_invoices fi") && s.includes("JOIN finance_student_accounts")) {
+      return [{
+        id: String(args[0]),
+        organization_id: ORG,
+        school_id: SCHOOL,
+        student_id: "stu-1",
+        student_account_id: "acct-1",
+        fee_assignment_id: "fa-1",
+        total_amount: "100000",
+        outstanding_amount: "100000",
+        invoice_status: "issued",
+      } as T];
+    }
+    if (s.startsWith("INSERT INTO finance_collections")) {
+      return [{
+        id: "coll-1",
+        organization_id: ORG,
+        school_id: SCHOOL,
+        receipt_number: String(args[5]),
+        amount_collected: String(args[9]),
+        collection_status: "completed",
+      } as T];
+    }
+    if (s.startsWith("INSERT INTO finance_receipts")) {
+      return [{ id: "rcpt-1", receipt_number: String(args[3]) } as T];
+    }
+    // Unhandled reads/writes from the createCollection post-path are inert here.
+    return [] as T[];
   }
 
   private find(args: unknown[]): FinanceOfflinePaymentRow | undefined {
@@ -117,6 +146,8 @@ function seedPdc(db: MockOfflinePaymentsDb) {
     instrumentDate: "2026-08-15",
     bankName: "State Bank",
     recordedBy: STAFF,
+    // PRA-P1-09 (S1): reconciliation posts a collection against this invoice.
+    invoiceId: "inv-1",
   });
 }
 

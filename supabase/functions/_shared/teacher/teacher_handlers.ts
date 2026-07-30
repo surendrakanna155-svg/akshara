@@ -1,5 +1,14 @@
 import type { AppConfig } from "../config.ts";
 import { createTeacherMobileReadHandlers } from "../entity_read/mobile_read_handlers.ts";
+import {
+  listTeacherAttendanceClasses,
+  listTeacherExamMarks,
+  listTeacherLeaveRequests,
+  listTeacherUpcomingExams,
+  overlayTeacherAttendanceStudents,
+  overlayTeacherDashboard,
+  overlayTeacherHomeworkSubmissions,
+} from "../pilot/pilot_operations_repository.ts";
 import { teacherStore } from "./teacher_read_repository.ts";
 
 const {
@@ -21,9 +30,6 @@ export async function handleDashboard(req: Request, config: AppConfig): Promise<
     "snapshot_dashboard",
     "Failed to load teacher dashboard",
     async (db, orgId, schoolId, teacherUserId, snapshot) => {
-      const { overlayTeacherDashboard } = await import(
-        "../pilot/pilot_operations_repository.ts"
-      );
       return await overlayTeacherDashboard(db, orgId, schoolId, teacherUserId, snapshot);
     },
   );
@@ -38,9 +44,6 @@ export async function handleAttendanceClasses(req: Request, config: AppConfig): 
     config,
     "Failed to load attendance classes",
     async (db, orgId, schoolId, teacherUserId, pagination) => {
-      const { listTeacherAttendanceClasses } = await import(
-        "../pilot/pilot_operations_repository.ts"
-      );
       return await listTeacherAttendanceClasses(db, orgId, schoolId, teacherUserId, pagination);
     },
   );
@@ -56,9 +59,6 @@ export async function handleAttendanceStudents(req: Request, config: AppConfig):
     "snapshot_attendance_students",
     "Failed to load attendance students",
     async (db, orgId, schoolId, teacherUserId, snapshot) => {
-      const { overlayTeacherAttendanceStudents } = await import(
-        "../pilot/pilot_operations_repository.ts"
-      );
       return await overlayTeacherAttendanceStudents(
         db,
         orgId,
@@ -79,9 +79,6 @@ export async function handleHomework(req: Request, config: AppConfig): Promise<R
     "homework_assignment",
     "Failed to load homework assignments",
     async (db, orgId, schoolId, items) => {
-      const { overlayTeacherHomeworkSubmissions } = await import(
-        "../pilot/pilot_operations_repository.ts"
-      );
       return await overlayTeacherHomeworkSubmissions(db, orgId, schoolId, items);
     },
   );
@@ -95,9 +92,6 @@ export async function handleExamsUpcoming(req: Request, config: AppConfig): Prom
     config,
     "Failed to load upcoming exams",
     async (db, orgId, schoolId, teacherUserId, pagination) => {
-      const { listTeacherUpcomingExams } = await import(
-        "../pilot/pilot_operations_repository.ts"
-      );
       return await listTeacherUpcomingExams(db, orgId, schoolId, teacherUserId, pagination);
     },
   );
@@ -111,9 +105,6 @@ export async function handleExamsMarks(req: Request, config: AppConfig): Promise
     config,
     "Failed to load exam marks",
     async (db, orgId, schoolId, teacherUserId, pagination) => {
-      const { listTeacherExamMarks } = await import(
-        "../pilot/pilot_operations_repository.ts"
-      );
       return await listTeacherExamMarks(db, orgId, schoolId, teacherUserId, pagination);
     },
   );
@@ -131,9 +122,6 @@ export async function handleLeave(req: Request, config: AppConfig): Promise<Resp
     config,
     "Failed to load teacher leave history",
     async (db, orgId, schoolId, teacherUserId, pagination) => {
-      const { listTeacherLeaveRequests } = await import(
-        "../pilot/pilot_operations_repository.ts"
-      );
       return await listTeacherLeaveRequests(db, orgId, schoolId, teacherUserId, pagination);
     },
   );
@@ -143,6 +131,7 @@ export async function handleLeaveBalance(req: Request, config: AppConfig): Promi
   return await handleSnapshot(req, config, "snapshot_leave_balance", "Failed to load leave balance");
 }
 
-export async function handleMessages(req: Request, config: AppConfig): Promise<Response> {
-  return await handleList(req, config, "message_thread", "Failed to load message threads");
-}
+// PRA-N-13 (S0/T1a): `handleMessages` (GET /teacher/messages) was dead code —
+// `routeCommunication` (dispatched before `routeTeacher` in app.ts) already owns
+// that path via the governed `handleTeacherMessageThreads`. This handler read
+// demo-seeded `teacher_entities` `message_thread` rows and was never reached.

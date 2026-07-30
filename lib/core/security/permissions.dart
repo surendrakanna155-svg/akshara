@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-/// Fine-grained permissions for Akshara ERP modules.
+/// Fine-grained permissions for NIKSHA OS modules.
 enum Permission {
   // Admissions
   viewAdmissions,
@@ -20,6 +20,12 @@ enum Permission {
   viewManagement,
   manageManagement,
   manageWorkflowAutomation,
+
+  // School Calendar (PRA-P1-17) — seeded server-side in
+  // 20260729000000_school_publisher.sql (superAdmin/schoolAdmin/principal/
+  // vicePrincipal: view+manage; teacher: view).
+  viewSchoolCalendar,
+  manageSchoolCalendar,
 
   // Transport
   viewTransport,
@@ -220,6 +226,16 @@ enum Permission {
   // teacher-entered (O4); markAttendance above is the teacher→roster permission.
   markStaffAttendance,
 
+  // P1-PROD-22 slice 4 — approve/reject manual staff attendance requests (the
+  // audited fallback when the geofence+face chain cannot complete). Seeded
+  // server-side in 20260820000000 for the supervisory roles.
+  approveStaffAttendance,
+
+  // SCE-1 slice 4 — approve/reject a student clearance dues-waiver (maker-checker,
+  // the sanctioned override to issue a TC despite a small remaining due). Seeded
+  // server-side in 20260878000000 for the supervisory roles.
+  approveClearanceWaiver,
+
   // Phase D M-D5 — Finance approval governance
   assignScholarship,
   approveFeeConcession,
@@ -271,6 +287,52 @@ enum Permission {
   // FV-PLAT-11 — White Label Platform
   viewWhiteLabelPlatform,
   manageWhiteLabelPlatform,
+
+  // PRC-A Batch 2 — Certificate Request Desk (caps 136–148)
+  requestStudentCertificate,
+  approveCertificateRequest,
+
+  // PRC-A Batch 2 — Gate Pass / early pickup (caps 109–118)
+  requestGatePass,
+  approveGatePass,
+  verifyGatePass,
+
+  // PRC-A Batch 2 — Complaints / internal issues (caps 101–108)
+  raiseComplaint,
+  manageComplaints,
+  viewComplaintsPrincipal,
+
+  // PRC-A Batch 2 — Student Health / Infirmary (caps 119–127).
+  // Owner decision #1: strict need-to-know. `viewStudentHealthRecord` is health
+  // staff + explicitly authorised leadership ONLY; teaching roles get
+  // `viewStudentCareAlert`, which carries no clinical detail and is further
+  // narrowed server-side to students that caller actually teaches. Never widen
+  // these on the client to "make the UI simpler" — the server is the authority,
+  // but a client that requests the wrong one leaks intent.
+  manageStudentHealth,
+  viewStudentHealthRecord,
+  viewStudentCareAlert,
+  administerStudentMedication,
+
+  // PRC-A Batch 3 — AI credit wallet (caps 37–43). Seeded server-side in
+  // 20260888000000_ai_credit_wallet.sql: viewAiWallet -> superAdmin,
+  // organizationOwner, organizationAdmin, management; manageAiCredits ->
+  // superAdmin ONLY (granting credit is a platform act, not a tenant one).
+  viewAiWallet,
+  manageAiCredits,
+
+  // PRC-A Batch 4 — storage quota (caps 31–36). Seeded server-side in
+  // 20260889000000_storage_quota.sql: viewStorageQuota -> superAdmin,
+  // organizationOwner, organizationAdmin, management. Deliberately no manage
+  // permission — the limit is set by the PLAN, not granted ad hoc.
+  viewStorageQuota,
+
+  // ASIP — platform support intelligence. Reporting an issue needs NO
+  // permission (any authenticated school user may report); these gate the
+  // Phase-2 NIKSHA support-staff view/manage surfaces and mirror the backend
+  // `viewSupport` / `manageSupport` permission slugs exactly.
+  viewSupport,
+  manageSupport,
 }
 
 /// Immutable set of [Permission] values for a session.

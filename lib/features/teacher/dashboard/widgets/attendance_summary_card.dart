@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../../shared/widgets/widgets.dart';
+import '../../../../theme/premium_tokens.dart';
 import '../../../../theme/radius.dart';
 import '../../../../theme/spacing.dart';
 import '../../../../theme/theme_extensions.dart';
+import '../../../../theme/typography.dart';
 import '../teacher_dashboard_provider.dart';
 
 /// TA-01 attendance summary — staff check-in, warning banner, KPI strip.
@@ -174,6 +176,10 @@ class _StaffCheckInCard extends StatelessWidget {
   }
 }
 
+/// DS V2 Phase 3 flagship — the class-attendance summary led by a signature
+/// present-rate progress **ring** in the persona accent, with the classes-marked
+/// and students-present counts as adjacent stats. Presentation only; conveys the
+/// same three metrics as the old three-up KPI strip.
 class _AttendanceKpiStrip extends StatelessWidget {
   const _AttendanceKpiStrip({required this.summary});
 
@@ -184,58 +190,104 @@ class _AttendanceKpiStrip extends StatelessWidget {
     final presentRate = summary.studentsTotal == 0
         ? 0
         : ((summary.studentsPresent / summary.studentsTotal) * 100).round();
+    final premium = context.premium;
+    final text = context.aksharaText;
 
     return Semantics(
       container: true,
       label:
           'Attendance summary: ${summary.classesMarked} of ${summary.classesTotal} classes marked, '
           '$presentRate percent students present',
-      child: Builder(
-        builder: (context) {
-          final narrow = MediaQuery.sizeOf(context).width < 360;
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: premium.premiumSurface,
+          borderRadius: BorderRadius.circular(AksharaRadius.xl),
+          border: Border.all(color: premium.premiumBorder),
+          boxShadow: premium.softShadow,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AksharaSpacing.s5),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Expanded(
-                child: SizedBox(
-                  height: 112,
-                  child: AksharaKpiCard(
-                    style: AksharaKpiCardStyle.filled,
-                    value: '${summary.classesMarked}/${summary.classesTotal}',
-                    subtitle: narrow ? 'Classes' : 'Classes marked',
-                    accent: KpiAccent.primary,
-                  ),
+              AksharaProgressRing(
+                value: presentRate / 100.0,
+                size: 92,
+                strokeWidth: 9,
+                color: premium.brandStart,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '$presentRate%',
+                      style: text.titleMedium.copyWith(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
+                        height: 1.0,
+                      ),
+                    ),
+                    Text(
+                      'Present',
+                      style: text.labelSmall.copyWith(
+                        color: context.colors.onSurfaceVariant,
+                        fontSize: 10,
+                        height: 1.1,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: AksharaSpacing.s3),
+              const SizedBox(width: AksharaSpacing.s5),
               Expanded(
-                child: SizedBox(
-                  height: 112,
-                  child: AksharaKpiCard(
-                    style: AksharaKpiCardStyle.filled,
-                    value:
-                        '${summary.studentsPresent}/${summary.studentsTotal}',
-                    subtitle: narrow ? 'Present' : 'Students present',
-                    accent: KpiAccent.success,
-                  ),
-                ),
-              ),
-              const SizedBox(width: AksharaSpacing.s3),
-              Expanded(
-                child: SizedBox(
-                  height: 112,
-                  child: AksharaKpiCard(
-                    style: AksharaKpiCardStyle.filled,
-                    value: '$presentRate%',
-                    subtitle: narrow ? 'Rate' : 'Present rate',
-                    accent: KpiAccent.neutral,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _stat(
+                      context,
+                      'Classes marked',
+                      '${summary.classesMarked}/${summary.classesTotal}',
+                    ),
+                    const SizedBox(height: AksharaSpacing.s3),
+                    _stat(
+                      context,
+                      'Students present',
+                      '${summary.studentsPresent}/${summary.studentsTotal}',
+                    ),
+                  ],
                 ),
               ),
             ],
-          );
-        },
+          ),
+        ),
       ),
+    );
+  }
+
+  Widget _stat(BuildContext context, String label, String value) {
+    final text = context.aksharaText;
+    final colors = context.colors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          value,
+          style: text.titleLarge.copyWith(
+            color: colors.onSurface,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.3,
+            height: 1.05,
+          ).tabularFigures,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        Text(
+          label,
+          style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
     );
   }
 }

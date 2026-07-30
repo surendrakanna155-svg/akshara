@@ -121,7 +121,7 @@ class ExportOperationsHubReportNotifier extends AsyncNotifier<Uint8List?> {
         final dateLabel =
             '${now.year}-${_two(now.month)}-${_two(now.day)}';
         return await ref.read(operationsHubPdfServiceProvider).buildDailyReportPdf(
-              schoolName: 'Akshara International School',
+              schoolName: 'NIKSHA International School',
               dateLabel: dateLabel,
               snapshot: snapshot,
             );

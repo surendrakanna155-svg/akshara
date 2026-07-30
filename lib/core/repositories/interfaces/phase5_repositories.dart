@@ -71,6 +71,7 @@ abstract class SchoolMemoriesRepository {
     String? albumId,
     String? albumTitle,
     String? mediaType,
+    int? sizeBytes,
   });
 
   Future<MemoryUploadConfirm> confirmUpload({
@@ -80,6 +81,10 @@ abstract class SchoolMemoriesRepository {
     required String storagePath,
     required String title,
     String? mediaType,
+    /// PRC-A Batch 4 — echoes the uploaded size so the backend can meter it
+    /// against the org storage quota (`recordStorageUsage`). Optional: a
+    /// missing/zero value simply records nothing, never blocks the confirm.
+    int? sizeBytes,
   });
 
   Future<String> getDownloadUrl({

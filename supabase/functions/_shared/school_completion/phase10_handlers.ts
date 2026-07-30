@@ -21,7 +21,10 @@ import {
   generateSyllabusFromTemplates,
   listSubjectTemplates,
   listSyllabusChapters,
+  listSyllabusTopics,
+  NoSyllabusTemplateError,
   templateToApi,
+  topicToApi,
 } from "./syllabus_automation_service.ts";
 import {
   allocateRoomsForTimetable,
@@ -36,6 +39,10 @@ import { schoolCompletionUuidPattern } from "./school_completion_handlers.ts";
 
 function tenantError(error: unknown): Response {
   if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+  // PRA-P1-18: an unseeded grade/board is a client-actionable state, not a 500.
+  if (error instanceof NoSyllabusTemplateError) {
+    return errorEnvelope("NO_SYLLABUS_TEMPLATE", error.message, 422);
+  }
   return errorEnvelope("INTERNAL_ERROR", String(error), 500);
 }
 
@@ -139,6 +146,33 @@ export async function handleListSyllabusChapters(req: Request, config: AppConfig
       listSyllabusChapters(db, organizationIdFromClaims(auth.claims), schoolIdFromClaims(auth.claims), academicYearId)
     );
     return jsonResponse(envelope({ items: items.map(chapterToApi) }));
+  } catch (error) {
+    return tenantError(error);
+  }
+}
+
+/**
+ * Real syllabus topics for a class/subject — backs the teacher's daily-capture
+ * topic picker so the client can send a REAL `topicId` to `completeTopic`
+ * instead of a fabricated one (P1 fix, caps 58-61).
+ */
+export async function handleListSyllabusTopics(req: Request, config: AppConfig): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requirePermission(auth.claims, "viewAcademicProgress") ??
+    requireSchoolOperationalScope(auth.claims);
+  if (denied) return denied;
+
+  const url = new URL(req.url);
+  try {
+    const items = await withTenantContext(config, auth.claims, (db) =>
+      listSyllabusTopics(db, organizationIdFromClaims(auth.claims), schoolIdFromClaims(auth.claims), {
+        className: url.searchParams.get("className") ?? undefined,
+        subjectId: url.searchParams.get("subjectId") ?? undefined,
+        chapterId: url.searchParams.get("chapterId") ?? undefined,
+      })
+    );
+    return jsonResponse(envelope({ items: items.map(topicToApi) }));
   } catch (error) {
     return tenantError(error);
   }

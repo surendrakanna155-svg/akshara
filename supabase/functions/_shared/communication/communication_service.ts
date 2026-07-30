@@ -22,20 +22,88 @@ import {
   listThreadsForUser,
   listUnreadBroadcastRecipientIds,
   resolveBroadcastRecipients,
+  insertTemplate,
+  listBroadcastHistory,
+  listDeliveriesForUser,
+  listTemplates,
+  updateTemplate,
+  type ChannelPolicyRow,
+  getChannelPolicy,
+  upsertChannelPolicy,
   type CommAudienceSegmentRow,
   type CommBroadcastRow,
   type CommMessageRow,
   type CommThreadRow,
 } from "./communication_repository.ts";
 import { enqueueNotificationRequested, processDeliveryQueue } from "./notification_service.ts";
+import { validateEscalationChain } from "./communication_escalation.ts";
 
 /**
- * PERF-1: hard cap on the recipients fanned out in a single broadcast so a
- * runaway audience can't blow the request/transaction budget. Anything beyond
- * the cap is dropped from this broadcast (and surfaced in the audit metadata);
- * the bound is generous enough to cover a whole school.
+ * PERF-1 / ICA-C6: per-statement batch size for broadcast fan-out. Recipients are
+ * written to `comm_recipients` and `notification_deliveries` in multi-row INSERTs
+ * of at most this many rows, so a single statement's parameter count stays well
+ * inside Postgres' 65,535-parameter ceiling (9 fixed + 1/recipient for the
+ * delivery INSERT). This is a per-INSERT chunk size, NOT a cap on the audience: a
+ * cohort larger than one batch is fanned out over SUCCESSIVE batches — every
+ * recipient is enqueued, never truncated (see {@link fanOutBroadcastDeliveries}).
  */
-const MAX_BROADCAST_RECIPIENTS = 5000;
+const BROADCAST_DELIVERY_BATCH_SIZE = 5000;
+
+/**
+ * ICA-C6 (P1): enqueue EVERY recipient of a broadcast, in bounded multi-row-INSERT
+ * batches. Previously the cohort was `slice(0, cap)`-truncated, silently DROPPING
+ * recipients past the cap with no error or continuation. Now the full cohort is
+ * chunked into successive batches of {@link BROADCAST_DELIVERY_BATCH_SIZE}, so a
+ * larger-than-a-batch audience reaches EVERYONE while each INSERT stays bounded
+ * (preserving the per-statement efficiency PERF-1 introduced — still one multi-row
+ * INSERT per chunk, never one query per recipient). For each chunk we write the
+ * `comm_recipients` ledger rows (COM-1, idempotent via ON CONFLICT DO NOTHING) and
+ * then one delivery batch per channel; the acknowledgement flag rides the `push`
+ * copy only (COM-D1). Tenant/school scoping is threaded through unchanged. Returns
+ * the number of recipients enqueued (== the resolved cohort size).
+ */
+async function fanOutBroadcastDeliveries(
+  db: TenantQueryClient,
+  input: {
+    broadcastId: string;
+    organizationId: string;
+    schoolId: string | null;
+    recipients: string[];
+    channels: string[];
+    renderedSubject: string;
+    renderedBody: string;
+    requiresAck: boolean;
+  },
+): Promise<number> {
+  const { recipients } = input;
+  for (
+    let start = 0;
+    start < recipients.length;
+    start += BROADCAST_DELIVERY_BATCH_SIZE
+  ) {
+    const chunk = recipients.slice(start, start + BROADCAST_DELIVERY_BATCH_SIZE);
+    await insertBroadcastRecipientsBatch(
+      db,
+      input.broadcastId,
+      input.organizationId,
+      chunk,
+    );
+    for (const channel of input.channels) {
+      await enqueueDeliveriesBatch(db, {
+        organizationId: input.organizationId,
+        schoolId: input.schoolId ?? "a2000000-0000-4000-8000-000000000001",
+        recipientUserIds: chunk,
+        channel,
+        category: "announcement",
+        renderedSubject: input.renderedSubject,
+        renderedBody: input.renderedBody,
+        broadcastId: input.broadcastId, // COM-1: tie the delivery ledger to this broadcast
+        requiresAck: input.requiresAck && channel === "push", // COM-D1: ack on push only
+      });
+    }
+  }
+  return recipients.length;
+}
 
 export class CommunicationValidationError extends Error {
   constructor(message: string) {
@@ -67,6 +135,33 @@ function requireSchool(claims: AccessTokenClaims): string {
     throw new CommunicationValidationError("School context required");
   }
   return claims.school_id;
+}
+
+/**
+ * PRA-P1-45: valid delivery channels for a broadcast fan-out (the
+ * `notification_deliveries.channel` CHECK). `push` is the primary/in-app channel
+ * and the ONLY one that carries the acknowledgement flag.
+ */
+const BROADCAST_CHANNELS = new Set(["push", "sms", "email"]);
+
+/**
+ * PRA-P1-45: normalize a caller-supplied channel list into the ADDITIVE set of
+ * delivery channels for a broadcast. `push` (the free in-app channel) is ALWAYS
+ * included — it is the baseline every recipient gets and the sole acknowledgement
+ * channel — and any opted-in `sms`/`email` are added on top as a fallback.
+ * Unknown labels are dropped. Omitted/empty ⇒ `["push"]`, so every existing
+ * caller is byte-for-byte unchanged (no automatic SMS/email cost). Order is
+ * stable push→sms→email.
+ */
+export function normalizeBroadcastChannels(
+  channels: string[] | undefined | null,
+): string[] {
+  const set = new Set<string>(["push"]);
+  for (const raw of channels ?? []) {
+    const c = String(raw ?? "").trim().toLowerCase();
+    if (BROADCAST_CHANNELS.has(c)) set.add(c);
+  }
+  return ["push", "sms", "email"].filter((c) => set.has(c));
 }
 
 /** Map shorthand audience labels to comm_broadcasts CHECK constraint values. */
@@ -154,7 +249,6 @@ export async function listUserNotifications(
   limit = 50,
   offset = 0,
 ): Promise<Record<string, unknown>[]> {
-  const { listDeliveriesForUser } = await import("./communication_repository.ts");
   const rows = await listDeliveriesForUser(db, claims.tenant_id, claims.sub, limit, offset);
   return rows.map(deliveryToNotificationApi);
 }
@@ -304,6 +398,13 @@ export async function sendBroadcastMessage(
      * {@link EXPLICIT_COHORT_AUDIENCES} token.
      */
     recipientUserIds?: string[];
+    /**
+     * PRA-P1-45: optional opt-in delivery channels (subset of push/sms/email).
+     * Omitted / empty ⇒ `["push"]`, i.e. no behaviour change from the old
+     * push-only fan-out. An admin who wants an SMS/email fallback passes them
+     * explicitly, so cost is never incurred automatically.
+     */
+    channels?: string[] | null;
   },
   req?: Request,
 ): Promise<Record<string, unknown>> {
@@ -354,25 +455,24 @@ export async function sendBroadcastMessage(
       audience,
       { className: audienceClass, sectionName: audienceSection },
     );
-  // PERF-1: bound the cohort, then write recipients + push deliveries in two
-  // multi-row INSERTs instead of 2 round-trips per recipient. The actual
-  // per-recipient send is NOT done here — deliveries are queued ('pending') and
-  // drained out of the request/response cycle (see handleCreateBroadcast), so a
-  // large-cohort broadcast can never block or time out the HTTP request.
-  const recipients = resolved.slice(0, MAX_BROADCAST_RECIPIENTS);
-  const dropped = resolved.length - recipients.length;
-
-  await insertBroadcastRecipientsBatch(db, broadcast.id, claims.tenant_id, recipients);
-  await enqueueDeliveriesBatch(db, {
+  // ICA-C6 / PERF-1: fan the FULL cohort out over successive bounded multi-row
+  // INSERTs — no recipient past a batch boundary is dropped. `requiresAck` rides
+  // the push copy ONLY (PRA-P1-45 / COM-D1): acknowledgement is an in-app
+  // affordance, so counting it on an sms/email copy would double-count the ack
+  // total. The actual per-recipient send is NOT done here — deliveries are queued
+  // ('pending') and drained out of the request/response cycle (see
+  // handleCreateBroadcast), so a large-cohort broadcast can never block or time
+  // out the HTTP request.
+  const channels = normalizeBroadcastChannels(input.channels);
+  const recipientCount = await fanOutBroadcastDeliveries(db, {
+    broadcastId: broadcast.id,
     organizationId: claims.tenant_id,
-    schoolId: schoolId ?? "a2000000-0000-4000-8000-000000000001",
-    recipientUserIds: recipients,
-    channel: "push",
-    category: "announcement",
+    schoolId: schoolId ?? null,
+    recipients: resolved,
+    channels,
     renderedSubject: input.title,
     renderedBody: input.body,
-    broadcastId: broadcast.id, // COM-1: tie the delivery ledger to this broadcast
-    requiresAck, // COM-D1: flag each delivery when the notice must be acknowledged
+    requiresAck,
   });
   await finalizeBroadcast(db, broadcast.id);
 
@@ -389,9 +489,12 @@ export async function sendBroadcastMessage(
         audienceClass,
         audienceSection,
         requiresAck,
-        recipientCount: recipients.length,
+        channels,
+        recipientCount,
         resolvedCount: resolved.length,
-        droppedOverCap: dropped,
+        // ICA-C6: the cohort is fully fanned out (chunked), so nothing is ever
+        // dropped over a cap. Field retained for back-compat / cert parity.
+        droppedOverCap: 0,
       },
       correlationId: req ? correlationIdFromRequest(req) : undefined,
     },
@@ -410,9 +513,10 @@ export async function sendBroadcastMessage(
     audienceClass: broadcast.audience_class,
     audienceSection: broadcast.audience_section,
     requiresAck: broadcast.requires_ack,
+    channels,
     title: broadcast.title,
-    recipientCount: recipients.length,
-    droppedOverCap: dropped,
+    recipientCount,
+    droppedOverCap: 0,
     status: "queued",
   };
 }
@@ -542,26 +646,24 @@ async function fanOutExistingBroadcast(
     broadcast.audience,
     { className: broadcast.audience_class, sectionName: broadcast.audience_section },
   );
-  const recipients = resolved.slice(0, MAX_BROADCAST_RECIPIENTS);
-  const dropped = resolved.length - recipients.length;
-
-  await insertBroadcastRecipientsBatch(db, broadcast.id, claims.tenant_id, recipients);
-  await enqueueDeliveriesBatch(db, {
+  // ICA-C6: fan the FULL cohort out over successive bounded batches (never
+  // truncated), same as the immediate path. Scheduled dispatch is push-only.
+  const recipientCount = await fanOutBroadcastDeliveries(db, {
+    broadcastId: broadcast.id,
     organizationId: claims.tenant_id,
-    schoolId: schoolId ?? "a2000000-0000-4000-8000-000000000001",
-    recipientUserIds: recipients,
-    channel: "push",
-    category: "announcement",
+    schoolId,
+    recipients: resolved,
+    channels: ["push"],
     renderedSubject: broadcast.title,
     renderedBody: broadcast.body,
-    broadcastId: broadcast.id, // COM-1: tie the delivery ledger to this broadcast
     requiresAck: broadcast.requires_ack === true, // COM-D1: carry the ack flag
   });
   await finalizeBroadcast(db, broadcast.id);
 
   return {
-    recipientCount: recipients.length,
-    droppedOverCap: dropped,
+    recipientCount,
+    // ICA-C6: full fan-out — nothing dropped over a cap. Retained for shape parity.
+    droppedOverCap: 0,
     resolvedCount: resolved.length,
   };
 }
@@ -644,7 +746,6 @@ export async function listNotificationTemplates(
   claims: AccessTokenClaims,
 ): Promise<Record<string, unknown>[]> {
   const schoolId = requireSchool(claims);
-  const { listTemplates } = await import("./communication_repository.ts");
   const rows = await listTemplates(db, claims.tenant_id, schoolId);
   return rows.map(templateToApi);
 }
@@ -679,9 +780,9 @@ export async function createNotificationTemplate(
     throw new CommunicationValidationError("Template code is required");
   }
   const channel = input.channel.trim();
-  if (!["sms", "email", "push"].includes(channel)) {
+  if (!["sms", "email", "push", "whatsapp"].includes(channel)) {
     throw new CommunicationValidationError(
-      "channel must be one of sms, email, push",
+      "channel must be one of sms, email, push, whatsapp",
     );
   }
   const bodyTemplate = input.bodyTemplate.trim();
@@ -692,7 +793,6 @@ export async function createNotificationTemplate(
     ? input.variables.map((v) => String(v))
     : [];
 
-  const { insertTemplate } = await import("./communication_repository.ts");
   const row = await insertTemplate(db, {
     organizationId: claims.tenant_id,
     schoolId,
@@ -762,9 +862,9 @@ export async function updateNotificationTemplate(
     throw new CommunicationValidationError("Template code cannot be empty");
   }
   const channel = input.channel?.trim();
-  if (channel !== undefined && !["sms", "email", "push"].includes(channel)) {
+  if (channel !== undefined && !["sms", "email", "push", "whatsapp"].includes(channel)) {
     throw new CommunicationValidationError(
-      "channel must be one of sms, email, push",
+      "channel must be one of sms, email, push, whatsapp",
     );
   }
   const bodyTemplate = input.bodyTemplate?.trim();
@@ -777,7 +877,6 @@ export async function updateNotificationTemplate(
       ? input.variables.map((v) => String(v))
       : []);
 
-  const { updateTemplate } = await import("./communication_repository.ts");
   const row = await updateTemplate(db, {
     organizationId: claims.tenant_id,
     schoolId,
@@ -815,6 +914,88 @@ export async function updateNotificationTemplate(
   return templateToApi(row);
 }
 
+/** Batch 6: API shape for a school's channel escalation policy. When no policy
+ * row exists the school has escalation OFF (existing behaviour). */
+function channelPolicyToApi(row: ChannelPolicyRow | null): Record<string, unknown> {
+  if (!row) {
+    return { configured: false, escalationChain: [], isActive: false };
+  }
+  return {
+    configured: true,
+    escalationChain: row.escalation_chain,
+    isActive: row.is_active,
+    updatedAt: row.updated_at,
+  };
+}
+
+/**
+ * Batch 6: read the caller's school channel escalation policy. Returns a
+ * not-configured shape (never throws) when the school has never set one.
+ */
+export async function getChannelPolicyForSchool(
+  db: TenantQueryClient,
+  claims: AccessTokenClaims,
+): Promise<Record<string, unknown>> {
+  const schoolId = requireSchool(claims);
+  const row = await getChannelPolicy(db, claims.tenant_id, schoolId);
+  return channelPolicyToApi(row);
+}
+
+/**
+ * Batch 6: create/replace the caller's school channel escalation policy. The
+ * chain is validated against the known channel vocabulary (no unknowns, no
+ * duplicates) so a bad chain can never be persisted; the write is audited.
+ */
+export async function upsertChannelPolicyForSchool(
+  db: TenantQueryClient,
+  claims: AccessTokenClaims,
+  input: { escalationChain: unknown; isActive?: boolean },
+  req?: Request,
+): Promise<Record<string, unknown>> {
+  if (claims.scope !== "school") {
+    throw new CommunicationValidationError(
+      "Channel policy management requires school scope",
+    );
+  }
+  const schoolId = requireSchool(claims);
+  const chainError = validateEscalationChain(input.escalationChain);
+  if (chainError) {
+    throw new CommunicationValidationError(chainError);
+  }
+  const escalationChain = (input.escalationChain as string[]).map((c) => c.trim());
+  const isActive = input.isActive ?? true;
+
+  const row = await upsertChannelPolicy(db, {
+    organizationId: claims.tenant_id,
+    schoolId,
+    escalationChain,
+    isActive,
+    createdBy: claims.sub,
+  });
+
+  await recordMutationAudit(
+    db,
+    claims,
+    {
+      eventType: "communicationChannelPolicyUpserted",
+      category: "configuration",
+      entityType: "communication_channel_policy",
+      entityId: row.id,
+      metadata: { escalationChain: row.escalation_chain, isActive: row.is_active },
+      correlationId: req ? correlationIdFromRequest(req) : undefined,
+    },
+    {
+      eventType: "communication.channel_policy.upserted",
+      payload: { policyId: row.id, escalationChain: row.escalation_chain, isActive: row.is_active },
+      sourceModule: "communication",
+      idempotencyKey: `communication.channel_policy:${row.id}:${Date.now()}`,
+    },
+    req,
+  );
+
+  return channelPolicyToApi(row);
+}
+
 /**
  * MJ-C6b: list past broadcasts from the SAME `comm_broadcasts` store
  * {@link sendBroadcastMessage} writes to, scoped to the caller's org/school.
@@ -831,7 +1012,6 @@ export async function listBroadcastHistoryEntries(
       "Broadcast history requires school or organization scope",
     );
   }
-  const { listBroadcastHistory } = await import("./communication_repository.ts");
   const rows = await listBroadcastHistory(
     db,
     claims.tenant_id,

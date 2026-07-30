@@ -138,6 +138,18 @@ class ParentHomeworkData {
       .where((item) => item.effectiveStatus == ParentHomeworkStatus.overdue)
       .length;
 
+  /// Honest-async contract neutral shape (CERT-002) — no child, no tasks, no
+  /// due dates, no coaching insight.
+  factory ParentHomeworkData.empty() {
+    return const ParentHomeworkData(
+      childName: '',
+      childClass: '',
+      items: [],
+      insightMessage: '',
+      insightActionLabel: '',
+    );
+  }
+
   factory ParentHomeworkData.mock() {
     return const ParentHomeworkData(
       childName: 'Ravi Kumar',

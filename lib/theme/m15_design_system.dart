@@ -1,4 +1,4 @@
-/// Akshara M15 Design System — centralized token export.
+/// NIKSHA M15 Design System — centralized token export.
 ///
 /// Visual modernization foundation (Phase 1). Import this barrel for all
 /// theme tokens; features should prefer [AksharaThemeContext] accessors.

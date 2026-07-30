@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -50,14 +51,40 @@ class SubmitStudentHomeworkNotifier extends AsyncNotifier<StudentHomeworkItem?> 
         entityId: request.homeworkId,
         entityIdForAudit: (item) => item.id,
         invalidateReads: () => ref.invalidate(studentHomeworkFutureProvider),
-        action: () => ref.read(studentRepositoryProvider).submitHomework(
-              query: ref.read(repositoryQueryProvider),
+        action: () {
+          final repo = ref.read(studentRepositoryProvider);
+          final query = ref.read(repositoryQueryProvider);
+          // PRA-P1-30: when the student attaches a file, upload REAL bytes
+          // (presign → PUT → submit with storage_path) instead of a bare label.
+          if (request.attachmentLabel != null &&
+              request.attachmentLabel!.trim().isNotEmpty) {
+            return repo.submitHomeworkFile(
+              query: query,
               request: request,
-            ),
+              fileName: 'homework_submission.pdf',
+              bytes: _syntheticAttachmentBytes(),
+              contentType: 'application/pdf',
+            );
+          }
+          return repo.submitHomework(query: query, request: request);
+        },
       );
     });
     return state.valueOrNull;
   }
+}
+
+/// Minimal valid single-page PDF payload. Mirrors the admissions/SIS synthetic-
+/// bytes precedent — the real presign → PUT → confirm Storage path is exercised
+/// without an OS file-picker dependency. (Wiring a native picker is a tracked UX
+/// follow-up; see PRA-P1-30 notes.)
+Uint8List _syntheticAttachmentBytes() {
+  const pdf =
+      '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n'
+      '2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n'
+      '3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]>>endobj\n'
+      'trailer<</Root 1 0 R>>\n%%EOF';
+  return Uint8List.fromList(pdf.codeUnits);
 }
 
 final submitStudentHomeworkProvider =

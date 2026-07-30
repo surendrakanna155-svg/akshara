@@ -153,6 +153,7 @@ class TransportFixtureBuilder {
         'busNumber': allocation.busNumber,
         'shift': TransportEnumCodec.shiftToApi(allocation.shift),
         'sisStudentId': allocation.sisStudentId,
+        'demandRaised': allocation.demandRaised,
       };
 
   Map<String, dynamic> allocationsEnvelope(

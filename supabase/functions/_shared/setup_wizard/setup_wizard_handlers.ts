@@ -13,6 +13,12 @@ import { TenantDbNotConfiguredError } from "../tenant_db.ts";
 import { emitMutationAudit, setupWizardAudit } from "../audit/mutation_audit_catalog.ts";
 import { buildSetupRecommendations, type SetupWizardInputs } from "./setup_wizard_service.ts";
 import { provisionSchoolFromWizard } from "./setup_wizard_provision_service.ts";
+import {
+  createSetupWizardSession,
+  getSetupWizardSession,
+  getSetupWizardSessionInputs,
+  updateSetupWizardSession,
+} from "./setup_wizard_repository.ts";
 
 const STEPS = [
   "school_profile",
@@ -41,23 +47,18 @@ export async function handleCreateSetupWizard(req: Request, config: AppConfig): 
 
   try {
     const id = await withTenantContext(config, auth.claims, async (db) => {
-      const rows = await db.queryObject<{ id: string }>(
-        `INSERT INTO setup_wizard_sessions (
-           organization_id, school_id, inputs, recommendations, warnings, missing_items, created_by
-         ) VALUES ($1, $2, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb, $7)
-         RETURNING id`,
-        [
-          orgId,
-          schoolId,
-          JSON.stringify(inputs),
-          JSON.stringify(result.recommendations),
-          JSON.stringify(result.warnings),
-          JSON.stringify(result.missingItems),
-          auth.claims.sub,
-        ],
+      const sessionId = await createSetupWizardSession(
+        db,
+        orgId,
+        schoolId,
+        JSON.stringify(inputs),
+        JSON.stringify(result.recommendations),
+        JSON.stringify(result.warnings),
+        JSON.stringify(result.missingItems),
+        auth.claims.sub,
       );
-      await emitMutationAudit(db, auth.claims, setupWizardAudit.sessionCreated(rows[0]!.id), req);
-      return rows[0]!.id;
+      await emitMutationAudit(db, auth.claims, setupWizardAudit.sessionCreated(sessionId), req);
+      return sessionId;
     });
     return jsonResponse(envelope({
       id,
@@ -86,20 +87,7 @@ export async function handleGetSetupWizard(
 
   try {
     const row = await withTenantContext(config, auth.claims, async (db) => {
-      const rows = await db.queryObject<{
-        id: string;
-        status: string;
-        current_step: string;
-        inputs: unknown;
-        recommendations: unknown;
-        warnings: unknown;
-        missing_items: unknown;
-      }>(
-        `SELECT id, status, current_step, inputs, recommendations, warnings, missing_items
-         FROM setup_wizard_sessions WHERE id = $1`,
-        [sessionId],
-      );
-      return rows[0];
+      return await getSetupWizardSession(db, sessionId);
     });
     if (!row) return errorEnvelope("NOT_FOUND", "Setup wizard session not found", 404);
     return jsonResponse(envelope({
@@ -134,29 +122,20 @@ export async function handleAdvanceSetupWizard(
 
   try {
     const result = await withTenantContext(config, auth.claims, async (db) => {
-      const existing = await db.queryObject<{ inputs: SetupWizardInputs }>(
-        `SELECT inputs FROM setup_wizard_sessions WHERE id = $1`,
-        [sessionId],
-      );
-      if (!existing[0]) throw new Error("Session not found");
-      const merged = { ...existing[0].inputs, ...(body.inputs ?? {}) };
+      const existingInputs = await getSetupWizardSessionInputs(db, sessionId);
+      if (!existingInputs) throw new Error("Session not found");
+      const merged = { ...existingInputs, ...(body.inputs ?? {}) };
       const built = buildSetupRecommendations(merged);
       const status = body.complete ? "completed" : "in_progress";
-      await db.queryObject(
-        `UPDATE setup_wizard_sessions
-         SET current_step = $2, inputs = $3::jsonb, recommendations = $4::jsonb,
-             warnings = $5::jsonb, missing_items = $6::jsonb, status = $7,
-             updated_at = timezone('utc', now())
-         WHERE id = $1`,
-        [
-          sessionId,
-          body.step,
-          JSON.stringify(merged),
-          JSON.stringify(built.recommendations),
-          JSON.stringify(built.warnings),
-          JSON.stringify(built.missingItems),
-          status,
-        ],
+      await updateSetupWizardSession(
+        db,
+        sessionId,
+        body.step,
+        JSON.stringify(merged),
+        JSON.stringify(built.recommendations),
+        JSON.stringify(built.warnings),
+        JSON.stringify(built.missingItems),
+        status,
       );
       let provisionWarnings: string[] = [];
       if (body.complete) {

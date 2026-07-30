@@ -9,7 +9,11 @@ per role, linked into the existing staging school so every dashboard resolves.
 
 ## Review site
 
-**https://akshara.veloraunisexsalon.com/review/**
+**https://app.nikshaos.in/review/**
+
+> ⚠️ Re-provision required: this review surface was served by the retired
+> host's vhost. Confirm the `/review/` location exists on the `nikshaos` vhost
+> before relying on this URL.
 
 - Static production build of `web/`, served by the existing nginx + TLS cert.
 - Its API calls go to a same-origin proxy `…/review-api` → the **test edge**

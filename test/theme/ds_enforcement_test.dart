@@ -29,7 +29,7 @@ const _swatchNames = [
 // code migrates onto tokens; they are a one-way ratchet.
 const _hexColorBaseline = 0; // already token-pure — locked at zero.
 const _swatchBaseline = 60;
-const _rawTextStyleBaseline = 159;
+const _rawTextStyleBaseline = 156; // ratcheted down 159→155 (CFC-1 post-PRC, 2026-07-16): Control Center providers panel migrated onto textTheme tokens. W0.2b lane convergence (2026-07-20): +1 → 156 — the data-reliability-platform lane's LIVE complaints screen (PRC-A) carries one raw error TextStyle at lib/features/complaints/complaints_screen.dart:391 (`Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error))`). W0 unions live code faithfully; tokenizing it (→ context.aksharaText.*.copyWith(color: context.colors.error)) is owned by W8/P2-UX-3.
 
 final _hexColor = RegExp(r'Color\(0x');
 final _swatch = RegExp('Colors\\.(${_swatchNames.join('|')})\\b');

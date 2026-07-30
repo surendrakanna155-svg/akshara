@@ -15,6 +15,14 @@ import {
   type IsolationProbeResult,
 } from "./tenant_isolation_probes.ts";
 import { requireInternalHealthAccess } from "./internal_health_auth.ts";
+import {
+  countOpenApCommitments,
+  countPendingNotificationDeliveries,
+  countPendingNotificationDeliveriesForOps,
+  countPendingOrFailedDomainEvents,
+  countPlatformSecretVaultEntries,
+  countPreviewedImportJobs,
+} from "./provider_health_repository.ts";
 
 /** Runs RLS-enforced isolation probes via direct `erp_tenant` connection. */
 export async function handleTenantAccessHealth(
@@ -120,26 +128,10 @@ export async function handleOperationsHealth(req: Request, config: AppConfig): P
     };
 
     const snapshot = await withTenantContext(config, staffClaims, async (db) => {
-      const pendingEvents = await db.queryCount(
-        `SELECT count(*)::text AS count FROM domain_events
-         WHERE organization_id = $1 AND status IN ('pending', 'failed')`,
-        [orgId],
-      );
-      const pendingDeliveries = await db.queryCount(
-        `SELECT count(*)::text AS count FROM notification_deliveries
-         WHERE organization_id = $1 AND school_id = $2 AND status = 'pending'`,
-        [orgId, schoolId],
-      );
-      const openAp = await db.queryCount(
-        `SELECT count(*)::text AS count FROM finance_ap_commitments
-         WHERE organization_id = $1 AND school_id = $2 AND status = 'open'`,
-        [orgId, schoolId],
-      );
-      const importJobs = await db.queryCount(
-        `SELECT count(*)::text AS count FROM onboarding_import_jobs
-         WHERE organization_id = $1 AND school_id = $2 AND status = 'previewed'`,
-        [orgId, schoolId],
-      );
+      const pendingEvents = await countPendingOrFailedDomainEvents(db, orgId);
+      const pendingDeliveries = await countPendingNotificationDeliveriesForOps(db, orgId, schoolId);
+      const openAp = await countOpenApCommitments(db, orgId, schoolId);
+      const importJobs = await countPreviewedImportJobs(db, orgId, schoolId);
       return { pendingEvents, pendingDeliveries, openApCommitments: openAp, previewedImportJobs: importJobs };
     });
 
@@ -228,17 +220,9 @@ export async function handleProviderHealth(req: Request, config: AppConfig): Pro
         session_id: "provider-health",
       };
       deliveryPending = await withTenantContext(config, staffClaims, async (db) => {
-        const rows = await db.queryObject<{ count: string }>(
-          `SELECT count(*)::text AS count FROM notification_deliveries
-           WHERE organization_id = $1 AND school_id = $2 AND status = 'pending'`,
-          [orgId, schoolId],
-        );
-        const vaultRows = await db.queryObject<{ count: string }>(
-          `SELECT count(*)::text AS count FROM platform_secret_vault WHERE organization_id = $1`,
-          [orgId],
-        );
-        vaultConfigured = Number(vaultRows[0]?.count ?? 0) > 0;
-        return Number(rows[0]?.count ?? 0);
+        const pending = await countPendingNotificationDeliveries(db, orgId, schoolId);
+        vaultConfigured = (await countPlatformSecretVaultEntries(db, orgId)) > 0;
+        return pending;
       });
     } catch {
       deliveryPending = -1;

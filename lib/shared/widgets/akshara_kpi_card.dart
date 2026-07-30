@@ -439,58 +439,95 @@ class _FilledKpiTile extends StatelessWidget {
             height: 1.05,
           ).tabularFigures;
 
+          // Three of these sit side by side on a phone (fee / admissions /
+          // at-risk on the principal dashboard), which leaves each card ~110dp.
+          // With the icon badge BESIDE the text that left ~55dp for the number,
+          // and a two-digit KPI wrapped to two lines — "36" rendered as "3"
+          // above "6". A split KPI number is always wrong, so below this width
+          // the icon moves ABOVE the text and the text gets the full card.
+          final narrow = constraints.maxWidth < 168;
+
+          final labelWidget = Text(
+            label,
+            style: text.kpiLabel.copyWith(
+              color: colors.onSurfaceVariant,
+              fontSize: dense ? 12 : 13,
+            ),
+            maxLines: dense && !narrow ? 1 : 2,
+            overflow: TextOverflow.ellipsis,
+          );
+
+          // The value NEVER wraps and is never ellipsised into nonsense: one
+          // line, scaled down only if the card is genuinely too small. An
+          // unreadable "3…" is worse than a slightly smaller "36".
+          final valueWidget = Align(
+            alignment: Alignment.centerLeft,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                style: valueStyle,
+                maxLines: 1,
+                softWrap: false,
+              ),
+            ),
+          );
+
+          final iconBadge = _KpiIconBadge(
+            icon: resolvedIcon,
+            foreground: accentColors.foreground,
+            background: accentColors.container,
+            size: dense ? 32 : AksharaKpiCard.iconBoxSize,
+            iconSize: dense ? 18 : 20,
+          );
+
           return Padding(
             padding: padding,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _KpiIconBadge(
-                      icon: resolvedIcon,
-                      foreground: accentColors.foreground,
-                      background: accentColors.container,
-                      size: dense ? 32 : AksharaKpiCard.iconBoxSize,
-                      iconSize: dense ? 18 : 20,
-                    ),
-                    const SizedBox(width: AksharaSpacing.s3),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            label,
-                            style: text.kpiLabel.copyWith(
-                              color: colors.onSurfaceVariant,
-                              fontSize: dense ? 12 : 13,
+                if (narrow)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      iconBadge,
+                      SizedBox(height: dense ? AksharaSpacing.s1 : AksharaSpacing.s2),
+                      labelWidget,
+                      SizedBox(height: dense ? AksharaSpacing.s1 : AksharaSpacing.s2),
+                      valueWidget,
+                    ],
+                  )
+                else
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      iconBadge,
+                      const SizedBox(width: AksharaSpacing.s3),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            labelWidget,
+                            SizedBox(
+                              height:
+                                  dense ? AksharaSpacing.s1 : AksharaSpacing.s2,
                             ),
-                            maxLines: dense ? 1 : 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          SizedBox(
-                            height:
-                                dense ? AksharaSpacing.s1 : AksharaSpacing.s2,
-                          ),
-                          Text(
-                            value,
-                            style: valueStyle,
-                            maxLines: dense ? 1 : 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+                            valueWidget,
+                          ],
+                        ),
                       ),
-                    ),
-                    if (onTap != null && !dense)
-                      Icon(
-                        Icons.arrow_forward_rounded,
-                        size: 18,
-                        color:
-                            accentColors.foreground.withValues(alpha: 0.7),
-                      ),
-                  ],
-                ),
+                      if (onTap != null && !dense)
+                        Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 18,
+                          color:
+                              accentColors.foreground.withValues(alpha: 0.7),
+                        ),
+                    ],
+                  ),
                 if (showTrend && detail != null) ...[
                   SizedBox(
                     height: dense ? AksharaSpacing.s1 : AksharaSpacing.s2,

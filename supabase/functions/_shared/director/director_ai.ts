@@ -15,7 +15,7 @@ import { fenceUntrusted, UNTRUSTED_DATA_PREAMBLE } from "../ai/prompt_safety.ts"
 const REFINE_MAX_TOKENS = 600;
 
 const SYSTEM_PROMPT = `
-You are Akshara's executive assistant to a school-chain director (franchise owner).
+You are NIKSHA's executive assistant to a school-chain director (franchise owner).
 You are given a one-paragraph portfolio brief whose numbers are already final.
 Rewrite it into a concise, board-ready narrative. Strict rules:
 - NEVER change, add, or invent any number (counts, percentages, ₹ amounts, school

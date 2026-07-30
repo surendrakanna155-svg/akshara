@@ -1,6 +1,8 @@
+import 'package:akshara_erp/shared/widgets/akshara_status_chip.dart';
 import 'package:akshara_erp/theme/accessibility.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:akshara_erp/theme/theme_extensions.dart';
+import 'package:akshara_erp/theme/typography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -23,14 +25,26 @@ Future<BuildContext> _themedContext(WidgetTester tester, ThemeData theme) async 
   return ctx;
 }
 
-// Every semantic tone clears the WCAG AA large-text floor (3.0:1) on its own
-// container in BOTH schemes. P2-UX-5 resolved the last shortfall: the dark
-// `tertiary` tone on its container was ~2.53:1 and is now ~3.21:1 after
-// deepening `tertiaryContainer` (#134E4A → #0F3D38). No per-tone exception
-// remains — the standard floor applies uniformly.
-double _minToneForegroundOnContainer(String scheme, KpiAccent accent) {
-  return AksharaAccessibility.minContrastLargeText;
-}
+// A11y-P0 — tone foreground on tone container is NORMAL text, not large text.
+//
+// The previous revision of this file asserted only the 3.0:1 large-text floor
+// with the comment "bold >= 14 -> large-text floor". That premise was wrong.
+// `AksharaStatusChip` defaults to `AksharaStatusChipSize.compact`, which paints
+// `labelSmall` (11px) at w600 — and WCAG 2.1 large text is >= 24px regular or
+// >= 18.66px bold. 11px bold is normal text, so the floor is 4.5:1.
+//
+// Under the wrong 3.0 floor five pairs passed green while failing AA on the
+// status chip used at 141 call sites ("Paid" / "Overdue" / "Absent" / "Late"):
+//   light warning  #D97706 on #FFFBEB = 3.07:1
+//   light tertiary #0D9488 on #CCFBF1 = 3.32:1
+//   light error    #DC2626 on #FEF2F2 = 4.41:1
+//   dark  tertiary #0D9488 on #0F3D38 = 3.21:1
+//   dark  indigo   #818CF8 on #312E81 = 3.83:1
+// All five were fixed by moving the FOREGROUND token (containers unchanged,
+// hue unchanged) in lib/theme/color_tokens.dart. Do not lower this back to
+// large-text unless the chip's default size stops being `compact`.
+const double _minToneForegroundOnContainer =
+    AksharaAccessibility.minContrastNormalText;
 
 void main() {
   group('P2-UX-4 · rendered contrast audit (beyond the token-pair gate)', () {
@@ -46,12 +60,17 @@ void main() {
         for (final accent in KpiAccent.values) {
           final tone = accent.resolve(context);
 
-          // 1. Chip / KPI-tile label (bold ≥14 → large-text floor): the tone
-          //    foreground on its own container.
+          // 1. AksharaStatusChip label — 11px `labelSmall` at w600, which is
+          //    NORMAL text under WCAG 2.1, so 4.5:1 (see the note above).
+          final toneRatio =
+              AksharaAccessibility.contrastRatio(tone.foreground, tone.container);
           expect(
-            AksharaAccessibility.contrastRatio(tone.foreground, tone.container),
-            greaterThanOrEqualTo(_minToneForegroundOnContainer(entry.name, accent)),
-            reason: '${entry.name}: $accent foreground on container',
+            toneRatio,
+            greaterThanOrEqualTo(_minToneForegroundOnContainer),
+            reason: '${entry.name}: $accent foreground on container is '
+                '${toneRatio.toStringAsFixed(2)}:1 — below the WCAG AA '
+                'normal-text floor of $_minToneForegroundOnContainer:1 that an '
+                '11px AksharaStatusChip label requires.',
           );
 
           // 2. Mark-badge glyph: the chosen on-colour on the SOLID tone fill —
@@ -108,5 +127,33 @@ void main() {
         }
       });
     }
+
+    // Guards the PREMISE of the 4.5:1 floor above. If the chip's default size
+    // (or `labelSmall`'s size) ever changes, this fails and forces whoever
+    // changed it to re-derive the floor rather than silently inheriting one.
+    testWidgets('the chip default really is normal-size text', (tester) async {
+      const wcagLargeBoldPt = 18.66; // WCAG 2.1: large = 14pt bold = 18.66px
+
+      expect(
+        const AksharaStatusChip(label: 'Paid', tone: KpiAccent.success).size,
+        AksharaStatusChipSize.compact,
+        reason: 'The 4.5:1 floor above is derived from the compact default.',
+      );
+
+      final context =
+          await _themedContext(tester, AksharaAppTheme.light());
+      final chipFontSize =
+          Theme.of(context).extension<AksharaTextStyles>()!.labelSmall.fontSize!;
+
+      expect(
+        chipFontSize,
+        lessThan(wcagLargeBoldPt),
+        reason: 'A compact chip paints labelSmall (${chipFontSize}px). Below '
+            '${wcagLargeBoldPt}px bold, WCAG 2.1 classes it as NORMAL text, so '
+            'tone foreground on tone container must clear '
+            '${AksharaAccessibility.minContrastNormalText}:1 — not the 3.0:1 '
+            'large-text floor.',
+      );
+    });
   });
 }

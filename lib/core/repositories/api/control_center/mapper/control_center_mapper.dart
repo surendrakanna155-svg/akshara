@@ -382,6 +382,66 @@ class ControlCenterMapper {
     ];
   }
 
+  AiWalletData toAiWallet(AiWalletResponseDto dto) {
+    final raw = dto.raw;
+    return AiWalletData(
+      balance: _mapAiWalletBalance(raw['balance'] as Map<String, dynamic>? ?? const {}),
+      entries: _mapAiCreditEntries(raw['entries'] as List<dynamic>? ?? const []),
+    );
+  }
+
+  /// The grant response only echoes the single new entry (not the full
+  /// ledger) — callers refresh [toAiWallet] separately for the ledger view.
+  AiWalletData toAiWalletGrant(AiWalletGrantResponseDto dto) {
+    final raw = dto.raw;
+    return AiWalletData(
+      balance: _mapAiWalletBalance(raw['balance'] as Map<String, dynamic>? ?? const {}),
+      entries: const [],
+    );
+  }
+
+  AiWalletBalance _mapAiWalletBalance(Map<String, dynamic> raw) {
+    return AiWalletBalance(
+      grantedUnits: raw['grantedUnits'] as int? ?? 0,
+      debitedUnits: raw['debitedUnits'] as int? ?? 0,
+      reservedUnits: raw['reservedUnits'] as int? ?? 0,
+      availableUnits: raw['availableUnits'] as int? ?? 0,
+      lastTopUpUnits: raw['lastTopUpUnits'] as int? ?? 0,
+      health: ControlCenterEnumCodec.parseAiWalletHealth(raw['health'] as String?),
+    );
+  }
+
+  /// PRC-A Batch 4 — `limitBytes`/`availableBytes` are NULLABLE (null =
+  /// unlimited plan); `enforced` defaults false (the dark master switch is
+  /// off unless the backend explicitly says otherwise).
+  StorageQuotaData toStorageQuota(StorageQuotaResponseDto dto) {
+    final raw = dto.raw;
+    return StorageQuotaData(
+      planName: raw['planName'] as String? ?? '',
+      usedBytes: raw['usedBytes'] as int? ?? 0,
+      limitBytes: raw['limitBytes'] as int?,
+      availableBytes: raw['availableBytes'] as int?,
+      health: ControlCenterEnumCodec.parseStorageQuotaHealth(raw['health'] as String?),
+      enforced: raw['enforced'] as bool? ?? false,
+    );
+  }
+
+  List<AiCreditEntry> _mapAiCreditEntries(List<dynamic> items) {
+    return [
+      for (final item in items)
+        if (item is Map<String, dynamic>)
+          AiCreditEntry(
+            id: item['id'] as String? ?? '',
+            entryType: item['entryType'] as String? ?? '',
+            units: item['units'] as int? ?? 0,
+            reason: item['reason'] as String? ?? '',
+            actorId: item['actorId'] as String?,
+            externalRef: item['externalRef'] as String?,
+            createdAt: item['createdAt'] as String? ?? '',
+          ),
+    ];
+  }
+
   List<String> _stringList(dynamic value) {
     if (value is! List) return const [];
     return [

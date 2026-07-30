@@ -30,6 +30,11 @@ export interface PlanRow {
   studentSlabMin: number;
   studentSlabMax: number | null;
   maxSchools: number | null;
+  /** PRC-A Batch 4 — plan storage cap in BYTES. null = unlimited (like maxSchools). */
+  maxStorageBytes: number | null;
+  /** W4 — plan SMS cap PER CALENDAR MONTH. null = unlimited (same convention as
+   * maxSchools / maxStorageBytes). Config-driven; never hardcoded in the gate. */
+  smsPerMonth: number | null;
   graceBufferPercent: number;
   trialLengthDays: number | null;
   trialGraceDays: number | null;
@@ -65,6 +70,8 @@ interface RawPlan {
   student_slab_min: number;
   student_slab_max: number | null;
   max_schools: number | null;
+  max_storage_bytes: string | number | null;
+  max_sms_per_month: string | number | null;
   grace_buffer_percent: string | number;
   trial_length_days: number | null;
   trial_grace_days: number | null;
@@ -97,6 +104,8 @@ function mapPlan(row: RawPlan): PlanRow {
     studentSlabMin: Number(row.student_slab_min),
     studentSlabMax: row.student_slab_max === null ? null : Number(row.student_slab_max),
     maxSchools: row.max_schools === null ? null : Number(row.max_schools),
+    maxStorageBytes: row.max_storage_bytes == null ? null : Number(row.max_storage_bytes),
+    smsPerMonth: row.max_sms_per_month == null ? null : Number(row.max_sms_per_month),
     graceBufferPercent: Number(row.grace_buffer_percent),
     trialLengthDays: row.trial_length_days === null ? null : Number(row.trial_length_days),
     trialGraceDays: row.trial_grace_days === null ? null : Number(row.trial_grace_days),
@@ -108,8 +117,9 @@ function mapPlan(row: RawPlan): PlanRow {
 }
 
 const PLAN_COLUMNS = `slug, name, description, tier_rank, student_slab_min,
-  student_slab_max, max_schools, grace_buffer_percent, trial_length_days,
-  trial_grace_days, base_price_paise, is_trial, is_public, is_active`;
+  student_slab_max, max_schools, max_storage_bytes, max_sms_per_month,
+  grace_buffer_percent, trial_length_days, trial_grace_days, base_price_paise,
+  is_trial, is_public, is_active`;
 
 /** All active, public plans with their entitlement slugs — drives GET /plans. */
 export async function listPublicPlans(

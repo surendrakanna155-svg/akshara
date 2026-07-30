@@ -22,7 +22,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 DirectorBoardPack sampleBoardPack() => DirectorBoardPack(
       reportId: 'board_pack_2026_q1',
-      title: 'Akshara Group — Board Pack',
+      title: 'NIKSHA Group — Board Pack',
       description: 'Quarterly portfolio review',
       fileType: 'pdf',
       generatedAt: DateTime.utc(2026, 6, 30),
@@ -36,7 +36,7 @@ DirectorBoardPack sampleBoardPack() => DirectorBoardPack(
       schools: const [
         DirectorSchoolRow(
           schoolId: 'sch-1',
-          schoolName: 'Akshara Vidyalaya — Central',
+          schoolName: 'NIKSHA Vidyalaya — Central',
           location: 'Hyderabad',
           students: 1840,
           revenueCr: 6.2,
@@ -47,7 +47,7 @@ DirectorBoardPack sampleBoardPack() => DirectorBoardPack(
         ),
         DirectorSchoolRow(
           schoolId: 'sch-2',
-          schoolName: 'Akshara Vidyalaya — North',
+          schoolName: 'NIKSHA Vidyalaya — North',
           location: 'Warangal',
           students: 1320,
           revenueCr: 4.1,

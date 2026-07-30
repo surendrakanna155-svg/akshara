@@ -94,7 +94,7 @@ void main() {
     test('a realistic templated message round-trips through encode/decode intact',
         () {
       const message =
-          'Akshara: Fee receipt for Asha (Class 3A) — ₹4,200 received.\nOpen the app to view.';
+          'NIKSHA: Fee receipt for Asha (Class 3A) — ₹4,200 received.\nOpen the app to view.';
       final uri = WhatsAppLauncher.buildChatUri(
         phoneE164: '9876543210',
         message: message,

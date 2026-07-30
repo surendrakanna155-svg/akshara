@@ -16,7 +16,7 @@ class AdmissionsOfferLetterPdfService {
 
   Future<Uint8List> buildOfferLetterPdf({
     required OfferLetterData data,
-    String schoolName = 'Akshara School',
+    String schoolName = 'NIKSHA School',
     String signatoryName = 'Principal',
   }) async {
     final document = pw.Document();

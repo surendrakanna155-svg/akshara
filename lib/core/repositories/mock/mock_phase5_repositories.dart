@@ -345,6 +345,7 @@ class MockSchoolMemoriesRepository implements SchoolMemoriesRepository {
     String? albumId,
     String? albumTitle,
     String? mediaType,
+    int? sizeBytes,
   }) async {
     final resolvedAlbumId = albumId ?? 'alb_new_$eventId';
     return MemoryUploadPresign(
@@ -363,6 +364,7 @@ class MockSchoolMemoriesRepository implements SchoolMemoriesRepository {
     required String storagePath,
     required String title,
     String? mediaType,
+    int? sizeBytes,
   }) async {
     final mediaId = 'med_${_mediaSeq++}';
     final shareToken = 'share_$mediaId';
@@ -427,6 +429,7 @@ class MockSchoolMemoriesRepository implements SchoolMemoriesRepository {
       albumId: albumId,
       albumTitle: albumTitle,
       mediaType: mediaType,
+      sizeBytes: bytes.length,
     );
     return confirmUpload(
       query: query,
@@ -435,6 +438,7 @@ class MockSchoolMemoriesRepository implements SchoolMemoriesRepository {
       storagePath: presign.path,
       title: title,
       mediaType: mediaType ?? presign.mediaType,
+      sizeBytes: bytes.length,
     );
   }
 

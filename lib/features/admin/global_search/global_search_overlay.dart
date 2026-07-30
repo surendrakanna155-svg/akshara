@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/dai/dai_intent.dart';
+import '../../../core/dai/dai_resolver.dart';
 import '../../../core/school_config/school_configuration_models.dart';
 import '../../../core/school_config/school_configuration_provider.dart';
 import '../../../core/security/permissions.dart';
@@ -56,15 +58,42 @@ class _GlobalSearchOverlayState extends ConsumerState<GlobalSearchOverlay> {
   /// Open an Adaptive Universal Search record (student/staff/lead) — deterministic
   /// navigation to the ERP record, no AI call (Search First → AI Later).
   void _openRecord(SearchResultItem item) {
-    final route = adaptiveSearchRoute(item.category, item.id);
+    // Pass the caller's RBAC so a student result opens the Student 360 dossier
+    // for roles that hold viewStudent360 (principal, VP, admin, management,
+    // teacher) and falls back to the SIS detail page for everyone else, instead
+    // of routing them into Access Denied.
+    final route = adaptiveSearchRoute(
+      item.category,
+      item.id,
+      hasPermission: ref.read(rbacServiceProvider).hasPermission,
+    );
     if (route == null) return;
     Navigator.of(context).pop();
     context.go(route);
   }
 
+  /// The DAI intent for the current query, or null when the resolver is not
+  /// confident, when it needs a directory lookup (the entity list below already
+  /// answers that better), or when this user lacks the destination's permission.
+  ///
+  /// Permission is checked HERE, not in the resolver: the DAI layer resolves
+  /// meaning and deliberately knows nothing about who is asking.
+  DaiIntent? _resolveDai(bool Function(Permission) hasPermission) {
+    if (_query.length < 3) return null;
+    final intent = DaiResolver.resolve(_query);
+    if (!intent.isResolved) return null;
+    if (intent.needsDirectoryLookup || intent.route == null) return null;
+    final permission = intent.requiredPermission;
+    if (permission != null && !hasPermission(permission)) return null;
+    return intent;
+  }
+
+  DaiIntent? _daiAnswer;
+
   @override
   Widget build(BuildContext context) {
     final rbac = ref.watch(rbacServiceProvider);
+    _daiAnswer = _resolveDai(rbac.hasPermission);
     final capabilities = ref.watch(schoolCapabilitiesProvider);
     final recentRoutes = ref.watch(recentRoutesProvider);
     // RBAC filter: entries the user lacks the route's view-permission for must
@@ -103,7 +132,9 @@ class _GlobalSearchOverlayState extends ConsumerState<GlobalSearchOverlay> {
                   autofocus: true,
                   textInputAction: TextInputAction.search,
                   decoration: const InputDecoration(
-                    hintText: 'Search students, staff, modules…',
+                    // The hint teaches the DAI vocabulary. Users do not discover
+                    // that they can type "fee defaulters" unless shown.
+                    hintText: 'Ask anything — "fee defaulters", "Class 8A"…',
                     prefixIcon: Icon(Icons.search),
                   ),
                   onChanged: (value) => setState(() => _query = value.trim()),
@@ -127,6 +158,18 @@ class _GlobalSearchOverlayState extends ConsumerState<GlobalSearchOverlay> {
                       ),
                       const SizedBox(height: AksharaSpacing.s4),
                     ],
+                    // DAI — the deterministic intent answer, on top. Resolved
+                    // on-device with no network call and no tokens, so it lands
+                    // instantly and works offline. Only shown when the resolver
+                    // is confident AND the destination is one this user may open.
+                    if (_daiAnswer != null)
+                      _DaiAnswerCard(
+                        intent: _daiAnswer!,
+                        onGo: () {
+                          Navigator.of(context).pop();
+                          context.go(_daiAnswer!.route!);
+                        },
+                      ),
                     // W2.S — deterministic, RBAC-scoped entity records (students /
                     // staff / admissions). Self-hides for short/empty queries.
                     AdaptiveSearchResults(query: _query, onSelect: _openRecord),
@@ -222,6 +265,57 @@ class _QuickActionRow extends StatelessWidget {
             onPressed: () => onNavigate(entry),
           ),
       ],
+    );
+  }
+}
+
+/// The DAI answer card — what makes global search feel like an operating
+/// system rather than a filter box.
+///
+/// Deliberately styled as an *answer*, not a result row: the sentence comes
+/// first, the destination second. Every word of it was composed deterministically
+/// by [DaiResolver] from the user's own query, so it can never say something the
+/// system will not then do.
+class _DaiAnswerCard extends StatelessWidget {
+  const _DaiAnswerCard({required this.intent, required this.onGo});
+
+  final DaiIntent intent;
+  final VoidCallback onGo;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final text = context.aksharaText;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AksharaSpacing.s3),
+      child: Material(
+        color: colors.primaryContainer,
+        borderRadius: BorderRadius.circular(AksharaSpacing.s3),
+        child: InkWell(
+          onTap: onGo,
+          borderRadius: BorderRadius.circular(AksharaSpacing.s3),
+          child: Padding(
+            padding: const EdgeInsets.all(AksharaSpacing.s4),
+            child: Row(
+              children: [
+                Icon(Icons.auto_awesome, size: 20, color: colors.primary),
+                const SizedBox(width: AksharaSpacing.s3),
+                Expanded(
+                  child: Text(
+                    intent.answer,
+                    style: text.bodyMedium.copyWith(
+                      color: colors.onPrimaryContainer,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Icon(Icons.arrow_forward_rounded, size: 18, color: colors.primary),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

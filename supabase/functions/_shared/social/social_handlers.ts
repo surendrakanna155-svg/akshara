@@ -40,7 +40,7 @@ function requireSocialManage(claims: Parameters<typeof requirePermission>[0]): R
 
 function redirectUri(body: { redirectUri?: string } | null): string {
   return body?.redirectUri ?? Deno.env.get("META_REDIRECT_URI") ??
-    "https://akshara.veloraunisexsalon.com/social/connect/callback";
+    "https://api.nikshaos.in/social/connect/callback";
 }
 
 function socialError(error: unknown): Response {

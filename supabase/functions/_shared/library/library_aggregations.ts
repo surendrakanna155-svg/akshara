@@ -337,8 +337,13 @@ export function computeFines(
 
   return {
     fines: [...persisted, ...live],
+    // PRA-P1-40 (S0/T7): honest note — library fines do NOT sync to Finance.
+    // There is no `library_fine` fee head or collection posting; a fine can only
+    // be waived or left outstanding today. The previous copy told the librarian a
+    // Finance sync existed. A real cash-collection/posting path is future work.
     financeIntegrationNote:
-      "Library fines sync to Finance FN-02 fee head library_fine. Paid fines post to FN-05 collections.",
+      "Library fines are tracked in the Library module and are NOT posted to the Finance ledger. " +
+      "Where a fine is matched to a registered student, collect it manually via the FN-02 library_fine fee head.",
     financeRoute: "/finance/fee-structures",
     totalPending: rupees(totalPending),
   };

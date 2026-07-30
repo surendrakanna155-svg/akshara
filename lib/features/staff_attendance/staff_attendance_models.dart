@@ -44,25 +44,43 @@ class AttendanceLocationFix {
 /// A live face capture: an on-device embedding + a liveness verdict. The SERVER
 /// performs the authoritative CV match against the enrolled reference — the
 /// client cannot assert a match itself.
+///
+/// [modelTag] identifies the on-device embedder (e.g. `mobilefacenet-v1`,
+/// [MobileFaceNetEmbedder.modelTag] in device/face_embedder.dart) that produced
+/// [embedding]. Slice 2: when both this and the enrolled reference's model tag
+/// are non-empty and differ, the server 422s FACE_EMBEDDING_MISMATCH ("re-enrol")
+/// instead of silently comparing embeddings from two different model spaces.
+/// A live face capture, as an ALIGNED 112x112 crop — not an embedding.
+///
+/// The client used to compute the embedding on-device and post it. That made
+/// template forgery possible: a tampered build could enrol vector E and replay
+/// it forever, and the server had no way to tell, because it only ever saw a
+/// number array. The server now derives the embedding itself from [cropBase64],
+/// so the client cannot fabricate one. The server REFUSES a request carrying an
+/// embedding (`FACE_EMBEDDING_NOT_ACCEPTED`), so this is not a soft migration —
+/// an old client fails loudly rather than silently degrading.
 class FaceCapture {
   const FaceCapture({
-    required this.embedding,
+    required this.cropBase64,
     required this.livenessPassed,
     this.captureRef,
   });
 
-  final List<double> embedding;
+  /// Base64 of the aligned 112x112 face crop (JPEG or PNG). ~10-20 KB, so the
+  /// upload stays small enough not to dominate check-in latency.
+  final String cropBase64;
   final bool livenessPassed;
   final String? captureRef;
 
   Map<String, dynamic> toJson() => {
-        'embedding': embedding,
+        'crop': cropBase64,
         'livenessPassed': livenessPassed,
         if (captureRef != null) 'captureRef': captureRef,
       };
 }
 
-/// A recorded (or optimistically-queued) staff check-in/out.
+/// A recorded staff check-in/out (always a confirmed server write — the
+/// check-in operation is online-only; there is no queued/optimistic state).
 class StaffCheckRecord {
   const StaffCheckRecord({
     required this.id,
@@ -73,7 +91,6 @@ class StaffCheckRecord {
     this.faceMatchScore,
     this.distanceM,
     this.eventTime,
-    this.pendingSync = false,
   });
 
   final String id;
@@ -84,9 +101,6 @@ class StaffCheckRecord {
   final double? faceMatchScore;
   final double? distanceM;
   final String? eventTime;
-
-  /// True when the write was queued offline (Sync Center surfaces it until confirmed).
-  final bool pendingSync;
 
   factory StaffCheckRecord.fromJson(Map<String, dynamic> json) {
     double? asDouble(dynamic v) => v == null ? null : (v as num).toDouble();
@@ -99,7 +113,6 @@ class StaffCheckRecord {
       faceMatchScore: asDouble(json['faceMatchScore'] ?? json['face_match_score']),
       distanceM: asDouble(json['distanceM'] ?? json['distance_m']),
       eventTime: (json['eventTime'] ?? json['event_time'])?.toString(),
-      pendingSync: json['pendingSync'] == true,
     );
   }
 }
@@ -110,7 +123,7 @@ class StaffCheckRecord {
 enum StaffCheckStatus { recorded, locationBlocked, faceBlocked, failed }
 
 class StaffCheckOutcome {
-  const StaffCheckOutcome._(this.status, {this.record, this.message});
+  const StaffCheckOutcome._(this.status, {this.record, this.message, this.code});
 
   factory StaffCheckOutcome.recorded(StaffCheckRecord record) =>
       StaffCheckOutcome._(StaffCheckStatus.recorded, record: record);
@@ -119,9 +132,11 @@ class StaffCheckOutcome {
   factory StaffCheckOutcome.locationBlocked(String? message) =>
       StaffCheckOutcome._(StaffCheckStatus.locationBlocked, message: message);
 
-  /// Face step failed — NOTHING was written or audited.
-  factory StaffCheckOutcome.faceBlocked(String? message) =>
-      StaffCheckOutcome._(StaffCheckStatus.faceBlocked, message: message);
+  /// Face step failed — NOTHING was written or audited. [code] carries the raw
+  /// server `STAFF_ATTENDANCE_*` reason (when the block came from a server
+  /// rejection) so the UI can offer a targeted fix — e.g. [isNotEnrolled].
+  factory StaffCheckOutcome.faceBlocked(String? message, {String? code}) =>
+      StaffCheckOutcome._(StaffCheckStatus.faceBlocked, message: message, code: code);
 
   factory StaffCheckOutcome.failed(String message) =>
       StaffCheckOutcome._(StaffCheckStatus.failed, message: message);
@@ -129,8 +144,16 @@ class StaffCheckOutcome {
   final StaffCheckStatus status;
   final StaffCheckRecord? record;
   final String? message;
+  final String? code;
 
   bool get isRecorded => status == StaffCheckStatus.recorded;
+
+  /// True when the face step was blocked specifically because the staff member
+  /// has no enrolled reference face yet (Slice 3 — drives the "Enrol my face"
+  /// affordance on [StaffCheckInCard]).
+  bool get isNotEnrolled =>
+      status == StaffCheckStatus.faceBlocked &&
+      code == 'STAFF_ATTENDANCE_FACE_NOT_ENROLLED';
 }
 
 /// Raised by the write seam when the SERVER rejects the attendance chain (422).
@@ -147,8 +170,26 @@ class StaffAttendanceRejected implements Exception {
   String toString() => 'StaffAttendanceRejected($code): $message';
 }
 
-/// The write seam for staff check-in. The real implementation routes through the
-/// reliability platform (offline-queueable); tests inject a fake.
+/// Raised by the write seam when the device is offline (audit R1). Per the
+/// FINAL design (docs/ATTENDANCE_AUTH_DESIGN_DECISION.md §4 — a FRESH location
+/// fix per event, server-enforced freshness window), a staff check-in can NEVER
+/// be queued for later replay: a drained queued event would be guaranteed-stale.
+/// The only offline path is the audited manual attendance request.
+class StaffAttendanceOffline implements Exception {
+  const StaffAttendanceOffline();
+
+  static const String userMessage =
+      "You're offline — attendance needs a live connection right now "
+      '(a saved check-in would be stale by the time it synced). '
+      'Try again when you are back online, or raise a manual attendance request.';
+
+  @override
+  String toString() => 'StaffAttendanceOffline: $userMessage';
+}
+
+/// The write seam for staff check-in. The real implementation routes through
+/// the reliability platform as an ONLINE-ONLY operation (never queued/optimistic
+/// — see [StaffAttendanceOffline]); tests inject a fake.
 abstract interface class StaffAttendanceWriter {
   Future<StaffCheckRecord> recordCheck({
     required StaffCheckEvent event,

@@ -31,6 +31,12 @@ abstract final class SchoolBuildScope {
     // Experimental / "big-company" extras
     AdminModule.platformOperations,
     AdminModule.dynamicWidgets,
+    // Owner scope decision (CODE-8, 2026-07-13): Alumni is DEFERRED for the
+    // pilot — hidden now, not built out (graduation auto-population + Finance
+    // link revisit post-pilot). Reversible: remove this entry + the /alumni
+    // route prefix below to bring it back. The ALUMNI_API_ENABLED flag stays ON
+    // (real backend), so un-hiding restores a live surface, not a mock.
+    AdminModule.alumni,
     // NOTE: organizationBuilder is no longer hidden here — it is now gated by
     // chain status at runtime (M3, see ChainScope), so real chains can see it.
     // NOTE: AdminModule.management is DELIBERATELY NOT hidden — it is fully built
@@ -81,6 +87,33 @@ abstract final class SchoolBuildScope {
     // capture + campaigns + source attribution, entitlement-gated via
     // module.marketing; reachable from the Marketing nav tile.
     RouteNames.principalCommand,
+    // Owner scope decision (CODE-8, 2026-07-13): Alumni deferred for pilot —
+    // the parent prefix hides /alumni and every /alumni/* sub-route (dashboard,
+    // registry, profile, events, donations, campaigns, mentorship, reports,
+    // settings). Route-hidden here + the module dropped from nav above.
+    RouteNames.alumni,
+    // Owner scope decision (CODE-7, 2026-07-13): Hostel ships "residence-lite"
+    // (occupancy: dashboard/students/rooms/attendance/mess/reports stay). The
+    // leave-management + visitor/gate-pass sub-features are DEFERRED — hidden
+    // now, not built out. Reversible per-entry.
+    RouteNames.hostelLeave,
+    RouteNames.hostelVisitors,
+    // Owner scope decision (V1-SCOPE-1, 2026-07-28): the Education Suite —
+    // Question Papers + Question Bank (the QIE engine surface) — is DEFERRED to
+    // Version 2. The question-generation engine is built but still owner/data
+    // gated (the certified question bank is empty), so shipping the tab in V1
+    // would expose an incomplete feature in school demos. Hidden now, NOT
+    // deleted: V2 restores it alongside Navodaya / IIT-JEE / NEET / regular
+    // school papers and AI-assisted generation.
+    //
+    // Safe to hide: the two COMPLETE tabs behind this route (Homework, Report
+    // Remarks) are also reachable through their own persona routes
+    // (/teacher/homework, /parent/homework, /student/homework), so hiding this
+    // entry removes no working capability from any user.
+    //
+    // TO RESTORE IN V2: delete this one line. See educationRouteBuilder in
+    // lib/router/education_navigation.dart.
+    RouteNames.education,
   };
 
   /// Whether [module] is hidden from the admin navigation in this build.

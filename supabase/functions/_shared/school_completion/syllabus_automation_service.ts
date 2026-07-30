@@ -1,5 +1,28 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
 
+/**
+ * PRA-P1-18: thrown when no real curriculum template exists for the requested
+ * board+grade+subject. Previously the generator silently inserted a fabricated
+ * 2-chapter "Unit 1 / Unit 2" stub — indistinguishable from a real syllabus and
+ * counted into the Principal's coverage-% over a meaningless denominator. Now it
+ * refuses: no fake curriculum is ever written. The provisioning flows already
+ * catch this and record an honest "syllabus auto-generation skipped" warning; the
+ * direct generate endpoint returns 422 so the school KNOWS the grade is unseeded.
+ */
+export class NoSyllabusTemplateError extends Error {
+  constructor(
+    public readonly board: string,
+    public readonly gradeLabel: string,
+    public readonly subjectName: string,
+  ) {
+    super(
+      `No curriculum template for ${board} / ${gradeLabel} / ${subjectName}; ` +
+        `syllabus cannot be auto-generated (only seeded grades are supported).`,
+    );
+    this.name = "NoSyllabusTemplateError";
+  }
+}
+
 export interface SubjectTemplateRow {
   id: string;
   board: string;
@@ -85,16 +108,20 @@ export async function generateSyllabusFromTemplates(
     createdBy: string;
   },
 ): Promise<{ chaptersCreated: number; topicsCreated: number; generationId: string }> {
-  const templates = await listSubjectTemplates(db, input.board ?? "CBSE", input.gradeLabel);
+  const board = input.board ?? "CBSE";
+  const templates = await listSubjectTemplates(db, board, input.gradeLabel);
   const match = templates.find(
     (t) =>
       t.subject_name.toLowerCase() === input.subjectName.toLowerCase() ||
       t.subject_code.toLowerCase() === input.subjectName.slice(0, 3).toLowerCase(),
   );
-  const chapters = match?.chapters ?? [
-    { name: "Unit 1", topics: ["Introduction", "Basics"] },
-    { name: "Unit 2", topics: ["Practice", "Review"] },
-  ];
+  // PRA-P1-18: refuse rather than fabricate. A missing template used to seed a
+  // fake "Unit 1 / Unit 2" scaffold (with no manual-edit path to fix it) that
+  // then polluted syllabus coverage-%. Only real, seeded curriculum is written.
+  if (!match || match.chapters.length === 0) {
+    throw new NoSyllabusTemplateError(board, input.gradeLabel, input.subjectName);
+  }
+  const chapters = match.chapters;
 
   let chaptersCreated = 0;
   let topicsCreated = 0;
@@ -257,6 +284,53 @@ export async function listSyllabusChapters(
      ORDER BY class_name, sequence_order`,
     [orgId, schoolId],
   );
+}
+
+/**
+ * Real syllabus topics for a class/subject (and optionally a single chapter),
+ * used by the teacher's daily-capture UI to pick the ACTUAL topic being
+ * completed instead of a client-fabricated id (P1 fix — the client previously
+ * sent `topic_${lessonLogId}`, which is not a real `syllabus_topics.id` and
+ * fails the `syllabus_topic_completions.topic_id` FK).
+ */
+export async function listSyllabusTopics(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  filters: { className?: string; subjectId?: string; chapterId?: string } = {},
+): Promise<SyllabusTopicRow[]> {
+  const conditions = ["organization_id = $1", "school_id = $2"];
+  const params: unknown[] = [orgId, schoolId];
+  if (filters.className) {
+    params.push(filters.className);
+    conditions.push(`class_name = $${params.length}`);
+  }
+  if (filters.subjectId) {
+    params.push(filters.subjectId);
+    conditions.push(`subject_id = $${params.length}`);
+  }
+  if (filters.chapterId) {
+    params.push(filters.chapterId);
+    conditions.push(`chapter_id = $${params.length}`);
+  }
+  return await db.queryObject<SyllabusTopicRow>(
+    `SELECT id, subject_id, class_name, chapter_id, topic_name, sequence_order, status
+     FROM syllabus_topics WHERE ${conditions.join(" AND ")}
+     ORDER BY class_name, sequence_order`,
+    params,
+  );
+}
+
+export function topicToApi(t: SyllabusTopicRow) {
+  return {
+    id: t.id,
+    subjectId: t.subject_id,
+    className: t.class_name,
+    chapterId: t.chapter_id,
+    topicName: t.topic_name,
+    sequenceOrder: t.sequence_order,
+    status: t.status,
+  };
 }
 
 export function templateToApi(t: SubjectTemplateRow) {

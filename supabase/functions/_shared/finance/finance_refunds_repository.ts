@@ -317,6 +317,31 @@ async function applyProcessedRefund(
 ): Promise<RefundListRow> {
   const refundAmount = parseAmount(refund.refund_amount);
 
+  // PRA-P0-03 (S1): CLAIM the refund before moving any money. This guarded,
+  // throw-on-0-rows transition (AND refund_status = 'pending') is the single
+  // serialization point: under READ COMMITTED two concurrent approvals of the
+  // same refund would otherwise both read 'pending', both pass the app checks,
+  // and both apply the amount_paid/outstanding deltas below — double-refunding
+  // real cash. With claim-first, exactly one transaction flips pending→processed;
+  // the loser matches 0 rows and throws, so the deltas run once. Mirrors the
+  // proven pattern at finance_fee_reductions_repository.ts:421.
+  const claimed = await db.queryObject<FinanceRefundRow>(
+    `UPDATE finance_refunds SET
+      refund_status = 'processed',
+      approved_by = $1,
+      approved_at = timezone('utc', now()),
+      updated_at = timezone('utc', now())
+     WHERE id = $2 AND organization_id = $3 AND school_id = $4
+       AND refund_status = 'pending'
+     RETURNING *`,
+    [approvedBy, refund.id, organizationId, schoolId],
+  );
+  if (claimed.length === 0) {
+    throw new InvalidRefundTransitionError(
+      `Refund is no longer pending (already processed or rejected): ${refund.id}`,
+    );
+  }
+
   const invoiceRows = await db.queryObject<FinanceInvoiceRow>(
     `SELECT * FROM finance_invoices
      WHERE id = $1 AND organization_id = $2 AND school_id = $3`,
@@ -369,18 +394,15 @@ async function applyProcessedRefund(
     [newCollectionStatus, collection.id, organizationId, schoolId],
   );
 
-  const updatedRows = await db.queryObject<FinanceRefundRow>(
-    `UPDATE finance_refunds SET
-      refund_status = 'processed',
-      approved_by = $1,
-      approved_at = timezone('utc', now()),
-      updated_at = timezone('utc', now())
-     WHERE id = $2 AND organization_id = $3 AND school_id = $4
-     RETURNING *`,
-    [approvedBy, refund.id, organizationId, schoolId],
-  );
-
-  return (await getRefund(db, organizationId, schoolId, updatedRows[0]!.id))!;
+  // The refund row was already claimed (pending→processed) at the TOP of this
+  // function with an `AND refund_status='pending'` guard + throw-on-0-rows
+  // (PRA-P0-03 claim-first), so the money-moves-exactly-once property is already
+  // enforced there and no second terminal status write is needed. (W0.2b: the DRP
+  // P5/RT-1 variant guarded at the terminal write instead; both achieve the same
+  // invariant — we keep the claim-first structure that the merged top-of-function
+  // uses, since a second guarded UPDATE here would see the already-'processed' row,
+  // match 0 rows, and throw erroneously.)
+  return (await getRefund(db, organizationId, schoolId, refund.id))!;
 }
 
 export async function approveRefund(
@@ -407,9 +429,13 @@ export async function approveRefund(
     throw new RefundSelfApprovalError();
   }
 
+  // PRA-P0-03 (S1): lock the collection row so concurrent refunds against the
+  // SAME collection serialize — the "already refunded + this refund > collected"
+  // check below then reads a stable total and cannot be bypassed by a race.
   const collectionRows = await db.queryObject<FinanceCollectionRow>(
     `SELECT * FROM finance_collections
-     WHERE id = $1 AND organization_id = $2 AND school_id = $3`,
+     WHERE id = $1 AND organization_id = $2 AND school_id = $3
+     FOR UPDATE`,
     [refund.collection_id, organizationId, schoolId],
   );
   const collection = collectionRows[0];
@@ -459,13 +485,22 @@ export async function rejectRefund(
     );
   }
 
-  await db.queryObject(
+  const rejectedRows = await db.queryObject<FinanceRefundRow>(
     `UPDATE finance_refunds SET
       refund_status = 'rejected',
       updated_at = timezone('utc', now())
-     WHERE id = $1 AND organization_id = $2 AND school_id = $3`,
+     WHERE id = $1 AND organization_id = $2 AND school_id = $3
+       AND refund_status = 'pending'
+     RETURNING id`,
     [refundId, organizationId, schoolId],
   );
+  if (rejectedRows.length === 0) {
+    // A concurrent approval/rejection already moved this refund out of pending;
+    // never reject an already-processed refund (its money was moved) — fail closed.
+    throw new InvalidRefundTransitionError(
+      `Cannot reject refund in status: ${refund.refund_status} (concurrent transition)`,
+    );
+  }
 
   return (await getRefund(db, organizationId, schoolId, refundId))!;
 }

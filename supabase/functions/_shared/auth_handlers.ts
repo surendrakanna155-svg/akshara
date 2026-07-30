@@ -4,6 +4,7 @@ import {
   type AuthScope,
   bearerToken,
   expiresAtIso,
+  hashOtp,
   hashToken,
   randomToken,
   signAccessToken,
@@ -24,6 +25,7 @@ import { envelope, errorEnvelope, jsonResponse, readJson } from "./http.ts";
 import { buildInfo } from "./build_info.ts";
 import { isSmsConfigured, sendOtpSms, type SmsConfig } from "./sms_provider.ts";
 import { evaluateOtpRateLimit } from "./otp_rate_limit.ts";
+import { assertSessionValid } from "./session_validation.ts";
 
 interface LoginBody {
   identifier?: string;
@@ -59,8 +61,22 @@ function normalizePhone(identifier: string, type?: string): string {
   return trimmed;
 }
 
+// PRA-P1-06 (S2): an OTP is an authentication secret and must be
+// cryptographically random. `Math.random()` is a non-cryptographic, seedable
+// PRNG whose output can be predicted from prior samples — unacceptable for a
+// login code. Draw a uniform 6-digit code from `crypto.getRandomValues` using
+// rejection sampling so there is no modulo bias across [100000, 999999].
 function generateOtp(): string {
-  return `${Math.floor(100000 + Math.random() * 900000)}`;
+  const span = 900000; // 100000..999999 inclusive
+  // Largest multiple of `span` below 2^32; reject the biased tail above it.
+  const limit = Math.floor(0x1_0000_0000 / span) * span;
+  const buf = new Uint32Array(1);
+  let n: number;
+  do {
+    crypto.getRandomValues(buf);
+    n = buf[0];
+  } while (n >= limit);
+  return `${100000 + (n % span)}`;
 }
 
 /** Best-effort source IP from proxy headers (Nginx sets X-Forwarded-For). */
@@ -82,9 +98,19 @@ function smsConfigFrom(config: AppConfig): SmsConfig {
 
 /**
  * A phone gets the OTP in the response (no SMS) when it is explicitly
- * allowlisted, or when global dev mode is on outside production.
+ * allowlisted, or when global dev mode is on — but ONLY outside production.
+ *
+ * ICA-B2: production has NO privileged OTP-in-response bypass. Regardless of the
+ * pilot-phone allowlist or the dev-mode flag, a production login MUST require the
+ * normal SMS-possession OTP flow — the plaintext OTP is NEVER returned in the
+ * response body for ANY phone. The allowlist/dev-return path below is a
+ * non-production convenience only (avoids SMS spend in dev/test); the leading
+ * production short-circuit makes it structurally impossible to leak an OTP in the
+ * body once `environment === "production"`, whatever the allowlist contains.
+ * Exported so the invariant can be unit-asserted directly.
  */
-function canReturnOtpInResponse(config: AppConfig, phone: string): boolean {
+export function canReturnOtpInResponse(config: AppConfig, phone: string): boolean {
+  if (config.environment === "production") return false;
   if (config.otpPilotPhones.includes(phone)) return true;
   if (config.otpDevMode && config.environment !== "production") return true;
   return false;
@@ -297,7 +323,10 @@ export async function handleLogin(req: Request, config: AppConfig): Promise<Resp
   }
 
   const otp = generateOtp();
-  const otpHash = await hashToken(otp);
+  // ICA-B4: OTPs are keyed-hashed (HMAC under the server secret), never a bare
+  // SHA-256 — a 6-digit code has only 10^6 preimages and would be reversible
+  // from a DB dump. Verify path (handleVerifyOtp) must use the SAME hashOtp.
+  const otpHash = await hashOtp(otp, config.jwtSecret);
   const expiresAt = expiresAtIso(config.otpTtlSeconds);
 
   const returnOtp = canReturnOtpInResponse(config, phone);
@@ -413,7 +442,8 @@ export async function handleVerifyOtp(
     return errorEnvelope("OTP_LOCKED", "Too many invalid attempts", 429);
   }
 
-  const submittedHash = await hashToken(body.otp.trim());
+  // ICA-B4: must mirror the store path's keyed hashOtp (same server secret).
+  const submittedHash = await hashOtp(body.otp.trim(), config.jwtSecret);
   if (submittedHash !== otpRow.otp_hash) {
     await client.from("otp_requests").update({
       attempts: (otpRow.attempts as number) + 1,
@@ -567,6 +597,16 @@ export async function handleContextSwitch(
   const currentClaims = await verifyAccessToken(config.jwtSecret, token);
   if (!currentClaims) return errorEnvelope("UNAUTHORIZED", "Invalid access token", 401);
 
+  // PRA-P1-07 (S2): verifying the JWT signature alone is not enough for a
+  // context switch. This route mints a BRAND-NEW session + refresh token from
+  // the presented token, so a still-unexpired access token belonging to a
+  // revoked/logged-out session (or a user whose membership was revoked) could
+  // otherwise re-establish full access — defeating revocation entirely. Route
+  // the switch through the same live-session/membership gate the normal request
+  // path uses (RT-16/RT-17) before issuing anything.
+  const sessionInvalid = await assertSessionValid(config, currentClaims);
+  if (sessionInvalid) return sessionInvalid;
+
   const body = await readJson<ContextSwitchBody>(req);
   if (!body?.scope) {
     return errorEnvelope("VALIDATION_ERROR", "scope is required", 422);
@@ -671,8 +711,13 @@ export async function handleRevokeSession(
   await client.from("sessions").update({ revoked_at: now })
     .eq("id", body.sessionId)
     .eq("user_id", claims.sub);
+  // ICA-B8: scope the refresh-token revoke to the CALLER's own tokens. Without
+  // the user_id predicate, knowing another user's session UUID would revoke the
+  // victim's refresh tokens (forced-logout DoS). refresh_tokens.user_id is NOT
+  // NULL (see 20260607100000_core_platform_schema.sql).
   await client.from("refresh_tokens").update({ revoked_at: now })
-    .eq("session_id", body.sessionId);
+    .eq("session_id", body.sessionId)
+    .eq("user_id", claims.sub);
 
   return jsonResponse(envelope({ success: true }));
 }
@@ -685,8 +730,13 @@ export async function handleMe(req: Request, config: AppConfig): Promise<Respons
   if (!claims) return errorEnvelope("UNAUTHORIZED", "Invalid access token", 401);
 
   const client = createServiceClient(config);
-  await setRequestContext(client, claims);
-
+  // ICA-B9: no setRequestContext here. This is a service_role client, which
+  // BYPASSES RLS; and set_request_context sets transaction-local GUCs while each
+  // PostgREST call runs in its own transaction, so the context would not persist
+  // to the read below — the call was an inert no-op that falsely implied tenant
+  // scoping. service_role reads MUST carry their own explicit filter. This one is
+  // safe because it is bounded to the caller by `.eq("id", claims.sub)` — any
+  // future list/read on a service_role client must do the same.
   const { data: user } = await client.from("users").select("id,phone,email,display_name")
     .eq("id", claims.sub).maybeSingle();
 

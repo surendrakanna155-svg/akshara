@@ -149,6 +149,7 @@ class TeacherHomeworkCreateRequestDto {
     final dueLabel = request.dueLabel.trim();
     final attachmentName = request.attachmentName?.trim();
     final attachmentRef = request.attachmentRef?.trim();
+    final attachmentStoragePath = request.attachmentStoragePath?.trim();
     // HWK-3 — de-dupe the multi-section list; fall back to the single class label.
     final classLabels = {
       for (final label in request.classLabels) label.trim(),
@@ -166,11 +167,14 @@ class TeacherHomeworkCreateRequestDto {
         if (dueLabel.isNotEmpty) 'due_label': dueLabel,
         if (studentName != null && studentName.isNotEmpty)
           'student_name': studentName,
-        // HWK-4 — optional teacher attachment reference (not a real upload).
+        // HWK-4 — optional teacher attachment display name + legacy reference.
         if (attachmentName != null && attachmentName.isNotEmpty)
           'attachment_name': attachmentName,
         if (attachmentRef != null && attachmentRef.isNotEmpty)
           'attachment_ref': attachmentRef,
+        // PRA-P1-30 — the REAL stored worksheet object path (when uploaded).
+        if (attachmentStoragePath != null && attachmentStoragePath.isNotEmpty)
+          'attachment_storage_path': attachmentStoragePath,
       },
     );
   }

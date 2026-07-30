@@ -15,6 +15,7 @@ import {
   computeFinanceCopilot,
   computeFinanceExecutive,
 } from "./finance_intelligence_service.ts";
+import { insertIntelligenceSnapshot } from "./finance_intelligence_repository.ts";
 
 function requireFinanceIntelligence(claims: Parameters<typeof requirePermission>[0]): Response | null {
   return requirePermission(claims, "viewFinanceIntelligence") ??
@@ -42,10 +43,13 @@ export async function handleFinanceCopilot(
   try {
     const snapshot = await withTenantContext(config, auth.claims, async (db) => {
       const data = await computeFinanceCopilot(db, orgId, schoolId);
-      await db.queryObject(
-        `INSERT INTO finance_intelligence_snapshots (organization_id, school_id, snapshot_type, payload, created_by)
-         VALUES ($1, $2, 'copilot', $3::jsonb, $4)`,
-        [orgId, schoolId, JSON.stringify(data), auth.claims.sub ?? null],
+      await insertIntelligenceSnapshot(
+        db,
+        orgId,
+        schoolId,
+        "copilot",
+        data,
+        auth.claims.sub ?? null,
       );
       await emitMutationAudit(db, auth.claims, financeAudit.intelligenceComputed(), req);
       return data;
@@ -76,10 +80,13 @@ export async function handleFinanceExecutiveDashboard(
   try {
     const snapshot = await withTenantContext(config, auth.claims, async (db) => {
       const data = await computeFinanceExecutive(db, orgId, schoolId);
-      await db.queryObject(
-        `INSERT INTO finance_intelligence_snapshots (organization_id, school_id, snapshot_type, payload, created_by)
-         VALUES ($1, $2, 'executive', $3::jsonb, $4)`,
-        [orgId, schoolId, JSON.stringify(data), auth.claims.sub ?? null],
+      await insertIntelligenceSnapshot(
+        db,
+        orgId,
+        schoolId,
+        "executive",
+        data,
+        auth.claims.sub ?? null,
       );
       await emitMutationAudit(
         db,

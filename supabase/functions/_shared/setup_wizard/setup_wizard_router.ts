@@ -31,5 +31,5 @@ export async function routeSetupWizard(
     return handleAdvanceSetupWizard(req, config, advanceMatch[1]!);
   }
 
-  return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+  return null;
 }

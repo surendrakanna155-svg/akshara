@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -20,35 +21,41 @@ class ParentHomeworkScreen extends ConsumerWidget {
   final VoidCallback? onNotificationsTap;
 
   static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
-  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
+  static const double _tabletMaxContentWidth =
+      AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // CERT-002 — honest-async contract.
+    final state = ref.watch(parentHomeworkViewStateProvider);
     final data = ref.watch(parentHomeworkDataProvider);
     final selectedFilter = ref.watch(homeworkFilterProvider);
-    final isLoading = ref.watch(parentHomeworkLoadingProvider);
-    final hasError = ref.watch(parentHomeworkErrorProvider);
 
     return Scaffold(
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'Homework',
-        subtitle: '${data.childName} · ${data.childClass}',
-        unreadNotifications: data.unreadNotifications,
+        subtitle: state.hasData && data.childName.isNotEmpty
+            ? '${data.childName} · ${data.childClass}'
+            : null,
+        unreadNotifications: state.hasData ? data.unreadNotifications : 0,
         showAi: false,
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,
       ),
-      body: isLoading
-          ? const AksharaLoadingState()
-          : hasError
-              ? AksharaErrorState(
-                  message: 'Unable to load homework right now.',
-                  onRetry: () => ref
-                      .read(parentHomeworkErrorProvider.notifier)
-                      .state = false,
-                )
-              : LayoutBuilder(
+      // DS V2 P4 — premium persona canvas behind the homework content.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: ErpAsyncBody<ParentHomeworkData>(
+          state: state,
+          loadingLabel: 'Loading homework',
+          emptyMessage: 'No homework has been published for your child yet.',
+          emptyIcon: Icons.assignment_outlined,
+          onRetry: () {
+            ref.read(parentHomeworkErrorProvider.notifier).state = false;
+            ref.invalidate(parentHomeworkFutureProvider);
+          },
+          builder: (_) => LayoutBuilder(
                   builder: (context, constraints) {
                     final isTablet = constraints.maxWidth >= _tabletBreakpoint;
                     final horizontalPadding = isTablet
@@ -63,65 +70,73 @@ class ParentHomeworkScreen extends ConsumerWidget {
                               ? _tabletMaxContentWidth
                               : double.infinity,
                         ),
-                        child: SingleChildScrollView(
-                          padding: EdgeInsets.fromLTRB(
-                            horizontalPadding,
-                            AksharaSpacing.s4,
-                            horizontalPadding,
-                            AksharaSpacing.s6,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              _HomeworkKpiStrip(data: data),
-                              const SizedBox(height: AksharaSpacing.s4),
-                              HomeworkFilterBar(
-                                selectedFilter: selectedFilter,
-                                onFilterChanged: (filter) => ref
-                                    .read(homeworkFilterProvider.notifier)
-                                    .state = filter,
-                              ),
-                              const SizedBox(height: AksharaSpacing.s3),
-                              if (data.items.isEmpty)
-                                const AksharaEmptyState(
-                                  message: 'No homework in this filter.',
-                                  icon: Icons.assignment_turned_in_outlined,
-                                  compact: true,
-                                )
-                              else
-                                Column(
-                                  children: [
-                                    for (var i = 0;
-                                        i < data.items.length;
-                                        i++) ...[
-                                      HomeworkListRow(
-                                        item: data.items[i],
-                                        onTap: () => _showHomeworkDetail(
-                                          context,
-                                          data.items[i],
-                                        ),
-                                      ),
-                                      if (i < data.items.length - 1)
-                                        const SizedBox(
-                                            height: AksharaSpacing.s2),
-                                    ],
-                                  ],
+                        child: RefreshIndicator(
+                          onRefresh: () async =>
+                              ref.invalidate(parentHomeworkFutureProvider),
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: EdgeInsets.fromLTRB(
+                              horizontalPadding,
+                              AksharaSpacing.s4,
+                              horizontalPadding,
+                              AksharaSpacing.s6,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _HomeworkKpiStrip(data: data),
+                                const SizedBox(height: AksharaSpacing.s4),
+                                HomeworkFilterBar(
+                                  selectedFilter: selectedFilter,
+                                  onFilterChanged: (filter) => ref
+                                      .read(homeworkFilterProvider.notifier)
+                                      .state = filter,
                                 ),
-                              const SizedBox(height: AksharaSpacing.s4),
-                              AksharaInsightCard(
-                                message: data.insightMessage,
-                                actionLabel: data.insightActionLabel,
-                                onAction: () => ref
-                                    .read(homeworkFilterProvider.notifier)
-                                    .state = HomeworkFilter.pending,
-                              ),
-                            ],
+                                const SizedBox(height: AksharaSpacing.s3),
+                                if (data.items.isEmpty)
+                                  const AksharaEmptyState(
+                                    message: 'No homework in this filter.',
+                                    icon: Icons.assignment_turned_in_outlined,
+                                    compact: true,
+                                  )
+                                else
+                                  Column(
+                                    children: [
+                                      for (var i = 0;
+                                          i < data.items.length;
+                                          i++) ...[
+                                        HomeworkListRow(
+                                          item: data.items[i],
+                                          onTap: () => _showHomeworkDetail(
+                                            context,
+                                            data.items[i],
+                                          ),
+                                        ),
+                                        if (i < data.items.length - 1)
+                                          const SizedBox(
+                                              height: AksharaSpacing.s2),
+                                      ],
+                                    ],
+                                  ),
+                                const SizedBox(height: AksharaSpacing.s4),
+                                if (data.insightMessage.isNotEmpty)
+                                  AksharaInsightCard(
+                                    message: data.insightMessage,
+                                    actionLabel: data.insightActionLabel,
+                                    onAction: () => ref
+                                        .read(homeworkFilterProvider.notifier)
+                                        .state = HomeworkFilter.pending,
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     );
                   },
                 ),
+        ),
+      ),
     );
   }
 
@@ -223,8 +238,8 @@ class _DetailLine extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(label,
-                  style: text.labelSmall
-                      .copyWith(color: colors.onSurfaceVariant)),
+                  style:
+                      text.labelSmall.copyWith(color: colors.onSurfaceVariant)),
               const SizedBox(height: 2),
               Text(value, style: text.bodyMedium),
             ],

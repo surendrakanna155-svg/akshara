@@ -11,7 +11,7 @@ import 'package:akshara_erp/core/repositories/mock/mock_parent_repository.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_attendance_sync_store.dart';
 import 'package:akshara_erp/core/teaching/teacher_assignment_registry.dart';
-import 'package:akshara_erp/core/communication/teacher_student_risk_service.dart';
+import 'package:akshara_erp/core/repositories/mock/mock_student_risk_fixtures.dart';
 
 void main() {
   setUp(() {
@@ -133,7 +133,7 @@ void main() {
         late: 0,
       );
 
-      final snap = TeacherStudentRiskService.snapshotForStudent(
+      final snap = MockStudentRiskFixtures.snapshotForStudent(
         MockCanonicalStudentRegistry.primaryMobileStudentId,
       );
 

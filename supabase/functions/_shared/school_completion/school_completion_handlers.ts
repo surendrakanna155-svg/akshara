@@ -385,7 +385,7 @@ export async function handleTestWhatsAppProvider(req: Request, config: AppConfig
       const delivery = await sendWhatsAppMessage(config, {
         toPhone: body.toPhone,
         templateId: body.templateId ?? "akshara_test",
-        body: "Akshara ERP WhatsApp provider test",
+        body: "NIKSHA OS WhatsApp provider test",
       });
       await emitMutationAudit(db, auth.claims, schoolCompletionAudit.whatsAppTestSent(body.toPhone), req);
       return delivery;

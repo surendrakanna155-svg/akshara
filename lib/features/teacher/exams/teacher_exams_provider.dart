@@ -112,6 +112,29 @@ List<ExamMarkEntry> _marks(Ref ref) {
       const <ExamMarkEntry>[];
 }
 
+/// TA-05 honest state — the MEASURED class average, or `null` when no mark has
+/// been scored yet.
+///
+/// Never 0 for "unknown": before any marks exist there is no average to report,
+/// and a filled `0%` ring would assert a measured zero the school never earned.
+/// This mirrors the same rule the marks grid already applies to its column-stats
+/// average (`scored.isEmpty ? null : …`). Callers must render `null` as an
+/// explicit unknown, not as a number.
+final teacherClassAveragePercentProvider = Provider<int?>((ref) {
+  if (ref.watch(teacherExamsEmptyProvider)) return null;
+
+  final scored = _marks(ref).where((m) => m.marksObtained != null);
+  if (scored.isEmpty) return null;
+
+  var sum = 0;
+  var count = 0;
+  for (final mark in scored) {
+    sum += mark.percent ?? 0;
+    count++;
+  }
+  return (sum / count).round();
+});
+
 final teacherExamsProvider = Provider<TeacherExamsData>((ref) {
   final unread = ref.watch(teacherUnreadNotificationsProvider);
   if (ref.watch(teacherExamsEmptyProvider)) {
@@ -124,14 +147,11 @@ final teacherExamsProvider = Provider<TeacherExamsData>((ref) {
   }
 
   final marks = _marks(ref);
-  final scored = marks.where((m) => m.marksObtained != null).toList();
-  final avg = scored.isEmpty
-      ? 0
-      : (scored
-              .map((m) => m.percent ?? 0)
-              .fold<int>(0, (a, b) => a + b) /
-          scored.length)
-          .round();
+  // Legacy non-nullable field on [TeacherExamsData]. The UI reads the honest
+  // nullable [teacherClassAveragePercentProvider] instead — this stays only so
+  // the (unchanged) data model keeps its contract, and is derived from the SAME
+  // computation so the two can never disagree.
+  final avg = ref.watch(teacherClassAveragePercentProvider) ?? 0;
 
   final upcoming = watchRepositoryFuture(
     ref,

@@ -1,7 +1,7 @@
 # School Admin Quick-Start Guide
 
 **Version:** 1.0 (v1.0-rc1)  
-**For:** School administrators using Akshara ERP web
+**For:** School administrators using NIKSHA OS web
 
 ---
 
@@ -78,4 +78,4 @@ If a student needs a second parent/guardian not on the import sheet:
 
 ## 7. Who to contact
 
-Log issues with your Akshara pilot contact. Include: your school name, phone number used, screenshot of error, and time of failure.
+Log issues with your NIKSHA OS pilot contact. Include: your school name, phone number used, screenshot of error, and time of failure.

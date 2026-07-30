@@ -23,6 +23,8 @@ import {
 import { flipLeaveDecision } from "./leave_decision_effect.ts";
 import { setFeeStructureStatus } from "../finance/finance_structures_repository.ts";
 import { recordFeeConcessionDecision } from "../finance/finance_fee_concessions_repository.ts";
+import { applyCertificateRequestDecision } from "../certificate_desk/certificate_desk_approval_effect.ts";
+import { applyGatePassDecision } from "../gate_pass/gate_pass_repository.ts";
 import type { ApprovalRequestRow } from "./approval_types.ts";
 import { insertDomainEffect } from "./approval_repository.ts";
 
@@ -314,6 +316,47 @@ export async function applyApprovalTypeHandler(
           throw error;
         }
       }
+      break;
+    }
+
+    case "certificateRequest": {
+      // PRC-A Batch 2 (caps 136–148). The request→approve layer in front of the
+      // certified SIS issuance engine: approving ISSUES through
+      // issueCertificate/issueTransferCertificate, so there is exactly one
+      // issuance engine and the TC no-dues gate can never be bypassed.
+      //
+      // NB: unlike `case "refund":` below, the effect deliberately does NOT
+      // swallow the engine's errors — the TC engine throws from after it has
+      // already burned a serial, and the throw IS the rollback. See the header
+      // of certificate_desk_approval_effect.ts.
+      const result = await applyCertificateRequestDecision(
+        db,
+        organizationId,
+        schoolId,
+        request.entity_id,
+        effectAction,
+        actorId ?? "",
+        comment ?? null,
+      );
+      effectPayload = { ...effectPayload, ...result };
+      break;
+    }
+
+    case "gatePass": {
+      // PRC-A Batch 2 (caps 109–118). Approving mints the single-use pickup
+      // credential and dispatches the OTP to the guardian. The returned payload
+      // is persisted verbatim into approval_domain_effects, so it carries only
+      // the fact of issuance — never the OTP or its hash.
+      const result = await applyGatePassDecision(
+        db,
+        organizationId,
+        schoolId,
+        request.entity_id,
+        effectAction,
+        actorId ?? "",
+        comment ?? null,
+      );
+      effectPayload = { ...effectPayload, ...result };
       break;
     }
 

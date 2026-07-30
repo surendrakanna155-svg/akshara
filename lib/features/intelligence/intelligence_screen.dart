@@ -81,7 +81,7 @@ class _IntelligenceScreenState extends ConsumerState<IntelligenceScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Akshara Analytics'),
+        title: const Text('NIKSHA Analytics'),
         bottom: TabBar(
           controller: _tabs,
           isScrollable: true,

@@ -34,7 +34,7 @@ export const TeacherAssistantPage = kpi('Teacher assistant', 'AI teaching assist
 export const SetupWizardPage = () => <InfoPage title="Setup wizard" subtitle="Guided school setup" icon="auto_fix_high" body="A step-by-step wizard that walks you through configuring your school — academic year, classes, subjects, staff and fees. Backed by the onboarding service." action="Start wizard" />;
 
 // ---- Copilot / AI ----
-export const CopilotPage = () => <InfoPage title="Akshara Copilot" subtitle="Ask anything about your school" icon="auto_awesome" body="A conversational AI assistant that answers questions across the ERP — attendance, fees, exams — respecting your role and permissions. Connects to the AI gateway." action="New chat" />;
+export const CopilotPage = () => <InfoPage title="NIKSHA OS Copilot" subtitle="Ask anything about your school" icon="auto_awesome" body="A conversational AI assistant that answers questions across the ERP — attendance, fees, exams — respecting your role and permissions. Connects to the AI gateway." action="New chat" />;
 export const AiContentPage = kpi('AI content', 'AI-generated content library', 'article', '/intelligence/priorities', 'ai-content');
 export const CopilotPersonaShellPage = () => <InfoPage title="Copilot" subtitle="Role-aware assistant" icon="smart_toy" body="The persona-aware Copilot shell adapts its tools and suggestions to your role. Powered by the W2 AI gateway." action="Open Copilot" />;
 export const AiAssistantSettingsPage = () => <InfoPage title="AI assistant settings" subtitle="Configure the assistant" icon="tune" body="Control the AI assistant's behaviour, data scope and token budget for your school. Deterministic-first with AI enhancement." />;

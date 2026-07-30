@@ -66,6 +66,14 @@ BACKUP_ENV=$ENV_FILE
 15 2 * * *   root   $INSTALL_DIR/akshara-backup.sh >> $LOG_DIR/backup.log 2>&1
 # Monthly restore drill at 03:30 on the 2nd (after the 1st's monthly backup exists).
 30 3 2 * *   root   $INSTALL_DIR/akshara-restore-drill.sh >> $LOG_DIR/drill.log 2>&1
+#
+# DELIBERATELY NOT SCHEDULED: akshara-retention-purge.sh.
+# audit_events is an append-only legal/forensic record. Unattended destruction
+# of it is not appropriate — a bad cron line would irreversibly destroy the
+# evidence trail with nothing left to prove it happened. The purge is run by a
+# human, on purpose, with --force, after sizing it via GET /audit/retention.
+# The published policy (docs/legal/DATA_RETENTION_AND_DELETION_POLICY.md) states
+# purging is manual; do not schedule it here without changing that policy first.
 EOF
 chmod 644 "$CRON_FILE"
 echo "installed cron file $CRON_FILE"

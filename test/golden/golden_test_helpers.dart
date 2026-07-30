@@ -57,10 +57,21 @@ Future<void> pumpGoldenDashboard(
   required Size viewport,
   List<Override> extraOverrides = const [],
   bool dark = false,
+  Color? personaAccent,
 }) async {
   suppressGoldenOverflowErrors();
   useGoldenViewport(tester, viewport);
   await initProviderTestPrefs();
+
+  // When a [personaAccent] is given, render the screen under the persona theme
+  // the real shell applies (persona-cohesive hero + accent chrome) rather than
+  // the base light/dark theme — so the golden reflects what the user sees.
+  final theme = personaAccent != null
+      ? AksharaAppTheme.persona(
+          brightness: dark ? Brightness.dark : Brightness.light,
+          accent: personaAccent,
+        )
+      : (dark ? AksharaAppTheme.dark() : AksharaAppTheme.light());
 
   await tester.pumpWidget(
     ProviderScope(
@@ -71,7 +82,7 @@ Future<void> pumpGoldenDashboard(
         ...providerTestOverrides(extraOverrides),
       ],
       child: MaterialApp(
-        theme: dark ? AksharaAppTheme.dark() : AksharaAppTheme.light(),
+        theme: theme,
         debugShowCheckedModeBanner: false,
         home: screen,
       ),

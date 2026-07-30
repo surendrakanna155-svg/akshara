@@ -82,10 +82,10 @@ class MockOrganizationBuilderRepository
     'draft_existing_2': InterviewDraft(
       id: 'draft_existing_2',
       packId: 'pack_hospital',
-      organizationName: 'Akshara Care Hospital',
+      organizationName: 'NIKSHA Care Hospital',
       currentStep: 6,
       answers: {
-        'identity_name': 'Akshara Care Hospital',
+        'identity_name': 'NIKSHA Care Hospital',
         'identity_departments': '8',
         'scale_beds': '120',
         'scale_doctors': '45',

@@ -46,9 +46,6 @@ import {
   handleSettings,
 } from "./admissions_extras_handlers.ts";
 
-const UUID_SEGMENT =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 function matchAdmissionsRoute(
   method: string,
   path: string,
@@ -257,14 +254,7 @@ export async function routeAdmissions(
 
   const match = matchAdmissionsRoute(method, path);
   if (!match) {
-    return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
-  }
-
-  // Validate UUID path segments when they look like UUIDs
-  for (const arg of match.args) {
-    if (arg.includes("-") && !UUID_SEGMENT.test(arg) && !arg.startsWith("LD-")) {
-      // Allow non-UUID legacy mock ids in path for compatibility
-    }
+    return null;
   }
 
   return await match.handler(req, config, ...match.args);

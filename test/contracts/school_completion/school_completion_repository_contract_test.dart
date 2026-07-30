@@ -261,5 +261,67 @@ void main() {
       );
       expect(intelligence.intelligenceScore, greaterThan(0));
     });
+
+    // P1 fix (caps 58-61) — the daily-capture UI used to send a FABRICATED
+    // `topic_${lessonLogId}` to `completeTopic`, which is not a real
+    // `syllabus_topics.id` and fails the completions FK server-side. These
+    // prove: (1) a real topic id round-trips through listSyllabusTopics and
+    // completeTopic and the status change PERSISTS; (2) a fabricated id is
+    // rejected rather than silently accepted.
+    test('completeTopic with a REAL topic id persists the completion',
+        () async {
+      final topics = await repo.listSyllabusTopics(
+        query: query,
+        className: '7',
+        subjectId: 'sub_1',
+      );
+      expect(topics, isNotEmpty);
+      final target = topics.first;
+      expect(target.status, isNot('completed'));
+
+      await repo.completeTopic(
+        query: query,
+        topicId: target.id,
+        lessonLogId: 'log_demo_1',
+      );
+
+      final reloaded = await repo.listSyllabusTopics(
+        query: query,
+        className: '7',
+        subjectId: 'sub_1',
+      );
+      final updated = reloaded.firstWhere((t) => t.id == target.id);
+      expect(updated.status, 'completed');
+    });
+
+    test('completeTopic with a FABRICATED topic id is rejected, not silently '
+        'accepted', () async {
+      expect(
+        () => repo.completeTopic(
+          query: query,
+          topicId: 'topic_log_demo_1', // the old fabrication pattern
+          lessonLogId: 'log_demo_1',
+        ),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('listSyllabusTopics filters by class and subject', () async {
+      final grade7Math = await repo.listSyllabusTopics(
+        query: query,
+        className: '7',
+        subjectId: 'sub_1',
+      );
+      expect(grade7Math, isNotEmpty);
+      expect(grade7Math.every((t) => t.className == '7'), isTrue);
+      expect(grade7Math.every((t) => t.subjectId == 'sub_1'), isTrue);
+
+      final noMatch = await repo.listSyllabusTopics(
+        query: query,
+        className: '7',
+        subjectId: 'sub_does_not_exist',
+      );
+      expect(noMatch, isEmpty);
+    });
   });
 }

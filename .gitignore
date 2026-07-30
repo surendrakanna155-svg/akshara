@@ -94,3 +94,6 @@ node_modules/
 # and merges later). A subagent committed it off-brief (6244b3e0/6949fe3d) + relaxed this
 # ignore; restored to a full-dir ignore so nothing dashboard-related is tracked here.
 tools/progress-dashboard/
+
+# Generated golden-failure diff output (masterImage/testImage/isolatedDiff/maskedDiff) — never commit
+test/golden/failures/

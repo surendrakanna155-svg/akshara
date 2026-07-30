@@ -22,7 +22,7 @@ import '../../test_helpers.dart';
 
 const _demoOrg = OrganizationPlanAssignment(
   organizationId: 'org_1',
-  organizationName: 'Akshara Trust',
+  organizationName: 'NIKSHA Trust',
   organizationSlug: 'akshara-trust',
   planSlug: 'trial',
   status: 'trial',

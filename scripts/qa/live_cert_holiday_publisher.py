@@ -10,7 +10,7 @@ are recorded as pending_connection (made real in Phase 2).
 Real VPS + real DB + school-scope JWT (minted on edge) + RBAC + real fan-out."""
 import json, os, time, subprocess, urllib.request, urllib.error
 
-BASE = "https://akshara.veloraunisexsalon.com"
+BASE = os.environ.get("API_BASE_URL", "https://api.nikshaos.in")
 ORG = "a1000000-0000-4000-8000-000000000001"
 USER = "a3000000-0000-4000-8000-000000000001"
 SCHOOL_A = "a2000000-0000-4000-8000-000000000001"

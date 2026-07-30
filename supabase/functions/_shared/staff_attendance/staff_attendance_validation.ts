@@ -4,11 +4,10 @@
 //   face verification (server-authoritative CV match vs enrolled reference).
 // Device biometric is NOT part of this chain (login-only).
 
+import { cosineSimilarity, faceMatchThreshold } from "../attendance_auth/face_match.ts";
+
 export type StaffCheckEventType = "check_in" | "check_out";
 const EVENT_TYPES: readonly StaffCheckEventType[] = ["check_in", "check_out"];
-
-/** Server-side face-match acceptance threshold (cosine similarity). */
-export const FACE_MATCH_THRESHOLD = 0.82;
 
 export class StaffAttendanceValidationError extends Error {
   readonly code: string;
@@ -31,12 +30,24 @@ export interface AttendanceFace {
   embedding: number[];
   livenessPassed: boolean;
   captureRef: string | null;
+  /** Which on-device model produced the live embedding (e.g. mobilefacenet-v1).
+   * Compared against the enrolled reference's model_tag when both are set —
+   * cross-model cosine scores are meaningless, so a mismatch must be a
+   * re-enrol error, not a confusing FACE_NO_MATCH. */
+  modelTag: string;
 }
 
 export interface ParsedStaffCheck {
   eventType: StaffCheckEventType;
   location: AttendanceLocation;
+  /** Populated by the SERVER after deriving the embedding from [faceCrop].
+   * At parse time `embedding` is empty and `modelTag` is blank — the client no
+   * longer supplies either. */
   face: AttendanceFace;
+  /** Base64 aligned 112x112 face crop, as captured live on-device. The server
+   * derives the embedding from this; see
+   * `attendance_auth/face_embedding_client.ts`. */
+  faceCrop: string;
   staffName: string;
   employeeRef: string | null;
 }
@@ -63,24 +74,6 @@ export function haversineMeters(
   const a = Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
-}
-
-/** Cosine similarity of two equal-length vectors; 0 if either is degenerate. */
-export function cosineSimilarity(a: number[], b: number[]): number {
-  if (a.length === 0 || a.length !== b.length) {
-    throw new StaffAttendanceValidationError(
-      "FACE_EMBEDDING_MISMATCH",
-      "Face embedding dimension mismatch",
-    );
-  }
-  let dot = 0, na = 0, nb = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i]! * b[i]!;
-    na += a[i]! * a[i]!;
-    nb += b[i]! * b[i]!;
-  }
-  if (na === 0 || nb === 0) return 0;
-  return dot / (Math.sqrt(na) * Math.sqrt(nb));
 }
 
 function num(v: unknown): number | null {
@@ -121,20 +114,30 @@ export function parseStaffCheckBody(
   }
 
   const faceObj = (body.face ?? {}) as Record<string, unknown>;
-  const embRaw = faceObj.embedding;
-  if (!Array.isArray(embRaw) || embRaw.length === 0) {
+
+  // A client-supplied embedding is REFUSED, loudly, rather than ignored.
+  //
+  // The whole point of server-side derivation is that a tampered client can no
+  // longer post a stored template and replay it forever. Silently dropping the
+  // field would leave a stale or malicious client appearing to succeed while
+  // its embedding was quietly discarded — and would hide a half-migrated
+  // deployment. Fail so the cause is unambiguous.
+  if (faceObj.embedding !== undefined || faceObj.model_tag !== undefined ||
+      faceObj.modelTag !== undefined) {
     throw new StaffAttendanceValidationError(
-      "FACE_REQUIRED",
-      "face.embedding (live capture) is required — no device-biometric fallback",
+      "FACE_EMBEDDING_NOT_ACCEPTED",
+      "This server derives the face embedding itself — send face.crop, not face.embedding. Update the app.",
     );
   }
-  const embedding = embRaw.map((v) => {
-    const n = num(v);
-    if (n === null) {
-      throw new StaffAttendanceValidationError("FACE_REQUIRED", "face.embedding must be numeric");
-    }
-    return n;
-  });
+
+  const cropRaw = faceObj.crop ?? faceObj.face_crop;
+  const faceCrop = typeof cropRaw === "string" ? cropRaw.trim() : "";
+  if (faceCrop === "") {
+    throw new StaffAttendanceValidationError(
+      "FACE_REQUIRED",
+      "face.crop (live capture) is required — no device-biometric fallback",
+    );
+  }
 
   return {
     eventType: eventTypeRaw as StaffCheckEventType,
@@ -146,12 +149,16 @@ export function parseStaffCheckBody(
       capturedAt,
     },
     face: {
-      embedding,
+      // Both filled by the server once the crop has been embedded. They are
+      // NOT client inputs any more.
+      embedding: [],
+      modelTag: "",
       livenessPassed: faceObj.livenessPassed === true || faceObj.liveness_passed === true,
       captureRef: faceObj.captureRef != null || faceObj.capture_ref != null
         ? String(faceObj.captureRef ?? faceObj.capture_ref)
         : null,
     },
+    faceCrop,
     staffName: String(body.staffName ?? body.staff_name ?? "").trim(),
     employeeRef: body.employeeRef != null || body.employee_ref != null
       ? String(body.employeeRef ?? body.employee_ref).trim()
@@ -219,12 +226,15 @@ export interface FaceVerdict {
 
 /**
  * Server-authoritative face verification: liveness gate + CV match of the live
- * embedding against the enrolled reference. Throws on liveness fail or no-match.
+ * embedding against the enrolled reference (shared clamped cosine from
+ * attendance_auth/face_match.ts; threshold env-tunable via
+ * FACE_MATCH_MIN_SIMILARITY). Throws on liveness fail, model/dimension
+ * mismatch (re-enrol, not a lookalike rejection), or no-match.
  */
 export function verifyFace(
   face: AttendanceFace,
-  referenceEmbedding: number[],
-  threshold: number = FACE_MATCH_THRESHOLD,
+  reference: { embedding: number[]; modelTag?: string },
+  threshold: number = faceMatchThreshold(),
 ): FaceVerdict {
   if (!face.livenessPassed) {
     throw new StaffAttendanceValidationError(
@@ -232,8 +242,26 @@ export function verifyFace(
       "Liveness check failed — hold your face to the live camera",
     );
   }
-  const score = cosineSimilarity(face.embedding, referenceEmbedding);
-  if (score < threshold) {
+  const refModel = (reference.modelTag ?? "").trim();
+  if (face.modelTag && refModel && face.modelTag !== refModel) {
+    throw new StaffAttendanceValidationError(
+      "FACE_EMBEDDING_MISMATCH",
+      "Your capture used a different face model than your enrollment — re-enrol your face",
+    );
+  }
+  if (
+    face.embedding.length === 0 ||
+    face.embedding.length !== reference.embedding.length
+  ) {
+    throw new StaffAttendanceValidationError(
+      "FACE_EMBEDDING_MISMATCH",
+      "Face embedding dimension mismatch — re-enrol your face",
+    );
+  }
+  const score = cosineSimilarity(face.embedding, reference.embedding);
+  // Fail-closed comparison: `!(score >= threshold)` also rejects NaN, where
+  // `score < threshold` would fail OPEN (NaN compares false both ways).
+  if (!(score >= threshold)) {
     throw new StaffAttendanceValidationError(
       "FACE_NO_MATCH",
       "Face did not match your enrolled reference",

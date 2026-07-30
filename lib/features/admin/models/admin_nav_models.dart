@@ -10,6 +10,12 @@ enum AdminModule {
   finance,
   sis,
   exams,
+  // PRC-A Batch 2 — day-to-day school desks.
+  certificateDesk,
+  gatePass,
+  complaints,
+  studentHealth,
+  schoolCompletion,
   hr,
   employee,
   management,

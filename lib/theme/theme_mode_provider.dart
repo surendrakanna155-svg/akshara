@@ -25,6 +25,17 @@ final themeModePreferenceStorageProvider =
 final themeModeProvider =
     NotifierProvider<ThemeModeNotifier, ThemeMode>(ThemeModeNotifier.new);
 
+/// Resolves the effective [Brightness] a persona shell should build its theme
+/// at, given the app-wide appearance [mode] and the current [platform]
+/// brightness (used only when [mode] is [ThemeMode.system]). Lets each shell
+/// honor the Appearance setting instead of forcing a fixed brightness (F-002).
+Brightness resolveEffectiveBrightness(ThemeMode mode, Brightness platform) =>
+    switch (mode) {
+      ThemeMode.light => Brightness.light,
+      ThemeMode.dark => Brightness.dark,
+      ThemeMode.system => platform,
+    };
+
 class ThemeModeNotifier extends Notifier<ThemeMode> {
   @override
   ThemeMode build() {

@@ -1,6 +1,10 @@
 import type { AppConfig } from "../config.ts";
 import { errorEnvelope } from "../http.ts";
-import { handleAuditBatchUpload } from "./audit_handlers.ts";
+import {
+  handleAuditBatchUpload,
+  handleAuditRetentionPreview,
+  handleListAuditEvents,
+} from "./audit_handlers.ts";
 import { handleProcessDomainEvents } from "./domain_events_handlers.ts";
 
 function matchAuditRoute(
@@ -9,6 +13,16 @@ function matchAuditRoute(
 ): { handler: (req: Request, config: AppConfig) => Promise<Response> } | null {
   if (method === "POST" && path === "/audit/events/batch") {
     return { handler: handleAuditBatchUpload };
+  }
+  // PRA-P1-53 (S2): permission-gated read route so the immutable audit trail is
+  // reviewable ("who changed this mark / deleted this payment").
+  if (method === "GET" && path === "/audit/events") {
+    return { handler: handleListAuditEvents };
+  }
+  // P0-RETENTION: read-only sizing of a prospective purge, so an operator can
+  // see the blast radius before running the destructive ops script by hand.
+  if (method === "GET" && path === "/audit/retention") {
+    return { handler: handleAuditRetentionPreview };
   }
   if (method === "POST" && path === "/domain-events/process-pending") {
     return { handler: handleProcessDomainEvents };
@@ -26,7 +40,7 @@ export async function routeAudit(
 
   const match = matchAuditRoute(method, path);
   if (!match) {
-    return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+    return null;
   }
 
   return await match.handler(req, config);

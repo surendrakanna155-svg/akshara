@@ -27,20 +27,21 @@ class TeacherDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // WIDGET-002 — honest-async contract.
+    final state = ref.watch(teacherDashboardViewStateProvider);
     final data = ref.watch(teacherDashboardProvider);
-    final isLoading = ref.watch(teacherDashboardLoadingProvider);
-    final hasError = ref.watch(teacherDashboardErrorProvider);
-    final isEmpty = ref.watch(teacherDashboardEmptyProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'Dashboard',
-        titleTrailing: AksharaContextChip(
-          label: data.periodLabel,
-          semanticLabel: 'Current period: ${data.periodLabel}',
-        ),
-        unreadNotifications: data.unreadNotifications,
+        titleTrailing: state.hasData && data.periodLabel.isNotEmpty
+            ? AksharaContextChip(
+                label: data.periodLabel,
+                semanticLabel: 'Current period: ${data.periodLabel}',
+              )
+            : null,
+        unreadNotifications: state.hasData ? data.unreadNotifications : 0,
         showAi: true,
         showProfile: true,
         capNotificationBadgeAt99: true,
@@ -49,11 +50,16 @@ class TeacherDashboardScreen extends ConsumerWidget {
         onNotificationsTap: () => _navigate('notifications'),
         onProfileTap: () => _navigate('profile'),
       ),
-      body: MobileAsyncBody(
-        isLoading: isLoading,
-        hasError: hasError,
-        isEmpty: isEmpty,
-        onRetry: () => ref.invalidate(teacherDashboardFutureProvider),
+      body: MobileAsyncBody.fromState(
+        state,
+        loadingLabel: 'Loading dashboard',
+        emptyMessage:
+            'Your teaching day will appear here once the school publishes '
+            "today's timetable and rosters.",
+        onRetry: () {
+          ref.read(teacherDashboardErrorProvider.notifier).state = false;
+          ref.invalidate(teacherDashboardFutureProvider);
+        },
         skeleton: AksharaSkeleton.dashboard(),
         builder: (context) => LayoutBuilder(
           builder: (context, constraints) {

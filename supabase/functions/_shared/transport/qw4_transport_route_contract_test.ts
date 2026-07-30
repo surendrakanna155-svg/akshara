@@ -1,7 +1,7 @@
 // QW4 · QA-B-020 — Transport module ROUTE + RBAC + entitlement contract (DB-free).
 //
 // What is proven here without a live Postgres:
-//   1. PATH-MATCH: every one of the 17 registered transport routes resolves to a
+//   1. PATH-MATCH: every one of the registered transport routes resolves to a
 //      handler (proxy: it does NOT 404), and an unregistered path under /transport
 //      404s while a path outside the prefix returns null (no match) at the router.
 //   2. ENTITLEMENT 402: wrapping routeTransport exactly as api/index.ts does
@@ -54,7 +54,7 @@ async function call(
   return router(req, config, method, path);
 }
 
-// The complete registered surface of routeTransport (37 routes after TRN-1..9).
+// The complete registered surface of routeTransport (TRN-1..9 + PRA-P0-19/20/P1-43).
 const REGISTERED: Array<[string, string]> = [
   ["GET", "/transport/dashboard"],
   ["GET", "/transport/routes"],
@@ -71,12 +71,15 @@ const REGISTERED: Array<[string, string]> = [
   ["POST", "/transport/allocations"],
   ["POST", "/transport/allocations/bulk"], // TRN-5
   ["POST", "/transport/attendance"],
+  ["POST", "/transport/attendance/generate"], // PRA-P1-43
   ["POST", "/transport/notify-delay"],
   ["POST", "/transport/vehicles"], // TRN-1
   ["POST", "/transport/drivers"], // TRN-1
   ["POST", "/transport/reminders/document-expiry"], // TRN-8
   ["POST", "/transport/demands"], // TRN-9
+  ["POST", "/transport/demands/bulk"], // PRA-P0-20
   ["POST", "/transport/routes/route-1/activate"],
+  ["PUT", "/transport/routes/route-1/vehicle"], // PRA-P0-19
   ["POST", "/transport/routes/route-1/stops"], // TRN-4
   ["POST", "/transport/routes/route-1/stops/reorder"], // TRN-4
   ["POST", "/transport/allocations/alloc-1/transfer"],
@@ -100,9 +103,9 @@ Deno.test("QA-B-020: all transport routes path-match to a handler (not 404)", as
   }
 });
 
-Deno.test("QA-B-020: unregistered path under /transport 404s; path outside prefix is null", async () => {
+Deno.test("QA-B-020: unregistered path under /transport returns null (central dispatcher 404s); path outside prefix is null", async () => {
   const under = await call(routeTransport, "GET", "/transport/not-a-route", ["viewTransport"]);
-  assertEquals(under?.status, 404);
+  assertEquals(under, null);
   const outside = await call(routeTransport, "GET", "/finance/dashboard", ["viewTransport"]);
   assertEquals(outside, null);
 });
@@ -173,6 +176,10 @@ const NEW_WRITE_ROUTES: Array<[string, string, unknown]> = [
   ["POST", "/transport/allocations/bulk", { routeId: "r1", pickupStop: "A", dropStop: "B", sisStudentIds: ["S1"] }],
   ["POST", "/transport/reminders/document-expiry", {}],
   ["POST", "/transport/demands", { sisStudentId: "S1", routeId: "r1", feeStructureId: "f1", academicYear: "2026-27" }],
+  // PRA-P0-19 / P0-20 / P1-43 write routes.
+  ["PUT", "/transport/routes/route-1/vehicle", { registration: "KA-01-AB-1234" }],
+  ["POST", "/transport/demands/bulk", { routeId: "r1", feeStructureId: "f1", academicYear: "2026-27" }],
+  ["POST", "/transport/attendance/generate", { routeId: "r1" }],
 ];
 
 Deno.test("QA-B-020: TRN-1..9 write routes are 403 without manageTransport, 503 with it", async () => {

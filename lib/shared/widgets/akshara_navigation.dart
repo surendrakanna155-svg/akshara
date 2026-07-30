@@ -1,5 +1,8 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_constants.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../theme/breakpoints.dart';
 import '../../theme/motion.dart';
@@ -50,7 +53,7 @@ class AksharaNavBrandHeader extends StatelessWidget {
                 const SizedBox(width: AksharaSpacing.s3),
                 Expanded(
                   child: Text(
-                    'Akshara ERP',
+                    AppConstants.appName,
                     style: text.titleSmall.copyWith(
                       color: colors.primary,
                       fontWeight: FontWeight.w700,
@@ -227,16 +230,30 @@ class AksharaModuleSubNavTab extends StatelessWidget {
           child: InkWell(
             onTap: onTap,
             borderRadius: AksharaRadius.chip,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AksharaSpacing.s4,
-                vertical: AksharaSpacing.s2,
+            // A11y-P1 tap target: 8dp of vertical padding around a 20dp
+            // `labelLarge` line box left this tab at ~36dp — under the project's
+            // standing 48dp minimum. This is a hand-rolled InkWell, so the
+            // theme's `materialTapTargetSize: padded` never applied to it. The
+            // minimum is now explicit. `widthFactor: 1.0` keeps the tab
+            // shrink-wrapped horizontally so it still sizes to its label.
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                minHeight: AksharaSpacing.minTouchTarget,
               ),
-              child: Text(
-                label,
-                style: text.labelLarge.copyWith(
-                  color: selected ? colors.primary : colors.onSurfaceVariant,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+              child: Center(
+                widthFactor: 1.0,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AksharaSpacing.s4,
+                    vertical: AksharaSpacing.s2,
+                  ),
+                  child: Text(
+                    label,
+                    style: text.labelLarge.copyWith(
+                      color: selected ? colors.primary : colors.onSurfaceVariant,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -439,27 +456,38 @@ class _MoreSubNavTab extends StatelessWidget {
           child: InkWell(
             onTap: onTap,
             borderRadius: AksharaRadius.chip,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AksharaSpacing.s4,
-                vertical: AksharaSpacing.s2,
+            // A11y-P1 tap target — same defect as AksharaModuleSubNavTab: a
+            // hand-rolled InkWell at ~36dp, below the 48dp minimum. "More" is
+            // the only route to the overflowed sub-nav screens on a phone.
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                minHeight: AksharaSpacing.minTouchTarget,
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'More',
-                    style: text.labelLarge.copyWith(
-                      color: colors.onSurfaceVariant,
-                      fontWeight: FontWeight.w500,
-                    ),
+              child: Center(
+                widthFactor: 1.0,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AksharaSpacing.s4,
+                    vertical: AksharaSpacing.s2,
                   ),
-                  Icon(
-                    Icons.expand_more_rounded,
-                    size: 18,
-                    color: colors.onSurfaceVariant,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'More',
+                        style: text.labelLarge.copyWith(
+                          color: colors.onSurfaceVariant,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Icon(
+                        Icons.expand_more_rounded,
+                        size: 18,
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -496,17 +524,37 @@ class AksharaAppBarIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
 
-    final button = Material(
-      color: colors.surfaceContainerLow,
-      shape: const CircleBorder(),
-      child: InkWell(
-        onTap: onPressed,
-        customBorder: const CircleBorder(),
-        child: SizedBox(
-          width: size,
-          height: size,
+    // A11y-P1 tap target: this is a hand-rolled InkWell, so the theme's
+    // `materialTapTargetSize: padded` never reached it and the button was
+    // whatever `size` said — 40dp by default, under the standing 48dp minimum,
+    // on every app bar in the app. The TARGET is now at least 48dp while the
+    // PAINTED circle stays exactly `size`: the tinted circle is drawn by an
+    // inner DecoratedBox and the interactive surface is the larger transparent
+    // one around it.
+    final target = math.max(size, AksharaSpacing.minTouchTarget);
+
+    final button = SizedBox(
+      width: target,
+      height: target,
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        child: InkWell(
+          onTap: onPressed,
+          customBorder: const CircleBorder(),
           child: Center(
-            child: child ?? Icon(icon, size: 22, color: colors.onSurfaceVariant),
+            child: Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                color: colors.surfaceContainerLow,
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child:
+                    child ?? Icon(icon, size: 22, color: colors.onSurfaceVariant),
+              ),
+            ),
           ),
         ),
       ),
@@ -555,7 +603,13 @@ class AksharaNavFilterChip extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: AksharaRadius.chip,
+        // A11y-P1 tap target — same defect as the sub-nav tabs: a hand-rolled
+        // InkWell whose only height came from 8dp of padding around a
+        // `labelMedium` line box, well under the 48dp minimum.
         child: Container(
+          constraints: const BoxConstraints(
+            minHeight: AksharaSpacing.minTouchTarget,
+          ),
           padding: const EdgeInsets.symmetric(
             horizontal: AksharaSpacing.s3,
             vertical: AksharaSpacing.s2,
@@ -568,11 +622,14 @@ class AksharaNavFilterChip extends StatelessWidget {
                   : colors.outlineVariant.withValues(alpha: 0.65),
             ),
           ),
-          child: Text(
-            label,
-            style: text.labelMedium.copyWith(
-              color: selected ? colors.onPrimaryContainer : colors.onSurfaceVariant,
-              fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+          child: Center(
+            widthFactor: 1.0,
+            child: Text(
+              label,
+              style: text.labelMedium.copyWith(
+                color: selected ? colors.onPrimaryContainer : colors.onSurfaceVariant,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+              ),
             ),
           ),
         ),

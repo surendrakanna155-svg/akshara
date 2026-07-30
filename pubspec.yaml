@@ -1,7 +1,7 @@
 name: akshara_erp
 description: Akshara ERP — multi-tenant school SaaS platform.
 publish_to: 'none'
-version: 18.6.2+187
+version: 1.0.0+1
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
@@ -32,6 +32,32 @@ dependencies:
   # Device biometric (Face ID / fingerprint) for staff self check-in attendance
   # (O5, Must-Before-GA). Device OS gate only — NO computer-vision face matching.
   local_auth: ^2.3.0
+  # Attendance auth device layer (Slice 3, docs/ATTENDANCE_AUTH_DESIGN_DECISION.md):
+  # fresh high-accuracy GPS + anti-mock (geolocator), live front-camera preview
+  # (camera), on-device face detection/liveness classification (google_mlkit_*),
+  # and the bundled MobileFaceNet embedder (tflite_flutter). `image` crops/converts
+  # the captured still to the embedder's RGB tensor input.
+  geolocator: ^14.0.2
+  camera: ^0.12.0+1
+  google_mlkit_face_detection: ^0.14.0
+  google_mlkit_commons: ^0.12.0
+  tflite_flutter: ^0.12.1
+  # Exact-pinned to what this repo already had resolved before Slice 3:
+  # image >=4.9.0 requires xml ^7.0.1, which conflicts with pdf's (<7.0.0)
+  # constraint and forces an unrelated pdf/xml upgrade — and with it a wave of
+  # new `prefer_const_constructors` lints — across every PDF-export service in
+  # the app. A caret range isn't enough here since pub still prefers the
+  # newest in-range version (4.9.1); this must be an exact pin.
+  image: 4.8.0
+
+  # ASIP Phase 1 (support intelligence) — the reporter attaches a screenshot and
+  # the client auto-collects device/app diagnostics. image_picker: screenshot
+  # capture / gallery pick; package_info_plus: app version; device_info_plus:
+  # device model + OS version. (Screen recording is deferred — see
+  # lib/features/support/report_issue_screen.dart.)
+  image_picker: ^1.1.2
+  package_info_plus: ^8.1.1
+  device_info_plus: ^11.1.1
 
 dev_dependencies:
   flutter_test:
@@ -47,20 +73,37 @@ dev_dependencies:
   #   flutter pub run flutter_launcher_icons
   flutter_launcher_icons: ^0.14.1
 
-# Launcher icon configuration. Run `flutter pub run flutter_launcher_icons`
-# to (re)generate the mipmap resources under android/app/src/main/res/.
+# Launcher icon configuration.
+#
+# The source PNGs in assets/branding/ are BUILD OUTPUTS, generated from the
+# NIKSHA OS vector master by `node brand/build_platform_icons.js`. Never edit
+# them by hand — fix the master and re-run that script, which also writes the
+# Android and iOS icons directly.
+#
+# `flutter pub run flutter_launcher_icons` remains safe to run: it reads the
+# same NIKSHA sources and the same #0B1F4B canvas, so it reproduces the current
+# icons instead of reverting the app to the old Akshara mark. That reversion was
+# live until now — this block still pointed at the pre-rebrand artwork with a
+# #1565C0 background, and `ios: false` is why the iOS set was never rebranded
+# and still held the stock Flutter template icon.
 flutter_launcher_icons:
   android: "ic_launcher"
-  ios: false
+  ios: true
   image_path: "assets/branding/app_icon.png"
   min_sdk_android: 24
   remove_alpha_ios: true
-  # Adaptive icon (Android 8.0+): brand background + transparent foreground.
-  adaptive_icon_background: "#1565C0"
+  # Adaptive icon (Android 8.0+): brand canvas + transparent foreground.
+  # Must match android/app/src/main/res/values/colors.xml ic_launcher_background.
+  adaptive_icon_background: "#0B1F4B"
   adaptive_icon_foreground: "assets/branding/app_icon_foreground.png"
 
 flutter:
   uses-material-design: true
+  assets:
+    # Attendance auth device layer (Slice 3): the bundled MobileFaceNet
+    # embedder model. NOT checked in yet — see assets/models/README.md.
+    # MobileFaceNetEmbedder fails loud (FACE_MODEL_MISSING) until it lands.
+    - assets/models/
 
 patrol:
   app_name: Akshara ERP

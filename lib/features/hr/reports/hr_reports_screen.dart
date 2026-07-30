@@ -59,10 +59,17 @@ class HrReportsScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // CERT-006 — an honest "not available" instead of a fabricated
+        // headcount/attendance headline when the KPIs are absent.
         AksharaSurfaceCard(
           child: Text(
-            data.headlineMetric,
-            style: context.aksharaText.titleMedium,
+            data.headlineMetric ??
+                'Staff and attendance figures are not available yet.',
+            style: data.headlineMetric != null
+                ? context.aksharaText.titleMedium
+                : context.aksharaText.bodyMedium.copyWith(
+                    color: context.colors.onSurfaceVariant,
+                  ),
           ),
         ),
         const SizedBox(height: AksharaSpacing.s6),
@@ -174,7 +181,7 @@ class HrReportsScreen extends ConsumerWidget {
       MapEntry('Report', selected.title),
       MapEntry('Report ID', selected.id),
       MapEntry('Description', selected.description),
-      MapEntry('Headline metric', data.headlineMetric),
+      MapEntry('Headline metric', data.headlineMetric ?? 'Not available'),
     ];
   }
 }

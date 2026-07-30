@@ -2,7 +2,6 @@ import 'package:akshara_erp/core/config/environment.dart';
 import 'package:akshara_erp/core/config/environment_provider.dart';
 import 'package:akshara_erp/core/providers/shared_preferences_provider.dart';
 import 'package:akshara_erp/features/auth/auth_models.dart';
-import 'package:akshara_erp/features/auth/splash_screen.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,8 +12,30 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'helpers/auth_test_overrides.dart';
 import 'helpers/provider_test_overrides.dart';
 
+// Re-export so ERP widget tests that render network-backed widgets (which reach
+// dioProvider → SharedPreferences) can initialize the test prefs stack via
+// pumpHrScreen-style helpers without importing the helpers path directly.
+export 'helpers/provider_test_overrides.dart' show initProviderTestPrefs;
+
 /// Default mobile viewport matching ST-01 / TA-01 design width.
 const Size kMobileTestViewport = Size(428, 926);
+
+/// How far widget tests advance the clock to get past app bootstrap.
+///
+/// Bootstrap has two independent pending timers: the splash screen's
+/// anti-flicker floor, and the startup connectivity probe
+/// (`ConnectivityServiceImpl.isReachable`, a 2s timeout that never resolves
+/// under the test harness). This value must cover BOTH, or the test ends with
+/// a pending timer and fails.
+///
+/// Deliberately NOT `SplashScreen.splashDuration`. Tests used to reuse that
+/// constant, which silently coupled them to a product timing decision: they
+/// only passed because the splash floor happened to be 2s and therefore
+/// happened to also drain the 2s connectivity timeout. Shortening the splash —
+/// a pure startup-performance win — broke them for a reason that had nothing to
+/// do with the splash. Sizing the settle window to the slowest bootstrap timer
+/// keeps the two independent.
+const Duration kStartupSettleDuration = Duration(seconds: 3);
 
 /// Applies a mobile-sized test surface and resets it after the test.
 void useMobileViewport(WidgetTester tester) {
@@ -26,7 +47,7 @@ void useMobileViewport(WidgetTester tester) {
   });
 }
 
-/// Pumps a [GoRouter] with Akshara theme + Riverpod overrides for widget tests.
+/// Pumps a [GoRouter] with NIKSHA theme + Riverpod overrides for widget tests.
 Future<void> pumpAksharaRouter(
   WidgetTester tester, {
   required GoRouter router,
@@ -61,7 +82,7 @@ Future<void> pumpAksharaRouter(
 
   if (settleSplash) {
     await tester.pump();
-    await tester.pump(SplashScreen.splashDuration);
+    await tester.pump(kStartupSettleDuration);
     await tester.pump();
   }
 }

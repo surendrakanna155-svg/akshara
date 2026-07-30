@@ -27,7 +27,7 @@ class MockBranchRepository implements BranchRepository {
         id: 'BA-001',
         branchId: 'BR-01',
         schoolId: 'SCH-1001',
-        schoolName: 'Akshara International Hyderabad',
+        schoolName: 'NIKSHA International Hyderabad',
         assignedManager: 'Asha Menon',
       ),
     ],

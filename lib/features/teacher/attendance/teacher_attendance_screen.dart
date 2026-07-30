@@ -20,6 +20,7 @@ import 'teacher_attendance_workflow.dart';
 import 'widgets/class_selector_strip.dart';
 import 'widgets/attendance_exception_grid.dart';
 import '../../../theme/breakpoints.dart';
+import '../../copilot/widgets/bottom_nav_ai_scope.dart';
 
 /// Teacher attendance marking — TA-02.
 class TeacherAttendanceScreen extends ConsumerStatefulWidget {
@@ -82,7 +83,7 @@ class _TeacherAttendanceScreenState
     final teaching = ref.watch(resolvedTeacherTeachingContextProvider);
 
     return Scaffold(
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'Mark Attendance',
         subtitle: teaching.appBarSubtitle,
@@ -111,21 +112,27 @@ class _TeacherAttendanceScreenState
           ),
         ],
       ),
-      body: isLoading
-          ? const AksharaLoadingState(semanticLabel: 'Loading attendance')
-          : hasError
-              ? AksharaErrorState(
-                  message: 'Unable to load attendance roster.',
-                  onRetry: () => ref
-                      .read(teacherAttendanceErrorProvider.notifier)
-                      .state = false,
-                )
-              : data.classes.isEmpty
-                  ? const AksharaEmptyState(
-                      message: 'No classes scheduled for attendance.',
-                      icon: Icons.class_outlined,
-                    )
-                  : _AttendanceBody(data: data),
+      // DS V2 P4 — premium persona canvas behind the marking roster (live
+      // present/absent/late are counts, not a %, so no ring — canvas cohesion
+      // only).
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: isLoading
+            ? const AksharaLoadingState(semanticLabel: 'Loading attendance')
+            : hasError
+                ? AksharaErrorState(
+                    message: 'Unable to load attendance roster.',
+                    onRetry: () => ref
+                        .read(teacherAttendanceErrorProvider.notifier)
+                        .state = false,
+                  )
+                : data.classes.isEmpty
+                    ? const AksharaEmptyState(
+                        message: 'No classes scheduled for attendance.',
+                        icon: Icons.class_outlined,
+                      )
+                    : _AttendanceBody(data: data),
+      ),
     );
   }
 }
@@ -193,6 +200,75 @@ class _AttendanceBodyState extends ConsumerState<_AttendanceBody>
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  /// F-080 — a bulk "All present"/"All absent" is a destructive overwrite of an
+  /// in-progress roster: it wipes explicit marks AND lets the debounced autosave
+  /// persist the wiped state over the recoverable draft. Guard it two ways:
+  ///  1. Confirm first ONLY when the action would overwrite students who are
+  ///     already marked (a blank roster applies directly — no needless friction;
+  ///     the non-destructive "Fill remaining present" fast path is untouched).
+  ///  2. After applying, offer a SnackBar Undo that restores the exact prior
+  ///     roster. Restoring re-writes the provider state, which re-arms the
+  ///     debounced autosave (via the `ref.listen` in [build]) so the RESTORED
+  ///     roster — not the wiped one — is what gets persisted.
+  Future<void> _handleBulkMark(StudentAttendanceMark mark) async {
+    final data = ref.read(teacherAttendanceProvider);
+    if (data.isSubmitted) return;
+    final students = data.students;
+    if (students.isEmpty) return;
+
+    // Snapshot the exact prior roster (incl. unmarked rows) so Undo restores it.
+    final priorMarks = <String, StudentAttendanceMark>{
+      for (final s in students) s.id: s.mark,
+    };
+    final alreadyMarked = students
+        .where((s) => s.mark != StudentAttendanceMark.unmarked)
+        .length;
+
+    if (alreadyMarked > 0) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Overwrite existing marks?'),
+          content: Text(
+            'Marking all ${mark.label.toLowerCase()} will overwrite '
+            '$alreadyMarked ${alreadyMarked == 1 ? 'student' : 'students'} '
+            'you have already marked.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Overwrite'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+
+    applyBulkMark(ref, mark);
+
+    if (!mounted) return;
+    final classId = data.selectedClassId;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('Marked all ${mark.label.toLowerCase()}.'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () {
+            if (!mounted) return;
+            restoreAttendanceMarks(ref, classId: classId, marks: priorMarks);
+          },
+        ),
+      ),
+    );
   }
 
   List<TeacherAttendanceStudent> get _visibleStudents {
@@ -281,8 +357,7 @@ class _AttendanceBodyState extends ConsumerState<_AttendanceBody>
                         children: [
                           Expanded(
                             child: OutlinedButton(
-                              onPressed: () => applyBulkMark(
-                                ref,
+                              onPressed: () => _handleBulkMark(
                                 StudentAttendanceMark.present,
                               ),
                               child: const Text('All present'),
@@ -291,8 +366,7 @@ class _AttendanceBodyState extends ConsumerState<_AttendanceBody>
                           const SizedBox(width: AksharaSpacing.s2),
                           Expanded(
                             child: OutlinedButton(
-                              onPressed: () => applyBulkMark(
-                                ref,
+                              onPressed: () => _handleBulkMark(
                                 StudentAttendanceMark.absent,
                               ),
                               child: const Text('All absent'),
@@ -338,13 +412,27 @@ class _AttendanceBodyState extends ConsumerState<_AttendanceBody>
                 ),
                 Expanded(
                   child: visibleStudents.isEmpty
-                      ? const Center(
+                      // Day one, a newly created class has an empty roster and
+                      // the teacher has typed nothing. Telling them their
+                      // search matched nothing is a lie — separate "no roster
+                      // yet" from "your search matched nothing", the same way
+                      // `data.classes.isEmpty` is handled one level up.
+                      ? Center(
                           child: SingleChildScrollView(
-                            child: AksharaEmptyState(
-                              message: 'No students match your search.',
-                              icon: Icons.search_off_outlined,
-                              compact: true,
-                            ),
+                            child: data.students.isEmpty
+                                ? const AksharaEmptyState(
+                                    message:
+                                        'No students are enrolled in this class '
+                                        'yet. They appear here as soon as the '
+                                        'office enrolls them.',
+                                    icon: Icons.groups_outlined,
+                                    compact: true,
+                                  )
+                                : const AksharaEmptyState(
+                                    message: 'No students match your search.',
+                                    icon: Icons.search_off_outlined,
+                                    compact: true,
+                                  ),
                           ),
                         )
                       // P2-UX-2 §2.1 — exception-first: a dense grid so the class
@@ -430,11 +518,15 @@ class _AttendanceActionBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
+          // Reserve the band occupied by the raised centre AI button in the
+          // bottom nav. Without this it is painted on top of the Submit row —
+          // a mistap hazard on the app's most-used data-entry screen. Resolves
+          // to 0 when no such button is drawn, so it costs nothing then.
           padding: EdgeInsets.fromLTRB(
             horizontalPadding,
             AksharaSpacing.s3,
             horizontalPadding,
-            AksharaSpacing.s3,
+            AksharaSpacing.s3 + BottomNavAiScope.reservedHeightOf(context),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,

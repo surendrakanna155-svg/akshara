@@ -105,3 +105,47 @@ credentials at all:
 - The 15-minute RPO target in `docs/DEPLOYMENT_MODEL_AND_DR_PLAN.md` needs **WAL
   archiving / PITR** — a layer-2 upgrade (requires a Postgres `archive_command` +
   restart). Tracked as a follow-up; nightly is the immediate safety net.
+
+## Data-retention purge (manual, never scheduled)
+
+`akshara-retention-purge.sh` enforces the retention horizons published in
+`docs/legal/DATA_RETENTION_AND_DELETION_POLICY.md`. It is **explicitly invoked**
+— `install-ops-cron.sh` deliberately does not schedule it.
+
+`audit_events` is an append-only legal/forensic record (it answers "who changed
+this mark / deleted this payment" and evidences consent under the DPDP Act).
+Unattended destruction of that record is not appropriate for this RC: a bad cron
+line would irreversibly destroy the evidence trail with nothing left to prove it
+happened. So a human runs it, on purpose, after sizing the purge.
+
+```bash
+# 1. SIZE it first (read-only, no deletion) — API, permission `viewManagement`:
+#    GET /audit/retention  ->  { retentionDays, cutoff, beyondRetention, total }
+
+# 2. DRY RUN on the box (default; reports counts, deletes nothing):
+/opt/akshara/backup/akshara-retention-purge.sh audit --days 730
+
+# 3. Only then, actually purge:
+/opt/akshara/backup/akshara-retention-purge.sh audit --days 730 --force
+
+# Optional: restrict to one tenant
+/opt/akshara/backup/akshara-retention-purge.sh audit --org <UUID> --force
+
+# Expired AI cache rows (already unreachable — the read path filters expires_at):
+/opt/akshara/backup/akshara-retention-purge.sh ai-cache --force
+```
+
+Without `--force` the script is a dry run, mirroring `akshara-restore.sh`'s
+refusal to overwrite the live DB. Every real purge appends an operator, a count
+and a timestamp to `$LOG_DIR/retention.log`.
+
+It runs as the DB superuser inside the postgres container by necessity:
+`audit_events` is `FORCE ROW LEVEL SECURITY`, so a cross-tenant purge cannot run
+from the tenant (`erp_tenant`) role. There is deliberately **no**
+client-reachable delete path for audit rows.
+
+Expired OTP rows (phone + hash from login attempts; the code is long dead):
+
+```bash
+/opt/akshara/backup/akshara-retention-purge.sh otp --force        # >= 7 days old
+```

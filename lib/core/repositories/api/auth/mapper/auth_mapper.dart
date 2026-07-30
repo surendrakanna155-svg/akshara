@@ -55,15 +55,19 @@ class AuthMapper {
 
   AuthUser toUser(AuthUserDto dto) {
     final raw = dto.raw;
+    final rawRoleSlug = raw['role'] as String? ?? raw['erpRole'] as String?;
     return AuthUser(
+      rawRoleSlug: rawRoleSlug,
       id: raw['id'] as String? ?? raw['userId'] as String? ?? '',
       displayName: raw['displayName'] as String? ??
           raw['name'] as String? ??
           'Staff User',
-      erpRole: ErpRole.fromName(
-            raw['role'] as String? ?? raw['erpRole'] as String?,
-          ) ??
-          ErpRole.superAdmin,
+      // JOURNEY-002: this used to be `... ?? ErpRole.superAdmin` — an unknown
+      // server role silently became the HIGHEST privilege in the product. The
+      // shared resolver fails closed to ErpRole.unsupported, and the session
+      // restore path (auth_claims.dart) uses the SAME resolver, so a given slug
+      // resolves identically on both paths (JOURNEY-003).
+      erpRole: ErpRole.resolve(rawRoleSlug),
       tenantId: raw['tenantId'] as String? ?? '',
       email: raw['email'] as String?,
       mobile: raw['mobile'] as String? ?? raw['phone'] as String?,

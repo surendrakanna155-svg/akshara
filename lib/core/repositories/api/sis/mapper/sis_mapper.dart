@@ -323,6 +323,10 @@ class SisMapper {
       status: student['status'] as String? ?? '',
       schoolName: school['name'] as String? ?? '',
       schoolCode: school['code'] as String? ?? '',
+      // ICA-H2: truthful gate-verified clearance sentence (transfer only).
+      clearanceStatement: _nullableString(
+        raw['clearanceStatement'] ?? raw['clearance_statement'],
+      ),
     );
   }
 

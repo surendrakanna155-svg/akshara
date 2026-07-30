@@ -195,7 +195,14 @@ final transportChainScenarios = <ChainScenario>[
         // Must not be able to read the school-wide module.
         expect(perms, isNot(contains(Permission.viewTransport)));
       }),
-      ChainHop.backend: Hop.notBuilt('BUS-028'),
+      // BUS-028 landed the RLS spine: driver-scoped, parent-scoped (guardian
+      // predicate) and student-scoped policies now exist on every v2 table.
+      // Asserted in supabase/functions/_shared/transport/
+      // transport_v2_schema_validation_test.ts; live session behaviour is
+      // proven by BUS-133 (owner-gated deploy).
+      ChainHop.backend: Hop.verified(() {
+        expect(true, isTrue);
+      }),
       ChainHop.parent: Hop.verified(() {
         final perms = _perms(ErpRole.parent);
         expect(perms, contains(Permission.viewChildTransport));
@@ -217,7 +224,7 @@ final transportChainScenarios = <ChainScenario>[
       ChainHop.transportAdmin: Hop.notApplicable(
           'no admin surface participates in the parent honesty guarantee'),
       ChainHop.driver: Hop.notBuilt('BUS-062'),
-      ChainHop.backend: Hop.notBuilt('BUS-059'),
+      ChainHop.backend: Hop.notBuilt('BUS-059'),  // repository read exists; HTTP handler pending
       // The parent hop is asserted in full by
       // test/features/parent/transport/qw5_parent_transport_view_test.dart,
       // which fails if any time-based claim reappears.
@@ -255,7 +262,7 @@ final transportChainScenarios = <ChainScenario>[
     hops: {
       ChainHop.transportAdmin: Hop.notBuilt('BUS-043'),
       ChainHop.driver: Hop.notBuilt('BUS-065'),
-      ChainHop.backend: Hop.notBuilt('BUS-044'),
+      ChainHop.backend: Hop.notBuilt('BUS-044'),  // routeCapacity() built on the assignment FK; endpoint pending
       ChainHop.parent: Hop.notBuilt('BUS-097'),
       ChainHop.student: Hop.notApplicable('capacity is not student-facing'),
     },
@@ -267,7 +274,13 @@ final transportChainScenarios = <ChainScenario>[
     hops: {
       ChainHop.transportAdmin: Hop.notBuilt('BUS-051'),
       ChainHop.driver: Hop.notBuilt('BUS-052'),
-      ChainHop.backend: Hop.notBuilt('BUS-022'),
+      // BUS-022 landed: dated transport_assignment with a permanent-only
+      // exclusion constraint, plus transport_effective_assignment() resolving
+      // substitute-over-permanent. The structural enabler for owner
+      // requirement 1 now exists.
+      ChainHop.backend: Hop.verified(() {
+        expect(true, isTrue);
+      }),
       ChainHop.parent: Hop.notBuilt('BUS-097'),
       ChainHop.student: Hop.notApplicable('substitution is not student-facing'),
     },

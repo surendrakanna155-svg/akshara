@@ -1,7 +1,12 @@
 # Production Integrations — Environment Configuration
 
-**Version:** 1.0 (v7.7)  
-**Scope:** Razorpay, Communication (Twilio/SendGrid/FCM), OpenAI Copilot
+**Version:** 1.1 (corrected 2026-07-28 against the code that actually reads these vars)  
+**Scope:** Razorpay, Communication (Twilio/SendGrid/FCM), AI Copilot
+
+> **Correction note.** Three variable names in v1.0 were wrong, and every one of
+> them failed *silently* — the operator sets the documented name, nothing reads
+> it, the feature stays stubbed, and no error is raised. Names below were
+> verified by grepping `Deno.env.get(...)` across `supabase/functions/`.
 
 ---
 
@@ -18,7 +23,7 @@
 
 ### Webhook verification checklist
 
-- [ ] Razorpay dashboard webhook URL: `https://<project>.supabase.co/functions/v1/api/webhooks/razorpay`
+- [ ] Razorpay dashboard webhook URL: `<POLICY/API HOST>/webhooks/razorpay` — the edge API is served at the ROOT of the VPS host (see `lib/core/config/environment.dart`), NOT at a hosted-Supabase `/functions/v1/` path. There is no hosted Supabase project in the production path.
 - [ ] Events enabled: `payment.captured`, `payment.failed`
 - [ ] `RAZORPAY_WEBHOOK_SECRET` matches dashboard secret
 - [ ] Staging smoke: create order → pay in test mode → webhook creates finance collection (v7.3.2 path)
@@ -39,7 +44,7 @@
 |---------|---------|-----------|
 | SMS (Twilio) | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` | `SMS_STUB_MODE=false` |
 | Email (SendGrid) | `SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL` | `EMAIL_STUB_MODE=false` |
-| Push (FCM) | `FCM_SERVER_KEY` | `FCM_STUB_MODE=false` |
+| Push (FCM) | `FCM_SERVICE_ACCOUNT_JSON` | `FCM_STUB_MODE=false` |
 
 **Default:** Stub mode is `true` when credentials absent (`notification_provider_config.ts`).
 
@@ -54,16 +59,24 @@
 
 ---
 
-## OpenAI (AI Copilot)
+## AI Copilot (Anthropic, or OpenRouter)
+
+The backend does **not** call OpenAI. `OPENAI_API_KEY` / `OPENAI_MODEL` are read
+by nothing — setting them leaves the copilot stubbed with no error.
 
 | Secret | Purpose |
 |--------|---------|
-| `OPENAI_API_KEY` | Live LLM responses |
-| `OPENAI_MODEL` | Optional override (default `gpt-4o-mini`) |
+| `AI_PROVIDER` | `anthropic` (default) or `openrouter` |
+| `ANTHROPIC_API_KEY` | Live LLM responses when `AI_PROVIDER=anthropic` |
+| `ANTHROPIC_MODEL` | Optional override (default `claude-opus-4-8`) |
+| `OPENROUTER_API_KEY` | Live LLM responses when `AI_PROVIDER=openrouter` |
+| `AI_MODEL` | Routed model for OpenRouter (default `anthropic/claude-sonnet-4-6`) |
+
+See `deploy/akshara-vps/.env.akshara.example` for the authoritative block.
 
 ### Fallback behaviour (read-only)
 
-When `OPENAI_API_KEY` is absent:
+When no key is set for the active provider:
 
 - Copilot returns **stub assistant replies** built from ERP context bundle
 - System prompt enforces read-only policy (no mutation claims)

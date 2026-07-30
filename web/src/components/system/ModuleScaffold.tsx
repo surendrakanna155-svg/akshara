@@ -19,7 +19,7 @@ export function ModuleScaffold({ title, icon, note }: { title: string; icon?: st
         </Text>
         <Text variant="body-md" className="mt-s1 max-w-reading text-on-surface-variant">
           {note ??
-            'This screen exists in the Akshara mobile app and is on the parity build list. It will be wired to the same design system and live data as the pages already completed.'}
+            'This screen exists in the NIKSHA OS mobile app and is on the parity build list. It will be wired to the same design system and live data as the pages already completed.'}
         </Text>
       </Card>
     </div>

@@ -22,7 +22,7 @@ export default defineConfig({
   preview: {
     proxy: {
       '/api-proxy': {
-        target: process.env.API_PROXY_TARGET || 'https://akshara.veloraunisexsalon.com',
+        target: process.env.API_PROXY_TARGET || 'https://api.nikshaos.in',
         changeOrigin: true,
         secure: true,
         rewrite: (p) => p.replace(/^\/api-proxy/, '/functions/v1/api'),

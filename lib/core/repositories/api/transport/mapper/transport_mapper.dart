@@ -110,6 +110,7 @@ class TransportMapper {
       busNumber: raw['busNumber'] as String? ?? '',
       shift: TransportEnumCodec.parseShift(raw['shift'] as String?),
       sisStudentId: raw['sisStudentId'] as String? ?? '',
+      demandRaised: raw['demandRaised'] as bool? ?? false,
     );
   }
 

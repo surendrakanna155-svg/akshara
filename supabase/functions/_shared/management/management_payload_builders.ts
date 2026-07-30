@@ -24,7 +24,9 @@ export function buildDashboardPayload(agg: ManagementAggregate): Record<string, 
   const kpis = [
     {
       id: "revenue",
-      value: formatInr(finance.totalCollected),
+      // PRA-P0-23 (S4): "Revenue MTD" must be month-to-date collections, not the
+      // all-time total (formula was fine, the period was wrong).
+      value: formatInr(agg.collectedThisMonth),
       label: "Revenue MTD",
       accentName: "primary",
     },
@@ -54,21 +56,39 @@ export function buildDashboardPayload(agg: ManagementAggregate): Record<string, 
       `${admissions.totalLeads} admission leads, ${admissions.joined} joined.`
     : "No revenue, fee, or admissions activity recorded yet.";
 
+  // PRA-P1-48 (S4): recent admissions conversions from the real pipeline.
+  const CONVERTED_STAGES = new Set(["joined", "confirmed", "admission_confirmed"]);
+  const recentConversions = admissions.pipelineLeads
+    .filter((l) => CONVERTED_STAGES.has(l.stage))
+    .slice(0, 10)
+    .map((l) => ({
+      id: l.id,
+      studentName: l.studentName,
+      classLabel: l.classLabel,
+      stage: l.stage,
+      source: l.source,
+    }));
+
   return {
     aiInsight,
     kpis,
+    // PRA-P1-48 (S4): no monthly revenue-series or expense-ledger table exists
+    // yet, so these stay HONESTLY empty (not a fabricated trend) — wire them when
+    // those sources land. The approval queue and recent conversions DO have real
+    // sources and are now populated.
     revenueTrend: [],
     expenseBreakdown: [],
-    approvalQueue: [],
+    approvalQueue: agg.pendingApprovals,
     admissionsSnapshot: {
       leadsMtd: admissions.totalLeads,
       confirmed: admissions.confirmed,
       joined: admissions.joined,
       conversionRate: formatPercent(admissions.conversionRate),
-      recentConversions: [],
+      recentConversions,
     },
     feeSnapshot: {
-      collectedMtd: formatInr(finance.totalCollected),
+      // PRA-P0-23 (S4): month-to-date, not all-time.
+      collectedMtd: formatInr(agg.collectedThisMonth),
       outstanding: formatInr(finance.totalOutstanding),
       collectionRate: formatPercent(finance.collectionRate),
       // NOTE: Flutter mapper reads `defaulters` (the old seed key
@@ -107,16 +127,22 @@ export function buildAnalyticsPayload(agg: ManagementAggregate): Record<string, 
     },
   ];
 
-  const attendanceByClass = academic.classPerformance.map((c) => ({
-    label: c.classLabel,
-    value: c.students,
-    percent: c.avgPercent,
+  // PRA-P2-22 (S4): the per-class attendance column must show EACH class's real
+  // attendance, not the school-wide scalar (and the "attendanceByClass" chart was
+  // wrongly built from exam performance, not attendance at all).
+  const attByClass = new Map(
+    academic.attendanceByClass.map((a) => [a.classLabel, a.attendancePercent]),
+  );
+  const attendanceByClass = academic.attendanceByClass.map((a) => ({
+    label: a.classLabel,
+    value: a.attendancePercent,
+    percent: a.attendancePercent,
   }));
 
   const classSummary = academic.classPerformance.map((c) => ({
     classLabel: c.classLabel,
     students: c.students,
-    attendancePercent: formatPercent(academic.avgAttendancePercent),
+    attendancePercent: formatPercent(attByClass.get(c.classLabel) ?? 0),
     avgMarks: formatPercent(c.avgPercent),
     feeCollectionPercent: formatPercent(finance.collectionRate),
     teachers: 0,

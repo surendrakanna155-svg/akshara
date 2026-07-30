@@ -1,5 +1,10 @@
+import 'package:akshara_erp/core/repositories/mock/mock_onboarding_repository.dart';
+import 'package:akshara_erp/core/repositories/repository_providers.dart';
+import 'package:akshara_erp/core/repositories/repository_query.dart';
+import 'package:akshara_erp/features/onboarding/onboarding_models.dart';
 import 'package:akshara_erp/features/onboarding/student_onboarding_screen.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,11 +16,34 @@ import '../../test_helpers.dart';
 /// then Confirm fires the import job). Both live on `student_onboarding_screen.dart`
 /// (Add-one tab + Upload tab) and run against the demo `MockOnboardingRepository`.
 
-Future<void> _pump(WidgetTester tester) async {
+/// Fails the COMMIT leg with a realistic transport exception whose
+/// `toString()` carries internal endpoint detail — exactly what must never
+/// reach a principal's screen on the school's first import.
+class _FailingCommitOnboardingRepository extends MockOnboardingRepository {
+  @override
+  Future<OnboardingImportJob> commitImport({
+    required RepositoryQuery query,
+    required String jobId,
+  }) async {
+    throw DioException(
+      requestOptions: RequestOptions(
+        path: '/functions/v1/onboarding-import-commit',
+        baseUrl: 'https://internal-db.akshara.invalid',
+      ),
+      type: DioExceptionType.connectionError,
+      message: 'SocketException: Failed host lookup',
+    );
+  }
+}
+
+Future<void> _pump(
+  WidgetTester tester, {
+  List<Override> overrides = const [],
+}) async {
   useMobileViewport(tester);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: erpWidgetTestOverrides(),
+      overrides: erpWidgetTestOverrides(overrides),
       child: MaterialApp(
         theme: AksharaAppTheme.light(),
         home: const StudentOnboardingScreen(),
@@ -122,6 +150,59 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('Committed 1 students'), findsOneWidget);
+    });
+
+    testWidgets(
+        'a failed commit shows a clean message, never the raw exception',
+        (tester) async {
+      await _pump(
+        tester,
+        overrides: [
+          onboardingRepositoryProvider
+              .overrideWithValue(_FailingCommitOnboardingRepository()),
+        ],
+      );
+      await _selectTab(tester, 'Upload file');
+
+      const csv = 'Student Name,Admission Number,Class,Section\n'
+          'Asha Rao,ADM-2026-0001,Grade 6,A\n';
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Paste CSV (header + rows)'),
+        csv,
+      );
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('onboarding_upload_file_btn')));
+      await settleRiverpodFutures(tester);
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(const Key('onboarding_commit_btn')));
+      await tester.tap(find.byKey(const Key('onboarding_commit_btn')));
+      await settleRiverpodFutures(tester);
+      await tester.pumpAndSettle();
+
+      // The user is told the commit failed, in the standard mapped wording.
+      expect(find.textContaining('Commit failed'), findsOneWidget);
+      expect(
+        find.textContaining('Unable to reach the server'),
+        findsOneWidget,
+      );
+
+      // …and NOTHING from the exception itself leaks: no type name, no
+      // internal host, no endpoint path, no socket detail.
+      for (final leak in const [
+        'DioException',
+        'internal-db.akshara.invalid',
+        'onboarding-import-commit',
+        'SocketException',
+        'Failed host lookup',
+      ]) {
+        expect(
+          find.textContaining(leak),
+          findsNothing,
+          reason: 'raw exception detail "$leak" reached the UI',
+        );
+      }
     });
   });
 }

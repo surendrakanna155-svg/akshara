@@ -61,7 +61,7 @@ docker exec -i akshara-postgres psql -U supabase_admin -d akshara_db \
 #        proxy_request_buffering off;
 #      }
 
-# 6. edge env: PUBLIC_STORAGE_BASE_URL=https://akshara.veloraunisexsalon.com
+# 6. edge env: PUBLIC_STORAGE_BASE_URL=https://api.nikshaos.in
 #    in /opt/akshara/.env.akshara, then: docker restart akshara-edge
 ```
 

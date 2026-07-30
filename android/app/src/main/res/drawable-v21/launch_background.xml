@@ -1,12 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Modify this file to customize your launch splash screen -->
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="?android:colorBackground" />
+<!-- NIKSHA OS native launch screen.
 
-    <!-- You can insert your own image assets here -->
-    <!-- <item>
+     This is what Android draws BEFORE Flutter starts, so it must already look
+     like the product: brand navy with the NIKSHA OS symbol centred. Previously
+     it was a bare white (light) / system-background (dark) fill, which made the
+     app appear to flash a blank screen on cold start.
+
+     Kept identical in drawable/ and drawable-v21/ so light and dark cold starts
+     are indistinguishable — the brand surface does not depend on system theme. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/ic_launcher_background" />
+    <item>
         <bitmap
             android:gravity="center"
-            android:src="@mipmap/launch_image" />
-    </item> -->
+            android:src="@drawable/launch_symbol" />
+    </item>
 </layer-list>

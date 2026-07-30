@@ -16,8 +16,30 @@ export type AuthResult =
  * freshness against live state so logout/revoke/demotion take effect on the
  * very next request instead of waiting out the 15-minute token TTL. This is the
  * single chokepoint every authenticated handler funnels through.
+ *
+ * ICA-F1: memoized per Request. The central chokepoint (`routeModuleRequest` in
+ * api/app.ts) authenticates every non-public module route ONCE, up front; the
+ * ~664 per-handler `authenticateRequest` calls (and the idempotency scope
+ * resolver) then reuse this cached result instead of re-running the
+ * session-validation DB read. Keyed on the Request identity, which is stable for
+ * a request's lifetime; `config` is the per-request singleton, so it is not part
+ * of the key. Purely an optimization — correctness holds if the cache misses
+ * (the call simply recomputes).
  */
-export async function authenticateRequest(
+const _authMemo = new WeakMap<Request, Promise<AuthResult>>();
+
+export function authenticateRequest(
+  req: Request,
+  config: AppConfig,
+): Promise<AuthResult> {
+  const cached = _authMemo.get(req);
+  if (cached) return cached;
+  const pending = authenticateRequestUncached(req, config);
+  _authMemo.set(req, pending);
+  return pending;
+}
+
+async function authenticateRequestUncached(
   req: Request,
   config: AppConfig,
 ): Promise<AuthResult> {
@@ -84,14 +106,28 @@ export function requireAnyPermission(
   );
 }
 
-/** Admissions operational tables require an active school scope with school_id. */
+/**
+ * School-operational tables require an active school scope with a school_id.
+ *
+ * Used by ~98 call sites across every module — NOT just admissions. The message
+ * used to be hardcoded to "Admissions operational data requires school scope", a
+ * copy-paste artifact from the module it was first written for: a Student Health
+ * or Finance caller was told about *Admissions*, and that wrong domain name was
+ * then captured verbatim in the 403 body, the request log and the access-denied
+ * audit. Harmless to security (the gate denied correctly either way), actively
+ * misleading to anyone reading the trail.
+ *
+ * `domain` is optional so all 98 existing call sites keep working unchanged and
+ * simply get an accurate, domain-neutral message; pass it to name the module.
+ */
 export function requireSchoolOperationalScope(
   claims: AccessTokenClaims,
+  domain?: string,
 ): Response | null {
   if (claims.scope !== "school" || !claims.school_id) {
     return errorEnvelope(
       "FORBIDDEN",
-      "Admissions operational data requires school scope",
+      `${domain ?? "This"} operational data requires school scope`,
       403,
     );
   }

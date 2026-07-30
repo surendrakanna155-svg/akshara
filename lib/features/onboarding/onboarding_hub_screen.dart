@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/errors/api_failure_mapper.dart';
+import '../../core/errors/error_text.dart';
 import '../../core/tenant/tenant_provider.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../core/utils/whatsapp_launcher.dart';
@@ -72,7 +73,9 @@ class OnboardingHubScreen extends ConsumerWidget {
               ),
               error: (error, _) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: AksharaSpacing.s3),
-                child: Text('Unable to load invites: $error'),
+                child: Text(
+                  'Unable to load invites: ${aksharaErrorMessage(error)}',
+                ),
               ),
               data: (items) => items.isEmpty
                   ? const Padding(
@@ -121,7 +124,11 @@ class OnboardingHubScreen extends ConsumerWidget {
     } catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not create invite: $error')),
+        SnackBar(
+          content: Text(
+            'Could not create invite: ${aksharaErrorMessage(error)}',
+          ),
+        ),
       );
       return;
     }
@@ -152,7 +159,12 @@ class OnboardingHubScreen extends ConsumerWidget {
       // couldn't be confirmed server-side, so surface it but don't block.
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Sent, but could not confirm status: $error')),
+          SnackBar(
+            content: Text(
+              'Sent, but could not confirm status: '
+              '${aksharaErrorMessage(error)}',
+            ),
+          ),
         );
       }
       return;
@@ -202,7 +214,7 @@ class _InviteTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final message =
-        'Welcome to Akshara ERP — ${invite.recipientLabel}. Open: ${invite.deepLink}';
+        'Welcome to NIKSHA OS — ${invite.recipientLabel}. Open: ${invite.deepLink}';
     return ListTile(
       title: Text(invite.recipientLabel),
       subtitle: Text('${invite.inviteType} · ${invite.recipientPhone} · ${invite.status}'),

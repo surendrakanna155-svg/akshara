@@ -258,27 +258,31 @@ class ImportFakeDb {
     }
 
     if (s.startsWith("INSERT INTO students")) {
+      // Canonical column order (ICA-F2 single identity writer): organization_id,
+      // school_id, student_code, display_name, status, created_by, user_id,
+      // is_placeholder, aadhaar, aadhaar_hash.
       const rec: StudentRecord = {
         id: this.id("stu"),
         organization_id: String(args[0]),
         school_id: String(args[1]),
-        user_id: (args[2] as string | null) ?? null,
-        student_code: String(args[3]),
-        display_name: String(args[4]),
+        user_id: (args[6] as string | null) ?? null,
+        student_code: String(args[2]),
+        display_name: String(args[3]),
         admission_number: "", // filled by the student_profiles insert below
-        aadhaar: (args[5] as string | null) ?? null,
-        aadhaar_hash: (args[6] as string | null) ?? null,
+        aadhaar: (args[8] as string | null) ?? null,
+        aadhaar_hash: (args[9] as string | null) ?? null,
       };
       this.students.push(rec);
       return [{ id: rec.id }];
     }
 
     if (s.startsWith("INSERT INTO student_profiles")) {
-      const studentId = String(args[0]);
+      // Canonical order: organization_id, school_id, student_id, admission_number,
+      // public_student_id, ...
+      const studentId = String(args[2]);
       const admission = String(args[3]);
       const st = this.students.find((x) => x.id === studentId);
       if (st) st.admission_number = admission;
-      // createImportedStudent puts public_student_id at $5 (index 4).
       this.profiles.push({ student_id: studentId, public_student_id: args[4] });
       return [];
     }

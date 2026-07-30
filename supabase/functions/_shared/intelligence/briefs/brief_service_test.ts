@@ -4,6 +4,7 @@ import { assert, assertEquals } from "jsr:@std/assert@1";
 import {
   assembleBriefSections,
   briefCacheKey,
+  briefPermissionSignature,
   secondsToNextIstPrewarm,
 } from "./brief_service.ts";
 import { buildFeed } from "../priority/priority_engine.ts";
@@ -57,15 +58,35 @@ Deno.test("sections: an empty feed yields an honest empty brief", () => {
   assertEquals(assembleBriefSections([]), []);
 });
 
-Deno.test("cache key: shared per (persona, scope, IST day) — no user id in the pulse key", () => {
+Deno.test("cache key: shared per (persona, scope, IST day, PERMISSION signature)", () => {
   assertEquals(
-    briefCacheKey("principal", "school", "2026-07-11"),
-    "brief:principal:school:2026-07-11",
+    briefCacheKey("principal", "school", "2026-07-11", "abc123def456"),
+    "brief:principal:school:abc123def456:2026-07-11",
   );
   assertEquals(
-    briefCacheKey("teacher", "user:u-1", "2026-07-11"),
-    "brief:teacher:user:u-1:2026-07-11",
+    briefCacheKey("teacher", "user:u-1", "2026-07-11", "abc123def456"),
+    "brief:teacher:user:u-1:abc123def456:2026-07-11",
   );
+});
+
+Deno.test("permission signature: RBAC cohorts never share a narrative (round-4 P1)", async () => {
+  const full = await briefPermissionSignature([
+    "viewAnalytics",
+    "viewStudentRisk",
+    "viewFinance",
+    "viewInventory",
+    "viewTransport",
+    "viewHr",
+    "viewLibrary",
+  ]);
+  const financeOnly = await briefPermissionSignature(["viewFinance"]);
+  const financePlusNoise = await briefPermissionSignature([
+    "viewFinance",
+    "manageCommunications", // brief-irrelevant → must not change the cohort
+  ]);
+  assert(full !== financeOnly, "superset and subset must never share prose");
+  assertEquals(financeOnly, financePlusNoise, "irrelevant permissions do not fragment sharing");
+  assertEquals(full.length, 12);
 });
 
 Deno.test("prewarm TTL: expires at the next 04:00 IST, never in the past", () => {

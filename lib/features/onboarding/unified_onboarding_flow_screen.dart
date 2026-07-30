@@ -397,7 +397,7 @@ class _AiQuickSetupCard extends StatelessWidget {
           ),
           const SizedBox(height: AksharaSpacing.s2),
           Text(
-            'Describe your school in a few words and let Akshara draft your '
+            'Describe your school in a few words and let NIKSHA draft your '
             'classes, sections, fees, language and modules. You can review and '
             'edit everything before going live.',
             style: context.aksharaText.bodyMedium,

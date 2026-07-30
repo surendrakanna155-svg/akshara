@@ -223,7 +223,7 @@ function mapJob(row: JobRow): ProvisioningJobView {
 // ─── Packs (catalog) ────────────────────────────────────────────────────────
 
 export async function listPacks(db: TenantQueryClient): Promise<OrgBuilderPack[]> {
-  // Akshara is an education-only product: the salon/hospital/restaurant packs are
+  // NIKSHA is an education-only product: the salon/hospital/restaurant packs are
   // seed/reference rows that are explicitly out of scope (hide-first). Offer only
   // the school pack. Mirrors the client-side pack-picker gate
   // (organization_builder_hub_screen.dart _kSupportedVerticalPackTypes) as

@@ -26,10 +26,14 @@ class YearTransitionPreviewRequestDto {
   final List<ClassMappingRuleDto> mappings;
 
   Map<String, dynamic> toJson() {
+    // PRA-P0-14: backend `parseClassMappings` reads the array from `classMapping`
+    // (a `mappings` key was silently ignored, so the wizard's choices never
+    // reached the preview and the backend just re-suggested).
     return {
       'sourceYearId': sourceYearId,
       'targetYearId': targetYearId,
-      'mappings': mappings.map((rule) => rule.toJson()).toList(growable: false),
+      'classMapping':
+          mappings.map((rule) => rule.toJson()).toList(growable: false),
     };
   }
 }
@@ -60,12 +64,17 @@ class ClassMappingRuleDto {
   final bool includeStudents;
 
   Map<String, dynamic> toJson() {
+    // PRA-P0-14: emit the backend contract (`sourceClassName / targetClassName /
+    // keepSection / action`). The wizard's single `includeStudents` toggle maps
+    // to the action: excluded => skip; an empty target (backend's graduate
+    // suggestion for terminal grades) => graduate; otherwise promote.
     return {
-      'sourceClassLabel': sourceClassLabel,
-      'sourceSection': sourceSection,
-      'targetClassLabel': targetClassLabel,
-      'targetSection': targetSection,
-      'includeStudents': includeStudents,
+      'sourceClassName': sourceClassLabel,
+      'targetClassName': targetClassLabel,
+      'keepSection': true,
+      'action': !includeStudents
+          ? 'skip'
+          : (targetClassLabel.trim().isEmpty ? 'graduate' : 'promote'),
     };
   }
 }

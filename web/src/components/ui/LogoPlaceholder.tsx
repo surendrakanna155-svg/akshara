@@ -1,9 +1,21 @@
 import { cn } from '@/lib/utils/cn';
 
 /**
- * Reusable Akshara logo placeholder. The final brand mark is not yet finalized,
- * so every surface renders through this component — swap the internals here once
- * the real logo lands, with zero page changes.
+ * The NIKSHA OS brand mark. Every surface renders through this component, so a
+ * brand change is one edit here with zero page changes.
+ *
+ * The mark itself is the approved vector master from `brand/niksha-os/svg/`,
+ * copied into `web/public/brand/` — never redrawn, recoloured or traced
+ * (BRAND_GUIDELINES.md §2 rule 3, §6 "Don't").
+ *
+ * On a coloured background (`tone="onPrimary"`, e.g. the login hero) the lifted
+ * `-on-dark` variant is used: the master's deep gradient stop is nearly the navy
+ * canvas colour, so the flag detail disappears without it (§4).
+ *
+ * WORDMARK: the brand package contains no horizontal-lockup master, so the name
+ * is typeset to the §5 specification — Inter 700 at +0.14em tracking, with the
+ * "OS" sub-label in Inter 600 / brand primary. Replace the <span> pair below
+ * with the lockup SVG once that master exists.
  */
 export interface LogoProps {
   /** Show the wordmark next to the mark. */
@@ -18,23 +30,27 @@ export function Logo({ showWordmark = true, size = 36, tone = 'default', classNa
   const onPrimary = tone === 'onPrimary';
   return (
     <span className={cn('inline-flex items-center gap-s3', className)}>
-      <span
-        className={cn(
-          'grid place-items-center rounded-[10px] font-bold',
-          onPrimary ? 'bg-white/15 text-white ring-1 ring-white/30' : 'bg-primary text-on-primary shadow-ak-2',
-        )}
-        style={{ width: size, height: size, fontSize: size * 0.5 }}
+      <img
+        src={onPrimary ? '/brand/niksha-os-symbol-on-dark.svg' : '/brand/niksha-os-symbol.svg'}
+        alt=""
+        width={size}
+        height={size}
+        style={{ width: size, height: size }}
         aria-hidden
-      >
-        A
-      </span>
+      />
       {showWordmark && (
-        <span className="flex flex-col leading-none">
-          <span className={cn('ak-title-md font-bold tracking-tight', onPrimary ? 'text-white' : 'text-on-surface')}>
-            Akshara
+        <span className="flex items-baseline gap-[6px] leading-none">
+          <span
+            className={cn('ak-title-md font-bold', onPrimary ? 'text-white' : 'text-on-surface')}
+            style={{ letterSpacing: '0.14em' }}
+          >
+            NIKSHA
           </span>
-          <span className={cn('text-[10px] font-medium uppercase tracking-[0.18em]', onPrimary ? 'text-white/90' : 'text-secondary')}>
-            School ERP
+          <span
+            className={cn('text-[13px] font-semibold', onPrimary ? 'text-white/90' : 'text-primary')}
+            style={{ letterSpacing: '0.06em' }}
+          >
+            OS
           </span>
         </span>
       )}

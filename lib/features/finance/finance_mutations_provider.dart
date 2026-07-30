@@ -12,8 +12,6 @@ import '../../core/errors/api_failure_mapper.dart';
 import '../../core/repositories/academic/academic_catalog_mutation.dart';
 import '../../core/repositories/academic/academic_catalog_provider.dart';
 import '../../core/repositories/repository_providers.dart';
-import '../../core/security/permissions.dart';
-import '../../core/security/rbac_service.dart';
 import '../../core/tenant/tenant_provider.dart';
 import '../../features/auth/auth_provider.dart';
 import 'collections/finance_collections_provider.dart';
@@ -42,6 +40,7 @@ void _invalidateFinanceReads(
   bool discounts = false,
   bool settings = false,
   bool qrPaymentSession = false,
+  bool feeReductions = false,
 }) {
   if (feeStructures) ref.invalidate(financeFeeStructuresFutureProvider);
   if (studentAccounts) ref.invalidate(financeStudentAccountsFutureProvider);
@@ -57,6 +56,8 @@ void _invalidateFinanceReads(
   if (discounts) ref.invalidate(financeDiscountsFutureProvider);
   if (settings) ref.invalidate(financeSettingsFutureProvider);
   if (qrPaymentSession) ref.invalidate(qrPaymentSessionProvider);
+  // STEP-5 — fee reductions read is separate from the discounts dashboard.
+  if (feeReductions) ref.invalidate(financeFeeReductionsFutureProvider);
 }
 
 Future<T?> _runMutation<T>(
@@ -75,6 +76,7 @@ Future<T?> _runMutation<T>(
   bool invalidateDiscounts = false,
   bool invalidateSettings = false,
   bool invalidateQrPaymentSession = false,
+  bool invalidateFeeReductions = false,
   void Function()? assertPermission,
   AuditEventType auditType = AuditEventType.financeHandoffSent,
 }) async {
@@ -103,6 +105,7 @@ Future<T?> _runMutation<T>(
       discounts: invalidateDiscounts,
       settings: invalidateSettings,
       qrPaymentSession: invalidateQrPaymentSession,
+      feeReductions: invalidateFeeReductions,
     );
     return result;
   } catch (error) {
@@ -359,6 +362,46 @@ class AssignFeePlanNotifier extends AsyncNotifier<StudentFeeAccount?> {
 final assignFeePlanProvider =
     AsyncNotifierProvider<AssignFeePlanNotifier, StudentFeeAccount?>(
   AssignFeePlanNotifier.new,
+);
+
+/// PRC-A gap fix — bulk/class-wide fee-structure assignment. Every
+/// assignment used to be one student at a time via the admissions-handoff
+/// queue; this wires the client to `POST /finance/fee-assignments/bulk`.
+class BulkAssignFeeStructureNotifier
+    extends AsyncNotifier<BulkFeeAssignmentResult?> {
+  @override
+  FutureOr<BulkFeeAssignmentResult?> build() => null;
+
+  Future<BulkFeeAssignmentResult?> execute(
+    BulkAssignFeePlanRequest request,
+  ) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertManageFinance(ref),
+        auditAction: 'bulkAssignFeeStructure',
+        entityId: request.feeStructureId,
+        metadata: {
+          'academicYear': request.academicYear,
+          'studentCount': '${request.studentIds.length}',
+        },
+        invalidateStudentAccounts: true,
+        action: () =>
+            ref.read(financeRepositoryProvider).bulkAssignFeeStructure(
+                  query: ref.read(repositoryQueryProvider),
+                  request: request,
+                ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final bulkAssignFeeStructureProvider = AsyncNotifierProvider<
+    BulkAssignFeeStructureNotifier, BulkFeeAssignmentResult?>(
+  BulkAssignFeeStructureNotifier.new,
 );
 
 // #6 — PATCH .../fee-assignments/:id/cancel (backend was already built with
@@ -1153,64 +1196,203 @@ final batchPrintReceiptsProvider =
   BatchPrintReceiptsNotifier.new,
 );
 
-/// Assigns a fee concession / scholarship pending principal approval (M-D5).
-class AssignFeeConcessionNotifier extends AsyncNotifier<String?> {
-  @override
-  FutureOr<String?> build() => null;
+// STEP-5 — P0 money-honesty fix (PRC-A cap 71): the old `AssignFeeConcessionNotifier`
+// fabricated a `concession_<timestamp>` id and either (a) submitted a
+// `feeConcession` approval whose backend effect hardcodes `payableApplied:
+// false` (records a row, moves NO money), or (b) called the in-memory
+// `FinanceApprovalGovernanceStore.applyConcession` — neither ever reached the
+// student's real payable. It has been retired in favour of the certified,
+// invoice-scoped `finance_fee_reductions_{repository,handlers}.ts`
+// maker-checker below: [ProposeScholarshipAwardNotifier] /
+// [ProposeDiscountApplicationNotifier] (MAKER, moves no money) and
+// [ApproveFeeReductionNotifier] (CHECKER — a DIFFERENT authorised person —
+// which is the only thing that actually reduces the invoice's payable). The
+// backend's `feeConcession` approval-type case is left untouched for
+// backward-compat with any already-pending legacy approvals; no NEW ones are
+// created from the client.
 
-  Future<String?> execute({
-    required String studentName,
-    required String amount,
+class ProposeScholarshipAwardNotifier extends AsyncNotifier<FeeReduction?> {
+  @override
+  FutureOr<FeeReduction?> build() => null;
+
+  Future<FeeReduction?> execute({
+    required String scholarshipId,
+    required String invoiceId,
     required String reason,
-    String feeAccountId = '',
+    double? percent,
+    double? amount,
   }) async {
     if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      final perms = ref.read(userPermissionsProvider);
-      if (perms == null || !perms.has(Permission.assignScholarship)) {
-        throw ApiFailureException(
-          const ApiFailure(
-            type: ApiFailureType.forbidden,
-            message: 'You do not have permission to assign scholarships.',
-            code: 'RBAC_ASSIGN_SCHOLARSHIP',
-          ),
-        );
-      }
-
-      final concessionId =
-          'concession_${DateTime.now().millisecondsSinceEpoch}';
-      final approvalRequired = ref.read(financeApprovalRequiredProvider);
-
-      if (approvalRequired) {
-        final auth = ref.read(authProvider);
-        final adapter = FeeConcessionApprovalAdapter();
-        await adapter.submitForApproval(
-          service: ref.read(approvalCenterServiceProvider),
-          query: ref.read(repositoryQueryProvider),
-          concessionId: concessionId,
-          requesterId: auth.claims?.userId ?? 'finance_demo',
-          requesterName: auth.displayName ?? 'Finance Admin',
-          title: 'Fee concession — $studentName',
-          summary: '$amount · $reason',
-          payload: {
-            'studentName': studentName,
-            'amount': amount,
-            'reason': reason,
-            'feeAccountId': feeAccountId,
-          },
-        );
-      } else {
-        FinanceApprovalGovernanceStore.instance.applyConcession(concessionId);
-      }
-
-      return concessionId;
+      return _runMutation(
+        ref,
+        assertPermission: () => assertManageFinance(ref),
+        auditAction: 'proposeScholarshipAward',
+        entityId: invoiceId,
+        entityIdForAudit: (item) => item.id,
+        metadata: {
+          'scholarshipId': scholarshipId,
+          'invoiceId': invoiceId,
+        },
+        invalidateDiscounts: true,
+        invalidateInvoices: true,
+        invalidateFeeReductions: true,
+        action: () =>
+            ref.read(financeRepositoryProvider).proposeScholarshipAward(
+                  query: ref.read(repositoryQueryProvider),
+                  scholarshipId: scholarshipId,
+                  invoiceId: invoiceId,
+                  reason: reason,
+                  percent: percent,
+                  amount: amount,
+                ),
+      );
     });
     return state.valueOrNull;
   }
 }
 
-final assignFeeConcessionProvider =
-    AsyncNotifierProvider<AssignFeeConcessionNotifier, String?>(
-  AssignFeeConcessionNotifier.new,
+final proposeScholarshipAwardProvider =
+    AsyncNotifierProvider<ProposeScholarshipAwardNotifier, FeeReduction?>(
+  ProposeScholarshipAwardNotifier.new,
+);
+
+class ProposeDiscountApplicationNotifier extends AsyncNotifier<FeeReduction?> {
+  @override
+  FutureOr<FeeReduction?> build() => null;
+
+  Future<FeeReduction?> execute({
+    required String discountRuleId,
+    required String invoiceId,
+    required String reason,
+    double? percent,
+    double? amount,
+  }) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertManageFinance(ref),
+        auditAction: 'proposeDiscountApplication',
+        entityId: invoiceId,
+        entityIdForAudit: (item) => item.id,
+        metadata: {
+          'discountRuleId': discountRuleId,
+          'invoiceId': invoiceId,
+        },
+        invalidateDiscounts: true,
+        invalidateInvoices: true,
+        invalidateFeeReductions: true,
+        action: () =>
+            ref.read(financeRepositoryProvider).proposeDiscountApplication(
+                  query: ref.read(repositoryQueryProvider),
+                  discountRuleId: discountRuleId,
+                  invoiceId: invoiceId,
+                  reason: reason,
+                  percent: percent,
+                  amount: amount,
+                ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final proposeDiscountApplicationProvider = AsyncNotifierProvider<
+    ProposeDiscountApplicationNotifier, FeeReduction?>(
+  ProposeDiscountApplicationNotifier.new,
+);
+
+class ApproveFeeReductionNotifier extends AsyncNotifier<FeeReduction?> {
+  @override
+  FutureOr<FeeReduction?> build() => null;
+
+  Future<FeeReduction?> execute({required String reductionId}) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertApproveFeeConcession(ref),
+        auditAction: 'approveFeeReduction',
+        entityId: reductionId,
+        invalidateDiscounts: true,
+        invalidateInvoices: true,
+        invalidateFeeReductions: true,
+        action: () => ref.read(financeRepositoryProvider).approveFeeReduction(
+              query: ref.read(repositoryQueryProvider),
+              reductionId: reductionId,
+            ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final approveFeeReductionProvider =
+    AsyncNotifierProvider<ApproveFeeReductionNotifier, FeeReduction?>(
+  ApproveFeeReductionNotifier.new,
+);
+
+class RejectFeeReductionNotifier extends AsyncNotifier<FeeReduction?> {
+  @override
+  FutureOr<FeeReduction?> build() => null;
+
+  Future<FeeReduction?> execute({required String reductionId}) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertApproveFeeConcession(ref),
+        auditAction: 'rejectFeeReduction',
+        entityId: reductionId,
+        invalidateDiscounts: true,
+        invalidateFeeReductions: true,
+        action: () => ref.read(financeRepositoryProvider).rejectFeeReduction(
+              query: ref.read(repositoryQueryProvider),
+              reductionId: reductionId,
+            ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final rejectFeeReductionProvider =
+    AsyncNotifierProvider<RejectFeeReductionNotifier, FeeReduction?>(
+  RejectFeeReductionNotifier.new,
+);
+
+class ReverseFeeReductionNotifier extends AsyncNotifier<FeeReduction?> {
+  @override
+  FutureOr<FeeReduction?> build() => null;
+
+  Future<FeeReduction?> execute({required String reductionId}) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertApproveFeeConcession(ref),
+        auditAction: 'reverseFeeReduction',
+        entityId: reductionId,
+        invalidateDiscounts: true,
+        invalidateInvoices: true,
+        invalidateFeeReductions: true,
+        action: () => ref.read(financeRepositoryProvider).reverseFeeReduction(
+              query: ref.read(repositoryQueryProvider),
+              reductionId: reductionId,
+            ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final reverseFeeReductionProvider =
+    AsyncNotifierProvider<ReverseFeeReductionNotifier, FeeReduction?>(
+  ReverseFeeReductionNotifier.new,
 );

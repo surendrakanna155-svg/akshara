@@ -33,3 +33,33 @@ final financeDiscountsViewStateProvider =
     forceEmpty: ref.watch(financeDiscountsEmptyProvider),
   );
 });
+
+// STEP-5 — fee reductions (scholarship awards + discount applications) that
+// actually reduce a student's payable via the invoice-scoped maker-checker.
+// Unfiltered (all statuses) so the discounts screen can show a "Pending
+// awards" section (Approve/Reject) and an "Approved" section (Reverse) from
+// one read; mutations invalidate this via `invalidateFeeReductions`.
+final financeFeeReductionsFutureProvider =
+    FutureProvider<List<FeeReduction>>((ref) async {
+  return ref.read(financeRepositoryProvider).listFeeReductions(
+        query: ref.watch(repositoryQueryProvider),
+      );
+});
+
+final financeFeeReductionsProvider = Provider<List<FeeReduction>>((ref) {
+  return ref.watch(financeFeeReductionsFutureProvider).valueOrNull ?? const [];
+});
+
+final financePendingFeeReductionsProvider = Provider<List<FeeReduction>>((ref) {
+  return ref
+      .watch(financeFeeReductionsProvider)
+      .where((r) => r.status == FeeReductionStatus.pending)
+      .toList(growable: false);
+});
+
+final financeApprovedFeeReductionsProvider = Provider<List<FeeReduction>>((ref) {
+  return ref
+      .watch(financeFeeReductionsProvider)
+      .where((r) => r.status == FeeReductionStatus.approved)
+      .toList(growable: false);
+});

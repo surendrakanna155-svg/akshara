@@ -1,10 +1,10 @@
-# Akshara ERP — Acceptable Use Policy (AUP)
+# NIKSHA OS — Acceptable Use Policy (AUP)
 
 **Document version:** 1.0
 **Status:** Draft for owner sign-off (see [PLACEHOLDERS.md](PLACEHOLDERS.md))
-**Operator:** **[LEGAL ENTITY NAME]** ("Akshara", "we", "us").
+**Operator:** **NIKSHA Technologies Pvt. Ltd.** ("NIKSHA OS", "we", "us").
 
-> This Acceptable Use Policy applies to everyone who uses Akshara ERP — schools,
+> This Acceptable Use Policy applies to everyone who uses NIKSHA OS — schools,
 > principals, administrators, teachers, staff, students and parents ("you"). It is
 > part of the [Terms & Conditions](TERMS_AND_CONDITIONS.md) and the
 > [Institution Agreement](INSTITUTION_AGREEMENT.md). Breaking it may lead to
@@ -14,10 +14,10 @@
 
 ## 1. Purpose
 
-Akshara handles sensitive information about children, families and staff. This
+NIKSHA OS handles sensitive information about children, families and staff. This
 policy keeps the platform safe, lawful and trustworthy for everyone.
 
-## 2. You may use Akshara to
+## 2. You may use NIKSHA OS to
 
 - Run legitimate school operations you are authorised to perform (admissions,
   attendance, exams, fees, transport, hostel, library, HR, communication, etc.).

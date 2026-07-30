@@ -18,7 +18,7 @@ ENV_FILE="${MONITORING_ENV:-/opt/akshara/monitoring/monitoring.env}"
 [[ -f "$ENV_FILE" ]] && source "$ENV_FILE"
 
 : "${EDGE_BASE:=http://127.0.0.1:3000}"
-: "${PUBLIC_DOMAIN:=akshara.veloraunisexsalon.com}"
+: "${PUBLIC_DOMAIN:=api.nikshaos.in}"
 : "${CERT_PATH:=/etc/letsencrypt/live/$PUBLIC_DOMAIN/fullchain.pem}"
 : "${DISK_WARN_PCT:=85}"
 : "${CERT_WARN_DAYS:=14}"

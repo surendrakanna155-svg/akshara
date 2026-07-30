@@ -1,6 +1,6 @@
-# Tester Instructions — Akshara ERP Pilot
+# Tester Instructions — NIKSHA OS Pilot
 
-**Thank you for helping test Akshara!**  
+**Thank you for helping test NIKSHA OS!**  
 **Build version:** 16.6.0 (166) · **Environment:** Staging demo school
 
 ---
@@ -12,7 +12,7 @@
 1. Receive `app-release.apk` from the team (email, Drive, or QR link)
 2. On your Android phone: **Settings → Security → Install unknown apps** → allow your file browser
 3. Open the APK file → **Install**
-4. Open **Akshara ERP**
+4. Open **NIKSHA OS**
 
 > **Tip:** If install is blocked, ensure you downloaded the complete file (~70 MB).
 
@@ -68,8 +68,8 @@ Send to the team contact or save in shared folder.
 ### 1. Install via TestFlight
 
 1. Install **TestFlight** from the App Store (if not installed)
-2. Open the invite email from Akshara team → **View in TestFlight**
-3. Tap **Install** on **Akshara ERP**
+2. Open the invite email from NIKSHA OS team → **View in TestFlight**
+3. Tap **Install** on **NIKSHA OS**
 4. Open from TestFlight or home screen
 
 > **Note:** TestFlight builds require the team to upload an IPA first. See `docs/Testing/iOS-Build-Guide.md` for build Mac setup.
@@ -127,4 +127,4 @@ A: Expected — staging data varies. Report only if layout breaks or crashes.
 | `docs/Testing/Bug-Report-Template.md` | How to report issues |
 | `docs/Testing/iOS-Build-Guide.md` | TestFlight setup (team) |
 
-**Contact:** Your Akshara pilot coordinator
+**Contact:** Your NIKSHA OS pilot coordinator

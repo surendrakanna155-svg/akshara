@@ -73,7 +73,7 @@ function tone(subjectType: string | undefined): {
     case "holiday":
       return {
         poster: (t) => `Holiday notice: ${t}. School remains closed.`,
-        whatsapp: (t) => `📅 Holiday: ${t}. Our school will remain closed. — Akshara School`,
+        whatsapp: (t) => `📅 Holiday: ${t}. Our school will remain closed. — NIKSHA School`,
         instagram: (t) => `${t} 📅 Enjoy the break!`,
         facebook: (t) => `Holiday announcement: ${t}. The school will remain closed.`,
         hashtags: "#Holiday #SchoolNotice",
@@ -81,7 +81,7 @@ function tone(subjectType: string | undefined): {
     case "festival":
       return {
         poster: (t) => `Warm greetings on ${t} from all of us.`,
-        whatsapp: (t) => `🪔 Happy ${t}! Warm wishes to our school family. — Akshara School`,
+        whatsapp: (t) => `🪔 Happy ${t}! Warm wishes to our school family. — NIKSHA School`,
         instagram: (t) => `Happy ${t} ✨ from our school family`,
         facebook: (t) => `Wishing everyone a joyful ${t} from our school family!`,
         hashtags: "#Festival #Greetings",
@@ -101,9 +101,9 @@ function tone(subjectType: string | undefined): {
       return {
         poster: (t) => `Celebrating ${t}.`,
         whatsapp: (t) => `🎉 ${t}! Proud moment for our school family. Share the joy!`,
-        instagram: (t) => `${t} ✨ #AksharaPride #StudentSuccess`,
+        instagram: (t) => `${t} ✨ #NikshaPride #StudentSuccess`,
         facebook: (t) => `Congratulations on ${t}! Share the joy with our community.`,
-        hashtags: "#AksharaPride",
+        hashtags: "#NikshaPride",
       };
   }
 }
@@ -125,7 +125,7 @@ export function generatePromotionAssetBundle(
     banner: assetMeta(
       "banner",
       "School Banner",
-      `${title} — Akshara School`,
+      `${title} — NIKSHA School`,
       `Wide banner for school displays and website hero.`,
       { format: "image/jpeg", width: 1920, height: 600, aspectRatio: "16:5" },
     ),

@@ -9,6 +9,7 @@ import '../teacher_requests.dart';
 import '../teacher_mutations_provider.dart';
 import '../teacher_unread_provider.dart';
 import 'teacher_messages_provider.dart';
+import '../../copilot/widgets/bottom_nav_ai_scope.dart';
 
 /// TA-06 conversation thread view.
 class TeacherConversationScreen extends ConsumerWidget {
@@ -154,7 +155,9 @@ class _ReplyComposerState extends ConsumerState<_ReplyComposer> {
         padding: EdgeInsets.only(
           left: AksharaSpacing.mobileMargin,
           right: AksharaSpacing.mobileMargin,
-          bottom: MediaQuery.viewInsetsOf(context).bottom,
+          // Clear the raised centre AI button's band so the composer's send
+          // control is never painted over. Resolves to 0 when no button is drawn.
+          bottom: MediaQuery.viewInsetsOf(context).bottom + BottomNavAiScope.reservedHeightOf(context),
         ),
         child: DecoratedBox(
           decoration: BoxDecoration(

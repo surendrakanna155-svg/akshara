@@ -12,9 +12,17 @@ import {
   requireSchoolOperationalScope,
 } from "../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
-import type { TenantQueryClient } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
+import { guardianUserIdsForStudents } from "../communication/guardian_recipients.ts";
+import { enqueueDelivery } from "../communication/communication_repository.ts";
+import { processDeliveryQueue } from "../communication/notification_service.ts";
+import {
+  findTeacherEntity,
+  insertTeacherEntity,
+  listTeacherEntities,
+  replaceTeacherEntity,
+} from "./teacher_parent_communication_repository.ts";
 
 /**
  * MJ-H13 — teacher parent-communication + subject-concern writes.
@@ -36,7 +44,6 @@ import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_ca
  * / 20260627110000 recovery), so this never 403s a legitimate teacher, and it is
  * a write-grade grant rather than a read one (`viewTeacherAssistant`).
  */
-const TEACHER_TABLE = "teacher_entities";
 const WRITE_PERMISSION = "manageTeacherAssistant";
 const READ_PERMISSION = "viewTeacherAssistant";
 
@@ -45,99 +52,31 @@ const ENTITY_SUBJECT_CONCERN = "subject_concern";
 
 const { runWrite } = createModuleWriteHandlers(WRITE_PERMISSION);
 
-/** Insert a teacher-owned JSONB entity row (binds teacher_id to satisfy RLS). */
-async function insertTeacherEntity(
-  db: TenantQueryClient,
-  organizationId: string,
-  schoolId: string,
-  teacherId: string,
-  entityType: string,
-  id: string,
-  payload: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
-  const rows = await db.queryObject<{ payload: Record<string, unknown> }>(
-    `INSERT INTO ${TEACHER_TABLE}
-       (id, organization_id, school_id, teacher_id, entity_type, payload)
-     VALUES ($1, $2, $3, $4, $5, $6::jsonb)
-     RETURNING payload`,
-    [id, organizationId, schoolId, teacherId, entityType, JSON.stringify(payload)],
-  );
-  return rows[0]?.payload ?? payload;
-}
-
-/** Read a single teacher-owned entity payload (null when absent / not owned). */
-async function findTeacherEntity(
-  db: TenantQueryClient,
-  organizationId: string,
-  schoolId: string,
-  teacherId: string,
-  entityType: string,
-  id: string,
-): Promise<Record<string, unknown> | null> {
-  const rows = await db.queryObject<{ payload: Record<string, unknown> }>(
-    `SELECT payload
-       FROM ${TEACHER_TABLE}
-      WHERE organization_id = $1
-        AND school_id = $2
-        AND teacher_id = $3
-        AND entity_type = $4
-        AND id = $5`,
-    [organizationId, schoolId, teacherId, entityType, id],
-  );
-  return rows[0]?.payload ?? null;
-}
-
-/** Replace a teacher-owned entity payload (null when no row was updated). */
-async function replaceTeacherEntity(
-  db: TenantQueryClient,
-  organizationId: string,
-  schoolId: string,
-  teacherId: string,
-  entityType: string,
-  id: string,
-  payload: Record<string, unknown>,
-): Promise<Record<string, unknown> | null> {
-  const rows = await db.queryObject<{ payload: Record<string, unknown> }>(
-    `UPDATE ${TEACHER_TABLE}
-        SET payload = $6::jsonb
-      WHERE organization_id = $1
-        AND school_id = $2
-        AND teacher_id = $3
-        AND entity_type = $4
-        AND id = $5
-      RETURNING payload`,
-    [organizationId, schoolId, teacherId, entityType, id, JSON.stringify(payload)],
-  );
-  return rows[0]?.payload ?? null;
-}
-
-/** List all teacher-owned entity payloads of a type. */
-async function listTeacherEntities(
-  db: TenantQueryClient,
-  organizationId: string,
-  schoolId: string,
-  teacherId: string,
-  entityType: string,
-): Promise<Array<Record<string, unknown>>> {
-  const rows = await db.queryObject<{ payload: Record<string, unknown> }>(
-    `SELECT payload
-       FROM ${TEACHER_TABLE}
-      WHERE organization_id = $1
-        AND school_id = $2
-        AND teacher_id = $3
-        AND entity_type = $4
-      ORDER BY id`,
-    [organizationId, schoolId, teacherId, entityType],
-  );
-  return rows.map((row) => row.payload);
-}
-
 function stringList(body: Record<string, unknown>, key: string): string[] {
   const value = body[key];
   if (!Array.isArray(value)) return [];
   return value
     .map((item) => String(item ?? "").trim())
     .filter((item) => item.length > 0);
+}
+
+/**
+ * PRA-P0-16: normalize the teacher-requested channel labels to the delivery
+ * channels the notification queue actually supports (`push`/`sms`/`email` — the
+ * `notification_deliveries.channel` CHECK). Any app/in-app/notification label
+ * maps to `push`; empty selection defaults to `push` (the always-available
+ * in-app channel). De-duplicated, order-stable.
+ */
+export function deliveryChannels(requested: string[]): string[] {
+  const mapped = requested.map((c) => {
+    const key = c.trim().toLowerCase();
+    if (key === "sms") return "sms";
+    if (key === "email") return "email";
+    // "app", "push", "notification", "in_app", … → the push/in-app channel.
+    return "push";
+  });
+  const deduped = Array.from(new Set(mapped));
+  return deduped.length > 0 ? deduped : ["push"];
 }
 
 /**
@@ -161,6 +100,41 @@ export async function handleSendParentCommunication(
     const message = customMessage ?? `Communication regarding ${reason}.`;
     const sourceConcernId = str(body, "sourceConcernId", "source_concern_id");
 
+    // PRA-P0-16: this previously stamped a hardcoded status:"sent" and enqueued
+    // NOTHING — the parent never received anything. Resolve the student's ACTIVE
+    // guardian(s) and enqueue a REAL delivery per requested channel, then set the
+    // status HONESTLY from what was actually queued.
+    const title = `Message about ${reason}`;
+    const targetChannels = deliveryChannels(channels);
+    const guardianIds = await guardianUserIdsForStudents(
+      db,
+      organizationId,
+      schoolId,
+      [sisStudentId],
+    );
+    let enqueued = 0;
+    for (const recipientUserId of guardianIds) {
+      for (const channel of targetChannels) {
+        await enqueueDelivery(db, {
+          organizationId,
+          schoolId,
+          recipientUserId,
+          channel,
+          category: "announcement",
+          renderedSubject: title,
+          renderedBody: message,
+        });
+        enqueued += 1;
+      }
+    }
+    // Drain out of the request the same way sendDirectMessage does, so the push
+    // actually goes out. A guardian-less student yields an honest "no_recipients"
+    // rather than a fabricated "sent".
+    if (enqueued > 0) {
+      await processDeliveryQueue(db, organizationId, claims, request);
+    }
+    const status = guardianIds.length === 0 ? "no_recipients" : "queued";
+
     const id = crypto.randomUUID();
     const log = {
       id,
@@ -168,8 +142,10 @@ export async function handleSendParentCommunication(
       reason,
       tone,
       channels,
+      deliveredChannels: targetChannels,
+      recipientCount: guardianIds.length,
       message,
-      status: "sent",
+      status,
       createdBy: teacherId,
       createdAt: new Date().toISOString(),
     };
@@ -213,12 +189,22 @@ export async function handleSendParentCommunication(
         "teacher.parent_communication.sent",
         "teacher_parent_communication",
         id,
-        { sisStudentId, reason, sourceConcernId: sourceConcernId ?? null },
+        {
+          sisStudentId,
+          reason,
+          sourceConcernId: sourceConcernId ?? null,
+          status,
+          recipientCount: guardianIds.length,
+          channels: targetChannels,
+        },
       ),
       request,
     );
 
-    return { payload: { id, status: "sent" }, status: 201 };
+    return {
+      payload: { id, status, recipientCount: guardianIds.length },
+      status: 201,
+    };
   });
 }
 

@@ -2,7 +2,7 @@
 // every GET endpoint the web pages consume. READ-ONLY (auth + GET only; no
 // mutations). Reports status + a shape spot-check per endpoint; flags errors as
 // gap candidates. Run: node web/scripts/live_validate.mjs
-const BASE = process.env.API_BASE_URL || 'https://akshara.veloraunisexsalon.com/functions/v1/api';
+const BASE = process.env.API_BASE_URL || 'https://api.nikshaos.in/functions/v1/api';
 const ADMIN = process.env.ADMIN_PHONE || '9876543210';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

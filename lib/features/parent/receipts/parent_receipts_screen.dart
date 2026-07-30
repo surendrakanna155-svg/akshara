@@ -22,7 +22,8 @@ class ParentReceiptsScreen extends ConsumerWidget {
   final void Function(FeeReceipt receipt)? onReceiptTap;
 
   static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
-  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
+  static const double _tabletMaxContentWidth =
+      AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -33,7 +34,7 @@ class ParentReceiptsScreen extends ConsumerWidget {
     final hasError = ref.watch(parentReceiptsErrorProvider);
 
     return Scaffold(
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'Receipts',
         subtitle: '${data.childName} · ${data.childClass}',
@@ -41,116 +42,122 @@ class ParentReceiptsScreen extends ConsumerWidget {
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,
       ),
-      body: isLoading
-          ? const AksharaLoadingState(semanticLabel: 'Loading receipts')
-          : hasError
-              ? AksharaErrorState(
-                  message: 'Unable to load receipts right now.',
-                  onRetry: () => ref
-                      .read(parentReceiptsErrorProvider.notifier)
-                      .state = false,
-                )
-              : LayoutBuilder(
-                  builder: (context, constraints) {
-                    final isTablet =
-                        constraints.maxWidth >= _tabletBreakpoint;
-                    final horizontalPadding = isTablet
-                        ? AksharaSpacing.tabletMargin
-                        : AksharaSpacing.mobileMargin;
+      // DS V2 P4 — premium persona canvas behind the receipts list.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: isLoading
+            ? const AksharaLoadingState(semanticLabel: 'Loading receipts')
+            : hasError
+                ? AksharaErrorState(
+                    message: 'Unable to load receipts right now.',
+                    onRetry: () => ref
+                        .read(parentReceiptsErrorProvider.notifier)
+                        .state = false,
+                  )
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isTablet =
+                          constraints.maxWidth >= _tabletBreakpoint;
+                      final horizontalPadding = isTablet
+                          ? AksharaSpacing.tabletMargin
+                          : AksharaSpacing.mobileMargin;
 
-                    return Align(
-                      alignment: Alignment.topCenter,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxWidth: isTablet
-                              ? _tabletMaxContentWidth
-                              : double.infinity,
-                        ),
-                        child: Column(
-                          children: [
-                            Padding(
-                              padding: EdgeInsets.fromLTRB(
-                                horizontalPadding,
-                                AksharaSpacing.s4,
-                                horizontalPadding,
-                                AksharaSpacing.s2,
-                              ),
-                              child: Semantics(
-                                label: 'Search receipts',
-                                child: SearchBar(
-                                  hintText: 'Search by title or receipt no.',
-                                  leading: const Icon(Icons.search),
-                                  onChanged: (value) => ref
-                                      .read(
-                                        parentReceiptSearchProvider.notifier,
-                                      )
-                                      .state = value,
-                                  padding: const WidgetStatePropertyAll(
-                                    EdgeInsets.symmetric(
-                                      horizontal: AksharaSpacing.s3,
+                      return Align(
+                        alignment: Alignment.topCenter,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: isTablet
+                                ? _tabletMaxContentWidth
+                                : double.infinity,
+                          ),
+                          child: Column(
+                            children: [
+                              Padding(
+                                padding: EdgeInsets.fromLTRB(
+                                  horizontalPadding,
+                                  AksharaSpacing.s4,
+                                  horizontalPadding,
+                                  AksharaSpacing.s2,
+                                ),
+                                child: Semantics(
+                                  label: 'Search receipts',
+                                  child: SearchBar(
+                                    hintText: 'Search by title or receipt no.',
+                                    leading: const Icon(Icons.search),
+                                    onChanged: (value) => ref
+                                        .read(
+                                          parentReceiptSearchProvider.notifier,
+                                        )
+                                        .state = value,
+                                    padding: const WidgetStatePropertyAll(
+                                      EdgeInsets.symmetric(
+                                        horizontal: AksharaSpacing.s3,
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: horizontalPadding,
+                              Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: horizontalPadding,
+                                ),
+                                child: ReceiptFilterBar(
+                                  selectedFilter: filter,
+                                  onFilterChanged: (value) => ref
+                                      .read(
+                                          parentReceiptFilterProvider.notifier)
+                                      .state = value,
+                                ),
                               ),
-                              child: ReceiptFilterBar(
-                                selectedFilter: filter,
-                                onFilterChanged: (value) => ref
-                                    .read(parentReceiptFilterProvider.notifier)
-                                    .state = value,
-                              ),
-                            ),
-                            const SizedBox(height: AksharaSpacing.s3),
-                            Expanded(
-                              child: data.receipts.isEmpty
-                                  ? AksharaEmptyState(
-                                      message: search.isEmpty
-                                          ? 'No receipts available yet.'
-                                          : 'No receipts match your search.',
-                                      icon: Icons.receipt_long_outlined,
-                                      compact: true,
-                                    )
-                                  : Material(
-                                      color: context.colors.surface,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(
-                                          AksharaSpacing.s2,
+                              const SizedBox(height: AksharaSpacing.s3),
+                              Expanded(
+                                child: data.receipts.isEmpty
+                                    ? AksharaEmptyState(
+                                        message: search.isEmpty
+                                            ? 'No receipts available yet.'
+                                            : 'No receipts match your search.',
+                                        icon: Icons.receipt_long_outlined,
+                                        compact: true,
+                                      )
+                                    : Material(
+                                        color: context.colors.surface,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            AksharaSpacing.s2,
+                                          ),
+                                          side: BorderSide(
+                                            color:
+                                                context.colors.outlineVariant,
+                                          ),
                                         ),
-                                        side: BorderSide(
-                                          color:
-                                              context.colors.outlineVariant,
+                                        child: ListView.builder(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: horizontalPadding,
+                                          ),
+                                          itemCount: data.receipts.length,
+                                          itemBuilder: (context, index) {
+                                            final receipt =
+                                                data.receipts[index];
+                                            return ReceiptListRow(
+                                              receipt: receipt,
+                                              showDivider: index <
+                                                  data.receipts.length - 1,
+                                              onTap: onReceiptTap == null
+                                                  ? null
+                                                  : () =>
+                                                      onReceiptTap!(receipt),
+                                            );
+                                          },
                                         ),
                                       ),
-                                      child: ListView.builder(
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: horizontalPadding,
-                                        ),
-                                        itemCount: data.receipts.length,
-                                        itemBuilder: (context, index) {
-                                          final receipt =
-                                              data.receipts[index];
-                                          return ReceiptListRow(
-                                            receipt: receipt,
-                                            showDivider:
-                                                index < data.receipts.length - 1,
-                                            onTap: onReceiptTap == null
-                                                ? null
-                                                : () => onReceiptTap!(receipt),
-                                          );
-                                        },
-                                      ),
-                                    ),
-                            ),
-                          ],
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
+                      );
+                    },
+                  ),
+      ),
     );
   }
 }

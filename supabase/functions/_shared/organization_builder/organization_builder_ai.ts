@@ -13,7 +13,7 @@ import type { InterviewRecommendation } from "./organization_builder_repository.
 const RECOMMEND_MAX_TOKENS = 320;
 
 const SYSTEM_PROMPT = `
-You are Akshara's Organization Builder assistant. A founder is configuring a new
+You are NIKSHA's Organization Builder assistant. A founder is configuring a new
 organization through a short interview. Given the vertical and the answers so far,
 suggest ONE concrete, actionable configuration recommendation.
 

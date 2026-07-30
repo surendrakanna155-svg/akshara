@@ -57,15 +57,19 @@ class StaffAttendanceController {
           'eventType': event.apiValue,
           'method': record.method,
           if (record.faceMatchScore != null) 'faceMatchScore': record.faceMatchScore.toString(),
-          if (record.pendingSync) 'pendingSync': 'true',
         },
       );
       return StaffCheckOutcome.recorded(record);
     } on StaffAttendanceRejected catch (e) {
       // Map the server verdict to the right banner (location vs face reason).
       return e.isFaceReason
-          ? StaffCheckOutcome.faceBlocked(e.message)
+          ? StaffCheckOutcome.faceBlocked(e.message, code: e.code)
           : StaffCheckOutcome.locationBlocked(e.message);
+    } on StaffAttendanceOffline {
+      // Audit R1: check-in is online-only by design — a queued event would be
+      // guaranteed-stale on drain (server location-freshness window). Fail
+      // honestly with a clear next step, never an optimistic "recorded".
+      return StaffCheckOutcome.failed(StaffAttendanceOffline.userMessage);
     } catch (e) {
       return StaffCheckOutcome.failed(e.toString());
     }

@@ -192,6 +192,23 @@ Detailed specifications: §10–§13. Client alignment: §14.
 
 ## 10. Domain Event Bus
 
+> ⚠️ **IMPLEMENTATION STATUS (verified 2026-07-28): this section describes a
+> DESIGN, not current behaviour.** `domain_events` is a durable, idempotency-keyed,
+> RLS-hardened **log** — genuinely good, and worth keeping. It is **not a bus
+> today**: every event is inserted in terminal `status='published'` while the drain
+> selects `pending|failed` (empty by construction), the subscriber registry is
+> empty, and no cron invokes the drain.
+>
+> Consequently the two propagation claims below are **not** what the code does:
+> notifications are enqueued **inline** by the calling handler, and fee collection
+> notifies the parent through a **direct** `sendTransactionalSms` call. Neither
+> goes through an event. Treat every "publishes X → Y reacts" statement in this
+> section as the target design.
+>
+> See `docs/engineering/DOMAIN_EVENTS_ARCHITECTURE.md` for the exact mechanism and
+> the sequencing constraint (scheduler first, status second).
+
+
 Cross-module integration uses a **transactional outbox** pattern:
 
 ```

@@ -31,6 +31,10 @@ class EducationMapper {
   static EduExamType examTypeFromApi(String value) => switch (value) {
         'weekly_test' => EduExamType.weeklyTest,
         'monthly_test' => EduExamType.monthlyTest,
+        // CCE assessments (State Board + CBSE). The short forms are accepted
+        // too because schools and imported spreadsheets commonly send 'fa'/'sa'.
+        'formative_assessment' || 'fa' => EduExamType.formativeAssessment,
+        'summative_assessment' || 'sa' => EduExamType.summativeAssessment,
         'quarterly' => EduExamType.quarterly,
         'half_yearly' => EduExamType.halfYearly,
         'annual' => EduExamType.annual,
@@ -40,6 +44,8 @@ class EducationMapper {
   static String examTypeToApi(EduExamType value) => switch (value) {
         EduExamType.weeklyTest => 'weekly_test',
         EduExamType.monthlyTest => 'monthly_test',
+        EduExamType.formativeAssessment => 'formative_assessment',
+        EduExamType.summativeAssessment => 'summative_assessment',
         EduExamType.quarterly => 'quarterly',
         EduExamType.halfYearly => 'half_yearly',
         EduExamType.annual => 'annual',

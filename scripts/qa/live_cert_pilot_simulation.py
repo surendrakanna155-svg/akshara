@@ -26,7 +26,7 @@ Run:  python3 scripts/qa/live_cert_pilot_simulation.py
 """
 import json, os, time, base64, subprocess, urllib.request, urllib.error
 
-BASE = "https://akshara.veloraunisexsalon.com"
+BASE = os.environ.get("API_BASE_URL", "https://api.nikshaos.in")
 ORG = "a1000000-0000-4000-8000-000000000001"          # pilot org (Professional plan)
 ADMIN = "+919876543210"
 ADMIN_UID = "a3000000-0000-4000-8000-000000000001"

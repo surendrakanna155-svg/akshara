@@ -351,22 +351,35 @@ void main() {
       expect(result.content, contains('try again'));
     });
 
-    test('AI-unavailable ERROR -> service falls back, does NOT crash',
-        () async {
+    // E2E-021 — REWRITTEN. This test previously asserted the defect: that the
+    // service "falls back" by returning an `AiGeneratedContent` whose body is
+    // the user's OWN PROMPT, reformatted and stamped `generatedAt: now()`. The
+    // UI could not tell that from a real generation, so a school could publish
+    // a machine's echo of its own instruction as composed content.
+    //
+    // The honest contract: a failed generation FAILS. The composer renders the
+    // error (its `generationState.hasError` branch shows `AksharaErrorState`)
+    // and the send action stays blocked. "Does not crash" is the screen's job,
+    // via `AsyncValue.guard` — not the service's, via a success-shaped lie.
+    test('AI-unavailable ERROR -> service rethrows; it never returns the '
+        "user's own prompt as generated content", () async {
       final pipeline = _pipeline(_ErrorProvider(), ErpRole.superAdmin);
       final service = AiContentService(pipeline: pipeline);
 
-      // Must not throw — the service catches and returns safe fallback content.
-      final result = await service.generate(
-        const AiContentRequest(
-          type: AiContentType.circular,
-          prompt: 'Exam schedule update',
-          audience: 'Parents',
-          tone: 'Formal',
+      await expectLater(
+        service.generate(
+          const AiContentRequest(
+            type: AiContentType.circular,
+            prompt: 'Exam schedule update',
+            audience: 'Parents',
+            tone: 'Formal',
+          ),
         ),
+        throwsA(anything),
+        reason: 'A failed generation must surface as a failure. Returning a '
+            'success-shaped value is how the prompt echo became publishable '
+            'content (E2E-021).',
       );
-      expect(result.content.trim(), isNotEmpty);
-      expect(result.content, contains('Exam schedule update'));
     });
 
     test('pipeline RECORDS the failure in telemetry, then rethrows (observable)',

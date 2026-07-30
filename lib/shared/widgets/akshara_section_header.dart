@@ -28,7 +28,15 @@ class AksharaSectionHeader extends StatelessWidget {
   final String? trailingLabel;
   final VoidCallback? onTrailingTap;
 
-  /// When true, wraps content in a 32px-tall row (PA-01 dashboard sections).
+  /// When true, gives the header row a 32px MINIMUM height (PA-01 dashboard
+  /// sections).
+  ///
+  /// A11y-P1: this used to be a hard `SizedBox(height: 32)` around a 14px title
+  /// whose line box is 20px. Above roughly 1.6× system font scale the text no
+  /// longer fitted and was clipped — on every section title of every dashboard
+  /// (243 of 297 call sites take the `fixedHeight: true` default). It is now a
+  /// minimum constraint, so at the default 1.0× scale the row is still exactly
+  /// 32px (pixel-identical) and only a large system font makes it grow.
   final bool fixedHeight;
 
   /// Optional gap rendered below the header row.
@@ -37,7 +45,7 @@ class AksharaSectionHeader extends StatelessWidget {
   /// Trailing action tap target style (dashboard vs compact section links).
   final AksharaSectionHeaderTrailingStyle trailingStyle;
 
-  static const double _dashboardHeaderHeight = 32;
+  static const double _dashboardHeaderMinHeight = 32;
 
   @override
   Widget build(BuildContext context) {
@@ -59,17 +67,20 @@ class AksharaSectionHeader extends StatelessWidget {
         if (trailingLabel != null)
           TextButton(
             onPressed: onTrailingTap,
+            // A11y-P1 tap target: this was 48×32 with an explicit
+            // `MaterialTapTargetSize.shrinkWrap`, which cancelled the 48dp
+            // floor the app theme guarantees globally
+            // (`materialTapTargetSize: padded`). "See all" is the only way to
+            // reach several list screens, including 3 on the parent dashboard.
+            // Both styles now take the full 48×48 target; the override is gone.
             style: TextButton.styleFrom(
               padding: trailingStyle == AksharaSectionHeaderTrailingStyle.compact
                   ? const EdgeInsets.symmetric(horizontal: AksharaSpacing.s2)
                   : EdgeInsets.zero,
-              minimumSize: Size(
+              minimumSize: const Size(
                 AksharaSpacing.minTouchTarget,
-                trailingStyle == AksharaSectionHeaderTrailingStyle.compact
-                    ? AksharaSpacing.minTouchTarget
-                    : 32,
+                AksharaSpacing.minTouchTarget,
               ),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
             child: Text(
               trailingLabel!,
@@ -84,7 +95,12 @@ class AksharaSectionHeader extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (fixedHeight)
-          SizedBox(height: _dashboardHeaderHeight, child: row)
+          ConstrainedBox(
+            constraints: const BoxConstraints(
+              minHeight: _dashboardHeaderMinHeight,
+            ),
+            child: row,
+          )
         else
           row,
         if (spacingBelow > 0) SizedBox(height: spacingBelow),

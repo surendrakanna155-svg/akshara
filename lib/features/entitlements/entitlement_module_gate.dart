@@ -113,7 +113,7 @@ class PlanLockedModuleView extends ConsumerWidget {
                         phone: kAksharaSalesWhatsApp,
                         label: 'Upgrade on WhatsApp',
                         message:
-                            'Hi Akshara team, I would like to upgrade my plan '
+                            'Hi NIKSHA team, I would like to upgrade my plan '
                             'to unlock more modules.',
                       ),
                       TextButton(

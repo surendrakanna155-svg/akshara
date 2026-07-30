@@ -306,7 +306,7 @@ Future<void> showAssignStudentTransportDialog(
 
   var selectedRouteId = selectableRoutes.first.id;
   final pickupController = TextEditingController();
-  final dropController = TextEditingController(text: 'Akshara Main Gate');
+  final dropController = TextEditingController(text: 'NIKSHA Main Gate');
 
   final confirmed = await showDialog<bool>(
     context: context,
@@ -781,4 +781,160 @@ Future<void> showRaiseTransportDemandDialog(
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(aksharaErrorMessage(error))));
   }
+}
+
+/// PRA-P0-20 — raise a Finance transport-fee demand for EVERY assigned student
+/// who is not yet billed, in one action. Reuses [raiseTransportDemandProvider]
+/// per allocation (demand only — Finance still collects) and is idempotent, so
+/// re-running bills nobody twice. Surfaced from the allocation screen next to
+/// the per-row billed status.
+Future<void> showRaiseDemandForUnbilledDialog(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final unbilled = (ref.read(transportAllocationsProvider) ?? const [])
+      .where((a) => a.isAssigned && !a.demandRaised)
+      .toList();
+  if (unbilled.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('All assigned students already have a transport demand.'),
+      ),
+    );
+    return;
+  }
+
+  final transportStructures = ref
+      .read(financeFeeStructuresProvider)
+      .where(
+        (structure) => structure.categories
+            .any((line) => line.category == FeeStructureCategory.transport),
+      )
+      .toList();
+  if (transportStructures.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'No transport fee structure found in Finance. Create one in Finance first.',
+        ),
+      ),
+    );
+    return;
+  }
+
+  var selectedStructureId = transportStructures.first.id;
+  final yearController =
+      TextEditingController(text: transportStructures.first.academicYear);
+  final termController = TextEditingController(text: 'annual');
+
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        title: const Text('Raise demand for unbilled'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                '${unbilled.length} assigned student(s) have no transport demand. '
+                'Transport defines the fee and raises a demand — Finance collects; '
+                'no payment is taken here.',
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: selectedStructureId,
+                isExpanded: true,
+                decoration:
+                    const InputDecoration(labelText: 'Transport fee structure'),
+                items: [
+                  for (final structure in transportStructures)
+                    DropdownMenuItem<String>(
+                      value: structure.id,
+                      child: Text(
+                        structure.name,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+                onChanged: (value) => setState(
+                    () => selectedStructureId = value ?? selectedStructureId),
+              ),
+              TextField(
+                controller: yearController,
+                decoration: const InputDecoration(labelText: 'Academic year'),
+              ),
+              TextField(
+                controller: termController,
+                decoration: const InputDecoration(labelText: 'Term'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: QaTestKeys.transportRaiseDemandSubmitButton,
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Raise demands'),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  final academicYear = yearController.text.trim();
+  final term = termController.text.trim();
+  if (academicYear.isEmpty || term.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Academic year and term are required.')),
+    );
+    return;
+  }
+
+  var raised = 0;
+  var alreadyBilled = 0;
+  var failed = 0;
+  for (final allocation in unbilled) {
+    try {
+      final result =
+          await ref.read(raiseTransportDemandProvider.notifier).execute(
+                RaiseTransportDemandRequest(
+                  sisStudentId: allocation.sisStudentId,
+                  routeId: allocation.routeId,
+                  feeStructureId: selectedStructureId,
+                  academicYear: academicYear,
+                  term: term,
+                  allocationId: allocation.id,
+                ),
+              );
+      if (result == null) {
+        failed++;
+      } else if (result.idempotent) {
+        alreadyBilled++;
+      } else {
+        raised++;
+      }
+    } catch (_) {
+      failed++;
+    }
+  }
+
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      key: QaTestKeys.transportRaiseDemandSuccessSnackbar,
+      content: Text(
+        'Transport demands: $raised raised'
+        '${alreadyBilled > 0 ? ', $alreadyBilled already billed' : ''}'
+        '${failed > 0 ? ', $failed failed' : ''}',
+      ),
+    ),
+  );
 }

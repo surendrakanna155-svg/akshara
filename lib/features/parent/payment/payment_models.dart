@@ -22,7 +22,39 @@ extension PaymentMethodX on PaymentMethod {
 }
 
 /// Payment flow phases rendered by [ParentPaymentScreen].
-enum PaymentFlowPhase { summary, processing, success, failure }
+///
+/// [pendingGatewayVerification] (PRA-P0-02, client half) is the fail-closed
+/// terminal state reached when a payment intent was created but there is no
+/// VERIFIED gateway payment to confirm it — because no payment-gateway SDK is
+/// wired yet (an explicit OWNER decision, out of scope). The flow lands here
+/// instead of fabricating a receipt and claiming [success] for money that no
+/// real gateway ever took.
+enum PaymentFlowPhase {
+  summary,
+  processing,
+  pendingGatewayVerification,
+  success,
+  failure,
+}
+
+/// Verified proof of a completed gateway charge, as it would be handed back by
+/// a real payment-gateway SDK callback (Razorpay `payment_id` + `signature`).
+///
+/// PRA-P0-02 (client half): a [success] is only allowed when a value of this
+/// type is present. No SDK is wired yet, so in the current build this is always
+/// null at the call site — the flow stops at
+/// [PaymentFlowPhase.pendingGatewayVerification]. Integrating a real gateway SDK
+/// (the sole producer of this proof) remains an explicit OWNER decision.
+@immutable
+class VerifiedGatewayPayment {
+  const VerifiedGatewayPayment({
+    required this.razorpayPaymentId,
+    required this.razorpaySignature,
+  });
+
+  final String razorpayPaymentId;
+  final String razorpaySignature;
+}
 
 /// Amount line in the payment breakdown.
 @immutable

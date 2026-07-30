@@ -13,8 +13,37 @@ import { emitMutationAudit, parentInsightsAudit } from "../audit/mutation_audit_
 import {
   generateParentInsightSnapshot,
   type InsightPeriod,
+  ParentInsightsNoDataError,
 } from "./parent_insights_service.ts";
 import { enrichParentInsightWithClaude, normalizeInsightLanguage } from "./parent_insights_ai.ts";
+import {
+  getLanguagePreference,
+  getLanguagePreferenceForStudent,
+  insertInsightSnapshot,
+  listInsightSnapshots,
+  upsertLanguagePreferenceDefault,
+  upsertLanguagePreferenceForStudent,
+} from "./parent_insights_repository.ts";
+
+/**
+ * PRA-P0-21: a parent-scope caller may only touch insights for their OWN child.
+ * `studentId` is client-supplied and was never checked against `child_ids`, so a
+ * parent could name any student id. Returns a 403 Response when the caller is a
+ * parent and the studentId is not one of their linked children; null otherwise
+ * (school-scope staff are governed by RLS + their operational scope). This is
+ * defence-in-depth alongside the parent-scope RLS on the source snapshot table.
+ */
+function denyForeignChild(
+  claims: Parameters<typeof requirePermission>[0],
+  studentId: string,
+): Response | null {
+  if (claims.scope !== "parent") return null;
+  const childIds = claims.child_ids ?? [];
+  if (!childIds.includes(studentId)) {
+    return errorEnvelope("FORBIDDEN", "You can only view insights for your own child", 403);
+  }
+  return null;
+}
 
 export async function handleGenerateParentInsights(req: Request, config: AppConfig): Promise<Response> {
   const auth = await authenticateRequest(req, config);
@@ -31,6 +60,8 @@ export async function handleGenerateParentInsights(req: Request, config: AppConf
   if (!body?.studentId) {
     return errorEnvelope("VALIDATION_ERROR", "studentId is required", 422);
   }
+  const foreign = denyForeignChild(auth.claims, body.studentId);
+  if (foreign) return foreign;
 
   const period = body.period ?? "weekly";
   const orgId = organizationIdFromClaims(auth.claims);
@@ -40,13 +71,12 @@ export async function handleGenerateParentInsights(req: Request, config: AppConf
     const result = await withTenantContext(config, auth.claims, async (db) => {
       let language = body.language?.trim();
       if (!language) {
-        const prefRows = await db.queryObject<{ language: string }>(
-          `SELECT language FROM parent_language_preferences
-           WHERE organization_id = $1 AND school_id = $2 AND user_id = $3
-             AND (student_id = $4 OR student_id IS NULL)
-           ORDER BY student_id NULLS LAST
-           LIMIT 1`,
-          [orgId, schoolId, auth.claims.sub, body.studentId],
+        const prefRows = await getLanguagePreferenceForStudent(
+          db,
+          orgId,
+          schoolId,
+          auth.claims.sub,
+          body.studentId,
         );
         language = prefRows[0]?.language ?? "english";
       }
@@ -60,28 +90,20 @@ export async function handleGenerateParentInsights(req: Request, config: AppConf
         baseSnapshot,
         { db, organizationId: orgId, schoolId, userId: auth.claims.sub },
       );
-      const rows = await db.queryObject<{ id: string }>(
-        `INSERT INTO parent_insight_snapshots (
-           organization_id, school_id, student_id, period, language,
-           strengths, weaknesses, attendance_insights, homework_insights,
-           improvement_suggestions, teacher_remarks_summary, progress_summary
-         ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8::jsonb, $9::jsonb, $10::jsonb, $11, $12)
-         RETURNING id`,
-        [
-          orgId,
-          schoolId,
-          body.studentId,
-          period,
-          language,
-          JSON.stringify(snapshot.strengths),
-          JSON.stringify(snapshot.weaknesses),
-          JSON.stringify(snapshot.attendanceInsights),
-          JSON.stringify(snapshot.homeworkInsights),
-          JSON.stringify(snapshot.improvementSuggestions),
-          snapshot.teacherRemarksSummary,
-          snapshot.progressSummary,
-        ],
-      );
+      const rows = await insertInsightSnapshot(db, {
+        organizationId: orgId,
+        schoolId,
+        studentId: body.studentId,
+        period,
+        language,
+        strengths: snapshot.strengths,
+        weaknesses: snapshot.weaknesses,
+        attendanceInsights: snapshot.attendanceInsights,
+        homeworkInsights: snapshot.homeworkInsights,
+        improvementSuggestions: snapshot.improvementSuggestions,
+        teacherRemarksSummary: snapshot.teacherRemarksSummary,
+        progressSummary: snapshot.progressSummary,
+      });
       const id = rows[0]!.id;
       await emitMutationAudit(
         db,
@@ -94,6 +116,15 @@ export async function handleGenerateParentInsights(req: Request, config: AppConf
     return jsonResponse(envelope(result), { status: 201 });
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    // PRA-P0-21: no readable risk snapshot → honest "not available yet", never a
+    // fabricated snapshot. Nothing was persisted and the model was never called.
+    if (error instanceof ParentInsightsNoDataError) {
+      return errorEnvelope(
+        "PARENT_INSIGHTS_NO_DATA",
+        "No insights are available for this student yet.",
+        404,
+      );
+    }
     return errorEnvelope("PARENT_INSIGHTS_ERROR", String(error), 500);
   }
 }
@@ -108,22 +139,12 @@ export async function handleListParentInsights(
   const denied = requirePermission(auth.claims, "viewParentInsights") ??
     requireParentInsightsScope(auth.claims);
   if (denied) return denied;
+  const foreign = denyForeignChild(auth.claims, studentId);
+  if (foreign) return foreign;
 
   try {
-    const items = await withTenantContext(config, auth.claims, async (db) =>
-      db.queryObject<Record<string, unknown>>(
-        `SELECT id, period, language, progress_summary AS "progressSummary",
-                strengths, weaknesses, attendance_insights AS "attendanceInsights",
-                homework_insights AS "homeworkInsights",
-                improvement_suggestions AS "improvementSuggestions",
-                teacher_remarks_summary AS "teacherRemarksSummary",
-                printable, voice_ready AS "voiceReady", generated_at AS "generatedAt"
-         FROM parent_insight_snapshots
-         WHERE student_id = $1
-         ORDER BY generated_at DESC
-         LIMIT 20`,
-        [studentId],
-      )
+    const items = await withTenantContext(config, auth.claims, (db) =>
+      listInsightSnapshots(db, studentId)
     );
     return jsonResponse(envelope({ items }));
   } catch (error) {
@@ -146,12 +167,12 @@ export async function handleGetParentLanguagePreference(req: Request, config: Ap
 
   try {
     const language = await withTenantContext(config, auth.claims, async (db) => {
-      const rows = await db.queryObject<{ language: string }>(
-        `SELECT language FROM parent_language_preferences
-         WHERE organization_id = $1 AND school_id = $2 AND user_id = $3
-           AND (($4::uuid IS NULL AND student_id IS NULL) OR student_id = $4)
-         LIMIT 1`,
-        [orgId, schoolId, auth.claims.sub, studentId],
+      const rows = await getLanguagePreference(
+        db,
+        orgId,
+        schoolId,
+        auth.claims.sub,
+        studentId,
       );
       return rows[0]?.language ?? "english";
     });
@@ -178,24 +199,21 @@ export async function handleSaveParentLanguagePreference(req: Request, config: A
   try {
     await withTenantContext(config, auth.claims, async (db) => {
       if (body.studentId) {
-        await db.queryObject(
-          `INSERT INTO parent_language_preferences (
-             organization_id, school_id, user_id, student_id, language
-           ) VALUES ($1, $2, $3, $4, $5)
-           ON CONFLICT (organization_id, school_id, user_id, student_id)
-             WHERE student_id IS NOT NULL
-           DO UPDATE SET language = EXCLUDED.language, updated_at = timezone('utc', now())`,
-          [orgId, schoolId, auth.claims.sub, body.studentId, body.language],
+        await upsertLanguagePreferenceForStudent(
+          db,
+          orgId,
+          schoolId,
+          auth.claims.sub,
+          body.studentId,
+          body.language,
         );
       } else {
-        await db.queryObject(
-          `INSERT INTO parent_language_preferences (
-             organization_id, school_id, user_id, student_id, language
-           ) VALUES ($1, $2, $3, NULL, $4)
-           ON CONFLICT (organization_id, school_id, user_id)
-             WHERE student_id IS NULL
-           DO UPDATE SET language = EXCLUDED.language, updated_at = timezone('utc', now())`,
-          [orgId, schoolId, auth.claims.sub, body.language],
+        await upsertLanguagePreferenceDefault(
+          db,
+          orgId,
+          schoolId,
+          auth.claims.sub,
+          body.language,
         );
       }
     });

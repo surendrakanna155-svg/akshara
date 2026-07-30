@@ -46,7 +46,7 @@ class ParentExamsScreen extends ConsumerWidget {
     };
 
     return Scaffold(
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'Exams',
         subtitle: async.hasValue
@@ -57,14 +57,18 @@ class ParentExamsScreen extends ConsumerWidget {
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,
       ),
-      body: _buildStatefulBody(
-        context: context,
-        ref: ref,
-        data: data,
-        section: section,
-        isLoading: isLoading,
-        error: error,
-        isSectionEmpty: isSectionEmpty,
+      // DS V2 P4 — premium persona canvas behind the exams content.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: _buildStatefulBody(
+          context: context,
+          ref: ref,
+          data: data,
+          section: section,
+          isLoading: isLoading,
+          error: error,
+          isSectionEmpty: isSectionEmpty,
+        ),
       ),
     );
   }

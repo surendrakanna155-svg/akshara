@@ -57,13 +57,12 @@ for (const route of NEW_ROUTES) {
   });
 }
 
-Deno.test("unregistered admissions route still 404s (negative control)", async () => {
+Deno.test("unregistered admissions route returns null (central dispatcher 404s)", async () => {
   const res = await routeAdmissions(
     newReq("GET", "/admissions/does-not-exist"),
     stubConfig,
     "GET",
     "/admissions/does-not-exist",
   );
-  assertExists(res);
-  assertEquals(res!.status, 404);
+  assertEquals(res, null);
 });

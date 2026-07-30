@@ -75,9 +75,9 @@ Deno.test("QA-B-021: all 16 hostel routes path-match to a handler (not 404)", as
   }
 });
 
-Deno.test("QA-B-021: unregistered path under /hostel 404s; path outside prefix is null", async () => {
+Deno.test("QA-B-021: unregistered path under /hostel returns null (central dispatcher 404s); path outside prefix is null", async () => {
   const under = await call(routeHostel, "GET", "/hostel/not-a-route", ["viewHostel"]);
-  assertEquals(under?.status, 404);
+  assertEquals(under, null);
   const outside = await call(routeHostel, "GET", "/library/dashboard", ["viewHostel"]);
   assertEquals(outside, null);
 });

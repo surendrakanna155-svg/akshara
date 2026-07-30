@@ -129,6 +129,9 @@ const ROUTES: Row[] = [
   { method: "POST", path: "/school/syllabus/generate", slug: "manageSyllabus", body: { academicYearId: "ay-1", className: "8-A", subjectId: "s-1", subjectName: "Math" } },
   { method: "POST", path: "/school/syllabus/clone", slug: "manageSyllabus", body: { fromYearId: "ay-1", toYearId: "ay-2" } },
   { method: "GET", path: "/school/syllabus/chapters", slug: "viewAcademicProgress" },
+  // P1 fix (caps 58-61) — real topic picker backing the teacher's daily-capture
+  // UI so the client can send a REAL topicId instead of a fabricated one.
+  { method: "GET", path: "/school/syllabus/topics", slug: "viewAcademicProgress" },
   { method: "POST", path: "/school/academic/complete-topic", slug: "manageAcademicProgress", body: { topicId: "t-1" } },
   { method: "GET", path: "/school/academic/teacher-progress", slug: "viewAcademicProgress" },
   { method: "GET", path: "/school/academic/principal-progress", slug: "viewAcademicProgress" },
@@ -196,15 +199,25 @@ Deno.test("QA-B-046: a non-/school/ path → router returns null", async () => {
   assertEquals(res, null);
 });
 
-Deno.test("QA-B-046: an unregistered /school/ path → 404 NOT_FOUND", async () => {
-  const res = await call("GET", "/school/does-not-exist", ["viewSubjects"]);
-  assertEquals(res.status, 404);
+Deno.test("QA-B-046: an unregistered /school/ path → null (central dispatcher 404s)", async () => {
+  const token = await signAccessToken(SECRET, claims(["viewSubjects"]), 900);
+  const req = new Request("https://x/school/does-not-exist", {
+    method: "GET",
+    headers: { authorization: `Bearer ${token}` },
+  });
+  const res = await routeSchoolCompletion(req, config, "GET", "/school/does-not-exist");
+  assertEquals(res, null);
 });
 
-Deno.test("QA-B-046: a registered path with an unregistered method → 404", async () => {
+Deno.test("QA-B-046: a registered path with an unregistered method → null (central dispatcher 404s)", async () => {
   // /school/subjects has GET + POST only; DELETE is not registered.
-  const res = await call("DELETE", "/school/subjects", ["manageSubjects"]);
-  assertEquals(res.status, 404);
+  const token = await signAccessToken(SECRET, claims(["manageSubjects"]), 900);
+  const req = new Request("https://x/school/subjects", {
+    method: "DELETE",
+    headers: { authorization: `Bearer ${token}` },
+  });
+  const res = await routeSchoolCompletion(req, config, "DELETE", "/school/subjects");
+  assertEquals(res, null);
 });
 
 Deno.test("QA-B-046: a write rejects malformed input (422) before the DB", async () => {

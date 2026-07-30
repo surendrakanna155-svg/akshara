@@ -23,7 +23,7 @@ Idempotent: the promotion + its deliveries are additive cert rows keyed by a
 time-nonce title; no destructive ops on real data."""
 import json, os, time, subprocess, urllib.request, urllib.error
 
-BASE = "https://akshara.veloraunisexsalon.com"
+BASE = os.environ.get("API_BASE_URL", "https://api.nikshaos.in")
 ORG = "a1000000-0000-4000-8000-000000000001"
 USER = "a3000000-0000-4000-8000-000000000001"
 SCHOOL_A = "a2000000-0000-4000-8000-000000000001"

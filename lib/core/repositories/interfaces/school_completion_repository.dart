@@ -181,6 +181,16 @@ abstract class SchoolCompletionRepository {
     String? academicYearId,
   });
 
+  /// Real syllabus topics (with real `syllabus_topics.id` values) for a
+  /// class/subject — backs the teacher's daily-capture topic picker so
+  /// [completeTopic] is never called with a fabricated id.
+  Future<List<SyllabusTopic>> listSyllabusTopics({
+    required RepositoryQuery query,
+    String? className,
+    String? subjectId,
+    String? chapterId,
+  });
+
   Future<void> completeTopic({
     required RepositoryQuery query,
     required String topicId,

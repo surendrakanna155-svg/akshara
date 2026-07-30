@@ -21,7 +21,7 @@ journal in [`execution/IMPLEMENTATION_PROGRESS.md`](execution/IMPLEMENTATION_PRO
 | Dimension | State (HEAD `68f15cb`) |
 |---|---|
 | **Product surface** | 47 feature modules in [`lib/features/`](../lib/features/) (Admissions, Finance, HR, Transport, SIS, Academics, Exams, Attendance, Homework, Communication, Library, Inventory, Hostel, Alumni, Parent, Teacher, Student, Director, Management/Principal, Onboarding, Staff-Attendance, Adaptive-AI/Intelligence, Platform, …) — **885 Dart files**, ~**607 routed screens**. |
-| **Backend** | Self-hosted Supabase edge (single `supabase/functions/api` request-router monolith) + `_shared` domain modules; **168 SQL migrations**; live on the VPS pilot (`akshara.veloraunisexsalon.com`). |
+| **Backend** | Self-hosted Supabase edge (single `supabase/functions/api` request-router monolith) + `_shared` domain modules; **168 SQL migrations**; live on the VPS pilot (`api.nikshaos.in`). |
 | **Tests** | **632 test files** (widget/unit/contract/route); backend Deno suites; live-cert Python scripts under `scripts/qa/`. `flutter analyze` = **0** (verified live 2026-07-03). |
 | **Engineering maturity** | **Local-complete** across the module set (client + backend + migrations + RBAC + tests). Not yet **production-certified**. |
 | **Readiness** | **Pre-pilot.** GA is **blocked** on live Track-B verification, one Global Red Team, a full pilot simulation, and Production Certification — see §4. |

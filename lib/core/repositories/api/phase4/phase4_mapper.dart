@@ -49,6 +49,10 @@ class Phase4Mapper {
       behaviour: Map<String, dynamic>.from(profile['behaviour'] as Map? ?? {}),
       transport: Map<String, dynamic>.from(profile['transport'] as Map? ?? {}),
       documents: Map<String, dynamic>.from(profile['documents'] as Map? ?? {}),
+      // Default to empty so a client built ahead of the backend deploy renders
+      // the section as "nothing recorded" instead of crashing.
+      care: Map<String, dynamic>.from(profile['care'] as Map? ?? {}),
+      leave: Map<String, dynamic>.from(profile['leave'] as Map? ?? {}),
     );
   }
 

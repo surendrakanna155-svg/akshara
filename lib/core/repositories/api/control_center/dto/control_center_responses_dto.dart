@@ -198,3 +198,40 @@ class ControlCenterSettingsResponseDto {
 
   final Map<String, dynamic> raw;
 }
+
+/// GET /ai-wallet — `{ balance: {...}, entries: [...] }`.
+class AiWalletResponseDto {
+  const AiWalletResponseDto({required this.raw});
+
+  factory AiWalletResponseDto.fromJson(Map<String, dynamic> json) {
+    final envelope = ApiEnvelopeDto.fromJson(json);
+    return AiWalletResponseDto(raw: envelope.requireData());
+  }
+
+  final Map<String, dynamic> raw;
+}
+
+/// POST /ai-wallet/grant — `{ entry: {...}, balance: {...} }`.
+class AiWalletGrantResponseDto {
+  const AiWalletGrantResponseDto({required this.raw});
+
+  factory AiWalletGrantResponseDto.fromJson(Map<String, dynamic> json) {
+    final envelope = ApiEnvelopeDto.fromJson(json);
+    return AiWalletGrantResponseDto(raw: envelope.requireData());
+  }
+
+  final Map<String, dynamic> raw;
+}
+
+/// GET /storage/quota — `{ planName, usedBytes, limitBytes, availableBytes,
+/// health, enforced }`.
+class StorageQuotaResponseDto {
+  const StorageQuotaResponseDto({required this.raw});
+
+  factory StorageQuotaResponseDto.fromJson(Map<String, dynamic> json) {
+    final envelope = ApiEnvelopeDto.fromJson(json);
+    return StorageQuotaResponseDto(raw: envelope.requireData());
+  }
+
+  final Map<String, dynamic> raw;
+}

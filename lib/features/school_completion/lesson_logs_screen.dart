@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/repositories/repository_providers.dart';
 import '../../shared/async/erp_async_state.dart';
+import 'lesson_log_dialogs.dart';
 import 'school_completion_providers.dart';
 
+/// v13 — real daily-capture: class/subject/topic/outcome come from the actual
+/// academic catalog and subject catalog (no more hardcoded demo values), and
+/// "mark topic complete" links to a REAL `syllabus_topics.id` instead of a
+/// fabricated `topic_${log.id}` that failed the completions FK (P1 fix,
+/// caps 58-61 — see `lesson_log_dialogs.dart`).
 class LessonLogsScreen extends ConsumerWidget {
   const LessonLogsScreen({super.key});
 
@@ -15,7 +20,7 @@ class LessonLogsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Lesson Logs')),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _createLog(context, ref),
+        onPressed: () => showLogLessonDialog(context, ref),
         icon: const Icon(Icons.add),
         label: const Text('Log lesson'),
       ),
@@ -32,37 +37,23 @@ class LessonLogsScreen extends ConsumerWidget {
               title: Text(log.topic),
               subtitle: Text('${log.className} · ${log.recordedOn}'),
               trailing: PopupMenuButton<String>(
-                onSelected: (value) async {
-                  if (value == 'complete') {
-                    await ref.read(schoolCompletionRepositoryProvider).completeTopic(
-                          query: ref.read(schoolCompletionQueryProvider),
-                          topicId: 'topic_${log.id}',
-                          lessonLogId: log.id,
-                        );
-                    ref.invalidate(lessonLogsProvider(null));
-                    ref.invalidate(teacherProgressProvider);
+                onSelected: (value) {
+                  if (value == 'link_topic') {
+                    showLinkSyllabusTopicDialog(context, ref, log: log);
                   }
                 },
                 itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'complete', child: Text('Mark topic complete')),
+                  PopupMenuItem(
+                    value: 'link_topic',
+                    child: Text('Link syllabus topic & mark complete'),
+                  ),
                 ],
-                child: Chip(label: Text(log.outcome)),
+                child: Chip(label: Text(lessonOutcomeLabel(log.outcome))),
               ),
             );
           },
         ),
       ),
     );
-  }
-
-  Future<void> _createLog(BuildContext context, WidgetRef ref) async {
-    await ref.read(schoolCompletionRepositoryProvider).createLessonLog(
-          query: ref.read(schoolCompletionQueryProvider),
-          className: 'Grade 8',
-          topic: 'Fractions revision',
-          subjectId: 'sub_2',
-          outcome: 'completed',
-        );
-    ref.invalidate(lessonLogsProvider(null));
   }
 }

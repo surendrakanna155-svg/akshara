@@ -50,7 +50,7 @@ function mapMeToUser(me: Record<string, unknown>, token: string): AuthUser {
     role,
     email: me.email as string | undefined,
     phone: me.phone as string | undefined,
-    schoolName: String(me.schoolName ?? me.organizationName ?? 'Akshara'),
+    schoolName: String(me.schoolName ?? me.organizationName ?? 'NIKSHA OS'),
     schoolId: String(me.schoolId ?? ''),
     tenantId: String(me.organizationId ?? me.tenantId ?? ''),
     token,
@@ -66,7 +66,7 @@ const STORAGE_KEY = 'akshara.session';
 
 /**
  * A NEUTRAL preview identity for a role — NOT fabricated business data.
- * It carries only the role label (for the shell) + the Akshara brand name; it
+ * It carries only the role label (for the shell) + the NIKSHA OS brand name; it
  * invents no person, no institution, no records. Real identity is populated from
  * the live `/auth/me` endpoint once credential sign-in is wired.
  */
@@ -75,7 +75,7 @@ function buildPreviewUser(role: ErpRole): AuthUser {
     id: `role_${role}`,
     name: ROLE_META[role].label,
     role,
-    schoolName: 'Akshara',
+    schoolName: 'NIKSHA OS',
     schoolId: '',
     tenantId: '',
   };

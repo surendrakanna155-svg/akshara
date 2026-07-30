@@ -14,62 +14,14 @@ import {
   handleVerifyOtp,
 } from "../_shared/auth_handlers.ts";
 import { handleTenantAccessHealth, handleOperationsHealth, handleStorageHealth, handleProviderHealth, handleBackupHealth } from "../_shared/tenant_handlers.ts";
-import { routeAdmissions } from "../_shared/admissions/admissions_router.ts";
-import { routeFinance } from "../_shared/finance/finance_router.ts";
-import { routeSis } from "../_shared/sis/sis_router.ts";
-import { routeExamAdministration } from "../_shared/academics/exam_administration/exam_administration_router.ts";
-import { routeAttendance } from "../_shared/attendance/attendance_router.ts";
-import { routeStaffAttendance } from "../_shared/staff_attendance/staff_attendance_router.ts";
-import { routeAcademic } from "../_shared/academic/academic_router.ts";
-import { routeTimetable } from "../_shared/timetable/timetable_router.ts";
-import { routeTransport } from "../_shared/transport/transport_router.ts";
-import { routeHr } from "../_shared/hr/hr_router.ts";
-import { routeHostel } from "../_shared/hostel/hostel_router.ts";
-import { routeLibrary } from "../_shared/library/library_router.ts";
-import { routeInventory } from "../_shared/inventory/inventory_router.ts";
-import { routeAlumni } from "../_shared/alumni/alumni_router.ts";
-import { routeManagement } from "../_shared/management/management_router.ts";
-import { routeControlCenter } from "../_shared/control_center/control_center_router.ts";
-import { routeParent } from "../_shared/parent/parent_router.ts";
-import { routeTeacher } from "../_shared/teacher/teacher_router.ts";
-import { routeStudent } from "../_shared/student/student_router.ts";
-import { routeApproval } from "../_shared/approval/approval_router.ts";
-import { routeAudit } from "../_shared/audit/audit_router.ts";
-import { routePayment } from "../_shared/payment/payment_router.ts";
-import { routeCommunication } from "../_shared/communication/communication_router.ts";
-import { routePilotOperations } from "../_shared/pilot/pilot_operations_router.ts";
-import { routeOnboarding } from "../_shared/onboarding/onboarding_router.ts";
-import { routeCopilot } from "../_shared/copilot/copilot_router.ts";
-import { routeSearch } from "../_shared/search/search_router.ts";
-import { routeAnalytics } from "../_shared/analytics/analytics_router.ts";
-import { routeEducation } from "../_shared/education/education_router.ts";
-import { routeIntelligence } from "../_shared/intelligence/intelligence_router.ts";
-import { routeEmployee } from "../_shared/employee/employee_router.ts";
-import { routeInventoryDistribution } from "../_shared/inventory_distribution/inventory_distribution_router.ts";
-import { routeOperations } from "../_shared/operations/operations_router.ts";
-import { routeMemories } from "../_shared/memories/school_memories_router.ts";
-import { routePromotion } from "../_shared/promotion/achievement_promotion_router.ts";
-import { routeSchoolCalendar } from "../_shared/school_calendar/school_calendar_router.ts";
-import { routeSocial } from "../_shared/social/social_router.ts";
-import { routeSetupWizard } from "../_shared/setup_wizard/setup_wizard_router.ts";
-import { routeWidgetPlatform } from "../_shared/widget_platform/widget_platform_router.ts";
-import { routeTeacherAssistant } from "../_shared/teacher_assistant/teacher_assistant_router.ts";
-import { routeParentInsights } from "../_shared/parent_insights/parent_insights_router.ts";
-import { routePrincipalCommand } from "../_shared/principal_command/principal_command_router.ts";
-import { routeGrowth } from "../_shared/growth/growth_router.ts";
-import { routeSchoolCompletion } from "../_shared/school_completion/school_completion_router.ts";
-import { routeParentExperience } from "../_shared/parent_experience/parent_experience_router.ts";
-import { routeDirector } from "../_shared/director/director_router.ts";
-import { routePredictions } from "../_shared/predictions/predictions_router.ts";
-import { routeOrganizationBuilder } from "../_shared/organization_builder/organization_builder_router.ts";
-import { routeLegal } from "../_shared/legal/legal_router.ts";
-// --- B1 school-config (AgentE) ---
-import { routeSchoolConfig } from "../_shared/school_config/school_config_router.ts";
-// --- end B1 school-config (AgentE) ---
-// --- B2 entitlement layer (Step 2) ---
-import { routeEntitlements } from "../_shared/entitlements/entitlement_router.ts";
-import { withEntitlement } from "../_shared/entitlements/entitlement_middleware.ts";
-// --- end B2 entitlement layer ---
+// ICA-F4: the module-router list is now a declarative registry (with per-router prefix
+// ownership + rationale) in _shared/route_registry.ts. `matchModuleRoute` iterates it and
+// returns null when no router owns the path; this file turns that single null into the one
+// canonical 404. Every module router is non-greedy (returns null, never its own route-404).
+import { isPublicModuleRoute, matchModuleRoute } from "../_shared/route_registry.ts";
+import { isPublicRoute } from "../_shared/public_routes.ts";
+import { authenticateRequest } from "../_shared/permission_middleware.ts";
+import { bearerToken, verifyAccessToken } from "../_shared/jwt.ts";
 import { errorEnvelope, routePath } from "../_shared/http.ts";
 import { dispatchWithIdempotency } from "../_shared/idempotency_dispatch.ts";
 import {
@@ -90,86 +42,37 @@ export async function routeModuleRequest(
   method: string,
   path: string,
 ): Promise<Response> {
-  const moduleRouters = [
-    routeLegal,
-    routeApproval,
-    routeAdmissions,
-    routeFinance,
-    routeSis,
-    routeExamAdministration,
-    routeAttendance,
-    routeStaffAttendance,
-    routeAcademic,
-    routeTimetable,
-    // --- B2: optional modules gated by plan entitlement (402 PLAN_UPGRADE_REQUIRED) ---
-    withEntitlement(routeTransport, "/transport", "module.transport"),
-    withEntitlement(routeHr, "/hr", "module.hr_payroll"),
-    withEntitlement(routeHostel, "/hostel", "module.hostel"),
-    withEntitlement(routeLibrary, "/library", "module.library"),
-    routeInventoryDistribution,
-    withEntitlement(routeInventory, "/inventory", "module.inventory"),
-    // --- end B2 gated modules ---
-    routeEmployee,
-    routeOperations,
-    routeMemories,
-    routePromotion,
-    routeSchoolCalendar,
-    routeSocial,
-    withEntitlement(routeAlumni, "/alumni", "module.alumni"),
-    routeManagement,
-    routeControlCenter,
-    routePilotOperations,
-    // B7: AI School Builder (Phase 1) — only the AI pre-fill path is plan-gated;
-    // the rest of /onboarding stays open (it's the certified onboarding foundation).
-    withEntitlement(routeOnboarding, "/onboarding/startup/ai-prefill", "feature.ai_school_builder"),
-    routeSetupWizard,
-    routeWidgetPlatform,
-    routeTeacherAssistant,
-    // B3: Parent Insights surfaced for parents — gated by plan entitlement.
-    withEntitlement(routeParentInsights, "/parent-insights", "feature.parent_insights"),
-    routePrincipalCommand,
-    // B6: Marketing Engine (growth platform) — gated by plan entitlement.
-    withEntitlement(routeGrowth, "/growth", "module.marketing"),
-    routeSchoolCompletion,
-    routeParentExperience,
-    withEntitlement(routeDirector, "/director", "module.multi_branch"),
-    // B9: Advanced AI Predictions (fee-default / admission-conversion / student-risk) —
-    // gated by the Enterprise feature.ai_predictions entitlement (per-deal override-grantable).
-    withEntitlement(routePredictions, "/predictions", "feature.ai_predictions"),
-    // B10: Organization Builder (P3) — chains/trusts stand up a new vertical org
-    // (packs → interview → preview → provision). Self-enforces the Enterprise
-    // feature.organization_builder entitlement internally (it owns two disjoint
-    // path prefixes, which a single withEntitlement wrapper cannot cover).
-    routeOrganizationBuilder,
-    // --- B1 school-config (AgentE) ---
-    routeSchoolConfig,
-    // --- end B1 school-config (AgentE) ---
-    // --- B2 entitlement layer (Step 2): GET /plans, GET /subscription ---
-    routeEntitlements,
-    // --- end B2 entitlement layer ---
-    routeAnalytics,
-    routeEducation,
-    routeIntelligence,
-    routeCopilot,
-    // W2.S — Universal School Search (deterministic, RBAC-scoped entity resolver).
-    routeSearch,
-    routeCommunication,
-    routeParent,
-    routeTeacher,
-    routeStudent,
-    routePayment,
-    routeAudit,
-  ] as const;
+  // ICA-F1: module-level auth/RBAC chokepoint. Every module route is authenticated
+  // HERE, before dispatch — so no route can be unauthenticated by omission (a handler
+  // that forgets its own `authenticateRequest` is still gated). Only the explicitly
+  // allowlisted public routes (signature-authed webhooks) bypass this.
+  //
+  // SEC-AUTH-FIRST: `handleRequest` now runs the SAME gate one level higher, before it
+  // matches any route at all. This check is therefore normally redundant — deliberately
+  // so. It is kept because `routeModuleRequest` is exported and separately callable, and
+  // because a defence that only exists at one level is one edit away from being gone
+  // (which is exactly how the pilot came to answer an anonymous 422). It costs nothing:
+  // `authenticateRequest` is memoized per Request, so the second call reuses the first
+  // result with no extra session-validation DB read.
+  //
+  // Fine-grained RBAC (requirePermission/requireAnyPermission/scope) stays in the
+  // handlers, unchanged — this gate guarantees AUTHENTICATION, not authorization.
+  if (!isPublicModuleRoute(method, path)) {
+    const auth = await authenticateRequest(req, config);
+    if (!auth.ok) return auth.response;
+  }
 
   // Universal store-and-replay idempotency (Data Reliability Platform §8.1):
   // every mutating module route carrying an `Idempotency-Key` replays exactly
   // once. Inert for any request without the header, so existing traffic is
   // unchanged.
   return dispatchWithIdempotency(req, config, async () => {
-    for (const route of moduleRouters) {
-      const matched = await route(req, config, method, path);
-      if (matched) return matched;
-    }
+    // ICA-F4: the ordered, declarative module-route registry lives in
+    // route_registry.ts. It returns null when no module router owns the path; this is
+    // the SINGLE place a route-level 404 is produced (module routers never emit their
+    // own route-404 — enforced by route_registry_test.ts).
+    const matched = await matchModuleRoute(req, config, method, path);
+    if (matched) return matched;
     return errorEnvelope(
       "NOT_FOUND",
       `Route not found: ${method} ${path}`,
@@ -179,11 +82,137 @@ export async function routeModuleRequest(
 }
 
 /**
+ * Who made the request — attached to every request log line so a support ticket
+ * ("my child was marked absent on Tuesday") can be narrowed to actual traffic.
+ * This log is the only durable per-request diagnostic the service produces, and
+ * without an actor it could only ever be narrowed to a path and a minute.
+ *
+ * TRUST BOUNDARY. Everything above `tokenState` is read from the SIGNED access
+ * token, verified here with the same HS256 check the auth middleware performs —
+ * so it is attributable. The client also sends `X-User-Id` / `X-School-Id` /
+ * `X-Tenant-Id`, which any caller can set to any value; those are recorded ONLY
+ * under the `header*` names and must NEVER be used to attribute an action.
+ * `headerIdentityMismatch` marks a request whose headers disagree with its
+ * token — normally a stale client, occasionally worth a second look.
+ *
+ * PRIVACY (holds the discipline documented on `logRequest`): IDs only. Fields
+ * deliberately EXCLUDED even though the verified token carries them:
+ *   • `student_id` / `child_ids` — these identify the CHILD a request concerns.
+ *     They are not needed to find a request (userId + sessionId + correlationId
+ *     already do that) and logging them would turn a diagnostic log into a
+ *     durable parent→child linkage dataset outside the RLS-protected DB.
+ *   • `role` / `permissions` — not identifiers, and recoverable from `userId`.
+ *   • everything else already excluded: bodies, tokens, query strings, names,
+ *     phone numbers, marks, OTPs, free text.
+ */
+export interface RequestLogIdentity {
+  /** Verified `sub` — the acting user. Null unless a valid token was presented. */
+  userId: string | null;
+  /** Verified `session_id` — which login/device, for "it only fails on my phone". */
+  sessionId: string | null;
+  /** Verified tenant (organization) id. */
+  tenantId: string | null;
+  /** Verified school id; null for org-scope tokens. */
+  schoolId: string | null;
+  /** Verified scope enum (school/parent/student/organization) — a role class, not a person. */
+  scope: string | null;
+  /**
+   * `verified` — signature + expiry checked, ids above are attributable.
+   * `invalid` — a token was presented but failed verification (expired/forged):
+   *             the ids are unknown, which is itself the diagnostic.
+   * `none` — no bearer at all (health, login, public webhooks).
+   * `unverifiable` — config never loaded, so no secret to verify with.
+   */
+  tokenState: "verified" | "invalid" | "none" | "unverifiable";
+  /** UNVERIFIED, client-supplied. Never attribution — only a narrowing hint. */
+  headerUserId: string | null;
+  headerSchoolId: string | null;
+  headerTenantId: string | null;
+  /** True when a supplied header contradicts the verified token. */
+  headerIdentityMismatch: boolean;
+}
+
+function trimmedHeader(req: Request, name: string): string | null {
+  const value = req.headers.get(name)?.trim();
+  return value ? value : null;
+}
+
+/**
+ * Resolves [RequestLogIdentity] for one request. Verification is a local HMAC
+ * check (no DB read, no session lookup), so it costs the same as the auth
+ * middleware's own verify and cannot fail the request: any error degrades to
+ * `tokenState: "invalid"` with null ids. `jwtSecret` is null only on the
+ * config-error path, where there is nothing to verify with.
+ */
+export async function resolveRequestIdentity(
+  req: Request,
+  jwtSecret: string | null,
+): Promise<RequestLogIdentity> {
+  const headerUserId = trimmedHeader(req, "x-user-id");
+  const headerSchoolId = trimmedHeader(req, "x-school-id");
+  const headerTenantId = trimmedHeader(req, "x-tenant-id");
+  const anonymous = {
+    userId: null,
+    sessionId: null,
+    tenantId: null,
+    schoolId: null,
+    scope: null,
+    headerUserId,
+    headerSchoolId,
+    headerTenantId,
+    headerIdentityMismatch: false,
+  };
+
+  let token: string | null = null;
+  try {
+    token = bearerToken(req);
+  } catch (_) {
+    token = null;
+  }
+  if (!token) return { ...anonymous, tokenState: "none" };
+  if (!jwtSecret) return { ...anonymous, tokenState: "unverifiable" };
+
+  let claims = null;
+  try {
+    claims = await verifyAccessToken(jwtSecret, token);
+  } catch (_) {
+    // verifyAccessToken already swallows its own failures; this is belt-and-braces
+    // so observability can never break the response path.
+    claims = null;
+  }
+  if (!claims) return { ...anonymous, tokenState: "invalid" };
+
+  return {
+    userId: claims.sub ?? null,
+    sessionId: claims.session_id ?? null,
+    tenantId: claims.tenant_id ?? null,
+    schoolId: claims.school_id ?? null,
+    scope: claims.scope ?? null,
+    tokenState: "verified",
+    headerUserId,
+    headerSchoolId,
+    headerTenantId,
+    headerIdentityMismatch: (headerUserId !== null && headerUserId !== claims.sub) ||
+      (headerTenantId !== null && headerTenantId !== claims.tenant_id) ||
+      (headerSchoolId !== null && claims.school_id !== null &&
+        headerSchoolId !== claims.school_id),
+  };
+}
+
+/**
  * One structured JSON log line per request (Batch 7 observability). Captured by
- * `docker logs akshara-edge`. Carries method/path/status/duration + a correlation
- * id for tracing. Deliberately logs NO request/response bodies, tokens, or query
- * strings, so secrets never leak into logs. Level: 50 server error, 40 client 4xx,
- * 30 ok.
+ * `docker logs akshara-edge`. Carries method/path/status/duration, a correlation
+ * id for tracing, and the actor identifiers in [RequestLogIdentity] so a ticket
+ * can be narrowed to a user/school/session. Deliberately logs NO request/response
+ * bodies, tokens, or query strings, so secrets never leak into logs — and no
+ * names, phone numbers, marks, OTPs or free text either: IDs only.
+ * Level: 50 server error, 40 client 4xx, 30 ok.
+ *
+ * `clientIp` is USUALLY NULL in production and that is expected, not a defect:
+ * it is read from `X-Forwarded-For`, and the internal gateway that fronts this
+ * function does not set that header, so there is no client address to record.
+ * It is kept because a deployment that does front the service with a proxy will
+ * populate it. Never treat a null `clientIp` as suspicious.
  */
 function logRequest(
   fields: {
@@ -193,16 +222,19 @@ function logRequest(
     durationMs: number;
     correlationId: string;
     clientIp: string | null;
+    identity: RequestLogIdentity;
     error?: string;
   },
 ): void {
   const level = fields.status >= 500 ? 50 : fields.status >= 400 ? 40 : 30;
+  const { identity, ...rest } = fields;
   console.log(JSON.stringify({
     level,
     time: new Date().toISOString(),
     type: "request",
     service: "akshara-api",
-    ...fields,
+    ...rest,
+    ...identity,
   }));
 }
 
@@ -257,6 +289,9 @@ export async function handleRequest(
       durationMs: Date.now() - startedAt,
       correlationId,
       clientIp,
+      // No config means no jwtSecret, so the token cannot be verified here —
+      // the header hints are all that can honestly be recorded.
+      identity: await resolveRequestIdentity(req, null),
       error: detail,
     });
     return withCors(
@@ -267,11 +302,44 @@ export async function handleRequest(
 
   const path = routePath(req);
   const method = req.method.toUpperCase();
+  // Resolved once, up front, so BOTH the normal and the unexpected-error log
+  // line carry the same actor. A local HMAC verify — no DB read.
+  const identity = await resolveRequestIdentity(req, config.jwtSecret ?? null);
 
   try {
     let response: Response;
 
-    if (method === "GET" && path === "/health") {
+    // ── SEC-AUTH-FIRST — authentication precedes validation AND dispatch ──────
+    //
+    // This is the FIRST thing that happens to a request after the correlation id
+    // and config are resolved: before the route table below is consulted, before
+    // any handler runs, and therefore before any body is read or any query
+    // parameter is parsed. An anonymous caller to anything not on the one
+    // declared allow-list gets exactly one answer — 401 — and learns nothing else.
+    //
+    // What this closes (all three confirmed against the live pilot):
+    //   · GET /attendance/register/monthly answered `422 classLabel is required`.
+    //     `handleAttendanceMonthlyRegister` validated its query string before
+    //     calling `withAuth`, so an anonymous caller was handed the route's
+    //     parameter contract. (The handler ordering is fixed too — see
+    //     attendance_handlers.ts — but no gate may depend on ~664 handlers each
+    //     getting their ordering right.)
+    //   · GET /audit/events and GET /identity/roles answered `404 Route not
+    //     found`. 404-vs-401 is route-existence disclosure: it lets an anonymous
+    //     caller map the API surface by diffing status codes. Because this gate
+    //     runs before the route is matched, a non-existent path and a real one
+    //     are now indistinguishable — both 401. (The authenticated 404 is
+    //     unchanged; see eng4_5_forced_auth_test.)
+    //
+    // The allow-list is declared once in `_shared/public_routes.ts`, with a
+    // stated `guardedBy` for every entry, and is proven minimal + sufficient by
+    // `auth_precedes_dispatch_guard_test.ts`.
+    const gate = isPublicRoute(method, path)
+      ? null
+      : await authenticateRequest(req, config);
+    if (gate && !gate.ok) {
+      response = gate.response;
+    } else if (method === "GET" && path === "/health") {
       response = handleHealth();
     } else if (method === "GET" && path === "/health/ready") {
       response = await handleReady(config);
@@ -329,6 +397,7 @@ export async function handleRequest(
       durationMs: Date.now() - startedAt,
       correlationId,
       clientIp,
+      identity,
     });
     return withCors(response, correlationId);
   } catch (error) {
@@ -343,6 +412,7 @@ export async function handleRequest(
       durationMs: Date.now() - startedAt,
       correlationId,
       clientIp,
+      identity,
       error: detail,
     });
     return withCors(

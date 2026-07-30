@@ -60,6 +60,17 @@ final academicOperationsApiEnabledProvider = Provider<bool>((ref) {
     defaultValue: false,
   );
 });
+/// PRA-P0-14: `/sis/reshuffle` and `/sis/section-balance` have NO backend
+/// anywhere in `supabase/` (recon-confirmed pure client-side mock) — only the
+/// year-transition/promotion path is real. They are DEFERRED: this provider has
+/// no `--dart-define` and always returns false, so the unbuilt surfaces stay
+/// honestly hidden in every live build (never surfaced-and-broken), while the
+/// now-fixed `/sis/promotion` surface stays behind
+/// [academicOperationsApiEnabledProvider] so enabling that flag reveals it.
+/// Kept decoupled so the two never share a flag again. (Local/mock dev builds
+/// still show them — `surface_backend_gate.dart` only hides in API-mode builds.)
+final advancedAcademicOperationsEnabledProvider = Provider<bool>((ref) => false);
+
 final continuityApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
   return const bool.fromEnvironment(
@@ -235,6 +246,14 @@ final controlCenterApiEnabledProvider = Provider<bool>((ref) {
   return const bool.fromEnvironment('CONTROL_CENTER_API_ENABLED',
       defaultValue: false);
 });
+
+/// ASIP support intelligence (Phase 1) — school-facing "Report an issue" flow.
+/// Set `--dart-define=ENABLE_API_MODE=true` and
+/// `--dart-define=SUPPORT_API_ENABLED=true` to hit the live `/support` API.
+final supportApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment('SUPPORT_API_ENABLED', defaultValue: false);
+});
 final directorApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
   return const bool.fromEnvironment('DIRECTOR_API_ENABLED',
@@ -332,6 +351,27 @@ final organizationBuilderApiEnabledProvider = Provider<bool>((ref) {
   );
 });
 
+// RT round-3 RT-5-3: Branch & Franchise are chain/multi-branch platform surfaces
+// with NO live backend (their repositories are mock-only). Like the other
+// backend-less surfaces they must be hidden in a live build so a chain-org
+// schoolAdmin can never reach a fabricated branch/franchise revenue dashboard.
+// OFF by default; no live_release.json flag turns them on (no backend exists).
+final branchOperationsApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'BRANCH_OPERATIONS_API_ENABLED',
+    defaultValue: false,
+  );
+});
+
+final franchiseOperationsApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'FRANCHISE_OPERATIONS_API_ENABLED',
+    defaultValue: false,
+  );
+});
+
 final platformOperationsApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
   return const bool.fromEnvironment(
@@ -352,6 +392,33 @@ final salonApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
   return const bool.fromEnvironment(
     'SALON_API_ENABLED',
+    defaultValue: false,
+  );
+});
+
+// PRA-N-7 / N-8 (S0/T2-D): branch, franchise and resource-optimization surfaces
+// have no live backend — their repositories are unconditional Mock* returns
+// (`repository_providers.dart`). These flags are absent from `live_release.json`
+// (default false), so `surface_backend_gate.dart` hides the surfaces in a live
+// build (they would otherwise show fabricated dashboards) while local/mock dev
+// builds keep them visible.
+final branchApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment('BRANCH_API_ENABLED', defaultValue: false);
+});
+
+final franchiseApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'FRANCHISE_API_ENABLED',
+    defaultValue: false,
+  );
+});
+
+final resourceOptimizationApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'RESOURCE_OPTIMIZATION_API_ENABLED',
     defaultValue: false,
   );
 });
@@ -411,6 +478,7 @@ final useApiRepositoriesProvider = Provider<bool>((ref) {
       ref.watch(aiCopilotApiEnabledProvider) ||
       ref.watch(alumniApiEnabledProvider) ||
       ref.watch(controlCenterApiEnabledProvider) ||
+      ref.watch(supportApiEnabledProvider) ||
       ref.watch(directorApiEnabledProvider) ||
       ref.watch(predictionsApiEnabledProvider) ||
       ref.watch(platformIntelligenceApiEnabledProvider) ||

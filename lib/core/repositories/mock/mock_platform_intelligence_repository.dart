@@ -84,7 +84,7 @@ class MockPlatformIntelligenceRepository
   }) async {
     return OrganizationIntelligence(
       organizationId: orgId,
-      organizationName: 'Akshara Education Trust',
+      organizationName: 'NIKSHA Education Trust',
       schoolCount: 11,
       activeStudentCount: 28940,
       revenueLakhs: 214.6,
@@ -106,7 +106,7 @@ class MockPlatformIntelligenceRepository
     const rows = [
       SchoolComparisonRow(
         schoolId: 'SCH-1001',
-        schoolName: 'Akshara International Hyderabad',
+        schoolName: 'NIKSHA International Hyderabad',
         studentCount: 2840,
         revenueLakhs: 52.4,
         growthPercent: 13,
@@ -195,7 +195,7 @@ class MockPlatformIntelligenceRepository
       organizationBreakdown: [
         PlatformIntelligenceKpi(
           id: 'org_akshara',
-          label: 'Akshara Trust',
+          label: 'NIKSHA Trust',
           value: 'INR 22.4L',
           delta: '34%',
         ),
@@ -333,7 +333,7 @@ class MockPlatformIntelligenceRepository
     required String trustId,
   }) async {
     return TrustDashboardIntelligence(
-      trustName: 'Akshara Trust Network ($trustId)',
+      trustName: 'NIKSHA Trust Network ($trustId)',
       kpis: const [
         PlatformIntelligenceKpi(
           id: 'trust_health',

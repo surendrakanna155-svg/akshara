@@ -10,6 +10,7 @@ import '../../admissions/dto/api_envelope_dto.dart';
 import '../../../repository_query.dart';
 import '../dto/approve_refund_request_dto.dart';
 import '../dto/assign_fee_plan_request_dto.dart';
+import '../dto/bulk_assign_fee_plan_request_dto.dart';
 import '../dto/confirm_qr_payment_request_dto.dart';
 import '../dto/create_fee_structure_request_dto.dart';
 import '../dto/create_refund_request_dto.dart';
@@ -22,6 +23,7 @@ import '../dto/finance_collections_dto.dart';
 import '../dto/finance_dashboard_dto.dart';
 import '../dto/finance_defaulters_dto.dart';
 import '../dto/finance_discounts_dto.dart';
+import '../dto/finance_fee_reductions_dto.dart';
 import '../dto/finance_fee_structures_dto.dart';
 import '../dto/finance_enum_codec.dart';
 import '../dto/finance_invoices_dto.dart';
@@ -556,6 +558,22 @@ class FinanceRemoteDataSource {
     );
   }
 
+  /// PRC-A gap fix — POST /finance/fee-assignments/bulk. Reuses the exact
+  /// same per-student assignment math as [assignFeePlan]; students who
+  /// already have this exact structure for this academic year come back in
+  /// the response's `skipped` list, not as an error.
+  Future<BulkFeeAssignmentResultDto> bulkAssignFeeStructure({
+    required RepositoryQuery query,
+    required BulkAssignFeePlanRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      FinanceApiPaths.feeAssignmentsBulk,
+      queryParameters: _queryParams(query),
+      data: BulkAssignFeePlanRequestDto.fromDomain(request).toJson(),
+    );
+    return BulkFeeAssignmentResultDto.fromJson(_requireData(response));
+  }
+
   /// #6 — PATCH .../fee-assignments/:id/cancel. No body. The handler's
   /// response nests the updated account under `data.account` (alongside the
   /// cancelled assignment); unwrap that sub-object before mapping so this
@@ -729,6 +747,119 @@ class FinanceRemoteDataSource {
       queryParameters: _queryParams(query),
     );
     return FinanceInvoiceDto.fromJson(_requireData(response));
+  }
+
+  // ── STEP-5: fee reductions (scholarship awards + discount applications) ───
+  // Invoice-scoped maker-checker: propose (MAKER) moves no money; only
+  // approve (CHECKER, someone other than the proposer) applies it. Plain
+  // `_dio` — like [waiveLateFee] — because the backend's `status='pending'`
+  // guard (not client idempotency) is what prevents a double-apply.
+  Future<FeeReductionsResponseDto> fetchFeeReductions({
+    required RepositoryQuery query,
+    String? status,
+    String? invoiceId,
+    String? studentId,
+    String? sourceKind,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      FinanceApiPaths.feeReductions,
+      queryParameters: {
+        ..._queryParams(query),
+        if (status != null && status.isNotEmpty) 'status': status,
+        if (invoiceId != null && invoiceId.isNotEmpty) 'invoiceId': invoiceId,
+        if (studentId != null && studentId.isNotEmpty) 'studentId': studentId,
+        if (sourceKind != null && sourceKind.isNotEmpty)
+          'sourceKind': sourceKind,
+      },
+    );
+    return FeeReductionsResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<FeeReduction> proposeScholarshipAward({
+    required RepositoryQuery query,
+    required String scholarshipId,
+    required String invoiceId,
+    required String reason,
+    double? percent,
+    double? amount,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      FinanceApiPaths.feeReductionScholarshipAwards,
+      queryParameters: _queryParams(query),
+      data: {
+        'scholarshipId': scholarshipId,
+        'invoiceId': invoiceId,
+        'reason': reason,
+        if (percent != null) 'percent': percent,
+        if (amount != null) 'amount': amount,
+      },
+    );
+    return _mapper.toFeeReduction(
+      FeeReductionDto.fromJson(_requireData(response)),
+    );
+  }
+
+  Future<FeeReduction> proposeDiscountApplication({
+    required RepositoryQuery query,
+    required String discountRuleId,
+    required String invoiceId,
+    required String reason,
+    double? percent,
+    double? amount,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      FinanceApiPaths.feeReductionDiscountApplications,
+      queryParameters: _queryParams(query),
+      data: {
+        'discountRuleId': discountRuleId,
+        'invoiceId': invoiceId,
+        'reason': reason,
+        if (percent != null) 'percent': percent,
+        if (amount != null) 'amount': amount,
+      },
+    );
+    return _mapper.toFeeReduction(
+      FeeReductionDto.fromJson(_requireData(response)),
+    );
+  }
+
+  Future<FeeReduction> approveFeeReduction({
+    required RepositoryQuery query,
+    required String reductionId,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      FinanceApiPaths.feeReductionApprove(reductionId),
+      queryParameters: _queryParams(query),
+    );
+    return _mapper.toFeeReduction(
+      FeeReductionDto.fromJson(_requireData(response)),
+    );
+  }
+
+  Future<FeeReduction> rejectFeeReduction({
+    required RepositoryQuery query,
+    required String reductionId,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      FinanceApiPaths.feeReductionReject(reductionId),
+      queryParameters: _queryParams(query),
+    );
+    return _mapper.toFeeReduction(
+      FeeReductionDto.fromJson(_requireData(response)),
+    );
+  }
+
+  Future<FeeReduction> reverseFeeReduction({
+    required RepositoryQuery query,
+    required String reductionId,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      FinanceApiPaths.feeReductionReverse(reductionId),
+      queryParameters: _queryParams(query),
+    );
+    return _mapper.toFeeReduction(
+      FeeReductionDto.fromJson(_requireData(response)),
+    );
   }
 
   // ── FIN-R1..R5: fee-recovery CRM ───────────────────────────────────────────

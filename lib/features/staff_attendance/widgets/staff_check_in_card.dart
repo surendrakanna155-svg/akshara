@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../router/route_names.dart';
+import '../manual_attendance_request_providers.dart';
 import '../staff_attendance_models.dart';
+import '../staff_attendance_providers.dart';
+import 'geofence_settings_dialog.dart';
 
 /// Self-service staff check-in/out card (B4). Attendance is proven by being inside
 /// the school geofence + a live camera face match (NO device biometric); the host
@@ -10,16 +16,58 @@ import '../staff_attendance_models.dart';
 /// Takes a deferred [onRecord] callback (rather than a pre-built controller) so
 /// the host resolves the heavy reliability/biometric stack lazily — only on tap,
 /// never at screen-build time.
-class StaffCheckInCard extends StatefulWidget {
-  const StaffCheckInCard({super.key, required this.onRecord});
+///
+/// PRA-P0-15: device capture currently always throws `DEVICE_ADAPTER_PENDING`
+/// (no geolocator/camera build), so the card also surfaces the AUDITED
+/// manual-attendance fallback — a "Request manual attendance" action for every
+/// staff member, plus an "Approve manual requests" entry gated on the approver
+/// permission ([canApproveManualAttendanceProvider]).
+///
+/// [onOpenEnrollment] (Slice 3), when provided, surfaces a settings-style entry
+/// point to `FaceEnrollmentScreen` at all times, PLUS a prominent "Enrol my
+/// face" call-to-action when the last outcome was specifically a
+/// `FACE_NOT_ENROLLED` rejection ([StaffCheckOutcome.isNotEnrolled]).
+///
+/// [onManualRequest] (Slice 4), when provided, surfaces the design-sanctioned
+/// fallback — "Request manual attendance" — whenever the chain could NOT
+/// complete (location-blocked / face-blocked / failed). Never on a recorded
+/// success. The host opens the submission flow with the attempted event.
+///
+/// W0.2b union: the widget is a ConsumerStatefulWidget (the state reads Riverpod
+/// providers), carrying BOTH the PRA-P0-15 manual-fallback/approver-queue
+/// callbacks and the DRP face-enrollment/manual-request callbacks.
+class StaffCheckInCard extends ConsumerStatefulWidget {
+  const StaffCheckInCard({
+    super.key,
+    required this.onRecord,
+    this.onRequestManual,
+    this.onOpenApproverQueue,
+    this.onOpenEnrollment,
+    this.onManualRequest,
+    this.onConfigureGeofence,
+  });
 
   final Future<StaffCheckOutcome> Function(StaffCheckEvent event) onRecord;
+  final VoidCallback? onOpenEnrollment;
+  final void Function(StaffCheckEvent? attempted)? onManualRequest;
+
+  /// Overrides navigation to the manual-request screen (used in tests). When
+  /// null the card pushes [RouteNames.hrStaffManualRequest].
+  final VoidCallback? onRequestManual;
+
+  /// Overrides navigation to the approver queue (used in tests). When null the
+  /// card pushes [RouteNames.hrStaffManualRequestQueue].
+  final VoidCallback? onOpenApproverQueue;
+
+  /// Overrides opening the geofence configuration dialog (used in tests). When
+  /// null the card shows [GeofenceSettingsDialog] itself — no route needed.
+  final VoidCallback? onConfigureGeofence;
 
   @override
-  State<StaffCheckInCard> createState() => _StaffCheckInCardState();
+  ConsumerState<StaffCheckInCard> createState() => _StaffCheckInCardState();
 }
 
-class _StaffCheckInCardState extends State<StaffCheckInCard> {
+class _StaffCheckInCardState extends ConsumerState<StaffCheckInCard> {
   bool _busy = false;
   StaffCheckOutcome? _last;
   StaffCheckEvent? _lastEvent;
@@ -39,9 +87,51 @@ class _StaffCheckInCardState extends State<StaffCheckInCard> {
     });
   }
 
+  void _openRequestManual() {
+    final override = widget.onRequestManual;
+    if (override != null) {
+      override();
+      return;
+    }
+    context.push(RouteNames.hrStaffManualRequest);
+  }
+
+  void _openApproverQueue() {
+    final override = widget.onOpenApproverQueue;
+    if (override != null) {
+      override();
+      return;
+    }
+    context.push(RouteNames.hrStaffManualRequestQueue);
+  }
+
+  /// Opens the school geofence editor. Deliberately a dialog rather than a
+  /// route: the geofence is the setup step that makes THIS card work, so it
+  /// belongs where the blocked check-in happens.
+  void _openGeofenceSettings() {
+    final override = widget.onConfigureGeofence;
+    if (override != null) {
+      override();
+      return;
+    }
+    // The location source is resolved lazily (ref.read, on tap) exactly like
+    // the record path — never at card-build time. On web/desktop it is the
+    // fail-loud placeholder, so "Use my current location" reports honestly
+    // and manual entry still works.
+    showDialog<bool>(
+      context: context,
+      builder: (_) => GeofenceSettingsDialog(
+        datasource: ref.read(schoolGeofenceDataSourceProvider),
+        locationSource: ref.read(attendanceLocationSourceProvider),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final canApprove = ref.watch(canApproveManualAttendanceProvider);
+    final canConfigureGeofence = ref.watch(canConfigureSchoolGeofenceProvider);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -52,7 +142,19 @@ class _StaffCheckInCardState extends State<StaffCheckInCard> {
               children: [
                 const Icon(Icons.location_on),
                 const SizedBox(width: 8),
-                Text('My attendance', style: theme.textTheme.titleMedium),
+                Expanded(
+                  child: Text('My attendance', style: theme.textTheme.titleMedium),
+                ),
+                // Slice 3 — always-available settings-style entry point to
+                // manage the enrolled reference face (separate from the
+                // FACE_NOT_ENROLLED call-to-action below).
+                if (widget.onOpenEnrollment != null)
+                  IconButton(
+                    key: const Key('staff-attendance-manage-face-button'),
+                    tooltip: 'Manage face enrollment',
+                    icon: const Icon(Icons.settings_outlined),
+                    onPressed: widget.onOpenEnrollment,
+                  ),
               ],
             ),
             const SizedBox(height: 4),
@@ -98,7 +200,72 @@ class _StaffCheckInCardState extends State<StaffCheckInCard> {
             if (_last != null) ...[
               const SizedBox(height: 12),
               _StatusBanner(outcome: _last!, event: _lastEvent),
+              // Slice 3 — the server rejected check-in specifically because
+              // this staff member has no enrolled reference face yet. Offer
+              // the fix inline rather than leaving them stuck on a banner.
+              if (_last!.isNotEnrolled && widget.onOpenEnrollment != null) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FilledButton.tonalIcon(
+                    key: const Key('staff-check-in-enrol-now-button'),
+                    onPressed: widget.onOpenEnrollment,
+                    icon: const Icon(Icons.face_retouching_natural),
+                    label: const Text('Enrol my face'),
+                  ),
+                ),
+              ],
+              // Slice 4 — the chain could not complete: offer the audited
+              // manual-request fallback (design §3's ONLY sanctioned bypass).
+              if (_last!.status != StaffCheckStatus.recorded &&
+                  widget.onManualRequest != null) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    key: const Key('manual-request-cta'),
+                    onPressed: () => widget.onManualRequest!(_lastEvent),
+                    icon: const Icon(Icons.edit_calendar_outlined),
+                    label: const Text('Request manual attendance'),
+                  ),
+                ),
+              ],
             ],
+            const Divider(height: 24),
+            // PRA-P0-15 — audited fallback when device capture is unavailable.
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: const Key('staff-request-manual-button'),
+                onPressed: _openRequestManual,
+                icon: const Icon(Icons.assignment_outlined, size: 18),
+                label: const Text("Can't check in? Request manual attendance"),
+              ),
+            ),
+            if (canApprove)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  key: const Key('staff-approve-manual-button'),
+                  onPressed: _openApproverQueue,
+                  icon: const Icon(Icons.rule, size: 18),
+                  label: const Text('Approve manual requests'),
+                ),
+              ),
+            // The school geofence is the FIRST gate of the chain — without it
+            // the server rejects EVERY check-in with GEOFENCE_NOT_CONFIGURED.
+            // Offered only to the supervisory roles the server grants
+            // `manageSchoolGeofence` to (it re-enforces the slug on the write).
+            if (canConfigureGeofence)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  key: const Key('staff-configure-geofence-button'),
+                  onPressed: _openGeofenceSettings,
+                  icon: const Icon(Icons.location_searching, size: 18),
+                  label: const Text('Set school geofence'),
+                ),
+              ),
           ],
         ),
       ),
@@ -120,9 +287,9 @@ class _StatusBanner extends StatelessWidget {
           scheme.secondaryContainer,
           scheme.onSecondaryContainer,
           Icons.check_circle,
-          outcome.record?.pendingSync == true
-              ? '${event?.label ?? 'Attendance'} queued — will sync when online.'
-              : '${event?.label ?? 'Attendance'} recorded.',
+          // Check-in is online-only (audit R1) — a recorded outcome is always
+          // a confirmed server write; there is no queued/pending state.
+          '${event?.label ?? 'Attendance'} recorded.',
         ),
       StaffCheckStatus.locationBlocked => (
           scheme.tertiaryContainer,

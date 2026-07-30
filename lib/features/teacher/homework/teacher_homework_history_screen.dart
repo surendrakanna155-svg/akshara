@@ -27,86 +27,92 @@ class TeacherHomeworkHistoryScreen extends ConsumerWidget {
     final range = ref.watch(teacherHomeworkHistoryRangeProvider);
 
     return Scaffold(
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: const AksharaAppBar(
         titleText: 'Homework History',
         trailingPadding: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AksharaSpacing.s4),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-                      final picked = await showDateRangePicker(
-                        context: context,
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                      );
-                      if (picked != null) {
-                        ref
-                            .read(teacherHomeworkHistoryRangeProvider.notifier)
-                            .state = HomeworkHistoryRange(
-                          fromDate: _iso(picked.start),
-                          toDate: _iso(picked.end),
+      // DS V2 P4 — premium persona canvas behind the history list.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final picked = await showDateRangePicker(
+                          context: context,
+                          firstDate: DateTime(2020),
+                          lastDate:
+                              DateTime.now().add(const Duration(days: 365)),
                         );
-                      }
-                    },
-                    icon: const Icon(Icons.date_range_outlined, size: 18),
-                    label: Text(
-                      range.fromDate == null
-                          ? 'All dates'
-                          : '${range.fromDate} → ${range.toDate}',
+                        if (picked != null) {
+                          ref
+                              .read(
+                                  teacherHomeworkHistoryRangeProvider.notifier)
+                              .state = HomeworkHistoryRange(
+                            fromDate: _iso(picked.start),
+                            toDate: _iso(picked.end),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.date_range_outlined, size: 18),
+                      label: Text(
+                        range.fromDate == null
+                            ? 'All dates'
+                            : '${range.fromDate} → ${range.toDate}',
+                      ),
                     ),
                   ),
-                ),
-                if (range.fromDate != null) ...[
-                  const SizedBox(width: AksharaSpacing.s2),
-                  IconButton(
-                    tooltip: 'Clear range',
-                    onPressed: () => ref
-                        .read(teacherHomeworkHistoryRangeProvider.notifier)
-                        .state = const HomeworkHistoryRange(),
-                    icon: const Icon(Icons.clear),
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: AksharaSpacing.s3),
-            FilledButton.icon(
-              key: QaTestKeys.teacherHomeworkHistoryExportButton,
-              onPressed: (async.valueOrNull?.isEmpty ?? true)
-                  ? null
-                  : () => _exportCsv(context, ref, async.value!),
-              icon: const Icon(Icons.download_outlined, size: 18),
-              label: const Text('Export CSV'),
-            ),
-            const SizedBox(height: AksharaSpacing.s4),
-            async.when(
-              loading: () => const AksharaLoadingState(),
-              error: (_, __) => const AksharaErrorState(
-                message: 'Unable to load homework history.',
-              ),
-              data: (items) {
-                if (items.isEmpty) {
-                  return const AksharaEmptyState(
-                    message: 'No homework in this date range.',
-                    icon: Icons.history_outlined,
-                    compact: true,
-                  );
-                }
-                return Column(
-                  children: [
-                    for (final item in items) _HistoryRow(item: item),
+                  if (range.fromDate != null) ...[
+                    const SizedBox(width: AksharaSpacing.s2),
+                    IconButton(
+                      tooltip: 'Clear range',
+                      onPressed: () => ref
+                          .read(teacherHomeworkHistoryRangeProvider.notifier)
+                          .state = const HomeworkHistoryRange(),
+                      icon: const Icon(Icons.clear),
+                    ),
                   ],
-                );
-              },
-            ),
-          ],
+                ],
+              ),
+              const SizedBox(height: AksharaSpacing.s3),
+              FilledButton.icon(
+                key: QaTestKeys.teacherHomeworkHistoryExportButton,
+                onPressed: (async.valueOrNull?.isEmpty ?? true)
+                    ? null
+                    : () => _exportCsv(context, ref, async.value!),
+                icon: const Icon(Icons.download_outlined, size: 18),
+                label: const Text('Export CSV'),
+              ),
+              const SizedBox(height: AksharaSpacing.s4),
+              async.when(
+                loading: () => const AksharaLoadingState(),
+                error: (_, __) => const AksharaErrorState(
+                  message: 'Unable to load homework history.',
+                ),
+                data: (items) {
+                  if (items.isEmpty) {
+                    return const AksharaEmptyState(
+                      message: 'No homework in this date range.',
+                      icon: Icons.history_outlined,
+                      compact: true,
+                    );
+                  }
+                  return Column(
+                    children: [
+                      for (final item in items) _HistoryRow(item: item),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

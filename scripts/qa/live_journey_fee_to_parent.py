@@ -3,7 +3,8 @@
 parent sees the new receipt. Proves the write-by-staff -> visible-to-parent loop
 end to end, then restores by cancelling the collection."""
 import json, urllib.request, urllib.error, sys
-BASE = "https://akshara.veloraunisexsalon.com"
+import os
+BASE = os.environ.get("API_BASE_URL", "https://api.nikshaos.in")
 SCHOOL = "a2000000-0000-4000-8000-000000000001"
 ADMIN, PARENT = "+919876543210", "+919876543211"
 results = []

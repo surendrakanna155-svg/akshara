@@ -3,10 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/communication/parent_communication_governance.dart';
 import '../../../core/communication/teacher_student_risk_service.dart';
+import '../../../core/repositories/mock/mock_student_risk_fixtures.dart';
 import '../../../core/exams/exam_administration_store.dart';
-import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/semantic_status.dart';
 
 /// Staff check-in state for the attendance summary area.
@@ -156,9 +157,40 @@ class TeacherDashboardData {
   final TeacherAiInsight aiInsight;
   final List<StudentAttentionItem> studentsNeedingAttention;
 
+  /// Honest-async contract neutral shape (WIDGET-002).
+  ///
+  /// Critically, `checkIn` is [StaffCheckInStatus.notCheckedIn] with no time and
+  /// no verification label: the product never asserts a biometric check-in the
+  /// teacher did not perform. No class, no roster counts, no timetable.
+  factory TeacherDashboardData.empty() {
+    return const TeacherDashboardData(
+      teacherName: '',
+      greetingEyebrow: '',
+      greetingHeadline: '',
+      periodLabel: '',
+      unreadNotifications: 0,
+      checkIn: StaffCheckInInfo(status: StaffCheckInStatus.notCheckedIn),
+      attendanceSummary: AttendanceSummary(
+        pendingBannerMessage: null,
+        pendingBannerActionLabel: '',
+        pendingClassId: null,
+        classesMarked: 0,
+        classesTotal: 0,
+        studentsPresent: 0,
+        studentsTotal: 0,
+      ),
+      todaySchedule: [],
+      pendingTasks: [],
+      classTeacher: null,
+      quickActions: [],
+      aiInsight: TeacherAiInsight(message: '', actionLabel: ''),
+      studentsNeedingAttention: [],
+    );
+  }
+
   factory TeacherDashboardData.mock() {
     final context = TeacherTeachingContext.demoClassTeacher();
-    final attention = TeacherStudentRiskService.attentionForClass(context);
+    final attention = MockStudentRiskFixtures.attentionForClass(context);
     // TCH-2 — marks still to enter, from the same marks-entry source that backs
     // /teacher/exams/marks (exams in the marks_entry phase with unfilled marks).
     final marksProgress = ExamAdministrationStore.instance.marksEntryProgress();
@@ -309,15 +341,23 @@ final teacherDashboardFutureProvider = FutureProvider<TeacherDashboardData>((ref
   return ref.read(teacherRepositoryProvider).getDashboard(query: ref.watch(repositoryQueryProvider));
 });
 
-final teacherDashboardProvider = Provider<TeacherDashboardData>((ref) {
-  final data = watchRepositoryFuture(
-    ref,
+/// WIDGET-002 — honest-async contract for `/teacher/dashboard`. The dashboard
+/// can no longer report a "9:02 AM · Geo+Face verified" check-in that never
+/// happened, on either the loading or the failure path.
+final teacherDashboardViewStateProvider =
+    Provider<ErpViewState<TeacherDashboardData>>((ref) {
+  return resolveErpAsync<TeacherDashboardData>(
     ref.watch(teacherDashboardFutureProvider),
-    manualLoading: ref.watch(teacherDashboardLoadingProvider),
-    manualError: ref.watch(teacherDashboardErrorProvider),
-    manualEmpty: ref.watch(teacherDashboardEmptyProvider),
+    forceLoading: ref.watch(teacherDashboardLoadingProvider),
+    forceError: ref.watch(teacherDashboardErrorProvider),
+    forceEmpty: ref.watch(teacherDashboardEmptyProvider),
+    errorMessage: 'Unable to load your dashboard.',
   );
-  return data ??
-      ref.watch(teacherDashboardFutureProvider).value ??
-      TeacherDashboardData.mock();
+});
+
+final teacherDashboardProvider = Provider<TeacherDashboardData>((ref) {
+  return honestPayload(
+    ref.watch(teacherDashboardViewStateProvider),
+    TeacherDashboardData.empty,
+  );
 });

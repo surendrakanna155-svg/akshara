@@ -44,7 +44,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// in the final group.
 
 SchoolBranding _pilotBranding() => const SchoolBranding(
-      displayName: 'Akshara Pilot School',
+      displayName: 'NIKSHA Pilot School',
       tagline: 'Pilot Cohort 2026',
       primaryColor: '#0B6E4F',
       secondaryColor: '#1565C0',
@@ -101,7 +101,7 @@ void main() {
       addTearDown(container.dispose);
       await container.read(schoolBrandingProvider.future);
 
-      expect(container.read(schoolDisplayNameProvider), 'Akshara Pilot School');
+      expect(container.read(schoolDisplayNameProvider), 'NIKSHA Pilot School');
       expect(container.read(schoolBrandingThemeProvider)?.hasOverride, isTrue);
       expect(container.read(schoolLogoUrlProvider), isNotNull);
     });
@@ -111,8 +111,14 @@ void main() {
   // DIMENSION 3 — Reliability (AI outage during the pilot degrades gracefully).
   // Slice of QA-C-022 (c).
   // -------------------------------------------------------------------------
-  group('QA-C-025 · Reliability (AI outage falls back, no crash)', () {
-    test('AI unavailable -> content service returns safe fallback', () async {
+  group('QA-C-025 · Reliability (AI outage fails honestly, no crash)', () {
+    // E2E-021 — REWRITTEN alongside QA-C-022 (c). Graceful degradation for a
+    // content generator is an HONEST FAILURE the composer can render, not a
+    // success-shaped value carrying the user's own prompt back to them. The
+    // no-crash guarantee lives in the screen (`AsyncValue.guard` +
+    // `AksharaErrorState`), which is where it is asserted.
+    test('AI unavailable -> content service rethrows (no fabricated content)',
+        () async {
       final pipeline = AiInferencePipeline(
         provider: _UnavailableProvider(),
         cache: AiResponseCache(),
@@ -121,16 +127,17 @@ void main() {
       );
       final service = AiContentService(pipeline: pipeline);
 
-      final result = await service.generate(
-        const AiContentRequest(
-          type: AiContentType.notice,
-          prompt: 'PTM on Saturday',
-          audience: 'Parents',
-          tone: 'Formal',
+      await expectLater(
+        service.generate(
+          const AiContentRequest(
+            type: AiContentType.notice,
+            prompt: 'PTM on Saturday',
+            audience: 'Parents',
+            tone: 'Formal',
+          ),
         ),
+        throwsA(anything),
       );
-      expect(result.content.trim(), isNotEmpty);
-      expect(result.content, contains('PTM on Saturday'));
     });
   });
 

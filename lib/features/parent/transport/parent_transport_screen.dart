@@ -40,21 +40,32 @@ class ParentTransportScreen extends ConsumerWidget {
         showAi: false,
         onNotificationsTap: onNotificationsTap,
       ),
-      body: ErpAsyncBody(
-        state: resolveErpAsync(viewAsync, isDataEmpty: (_) => false),
-        loadingLabel: 'Loading',
-        emptyMessage: 'No transport allocation on file for this student.',
-        emptyIcon: Icons.directions_bus_outlined,
-        onRetry: () => ref.invalidate(parentTransportAllocationProvider),
-        builder: (view) {
-          return switch (view.availability) {
-            ParentTransportAvailability.notEnabled => const _NotEnabledState(),
-            ParentTransportAvailability.noAllocation =>
-              const _NoAllocationState(),
-            ParentTransportAvailability.available =>
-              _AllocationDetail(allocation: view.allocation!),
-          };
-        },
+      // DS V2 P4 — premium persona canvas behind the transport content.
+      //
+      // The canvas is adopted from DS V2; the DS-V2-era *body* deliberately is
+      // not. That body rendered a compile-time "Bus is approximately 8 minutes
+      // away (telemetry preview)" card to every parent, for every child, on
+      // every load. BUS-001 removed it: there is no position source (Phase 9)
+      // and no ETA engine (BUS-091), so no time-based claim about a child's bus
+      // may appear here. Visual system in, invented fact stays out.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: ErpAsyncBody(
+          state: resolveErpAsync(viewAsync, isDataEmpty: (_) => false),
+          loadingLabel: 'Loading',
+          emptyMessage: 'No transport allocation on file for this student.',
+          emptyIcon: Icons.directions_bus_outlined,
+          onRetry: () => ref.invalidate(parentTransportAllocationProvider),
+          builder: (view) {
+            return switch (view.availability) {
+              ParentTransportAvailability.notEnabled => const _NotEnabledState(),
+              ParentTransportAvailability.noAllocation =>
+                const _NoAllocationState(),
+              ParentTransportAvailability.available =>
+                _AllocationDetail(allocation: view.allocation!),
+            };
+          },
+        ),
       ),
     );
   }

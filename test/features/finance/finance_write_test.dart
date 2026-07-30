@@ -1,3 +1,5 @@
+import 'package:akshara_erp/core/repositories/repository_providers.dart';
+import 'package:akshara_erp/core/repositories/repository_query.dart';
 import 'package:akshara_erp/core/security/erp_role.dart';
 import 'package:akshara_erp/core/security/rbac_service.dart';
 import 'package:akshara_erp/core/security/user_permissions.dart';
@@ -262,7 +264,13 @@ void main() {
       expect(container.read(createRefundProvider).hasError, isTrue);
     });
 
-    test('assignFeeConcession succeeds with finance admin role', () async {
+    // STEP-5 — P0 money-honesty fix (PRC-A cap 71): replaces the old
+    // "assignFeeConcession" fabricated-id tests above. The MAKER step
+    // (propose*) moves no money and only needs manageFinance; the CHECKER
+    // step (approve/reject/reverse) needs approveFeeConcession AND rejects
+    // the proposer approving their own reduction (SoD, mirrors refunds).
+    test('proposeScholarshipAward succeeds with finance admin role and moves '
+        'no money', () async {
       final container = ProviderContainer(
         overrides: [
           ...providerTestOverrides(),
@@ -273,20 +281,23 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      final concessionId = await container
-          .read(assignFeeConcessionProvider.notifier)
+      final proposed = await container
+          .read(proposeScholarshipAwardProvider.notifier)
           .execute(
-            studentName: 'Arjun Patel',
-            amount: '₹15,000',
+            scholarshipId: 'sch_1',
+            invoiceId: 'inv_1',
             reason: 'Merit scholarship',
-            feeAccountId: 'acct_1',
+            percent: 10,
           );
 
-      expect(concessionId, isNotNull);
-      expect(concessionId, startsWith('concession_'));
+      expect(proposed, isNotNull);
+      expect(proposed!.status, FeeReductionStatus.pending);
+      expect(proposed.invoiceId, 'inv_1');
+      expect(proposed.appliedAmount, '0');
     });
 
-    test('assignFeeConcession fails when assignScholarship permission missing',
+    test(
+        'proposeScholarshipAward fails when manageFinance permission missing',
         () async {
       final container = ProviderContainer(
         overrides: [
@@ -298,13 +309,79 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      await container.read(assignFeeConcessionProvider.notifier).execute(
-            studentName: 'Test Student',
-            amount: '₹5,000',
+      await container.read(proposeScholarshipAwardProvider.notifier).execute(
+            scholarshipId: 'sch_1',
+            invoiceId: 'inv_1',
             reason: 'Test',
+            percent: 10,
           );
 
-      expect(container.read(assignFeeConcessionProvider).hasError, isTrue);
+      expect(
+        container.read(proposeScholarshipAwardProvider).hasError,
+        isTrue,
+      );
+    });
+
+    test('approveFeeReduction actually reduces the invoice payable', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.financeAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final proposed = await container
+          .read(proposeDiscountApplicationProvider.notifier)
+          .execute(
+            discountRuleId: 'rule_1',
+            invoiceId: 'inv_1',
+            reason: 'Early bird payment',
+            percent: 10,
+          );
+      expect(proposed, isNotNull);
+
+      final approved = await container
+          .read(approveFeeReductionProvider.notifier)
+          .execute(reductionId: proposed!.id);
+
+      expect(approved, isNotNull);
+      expect(approved!.status, FeeReductionStatus.approved);
+      expect(double.parse(approved.appliedAmount), greaterThan(0));
+
+      final invoice = await container
+          .read(financeRepositoryProvider)
+          .getInvoice(query: RepositoryQuery.demo, invoiceId: 'inv_1');
+      expect(invoice, isNotNull);
+      expect(
+        double.parse(invoice!.outstandingAmount),
+        lessThan(50000),
+      );
+    });
+
+    test(
+        'approveFeeReduction fails when approveFeeConcession permission '
+        'missing', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          // No finance permissions at all — mirrors the RBAC-gate style of
+          // the other "permission missing" tests above (checked before the
+          // repository is ever touched, so no pending reduction is needed).
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.admissionsCounselor),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container
+          .read(approveFeeReductionProvider.notifier)
+          .execute(reductionId: 'fred_test');
+
+      expect(container.read(approveFeeReductionProvider).hasError, isTrue);
     });
   });
 }

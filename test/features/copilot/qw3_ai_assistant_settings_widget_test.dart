@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../helpers/provider_test_overrides.dart';
 import '../../test_helpers.dart';
 
 /// QW3 · QA-F-053 — Settings → AI Assistant access-mode preferences (INTEL-05).

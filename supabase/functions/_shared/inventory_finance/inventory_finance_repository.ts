@@ -318,9 +318,16 @@ export async function receiveGoods(
       quantity_received: number;
       unit_cost: number;
     }>(
+      // PRA-P2-10 (S1): lock the PO line FOR UPDATE. Without it, two concurrent
+      // GRNs both read the same quantity_received, both pass the over-receipt
+      // check below, and both increment — over-receiving past the ordered
+      // quantity (a TOCTOU race under READ COMMITTED). The lock serializes them
+      // on the row so the second sees the first's committed increment and is
+      // correctly rejected. Mirrors upsertStockValuation's FOR UPDATE discipline.
       `SELECT sku, quantity, quantity_received, unit_cost
        FROM purchase_order_lines
-       WHERE id = $1 AND purchase_order_id = $2`,
+       WHERE id = $1 AND purchase_order_id = $2
+       FOR UPDATE`,
       [line.purchaseOrderLineId, purchaseOrderId],
     );
     const poLine = poLineRows[0];
@@ -336,12 +343,21 @@ export async function receiveGoods(
       [grnId, line.purchaseOrderLineId, organizationId, schoolId, line.quantityReceived],
     );
 
-    await db.queryObject(
+    // RT round-3 S1: guard the receipt delta atomically. The over-receipt check
+    // above reads an UNLOCKED poLine, so two concurrent GRNs both pass it and
+    // stack their deltas (10-qty line → quantity_received 20). The unconditional
+    // `AND quantity_received + $2 <= quantity` predicate makes the loser match 0
+    // rows → throw → the enclosing txn rolls back its GRN line + stock valuation.
+    const poLineUpdated = await db.queryObject<{ id: string }>(
       `UPDATE purchase_order_lines
        SET quantity_received = quantity_received + $2
-       WHERE id = $1`,
+       WHERE id = $1 AND quantity_received + $2 <= quantity
+       RETURNING id`,
       [line.purchaseOrderLineId, line.quantityReceived],
     );
+    if (poLineUpdated.length === 0) {
+      throw new Error(`Over-receipt on SKU ${poLine.sku} (concurrent receipt)`);
+    }
 
     await upsertStockValuation(
       db,
@@ -462,6 +478,60 @@ export async function listStockValuations(
     quantityOnHand: row.quantity_on_hand,
     weightedAvgCost: row.weighted_avg_cost,
     inventoryValue: row.quantity_on_hand * row.weighted_avg_cost,
+  }));
+}
+
+/**
+ * WEB-004 (ERP-WT-004) — the stock ledger the web Stock page reads: on-hand,
+ * reorder level, and per-item valuation in one row (the existing
+ * `listStockValuations` omits reorder_level/item_name/item_type). Optional
+ * itemType filter ('asset' | 'consumable'). Same single table + RLS scope.
+ */
+export async function listStockLevels(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  opts: { itemType?: string } = {},
+): Promise<Array<{
+  sku: string;
+  itemName: string | null;
+  itemType: string;
+  quantityOnHand: number;
+  reorderLevel: number;
+  weightedAvgCost: number;
+  inventoryValue: number;
+  belowReorder: boolean;
+}>> {
+  const args: unknown[] = [organizationId, schoolId];
+  let filter = "";
+  if (opts.itemType) {
+    args.push(opts.itemType);
+    filter = ` AND item_type = $${args.length}`;
+  }
+  const rows = await db.queryObject<{
+    sku: string;
+    item_name: string | null;
+    item_type: string;
+    quantity_on_hand: number;
+    reorder_level: number;
+    weighted_avg_cost: number;
+  }>(
+    `SELECT sku, item_name, item_type, quantity_on_hand, reorder_level, weighted_avg_cost
+     FROM inventory_stock_valuations
+     WHERE organization_id = $1 AND school_id = $2${filter}
+     ORDER BY sku ASC
+     LIMIT 500`,
+    args,
+  );
+  return rows.map((row) => ({
+    sku: row.sku,
+    itemName: row.item_name,
+    itemType: row.item_type,
+    quantityOnHand: row.quantity_on_hand,
+    reorderLevel: row.reorder_level,
+    weightedAvgCost: row.weighted_avg_cost,
+    inventoryValue: row.quantity_on_hand * row.weighted_avg_cost,
+    belowReorder: row.quantity_on_hand <= row.reorder_level,
   }));
 }
 

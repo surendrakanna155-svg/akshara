@@ -171,12 +171,17 @@ class SearchGroup {
     required this.label,
     required this.results,
     required this.total,
+    this.offset = 0,
   });
 
   final String category;
   final String label;
   final List<SearchResultItem> results;
   final int total;
+
+  /// The offset this page was fetched at. `offset + results.length < total`
+  /// means more pages are available ("Show more" pagination).
+  final int offset;
 }
 
 @immutable

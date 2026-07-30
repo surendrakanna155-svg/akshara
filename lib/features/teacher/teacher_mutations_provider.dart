@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -402,7 +403,11 @@ class SubmitTeacherExamResultsForApprovalNotifier
       final requesterId = claims?.userId ?? 'teacher_demo';
       final requesterName = auth.displayName ?? 'Teacher';
 
-      final adapter = ExamResultsApprovalAdapter();
+      // PRA-P0-05 (S0/T2-C): inject the live exam repository so the teacher
+      // publish-for-approval path resolves real exams instead of the mock store.
+      final adapter = ExamResultsApprovalAdapter(
+        repository: ref.read(examAdministrationRepositoryProvider),
+      );
       final approval = await adapter.submitForApproval(
         service: ref.read(approvalCenterServiceProvider),
         query: ref.read(repositoryQueryProvider),
@@ -604,14 +609,40 @@ class CreateTeacherHomeworkNotifier
         entityId: 'homework',
         entityIdForAudit: (assignment) => assignment.id,
         invalidateHomework: true,
-        action: () => ref.read(teacherRepositoryProvider).createHomework(
-              query: ref.read(repositoryQueryProvider),
+        action: () {
+          final repo = ref.read(teacherRepositoryProvider);
+          final query = ref.read(repositoryQueryProvider);
+          // PRA-P1-30: when the teacher attaches a worksheet, upload REAL bytes
+          // (presign → PUT → create with storage_path) instead of a bare label.
+          if (request.attachmentName != null &&
+              request.attachmentName!.trim().isNotEmpty) {
+            return repo.createHomeworkFile(
+              query: query,
               request: request,
-            ),
+              fileName: 'homework_worksheet.pdf',
+              bytes: _syntheticAttachmentBytes(),
+              contentType: 'application/pdf',
+            );
+          }
+          return repo.createHomework(query: query, request: request);
+        },
       );
     });
     return state.valueOrNull;
   }
+}
+
+/// Minimal valid single-page PDF payload. Mirrors the admissions/SIS synthetic-
+/// bytes precedent — the real presign → PUT → confirm Storage path is exercised
+/// without an OS file-picker dependency. (Wiring a native picker is a tracked UX
+/// follow-up; see PRA-P1-30 notes.)
+Uint8List _syntheticAttachmentBytes() {
+  const pdf =
+      '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n'
+      '2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n'
+      '3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]>>endobj\n'
+      'trailer<</Root 1 0 R>>\n%%EOF';
+  return Uint8List.fromList(pdf.codeUnits);
 }
 
 final createTeacherHomeworkProvider =

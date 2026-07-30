@@ -21,14 +21,23 @@ import { staffAttendanceAudit } from "../audit/mutation_audit_catalog.ts";
 import {
   createAttendanceRequest,
   decideAttendanceRequest,
-  enrollFace,
-  getActiveEnrollment,
   getGeofenceConfig,
+  listMyAttendanceRequests,
+  listPendingAttendanceRequests,
   recordStaffCheckIn,
   StaffAttendanceValidationError,
   staffCheckInToApi,
   upsertGeofenceConfig,
 } from "./staff_check_in_repository.ts";
+import {
+  enrollFace,
+  FaceEnrollmentValidationError,
+  getActiveEnrollment,
+} from "../attendance_auth/face_enrollment_repository.ts";
+import {
+  deriveFaceEmbedding,
+  FaceEmbeddingUnavailableError,
+} from "../attendance_auth/face_embedding_client.ts";
 import {
   parseStaffCheckBody,
   validateLocation,
@@ -72,7 +81,14 @@ function roleOf(claims: unknown): string {
 }
 
 function validationResponse(e: StaffAttendanceValidationError): Response {
-  return errorEnvelope(`STAFF_ATTENDANCE_${e.code}`, e.message, 422);
+  // Contract fidelity with the HR leave twin (audit R4): SoD denial is a 403
+  // (authorization, not payload), a lost decide race is a 409 conflict.
+  const status = e.code === "SELF_APPROVE_DENIED"
+    ? 403
+    : e.code === "REQUEST_ALREADY_DECIDED"
+    ? 409
+    : 422;
+  return errorEnvelope(`STAFF_ATTENDANCE_${e.code}`, e.message, status);
 }
 
 // ── POST /staff-attendance/check ─────────────────────────────────────────────
@@ -105,14 +121,28 @@ export async function handleRecordStaffCheckIn(
       // 2. Location: anti-mock -> accuracy -> freshness -> inside-geofence.
       const loc = validateLocation(parsed.location, cfg, nowMs);
       // 3. Face: liveness + server-side CV match vs the enrolled reference.
-      const reference = await getActiveEnrollment(db, userId);
+      const reference = await getActiveEnrollment(
+        db,
+        { organizationId, schoolId },
+        userId,
+      );
       if (!reference) {
         throw new StaffAttendanceValidationError(
           "FACE_NOT_ENROLLED",
           "No enrolled reference face — enrol your face before recording attendance",
         );
       }
-      const face = verifyFace(parsed.face, reference);
+
+      // Derive the embedding HERE, from the crop this server received. The
+      // client no longer computes it, so it can no longer forge or replay a
+      // template. Any failure throws (never returns a usable vector), so a
+      // broken or unreachable inference service fails the check-in CLOSED to
+      // the audited manual-attendance request rather than admitting anyone.
+      const derived = await deriveFaceEmbedding(parsed.faceCrop);
+      const face = verifyFace(
+        { ...parsed.face, embedding: derived.embedding, modelTag: derived.modelTag },
+        reference,
+      );
 
       const inserted = await recordStaffCheckIn(db, organizationId, schoolId, {
         userId,
@@ -144,11 +174,26 @@ export async function handleRecordStaffCheckIn(
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse();
     if (error instanceof StaffAttendanceValidationError) return validationResponse(error);
+    // Embedding derivation failed. Surface the real reason rather than a 500:
+    // FACE_CROP_INVALID means capture again (a retry WILL help), whereas
+    // FACE_SERVICE_UNAVAILABLE means the service is down and the staff member
+    // should use the audited manual request. 503 for the latter so monitoring
+    // can tell an outage apart from a bad capture.
+    if (error instanceof FaceEmbeddingUnavailableError) {
+      return errorEnvelope(
+        `STAFF_ATTENDANCE_${error.code}`,
+        error.message,
+        error.code === "FACE_SERVICE_UNAVAILABLE" ? 503 : 422,
+      );
+    }
     throw error;
   }
 }
 
 // ── POST /staff-attendance/enroll-face ───────────────────────────────────────
+// Self-service twin of POST /attendance-auth/face/enroll: same governed write
+// path (attendance_auth repository — one validation bound, one revoke-then-
+// insert), kept at this route for the staff self-enrolment client flow.
 export async function handleEnrollFace(req: Request, config: AppConfig): Promise<Response> {
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
@@ -157,39 +202,38 @@ export async function handleEnrollFace(req: Request, config: AppConfig): Promise
 
   try {
     const body = await readJson<Record<string, unknown>>(req);
-    const embRaw = body?.embedding;
-    if (!Array.isArray(embRaw) || embRaw.length < 32) {
-      throw new StaffAttendanceValidationError(
-        "FACE_REQUIRED",
-        "embedding (a live-capture face vector, >=32 dims) is required",
-      );
-    }
-    const embedding = embRaw.map((v) => {
-      const n = Number(v);
-      if (!Number.isFinite(n)) {
-        throw new StaffAttendanceValidationError("FACE_REQUIRED", "embedding must be numeric");
-      }
-      return n;
-    });
     const claims = auth.claims;
     const organizationId = organizationIdFromClaims(claims);
     const schoolId = schoolIdFromClaims(claims);
     const userId = subjectOf(claims);
 
     const result = await withTenantContext(config, claims, async (db) => {
-      const enr = await enrollFace(db, organizationId, schoolId, userId, embedding);
+      const enr = await enrollFace(db, { organizationId, schoolId }, {
+        userId,
+        embedding: body?.embedding,
+        modelTag: String(body?.modelTag ?? body?.model_tag ?? "").trim(),
+        enrolledBy: userId,
+      });
       const spec = staffAttendanceAudit.faceEnrolled(enr.id, userId);
       await recordMutationAudit(db, claims, spec.audit, spec.domain, req);
       return enr;
     });
     return jsonResponse(envelope({
       id: result.id,
-      embeddingDim: result.embeddingDim,
-      enrolledAt: result.enrolledAt,
+      // embeddingDim kept for the original B4 contract; embeddingDims matches
+      // the /attendance-auth twin so the two enroll routes agree.
+      embeddingDim: result.embeddingDims,
+      embeddingDims: result.embeddingDims,
+      modelTag: result.modelTag,
+      enrolledAt: result.createdAt,
     }));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse();
     if (error instanceof StaffAttendanceValidationError) return validationResponse(error);
+    if (error instanceof FaceEnrollmentValidationError) {
+      const status = error.code === "ENROLLMENT_CONFLICT" ? 409 : 422;
+      return errorEnvelope(`STAFF_ATTENDANCE_${error.code}`, error.message, status);
+    }
     throw error;
   }
 }
@@ -354,6 +398,62 @@ export async function handleCreateManualRequest(req: Request, config: AppConfig)
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse();
     if (error instanceof StaffAttendanceValidationError) return validationResponse(error);
+    throw error;
+  }
+}
+
+// ── GET /staff-attendance/manual-requests ────────────────────────────────────
+// SLICE 4 — the read that makes the design-§3 fallback usable in-app.
+//   ?mine=true → the CALLER's own recent requests (JWT subject only; the same
+//                universal self-service gate as POST /check).
+//   default    → the school's PENDING approval queue (approver gate — the same
+//                supervisory permission that decides them).
+// Read-only: no mutation audit.
+export async function handleListManualRequests(req: Request, config: AppConfig): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const url = new URL(req.url);
+  const mine = url.searchParams.get("mine") === "true";
+  const denied = mine ? requireMark(auth.claims) : requireApprove(auth.claims);
+  if (denied) return denied;
+
+  const claims = auth.claims;
+  const organizationId = organizationIdFromClaims(claims);
+  const schoolId = schoolIdFromClaims(claims);
+  try {
+    if (mine) {
+      const rows = await withTenantContext(config, claims, (db) =>
+        listMyAttendanceRequests(db, organizationId, schoolId, subjectOf(claims)));
+      return jsonResponse(envelope({
+        items: rows.map((r) => ({
+          id: r.id,
+          eventType: r.event_type,
+          reason: r.reason,
+          status: r.status,
+          createdAt: r.created_at,
+          decidedAt: r.decided_at,
+        })),
+      }));
+    }
+    const limitRaw = Number(url.searchParams.get("limit") ?? "50");
+    const limit = Number.isFinite(limitRaw)
+      ? Math.min(100, Math.max(1, Math.trunc(limitRaw)))
+      : 50;
+    const rows = await withTenantContext(config, claims, (db) =>
+      listPendingAttendanceRequests(db, organizationId, schoolId, limit));
+    return jsonResponse(envelope({
+      items: rows.map((r) => ({
+        id: r.id,
+        userId: r.user_id,
+        staffName: r.staff_name,
+        eventType: r.event_type,
+        reason: r.reason,
+        createdAt: r.created_at,
+      })),
+      count: rows.length,
+    }));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse();
     throw error;
   }
 }

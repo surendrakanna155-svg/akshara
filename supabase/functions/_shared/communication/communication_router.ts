@@ -10,6 +10,7 @@ import {
   handleDeleteAudienceSegment,
   handleDeliveryMetrics,
   handleDeliveryWebhook,
+  handleGetChannelPolicy,
   handleListAudienceSegments,
   handleListTemplates,
   handleMarkAllNotificationsRead,
@@ -26,7 +27,17 @@ import {
   handleTeacherSendMessage,
   handleUnregisterDeviceToken,
   handleUpdateTemplate,
+  handleUpsertChannelPolicy,
 } from "./communication_handlers.ts";
+// WEB-010 (ERP-WT-010): the comms-analytics summary + parent-adoption reads
+// already exist under the /school/communications/analytics/* prefix in the
+// school_completion module (contract-tested, Flutter-wired). The web platform
+// targets /communications/analytics/*; alias to the SAME certified handlers
+// rather than duplicate the aggregation.
+import {
+  handleGetCommunicationAnalyticsSummary,
+  handleGetParentAdoptionAnalytics,
+} from "../school_completion/phase15_handlers.ts";
 
 /** MJ-M12: matches `/communications/templates/{id}` — a single non-empty,
  * non-slash segment after the templates collection (excludes the bare
@@ -119,8 +130,22 @@ export function matchCommunicationRoute(
   if (method === "POST" && path === "/communications/notifications/process-queue") {
     return { handler: handleProcessNotificationQueue };
   }
+  // Batch 6: per-school channel escalation policy (WhatsApp orchestrator).
+  if (method === "GET" && path === "/communications/channel-policy") {
+    return { handler: handleGetChannelPolicy };
+  }
+  if (method === "PUT" && path === "/communications/channel-policy") {
+    return { handler: handleUpsertChannelPolicy };
+  }
   if (method === "GET" && path === "/communications/delivery/metrics") {
     return { handler: handleDeliveryMetrics };
+  }
+  // WEB-010: web-platform aliases to the existing school_completion analytics.
+  if (method === "GET" && path === "/communications/analytics/summary") {
+    return { handler: handleGetCommunicationAnalyticsSummary };
+  }
+  if (method === "GET" && path === "/communications/analytics/parent-adoption") {
+    return { handler: handleGetParentAdoptionAnalytics };
   }
   if (method === "POST" && path === "/communications/delivery/webhook") {
     return { handler: handleDeliveryWebhook };
@@ -203,7 +228,7 @@ export async function routeCommunication(
 
   const match = matchCommunicationRoute(method, path);
   if (!match) {
-    return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+    return null;
   }
   return await match.handler(req, config);
 }

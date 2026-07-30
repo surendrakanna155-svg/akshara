@@ -43,15 +43,12 @@ void handleTeacherNavigation(
       context.go(RouteNames.teacherMessages);
     case 'parent_communication':
       context.go(RouteNames.teacherParentCommunication);
-    case 'student_risk':
-      if (actionId.startsWith('student_risk_')) {
-        final id = actionId.replaceFirst('student_risk_', '');
-        context.push(RouteNames.teacherStudentRisk(id));
-      }
     case 'leave':
       context.go(RouteNames.teacherLeave);
     case 'notifications':
-      context.push(RouteNames.parentNotifications);
+      // F-128 — the teacher bell opens the teacher-scoped notifications inbox,
+      // not the parent persona's route.
+      context.push(RouteNames.teacherNotifications);
     case 'class_teacher_dashboard':
       context.go(RouteNames.teacherClassTeacherDashboard);
       break;
@@ -62,7 +59,8 @@ void handleTeacherNavigation(
         context.push(RouteNames.aiAssistant);
       }
     case 'profile':
-      context.go(RouteNames.teacherDashboard);
+      // F-164 — the profile avatar opens the teacher profile, not Home.
+      context.go(RouteNames.teacherProfile);
     case 'home':
       context.go(RouteNames.teacherDashboard);
     default:
@@ -73,6 +71,12 @@ void handleTeacherNavigation(
         context.go('${RouteNames.teacherAttendance}?class=$label');
       } else if (actionId.startsWith('mark_attendance_')) {
         context.go(RouteNames.teacherAttendance);
+      } else if (actionId.startsWith('student_risk_')) {
+        // F-163 — the dashboard "Students requiring attention → Review" tap
+        // emits `student_risk_<sisStudentId>`; open that student's risk detail
+        // (mirrors the class-teacher dashboard's RouteNames.teacherStudentRisk).
+        final id = actionId.replaceFirst('student_risk_', '');
+        context.push(RouteNames.teacherStudentRisk(id));
       } else if (actionId.startsWith('class_')) {
         context.go(RouteNames.teacherTimetable);
       } else if (actionId.startsWith('thread_')) {

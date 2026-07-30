@@ -97,6 +97,9 @@ class _StaffOtpScreenState extends ConsumerState<StaffOtpScreen> {
         title: const Text('Verify OTP'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
+          // A11y-P2: without a label this icon-only button announces as just
+          // "button". The tooltip becomes the accessible name.
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
           onPressed: () {
             ref.read(staffLoginProvider.notifier).reset();
             context.go(RouteNames.staffLogin);
@@ -128,13 +131,14 @@ class _StaffOtpScreenState extends ConsumerState<StaffOtpScreen> {
                 controller: _otpController,
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.done,
+                autofillHints: const [AutofillHints.oneTimeCode],
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
                   LengthLimitingTextInputFormatter(6),
                 ],
                 decoration: InputDecoration(
                   labelText: '6-digit OTP',
-                  hintText: MockStaffOtpWorkflow.validOtp,
+                  hintText: '••••••',
                   border: OutlineInputBorder(
                     borderRadius: AksharaRadius.inputBorder,
                   ),

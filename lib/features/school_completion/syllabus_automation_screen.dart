@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/errors/error_text.dart';
 import '../../core/repositories/academic/academic_catalog_provider.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../shared/async/erp_async_state.dart';
 import 'school_completion_providers.dart';
 import '../../theme/spacing.dart';
+import '../../theme/theme_extensions.dart';
 
 /// v12.7 — Subject templates, auto generation, and year cloning.
 class SyllabusAutomationScreen extends ConsumerStatefulWidget {
@@ -87,7 +89,33 @@ class _SyllabusAutomationScreenState extends ConsumerState<SyllabusAutomationScr
                         );
                       },
                       loading: () => const SizedBox.shrink(),
-                      error: (_, __) => const SizedBox.shrink(),
+                      // The action used to disappear entirely when the academic
+                      // catalog failed to load, leaving the user staring at a
+                      // screen with no button and no reason for its absence —
+                      // indistinguishable from the feature not existing. Keep
+                      // the affordance visible but disabled, and say why.
+                      error: (error, _) => Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          FilledButton.icon(
+                            onPressed: null,
+                            icon: const Icon(Icons.auto_awesome),
+                            label: const Text('Auto-generate syllabus'),
+                          ),
+                          const SizedBox(height: AksharaSpacing.s2),
+                          Text(
+                            "Can't generate right now — the academic year "
+                            'could not be loaded. ${aksharaErrorMessage(error)}',
+                            style: context.aksharaText.bodySmall
+                                .copyWith(color: context.colors.error),
+                          ),
+                          TextButton(
+                            onPressed: () =>
+                                ref.invalidate(academicCatalogFutureProvider),
+                            child: const Text('Try again'),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   Expanded(

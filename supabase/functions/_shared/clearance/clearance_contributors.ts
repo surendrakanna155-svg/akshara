@@ -1,0 +1,134 @@
+// SCE-1 — the concrete clearance contributors.
+//
+// Only modules with a REAL per-student dues ledger are `tracked: true`. Library
+// (loans/fines are keyed by member NAME, not the student UUID) and Hostel (the
+// current read APIs are seeded/mock, no per-student dues ledger) are registered
+// `tracked: false` so the report is HONEST about coverage — they surface as
+// `not_tracked`, never a fabricated CLEARED or block. They flip to tracked when
+// a real student-keyed ledger + a UUID linkage exist (no engine change needed).
+
+import type { TenantQueryClient } from "../tenant_db.ts";
+import type { ClearanceContributor, ClearanceItem } from "./clearance_engine.ts";
+
+/** Finance — the authoritative money source. Reports the AUTHORITATIVE NET
+ * outstanding: COALESCE(SUM(outstanding_amount),0) across the student's OPEN
+ * finance_student_accounts, with NO per-row `>0` filter — byte-identical to the
+ * SIS-D1 TC gate's `outstandingForStudent` (sis_certificates_repository.ts), so
+ * a credit in one open account correctly nets against a due in another and the
+ * clearance engine's block decision equals the live gate's BY CONSTRUCTION
+ * (audit R1 P3-1: a per-row `>0` list could block a net-zero student the gate
+ * would clear). Kept as a self-contained query rather than importing
+ * outstandingForStudent to avoid a sis↔clearance import cycle; the net-SUM shape
+ * (no per-row filter) is pinned by a contributor test — the two queries are
+ * intentional twins kept in sync by that test's assertions, not shared code.
+ * TRN-9 transport fees + inventory demands raise finance rows, so this net
+ * already absorbs most cross-module money. */
+export const financeContributor: ClearanceContributor = {
+  module: "finance",
+  tracked: true,
+  async contribute(db, scope, studentId): Promise<ClearanceItem[]> {
+    const rows = await db.queryObject<{ outstanding: string | null }>(
+      `SELECT COALESCE(SUM(outstanding_amount), 0)::text AS outstanding
+         FROM finance_student_accounts
+        WHERE organization_id = $1
+          AND school_id = $2
+          AND student_id = $3::uuid
+          AND status = 'open'`,
+      [scope.organizationId, scope.schoolId, studentId],
+    );
+    const net = Number(rows[0]?.outstanding ?? 0);
+    // Only a POSITIVE net is a due; a zero/credit net is cleared (matches the
+    // gate's `outstanding > 0`). One authoritative line, no per-year breakdown.
+    if (!(net > 0)) return [];
+    return [{
+      reference: `finance:${studentId}`,
+      description: "Fee dues (net across open accounts)",
+      amount: net,
+    }];
+  },
+};
+
+/** Inventory — un-paid distributed items (textbooks/uniforms a student was
+ * given and owes for). Reads inv_student_distributions in the money-owed state
+ * `payment_pending`; keyed by the real student_id. Non-payment_pending statuses
+ * (distributed/acknowledged/paid) are NOT dues.
+ *
+ * The rupees live on the linked payment_requests row — a SEPARATE ledger from
+ * finance_student_accounts (which this row's amount never posts to), so reading
+ * it here does NOT double-count the finance line; it fills a real gap in the
+ * total. LEFT JOIN + a still-owed status filter (a captured/cancelled request
+ * is settled) so a distribution without a live request still flags as pending
+ * (amount 0) rather than vanishing. */
+export const inventoryContributor: ClearanceContributor = {
+  module: "inventory",
+  tracked: true,
+  async contribute(db, scope, studentId): Promise<ClearanceItem[]> {
+    const rows = await db.queryObject<{
+      id: string;
+      item_name: string | null;
+      quantity: number;
+      amount: string | null;
+    }>(
+      `SELECT d.id,
+              c.name AS item_name,
+              d.quantity,
+              CASE WHEN pr.status IN ('pending', 'initiated', 'failed')
+                   THEN pr.amount::text END AS amount
+         FROM inv_student_distributions d
+         JOIN inv_catalog_items c ON c.id = d.catalog_item_id
+         LEFT JOIN payment_requests pr ON pr.id = d.payment_request_id
+        WHERE d.organization_id = $1
+          AND d.school_id = $2
+          AND d.student_id = $3::uuid
+          AND d.status = 'payment_pending'
+        ORDER BY d.created_at DESC`,
+      [scope.organizationId, scope.schoolId, studentId],
+    );
+    return rows.map((r) => ({
+      reference: r.id,
+      description: r.item_name
+        ? `Unpaid item — ${r.item_name}${r.quantity > 1 ? ` ×${r.quantity}` : ""}`
+        : "Unpaid distributed item",
+      // Real owed rupees from the linked (still-open) payment request; 0 when no
+      // live request is attached — the obligation still flags as pending.
+      amount: Number(r.amount ?? 0),
+    }));
+  },
+};
+
+/** Library — registered but NOT yet tracked: loans/fines key by member name,
+ * not the student UUID, so a reliable per-student read is not possible today.
+ * Surfaced as `not_tracked` (honest coverage gap), never a false block.
+ *
+ * OWNER ITEM (SCE-1 / ICA-H2): this name-key fragility is why the TC engine's
+ * separate PRA-P1-20 library gate (libraryDuesForStudent, keyed by sisStudentId)
+ * can null-read, and why the TC certificate wording asserts only FINANCE dues.
+ * Flipping library to `tracked: true` / a blocking gate requires a real
+ * student-UUID-keyed library ledger — an owner decision, not a code default. */
+export const libraryContributor: ClearanceContributor = {
+  module: "library",
+  tracked: false,
+  contribute() {
+    return Promise.resolve([]);
+  },
+};
+
+/** Hostel — registered but NOT yet tracked: the current hostel read APIs are
+ * seeded/mock with no real per-student dues ledger (hostel fees, where real,
+ * are raised as finance demands and already counted by the finance line). */
+export const hostelContributor: ClearanceContributor = {
+  module: "hostel",
+  tracked: false,
+  contribute() {
+    return Promise.resolve([]);
+  },
+};
+
+/** The default registry, in report order. Finance first (authoritative money),
+ * then inventory (real, non-monetary flag), then the honest coverage caveats. */
+export const DEFAULT_CLEARANCE_REGISTRY: readonly ClearanceContributor[] = [
+  financeContributor,
+  inventoryContributor,
+  libraryContributor,
+  hostelContributor,
+];

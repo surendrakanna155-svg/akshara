@@ -26,10 +26,13 @@ import 'package:akshara_erp/core/security/mutation_permission_registry.dart';
 import 'package:akshara_erp/core/security/permissions.dart';
 import 'package:akshara_erp/core/security/role_permissions.dart';
 import 'package:akshara_erp/features/staff_attendance/attendance_capture_sources.dart';
+import 'package:akshara_erp/features/staff_attendance/manual_attendance_request_providers.dart';
+import 'package:akshara_erp/features/staff_attendance/staff_attendance_providers.dart';
 import 'package:akshara_erp/features/staff_attendance/staff_attendance_controller.dart';
 import 'package:akshara_erp/features/staff_attendance/staff_attendance_models.dart';
 import 'package:akshara_erp/features/staff_attendance/widgets/staff_check_in_card.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -42,14 +45,13 @@ AttendanceLocationFix _fix({bool isMock = false}) => AttendanceLocationFix(
     );
 
 FaceCapture _face() => const FaceCapture(
-      embedding: [0.1, 0.2, 0.3, 0.4],
+      cropBase64: 'Y3JvcC1ieXRlcw==',
       livenessPassed: true,
       captureRef: 'cap/1.jpg',
     );
 
 class _FakeWriter implements StaffAttendanceWriter {
-  _FakeWriter({this.pendingSync = false, this.throwError = false, this.reject});
-  final bool pendingSync;
+  _FakeWriter({this.throwError = false, this.reject});
   final bool throwError;
   final StaffAttendanceRejected? reject;
   final List<({StaffCheckEvent event, AttendanceLocationFix location, FaceCapture face})> calls = [];
@@ -69,9 +71,21 @@ class _FakeWriter implements StaffAttendanceWriter {
       locationVerified: true,
       faceMatched: true,
       faceMatchScore: 0.95,
-      pendingSync: pendingSync,
     );
   }
+}
+
+/// Simulates the online-only gateway path when the device is offline: the
+/// write seam surfaces the typed [StaffAttendanceOffline] (audit R1) — it
+/// NEVER returns an optimistic record.
+class _OfflineWriter implements StaffAttendanceWriter {
+  @override
+  Future<StaffCheckRecord> recordCheck({
+    required StaffCheckEvent event,
+    required AttendanceLocationFix location,
+    required FaceCapture face,
+  }) async =>
+      throw const StaffAttendanceOffline();
 }
 
 Future<AuditLogger> _auditLogger() async {
@@ -180,8 +194,15 @@ void main() {
       expect((await audit.readAll()).single.type, AuditEventType.staffCheckOutRecorded);
     });
 
-    test('offline → write queued (pendingSync) is still recorded + audited', () async {
-      final writer = _FakeWriter(pendingSync: true);
+    // Audit R1: DELIBERATE behaviour change from the original "offline →
+    // queued (pendingSync) is still recorded" test. Check-in is now
+    // ONLINE-ONLY by design: the server enforces a location-freshness window,
+    // so a queued check-in drained later is GUARANTEED-stale — an optimistic
+    // "recorded" would be a lie (docs/ATTENDANCE_AUTH_DESIGN_DECISION.md §4;
+    // the only offline path is the audited manual request).
+    test('OFFLINE → honest typed failure with the manual-request hint, '
+        'NO optimistic success, NO audit', () async {
+      final writer = _OfflineWriter();
       final audit = await _auditLogger();
       final controller = _controller(
         location: FixedLocationSource(_fix()),
@@ -192,9 +213,11 @@ void main() {
 
       final outcome = await controller.record(StaffCheckEvent.checkIn);
 
-      expect(outcome.isRecorded, isTrue);
-      expect(outcome.record!.pendingSync, isTrue);
-      expect((await audit.readAll()).single.metadata['pendingSync'], 'true');
+      expect(outcome.status, StaffCheckStatus.failed);
+      expect(outcome.record, isNull, reason: 'never an optimistic record offline');
+      expect(outcome.message, StaffAttendanceOffline.userMessage);
+      expect(outcome.message, contains('manual attendance request'));
+      expect(await audit.readAll(), isEmpty);
     });
 
     test('server FACE_NO_MATCH (422) → faceBlocked, NO audit', () async {
@@ -251,16 +274,32 @@ void main() {
   });
 
   group('B4 attendance — RBAC + reliability policy (unchanged contracts)', () {
-    test('every staff persona holds markStaffAttendance; parent/student never', () {
+    test(
+        'every staff persona holds markStaffAttendance; parent/student and the '
+        'unsupported sentinel never', () {
+      // JOURNEY-002: `ErpRole.unsupported` is the fail-closed sentinel an
+      // unmapped server role slug resolves to. It must grant NOTHING —
+      // self-check-in included — so it joins parent/student on the deny side
+      // rather than inheriting the blanket "everyone else is staff" default.
+      const neverSelfChecksIn = {
+        ErpRole.parent,
+        ErpRole.student,
+        ErpRole.unsupported,
+      };
       for (final role in ErpRole.values) {
         final has = RolePermissionMatrix.permissionsFor(role)
             .contains(Permission.markStaffAttendance);
-        if (role == ErpRole.parent || role == ErpRole.student) {
+        if (neverSelfChecksIn.contains(role)) {
           expect(has, isFalse, reason: '${role.name} must NOT self-check-in');
         } else {
           expect(has, isTrue, reason: '${role.name} is staff and may self-check-in');
         }
       }
+      // The sentinel holds nothing at all, not merely "not this one".
+      expect(
+        RolePermissionMatrix.permissionsFor(ErpRole.unsupported).values,
+        isEmpty,
+      );
     });
 
     test('multi-hat union grants it when ANY hat is staff (parent+teacher)', () {
@@ -270,11 +309,15 @@ void main() {
       expect(union.contains(Permission.markStaffAttendance), isTrue);
     });
 
-    test('check-in write is offline-queueable (low-risk) in the policy registry', () {
+    // Audit R1: DELIBERATELY changed from queueable → onlineOnly. A queued
+    // check-in drained after reconnect is guaranteed-stale under the server's
+    // location-freshness window, so this op must fail fast offline instead of
+    // producing an optimistic result (see the OFFLINE test above).
+    test('check-in write is ONLINE-ONLY in the policy registry (never queued)', () {
       final policy = OperationPolicyRegistry.withDefaults()
           .policyFor(OperationTypes.markStaffAttendance);
-      expect(policy.kind, OperationKind.queueable);
-      expect(policy.conflictCategory, ConflictCategory.lowRisk);
+      expect(policy.kind, OperationKind.onlineOnly);
+      expect(policy.isOnlineOnly, isTrue);
     });
 
     test('both staff-attendance mutations require markStaffAttendance', () {
@@ -297,8 +340,14 @@ void main() {
         writer: _FakeWriter(),
         audit: audit,
       );
-      await tester.pumpWidget(MaterialApp(
-        home: Scaffold(body: StaffCheckInCard(onRecord: controller.record)),
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          canApproveManualAttendanceProvider.overrideWithValue(false),
+          canConfigureSchoolGeofenceProvider.overrideWithValue(false),
+        ],
+        child: MaterialApp(
+          home: Scaffold(body: StaffCheckInCard(onRecord: controller.record)),
+        ),
       ));
 
       expect(find.byKey(const Key('staff-check-in-button')), findsOneWidget);
@@ -320,8 +369,14 @@ void main() {
         writer: _FakeWriter(),
         audit: audit,
       );
-      await tester.pumpWidget(MaterialApp(
-        home: Scaffold(body: StaffCheckInCard(onRecord: controller.record)),
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          canApproveManualAttendanceProvider.overrideWithValue(false),
+          canConfigureSchoolGeofenceProvider.overrideWithValue(false),
+        ],
+        child: MaterialApp(
+          home: Scaffold(body: StaffCheckInCard(onRecord: controller.record)),
+        ),
       ));
 
       await tester.tap(find.byKey(const Key('staff-check-in-button')));

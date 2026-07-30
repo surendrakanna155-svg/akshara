@@ -14,7 +14,7 @@ import 'spacing.dart';
 import 'theme_extensions.dart';
 import 'typography.dart';
 
-/// Builds Material 3 [ThemeData] for the Akshara ERP monorepo — M15 foundation.
+/// Builds Material 3 [ThemeData] for the NIKSHA OS monorepo — M15 foundation.
 ///
 /// Riverpod providers should call [AksharaAppTheme.light] / [.dark] with an
 /// optional [WhiteLabelThemeConfig] — keep this class free of Riverpod imports.
@@ -31,6 +31,7 @@ abstract final class AksharaAppTheme {
       tokens: tokens,
       brightness: Brightness.light,
       locale: locale,
+      accent: whiteLabel?.primary,
     );
   }
 
@@ -46,6 +47,7 @@ abstract final class AksharaAppTheme {
       tokens: tokens,
       brightness: Brightness.dark,
       locale: locale,
+      accent: whiteLabel?.primary,
     );
   }
 
@@ -66,10 +68,32 @@ abstract final class AksharaAppTheme {
     );
   }
 
+  /// DS V2 — unified persona theme: shared M15 Light/Dark surfaces with the persona
+  /// [accent] as primary. Honors the caller-resolved [brightness] (Appearance setting);
+  /// personas no longer force a fixed brightness. White-label branding still wins.
+  static ThemeData persona({
+    required Brightness brightness,
+    required Color accent,
+    WhiteLabelThemeConfig? whiteLabel,
+    Locale? locale,
+  }) {
+    final primary = whiteLabel?.primary ?? accent;
+    final tokens = brightness == Brightness.dark
+        ? AksharaColorTokens.dark(primaryOverride: primary)
+        : AksharaColorTokens.light(primaryOverride: primary);
+    return _build(
+      tokens: tokens,
+      brightness: brightness,
+      locale: locale,
+      accent: primary,
+    );
+  }
+
   static ThemeData _build({
     required AksharaColorTokens tokens,
     required Brightness brightness,
     Locale? locale,
+    Color? accent,
   }) {
     final colorScheme = tokens.toColorScheme(brightness: brightness);
     final aksharaExtension = AksharaThemeExtension.fromTokens(
@@ -97,9 +121,7 @@ abstract final class AksharaAppTheme {
       extensions: <ThemeExtension<dynamic>>[
         aksharaExtension,
         aksharaText,
-        brightness == Brightness.dark
-            ? AksharaPremiumTokens.dark()
-            : AksharaPremiumTokens.light(),
+        _premiumTokens(brightness, accent),
       ],
       appBarTheme: _appBarTheme(colorScheme, aksharaText),
       navigationBarTheme: _navigationBarTheme(colorScheme, aksharaText),
@@ -182,6 +204,48 @@ abstract final class AksharaAppTheme {
         decoration: BoxDecoration(
           border: Border.all(color: colorScheme.outlineVariant),
           borderRadius: AksharaRadius.card,
+        ),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        // DS V2 P2-3 — the un-themed M3 SegmentedButton was raw default Material
+        // (pale secondaryContainer selected segment). Brand it like the rest of
+        // the chrome: an accent-tinted selected segment (primary @ 14%) with a
+        // full-strength accent label + checkmark, on a hairline outline.
+        style: ButtonStyle(
+          textStyle: WidgetStatePropertyAll(
+            aksharaText.labelLarge.copyWith(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return colorScheme.onSurface.withValues(alpha: 0.04);
+            }
+            if (states.contains(WidgetState.selected)) {
+              return colorScheme.primary.withValues(alpha: 0.14);
+            }
+            return Colors.transparent;
+          }),
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return colorScheme.onSurface.withValues(alpha: 0.38);
+            }
+            if (states.contains(WidgetState.selected)) {
+              return colorScheme.primary;
+            }
+            return colorScheme.onSurfaceVariant;
+          }),
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.pressed)) {
+              return colorScheme.primary.withValues(alpha: 0.10);
+            }
+            if (states.contains(WidgetState.hovered)) {
+              return colorScheme.primary.withValues(alpha: 0.06);
+            }
+            return null;
+          }),
+          side: WidgetStatePropertyAll(
+            BorderSide(color: colorScheme.outlineVariant),
+          ),
+          minimumSize: const WidgetStatePropertyAll(Size(0, 44)),
         ),
       ),
       tabBarTheme: TabBarThemeData(
@@ -279,13 +343,31 @@ abstract final class AksharaAppTheme {
     );
   }
 
+  /// The premium visual-system tokens for this theme. When an [accent] is known
+  /// (a persona or white-label brand), the hero/AI/canvas surfaces are re-toned
+  /// to it so they read cohesively with the branded chrome instead of the fixed
+  /// indigo→violet brand (DS V2 P2-4).
+  static AksharaPremiumTokens _premiumTokens(
+    Brightness brightness,
+    Color? accent,
+  ) {
+    final base = brightness == Brightness.dark
+        ? AksharaPremiumTokens.dark()
+        : AksharaPremiumTokens.light();
+    return accent == null ? base : base.forAccent(accent);
+  }
+
   static AppBarTheme _appBarTheme(
     ColorScheme scheme,
     AksharaTextStyles text,
   ) {
     return AppBarTheme(
       elevation: 0,
-      scrolledUnderElevation: 0,
+      // DS V2 P2-2 — flat at rest, but a soft shadow appears once content scrolls
+      // beneath so the bar detaches cleanly from the page (premium structure).
+      // No color change at rest; surfaceTint stays off.
+      scrolledUnderElevation: 3,
+      shadowColor: scheme.shadow.withValues(alpha: 0.10),
       centerTitle: false,
       backgroundColor: scheme.surface,
       foregroundColor: scheme.onSurface,
@@ -311,10 +393,14 @@ abstract final class AksharaAppTheme {
       surfaceTintColor: Colors.transparent,
       elevation: 8,
       shadowColor: scheme.shadow.withValues(alpha: 0.12),
-      indicatorColor: scheme.primaryContainer,
-      indicatorShape: RoundedRectangleBorder(
-        borderRadius: AksharaRadius.chip,
-      ),
+      // DS V2 P2-1 — branded persona chrome: a crisp accent-tinted stadium pill
+      // (primary @ 16%) with a full-strength accent icon + label. Reads clearly
+      // as the persona hue in BOTH light and dark (unlike the old washed M3
+      // `primaryContainer` pill + dark `onPrimaryContainer` icon, which looked
+      // near-identical across personas). Contrast holds: a 16% tint keeps the
+      // pill pale enough that the full-strength `primary` icon clears 3:1.
+      indicatorColor: scheme.primary.withValues(alpha: 0.16),
+      indicatorShape: const StadiumBorder(),
       labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       labelTextStyle: WidgetStateProperty.resolveWith((states) {
         final selected = states.contains(WidgetState.selected);
@@ -325,11 +411,8 @@ abstract final class AksharaAppTheme {
       }),
       iconTheme: WidgetStateProperty.resolveWith((states) {
         final selected = states.contains(WidgetState.selected);
-        // Selected icon sits INSIDE the primaryContainer indicator pill, so it
-        // must use onPrimaryContainer for contrast (primary-on-primaryContainer
-        // was the washed-out highlight bug). Matches the drawer theme below.
         return IconThemeData(
-          color: selected ? scheme.onPrimaryContainer : scheme.onSurfaceVariant,
+          color: selected ? scheme.primary : scheme.onSurfaceVariant,
           size: 24,
         );
       }),
@@ -339,7 +422,9 @@ abstract final class AksharaAppTheme {
   static NavigationRailThemeData _navigationRailTheme(ColorScheme scheme) {
     return NavigationRailThemeData(
       backgroundColor: scheme.surface,
-      indicatorColor: scheme.primaryContainer,
+      // DS V2 P2-1 — same branded accent pill as the bottom nav.
+      indicatorColor: scheme.primary.withValues(alpha: 0.14),
+      indicatorShape: const StadiumBorder(),
       selectedIconTheme: IconThemeData(color: scheme.primary, size: 24),
       unselectedIconTheme: IconThemeData(
         color: scheme.onSurfaceVariant,
@@ -361,18 +446,20 @@ abstract final class AksharaAppTheme {
     return NavigationDrawerThemeData(
       backgroundColor: scheme.surface,
       surfaceTintColor: Colors.transparent,
-      indicatorColor: scheme.primaryContainer,
+      // DS V2 P2-1 — branded accent pill; selected row reads in the persona hue.
+      indicatorColor: scheme.primary.withValues(alpha: 0.12),
+      indicatorShape: const StadiumBorder(),
       iconTheme: WidgetStateProperty.resolveWith((states) {
         final selected = states.contains(WidgetState.selected);
         return IconThemeData(
-          color: selected ? scheme.onPrimaryContainer : scheme.onSurfaceVariant,
+          color: selected ? scheme.primary : scheme.onSurfaceVariant,
         );
       }),
       labelTextStyle: WidgetStateProperty.resolveWith((states) {
         final selected = states.contains(WidgetState.selected);
         return TextStyle(
-          color: selected ? scheme.onPrimaryContainer : scheme.onSurface,
-          fontWeight: selected ? FontWeight.w500 : FontWeight.w400,
+          color: selected ? scheme.primary : scheme.onSurface,
+          fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
         );
       }),
     );

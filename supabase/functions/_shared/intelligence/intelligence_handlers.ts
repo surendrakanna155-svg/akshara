@@ -27,12 +27,19 @@ import { generateParentGuidanceReport } from "./parent_guidance_generator.ts";
 import {
   computeAndStoreRiskSnapshots,
   getRiskSnapshotByStudent,
+  insertCommunicationDraft,
+  insertParentGuidanceReport,
   listClassRiskSummaries,
   listRiskSnapshots,
+  publishParentGuidanceReport,
 } from "./student_risk_repository.ts";
 import { buildTeacherSuccessCenter } from "./teacher_success_service.ts";
 import { buildPrincipalIntelligenceCenter } from "./principal_intelligence_service.ts";
 import { executePrincipalQuery } from "./principal_query_service.ts";
+// WEB-006 (ERP-WT-006): second-mount the EXISTING AI economics service (also at
+// /copilot/economics) under /intelligence, plus a governance/trust lens derived
+// purely from the same aggregate — no new query, no new telemetry.
+import { computeAiTrust, getAiEconomics } from "../ai/ai_economics_service.ts";
 import type {
   CommunicationScenario,
   GuidanceMode,
@@ -46,6 +53,13 @@ function requireRiskRead(claims: Parameters<typeof requirePermission>[0]): Respo
 
 function requireIntelligenceWrite(claims: Parameters<typeof requirePermission>[0]): Response | null {
   return requirePermission(claims, "generateIntelligence") ??
+    requireSchoolOperationalScope(claims);
+}
+
+// WEB-006: the AI economics/trust dashboards read behind either the copilot-view
+// slug (matching the existing /copilot/economics gate) or the analytics slug.
+function requireAiInsightRead(claims: Parameters<typeof requirePermission>[0]): Response | null {
+  return requireAnyPermission(claims, ["viewAiCopilot", "viewAnalytics"]) ??
     requireSchoolOperationalScope(claims);
 }
 
@@ -200,29 +214,24 @@ export async function handleGenerateCommunication(req: Request, config: AppConfi
 
   try {
     const id = await runTenant(config, auth.claims, async (db) => {
-      const rows = await db.queryObject<{ id: string }>(
-        `INSERT INTO intel_communication_drafts (
-           organization_id, school_id, scenario, student_id, custom_note, languages, outputs, created_by
-         ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8)
-         RETURNING id`,
-        [
-          orgId,
-          schoolId,
-          body.scenario,
-          body.studentId ?? null,
-          note ?? null,
-          JSON.stringify(languages),
-          JSON.stringify(communicationDraftToApi(drafts)),
-          auth.claims.sub,
-        ],
+      const draftId = await insertCommunicationDraft(
+        db,
+        orgId,
+        schoolId,
+        body.scenario,
+        body.studentId ?? null,
+        note ?? null,
+        JSON.stringify(languages),
+        JSON.stringify(communicationDraftToApi(drafts)),
+        auth.claims.sub,
       );
       await emitMutationAudit(
         db,
         auth.claims,
-        intelligenceAudit.communicationGenerated(rows[0]!.id),
+        intelligenceAudit.communicationGenerated(draftId),
         req,
       );
-      return rows[0]!.id;
+      return draftId;
     });
 
     return jsonResponse(envelope({ id, ...communicationDraftToApi(drafts) }), { status: 201 });
@@ -296,30 +305,25 @@ export async function handleGenerateParentGuidance(req: Request, config: AppConf
       const report = generateParentGuidanceReport(body.mode, language, inputs);
       const status = publish ? "published" : "draft";
 
-      const rows = await db.queryObject<{ id: string }>(
-        `INSERT INTO intel_parent_guidance_reports (
-           organization_id, school_id, student_id, mode, language, inputs, report, status, created_by
-         ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8, $9)
-         RETURNING id`,
-        [
-          orgId,
-          schoolId,
-          body.studentId,
-          body.mode,
-          language,
-          JSON.stringify(inputs),
-          JSON.stringify(report),
-          status,
-          auth.claims.sub,
-        ],
+      const id = await insertParentGuidanceReport(
+        db,
+        orgId,
+        schoolId,
+        body.studentId,
+        body.mode,
+        language,
+        JSON.stringify(inputs),
+        JSON.stringify(report),
+        status,
+        auth.claims.sub,
       );
       await emitMutationAudit(
         db,
         auth.claims,
-        intelligenceAudit.parentGuidanceGenerated(rows[0]!.id),
+        intelligenceAudit.parentGuidanceGenerated(id),
         req,
       );
-      return { id: rows[0]!.id, report, inputs };
+      return { id, report, inputs };
     });
 
     return jsonResponse(envelope(
@@ -348,13 +352,7 @@ export async function handlePublishParentGuidance(
 
   try {
     await runTenant(config, auth.claims, async (db) => {
-      const rows = await db.queryObject<{ id: string }>(
-        `UPDATE intel_parent_guidance_reports
-         SET status = 'published', updated_at = timezone('utc', now())
-         WHERE id = $1
-         RETURNING id`,
-        [reportId],
-      );
+      const rows = await publishParentGuidanceReport(db, reportId);
       if (!rows.length) throw new Error("Guidance report not found");
       await emitMutationAudit(
         db,
@@ -432,6 +430,59 @@ export async function handlePrincipalIntelligenceCenter(
       buildPrincipalIntelligenceCenter(db, orgId, schoolId, period)
     );
     return jsonResponse(envelope(principalCenterToApi(center)));
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+// ─── WEB-006: AI economics + trust dashboards ────────────────────────────────
+
+/**
+ * GET /intelligence/ai-economics — month-to-date AI spend / tokens / cache
+ * economics. Second mount of the same certified service behind /copilot/economics.
+ */
+export async function handleAiEconomicsDashboard(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireAiInsightRead(auth.claims);
+  if (denied) return denied;
+
+  try {
+    const economics = await runTenant(config, auth.claims, (db) =>
+      getAiEconomics(db, {
+        organizationId: organizationIdFromClaims(auth.claims),
+        schoolId: schoolIdFromClaims(auth.claims)!,
+      }));
+    return jsonResponse(envelope(economics));
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+/**
+ * GET /intelligence/trust — AI governance / trust lens (deterministic-first
+ * ratio, guardrail/rate/spend-cap/no-key fallbacks, cache reuse) derived purely
+ * from the same economics aggregate. Honest zeros when there's no AI activity.
+ */
+export async function handleAiTrustDashboard(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireAiInsightRead(auth.claims);
+  if (denied) return denied;
+
+  try {
+    const trust = await runTenant(config, auth.claims, async (db) =>
+      computeAiTrust(await getAiEconomics(db, {
+        organizationId: organizationIdFromClaims(auth.claims),
+        schoolId: schoolIdFromClaims(auth.claims)!,
+      })));
+    return jsonResponse(envelope(trust));
   } catch (error) {
     return handleError(error);
   }

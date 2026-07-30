@@ -2,11 +2,11 @@ import type { AccessTokenClaims } from "../jwt.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 import { correlationIdFromRequest, recordMutationAudit } from "../audit/audit_repository.ts";
 import { createCollection } from "../finance/finance_collections_repository.ts";
-import { loadRazorpayConfig } from "./razorpay_config.ts";
 import {
-  createRazorpayOrder,
-  verifyRazorpayPaymentSignature,
-} from "./razorpay_client.ts";
+  DEFAULT_PROVIDER_ID,
+  getPaymentProvider,
+  resolvePaymentProvider,
+} from "./payment_provider_registry.ts";
 import {
   createPaymentIntent,
   findIntentByIdempotencyKey,
@@ -69,6 +69,23 @@ function toApiPaymentMethod(method: string | null): string {
   return method ?? "upi";
 }
 
+/// PRA-P0-02 (S1): resolve the invoice backing a fee installment so a captured
+/// payment can be posted to the school's books as a real collection. Returns null
+/// when the installment (or its invoice) does not exist — the caller fails closed.
+async function resolveInstallmentInvoiceId(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  installmentId: string,
+): Promise<string | null> {
+  const rows = await db.queryObject<{ invoice_id: string }>(
+    `SELECT invoice_id FROM finance_invoice_installments
+     WHERE id = $1 AND organization_id = $2 AND school_id = $3`,
+    [installmentId, organizationId, schoolId],
+  );
+  return rows[0]?.invoice_id ?? null;
+}
+
 export async function initiatePayment(
   db: TenantQueryClient,
   claims: AccessTokenClaims,
@@ -82,10 +99,15 @@ export async function initiatePayment(
     throw new PaymentIntentStateError("installment_id and positive amount are required");
   }
 
-  const razorpay = loadRazorpayConfig();
   const orgId = claims.tenant_id;
   const schoolId = claims.school_id;
   const studentId = requireParentChild(claims);
+
+  // W3: resolve the school's configured provider (default 'razorpay'). All
+  // gateway calls below go through this seam, never a hard-coded gateway. A
+  // missing config → razorpay; an unknown/disabled configured provider throws
+  // (fail-closed) rather than silently capturing money.
+  const provider = await resolvePaymentProvider(db, orgId, schoolId);
 
   if (input.idempotencyKey) {
     const existing = await findIntentByIdempotencyKey(db, orgId, input.idempotencyKey);
@@ -97,9 +119,27 @@ export async function initiatePayment(
         status: existing.status,
         expiresAtLabel: existing.expires_at ? expiresLabel(new Date(existing.expires_at)) : "Expires soon",
         razorpayOrderId: existing.gateway_order_id ?? "",
-        razorpayKeyId: razorpay.keyId,
+        razorpayKeyId: provider.publicClientKey(),
       };
     }
+  }
+
+  // PRA-P0-02 (S1): resolve the installment's invoice and FAIL CLOSED when it
+  // cannot be found. Previously this hard-coded `invoiceId: null`, so the capture
+  // path's `if (intent.invoice_id)` gate was always false — Razorpay took the
+  // money, NO finance_collections/finance_receipts row was written, and the parent
+  // was shown a fabricated receipt number. A payment that cannot be tied to an
+  // invoice must not proceed rather than silently lose money.
+  const resolvedInvoiceId = await resolveInstallmentInvoiceId(
+    db,
+    orgId,
+    schoolId,
+    input.installmentId,
+  );
+  if (!resolvedInvoiceId) {
+    throw new PaymentIntentStateError(
+      `No invoice found for installment ${input.installmentId} — cannot initiate payment`,
+    );
   }
 
   const seeded = await findRequestByInstallment(db, orgId, claims.sub, input.installmentId);
@@ -110,12 +150,12 @@ export async function initiatePayment(
     payerUserId: claims.sub,
     sourceType: "fee_installment",
     sourceId: input.installmentId,
-    invoiceId: null,
+    invoiceId: resolvedInvoiceId,
     amount: input.amount,
     idempotencyKey: input.idempotencyKey,
   });
 
-  const order = await createRazorpayOrder(razorpay, {
+  const order = await provider.createOrder({
     amount: input.amount,
     receipt: request.id,
     notes: {
@@ -136,6 +176,9 @@ export async function initiatePayment(
     gatewayOrderId: order.id,
     idempotencyKey: input.idempotencyKey,
     expiresAt,
+    // Persist WHICH provider opened this intent so confirm/webhook resolve the
+    // same one.
+    gateway: provider.id,
   });
 
   await recordMutationAudit(
@@ -169,7 +212,7 @@ export async function initiatePayment(
     status: "initiated",
     expiresAtLabel: expiresLabel(expiresAt),
     razorpayOrderId: order.id,
-    razorpayKeyId: razorpay.keyId,
+    razorpayKeyId: provider.publicClientKey(),
   };
 }
 
@@ -183,7 +226,6 @@ export async function confirmPayment(
     throw new PaymentIntentStateError("Payment confirmation requires parent scope");
   }
 
-  const razorpay = loadRazorpayConfig();
   const orgId = claims.tenant_id;
   const schoolId = claims.school_id;
 
@@ -207,23 +249,30 @@ export async function confirmPayment(
     throw new PaymentIntentStateError(`Payment intent is not confirmable: ${intent.status}`);
   }
 
-  // FAIL-CLOSED: when running against a live Razorpay gateway (not stub mode),
-  // gateway verification is MANDATORY before any capture. Previously this whole
-  // block was skipped if the client omitted razorpayPaymentId/signature (the
-  // Flutter app sends only transactionRef), which meant flipping
-  // RAZORPAY_STUB_MODE=false without integrating the SDK would capture + issue a
-  // finance receipt with ZERO proof of payment. Now a live confirm with missing
-  // or invalid proof throws BEFORE any collection/receipt/capture is created.
-  // Stub mode (the current default with no RAZORPAY_* env) is unchanged: it
-  // never touches real money, so capture proceeds without a gateway signature.
-  if (!razorpay.stubMode) {
+  // W3: confirm through the SAME provider that opened the intent (intent.gateway),
+  // via the registry — never a hard-coded gateway. An unknown persisted gateway
+  // throws (fail-closed) rather than defaulting.
+  const provider = getPaymentProvider(intent.gateway || DEFAULT_PROVIDER_ID);
+
+  // FAIL-CLOSED: when the provider requires a gateway signature (a LIVE Razorpay
+  // gateway, or any provider whose payments cannot be self-confirmed by the payer
+  // — e.g. the offline/manual provider), verification is MANDATORY before any
+  // capture. Previously this block was Razorpay-`stubMode`-gated and skipped when
+  // the client omitted razorpayPaymentId/signature (the Flutter app sends only
+  // transactionRef), which meant flipping RAZORPAY_STUB_MODE=false without
+  // integrating the SDK would capture + issue a finance receipt with ZERO proof
+  // of payment. Now a confirm with missing or invalid proof throws BEFORE any
+  // collection/receipt/capture is created. A stub gateway (the current default
+  // with no RAZORPAY_* env) reports requiresGatewaySignature()=false: it never
+  // touches real money, so capture proceeds without a gateway signature — the
+  // exact prior stub behaviour, preserved.
+  if (provider.requiresGatewaySignature()) {
     if (!input.razorpayPaymentId || !input.razorpaySignature || !intent.gateway_order_id) {
       throw new PaymentIntentStateError(
         "Live payment requires a verified Razorpay payment id and signature",
       );
     }
-    const valid = await verifyRazorpayPaymentSignature(
-      razorpay,
+    const valid = await provider.verifyPaymentSignature(
       intent.gateway_order_id,
       input.razorpayPaymentId,
       input.razorpaySignature,
@@ -233,23 +282,46 @@ export async function confirmPayment(
     }
   }
 
-  let collectionId: string | null = null;
-  let receiptId: string | null = null;
-  let receiptNumber = `APS-${new Date().getFullYear()}-${intent.id.slice(0, 8).toUpperCase()}`;
-
-  if (intent.invoice_id) {
-    const collection = await createCollection(db, orgId, schoolId, {
-      invoiceId: intent.invoice_id,
-      amountCollected: intent.amount,
-      paymentMethod: intent.payment_method ?? "upi",
-      referenceNumber: input.transactionRef,
-      notes: "Universal Payment Engine capture",
-      collectedBy: claims.sub,
-    });
-    collectionId = collection.collection.id;
-    receiptId = collection.receipt.id;
-    receiptNumber = collection.receipt.receipt_number;
+  // PRA-M-2 (S1): serialize capture. Lock the intent row and re-read its status
+  // BEFORE creating a collection. Without this, a duplicate confirm or a Razorpay
+  // webhook racing the confirm would each pass the status check and each
+  // createCollection — double-posting the student's ledger (a race that only
+  // becomes live now that P0-02 makes the capture actually record a collection).
+  // The lock is held to commit, so the concurrent caller blocks here, then re-reads
+  // 'captured' and is rejected rather than posting a second collection.
+  const captureLock = await db.queryObject<{ status: string }>(
+    `SELECT status FROM payment_intents
+     WHERE id = $1 AND organization_id = $2
+     FOR UPDATE`,
+    [intent.id, orgId],
+  );
+  if (captureLock[0]?.status === "captured") {
+    throw new PaymentIntentStateError(
+      `Payment already captured for intent ${intent.id}`,
+    );
   }
+
+  // PRA-P0-02 (S1): fail closed. A capture that cannot be tied to an invoice must
+  // NOT fabricate a receipt number and report success while writing nothing to the
+  // books. initiatePayment now resolves + persists the invoice, so this only fires
+  // for a legacy/null-invoice intent — where erroring is the safe outcome, not a
+  // fake "Payment successful — Receipt APS-…".
+  if (!intent.invoice_id) {
+    throw new PaymentIntentStateError(
+      "Payment intent has no invoice — refusing to capture without recording a collection",
+    );
+  }
+  const collection = await createCollection(db, orgId, schoolId, {
+    invoiceId: intent.invoice_id,
+    amountCollected: intent.amount,
+    paymentMethod: intent.payment_method ?? "upi",
+    referenceNumber: input.transactionRef,
+    notes: "Universal Payment Engine capture",
+    collectedBy: claims.sub,
+  });
+  const collectionId: string = collection.collection.id;
+  const receiptId: string = collection.receipt.id;
+  const receiptNumber: string = collection.receipt.receipt_number;
 
   const captured = await markIntentCaptured(db, intent.id, {
     transactionRef: input.transactionRef,
@@ -402,11 +474,30 @@ export async function processRazorpayWebhook(
   }
 
   if (eventType === "payment.failed") {
-    await db.queryObject(
-      `UPDATE payment_intents SET status = 'failed', updated_at = timezone('utc', now()) WHERE id = $1`,
+    // GUARDED terminal write. Razorpay does not guarantee webhook ordering, and
+    // a single order can produce a `payment.failed` for one attempt and a
+    // `payment.captured` for the retry. An unguarded write here let a late
+    // failure demote an intent whose money HAD been captured — leaving a
+    // 'failed' intent alongside a real collection and a credited invoice, so
+    // the parent sees "payment failed" for money the school actually took.
+    //
+    // Money-terminal states ('captured', 'settled') are never walked back by a
+    // failure event. The capture path is already guarded the same way
+    // (`markPaymentIntentCaptured`); this closes the asymmetry.
+    const failed = await db.queryObject<{ id: string }>(
+      `UPDATE payment_intents SET status = 'failed', updated_at = timezone('utc', now())
+       WHERE id = $1 AND status NOT IN ('captured', 'settled')
+       RETURNING id`,
       [intent.id],
     );
-    return { processed: true, intentId: intent.id };
+    // Zero rows means the intent is money-terminal. Deliberately NOT an error:
+    // throwing would make the gateway redeliver this event forever. It is
+    // correctly processed — the correct action was to ignore it.
+    return {
+      processed: true,
+      intentId: intent.id,
+      collectionId: failed.length === 0 ? intent.collection_id : undefined,
+    };
   }
 
   return { processed: true, intentId: intent.id };

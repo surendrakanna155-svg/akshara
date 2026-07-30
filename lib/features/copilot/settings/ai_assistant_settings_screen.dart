@@ -30,7 +30,7 @@ class AiAssistantSettingsScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
           Text(
-            'Choose how Akshara AI appears. Preferences are saved for your account on this device.',
+            'Choose how NIKSHA AI appears. Preferences are saved for your account on this device.',
             style: text.bodyMedium.copyWith(color: context.colors.onSurfaceVariant),
           ),
           const SizedBox(height: AksharaSpacing.s4),

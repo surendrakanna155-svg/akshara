@@ -484,8 +484,12 @@ export function employeeDetailToApi(
     );
   }
   if (department === "finance") {
+    // PRA-P0-24 (S0/T7, B5 Option C): honest note — payroll→Finance ledger
+    // posting is NOT yet implemented (scheduled for Stage S7). The previous copy
+    // asserted a working "posts to Finance" integration that does not exist.
     integrationNotes.push(
-      "Payroll entries post to Finance module (FN-05 salary disbursement placeholder).",
+      "Payroll is tracked in the HR module and is NOT posted to the Finance ledger — " +
+        "record salary disbursements against the FN-05 head in Finance manually.",
     );
   }
   if (department === "transport") {

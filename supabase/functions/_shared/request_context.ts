@@ -1,7 +1,17 @@
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import type { AccessTokenClaims } from "./jwt.ts";
 
-/** Applies JWT claims to PostgreSQL session vars via auth.set_request_context RPC (v6.1 §6.3). */
+/**
+ * Applies JWT claims to PostgreSQL session vars via auth.set_request_context RPC
+ * (v6.1 §6.3).
+ *
+ * ICA-B9 WARNING: this is only meaningful on a NON-bypass (tenant/`erp_tenant`)
+ * client whose subsequent query runs in the SAME transaction. On a `service_role`
+ * client it is an INERT no-op that FALSELY implies tenant scoping: service_role
+ * bypasses RLS, and set_request_context writes transaction-local GUCs while each
+ * PostgREST call runs in its own transaction, so the context never reaches the
+ * next query. service_role reads MUST instead carry their own explicit filter.
+ */
 export async function setRequestContext(
   client: SupabaseClient,
   claims: Pick<

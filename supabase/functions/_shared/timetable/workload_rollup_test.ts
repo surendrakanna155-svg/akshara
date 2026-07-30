@@ -13,6 +13,7 @@ import type { TenantQueryClient } from "../tenant_db.ts";
 import {
   buildTeacherWorkloadRollup,
   classifyWorkload,
+  computeFreePeriods,
   UNIFIED_OVERLOAD_THRESHOLD,
   UNIFIED_UNDERLOAD_THRESHOLD,
 } from "./workload_rollup.ts";
@@ -47,11 +48,18 @@ class RollupDb {
     private periods: PeriodMeta[],
     private names: TeacherName[],
     private subjects: TeacherSubject[],
+    private gridSlots: number,
   ) {}
   // deno-lint-ignore no-explicit-any
   queryObject<T>(sql: string, _args: any[] = []): Promise<T[]> {
     if (sql.includes("FROM academic_timetable_periods p")) {
       return Promise.resolve(this.periods as unknown as T[]);
+    }
+    // PRC-A cap 130 — working-week grid slots for free-period derivation.
+    if (sql.includes("MAX(periods_per_day * days_per_week)")) {
+      return Promise.resolve(
+        [{ grid_slots: this.gridSlots > 0 ? String(this.gridSlots) : null }] as unknown as T[],
+      );
     }
     if (sql.includes("FROM teacher_assignments ta")) {
       return Promise.resolve(this.names as unknown as T[]);
@@ -67,8 +75,9 @@ function db(
   periods: PeriodMeta[],
   names: TeacherName[] = [],
   subjects: TeacherSubject[] = [],
+  gridSlots = 40, // default working week: 8 periods × 5 days
 ): TenantQueryClient {
-  return new RollupDb(periods, names, subjects) as unknown as TenantQueryClient;
+  return new RollupDb(periods, names, subjects, gridSlots) as unknown as TenantQueryClient;
 }
 
 /** Emit `n` scheduled periods for one teacher in a section (subject label fixed). */
@@ -230,4 +239,36 @@ Deno.test("exactly-24 periods is balanced, exactly-25 is over (threshold boundar
   assertEquals(byId.get("T24")!.isOverloaded, false);
   assertEquals(byId.get("T25")!.status, "over");
   assertEquals(byId.get("T25")!.isOverloaded, true);
+});
+
+// ─── PRC-A cap 130 — free (non-contact) periods ──────────────────────────────
+Deno.test("computeFreePeriods: grid − contact, clamped at 0", () => {
+  assertEquals(computeFreePeriods(40, 24), 16); // 40-slot week, 24 taught → 16 free
+  assertEquals(computeFreePeriods(40, 40), 0); // fully loaded → 0 free
+  assertEquals(computeFreePeriods(40, 45), 0); // over-scheduled edge clamps to 0
+  assertEquals(computeFreePeriods(0, 0), 0); // no grid → 0 free (honest zero)
+});
+
+Deno.test("rollup: freePeriods = working-week grid − scheduled periods", async () => {
+  // 40-slot grid; a teacher timetabled for 22 periods has 18 free.
+  const rollup = await buildTeacherWorkloadRollup(
+    db(periodsFor("t-1", "sec-a", "Math", 22), [], [], 40),
+    ORG,
+    SCHOOL,
+    YEAR,
+  );
+  assertEquals(rollup.teachers[0].periodCount, 22);
+  assertEquals(rollup.teachers[0].freePeriods, 18);
+});
+
+Deno.test("rollup: no timetable → freePeriods honest zero (grid null)", async () => {
+  // gridSlots 0 → the MAX query returns null → every teacher's freePeriods is 0.
+  const rollup = await buildTeacherWorkloadRollup(
+    db(periodsFor("t-1", "sec-a", "Math", 12), [], [], 0),
+    ORG,
+    SCHOOL,
+    YEAR,
+  );
+  assertEquals(rollup.teachers[0].periodCount, 12);
+  assertEquals(rollup.teachers[0].freePeriods, 0);
 });

@@ -16,14 +16,17 @@ import {
 import {
   handleActivateRoute,
   handleAddStop,
+  handleAssignRouteVehicle,
   handleAssignStudentTransport,
   handleBulkAllocateTransport,
+  handleBulkRaiseTransportDemand,
   handleCreateDriver,
   handleCreateRoute,
   handleCreateVehicle,
   handleDeleteDriver,
   handleDeleteVehicle,
   handleDocumentExpiryReminder,
+  handleGenerateAttendanceRoster,
   handleNotifyRouteDelay,
   handleRaiseTransportDemand,
   handleRecordAttendance,
@@ -35,6 +38,16 @@ import {
   handleUpdateStop,
   handleUpdateVehicle,
 } from "./transport_write_handlers.ts";
+import {
+  handleCostSummary,
+  handleListExpenses,
+  handleRecordExpense,
+  handleVoidExpense,
+} from "./transport_expenses_handlers.ts";
+import {
+  handleAllocationHistory,
+  handleStudentAllocationHistory,
+} from "./transport_allocation_history_handlers.ts";
 
 type RouteHandler = (req: Request, config: AppConfig) => Promise<Response>;
 
@@ -51,12 +64,23 @@ function matchTransportRoute(method: string, path: string): { handler: RouteHand
       "/transport/reports": handleReports,
       "/transport/settings": handleSettings,
       "/transport/occupancy-metrics": handleOccupancyMetrics,
+      // Batch 8: transport expense domain (real cost, no static mock).
+      "/transport/expenses": handleListExpenses,
+      "/transport/cost-summary": handleCostSummary,
     };
     const handler = routes[path] as RouteHandler | undefined;
     if (handler) return { handler };
     // TRN-3: stop-wise roster read.
     if (/^\/transport\/routes\/[^/]+\/roster$/.test(path)) {
       return { handler: handleRouteRoster };
+    }
+    // W4: effective-dated assignment history (timeline, or ?asOf=<date> for the
+    // period open on that date) — per allocation and per student.
+    if (/^\/transport\/allocations\/[^/]+\/history$/.test(path)) {
+      return { handler: handleAllocationHistory };
+    }
+    if (/^\/transport\/students\/[^/]+\/allocation-history$/.test(path)) {
+      return { handler: handleStudentAllocationHistory };
     }
     return null;
   }
@@ -71,6 +95,11 @@ function matchTransportRoute(method: string, path: string): { handler: RouteHand
     // TRN-5: bulk allocation.
     if (path === "/transport/allocations/bulk") {
       return { handler: handleBulkAllocateTransport };
+    }
+    // PRA-P1-43: generate a route's attendance roster from its allocations
+    // (more specific than the collection POST — match first).
+    if (path === "/transport/attendance/generate") {
+      return { handler: handleGenerateAttendanceRoster };
     }
     // --- A6 writes (AgentC) ---
     if (path === "/transport/attendance") {
@@ -91,9 +120,22 @@ function matchTransportRoute(method: string, path: string): { handler: RouteHand
     if (path === "/transport/reminders/document-expiry") {
       return { handler: handleDocumentExpiryReminder };
     }
+    // PRA-P0-20: bulk-raise transport-fee demands (more specific — match first).
+    if (path === "/transport/demands/bulk") {
+      return { handler: handleBulkRaiseTransportDemand };
+    }
     // TRN-9: raise a Finance transport-fee demand.
     if (path === "/transport/demands") {
       return { handler: handleRaiseTransportDemand };
+    }
+    // Batch 8: record / void a transport expense.
+    if (path === "/transport/expenses") {
+      return { handler: handleRecordExpense };
+    }
+    const voidExpenseMatch = path.match(/^\/transport\/expenses\/([^/]+)\/void$/);
+    if (voidExpenseMatch) {
+      const id = decodeURIComponent(voidExpenseMatch[1]!);
+      return { handler: (req, config) => handleVoidExpense(req, config, id) };
     }
     if (/^\/transport\/routes\/[^/]+\/activate$/.test(path)) {
       return { handler: handleActivateRoute };
@@ -112,6 +154,11 @@ function matchTransportRoute(method: string, path: string): { handler: RouteHand
   }
 
   if (method === "PUT") {
+    // PRA-P0-19: assign a vehicle to a route (more specific than the stop update
+    // — but distinct paths; wires the TRN-7 capacity guard live).
+    if (/^\/transport\/routes\/[^/]+\/vehicle$/.test(path)) {
+      return { handler: handleAssignRouteVehicle };
+    }
     // TRN-1: vehicle & driver update.
     if (/^\/transport\/vehicles\/[^/]+$/.test(path)) {
       return { handler: handleUpdateVehicle };
@@ -157,7 +204,7 @@ export async function routeTransport(
 
   const match = matchTransportRoute(method, path);
   if (!match) {
-    return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+    return null;
   }
 
   return await match.handler(req, config);

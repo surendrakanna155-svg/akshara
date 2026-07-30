@@ -61,5 +61,5 @@ export async function routeMemories(
     }
   }
 
-  return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+  return null;
 }

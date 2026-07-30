@@ -46,6 +46,23 @@ export interface NotificationDeliveryRow {
   route: string | null;
   sent_at: string | null;
   created_at: string;
+  /** Batch 6: the delivery whose terminal failure spawned this one (NULL for a
+   * primary send). */
+  escalated_from: string | null;
+  /** Batch 6: hop count from the primary send (0 = primary). Bounds escalation. */
+  escalation_depth: number;
+}
+
+/** Batch 6: a per-school escalation policy row (communication_channel_policies). */
+export interface ChannelPolicyRow {
+  id: string;
+  organization_id: string;
+  school_id: string;
+  escalation_chain: string[];
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface CommThreadRow {
@@ -330,13 +347,18 @@ export async function enqueueDelivery(
     renderedBody: string;
     childContext?: string | null;
     route?: string | null;
+    /** Batch 6: set when this delivery is an escalation follow-up — links it to
+     * the terminally-failed delivery and records its hop count. */
+    escalatedFrom?: string | null;
+    escalationDepth?: number;
   },
 ): Promise<NotificationDeliveryRow> {
   const rows = await db.queryObject<NotificationDeliveryRow>(
     `INSERT INTO notification_deliveries (
        organization_id, school_id, recipient_user_id, channel, template_id,
-       category, rendered_subject, rendered_body, child_context, route, status
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending')
+       category, rendered_subject, rendered_body, child_context, route, status,
+       escalated_from, escalation_depth
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending', $11, $12)
      RETURNING *`,
     [
       input.organizationId,
@@ -349,6 +371,8 @@ export async function enqueueDelivery(
       input.renderedBody,
       input.childContext ?? null,
       input.route ?? null,
+      input.escalatedFrom ?? null,
+      input.escalationDepth ?? 0,
     ],
   );
   return rows[0]!;
@@ -431,45 +455,145 @@ export async function fetchPendingDeliveries(
   );
 }
 
+/**
+ * P5 (red-team #1): atomically CLAIM up to `limit` due deliveries for one org,
+ * flipping them 'pending' → 'sending' in a single statement. `FOR UPDATE SKIP
+ * LOCKED` makes concurrent drains claim DISJOINT sets — a delivery is sent by
+ * exactly one drain, so no message (or escalation) is duplicated. Also reclaims
+ * deliveries orphaned in 'sending' by a drain that died mid-send (older than the
+ * lease window) — at-least-once delivery, bounded by the lease, which for
+ * notifications is correct (a rare post-crash duplicate beats a lost message).
+ * Mirrors claimDueScheduledBroadcasts.
+ */
+export async function claimPendingDeliveries(
+  db: TenantQueryClient,
+  orgId: string,
+  limit = 50,
+  leaseMinutes = 10,
+): Promise<NotificationDeliveryRow[]> {
+  return await db.queryObject<NotificationDeliveryRow>(
+    `UPDATE notification_deliveries
+        SET status = 'sending', updated_at = timezone('utc', now())
+      WHERE id IN (
+        SELECT id FROM notification_deliveries
+         WHERE organization_id = $1
+           AND (
+             (status = 'pending'
+               AND (next_retry_at IS NULL OR next_retry_at <= timezone('utc', now())))
+             OR (status = 'sending'
+               AND updated_at < timezone('utc', now()) - ($3 || ' minutes')::interval)
+           )
+         ORDER BY created_at
+         LIMIT $2
+         FOR UPDATE SKIP LOCKED
+      )
+      RETURNING *`,
+    [orgId, limit, String(leaseMinutes)],
+  );
+}
+
 export async function markDeliverySent(
   db: TenantQueryClient,
   deliveryId: string,
   providerRef: string | null,
 ): Promise<void> {
+  // P5 (red-team #1): guard on the 'sending' claim so only the drain that claimed
+  // this delivery marks it sent (a lost/expired claim is a no-op, not a double-write).
   await db.queryObject(
     `UPDATE notification_deliveries
      SET status = 'sent', provider_ref = $2, sent_at = timezone('utc', now()),
          updated_at = timezone('utc', now())
-     WHERE id = $1`,
+     WHERE id = $1 AND status = 'sending'`,
     [deliveryId, providerRef],
   );
 }
 
+/**
+ * Record a delivery attempt failure. Reschedules with exponential backoff while
+ * retries remain; flips the row to terminal `status='failed'` once
+ * `max_retries` is reached. Returns `{ terminal }` so the drain knows when a
+ * delivery has genuinely given up and escalation (Batch 6) may fire.
+ */
 export async function markDeliveryFailed(
   db: TenantQueryClient,
   delivery: NotificationDeliveryRow,
   error: string,
-): Promise<void> {
+): Promise<{ terminal: boolean }> {
   const nextRetry = delivery.retry_count + 1;
   if (nextRetry >= delivery.max_retries) {
-    await db.queryObject(
+    // P5 (red-team #1): the terminal transition is guarded on the 'sending' claim
+    // and RETURNS the id, so `terminal` is true ONLY when THIS drain owned the
+    // claim and actually flipped it to 'failed' — a lost claim never escalates
+    // (Batch-6 escalation fires only on a real terminal transition).
+    const rows = await db.queryObject<{ id: string }>(
       `UPDATE notification_deliveries
        SET status = 'failed', retry_count = $2, last_error = $3,
            updated_at = timezone('utc', now())
-       WHERE id = $1`,
+       WHERE id = $1 AND status = 'sending'
+       RETURNING id`,
       [delivery.id, nextRetry, error],
     );
-    return;
+    return { terminal: rows.length > 0 };
   }
+  // Reschedule: hand the claimed row back to 'pending' with a backoff so a future
+  // drain re-claims it (guarded on the 'sending' claim).
   const backoffMinutes = Math.pow(2, nextRetry);
   await db.queryObject(
     `UPDATE notification_deliveries
-     SET retry_count = $2, last_error = $3,
+     SET status = 'pending', retry_count = $2, last_error = $3,
          next_retry_at = timezone('utc', now()) + ($4 || ' minutes')::interval,
          updated_at = timezone('utc', now())
-     WHERE id = $1`,
+     WHERE id = $1 AND status = 'sending'`,
     [delivery.id, nextRetry, error, String(backoffMinutes)],
   );
+  return { terminal: false };
+}
+
+/** Batch 6: load the caller's school escalation policy, or null when none is
+ * configured (→ escalation disabled, existing behaviour preserved). */
+export async function getChannelPolicy(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+): Promise<ChannelPolicyRow | null> {
+  const rows = await db.queryObject<ChannelPolicyRow>(
+    `SELECT * FROM communication_channel_policies
+      WHERE organization_id = $1 AND school_id = $2`,
+    [orgId, schoolId],
+  );
+  return rows[0] ?? null;
+}
+
+/** Batch 6: upsert the caller's school escalation policy (one row per school). */
+export async function upsertChannelPolicy(
+  db: TenantQueryClient,
+  input: {
+    organizationId: string;
+    schoolId: string;
+    escalationChain: string[];
+    isActive: boolean;
+    createdBy: string;
+  },
+): Promise<ChannelPolicyRow> {
+  const rows = await db.queryObject<ChannelPolicyRow>(
+    `INSERT INTO communication_channel_policies (
+       organization_id, school_id, escalation_chain, is_active, created_by
+     ) VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (organization_id, school_id)
+     DO UPDATE SET
+       escalation_chain = EXCLUDED.escalation_chain,
+       is_active = EXCLUDED.is_active,
+       updated_at = timezone('utc', now())
+     RETURNING *`,
+    [
+      input.organizationId,
+      input.schoolId,
+      input.escalationChain,
+      input.isActive,
+      input.createdBy,
+    ],
+  );
+  return rows[0]!;
 }
 
 export async function listThreadsForUser(
@@ -1229,6 +1353,30 @@ export async function deleteAudienceSegment(
       WHERE id = $1::uuid AND organization_id = $2 AND school_id = $3
       RETURNING id`,
     [id, orgId, schoolId],
+  );
+  return rows[0]?.id ?? null;
+}
+
+/**
+ * v15.6 delivery webhook: set a delivery's status directly (no 'sending' claim
+ * guard — the webhook confirms an external provider's outcome, not a drain's own
+ * transition). `delivered_at` is stamped only when the new status is
+ * 'delivered'; otherwise it is left unchanged. Returns the updated id, or null
+ * when no delivery with that id exists.
+ */
+export async function updateDeliveryStatusFromWebhook(
+  db: TenantQueryClient,
+  deliveryId: string,
+  status: string,
+): Promise<string | null> {
+  const rows = await db.queryObject<{ id: string }>(
+    `UPDATE notification_deliveries
+        SET status = $2,
+            delivered_at = CASE WHEN $2 = 'delivered' THEN now() ELSE delivered_at END,
+            updated_at = now()
+      WHERE id = $1::uuid
+      RETURNING id`,
+    [deliveryId, status],
   );
   return rows[0]?.id ?? null;
 }

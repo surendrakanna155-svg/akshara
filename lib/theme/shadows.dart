@@ -21,12 +21,15 @@ abstract final class AksharaShadows {
   static const double modalSpread = -4;
   static const Offset modalOffset = Offset(0, 12);
 
+  // DS V2 P2-2 — nudged up ~0.01 per level so resting/hover cards read as a soft
+  // premium float on the light near-white canvas (was so faint cards looked flat
+  // and "default Material"). Still well under the 0.10 soft ceiling at level 2.
   static double opacityForLevel(int level) => switch (level) {
-        1 => 0.04,
-        2 => 0.06,
-        3 => 0.08,
-        4 => 0.10,
-        5 => 0.12,
+        1 => 0.05,
+        2 => 0.07,
+        3 => 0.09,
+        4 => 0.11,
+        5 => 0.13,
         _ => 0.0,
       };
 
@@ -74,12 +77,15 @@ abstract final class AksharaShadows {
     );
 
     return switch (level) {
+      // DS V2 P2-2 — resting cards get a soft, diffuse premium float (a wider
+      // blur pulled in with a negative spread) instead of the old 1px hairline,
+      // so they lift gently off the canvas without looking heavy.
       1 => [
           BoxShadow(
             color: color,
-            offset: const Offset(0, 1),
-            blurRadius: 2,
-            spreadRadius: 0,
+            offset: const Offset(0, 2),
+            blurRadius: 8,
+            spreadRadius: -2,
           ),
         ],
       2 => [

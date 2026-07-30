@@ -289,7 +289,7 @@ class MockCopilotRepository implements CopilotRepository {
       AiInferenceRequest(
         prompt: content,
         taskType: aiTaskTypeName(AiInferenceTaskType.copilotChat),
-        systemPrompt: 'Akshara ERP copilot assistant',
+        systemPrompt: 'NIKSHA OS copilot assistant',
         context: screenContext?.toJson() ?? const {},
       ),
     );

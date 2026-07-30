@@ -7,9 +7,10 @@ then exercises read + write workflows per domain and classifies each:
 No mocks, no route-existence-only checks.
 """
 import json, urllib.request, urllib.error, sys, time
+import os
 TS = str(int(time.time()))
 
-BASE = "https://akshara.veloraunisexsalon.com"
+BASE = os.environ.get("API_BASE_URL", "https://api.nikshaos.in")
 SCHOOL_1 = "a2000000-0000-4000-8000-000000000001"
 PERSONAS = {
     "admin":   "+919876543210",   # Staging School Admin (schoolAdmin + orgAdmin)

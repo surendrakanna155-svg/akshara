@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/security/permissions.dart';
+import '../../../core/security/rbac_service.dart';
 import '../../../core/school_config/school_configuration_provider.dart';
 import '../../../core/school_config/school_dashboard_adapter.dart';
 import '../../../core/testing/qa_test_keys.dart';
@@ -203,6 +204,31 @@ class ManagementDashboardScreen extends ConsumerWidget {
           ),
           const SizedBox(height: AksharaSpacing.s3),
           const _AttendancePendingWidget(),
+          // PRA-P1-17 — entry point into the holiday/event calendar. Gated on
+          // viewSchoolCalendar so it mirrors the backend read permission.
+          if (ref
+              .watch(rbacServiceProvider)
+              .hasPermission(Permission.viewSchoolCalendar)) ...[
+            const SizedBox(height: AksharaSpacing.s6),
+            AksharaSectionHeader(
+              title: 'School calendar',
+              trailingLabel: 'Open',
+              onTrailingTap: () =>
+                  context.go(RouteNames.managementSchoolCalendar),
+            ),
+            const SizedBox(height: AksharaSpacing.s3),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.event_outlined),
+                title: const Text('Holidays & events'),
+                subtitle: const Text(
+                  'Manage holidays and events so attendance and HR honour them.',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.go(RouteNames.managementSchoolCalendar),
+              ),
+            ),
+          ],
           const SizedBox(height: AksharaSpacing.s6),
           const AksharaSectionHeader(title: 'Approval queue'),
           const SizedBox(height: AksharaSpacing.s3),

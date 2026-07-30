@@ -90,7 +90,7 @@ void main() {
       await pumpAdminShell(tester, viewport: const Size(1440, 900));
 
       expect(find.byType(AdminNavigationRail), findsOneWidget);
-      expect(find.text('Akshara ERP'), findsOneWidget);
+      expect(find.text('NIKSHA OS'), findsOneWidget);
       expect(find.byType(AdminModulePlaceholderScreen), findsOneWidget);
     });
 

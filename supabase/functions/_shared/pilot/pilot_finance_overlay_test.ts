@@ -68,7 +68,7 @@ Deno.test("overlayReceiptsFromFinance shapes real receipts for the parent app", 
     mockDb([
       { match: "count(*)", rows: [{ total: "2" }] },
       STUDENT_CONTEXT,
-      { match: "FROM schools", rows: [{ name: "Akshara Public School" }] },
+      { match: "FROM schools", rows: [{ name: "NIKSHA Public School" }] },
       {
         match: "FROM finance_receipts r",
         rows: [
@@ -107,7 +107,7 @@ Deno.test("overlayReceiptsFromFinance shapes real receipts for the parent app", 
   assertEquals(first.statusLabel, "Paid");
   assertEquals(first.childName, "Asha Rao");
   assertEquals(first.childClass, "5-A");
-  assertEquals(first.schoolName, "Akshara Public School");
+  assertEquals(first.schoolName, "NIKSHA Public School");
   assertEquals(first.category, "Fees");
   const lineItems = first.lineItems as Record<string, unknown>[];
   assertEquals(lineItems[0]?.amount, 2500);

@@ -19,6 +19,7 @@ import {
   type AssetLifecycleEventType,
   type RecordLifecycleEventInput,
 } from "./inventory_intelligence_service.ts";
+import { advanceProcurementWorkflowStatus } from "./inventory_read_repository.ts";
 
 function requireInventoryIntelligence(
   claims: Parameters<typeof requirePermission>[0],
@@ -209,19 +210,12 @@ export async function handleAdvanceProcurementWorkflow(
 
   try {
     const result = await withTenantContext(config, auth.claims, async (db) => {
-      const rows = await db.queryObject<{ id: string; status: string; po_number: string }>(
-        `UPDATE purchase_orders
-         SET status = CASE
-           WHEN status = 'draft' THEN 'approved'
-           WHEN status = 'approved' THEN 'partially_received'
-           ELSE status
-         END,
-         approved_by = CASE WHEN status = 'draft' THEN $4::uuid ELSE approved_by END,
-         approved_at = CASE WHEN status = 'draft' THEN timezone('utc', now()) ELSE approved_at END,
-         updated_at = timezone('utc', now())
-         WHERE id = $1::uuid AND organization_id = $2 AND school_id = $3
-         RETURNING id, status, po_number`,
-        [purchaseOrderId, orgId, schoolId, auth.claims.sub ?? null],
+      const rows = await advanceProcurementWorkflowStatus(
+        db,
+        purchaseOrderId,
+        orgId,
+        schoolId,
+        auth.claims.sub ?? null,
       );
       if (rows.length === 0) {
         return null;

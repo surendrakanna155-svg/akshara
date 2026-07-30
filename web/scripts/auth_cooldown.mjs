@@ -1,7 +1,7 @@
 // Single patient auth: long quiet windows, minimal requests, to let the OTP
 // per-phone cap fully reset. Caches school-scoped session on success.
 import fs from 'node:fs';
-const API='https://akshara.veloraunisexsalon.com/functions/v1/api';
+const API='https://api.nikshaos.in/functions/v1/api';
 const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
 async function post(p,b,t){const r=await fetch(API+p,{method:'POST',headers:{'Content-Type':'application/json',...(t?{Authorization:`Bearer ${t}`}:{})},body:JSON.stringify(b)});return{status:r.status,json:await r.json().catch(()=>null)};}
 async function get(p,t){const r=await fetch(API+p,{headers:t?{Authorization:`Bearer ${t}`}:{}});return{status:r.status,json:await r.json().catch(()=>null)};}

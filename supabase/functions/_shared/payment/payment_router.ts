@@ -44,7 +44,7 @@ export async function routePayment(
 
   const match = matchPaymentRoute(method, path);
   if (!match) {
-    return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+    return null;
   }
 
   return await match.handler(req, config);

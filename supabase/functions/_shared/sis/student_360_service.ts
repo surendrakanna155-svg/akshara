@@ -20,6 +20,12 @@ export interface Student360Profile {
   behaviour: Record<string, unknown>;
   transport: Record<string, unknown>;
   documents: Record<string, unknown>;
+  /// Minimum actionable health flags ONLY (see the care-alerts query below).
+  /// Never clinical detail — that lives behind the health module's own
+  /// permission + audit path.
+  care: Record<string, unknown>;
+  /// Leave requests raised for this student, newest first.
+  leave: Record<string, unknown>;
 }
 
 export interface StudentTimelineEvent {
@@ -86,6 +92,8 @@ export async function buildStudent360Profile(
     documents,
     commSummary,
     transportRows,
+    careAlerts,
+    leaveRows,
   ] = await Promise.all([
     client.queryObject<{
       present: number;
@@ -201,9 +209,65 @@ export async function buildStudent360Profile(
      LIMIT 1`,
       [organizationId, schoolId, detail.student.student_code, studentId],
     ),
+    // Care alerts — the DELIBERATELY MINIMAL health surface.
+    //
+    // Owner decision (LOCKED 2026-07-15) forbids clinical health detail on
+    // broad profile surfaces, and Student 360 is exactly such a surface. So this
+    // reads `student_care_alerts` — the separate table built to carry only
+    // teacher-actionable facts ("severe peanut allergy — epipen in infirmary")
+    // — and NEVER the clinical tables (incidents / medications / admin log).
+    // A principal who needs the clinical record opens the health module, where
+    // `viewStudentHealthRecord` is enforced and the read is audit-logged.
+    client.queryObject<{
+      alert_label: string;
+      action_note: string;
+      severity: string;
+    }>(
+      `SELECT alert_label, action_note, severity
+     FROM student_care_alerts
+     WHERE student_id = $1 AND organization_id = $2 AND school_id = $3
+       AND is_active = true
+     ORDER BY CASE severity
+                WHEN 'critical' THEN 0
+                WHEN 'important' THEN 1
+                ELSE 2
+              END,
+              alert_label`,
+      [studentId, organizationId, schoolId],
+    ),
+    // Leave history — parent/teacher-submitted leave for this child.
+    client.queryObject<{
+      type_label: string;
+      from_date_label: string;
+      to_date_label: string;
+      reason: string;
+      status: string;
+      created_at: string;
+    }>(
+      `SELECT type_label, from_date_label, to_date_label, reason, status,
+              created_at::text
+     FROM mobile_leave_requests
+     WHERE student_id = $1 AND organization_id = $2 AND school_id = $3
+     ORDER BY created_at DESC
+     LIMIT 20`,
+      [studentId, organizationId, schoolId],
+    ),
   ]);
 
   const includeSensitive = viewMode !== "parent";
+
+  // Student photo. There is no dedicated photo column on the student profile;
+  // photos are stored as a TYPED STUDENT DOCUMENT in the existing SIS documents
+  // table + bucket, so no new table, bucket or migration is needed. Newest
+  // upload wins. `photoUrl` is null when the school has not uploaded one — the
+  // client then renders an initials avatar rather than a broken image.
+  const photoDoc = documents
+    .filter((row) => {
+      const type = (row.document_type ?? "").toLowerCase();
+      return type === "photo" || type === "student_photo" || type === "profile_photo";
+    })
+    .sort((a, b) => String(b.uploaded_at ?? "").localeCompare(String(a.uploaded_at ?? "")))[0];
+  const photoUrl = photoDoc?.file_uri ?? null;
   const conductIncidents = conduct.map((row) => ({
     date: row.occurred_on,
     type: row.incident_type,
@@ -222,6 +286,7 @@ export async function buildStudent360Profile(
       className: detail.currentEnrollment?.class_name ?? null,
       sectionName: detail.currentEnrollment?.section_name ?? null,
       rollNumber: detail.currentEnrollment?.roll_number ?? null,
+      photoUrl,
     },
     admissions: {
       admissionNumber: detail.profile?.admission_number ?? null,
@@ -300,6 +365,23 @@ export async function buildStudent360Profile(
           uploadedAt: api.uploadedAt,
         };
       }),
+    },
+    care: {
+      alerts: careAlerts.map((row) => ({
+        label: row.alert_label,
+        actionNote: row.action_note,
+        severity: row.severity,
+      })),
+    },
+    leave: {
+      items: leaveRows.map((row) => ({
+        type: row.type_label,
+        fromDate: row.from_date_label,
+        toDate: row.to_date_label,
+        reason: row.reason,
+        status: row.status,
+        requestedAt: row.created_at,
+      })),
     },
   };
 }

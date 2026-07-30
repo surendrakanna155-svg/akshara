@@ -17,8 +17,7 @@ abstract final class LegalLinks {
   ///
   /// OWNER ACTION: keep this in sync with the Play Console "Privacy Policy" URL
   /// and host the documents under this base.
-  static const String policyHostBaseUrl =
-      'https://akshara.veloraunisexsalon.com';
+  static const String policyHostBaseUrl = 'https://nikshaos.in';
 
   /// Placeholder base; used to detect an unconfigured host.
   static const String _placeholderHostBaseUrl = 'https://example.com/akshara';

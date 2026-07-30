@@ -6,7 +6,7 @@
 // generatedAt) so the value is deterministic per request.
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-// School-local timezone. Akshara is India-first (CBSE/CISCE/AP/TS boards), so
+// School-local timezone. NIKSHA is India-first (CBSE/CISCE/AP/TS boards), so
 // "today"/"overdue" must be computed on the IST wall clock, not server UTC —
 // otherwise during IST 00:00–05:29 (UTC 18:30–23:59 the prior day) a homework
 // due "today" reads dueInDays=1 and an item overdue since IST-midnight reads 0.

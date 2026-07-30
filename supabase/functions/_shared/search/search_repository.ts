@@ -251,7 +251,14 @@ export async function searchFinanceInvoices(
           WHEN lower(s.display_name) LIKE lower($3) || '%' THEN 4
           ELSE 5
         END,
-        s.display_name
+        -- Secondary sort MUST match the JS re-rank's tiebreak (the result
+        -- TITLE = invoice_number): with them aligned the display order is
+        -- order-preserving over the SQL window and OFFSET paging is exact.
+        -- Sorting by student_name here made page boundaries live in a
+        -- different order space — duplicates + unreachable rows across
+        -- "Show more" pages (audit round 4, P2).
+        fi.invoice_number,
+        fi.id
       LIMIT $4 OFFSET $5`,
     [organizationId, schoolId, q, cap, offset],
   );

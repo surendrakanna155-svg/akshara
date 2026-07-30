@@ -83,7 +83,7 @@ class MockControlCenterRepository implements ControlCenterRepository {
   static const _schools = [
     PlatformSchool(
       id: 'SCH-1001',
-      name: 'Akshara International — Hyderabad',
+      name: 'NIKSHA International — Hyderabad',
       plan: SubscriptionPlan.premium,
       studentCount: 2840,
       status: PlatformSchoolStatus.active,
@@ -300,7 +300,7 @@ class MockControlCenterRepository implements ControlCenterRepository {
         ),
         BillingInvoice(
           id: 'INV-2026-0420',
-          schoolName: 'Akshara International — Hyderabad',
+          schoolName: 'NIKSHA International — Hyderabad',
           amountLakhs: 4.2,
           dueDate: '2026-06-30',
           status: 'Paid',
@@ -402,7 +402,7 @@ class MockControlCenterRepository implements ControlCenterRepository {
       SupportTicket(
         id: 'TKT-8803',
         subject: 'Transport GPS integration',
-        schoolName: 'Akshara International — Hyderabad',
+        schoolName: 'NIKSHA International — Hyderabad',
         status: SupportTicketStatus.resolved,
         priority: 'Low',
         slaRemaining: '—',
@@ -467,7 +467,7 @@ class MockControlCenterRepository implements ControlCenterRepository {
       ),
       WhiteLabelConfig(
         schoolId: 'SCH-1001',
-        schoolName: 'Akshara International — Hyderabad',
+        schoolName: 'NIKSHA International — Hyderabad',
         logoUrl: 'assets/branding/akshara_intl_logo.png',
         primaryColorHex: '#2E7D32',
         customDomain: 'portal.aksharainternational.in',
@@ -565,7 +565,7 @@ class MockControlCenterRepository implements ControlCenterRepository {
         ),
         PlatformRole(
           id: 'role_director',
-          name: 'Akshara Director',
+          name: 'NIKSHA Director',
           description: 'Platform revenue and analytics — no school PII',
           permissionCount: 22,
           userCount: 5,
@@ -747,5 +747,126 @@ class MockControlCenterRepository implements ControlCenterRepository {
     required CreateCrmLeadRequest request,
   }) async {
     return MockControlCenterWriteStore.instance.createLead(request);
+  }
+
+  static const _seedAiCreditEntries = [
+    AiCreditEntry(
+      id: 'AICR-101',
+      entryType: 'top_up',
+      units: 5000,
+      reason: 'Quarterly AI credit purchase — Q2 2026',
+      actorId: 'plat_admin_1',
+      externalRef: 'PO-2026-0044',
+      createdAt: '2026-04-01T09:00:00.000Z',
+    ),
+    AiCreditEntry(
+      id: 'AICR-108',
+      entryType: 'adjustment',
+      units: -120,
+      reason: 'Correction: duplicate AI call billed twice',
+      actorId: 'plat_admin_1',
+      createdAt: '2026-05-14T11:30:00.000Z',
+    ),
+    AiCreditEntry(
+      id: 'AICR-112',
+      entryType: 'expiry',
+      units: -300,
+      reason: 'Unused promotional credits expired',
+      createdAt: '2026-06-01T00:00:00.000Z',
+    ),
+  ];
+
+  /// Debits/reservations come from `ai_call_log` / `ai_call_reservations`,
+  /// which this mock module does not model — held constant to keep the
+  /// wallet's balance projection realistic without a second AI-usage mock.
+  static const _mockDebitedUnits = 3120;
+  static const _mockReservedUnits = 40;
+
+  List<AiCreditEntry> get _allAiCreditEntries => [
+        ...MockControlCenterWriteStore.instance.aiCreditEntries,
+        ..._seedAiCreditEntries,
+      ];
+
+  /// Mirrors `readWalletBalance()` / `walletHealth()` in
+  /// `ai_wallet_repository.ts`: available = granted - debited - reserved
+  /// (may be negative); health falls back to lifetime grants when there has
+  /// never been a top_up.
+  AiWalletBalance _computeAiWalletBalance(List<AiCreditEntry> entries) {
+    final granted = entries.fold<int>(0, (sum, e) => sum + e.units);
+    const debited = _mockDebitedUnits;
+    const reserved = _mockReservedUnits;
+    final available = granted - debited - reserved;
+    final lastTopUp = entries
+        .firstWhere(
+          (e) => e.entryType == 'top_up',
+          orElse: () => const AiCreditEntry(
+            id: '',
+            entryType: 'top_up',
+            units: 0,
+            reason: '',
+            createdAt: '',
+          ),
+        )
+        .units;
+    final ceiling = lastTopUp > 0 ? lastTopUp : granted;
+    final health = available <= 0 || ceiling <= 0
+        ? AiWalletHealth.empty
+        : (available <= (ceiling * 0.1).ceil() ? AiWalletHealth.low : AiWalletHealth.healthy);
+
+    return AiWalletBalance(
+      grantedUnits: granted,
+      debitedUnits: debited,
+      reservedUnits: reserved,
+      availableUnits: available,
+      lastTopUpUnits: lastTopUp,
+      health: health,
+    );
+  }
+
+  @override
+  Future<AiWalletData> getAiWallet({required RepositoryQuery query}) async {
+    final entries = _allAiCreditEntries;
+    return AiWalletData(
+      balance: _computeAiWalletBalance(entries),
+      entries: entries,
+    );
+  }
+
+  @override
+  Future<AiWalletData> grantAiCredits({
+    required RepositoryQuery query,
+    required String entryType,
+    required int units,
+    required String reason,
+    String? externalRef,
+  }) async {
+    MockControlCenterWriteStore.instance.grantAiCredits(
+      entryType: entryType,
+      units: units,
+      reason: reason,
+      externalRef: externalRef,
+    );
+    final entries = _allAiCreditEntries;
+    return AiWalletData(
+      balance: _computeAiWalletBalance(entries),
+      entries: entries,
+    );
+  }
+
+  /// PRC-A Batch 4 — 2.1 GiB used of a 5 GiB plan limit; enforcement is
+  /// shipped dark (mirrors the real deploy — `STORAGE_QUOTA_ENFORCEMENT`
+  /// defaults off).
+  @override
+  Future<StorageQuotaData> getStorageQuota({required RepositoryQuery query}) async {
+    const usedBytes = 2254857830; // ~2.1 GiB
+    const limitBytes = 5368709120; // 5 GiB
+    return const StorageQuotaData(
+      planName: 'Standard',
+      usedBytes: usedBytes,
+      limitBytes: limitBytes,
+      availableBytes: limitBytes - usedBytes,
+      health: StorageQuotaHealth.healthy,
+      enforced: false,
+    );
   }
 }

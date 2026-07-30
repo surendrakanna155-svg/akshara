@@ -1,6 +1,7 @@
 import type {
   AssignmentWithAccount,
   FinanceFeeAssignmentRow,
+  StudentAccountListRow,
 } from "./finance_assignments_repository.ts";
 import type {
   CollectionListRow,
@@ -25,11 +26,20 @@ export interface FinanceFeeStructureRow {
   name: string;
   academic_year: string;
   academic_year_id: string | null;
+  // Cap 67 — real class/section binding (soft FK, nullable = "unbound").
+  class_id: string | null;
+  section_id: string | null;
   description: string | null;
   status: string;
   created_by: string;
   created_at: string;
   updated_at: string;
+}
+
+/** Cap 67 — resolved class/section labels for a bound structure (looked up by the caller). */
+export interface FeeStructureClassBindingLabels {
+  className: string | null;
+  sectionName: string | null;
 }
 
 export interface FinanceFeeStructureItemRow {
@@ -81,6 +91,7 @@ function sumItemAmounts(items: FinanceFeeStructureItemRow[]): string {
 export function feeStructureToApi(
   structure: FinanceFeeStructureRow,
   items: FinanceFeeStructureItemRow[],
+  classBinding: FeeStructureClassBindingLabels = { className: null, sectionName: null },
 ): Record<string, unknown> {
   const categories = items
     .sort((a, b) => a.sort_order - b.sort_order)
@@ -98,6 +109,12 @@ export function feeStructureToApi(
     name: structure.name,
     academicYear: structure.academic_year,
     academicYearId: structure.academic_year_id,
+    // Cap 67 — real class/section binding; null = unbound (free-text
+    // description below remains the only "class range" for those rows).
+    classId: structure.class_id,
+    className: classBinding.className,
+    sectionId: structure.section_id,
+    sectionName: classBinding.sectionName,
     description: structure.description,
     status: structure.status,
     classRange: structure.description ?? "",
@@ -125,6 +142,30 @@ export function listEnvelope(
       page: pagination.page,
       pageSize: pagination.pageSize,
       total: pagination.total,
+      hasMore: pagination.hasMore,
+    },
+  };
+}
+
+// ICA-C7: response shape for keyset (cursor) pagination — same `{items, pagination}`
+// envelope, but the pagination block carries the opaque `cursor`/`nextCursor` instead
+// of page/total (which keyset does not compute). `cursor` echoes the request cursor
+// (null on the first page) so a client can tell where it is.
+export function keysetEnvelope(
+  items: Record<string, unknown>[],
+  pagination: {
+    pageSize: number;
+    cursor: string | null;
+    nextCursor: string | null;
+    hasMore: boolean;
+  },
+): Record<string, unknown> {
+  return {
+    items,
+    pagination: {
+      pageSize: pagination.pageSize,
+      cursor: pagination.cursor,
+      nextCursor: pagination.nextCursor,
       hasMore: pagination.hasMore,
     },
   };
@@ -169,6 +210,42 @@ function mapAccountStatus(status: string): string {
   return status === "closed" ? "closed" : "active";
 }
 
+/** Cap 73 — the applied mid-year admission proration, exposed as one unit. */
+function prorationToApi(
+  row: Pick<
+    FinanceFeeAssignmentRow,
+    | "proration_policy"
+    | "proration_basis"
+    | "proration_total_months"
+    | "proration_months_charged"
+    | "proration_reference_date"
+    | "proration_annual_amount"
+    | "proration_charged_amount"
+    | "proration_fallback_reason"
+    | "proration_is_override"
+    | "proration_override_reason"
+    | "proration_overridden_by"
+  >,
+): Record<string, unknown> {
+  return {
+    policy: row.proration_policy,
+    basis: row.proration_basis,
+    totalMonths: row.proration_total_months,
+    monthsCharged: row.proration_months_charged,
+    referenceDate: row.proration_reference_date,
+    annualAmount: row.proration_annual_amount != null
+      ? formatAmount(row.proration_annual_amount)
+      : null,
+    chargedAmount: row.proration_charged_amount != null
+      ? formatAmount(row.proration_charged_amount)
+      : null,
+    fallbackReason: row.proration_fallback_reason,
+    isOverride: row.proration_is_override,
+    overrideReason: row.proration_override_reason,
+    overriddenBy: row.proration_overridden_by,
+  };
+}
+
 export function assignmentToApi(
   row: FinanceFeeAssignmentRow,
 ): Record<string, unknown> {
@@ -182,6 +259,9 @@ export function assignmentToApi(
     assignedAt: row.assigned_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    // Cap 73 — which mid-year admission proration policy applied, and how it
+    // was derived (months charged / total months / basis), not just a number.
+    proration: prorationToApi(row),
   };
 }
 
@@ -205,6 +285,35 @@ export function studentAccountToApi(
     status: mapAccountStatus(account.status),
     lastPaymentDate: "",
     installmentPlan: "",
+    // Cap 73 — surfaced here too: this is the response shape callers actually
+    // consume for assign/bulk-assign, so the proration explanation travels
+    // with the result instead of requiring a second GET-assignment call.
+    proration: prorationToApi(assignment),
+  };
+}
+
+/**
+ * WEB-007 — maps one lightweight list row to the client contract. Same field
+ * names as `studentAccountToApi` for the fields the list actually shows, minus
+ * the per-account enrichment (invoice/proration/installment) the list omits.
+ */
+export function studentAccountListItemToApi(
+  row: StudentAccountListRow,
+): Record<string, unknown> {
+  return {
+    id: row.id,
+    studentId: row.student_id,
+    studentName: row.student_name ?? "",
+    admissionNumber: row.admission_number ?? "",
+    classLabel: row.class_label ?? "",
+    feeStructureName: row.fee_structure_name ?? "",
+    feeStructureId: row.fee_structure_id ?? "",
+    feeAssignmentId: row.fee_assignment_id,
+    academicYear: row.academic_year,
+    totalDue: formatAmount(row.total_fee),
+    totalPaid: formatAmount(row.amount_paid),
+    balance: formatAmount(row.outstanding_amount),
+    status: mapAccountStatus(row.status),
   };
 }
 
@@ -517,7 +626,9 @@ export function dashboardToApi(data: FinanceDashboardSnapshot): Record<string, u
 // invoices (debits) and completed collections (credits) into a running-balance
 // ledger, plus the raw invoice/payment lists and an account summary.
 export function studentLedgerToApi(ledger: StudentLedger): Record<string, unknown> {
-  const { account, invoices, collections } = ledger;
+  // PRA-P1-11 (S1): `refunds` is optional on StudentLedger; default to none so
+  // legacy callers keep working.
+  const { account, invoices, collections, refunds = [] } = ledger;
 
   const invoiceRows = invoices.map((inv) => ({
     id: inv.id,
@@ -540,11 +651,13 @@ export function studentLedgerToApi(ledger: StudentLedger): Record<string, unknow
   }));
 
   // Build a running-balance ledger: an invoice debits (raises balance owed), a
-  // completed collection credits (reduces it). Cancelled collections do not move
-  // the balance. Sorted by date then a stable debit-before-credit tiebreak.
+  // completed collection credits (reduces it), and a processed refund debits it
+  // back. Cancelled collections do not move the balance. Sorted by date then a
+  // stable tiebreak (invoice → payment → refund) so on a single day the money
+  // is paid before it is refunded.
   interface LedgerEntry {
     date: string;
-    kind: "invoice" | "payment";
+    kind: "invoice" | "payment" | "refund";
     reference: string;
     description: string;
     debit: number;
@@ -573,6 +686,27 @@ export function studentLedgerToApi(ledger: StudentLedger): Record<string, unknow
       debit: 0,
       credit: parseFloat(c.amount_collected) || 0,
       order: 1,
+    });
+  }
+  // PRA-P1-11 (S1): debit each processed refund. A refunded collection keeps
+  // status 'refunded'/'partially_refunded' (NOT 'cancelled'), so it survives the
+  // filter above and still credits its full original amount — while the summary
+  // reads account.outstanding_amount, which applyProcessedRefund already raised
+  // by the refunded amount. Without this debit the ledger's running balance ends
+  // below the summary and the printed statement contradicts itself. We debit
+  // each refund row's own refund_amount (the partial portion, for a
+  // partially_refunded collection), so partial refunds are never double-counted.
+  for (const r of refunds) {
+    entries.push({
+      date: r.refund_date,
+      kind: "refund",
+      reference: r.receipt_number ?? r.id,
+      description: r.receipt_number
+        ? `Refund against ${r.receipt_number}`
+        : "Refund",
+      debit: parseFloat(r.refund_amount) || 0,
+      credit: 0,
+      order: 2,
     });
   }
   entries.sort((a, b) => {

@@ -58,7 +58,7 @@ void main() {
         stepIndex: 6,
         answers: {
           'pack_id': 'pack_school',
-          'identity_name': 'Akshara Test School',
+          'identity_name': 'NIKSHA Test School',
           'review': 'confirmed',
         },
       );
@@ -67,7 +67,7 @@ void main() {
         draftId: draftId,
       );
       expect(draft.status, InterviewDraftStatus.readyForPreview);
-      expect(draft.organizationName, 'Akshara Test School');
+      expect(draft.organizationName, 'NIKSHA Test School');
     });
 
     test('generatePreview includes universal employee module flag', () async {
@@ -78,7 +78,7 @@ void main() {
         stepIndex: 0,
         answers: {
           'pack_id': 'pack_hospital',
-          'identity_name': 'Akshara Care',
+          'identity_name': 'NIKSHA Care',
         },
       );
       final preview = await mockRepo.generatePreview(

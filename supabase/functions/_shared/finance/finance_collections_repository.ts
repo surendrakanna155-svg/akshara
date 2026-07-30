@@ -6,6 +6,8 @@ import {
   allocateCollectionToHeads,
   reverseCollectionFromHeads,
 } from "./finance_head_allocations_repository.ts";
+// PRA-P1-08 (S1): read the per-school receipt prefix + sequencing feature flag.
+import { getSettingsRow } from "./finance_settings_repository.ts";
 
 export type CollectionStatus =
   | "draft"
@@ -79,6 +81,22 @@ export interface CreateCollectionInput {
    * replays the original collection instead of creating a second one.
    */
   idempotencyKey?: string;
+  /**
+   * PRA-P1-09 (S1): internal flag set ONLY by the Offline Instrument Register on
+   * successful reconciliation. Direct callers (the collection screen) leave it
+   * false, so cheque/DD/PDC entry is rejected there; a cleared instrument posts
+   * its collection through this flag. Not a client-supplied field.
+   */
+  allowInstrument?: boolean;
+  /**
+   * ICA-A2 (P0): the offline instrument this collection settles, set ONLY by the
+   * Offline Instrument Register's reconcile path. Persisted to
+   * finance_collections.offline_payment_id, which carries a partial UNIQUE index
+   * (finance_collections_offline_payment_uq) so a single instrument can back at
+   * most ONE collection — the DB backstop against a reconcile double-credit race.
+   * Not a client-supplied field.
+   */
+  offlinePaymentId?: string;
 }
 
 export class InvoiceNotCollectibleError extends Error {
@@ -86,6 +104,28 @@ export class InvoiceNotCollectibleError extends Error {
     super(message);
     this.name = "InvoiceNotCollectibleError";
   }
+}
+
+/**
+ * PRA-P1-09 (S1): raised when a cheque / DD / post-dated-cheque is entered
+ * directly through the collection path. Instruments must be recorded in the
+ * Offline Instrument Register, which posts the collection only after the
+ * instrument clears (so uncleared cheques are never booked as revenue). Maps
+ * to 422.
+ */
+export class InstrumentPaymentNotAllowedError extends Error {
+  constructor() {
+    super(
+      "Cheque, DD and post-dated cheque payments must be recorded in the Offline Instrument Register — they post to the ledger only after the instrument clears. Please use the Offline Instrument Register.",
+    );
+    this.name = "InstrumentPaymentNotAllowedError";
+  }
+}
+
+/** PRA-P1-09 (S1): instrument methods that must go through the register. */
+const INSTRUMENT_METHODS: readonly string[] = ["cheque", "dd", "pdc"];
+export function isInstrumentMethod(method: string): boolean {
+  return INSTRUMENT_METHODS.includes(method.trim().toLowerCase());
 }
 
 export class CollectionAmountError extends Error {
@@ -174,6 +214,93 @@ function buildReceiptNumber(): string {
   return `RCPT-${year}-${suffix}`;
 }
 
+/**
+ * PRA-P1-08 (S1): Indian financial-year label (April–March) for an ISO date,
+ * e.g. 2026-04-01 → "2026-27", 2027-03-31 → "2026-27".
+ */
+function fiscalYearOf(isoDate: string): string {
+  const d = new Date(`${isoDate}T00:00:00Z`);
+  const y = d.getUTCFullYear();
+  const startYear = d.getUTCMonth() >= 3 ? y : y - 1; // month 3 = April (0-indexed)
+  const endYY = String((startYear + 1) % 100).padStart(2, "0");
+  return `${startYear}-${endYY}`;
+}
+
+/**
+ * ICA-A3 (P1): a per-school receipt prefix derived from the school's UNIQUE
+ * `code` (schools.code is UNIQUE per organization). Uppercased and reduced to
+ * A–Z0–9 so it is a safe, human-readable receipt prefix; falls back to "RCP"
+ * only if a school somehow has no usable code. Because two schools in one org can
+ * never share a code, their DEFAULT receipt numbers can never be identical — so a
+ * second school's first collection can no longer collide with the first school's.
+ */
+async function schoolReceiptPrefix(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+): Promise<string> {
+  const rows = await db.queryObject<{ code: string }>(
+    `SELECT code FROM schools WHERE id = $1 AND organization_id = $2`,
+    [schoolId, organizationId],
+  );
+  const cleaned = String(rows[0]?.code ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+  return cleaned || "RCP";
+}
+
+/**
+ * PRA-P1-08 (S1): allocate a receipt number. When the per-school
+ * `receipts.receipt_sequencing` flag is on, returns a GAPLESS per-school,
+ * per-financial-year number `{prefix}/{FY}/{NNNNNN}`; otherwise the legacy random
+ * number (so existing receipts are untouched and both formats coexist under the
+ * scoped UNIQUE(organization_id, school_id, receipt_number)).
+ *
+ * ICA-A3 (P1): the prefix is per-school so two schools in one org cannot both mint
+ * `RCP/{FY}/000001` and collide. An explicitly configured `receipt_prefix` is
+ * honoured verbatim (the school owns its namespace); otherwise the default prefix
+ * is the school's own UNIQUE code, which keeps numbers human-distinct across
+ * schools. The scoped UNIQUE index on finance_receipts
+ * (organization_id, school_id, receipt_number) is the DB backstop that keeps this
+ * correct even if two schools were ever set to the same explicit prefix.
+ *
+ * The atomic `INSERT ... ON CONFLICT ... RETURNING` runs inside the collection's
+ * transaction, so if the collection rolls back the increment rolls back too — a
+ * failed collection never burns a number. Numbers are never decremented/reused;
+ * a cancelled collection keeps its number (a permanently-recorded void).
+ */
+async function allocateReceiptNumber(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  collectionDate: string,
+): Promise<string> {
+  const settingsRow = await getSettingsRow(db, organizationId, schoolId);
+  const settings = settingsRow?.settings ?? {};
+  const sequencingOn =
+    String(settings["receipts.receipt_sequencing"] ?? "false") === "true";
+  if (!sequencingOn) {
+    return buildReceiptNumber();
+  }
+  const configuredPrefix = String(settings["receipts.receipt_prefix"] ?? "").trim();
+  const prefix = configuredPrefix !== ""
+    ? configuredPrefix
+    : await schoolReceiptPrefix(db, organizationId, schoolId);
+  const fiscalYear = fiscalYearOf(collectionDate);
+  const rows = await db.queryObject<{ next_number: string }>(
+    `INSERT INTO finance_receipt_sequences (organization_id, school_id, fiscal_year, next_number)
+     VALUES ($1, $2, $3, 1)
+     ON CONFLICT (organization_id, school_id, fiscal_year)
+       DO UPDATE SET next_number = finance_receipt_sequences.next_number + 1,
+                     updated_at = timezone('utc', now())
+     RETURNING next_number`,
+    [organizationId, schoolId, fiscalYear],
+  );
+  const seq = Number(rows[0]?.next_number ?? 1);
+  return `${prefix}/${fiscalYear}/${String(seq).padStart(6, "0")}`;
+}
+
 function parseAmount(value: string | number): number {
   const num = typeof value === "number" ? value : parseFloat(value);
   return Number.isFinite(num) ? num : 0;
@@ -208,7 +335,8 @@ async function loadInvoiceForCollection(
     `SELECT fi.*, fsa.id AS student_account_id
      FROM finance_invoices fi
      JOIN finance_student_accounts fsa
-       ON fsa.fee_assignment_id = fi.fee_assignment_id
+       ON fsa.student_id = fi.student_id
+      AND fsa.academic_year = fi.academic_year
       AND fsa.organization_id = fi.organization_id
       AND fsa.school_id = fi.school_id
      WHERE fi.id = $1 AND fi.organization_id = $2 AND fi.school_id = $3
@@ -275,6 +403,26 @@ async function findCollectionByIdempotencyKey(
   return rows[0]?.id ?? null;
 }
 
+/**
+ * ICA-A2 (P0): locate the collection already posted for an offline instrument —
+ * used to REPLAY (rather than 500) when the partial-unique index
+ * finance_collections_offline_payment_uq rejects a second collection for the same
+ * instrument that slipped past the idempotency replay.
+ */
+async function findCollectionByOfflinePaymentId(
+  db: TenantQueryClient,
+  organizationId: string,
+  offlinePaymentId: string,
+): Promise<string | null> {
+  const rows = await db.queryObject<{ id: string }>(
+    `SELECT id FROM finance_collections
+     WHERE organization_id = $1 AND offline_payment_id = $2
+     LIMIT 1`,
+    [organizationId, offlinePaymentId],
+  );
+  return rows[0]?.id ?? null;
+}
+
 export async function createCollection(
   db: TenantQueryClient,
   organizationId: string,
@@ -283,6 +431,14 @@ export async function createCollection(
 ): Promise<CollectionWithReceipt> {
   if (!Number.isFinite(input.amountCollected) || input.amountCollected <= 0) {
     throw new CollectionAmountError("Amount collected must be greater than zero");
+  }
+
+  // PRA-P1-09 (S1): reject direct cheque/DD/PDC entry. Instruments post to the
+  // ledger only after the Offline Instrument Register reconciles them (which
+  // calls this function with `allowInstrument`), so an uncleared instrument is
+  // never booked as completed revenue.
+  if (!input.allowInstrument && isInstrumentMethod(input.paymentMethod)) {
+    throw new InstrumentPaymentNotAllowedError();
   }
 
   const invoice = await loadInvoiceForCollection(
@@ -319,7 +475,6 @@ export async function createCollection(
     );
   }
 
-  const receiptNumber = buildReceiptNumber();
   const collectionDate = input.collectionDate ?? new Date().toISOString().slice(0, 10);
 
   // FIN-D1: reject a collection dated on/before the latest closed day. Checked
@@ -333,14 +488,25 @@ export async function createCollection(
   const newOutstanding = outstanding - input.amountCollected;
   const newInvoiceStatus = computeInvoiceStatus(newOutstanding, total);
 
+  // PRA-P1-08 (S1): allocate the receipt number as the LAST step before the
+  // collection INSERT, inside this transaction. A rollback of anything below
+  // undoes the sequence increment, so a failed collection never burns a number.
+  const receiptNumber = await allocateReceiptNumber(
+    db,
+    organizationId,
+    schoolId,
+    collectionDate,
+  );
+
   let collectionRows: FinanceCollectionRow[];
   try {
     collectionRows = await db.queryObject<FinanceCollectionRow>(
       `INSERT INTO finance_collections (
         organization_id, school_id, student_id, invoice_id, student_account_id,
         receipt_number, collection_date, payment_method, reference_number,
-        amount_collected, notes, collection_status, collected_by, idempotency_key
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'completed', $12, $13)
+        amount_collected, notes, collection_status, collected_by, idempotency_key,
+        offline_payment_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'completed', $12, $13, $14)
       RETURNING *`,
       [
         organizationId,
@@ -356,6 +522,10 @@ export async function createCollection(
         input.notes ?? null,
         input.collectedBy,
         input.idempotencyKey ?? null,
+        // ICA-A2 (P0): tie the collection to its offline instrument (NULL for the
+        // normal collection screen path). The partial UNIQUE index on this column
+        // makes a second collection for the same instrument a hard DB error.
+        input.offlinePaymentId ?? null,
       ],
     );
   } catch (error) {
@@ -371,6 +541,25 @@ export async function createCollection(
         db,
         organizationId,
         input.idempotencyKey,
+      );
+      const replayed = existingId
+        ? await loadCollectionWithReceipt(db, organizationId, schoolId, existingId)
+        : null;
+      if (replayed) return replayed;
+    }
+    // ICA-A2 (P0): the partial-unique index finance_collections_offline_payment_uq
+    // is the hard DB backstop for a reconcile race that slips past BOTH the
+    // instrument row lock and the idempotency replay — recover by replaying the
+    // one collection already posted for this instrument instead of a raw 500.
+    if (
+      input.offlinePaymentId &&
+      String(error).includes("duplicate key") &&
+      String(error).includes("offline_payment")
+    ) {
+      const existingId = await findCollectionByOfflinePaymentId(
+        db,
+        organizationId,
+        input.offlinePaymentId,
       );
       const replayed = existingId
         ? await loadCollectionWithReceipt(db, organizationId, schoolId, existingId)
@@ -663,7 +852,25 @@ export async function cancelCollection(
     throw new ReceiptNotFoundError(collectionId);
   }
 
-  if (collection.collection_status === "completed") {
+  // PRA-P0-04 (S1): lock the collection row and re-read its status UNDER the lock
+  // before reversing any money. The production client never sends
+  // `expectedVersion`, so the optimistic `row_version` predicate on the terminal
+  // UPDATE below was vacuously true — two concurrent cancels of the same receipt
+  // both read 'completed', both reversed the amount_paid/outstanding deltas, and
+  // both cancelled the row (double reversal). With this lock the loser blocks
+  // here, then re-reads 'cancelled' and is rejected, so the reversal runs once.
+  const lockedRows = await db.queryObject<FinanceCollectionRow>(
+    `SELECT * FROM finance_collections
+     WHERE id = $1 AND organization_id = $2 AND school_id = $3
+     FOR UPDATE`,
+    [collectionId, organizationId, schoolId],
+  );
+  const lockedStatus = lockedRows[0]?.collection_status;
+  if (lockedStatus === "cancelled") {
+    throw new InvalidCollectionTransitionError("Collection is already cancelled");
+  }
+
+  if (lockedStatus === "completed") {
     const amount = parseAmount(collection.amount_collected);
     const invoiceRows = await db.queryObject<FinanceInvoiceRow>(
       `SELECT * FROM finance_invoices WHERE id = $1 AND organization_id = $2 AND school_id = $3`,
@@ -712,6 +919,7 @@ export async function cancelCollection(
       cancelled_at = timezone('utc', now()),
       updated_at = timezone('utc', now())
      WHERE id = $1 AND organization_id = $2 AND school_id = $3
+       AND collection_status <> 'cancelled'
        AND ($6::int IS NULL OR row_version = $6)
      RETURNING *`,
     [collectionId, organizationId, schoolId, reason, input.cancelledBy, expectedVersion ?? null],
@@ -885,4 +1093,32 @@ export async function listReceiptsForAccount(
      ORDER BY fr.receipt_date DESC, fr.created_at DESC`,
     [studentAccountId, organizationId, schoolId],
   );
+}
+
+/** The guardian phone + student name used for a post-payment receipt SMS. */
+export interface ReceiptSmsRecipient {
+  phone: string;
+  name: string;
+}
+
+/**
+ * Resolve the student's guardian phone + display name for a post-payment
+ * receipt SMS, keyed by the paid invoice. Tenant-scoped via the RLS context on
+ * `db`; returns null when no invoice/guardian with a phone is found.
+ */
+export async function getReceiptSmsRecipient(
+  db: TenantQueryClient,
+  invoiceId: string,
+): Promise<ReceiptSmsRecipient | null> {
+  const rows = await db.queryObject<ReceiptSmsRecipient>(
+    `SELECT u.phone AS phone, s.display_name AS name
+       FROM finance_invoices fi
+       JOIN students s ON s.id = fi.student_id
+       JOIN student_guardians sg ON sg.student_id = s.id
+       JOIN users u ON u.id = sg.guardian_user_id
+      WHERE fi.id = $1 AND u.phone IS NOT NULL
+      LIMIT 1`,
+    [invoiceId],
+  );
+  return rows[0] ?? null;
 }

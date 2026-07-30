@@ -88,7 +88,7 @@ class _FakeInterviewRepository implements OrganizationBuilderRepository {
   }) async {
     return ConfigPreview(
       draftId: draftId,
-      organizationName: 'Akshara Test',
+      organizationName: 'NIKSHA Test',
       packId: 'pack_school',
       modules: const [],
       roles: const [],
@@ -106,7 +106,7 @@ class _FakeInterviewRepository implements OrganizationBuilderRepository {
     return ProvisioningJob(
       id: 'job_test',
       draftId: draftId,
-      organizationName: 'Akshara Test',
+      organizationName: 'NIKSHA Test',
       status: ProvisioningJobStatus.pending,
       steps: const [],
       startedAt: DateTime(2026, 6, 1),
@@ -121,7 +121,7 @@ class _FakeInterviewRepository implements OrganizationBuilderRepository {
     return ProvisioningJob(
       id: jobId,
       draftId: 'draft_test',
-      organizationName: 'Akshara Test',
+      organizationName: 'NIKSHA Test',
       status: ProvisioningJobStatus.completed,
       steps: const [],
       startedAt: DateTime(2026, 6, 1),
@@ -178,7 +178,7 @@ void main() {
 
     await tester.enterText(
       find.byKey(QaTestKeys.organizationBuilderInterviewNameField),
-      'Akshara North Campus',
+      'NIKSHA North Campus',
     );
     await tester.tap(
       find.byKey(QaTestKeys.organizationBuilderInterviewContinueButton),

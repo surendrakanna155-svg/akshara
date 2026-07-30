@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../security/erp_role.dart';
+import '../security/permissions.dart';
 import '../security/rbac_service.dart';
 import 'entitlement_models.dart';
 import 'entitlement_provider.dart';
@@ -11,10 +12,25 @@ import 'entitlement_provider.dart';
 /// `managePlatformSubscriptions` server-side); the backend remains the real
 /// enforcement. Read-only listing + a single assign action — no billing.
 
-/// Whether the current user may assign organization plans (superAdmin only).
+/// Whether the current user may assign organization plans.
+///
+/// JOURNEY-002 — this was **role-only**. Combined with the `?? ErpRole.superAdmin`
+/// login fallback it meant an office clerk or a school nurse (any server role the
+/// client enum did not know) rendered the organization plan-assignment screen
+/// *and its Save action*. The fallback is fixed at the source, but a role-only
+/// gate is one enum drift away from the same outcome, so the check is now a
+/// conjunct: hold the role **and** hold a platform-administration permission the
+/// server actually seeded for that session.
+///
+/// `manageControlCenter` is the client-side stand-in for the server's
+/// `managePlatformSubscriptions` grant (there is no client [Permission] for it);
+/// both are seeded to the same platform-admin role set, and the backend remains
+/// the real enforcement on `POST /platform/subscriptions`.
 final canAssignOrganizationPlansProvider = Provider<bool>((ref) {
   final perms = ref.watch(userPermissionsProvider);
-  return perms?.hasRole(ErpRole.superAdmin) ?? false;
+  if (perms == null) return false;
+  return perms.hasRole(ErpRole.superAdmin) &&
+      perms.has(Permission.manageControlCenter);
 });
 
 /// Lists every organization with its current plan (drives the assign screen).

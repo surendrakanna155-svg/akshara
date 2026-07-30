@@ -1027,3 +1027,116 @@ class TestAnswerFormats(unittest.TestCase):
     def test_a_scaling_probe_outside_a_relation_domain_returns_none_not_a_crash(self):
         """Scaling the r of n!/(n-r)! drives mpmath to a gamma pole; the honest answer is 'unverifiable'."""
         self.assertIsNone(AR._solve("P = factorial(n) / factorial(n - r)", {"n": 5.0, "r": 20.0}, "P"))
+
+
+@unittest.skipUnless(INDEX.exists(), f"certified knowledge index not found at {INDEX}")
+class TestStatementBased(unittest.TestCase):
+    """JEE Main's staple. The AR truth table with the explanation link removed."""
+
+    @classmethod
+    def setUpClass(cls):
+        from kie.qie.certgen import statement_based as SB
+        cls.SB = SB
+        cls.c = _index()
+        cls.rb, _ = B.resolve(cls.c)
+        cls.rc, _ = COMP.resolve(cls.c)
+        cls.ra, _ = AR.resolve(cls.c)
+        cls.items = SB.generate(cls.ra)
+        cls.gated = E.gate_items(cls.items, resolved=cls.rb, resolved_chains=cls.rc)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.c.close()
+
+    def test_items_clear_the_battery(self):
+        bad = {r["gen_id"]: r["fatal"] + r["quarantine"] for r in self.gated if r["fatal"] or r["quarantine"]}
+        self.assertEqual(bad, {}, f"statement items must be clean: {bad}")
+
+    def test_key_follows_from_two_computed_truths(self):
+        for it in self.items:
+            tt = it["provenance"]["truth_table"]
+            expect = self.SB._KEY_FOR[(tt["statement_1_true"], tt["statement_2_true"])]
+            self.assertEqual(it["answer_label"], expect, it["gen_id"])
+
+    def test_truths_are_recomputable(self):
+        for it in self.items:
+            b = next(x.binding for x in self.ra if x.binding.binding_id == it["binding_id"])
+            tt = it["provenance"]["truth_table"]
+            lines = it["stem"].split("\n")
+            s1 = lines[0].replace("Statement I: ", "")
+            match = [c for c in list(b.true_claims) + [b.false_claim] if c.text == s1]
+            self.assertTrue(match, f"{it['gen_id']}: statement I not traceable to a declared claim")
+            got = AR.claim_is_true(b.relation, b.base_params, b.solve_for, match[0])
+            self.assertEqual(bool(got), tt["statement_1_true"])
+
+    def test_every_wrong_option_is_refuted(self):
+        for it in self.items:
+            res = self.SB.verify_options(it)
+            self.assertTrue(res["ok"], f"{it['gen_id']}: {res['detail']}")
+            self.assertEqual(res["unrefuted"], [])
+
+    def test_two_identical_statements_are_refused(self):
+        """A key requiring both statements false would reuse one sentence twice — not a two-statement item."""
+        for it in self.items:
+            lines = it["stem"].split("\n")
+            self.assertNotEqual(lines[0].replace("Statement I: ", ""),
+                                lines[1].replace("Statement II: ", ""))
+
+
+@unittest.skipUnless(INDEX.exists(), f"certified knowledge index not found at {INDEX}")
+class TestCaseStudy(unittest.TestCase):
+    """Shared stimulus with dependent sub-questions — CBSE case-based, JEE Advanced paragraph."""
+
+    @classmethod
+    def setUpClass(cls):
+        from kie.qie.certgen import case_study as CS
+        cls.CS = CS
+        cls.c = _index()
+        cls.rb, _ = B.resolve(cls.c)
+        cls.rc, _ = COMP.resolve(cls.c)
+        cls.items = CS.generate(cls.rc, 1, "TESTCS")
+        cls.gated = E.gate_items(cls.items, resolved=cls.rb, resolved_chains=cls.rc)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.c.close()
+
+    def test_items_clear_the_battery(self):
+        bad = {r["gen_id"]: r["fatal"] + r["quarantine"] for r in self.gated if r["fatal"] or r["quarantine"]}
+        self.assertEqual(bad, {}, f"case items must be clean: {bad}")
+
+    def test_cases_are_structurally_sound(self):
+        res = self.CS.verify_case(self.items)
+        self.assertTrue(res["ok"], res["detail"])
+        self.assertGreater(res["cases"], 0)
+
+    def test_parts_share_one_passage_and_are_contiguous(self):
+        by_case = {}
+        for it in self.items:
+            by_case.setdefault(it["case_id"], []).append(it)
+        for cid, group in by_case.items():
+            group.sort(key=lambda r: r["sub_index"])
+            self.assertEqual([r["sub_index"] for r in group], list(range(1, len(group) + 1)))
+            passages = {r["stem"].split("\nQuestion ")[0] for r in group}
+            self.assertEqual(len(passages), 1, f"{cid}: parts must share one passage")
+
+    def test_each_part_has_a_distinct_answer(self):
+        """A case whose parts share an answer is not progressive."""
+        by_case = {}
+        for it in self.items:
+            by_case.setdefault(it["case_id"], []).append(it)
+        for cid, group in by_case.items():
+            vals = [r["answer_value"] for r in group]
+            self.assertEqual(len(set(vals)), len(vals), f"{cid}: repeated answer across parts")
+
+    def test_sub_answers_match_the_parent_chain_execution(self):
+        """Every sub-answer must be a value the chain actually produced — not recomputed here."""
+        for it in self.items:
+            inter = it["provenance"]["intermediates"]
+            self.assertIn(it["answer_value"], [SOL.fmt_exact(v, 2) for v in inter.values()],
+                          f"{it['gen_id']}: answer is not one of the chain's intermediates")
+
+    def test_a_duplicated_case_is_skipped_whole(self):
+        """Two chains sharing a leading prefix must not emit a case with a missing part."""
+        res = self.CS.verify_case(self.items)
+        self.assertTrue(res["ok"], "no partial case may be emitted")

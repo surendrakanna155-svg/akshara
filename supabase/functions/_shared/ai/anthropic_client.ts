@@ -1,4 +1,4 @@
-// Shared AI client for Akshara AI surfaces (copilot, parent insights,
+// Shared AI client for NIKSHA AI surfaces (copilot, parent insights,
 // question-intelligence gap-fill).
 //
 // Provider is config-driven so the same call sites work against either:
@@ -195,7 +195,7 @@ async function callOpenRouter(input: ClaudeCallInput, model: string): Promise<Cl
       "authorization": `Bearer ${input.apiKey}`,
       "content-type": "application/json",
       // Optional OpenRouter attribution headers — harmless if ignored.
-      "x-title": "Akshara",
+      "x-title": "NIKSHA",
     },
     body: JSON.stringify({
       model,

@@ -11,6 +11,9 @@ class UploadStudentDocumentRequestDto {
         'type': request.type,
         'fileName': request.fileName,
         'status': request.status,
+        // PRA-P1-19 — the real stored object path (omitted when confirming
+        // through the presign flow supplies it separately).
+        if (request.storagePath != null) 'storage_path': request.storagePath,
       },
     );
   }

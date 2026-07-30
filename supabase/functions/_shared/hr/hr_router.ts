@@ -1,5 +1,7 @@
 import type { AppConfig } from "../config.ts";
 import { errorEnvelope } from "../http.ts";
+import { routeStaffDuty } from "../staff_duty/staff_duty_router.ts";
+import { routeStatutory } from "./statutory_payroll_router.ts";
 import {
   handleAttendance,
   handleDashboard,
@@ -22,6 +24,10 @@ import {
   handleSalaryRegister,
 } from "./hr_reports_handlers.ts";
 import {
+  handleLeaveAccrualBalances,
+  handleRunLeaveAccrual,
+} from "./leave_accrual_handlers.ts";
+import {
   handleApproveLeaveRequest,
   handleBatchDecideLeave,
   handleCreateEmployee,
@@ -31,6 +37,7 @@ import {
   handleGeneratePayrollRun,
   handleProcessPayrollRun,
   handleRejectLeaveRequest,
+  handleUpdateSettings,
   handleUpsertSalaryStructure,
   handleSetEmployeeProbation,
   handleSetEmployeeStatus,
@@ -38,9 +45,6 @@ import {
   handleUpdatePerformanceReview,
   handleUpdateRecruitmentOpening,
 } from "./hr_write_handlers.ts";
-
-const UUID_SEGMENT =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function matchHrRoute(
   method: string,
@@ -68,6 +72,10 @@ function matchHrRoute(
     }
     if (path === "/hr/leave/balances") {
       return { handler: handleLeaveBalances, args: [] };
+    }
+    // PRA-P1-34 — derivable leave-accrual balances (from the append-only ledger).
+    if (path === "/hr/leave/accrual/balances") {
+      return { handler: handleLeaveAccrualBalances, args: [] };
     }
     if (path === "/hr/reports/headcount") {
       return { handler: handleHeadcount, args: [] };
@@ -121,6 +129,11 @@ function matchHrRoute(
     if (path === "/hr/leave/batch-decide") {
       return { handler: handleBatchDecideLeave, args: [] };
     }
+    // PRA-P1-34 — run automatic leave accrual for the school (idempotent per period).
+    // Literal path; registered before the /hr/leave/{id}/approve|reject regexes.
+    if (path === "/hr/leave/accrual/run") {
+      return { handler: handleRunLeaveAccrual, args: [] };
+    }
     // HR-D2 probation confirm/extend.
     const probationMatch = path.match(/^\/hr\/employees\/([^/]+)\/probation$/);
     if (probationMatch) {
@@ -157,6 +170,11 @@ function matchHrRoute(
   }
 
   if (method === "PUT") {
+    // PRA-P1-33 — HR settings are now writable (previously GET-only). Literal
+    // path, registered before the /hr/employees/{id} catch-all.
+    if (path === "/hr/settings") {
+      return { handler: handleUpdateSettings, args: [] };
+    }
     const employeeMatch = path.match(/^\/hr\/employees\/([^/]+)$/);
     if (employeeMatch) {
       return { handler: handleUpdateEmployee, args: [employeeMatch[1]!] };
@@ -193,15 +211,22 @@ export async function routeHr(
 ): Promise<Response | null> {
   if (!path.startsWith("/hr")) return null;
 
+  // W4 staff-duty sub-module (owner #6): /hr/staff-duties/* (substitute classes,
+  // exam invigilation, non-teaching duties) is served by the dedicated staff_duty
+  // module router — a separate concern from attendance, kept off this router's own
+  // match table. Returns null for every other /hr path, so those fall through.
+  const staffDuty = await routeStaffDuty(req, config, method, path);
+  if (staffDuty) return staffDuty;
+
+  // PRA-P1-35 (owner #9) statutory-payroll config sub-module: /hr/payroll/statutory/*
+  // (PF/ESI/PT/TDS rates, ceilings, PT slabs). Served by its dedicated router; returns
+  // null for every other /hr path so those fall through to the main match table.
+  const statutory = await routeStatutory(req, config, method, path);
+  if (statutory) return statutory;
+
   const match = matchHrRoute(method, path);
   if (!match) {
-    return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
-  }
-
-  for (const arg of match.args) {
-    if (arg.includes("-") && !UUID_SEGMENT.test(arg)) {
-      // Allow non-UUID legacy mock ids in path for compatibility
-    }
+    return null;
   }
 
   return await match.handler(req, config, ...match.args);

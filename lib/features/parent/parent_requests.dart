@@ -63,14 +63,26 @@ class ParentPaymentInitiateRequest {
 }
 
 /// Domain request to confirm a payment after gateway callback.
+///
+/// PRA-P0-02 (client half): [razorpayPaymentId]/[razorpaySignature] carry the
+/// VERIFIED gateway proof produced by a real payment-gateway SDK callback. They
+/// map to the backend's `razorpay_payment_id`/`razorpay_signature` body keys and
+/// flow into `payment_service.ts`'s live-verification path, which — in live
+/// (non-stub) mode — refuses to capture without them. They are optional wiring
+/// only: no SDK is wired yet (an explicit OWNER decision), so they are currently
+/// always null and the client never claims success in that case.
 class ParentPaymentConfirmRequest {
   const ParentPaymentConfirmRequest({
     required this.paymentIntentId,
     required this.transactionRef,
+    this.razorpayPaymentId,
+    this.razorpaySignature,
   });
 
   final String paymentIntentId;
   final String transactionRef;
+  final String? razorpayPaymentId;
+  final String? razorpaySignature;
 }
 
 /// Domain request to send a parent message to a teacher.

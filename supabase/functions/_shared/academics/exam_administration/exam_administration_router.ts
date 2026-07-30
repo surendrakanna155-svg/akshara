@@ -8,8 +8,10 @@ import {
   handleExamToppers,
   handleGenerateSeating,
   handleGetExam,
+  handleGetGradeScale,
   handleGetSeating,
   handleGraceMark,
+  handlePutGradeScale,
   handleHallTickets,
   handleListAdjustments,
   handleListExamMarks,
@@ -22,6 +24,7 @@ import {
   handleRemindPendingMarks,
   handleProcessExamResults,
   handlePublishExamResults,
+  handleUnpublishExamResults,
   handleReportCards,
   handleScheduleExam,
   handleTabulationRegister,
@@ -53,6 +56,14 @@ export function matchExamAdministrationRoute(
   // before the generic /academics/exams/marks/{id} PATCH matcher (different verb).
   if (path === "/academics/exams/marks/remind" && method === "POST") {
     return { handler: handleRemindPendingMarks, args: [] };
+  }
+
+  // PRA-P1-13 — per-school grade scale (read + save). Literal path matched BEFORE
+  // the generic /academics/exams/{examId} GET so "grade-scale" is never mistaken
+  // for an exam id.
+  if (path === "/academics/exams/grade-scale") {
+    if (method === "GET") return { handler: handleGetGradeScale, args: [] };
+    if (method === "PUT") return { handler: handlePutGradeScale, args: [] };
   }
 
   // EXM-3/4b/7 — class + term scoped read reports. Matched BEFORE the generic
@@ -160,6 +171,8 @@ export function matchExamAdministrationRoute(
       handler: handleVerifyCoordinator,
     },
     { suffix: "/publish", method: "POST", handler: handlePublishExamResults },
+    // PRA-P1-12 — reopen a published exam for correction / re-evaluation.
+    { suffix: "/unpublish", method: "POST", handler: handleUnpublishExamResults },
   ];
 
   for (const { suffix, method: allowed, handler } of actionMatchers) {
@@ -182,7 +195,7 @@ export async function routeExamAdministration(
 
   const match = matchExamAdministrationRoute(method, path);
   if (!match) {
-    return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+    return null;
   }
 
   return await match.handler(req, config, ...match.args);

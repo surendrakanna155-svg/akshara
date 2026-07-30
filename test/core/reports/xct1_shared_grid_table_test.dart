@@ -87,7 +87,7 @@ void main() {
       ),
     );
     final bytes = await service.buildDailyReportPdf(
-      schoolName: 'Akshara Public School',
+      schoolName: 'NIKSHA Public School',
       dateLabel: '2026-07-04',
       snapshot: snapshot,
     );

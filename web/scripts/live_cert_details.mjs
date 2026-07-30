@@ -4,7 +4,7 @@ import { chromium } from '@playwright/test';
 import { ensureFreshSession } from './refresh_session.mjs';
 
 const BASE = process.env.BASE_URL || 'http://localhost:4350';
-const API = 'https://akshara.veloraunisexsalon.com/functions/v1/api';
+const API = 'https://api.nikshaos.in/functions/v1/api';
 const s = await ensureFreshSession(600);
 
 const get = async (p) => {

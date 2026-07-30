@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/widgets/akshara_section_empty.dart';
 import '../../../../theme/radius.dart';
 import '../../../../theme/spacing.dart';
 import '../../../../theme/theme_extensions.dart';
@@ -17,6 +18,16 @@ class AdmissionsCounselorLeaderboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Same defect as the pipeline: an empty list inside a fixed 120px box is
+    // 120px of blank space under a header on day one.
+    if (entries.isEmpty) {
+      return const AksharaSectionEmpty(
+        message: 'No counselor activity yet. Rankings appear once leads are '
+            'assigned.',
+        icon: Icons.leaderboard_outlined,
+      );
+    }
+
     if (AdminLayout.useCardLayout(context)) {
       return Column(
         children: [

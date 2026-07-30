@@ -15,7 +15,7 @@ import 'package:go_router/go_router.dart';
 
 import 'patrol_app.dart';
 
-/// Default Patrol config for Akshara QA builds (extended timeouts for splash).
+/// Default Patrol config for NIKSHA QA builds (extended timeouts for splash).
 PatrolTesterConfig aksharaPatrolConfig() {
   return const PatrolTesterConfig(
     existsTimeout: Duration(seconds: 30),

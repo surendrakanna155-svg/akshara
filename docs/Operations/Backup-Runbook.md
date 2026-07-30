@@ -4,7 +4,7 @@
 > **[`../BACKUP_RESTORE_RUNBOOK.md`](../BACKUP_RESTORE_RUNBOOK.md)**.
 >
 > The previous content of this file described **Supabase-managed PITR / daily snapshots**, which does
-> **not** match the actual deployment. Akshara runs on a **self-hosted VPS** with nightly, AES-256
+> **not** match the actual deployment. NIKSHA OS runs on a **self-hosted VPS** with nightly, AES-256
 > **encrypted** `pg_dump` backups (script `deploy/akshara-vps/backup/akshara-backup.sh`), an
 > `ops_backup_runs` ledger, a monthly restore drill, and an operator-only `/health/backup` probe. The
 > stale Supabase-PITR description was removed to avoid contradicting the canonical runbook.

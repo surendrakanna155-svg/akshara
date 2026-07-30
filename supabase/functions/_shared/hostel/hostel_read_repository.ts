@@ -91,7 +91,8 @@ export async function recomputeVisitors(
 
 /** Default finance-integration note shown on the Mess screen when no seed snapshot is present. */
 const DEFAULT_MESS_FINANCE_NOTE =
-  "Mess expenses post to Finance FN-05 expense ledger";
+  "Mess expenses are tracked in the Hostel module and are NOT posted to the Finance ledger; " +
+  "record them against the FN-05 expense head manually if needed";
 
 /** Newest-first ordering by ISO `recordedAt` timestamp (string compare is safe for ISO). */
 function byRecordedAtDesc(

@@ -105,31 +105,45 @@ class MarksEntryField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final field = SizedBox(
+      width: width,
+      child: TextField(
+        key: fieldKey,
+        controller: controller,
+        focusNode: focusNode,
+        enabled: enabled,
+        keyboardType: TextInputType.number,
+        textInputAction: TextInputAction.next,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        decoration: InputDecoration(
+          labelText: label,
+          isDense: true,
+          suffixText: '/$maxMarks',
+        ),
+        onSubmitted: onSubmitted == null ? null : (_) => onSubmitted!(),
+      ),
+    );
+
     // P2-UX-4 (Polish §7): a dense fixed-width grid cell — cap the inherited text
     // scale at 1.3× so a very large system font can't overflow the 88px cell or
     // its `/max` suffix. A no-op at the default 1.0×.
-    final mq = MediaQuery.of(context);
-    return MediaQuery(
-      data: mq.copyWith(
-        textScaler: AksharaAccessibility.clampDenseGridTextScale(mq.textScaler),
-      ),
-      child: SizedBox(
-        width: width,
-        child: TextField(
-          key: fieldKey,
-          controller: controller,
-          focusNode: focusNode,
-          enabled: enabled,
-          keyboardType: TextInputType.number,
-          textInputAction: TextInputAction.next,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          decoration: InputDecoration(
-            labelText: label,
-            isDense: true,
-            suffixText: '/$maxMarks',
-          ),
-          onSubmitted: onSubmitted == null ? null : (_) => onSubmitted!(),
-        ),
+    //
+    // PERF (RC): read ONLY the text-scale aspect. `MediaQuery.of` subscribes the
+    // cell to EVERY MediaQueryData field — including `viewInsets` — so every
+    // marks cell in the grid rebuilt on every frame of the keyboard open/close
+    // animation. `MediaQuery.textScalerOf` is the scoped accessor and rebuilds
+    // only when the text scale actually changes.
+    final scaler = MediaQuery.textScalerOf(context);
+    final clamped = AksharaAccessibility.clampDenseGridTextScale(scaler);
+    // Unclamped (the overwhelmingly common case, incl. the default 1.0×): the
+    // override would be a no-op, so don't push a MediaQuery — and don't read the
+    // full MediaQueryData needed to build one.
+    if (clamped == scaler) return field;
+
+    return Builder(
+      builder: (context) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(textScaler: clamped),
+        child: field,
       ),
     );
   }

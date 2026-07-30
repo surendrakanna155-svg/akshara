@@ -20,6 +20,7 @@ import {
   createNotificationTemplate,
   deleteAudienceSegmentEntry,
   getBroadcastReport,
+  getChannelPolicyForSchool,
   listAudienceSegmentEntries,
   listBroadcastHistoryEntries,
   listNotificationTemplates,
@@ -32,10 +33,16 @@ import {
   sendBroadcastMessage,
   sendDirectMessage,
   updateNotificationTemplate,
+  upsertChannelPolicyForSchool,
 } from "./communication_service.ts";
 import {
   BroadcastNotFoundError,
   getNotificationDeliveryMetrics,
+  markAllNotificationsRead,
+  markNotificationRead,
+  registerDeviceToken,
+  unregisterDeviceToken,
+  updateDeliveryStatusFromWebhook,
 } from "./communication_repository.ts";
 import { processDeliveryQueue } from "./notification_service.ts";
 import {
@@ -140,6 +147,24 @@ function boolFlag(body: Record<string, unknown>, ...keys: string[]): boolean {
     if (value === true || value === "true") return true;
   }
   return false;
+}
+
+/**
+ * PRA-P1-45: read a string[] from the body under any of the given keys (first
+ * that is an array wins). Non-array/absent ⇒ undefined, so the service applies
+ * its push-only default. Blanks are trimmed out.
+ */
+function stringArray(
+  body: Record<string, unknown>,
+  ...keys: string[]
+): string[] | undefined {
+  for (const key of keys) {
+    const value = body[key];
+    if (Array.isArray(value)) {
+      return value.map((v) => String(v ?? "").trim()).filter((v) => v.length > 0);
+    }
+  }
+  return undefined;
 }
 
 export async function handleListTemplates(
@@ -539,6 +564,8 @@ export async function handleCreateBroadcast(
       return jsonResponse(envelope(scheduled), { status: 201 });
     }
 
+    // PRA-P1-45: opt-in SMS/email fallback channels (default push-only).
+    const channels = stringArray(body, "channels");
     const result = await withTenantContext(config, auth.claims, async (db) =>
       await sendBroadcastMessage(
         db,
@@ -550,6 +577,7 @@ export async function handleCreateBroadcast(
           audienceClass,
           audienceSection,
           requiresAck,
+          channels,
         },
         req,
       )
@@ -789,6 +817,81 @@ export async function handleProcessNotificationQueue(
   }
 }
 
+/**
+ * Batch 6: GET /communications/channel-policy — read the caller's school channel
+ * escalation policy (falls back to a not-configured shape). Gated by
+ * `manageCommunications` (same admin gate as template management + the queue
+ * processor).
+ */
+export async function handleGetChannelPolicy(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requirePermission(auth.claims, "manageCommunications");
+  if (denied) return denied;
+
+  try {
+    const policy = await withTenantContext(config, auth.claims, async (db) =>
+      await getChannelPolicyForSchool(db, auth.claims)
+    );
+    return jsonResponse(envelope(policy));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    if (error instanceof CommunicationValidationError) {
+      return errorEnvelope("VALIDATION_ERROR", error.message, 422);
+    }
+    return errorEnvelope("INTERNAL_ERROR", "Failed to load channel policy", 500);
+  }
+}
+
+/**
+ * Batch 6: PUT /communications/channel-policy — create/replace the caller's
+ * school channel escalation policy. Gated by `manageCommunications`. An invalid
+ * chain (unknown/duplicate channel, empty) → 422.
+ */
+export async function handleUpsertChannelPolicy(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requirePermission(auth.claims, "manageCommunications");
+  if (denied) return denied;
+
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) {
+    return errorEnvelope("VALIDATION_ERROR", "Invalid JSON body", 422);
+  }
+  const isActiveRaw = body["is_active"] ?? body["isActive"];
+
+  try {
+    const policy = await withTenantContext(config, auth.claims, async (db) =>
+      await upsertChannelPolicyForSchool(
+        db,
+        auth.claims,
+        {
+          escalationChain: body["escalation_chain"] ?? body["escalationChain"],
+          isActive: typeof isActiveRaw === "boolean" ? isActiveRaw : undefined,
+        },
+        req,
+      )
+    );
+    return jsonResponse(envelope(policy));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    if (error instanceof CommunicationValidationError) {
+      return errorEnvelope("VALIDATION_ERROR", error.message, 422);
+    }
+    return errorEnvelope("INTERNAL_ERROR", "Failed to save channel policy", 500);
+  }
+}
+
 function paginationFromRequest(req: Request): { limit: number; offset: number } {
   const url = new URL(req.url);
   const limit = Math.min(Math.max(parseInt(url.searchParams.get("limit") ?? "50", 10) || 50, 1), 100);
@@ -995,7 +1098,6 @@ export async function handleMarkNotificationRead(
   }
 
   try {
-    const { markNotificationRead } = await import("./communication_repository.ts");
     const updated = await withTenantContext(config, auth.claims, async (db) => {
       const ok = await markNotificationRead(db, auth.claims.tenant_id, auth.claims.sub, notificationId);
       if (ok) {
@@ -1062,7 +1164,6 @@ export async function handleMarkAllNotificationsRead(
   }
 
   try {
-    const { markAllNotificationsRead } = await import("./communication_repository.ts");
     const count = await withTenantContext(config, auth.claims, async (db) => {
       const c = await markAllNotificationsRead(db, auth.claims.tenant_id, auth.claims.sub);
       if (c > 0) {
@@ -1099,7 +1200,6 @@ export async function handleRegisterDeviceToken(
   }
 
   try {
-    const { registerDeviceToken } = await import("./communication_repository.ts");
     await withTenantContext(config, auth.claims, async (db) => {
       await registerDeviceToken(db, auth.claims.tenant_id, auth.claims.sub, platform, token);
       await auditComm(db, auth.claims, "deviceTokenRegistered", "communication.device_token.registered",
@@ -1132,7 +1232,6 @@ export async function handleUnregisterDeviceToken(
   }
 
   try {
-    const { unregisterDeviceToken } = await import("./communication_repository.ts");
     await withTenantContext(config, auth.claims, async (db) => {
       await unregisterDeviceToken(db, auth.claims.tenant_id, auth.claims.sub, token);
       await auditComm(db, auth.claims, "deviceTokenUnregistered", "communication.device_token.unregistered",
@@ -1243,16 +1342,7 @@ export async function handleDeliveryWebhook(req: Request, config: AppConfig): Pr
     };
 
     const updated = await withTenantContext(config, tenantClaims, async (db) => {
-      const rows = await db.queryObject<{ id: string }>(
-        `UPDATE notification_deliveries
-            SET status = $2,
-                delivered_at = CASE WHEN $2 = 'delivered' THEN now() ELSE delivered_at END,
-                updated_at = now()
-          WHERE id = $1::uuid
-          RETURNING id`,
-        [row.id, status],
-      );
-      const id = rows[0]?.id ?? null;
+      const id = await updateDeliveryStatusFromWebhook(db, row.id, status);
       if (id) {
         await auditComm(db, tenantClaims, "deliveryConfirmed", "communication.delivery.confirmed",
           "notification_delivery", id, { status }, req);

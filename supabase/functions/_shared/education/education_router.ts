@@ -29,6 +29,7 @@ import {
   handleUpdateQuestionBank,
   handleUpdateReportRemark,
 } from "./education_handlers.ts";
+import { matchLearningEvidenceRoute } from "./learning_evidence_router.ts";
 
 const UUID_SEGMENT =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -40,6 +41,13 @@ export function matchEducationRoute(
   handler: (req: Request, config: AppConfig, ...args: string[]) => Promise<Response>;
   args: string[];
 } | null {
+  // EIP-6 — the Learning Evidence spine owns `/education/evidence/*`. Delegated
+  // here so it goes live through the already-mounted routeEducation entry (no
+  // api/app.ts change). Its self-contained matcher is authoritative for that
+  // subtree; a miss falls through to the existing education routes below.
+  const evidence = matchLearningEvidenceRoute(method, path);
+  if (evidence) return evidence;
+
   if (path === "/education/question-bank" && method === "GET") {
     return { handler: handleListQuestionBank, args: [] };
   }

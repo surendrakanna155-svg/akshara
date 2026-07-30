@@ -62,7 +62,7 @@ function clearAiKeyEnv() {
 }
 
 const baseContext: CopilotContextBundle = {
-  school: { schoolId: "s1", name: "Akshara", code: "AKS" },
+  school: { schoolId: "s1", name: "NIKSHA", code: "AKS" },
   academicYear: { label: "2026-27", status: "active" },
   finance: { access: "granted", completedCollections: 3, collectedAmount: "1000" },
   admissions: { access: "denied" },

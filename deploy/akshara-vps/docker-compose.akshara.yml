@@ -1,11 +1,30 @@
 # Akshara isolated lean self-host (Supabase) — VPS 46.28.44.46, ALL localhost-only.
 # Live Stage 4 stack: Postgres + PostgREST + nginx rest-gateway + Deno edge.
 # Real env (.env.akshara, postgrest.env) live ONLY on the VPS, chmod 600 — never committed.
+# Log rotation for every service below.
+#
+# Docker's default json-file driver has NO max-size and NO max-file, so
+# container logs grow until the disk fills. That matters more here than usual:
+# the edge request log is the ONLY durable diagnostic artifact this system
+# produces (client-side error reporting resolves to no-ops in a production
+# build), and this VPS is SHARED with unrelated production workloads — so a
+# runaway log here takes down someone else's business too.
+#
+# 50MB x 5 caps each service at 250MB while keeping roughly a week of pilot
+# traffic. The existing logrotate rule (backup/install-ops-cron.sh) only covers
+# /var/log/akshara/*.log — the shell scripts — and never touched these.
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "50m"
+    max-file: "5"
+
 name: akshara
 services:
   akshara-postgres:
     image: public.ecr.aws/supabase/postgres:17.6.1.127
     container_name: akshara-postgres
+    logging: *default-logging
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -26,6 +45,7 @@ services:
   akshara-postgrest:
     image: public.ecr.aws/supabase/postgrest:v14.5
     container_name: akshara-postgrest
+    logging: *default-logging
     restart: unless-stopped
     env_file: postgrest.env
     depends_on:
@@ -35,6 +55,7 @@ services:
   akshara-rest-gateway:
     image: nginx:alpine
     container_name: akshara-rest-gateway
+    logging: *default-logging
     restart: unless-stopped
     volumes: ["./gateway.conf:/etc/nginx/conf.d/default.conf:ro"]
     depends_on: [akshara-postgrest]
@@ -43,6 +64,7 @@ services:
   akshara-edge:
     image: denoland/deno:alpine
     container_name: akshara-edge
+    logging: *default-logging
     restart: unless-stopped
     working_dir: /app
     command: ["run","-A","--no-lock","api/index.ts"]
@@ -56,6 +78,42 @@ services:
     ports: ["127.0.0.1:3000:8000"]
     networks: [akshara-net]
 
+  # Face embedding service — derives the 512-d AuraFace vector from an aligned
+  # 112x112 crop for 1:1 staff-attendance verification.
+  #
+  # NO `ports:` — deliberately. This handles biometric data and is reachable
+  # only from akshara-net (the edge function calls it by service name). Exposing
+  # it on the host would put an unauthenticated embedding endpoint on the box.
+  #
+  # WORKERS = one per vCPU. Measured: N single-threaded workers scale ~linearly
+  # (3.50x at 4) where intra-op threads manage only 1.86x, so N workers beat one
+  # N-threaded process by ~1.85x on identical cores. The current VPS is 1 vCPU.
+  #
+  # The model is mounted read-only, never baked into the image and never
+  # committed. Populate ./face-inference/models via face-inference/fetch_model.sh.
+  akshara-face-inference:
+    build: ./face-inference
+    image: akshara-face-inference:latest
+    container_name: akshara-face-inference
+    logging: *default-logging
+    restart: unless-stopped
+    environment:
+      WORKERS: "1"
+      FACE_MODEL_PATH: /models/glintr100_int8.onnx
+      FACE_DETECTOR_PATH: /models/blaze_face_short_range.tflite
+      FACE_MODEL_TAG: auraface-v1
+    volumes:
+      - ./face-inference/models:/models:ro
+    healthcheck:
+      # Loads the model, so a missing or unreadable file surfaces here rather
+      # than on a staff member's first check-in.
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8080/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks: [akshara-net]
+
   # Supabase Storage (Batch 7). Self-host on local disk volume; service manages
   # its own storage.* schema. One-time setup (role password, schema ownership,
   # grants, bucket) is in storage/README.md. Host port lets the public Nginx
@@ -63,6 +121,7 @@ services:
   akshara-storage:
     image: supabase/storage-api:v1.19.3
     container_name: akshara-storage
+    logging: *default-logging
     restart: unless-stopped
     env_file: storage.env
     volumes: [akshara_storage_data:/var/lib/storage]

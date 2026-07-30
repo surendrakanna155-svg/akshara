@@ -43,4 +43,4 @@
 
 ## Support contacts
 
-Document your school's Akshara admin contact and escalation path here before go-live.
+Document your school's NIKSHA OS admin contact and escalation path here before go-live.

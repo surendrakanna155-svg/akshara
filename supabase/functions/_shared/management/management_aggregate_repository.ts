@@ -1,6 +1,18 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
 import { getDashboard as getFinanceDashboard } from "../finance/finance_dashboard_repository.ts";
 import { getDashboard as getAdmissionsDashboard } from "../admissions/admissions_dashboard_repository.ts";
+// PRA-P0-22 / P2-22 (S4): the ONE canonical attendance formula (present + late +
+// 0.5·half_day over total-minus-excused) — never re-implement it inline.
+import {
+  attendanceDenominatorSql,
+  attendedDaysSql,
+} from "../attendance/attendance_percentage.ts";
+// PRA-P1-47 (S4): the ONE canonical "days overdue" expression Finance's
+// defaulters list is built from — a defaulter is OVERDUE, not merely outstanding.
+import { overdueDaysSql } from "../finance/finance_aging.ts";
+// PRA-P1-48 (S4): the real pending-approval queue for the executive dashboard
+// (was a hardcoded empty array).
+import { listPendingApprovals } from "../approval/approval_repository.ts";
 
 // MJ-C8 (PRINC-1): the Principal/Management executive dashboards used to serve
 // a never-refreshed `management_entities` seed snapshot, so every school saw the
@@ -70,33 +82,92 @@ export interface AcademicAggregate {
     avgPercent: number;
     atRiskCount: number;
   }>;
+  /**
+   * PRA-P2-22: real per-class attendance % (canonical formula), NOT the school
+   * scalar. ICA-H3: `attendancePercent` is `null` — rendered "—"/"no data" — when a
+   * class has a zero attendance denominator (nothing marked yet, or every marked
+   * day was excused). Per the canonical `attendance_percentage` contract it is
+   * NEVER a fabricated 0 (which would show a catastrophic 0% for an unmarked class).
+   */
+  attendanceByClass: Array<{ classLabel: string; attendancePercent: number | null }>;
 }
 
 // A mark counts as a pass at 33% of max (standard Indian board threshold).
 const PASS_THRESHOLD = 0.33;
+
+// ICA-C2 (perf) — the management academic aggregates (attendance %, pass rate,
+// per-class / per-subject performance) reflect the CURRENT academic year, not an
+// ever-growing all-time scan. Attendance is bounded by the session date and exam
+// marks by their last-touched/publish time to a trailing 12-month window — the
+// same "current-year" convention the director dashboards use — so the aggregated
+// working set stays bounded as pilot data accumulates. Roster / defaulter counts
+// stay point-in-time and collectedThisMonth keeps its own month-to-date bound;
+// only these academic aggregates were the unbounded all-time scans.
+const CURRENT_ACADEMIC_YEAR_INTERVAL = "365 days";
 
 export async function getAcademicAggregate(
   db: TenantQueryClient,
   organizationId: string,
   schoolId: string,
 ): Promise<AcademicAggregate> {
+  // PRA-P0-22 / P2-22 (S4): compute attendance from the CANONICAL formula
+  // (attended = present + late + 0.5·half_day; denominator = total − excused),
+  // grouped per class in ONE pass. The old inline query counted 'excused' as
+  // attended and dropped 'half_day' entirely (wrong school-wide number), and the
+  // per-class dashboard column reused that single school scalar for every class.
   const attendanceRows = await db.queryObject<{
-    present: string;
+    class_label: string;
+    attended: string;
+    denominator: string;
     total: string;
   }>(
     `SELECT
-       COUNT(*) FILTER (WHERE ar.mark IN ('present', 'late', 'excused'))::text AS present,
+       COALESCE(NULLIF(s.class_label, ''), 'Unassigned') AS class_label,
+       ${attendedDaysSql("ar.mark")}::float8::text AS attended,
+       ${attendanceDenominatorSql("ar.mark")}::text AS denominator,
        COUNT(*)::text AS total
      FROM attendance_records ar
      JOIN attendance_sessions s ON s.id = ar.session_id
      WHERE ar.organization_id = $1 AND ar.school_id = $2
-       AND s.status = 'submitted'`,
+       AND s.status = 'submitted'
+       -- ICA-C2: current academic year only (trailing 365 days on the session
+       -- date). This only narrows which sessions are counted; the per-class
+       -- zero-denominator -> null contract (ICA-H3) below is unchanged.
+       AND s.session_date >= CURRENT_DATE - interval '${CURRENT_ACADEMIC_YEAR_INTERVAL}'
+     GROUP BY COALESCE(NULLIF(s.class_label, ''), 'Unassigned')
+     ORDER BY 1`,
     [organizationId, schoolId],
   );
-  const attTotal = Number(attendanceRows[0]?.total ?? "0");
-  const attPresent = Number(attendanceRows[0]?.present ?? "0");
-  const avgAttendancePercent = attTotal > 0
-    ? Math.round((attPresent / attTotal) * 100)
+  let attSchoolAttended = 0;
+  let attSchoolDenominator = 0;
+  let attTotal = 0;
+  const attendanceByClass = attendanceRows.map((r) => {
+    const attended = Number(r.attended);
+    const denominator = Number(r.denominator);
+    attSchoolAttended += attended;
+    attSchoolDenominator += denominator;
+    attTotal += Number(r.total);
+    return {
+      classLabel: r.class_label,
+      // ICA-H3: a zero denominator (nothing marked, or every marked day excused)
+      // is "no data" -> null (client renders "—"), NEVER a fabricated 0% that
+      // would misreport an unmarked class as a catastrophic 0. This matches the
+      // canonical attendance_percentage null-on-zero-denominator contract.
+      attendancePercent: denominator > 0
+        ? Math.round((attended / denominator) * 100)
+        : null,
+    };
+  });
+  // School-wide average is a POOLED ratio (Σ attended / Σ denominator), NOT a mean
+  // of the per-class percentages: a zero-denominator (null) class contributes
+  // attended=0 AND denominator=0, so it is excluded from BOTH sides and can never
+  // drag the school figure down. When every class is null (Σ denominator = 0) there
+  // is no attendance data; `hasAttendance` (below) carries that "no data" signal.
+  // (The scalar stays a non-null number so the management payload builders — which
+  // format it unconditionally — keep compiling; rendering it as "—" on the all-null
+  // case is a client-side follow-up, see report.)
+  const avgAttendancePercent = attSchoolDenominator > 0
+    ? Math.round((attSchoolAttended / attSchoolDenominator) * 100)
     : 0;
 
   const markRows = await db.queryObject<{
@@ -116,7 +187,10 @@ export async function getAcademicAggregate(
        )), 0)::text AS avg_percent
      FROM exam_mark_entries m
      WHERE m.organization_id = $1 AND m.school_id = $2
-       AND m.published = true`,
+       AND m.published = true
+       -- ICA-C2: current academic year only (trailing 365 days). exam_mark_entries
+       -- has no created_at, so bound on updated_at (last-touched/publish time).
+       AND m.updated_at >= now() - interval '${CURRENT_ACADEMIC_YEAR_INTERVAL}'`,
     [organizationId, schoolId, PASS_THRESHOLD],
   );
   const markTotal = Number(markRows[0]?.total ?? "0");
@@ -148,6 +222,9 @@ export async function getAcademicAggregate(
      FROM exam_mark_entries m
      WHERE m.organization_id = $1 AND m.school_id = $2
        AND m.published = true
+       -- ICA-C2: current academic year only (trailing 365 days). exam_mark_entries
+       -- has no created_at, so bound on updated_at (last-touched/publish time).
+       AND m.updated_at >= now() - interval '${CURRENT_ACADEMIC_YEAR_INTERVAL}'
      GROUP BY COALESCE(NULLIF(m.class_label, ''), 'Unassigned')
      ORDER BY 1`,
     [organizationId, schoolId, PASS_THRESHOLD],
@@ -191,6 +268,9 @@ export async function getAcademicAggregate(
       AND es.school_id = m.school_id
      WHERE m.organization_id = $1 AND m.school_id = $2
        AND m.published = true
+       -- ICA-C2: current academic year only (trailing 365 days). exam_mark_entries
+       -- has no created_at, so bound on updated_at (last-touched/publish time).
+       AND m.updated_at >= now() - interval '${CURRENT_ACADEMIC_YEAR_INTERVAL}'
      GROUP BY COALESCE(NULLIF(es.subject, ''), 'General')
      ORDER BY 1`,
     [organizationId, schoolId, PASS_THRESHOLD],
@@ -214,6 +294,7 @@ export async function getAcademicAggregate(
     hasExams: markTotal > 0,
     classPerformance,
     subjectPerformance,
+    attendanceByClass,
   };
 }
 
@@ -227,8 +308,19 @@ export interface ManagementAggregate {
   academic: AcademicAggregate;
   /** Count of active students on the roster (students.status = 'active'). */
   activeStudents: number;
-  /** Count of fee defaulters: open accounts with outstanding > 0. */
+  /** PRA-P1-47: fee defaulters = OVERDUE accounts (Finance's daysOverdue > 0), not merely any outstanding balance. */
   defaulterCount: number;
+  /** PRA-P0-23: collections this calendar month (month-to-date) — the real "Revenue MTD". */
+  collectedThisMonth: number;
+  /** PRA-P1-48: real pending-approval queue (was hardcoded []). */
+  pendingApprovals: Array<{
+    id: string;
+    type: string;
+    title: string;
+    summary: string;
+    requesterName: string;
+    createdAt: string;
+  }>;
 }
 
 export async function getManagementAggregate(
@@ -239,14 +331,26 @@ export async function getManagementAggregate(
   const finance = await getFinanceDashboard(db, organizationId, schoolId);
   const admissions = await getAdmissionsDashboard(db, organizationId, schoolId);
   const academic = await getAcademicAggregate(db, organizationId, schoolId);
+  // PRA-P1-48: the real pending-approval queue (was a hardcoded empty array).
+  const approvals = await listPendingApprovals(db, organizationId, schoolId);
 
-  const studentRows = await db.queryObject<{ active: string; defaulters: string }>(
+  const studentRows = await db.queryObject<
+    { active: string; defaulters: string; collected_mtd: string }
+  >(
     `SELECT
        (SELECT count(*)::text FROM students
          WHERE organization_id = $1 AND school_id = $2 AND status = 'active') AS active,
-       (SELECT count(*)::text FROM finance_student_accounts
+       -- PRA-P1-47: a defaulter is OVERDUE (Finance's canonical daysOverdue > 0),
+       -- not merely any open account with a balance.
+       (SELECT count(*)::text FROM finance_student_accounts fsa
+         WHERE fsa.organization_id = $1 AND fsa.school_id = $2
+           AND fsa.status = 'open'
+           AND ${overdueDaysSql("fsa.student_id", "fsa.organization_id")} > 0) AS defaulters,
+       -- PRA-P0-23: month-to-date collections — the real "Revenue MTD".
+       (SELECT COALESCE(SUM(amount_collected), 0)::text FROM finance_collections
          WHERE organization_id = $1 AND school_id = $2
-           AND status = 'open' AND outstanding_amount > 0) AS defaulters`,
+           AND collection_status IN ('completed', 'partially_refunded', 'refunded')
+           AND collection_date >= date_trunc('month', CURRENT_DATE)) AS collected_mtd`,
     [organizationId, schoolId],
   );
 
@@ -256,5 +360,14 @@ export async function getManagementAggregate(
     academic,
     activeStudents: Number(studentRows[0]?.active ?? "0"),
     defaulterCount: Number(studentRows[0]?.defaulters ?? "0"),
+    collectedThisMonth: Number(studentRows[0]?.collected_mtd ?? "0"),
+    pendingApprovals: approvals.map((a) => ({
+      id: a.id,
+      type: a.type,
+      title: a.title,
+      summary: a.summary,
+      requesterName: a.requester_name,
+      createdAt: a.created_at,
+    })),
   };
 }

@@ -1,6 +1,29 @@
 # AKSHARA PRODUCT REALITY & CORRECTNESS CERTIFICATION PROGRAM — Canonical Tracker (PRC)
 
 **Status:** ⚪ **SCHEDULED — DO NOT EXECUTE YET** · **Integrated:** 2026-07-11 · **Program ID:** PRC
+> ## ✅ PRC PROGRAM COMPLETE & CERTIFIED — owner-accepted 2026-07-16 (tip `671d07a3`). **FROZEN.**
+> **PRC-A (Wave A) = COMPLETE.** All implementation batches LIVE CERTIFIED on prod Postgres:
+> Batch 2 missing-modules (`b77cd64a`) · Batch 3 AI wallet (`0afb967a`) · Batch 4 storage quota (`a176b7d4`) ·
+> Batch 5 webhook HMAC/replay (`66f094dc`) · Batch 6 WhatsApp channel+escalation (`07b39b75`) ·
+> Batch 7 Tally export (`c1046b67`) · Batch 8 transport expense+cost/occupancy/fuelTrend (`f1439e48`) ·
+> Batch 9 upload malware-scan (`80967d18`) · Batch 10 marketing internal (`707fa91f`). Money-P0 fixes
+> (`4bc1046b`), fee-concession (`fb39dfcc`), transport stop-revoke (`a7f3a1f3`), bulk assign, vault AES,
+> proration all landed. Residual activations are external-gated (Meta App Review, image-gen provider, AV
+> engine, VAULT_ENC_KEY) — isolated per owner decision #4, tracked, NOT incomplete implementation.
+> Evidence: [`../execution/PRC_A_WAVE_A_PROGRESS.md`](../execution/PRC_A_WAVE_A_PROGRESS.md) + `scripts/qa/live_cert_batch*.sql`.
+>
+> **PRC-B (Wave B) = COMPLETE.** All 12 invariant categories CERTIFIED, zero defects, at the tracker's
+> stated floor. 41 direct certifications (18+10 unit + 9+4 live) + the PRC-A cross-referenced live-certs.
+> Evidence: **[`../execution/PRC_B_CERTIFICATION.md`](../execution/PRC_B_CERTIFICATION.md)** +
+> `prc_b_money_formula_cert_test.ts` · `prc_b_datetime_cert_test.ts` · `scripts/qa/live_cert_prcb_*.sql`.
+> Backend deno 3484/0/3. EOS gate: **PASS**. Optional per-ID deepening documented as depth extensions, not gaps.
+>
+> **⚠ Per the anti-disappearance law (§Program-laws #3), the ⚪ status cells in the detail tables below are
+> left as authored; this banner + the two evidence SSOTs are the authoritative DONE record. Next roadmap
+> gate: CFC-1 (Code Freeze Checklist).**
+
+**Status:** ✅ **CERTIFIED & FROZEN (PRC-A + PRC-B complete, 2026-07-16, `671d07a3`)** · **Integrated:** 2026-07-11 · **Program ID:** PRC
+**RECON-2 note (2026-07-14):** this program was **skipped in the ERP-lane drift** (the ERP-branch roadmap had lost the PRC integration) — the lane wrongly ran CFC-1→FREEZE-1→"P4-RT" before PRC. Corrected: FREEZE-1 rescinded, PRC-A is now executing. First-pass classification + progress: [`../execution/PRC_A_WAVE_A_PROGRESS.md`](../execution/PRC_A_WAVE_A_PROGRESS.md). See [`../execution/RECON-2_EXECUTION_ORDER_CORRECTION.md`](../execution/RECON-2_EXECUTION_ORDER_CORRECTION.md).
 **Source (execution authority, FROZEN):** [`../AKSHARA_PRODUCT_REALITY_AND_CORRECTNESS_CERTIFICATION.md`](../AKSHARA_PRODUCT_REALITY_AND_CORRECTNESS_CERTIFICATION.md) — every `L<n>` reference below is a line of that file.
 **Roadmap anchor:** [`FINAL_EXECUTION_MASTER_ROADMAP.md`](FINAL_EXECUTION_MASTER_ROADMAP.md) → **PROGRAM PRC** (items **PRC-A**, **PRC-B**).
 **Authority rule (from the owner directive):** after integration, chat memory is NOT an execution input — the source document and the canonical roadmap (+ this tracker) are the execution authority.
@@ -782,6 +805,7 @@ Breakdown of the canonical requirements:
 | # | PRC ID(s) | Conflict / blocker | Class (PRC-X-16..19) | Owner decision | Date |
 |---|---|---|---|---|---|
 | — | — | none recorded at integration (100% mapped) | — | — | — |
+| 1 | PRC-X-01 (entry) | **Entry deferral + git preservation.** The program's auto-entry condition (P3 exit + EOS) was met 2026-07-11, but the integration edits had been stranded UNCOMMITTED on the K-lane checkout (`feature/qp-content-readiness`, shared-worktree incident class) and never reached the ERP branch — the ERP lane executed CFC-1 pre-clearing without visibility of the PRC gate. On 2026-07-14 the owner directed: *"Complete the ERP-side CFC-1 gate … If the gate passes, proceed to FREEZE-1 and then begin the next roadmap phase (P4 Red Team) without waiting for further confirmation."* That directive constitutes the **"higher-priority blocking production gate"** contemplated by PRC-X-01, so Wave A's auto-start defers — the program is NOT cancelled, no row deleted/weakened. This copy commits the frozen source + tracker to the ERP branch (`docs/` + `docs/roadmap/`) to end the disappearance risk. **OPEN owner decision: the PRC slot** — recommended PRC-A → PRC-B run with/after P4-RT-1 (both are audit-and-fix correctness waves, freeze-compatible), and MUST complete before P6-VAL-1. | PRC-X-01 deferral (sequencing, not scope) | Directive of 2026-07-14 (CFC-1 → FREEZE-1 → P4); slot ruling PENDING | 2026-07-14 |
 
 ---
 

@@ -125,7 +125,12 @@ class _HeaderRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: height,
+      // DS V2 P2-7 — a filled header band (was bare text on the page bg) so the
+      // header reads as a distinct row — premium, and clearer scanning. Uses
+      // `surfaceContainerHighest` so it stays visible against the typical
+      // `surfaceContainerLow` page the table sits on (the rows are transparent).
       decoration: BoxDecoration(
+        color: context.colors.surfaceContainerHighest,
         border: Border(bottom: BorderSide(color: dividerColor)),
       ),
       child: Row(
@@ -138,11 +143,19 @@ class _HeaderRow extends StatelessWidget {
           for (final column in columns)
             Expanded(
               flex: column.numeric ? 1 : 2,
-              child: DefaultTextStyle(
-                style: textStyle ?? const TextStyle(fontWeight: FontWeight.w600),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-                child: column.label,
+              // Match the data cells' horizontal padding so the header labels
+              // line up with the column values below them (they didn't).
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AksharaSpacing.s3,
+                ),
+                child: DefaultTextStyle(
+                  style:
+                      textStyle ?? const TextStyle(fontWeight: FontWeight.w600),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  child: column.label,
+                ),
               ),
             ),
         ],

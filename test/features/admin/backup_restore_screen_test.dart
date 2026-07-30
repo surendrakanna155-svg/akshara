@@ -41,7 +41,7 @@ void main() {
     await _pumpScreen(tester);
 
     expect(find.text('Backup status'), findsOneWidget);
-    expect(find.text('Akshara-managed database backups'), findsOneWidget);
+    expect(find.text('NIKSHA-managed database backups'), findsOneWidget);
     expect(find.textContaining('Nightly'), findsWidgets);
     // RPO note surfaced to the admin.
     expect(find.textContaining('≈ 24 hours'), findsOneWidget);

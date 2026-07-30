@@ -14,7 +14,6 @@ import '../../../../features/parent/profile/profile_models.dart';
 import '../../../../features/parent/receipts/receipt_models.dart';
 import '../../../../features/parent/timetable/timetable_models.dart';
 import '../../../../features/teacher/messages/message_models.dart';
-import '../../../communication/parent_communication_inbox_fallback.dart';
 import '../../../communication/parent_communication_models.dart';
 import '../../interfaces/parent_repository.dart';
 import '../../repository_query.dart';
@@ -270,17 +269,15 @@ class ApiParentRepository implements ParentRepository {
     required RepositoryQuery query,
     required String activeChildId,
   }) async {
-    try {
-      final dto = await _remote.fetchCommunicationInbox(
-        query: query,
-        activeChildId: activeChildId,
-      );
-      final items = _mapper.toCommunicationInbox(dto);
-      if (items.isNotEmpty) return items;
-    } catch (_) {
-      // Fall through to shared store when API is unavailable.
-    }
-    return ParentCommunicationInboxFallback.inboxForChild(activeChildId);
+    // PRA-N-10 (S0/T2-E): fail closed — return the live inbox (an empty inbox is
+    // a valid state), never the in-memory mock fallback. The old code diverted to
+    // ParentCommunicationInboxFallback on any error OR a successful-but-empty
+    // response, showing fabricated notices resolved against a demo student.
+    final dto = await _remote.fetchCommunicationInbox(
+      query: query,
+      activeChildId: activeChildId,
+    );
+    return _mapper.toCommunicationInbox(dto);
   }
 
   @override
@@ -288,15 +285,12 @@ class ApiParentRepository implements ParentRepository {
     required RepositoryQuery query,
     required String communicationId,
   }) async {
-    try {
-      final dto = await _remote.fetchCommunicationMessage(
-        query: query,
-        communicationId: communicationId,
-      );
-      return _mapper.toCommunicationInboxItem(dto.raw);
-    } catch (_) {
-      return ParentCommunicationInboxFallback.messageById(communicationId);
-    }
+    // PRA-N-10 (S0/T2-E): fail closed — surface the real message or the error.
+    final dto = await _remote.fetchCommunicationMessage(
+      query: query,
+      communicationId: communicationId,
+    );
+    return _mapper.toCommunicationInboxItem(dto.raw);
   }
 
   @override
@@ -304,14 +298,12 @@ class ApiParentRepository implements ParentRepository {
     required RepositoryQuery query,
     required String communicationId,
   }) async {
-    try {
-      await _remote.markCommunicationRead(
-        query: query,
-        communicationId: communicationId,
-      );
-    } catch (_) {
-      ParentCommunicationInboxFallback.markRead(communicationId);
-    }
+    // PRA-N-10 (S0/T2-E): fail closed — a failed read-receipt must surface, not
+    // be faked in a device-local store the server never sees.
+    await _remote.markCommunicationRead(
+      query: query,
+      communicationId: communicationId,
+    );
   }
 
   @override
@@ -319,13 +311,11 @@ class ApiParentRepository implements ParentRepository {
     required RepositoryQuery query,
     required String communicationId,
   }) async {
-    try {
-      await _remote.acknowledgeCommunication(
-        query: query,
-        communicationId: communicationId,
-      );
-    } catch (_) {
-      ParentCommunicationInboxFallback.acknowledge(communicationId);
-    }
+    // PRA-N-10 (S0/T2-E): fail closed — a parent's acknowledgement of a school
+    // notice must reach the server or error, never a silent local fake.
+    await _remote.acknowledgeCommunication(
+      query: query,
+      communicationId: communicationId,
+    );
   }
 }

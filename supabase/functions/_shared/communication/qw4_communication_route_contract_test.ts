@@ -272,18 +272,15 @@ Deno.test("COM-D1: POST /communications/notifications/:id/acknowledge rejects an
   assertEquals(res?.status, 401);
 });
 
-Deno.test("QA-B-017: an unregistered in-prefix communication path returns 404 NOT_FOUND", async () => {
+Deno.test("QA-B-017: an unregistered in-prefix communication path returns null (central dispatcher 404s)", async () => {
   const res = await call("GET", "/communications/does-not-exist", ["viewCommunications"], "school");
-  assertEquals(res?.status, 404);
-  const env = await res!.json();
-  assertEquals(env.error.code, "NOT_FOUND");
-  assertEquals(env.data, null);
+  assertEquals(res, null);
 });
 
-Deno.test("QA-B-017: a wrong-method on a registered path returns 404 NOT_FOUND", async () => {
-  // /communications/broadcasts is POST-only; a GET is not registered → 404.
+Deno.test("QA-B-017: a wrong-method on a registered path returns null (central dispatcher 404s)", async () => {
+  // /communications/broadcasts is POST-only; a GET is not registered → null.
   const res = await call("GET", "/communications/broadcasts", ["sendBroadcast"], "school");
-  assertEquals(res?.status, 404);
+  assertEquals(res, null);
 });
 
 Deno.test("QA-B-017: an out-of-prefix path is not owned by the communication router (null)", async () => {

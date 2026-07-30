@@ -68,6 +68,8 @@ import {
   listLeads,
   markLeadLost,
   rescheduleFollowUp,
+  EnrollmentApplicationNotFoundError,
+  EnrollmentNotApprovedError,
   reviewDocument,
   setApprovalDecision,
   submitApplication,
@@ -1547,13 +1549,24 @@ export async function handleSubmitEnrollment(
     );
   }
 
+  const applicationId = optionalSnakeStr(body, "application_id") ?? null;
+  // PRA-P0-13: a WALK-IN enrollment (no prior application) mints an active
+  // student with no approval workflow behind it, so it requires approval
+  // authority — not merely manageAdmissions, which counselors hold without
+  // approveAdmissions. The application-backed path is instead gated inside
+  // submitEnrollment on the application already being 'approved'.
+  if (!applicationId) {
+    const approveDenied = requirePermission(auth.claims, "approveAdmissions");
+    if (approveDenied) return approveDenied;
+  }
+
   const orgId = organizationIdFromClaims(auth.claims);
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
     const enrollment = await runTenant(config, auth.claims, async (db) => {
       const created = await submitEnrollment(db, orgId, schoolId, {
-        applicationId: optionalSnakeStr(body, "application_id") ?? null,
+        applicationId,
         studentFullName,
         dateOfBirth: String(student.date_of_birth ?? ""),
         gender: String(student.gender ?? ""),
@@ -1589,6 +1602,13 @@ export async function handleSubmitEnrollment(
     }
     if (error instanceof CatalogMismatchError) {
       return errorEnvelope("CATALOG_MISMATCH", error.message, 422);
+    }
+    // PRA-P0-13: application-backed enrollment gates.
+    if (error instanceof EnrollmentApplicationNotFoundError) {
+      return errorEnvelope("APPLICATION_NOT_FOUND", error.message, 404);
+    }
+    if (error instanceof EnrollmentNotApprovedError) {
+      return errorEnvelope("APPLICATION_NOT_APPROVED", error.message, 409);
     }
     throw error;
   }

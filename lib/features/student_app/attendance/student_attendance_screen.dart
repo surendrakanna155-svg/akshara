@@ -19,7 +19,8 @@ class StudentAttendanceScreen extends ConsumerStatefulWidget {
   final VoidCallback? onNotificationsTap;
 
   static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
-  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
+  static const double _tabletMaxContentWidth =
+      AksharaBreakpoints.compactContentMaxWidth;
   @override
   ConsumerState<StudentAttendanceScreen> createState() =>
       _StudentAttendanceScreenState();
@@ -46,22 +47,29 @@ class _StudentAttendanceScreenState
 
     if (isLoading) {
       return Scaffold(
-        backgroundColor: context.colors.surfaceContainerLow,
+        backgroundColor: Colors.transparent,
         appBar: _buildAppBar(context, subtitle: null, unread: 0),
-        body: const AksharaLoadingState(semanticLabel: 'Loading attendance'),
+        // DS V2 P4 — premium persona canvas, cohesive with the dashboards.
+        body: const AksharaPremiumBackground(
+          showMotif: false,
+          child: AksharaLoadingState(semanticLabel: 'Loading attendance'),
+        ),
       );
     }
 
     if (hasError) {
       return Scaffold(
-        backgroundColor: context.colors.surfaceContainerLow,
+        backgroundColor: Colors.transparent,
         appBar: _buildAppBar(context, subtitle: null, unread: 0),
-        body: AksharaErrorState(
-          message: 'Unable to load your attendance right now.',
-          onRetry: () {
-            ref.read(studentAttendanceErrorProvider.notifier).state = false;
-            ref.invalidate(studentAttendanceFutureProvider);
-          },
+        body: AksharaPremiumBackground(
+          showMotif: false,
+          child: AksharaErrorState(
+            message: 'Unable to load your attendance right now.',
+            onRetry: () {
+              ref.read(studentAttendanceErrorProvider.notifier).state = false;
+              ref.invalidate(studentAttendanceFutureProvider);
+            },
+          ),
         ),
       );
     }
@@ -71,111 +79,123 @@ class _StudentAttendanceScreenState
     final highlightAbsent = ref.watch(studentAttendanceHighlightAbsentProvider);
 
     return Scaffold(
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: _buildAppBar(
         context,
-        subtitle: async.hasValue
-            ? '${data.childName} · ${data.childClass}'
-            : null,
+        subtitle:
+            async.hasValue ? '${data.childName} · ${data.childClass}' : null,
         unread: async.hasValue ? data.unreadNotifications : 0,
       ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final isTablet = constraints.maxWidth >=
-              StudentAttendanceScreen._tabletBreakpoint;
-          final horizontalPadding = isTablet
-              ? AksharaSpacing.tabletMargin
-              : AksharaSpacing.mobileMargin;
-          const cellSize = 36.0;
+      // DS V2 P4 — premium persona canvas behind the attendance content. The
+      // month attendance % already reads as a signature ring via the shared
+      // AttendanceKpiStrip; presentation only.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isTablet = constraints.maxWidth >=
+                StudentAttendanceScreen._tabletBreakpoint;
+            final horizontalPadding = isTablet
+                ? AksharaSpacing.tabletMargin
+                : AksharaSpacing.mobileMargin;
+            const cellSize = 36.0;
 
-          return Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: isTablet
-                    ? StudentAttendanceScreen._tabletMaxContentWidth
-                    : double.infinity,
-              ),
-              child: SingleChildScrollView(
-                controller: _scrollController,
-                padding: EdgeInsets.fromLTRB(
-                  horizontalPadding,
-                  AksharaSpacing.s4,
-                  horizontalPadding,
-                  AksharaSpacing.s6,
+            return Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: isTablet
+                      ? StudentAttendanceScreen._tabletMaxContentWidth
+                      : double.infinity,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    AttendanceMonthSelector(
-                      monthLabel: data.monthLabel,
-                      onPrevious: () => _changeMonth(-1),
-                      onNext: () => _changeMonth(1),
+                child: RefreshIndicator(
+                  onRefresh: () async =>
+                      ref.invalidate(studentAttendanceFutureProvider),
+                  child: SingleChildScrollView(
+                    controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.fromLTRB(
+                      horizontalPadding,
+                      AksharaSpacing.s4,
+                      horizontalPadding,
+                      AksharaSpacing.s6,
                     ),
-                    const SizedBox(height: AksharaSpacing.s4),
-                    AttendanceKpiStrip(
-                      metrics: data.kpi,
-                      onAbsentTap: _onAbsentKpiTap,
-                    ),
-                    const SizedBox(height: AksharaSpacing.s4),
-                    SizedBox(
-                      height: AttendanceCalendar.cardHeight,
-                      child: AttendanceCalendar(
-                        days: data.calendarDays,
-                        cellSize: cellSize,
-                        highlightAbsent: highlightAbsent,
-                        onDayTap: _onCalendarDayTap,
-                      ),
-                    ),
-                    if (data.warningBannerMessage != null) ...[
-                      const SizedBox(height: AksharaSpacing.s4),
-                      AksharaWarningBanner(
-                        key: _bannerKey,
-                        message: data.warningBannerMessage!,
-                      ),
-                    ],
-                    const SizedBox(height: AksharaSpacing.s4),
-                    const AksharaSectionHeader(
-                      title: 'Attendance history',
-                      fixedHeight: false,
-                      spacingBelow: AksharaSpacing.s2,
-                    ),
-                    if (data.recentLogs.isEmpty)
-                      const AksharaEmptyState(
-                        message: 'No attendance records for this month.',
-                        icon: Icons.event_busy_outlined,
-                        compact: true,
-                      )
-                    else
-                      Column(
-                        children: [
-                          for (var i = 0; i < data.recentLogs.length; i++) ...[
-                            AttendanceSummaryCard(
-                              log: data.recentLogs[i],
-                              onInfoTap: () => _showDayDetailSheet(
-                                context,
-                                data.recentLogs[i],
-                              ),
-                            ),
-                            if (i < data.recentLogs.length - 1)
-                              const SizedBox(height: AksharaSpacing.s2),
-                          ],
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        AttendanceMonthSelector(
+                          monthLabel: data.monthLabel,
+                          onPrevious: () => _changeMonth(-1),
+                          onNext: () => _changeMonth(1),
+                        ),
+                        const SizedBox(height: AksharaSpacing.s4),
+                        AttendanceKpiStrip(
+                          metrics: data.kpi,
+                          onAbsentTap: _onAbsentKpiTap,
+                        ),
+                        const SizedBox(height: AksharaSpacing.s4),
+                        SizedBox(
+                          height: AttendanceCalendar.cardHeight,
+                          child: AttendanceCalendar(
+                            days: data.calendarDays,
+                            cellSize: cellSize,
+                            highlightAbsent: highlightAbsent,
+                            onDayTap: _onCalendarDayTap,
+                          ),
+                        ),
+                        if (data.warningBannerMessage != null) ...[
+                          const SizedBox(height: AksharaSpacing.s4),
+                          AksharaWarningBanner(
+                            key: _bannerKey,
+                            message: data.warningBannerMessage!,
+                          ),
                         ],
-                      ),
-                    const SizedBox(height: AksharaSpacing.s4),
-                    AksharaInsightCard(
-                      message: insight.message,
-                      actionLabel: insight.actionLabel,
-                      icon: Icons.insights_outlined,
-                      semanticLabelPrefix: 'AI attendance insight',
-                      onAction: _onAbsentKpiTap,
+                        const SizedBox(height: AksharaSpacing.s4),
+                        const AksharaSectionHeader(
+                          title: 'Attendance history',
+                          fixedHeight: false,
+                          spacingBelow: AksharaSpacing.s2,
+                        ),
+                        if (data.recentLogs.isEmpty)
+                          const AksharaEmptyState(
+                            message: 'No attendance records for this month.',
+                            icon: Icons.event_busy_outlined,
+                            compact: true,
+                          )
+                        else
+                          Column(
+                            children: [
+                              for (var i = 0;
+                                  i < data.recentLogs.length;
+                                  i++) ...[
+                                AttendanceSummaryCard(
+                                  log: data.recentLogs[i],
+                                  onInfoTap: () => _showDayDetailSheet(
+                                    context,
+                                    data.recentLogs[i],
+                                  ),
+                                ),
+                                if (i < data.recentLogs.length - 1)
+                                  const SizedBox(height: AksharaSpacing.s2),
+                              ],
+                            ],
+                          ),
+                        const SizedBox(height: AksharaSpacing.s4),
+                        AksharaInsightCard(
+                          message: insight.message,
+                          actionLabel: insight.actionLabel,
+                          icon: Icons.insights_outlined,
+                          semanticLabelPrefix: 'AI attendance insight',
+                          onAction: _onAbsentKpiTap,
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -287,8 +307,18 @@ class _StudentAttendanceScreenState
 
   String _monthName(int month) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return months[month - 1];
   }

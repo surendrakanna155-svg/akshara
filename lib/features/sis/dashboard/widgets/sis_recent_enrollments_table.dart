@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/widgets/akshara_section_empty.dart';
 import '../../../../shared/widgets/akshara_status_chip.dart';
 import '../../../../theme/spacing.dart';
 import '../../../../theme/theme_extensions.dart';
@@ -16,6 +17,17 @@ class SisRecentEnrollmentsTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Day one a school has no students by definition, so this is the section
+    // most likely to be a blank hole under a header on a first login. Say what
+    // is happening instead of rendering nothing.
+    if (enrollments.isEmpty) {
+      return const AksharaSectionEmpty(
+        message: 'No students enrolled yet. New admissions appear here as they '
+            'join.',
+        icon: Icons.school_outlined,
+      );
+    }
+
     if (AdminLayout.useCardLayout(context)) {
       return Column(
         children: [

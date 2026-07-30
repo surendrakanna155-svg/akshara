@@ -38,17 +38,50 @@ class SqfliteReliabilityStore implements ReliabilityStore {
   /// Secure-storage key name holding the SQLCipher passphrase.
   static const String _cipherKeyName = 'reliability_db_cipher_key_v1';
 
+  /// Whether the most recent [open] had to MINT a new cipher key because secure
+  /// storage held none.
+  ///
+  /// Read by `reliability_store_opener.dart` immediately after a failed open, to
+  /// decide whether deleting an undecryptable database is safe. The distinction
+  /// is the whole safety argument:
+  ///   * key was minted this launch + database exists and will not decrypt
+  ///     → the key that wrote it is genuinely gone (e.g. app data restored onto
+  ///       a new device without the non-transferable keystore entry). Nothing in
+  ///       that file is recoverable, so rebuilding loses nothing.
+  ///   * key was READ BACK successfully + database will not decrypt
+  ///     → something else is wrong. Deleting would destroy the user's queued
+  ///       work for a cause we have not diagnosed. Degrade honestly instead.
+  ///
+  /// Without this, a device that could never read its key back would silently
+  /// wipe queued work on EVERY launch — strictly worse than the non-durable
+  /// fallback it replaced.
+  static bool lastOpenMintedNewKey = false;
+
   /// Generate-once / read-back a 256-bit SQLCipher passphrase from the OS secure
   /// storage. The key never leaves the keystore and is wiped with the app.
   static Future<String> _obtainCipherKey(FlutterSecureStorage storage) async {
     final String? existing = await storage.read(key: _cipherKeyName);
-    if (existing != null && existing.isNotEmpty) return existing;
+    if (existing != null && existing.isNotEmpty) {
+      lastOpenMintedNewKey = false;
+      return existing;
+    }
     final Random rng = Random.secure();
     final List<int> bytes = List<int>.generate(32, (_) => rng.nextInt(256));
     final String key = base64UrlEncode(bytes);
     await storage.write(key: _cipherKeyName, value: key);
+    lastOpenMintedNewKey = true;
     return key;
   }
+
+  /// On-device path of the encrypted database.
+  ///
+  /// Exposed so the opener can delete a file the current key cannot decrypt
+  /// (see `reliability_store_opener.dart`) without duplicating the filename in
+  /// two places — a drift that would silently leave the stale database behind.
+  static Future<String> databasePath() async =>
+      p.join(await getDatabasesPath(), _databaseFileName);
+
+  static const String _databaseFileName = 'akshara_reliability.db';
 
   static Future<SqfliteReliabilityStore> open({
     FlutterSecureStorage? secureStorage,
@@ -56,8 +89,7 @@ class SqfliteReliabilityStore implements ReliabilityStore {
     final FlutterSecureStorage storage =
         secureStorage ?? const FlutterSecureStorage();
     final String password = await _obtainCipherKey(storage);
-    final String dir = await getDatabasesPath();
-    final String path = p.join(dir, 'akshara_reliability.db');
+    final String path = await databasePath();
     final Database db = await openDatabase(
       path,
       password: password,

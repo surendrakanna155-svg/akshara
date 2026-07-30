@@ -1,13 +1,13 @@
-# Akshara ERP — School / Institution Agreement
+# NIKSHA OS — School / Institution Agreement
 
 **Document version:** 1.0
 **Status:** Draft for owner sign-off (see [PLACEHOLDERS.md](PLACEHOLDERS.md))
-**Provider:** **[LEGAL ENTITY NAME]**, **[ENTITY TYPE]**, **[REGISTERED ADDRESS]**
-("Akshara", "Provider", "we").
+**Provider:** **NIKSHA Technologies Pvt. Ltd.**, **Private Limited Company**, **[REGISTERED ADDRESS]**
+("NIKSHA OS", "Provider", "we").
 **Institution:** the school / educational organisation that subscribes to or uses
 the Service (the "Institution", "you").
 
-> This Agreement is the binding contract between Akshara and a school. It
+> This Agreement is the binding contract between NIKSHA OS and a school. It
 > incorporates the [Terms & Conditions](TERMS_AND_CONDITIONS.md), the
 > [Acceptable Use Policy](ACCEPTABLE_USE_POLICY.md), the
 > [Privacy Policy](PRIVACY_POLICY.md), the [AI Usage & Disclaimer](AI_USAGE_AND_DISCLAIMER.md),
@@ -20,7 +20,7 @@ the Service (the "Institution", "you").
 # Part A — Service terms
 
 ## A1. The relationship
-- Akshara provides the Service to the Institution to run its school operations.
+- NIKSHA OS provides the Service to the Institution to run its school operations.
 - The Institution is responsible for how it and its users (staff, teachers, parents,
   students) use the Service, including configuring modules, entering data, and
   obtaining any consents the law requires from parents/guardians.
@@ -39,7 +39,7 @@ The Institution agrees to:
 5. Keep its own copies of any records it is legally required to retain.
 
 ## A3. Provider responsibilities
-Akshara agrees to:
+NIKSHA OS agrees to:
 1. Provide the Service with reasonable skill and care and apply the security
    measures in the [Security Policy](SECURITY_AND_RESPONSIBLE_DISCLOSURE.md).
 2. Process Institution data **only** on the Institution's documented instructions
@@ -61,12 +61,12 @@ Akshara agrees to:
 ## A5. Suspension & termination
 - Either party may terminate for material breach not cured within **30 days** of
   written notice.
-- Akshara may suspend access for non-payment, security risk, or unlawful use.
+- NIKSHA OS may suspend access for non-payment, security risk, or unlawful use.
 - On termination: see A6 (exit) and the
   [Data Retention & Deletion Policy](DATA_RETENTION_AND_DELETION_POLICY.md).
 
 ## A6. Exit & data portability
-On termination or expiry, Akshara will, on request and within an agreed window:
+On termination or expiry, NIKSHA OS will, on request and within an agreed window:
 1. Disable access;
 2. Make the Institution's data available for **export** in a commonly used format;
    then
@@ -77,20 +77,20 @@ On termination or expiry, Akshara will, on request and within an agreed window:
 ## A7. Warranties & disclaimers
 The Service is provided with reasonable skill and care but otherwise **"as is"** as
 described in the [Terms & Conditions](TERMS_AND_CONDITIONS.md) §11. AI features are
-assistive only (see [AI Usage & Disclaimer](AI_USAGE_AND_DISCLAIMER.md)). Akshara
+assistive only (see [AI Usage & Disclaimer](AI_USAGE_AND_DISCLAIMER.md)). NIKSHA OS
 supports — and does not replace — the Institution's professional and legal
 responsibilities.
 
 ## A8. Liability
 The limitation of liability in the [Terms & Conditions](TERMS_AND_CONDITIONS.md) §12
 applies. For an Institution, the aggregate liability cap is the **fees paid by the
-Institution to Akshara in the 12 months** before the event, except for liabilities
+Institution to NIKSHA OS in the 12 months** before the event, except for liabilities
 that cannot be limited by law (including certain DPDP Act liabilities).
 
 ## A9. Indemnity
-The Institution will indemnify Akshara against third-party claims arising from the
+The Institution will indemnify NIKSHA OS against third-party claims arising from the
 Institution's unlawful processing, its breach of this Agreement or the AUP, or
-content it or its users upload. Akshara will indemnify the Institution against claims
+content it or its users upload. NIKSHA OS will indemnify the Institution against claims
 that the Service's own software infringes a third party's IP rights, subject to the
 liability cap.
 
@@ -107,18 +107,18 @@ resolution via the Grievance Officer first.
 
 # Part B — Data Processing Addendum (DPA)
 
-This Addendum governs Akshara's processing of personal data on the Institution's
+This Addendum governs NIKSHA OS's processing of personal data on the Institution's
 behalf and reflects the **Digital Personal Data Protection Act, 2023** and the
 **DPDP Rules, 2025**.
 
 ## B1. Roles
 - The **Institution is the Data Fiduciary** for student, parent and staff personal
   data it processes through the Service.
-- **Akshara is the Data Processor**, processing that data **only** on the
+- **NIKSHA OS is the Data Processor**, processing that data **only** on the
   Institution's documented instructions (this Agreement, the Service's
   configuration, and the Institution's use of features).
-- For limited account/device/diagnostic data Akshara needs to run the Service
-  itself, **Akshara is the Data Fiduciary** (see [Privacy Policy](PRIVACY_POLICY.md)).
+- For limited account/device/diagnostic data NIKSHA OS needs to run the Service
+  itself, **NIKSHA OS is the Data Fiduciary** (see [Privacy Policy](PRIVACY_POLICY.md)).
 
 ## B2. Scope & purpose of processing
 - **Subject matter:** operating the school-management Service.
@@ -133,8 +133,8 @@ behalf and reflects the **Digital Personal Data Protection Act, 2023** and the
   masked); device/technical data.
 - **Duration:** for the term, then per Part A6 and the Retention Policy.
 
-## B3. Akshara's obligations as Processor
-Akshara will:
+## B3. NIKSHA OS's obligations as Processor
+NIKSHA OS will:
 1. Process personal data **only** on the Institution's documented instructions, and
    not for its own independent purposes (and **never** to sell data, advertise to
    children, or train unrelated third-party AI models).
@@ -154,18 +154,18 @@ Akshara will:
    allow audits as reasonably required (subject to confidentiality and security).
 
 ## B4. Sub-processors
-- The Institution **authorises** Akshara to engage the sub-processors listed in
+- The Institution **authorises** NIKSHA OS to engage the sub-processors listed in
   [SUBPROCESSORS.md](SUBPROCESSORS.md) to provide the Service.
-- Akshara imposes data-protection obligations on sub-processors consistent with this
+- NIKSHA OS imposes data-protection obligations on sub-processors consistent with this
   Addendum and remains responsible for their performance.
-- Akshara will keep the sub-processor list current and record material changes in
+- NIKSHA OS will keep the sub-processor list current and record material changes in
   the [CHANGELOG](CHANGELOG.md). If the Institution reasonably objects to a new
   sub-processor on data-protection grounds, the parties will work in good faith to
   find an alternative; if none is feasible, the Institution may terminate the
   affected feature or the Agreement as its sole remedy.
 
 ## B5. Children's data
-The parties acknowledge the Service is used by and about children. Akshara processes
+The parties acknowledge the Service is used by and about children. NIKSHA OS processes
 children's data **only** to deliver the Service on the Institution's instructions,
 and applies the protections in [Children's Data & Consent](CHILDREN_DATA_AND_CONSENT.md):
 no tracking, behavioural monitoring, or targeted advertising directed at children.
@@ -174,12 +174,12 @@ responsibility.**
 
 ## B6. International transfers
 Some sub-processors are outside India (see [SUBPROCESSORS.md](SUBPROCESSORS.md)).
-Akshara transfers only the **minimum necessary** data, under contractual safeguards,
+NIKSHA OS transfers only the **minimum necessary** data, under contractual safeguards,
 consistent with the DPDP Act and Rules, and not to any jurisdiction restricted by
 the Central Government.
 
 ## B7. Records & assistance
-Akshara maintains records of categories of processing and provides the Institution
+NIKSHA OS maintains records of categories of processing and provides the Institution
 reasonable assistance and information to meet the Institution's obligations as Data
 Fiduciary.
 
@@ -195,5 +195,5 @@ Addendum to remain compliant.
 > OWNER ACTION: For schools, capture acceptance in-app (the app records the accepting
 > user, role, version, timestamp, and IP/device) and/or via a counter-signed copy.
 
-- **For the Provider:** [LEGAL ENTITY NAME] — name, designation, date.
+- **For the Provider:** NIKSHA Technologies Pvt. Ltd. — name, designation, date.
 - **For the Institution:** name of school, authorised signatory, designation, date.

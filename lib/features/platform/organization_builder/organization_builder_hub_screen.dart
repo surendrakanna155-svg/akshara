@@ -11,7 +11,7 @@ import 'organization_builder_models.dart';
 import 'organization_builder_providers.dart';
 import '../../../theme/spacing.dart';
 
-/// Akshara is an education-only product — the salon/hospital/restaurant verticals
+/// NIKSHA is an education-only product — the salon/hospital/restaurant verticals
 /// are explicitly out of scope (hide-first). The org-builder pack picker only
 /// ever offers the school pack. The backend (`listPacks`) applies the same filter
 /// as defense-in-depth; this is the user-facing gate.

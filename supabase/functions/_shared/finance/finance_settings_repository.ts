@@ -43,6 +43,15 @@ export const FINANCE_SETTINGS_TEMPLATE: SettingSectionTemplate[] = [
         editable: true,
       },
       {
+        // PRA-P1-08 (S1): per-school feature gate for gapless receipt numbering.
+        id: "receipt_sequencing",
+        label: "Gapless Receipt Numbering",
+        defaultValue: "false",
+        description:
+          "Use a per-school, per-financial-year sequential receipt number (e.g. RCP/2026-27/000042). When off, receipts use the legacy random number.",
+        editable: true,
+      },
+      {
         id: "invoice_prefix",
         label: "Invoice Number Prefix",
         defaultValue: "INV",
@@ -145,6 +154,19 @@ export const FINANCE_SETTINGS_TEMPLATE: SettingSectionTemplate[] = [
         defaultValue: "tuition_first",
         description:
           "Order part-payments are allocated across fee heads. Currently only 'tuition_first' is implemented.",
+        editable: true,
+      },
+      // Cap 73 (owner decision #5) — mid-year admission fee proration policy.
+      {
+        id: "midyear_admission_proration_policy",
+        label: "Mid-Year Admission Fee Policy",
+        defaultValue: "full_annual",
+        description:
+          "How a mid-year admission's fee is billed against the annual fee " +
+          "structure. 'full_annual' bills the whole year (TODAY'S BEHAVIOUR — " +
+          "the default; an unconfigured school's billing never changes). " +
+          "'prorate_from_admission_month' bills only the months from the " +
+          "admission month through the academic year's end.",
         editable: true,
       },
     ],

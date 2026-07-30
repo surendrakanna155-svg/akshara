@@ -17,7 +17,7 @@
 
 /** The canned, localizable refusal served to off-domain requests (0 tokens). */
 export const SCHOOL_ASSISTANT_REFUSAL =
-  "I'm the Akshara School Assistant — I can only help with school activities " +
+  "I'm the NIKSHA School Assistant — I can only help with school activities " +
   "like attendance, homework, exams, fees, transport, and student progress.";
 
 export interface DomainVerdict {

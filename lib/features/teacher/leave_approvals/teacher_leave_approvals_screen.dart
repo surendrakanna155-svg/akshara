@@ -19,21 +19,24 @@ class TeacherLeaveApprovalsScreen extends ConsumerWidget {
     final pending = ref.watch(classTeacherPendingLeavesProvider);
 
     return Scaffold(
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(title: const Text('Student leave requests')),
-      body: pending.isEmpty
-          ? const AksharaEmptyState(
-              icon: Icons.event_available_outlined,
-              message: 'No pending leave requests for your class.',
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.all(AksharaSpacing.s4),
-              itemCount: pending.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: AksharaSpacing.s3),
-              itemBuilder: (context, i) =>
-                  _LeaveCard(request: pending[i]),
-            ),
+      // DS V2 P4 — premium persona canvas behind the approval list.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: pending.isEmpty
+            ? const AksharaEmptyState(
+                icon: Icons.event_available_outlined,
+                message: 'No pending leave requests for your class.',
+              )
+            : ListView.separated(
+                padding: const EdgeInsets.all(AksharaSpacing.s4),
+                itemCount: pending.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: AksharaSpacing.s3),
+                itemBuilder: (context, i) => _LeaveCard(request: pending[i]),
+              ),
+      ),
     );
   }
 }

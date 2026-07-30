@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/widgets/akshara_section_empty.dart';
 import '../../../../theme/radius.dart';
 import '../../../../theme/spacing.dart';
 import '../../../../theme/theme_extensions.dart';
@@ -21,6 +22,16 @@ class AdmissionsPipelinePreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = context.aksharaText;
+
+    // An empty kanban inside a fixed 220px box reserves a screenful of blank
+    // space under the header on day one. Collapse to an honest line instead.
+    if (pipeline.isEmpty) {
+      return const AksharaSectionEmpty(
+        message: 'No enquiries yet. New leads appear here and move across the '
+            'stages.',
+        icon: Icons.view_kanban_outlined,
+      );
+    }
 
     return Semantics(
       container: true,

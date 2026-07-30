@@ -29,7 +29,7 @@ socket or the API is unreachable the script ERRORS in setup — it never greens.
 """
 import json, os, time, uuid, subprocess, threading, urllib.request, urllib.error
 
-BASE = os.environ.get("API_BASE_URL", "https://akshara.veloraunisexsalon.com")
+BASE = os.environ.get("API_BASE_URL", "https://api.nikshaos.in")
 # Isolated Track-B run: point API_BASE_URL at the test edge, AKSHARA_DB_NAME at
 # akshara_tenant_test, EDGE_CONTAINER at akshara-edge-test (never touches prod).
 DB_NAME = os.environ.get("AKSHARA_DB_NAME", "akshara_db")

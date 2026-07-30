@@ -24,7 +24,7 @@ const MAX_FEE_CATEGORIES = 10;
 const MAX_MODULES = 16;
 
 const SYSTEM_PROMPT = `
-You are Akshara's AI School Builder. A school founder gives a short brief and a
+You are NIKSHA's AI School Builder. A school founder gives a short brief and a
 deterministic baseline setup. Your job is to refine the baseline into a clean,
 realistic startup configuration for an Indian K-12 school.
 

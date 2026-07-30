@@ -28,15 +28,18 @@ class ParentAttendanceScreen extends ConsumerStatefulWidget {
   final void Function(String destination)? onAcademicsNavigate;
 
   static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
-  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
-  static const double _largeMobileBreakpoint = AksharaBreakpoints.largeMobileMinWidth;
+  static const double _tabletMaxContentWidth =
+      AksharaBreakpoints.compactContentMaxWidth;
+  static const double _largeMobileBreakpoint =
+      AksharaBreakpoints.largeMobileMinWidth;
 
   @override
   ConsumerState<ParentAttendanceScreen> createState() =>
       _ParentAttendanceScreenState();
 }
 
-class _ParentAttendanceScreenState extends ConsumerState<ParentAttendanceScreen> {
+class _ParentAttendanceScreenState
+    extends ConsumerState<ParentAttendanceScreen> {
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _bannerKey = GlobalKey();
 
@@ -54,7 +57,7 @@ class _ParentAttendanceScreenState extends ConsumerState<ParentAttendanceScreen>
     final highlightAbsent = ref.watch(attendanceHighlightAbsentProvider);
 
     return Scaffold(
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'Attendance',
         subtitle: '${data.childName} · ${data.childClass}',
@@ -63,109 +66,124 @@ class _ParentAttendanceScreenState extends ConsumerState<ParentAttendanceScreen>
         trailingPadding: true,
         onNotificationsTap: widget.onNotificationsTap,
       ),
-      body: isLoading
-          ? const AksharaLoadingState()
-          : hasError
-              ? AksharaErrorState(
-                  message: 'Unable to load attendance right now.',
-                  onRetry: () =>
-                      ref.read(parentAttendanceErrorProvider.notifier).state = false,
-                )
-              : LayoutBuilder(
-              builder: (context, constraints) {
-                final isTablet =
-                    constraints.maxWidth >= ParentAttendanceScreen._tabletBreakpoint;
-                final isLargeMobile = constraints.maxWidth >=
-                    ParentAttendanceScreen._largeMobileBreakpoint;
-                final horizontalPadding = isTablet
-                    ? AksharaSpacing.tabletMargin
-                    : AksharaSpacing.mobileMargin;
-                final cellSize = isLargeMobile ? 52.0 : 48.0;
+      // DS V2 P4 — premium persona canvas behind the attendance content.
+      body: AksharaPremiumBackground(
+        showMotif: false,
+        child: isLoading
+            ? const AksharaLoadingState()
+            : hasError
+                ? AksharaErrorState(
+                    message: 'Unable to load attendance right now.',
+                    onRetry: () => ref
+                        .read(parentAttendanceErrorProvider.notifier)
+                        .state = false,
+                  )
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isTablet = constraints.maxWidth >=
+                          ParentAttendanceScreen._tabletBreakpoint;
+                      final isLargeMobile = constraints.maxWidth >=
+                          ParentAttendanceScreen._largeMobileBreakpoint;
+                      final horizontalPadding = isTablet
+                          ? AksharaSpacing.tabletMargin
+                          : AksharaSpacing.mobileMargin;
+                      final cellSize = isLargeMobile ? 52.0 : 48.0;
 
-                return Align(
-                  alignment: Alignment.topCenter,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: isTablet
-                          ? ParentAttendanceScreen._tabletMaxContentWidth
-                          : double.infinity,
-                    ),
-                    child: SingleChildScrollView(
-                      controller: _scrollController,
-                      padding: EdgeInsets.fromLTRB(
-                        horizontalPadding,
-                        AksharaSpacing.s4,
-                        horizontalPadding,
-                        AksharaSpacing.s6,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          AcademicsShortcutsStrip(
-                            onTimetableTap: () =>
-                                widget.onAcademicsNavigate?.call('timetable'),
-                            onHomeworkTap: () =>
-                                widget.onAcademicsNavigate?.call('homework'),
-                            onExamsTap: () =>
-                                widget.onAcademicsNavigate?.call('exams'),
+                      return Align(
+                        alignment: Alignment.topCenter,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: isTablet
+                                ? ParentAttendanceScreen._tabletMaxContentWidth
+                                : double.infinity,
                           ),
-                          const SizedBox(height: AksharaSpacing.s4),
-                          AttendanceMonthSelector(
-                            monthLabel: data.monthLabel,
-                            onPrevious: () => _changeMonth(-1),
-                            onNext: () => _changeMonth(1),
-                          ),
-                          const SizedBox(height: AksharaSpacing.s4),
-                          AttendanceKpiStrip(
-                            metrics: data.kpi,
-                            onAbsentTap: _onAbsentKpiTap,
-                          ),
-                          const SizedBox(height: AksharaSpacing.s4),
-                          SizedBox(
-                            height: AttendanceCalendar.cardHeight,
-                            child: AttendanceCalendar(
-                              days: data.calendarDays,
-                              cellSize: cellSize,
-                              highlightAbsent: highlightAbsent,
-                              onDayTap: _onCalendarDayTap,
-                            ),
-                          ),
-                          if (data.warningBannerMessage != null) ...[
-                            const SizedBox(height: AksharaSpacing.s4),
-                            AksharaWarningBanner(
-                              key: _bannerKey,
-                              message: data.warningBannerMessage!,
-                            ),
-                          ],
-                          const SizedBox(height: AksharaSpacing.s4),
-                          const AksharaSectionHeader(
-                            title: 'Recent',
-                            fixedHeight: false,
-                            spacingBelow: AksharaSpacing.s2,
-                          ),
-                          Column(
-                            children: [
-                              for (var i = 0; i < data.recentLogs.length; i++) ...[
-                                AttendanceSummaryCard(
-                                  log: data.recentLogs[i],
-                                  onInfoTap: () => _showDayDetailSheet(
-                                    context,
-                                    data.recentLogs[i],
+                          child: RefreshIndicator(
+                            onRefresh: () async =>
+                                ref.invalidate(parentAttendanceFutureProvider),
+                            child: SingleChildScrollView(
+                              controller: _scrollController,
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: EdgeInsets.fromLTRB(
+                                horizontalPadding,
+                                AksharaSpacing.s4,
+                                horizontalPadding,
+                                AksharaSpacing.s6,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  AcademicsShortcutsStrip(
+                                    onTimetableTap: () => widget
+                                        .onAcademicsNavigate
+                                        ?.call('timetable'),
+                                    onHomeworkTap: () => widget
+                                        .onAcademicsNavigate
+                                        ?.call('homework'),
+                                    onExamsTap: () => widget.onAcademicsNavigate
+                                        ?.call('exams'),
                                   ),
-                                ),
-                                if (i < data.recentLogs.length - 1)
-                                  const SizedBox(height: AksharaSpacing.s2),
-                              ],
-                            ],
+                                  const SizedBox(height: AksharaSpacing.s4),
+                                  AttendanceMonthSelector(
+                                    monthLabel: data.monthLabel,
+                                    onPrevious: () => _changeMonth(-1),
+                                    onNext: () => _changeMonth(1),
+                                  ),
+                                  const SizedBox(height: AksharaSpacing.s4),
+                                  AttendanceKpiStrip(
+                                    metrics: data.kpi,
+                                    onAbsentTap: _onAbsentKpiTap,
+                                  ),
+                                  const SizedBox(height: AksharaSpacing.s4),
+                                  SizedBox(
+                                    height: AttendanceCalendar.cardHeight,
+                                    child: AttendanceCalendar(
+                                      days: data.calendarDays,
+                                      cellSize: cellSize,
+                                      highlightAbsent: highlightAbsent,
+                                      onDayTap: _onCalendarDayTap,
+                                    ),
+                                  ),
+                                  if (data.warningBannerMessage != null) ...[
+                                    const SizedBox(height: AksharaSpacing.s4),
+                                    AksharaWarningBanner(
+                                      key: _bannerKey,
+                                      message: data.warningBannerMessage!,
+                                    ),
+                                  ],
+                                  const SizedBox(height: AksharaSpacing.s4),
+                                  const AksharaSectionHeader(
+                                    title: 'Recent',
+                                    fixedHeight: false,
+                                    spacingBelow: AksharaSpacing.s2,
+                                  ),
+                                  Column(
+                                    children: [
+                                      for (var i = 0;
+                                          i < data.recentLogs.length;
+                                          i++) ...[
+                                        AttendanceSummaryCard(
+                                          log: data.recentLogs[i],
+                                          onInfoTap: () => _showDayDetailSheet(
+                                            context,
+                                            data.recentLogs[i],
+                                          ),
+                                        ),
+                                        if (i < data.recentLogs.length - 1)
+                                          const SizedBox(
+                                              height: AksharaSpacing.s2),
+                                      ],
+                                    ],
+                                  ),
+                                  const SizedBox(height: AksharaSpacing.s4),
+                                ],
+                              ),
+                            ),
                           ),
-                          const SizedBox(height: AksharaSpacing.s4),
-                        ],
-                      ),
-                    ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
+      ),
     );
   }
 

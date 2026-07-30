@@ -1,12 +1,14 @@
-// QW4 · QA-B-025 / QA-B-026 / QA-B-042 — Inventory module ROUTE + RBAC +
-// entitlement contract (DB-free). routeInventory composes three sub-routers in
-// order: routeInventoryFinanceWrite (procurement/vendors-catalog/valuation),
-// matchInventoryIntelligenceRoute (copilot/lifecycle/procurement-workflow), and
-// the base matchInventoryRoute (dashboard/assets/…).
+// QW4 · QA-B-025 — Inventory module ROUTE + RBAC + entitlement contract (DB-free).
+// After ICA-F6, routeInventory composes TWO sub-routers in order:
+// matchInventoryIntelligenceRoute (copilot/lifecycle/procurement-workflow) and the
+// base matchInventoryRoute (dashboard/assets/…). The procurement / vendor-catalog /
+// stock (inventory_finance) surface moved to routeInventoryFinance — its route,
+// RBAC and module.inventory-entitlement contract is proven in
+// inventory_finance/inventory_finance_route_contract_test.ts.
 //
 // Proven without a live Postgres:
 //   QA-B-025
-//     • PATH-MATCH: every registered inventory route across all three sub-routers
+//     • PATH-MATCH: every registered inventory route across both sub-routers
 //       resolves to a handler (status !== 404); unregistered under /inventory 404s;
 //       outside the prefix returns null.
 //     • module.inventory 402 gate wired via withEntitlement on the /inventory prefix
@@ -14,11 +16,6 @@
 //     • POST /inventory/intelligence/lifecycle/events requires manageAssetLifecycle
 //       OR manageInventory → 403 for a non-holder, 422 for a holder with a bad body
 //       (validation runs before the DB), 503 for a holder with a valid body.
-//   QA-B-026 / QA-B-042
-//     • POST /inventory/procurement/orders, POST /inventory/vendors/catalog and
-//       POST /inventory/vendors require manageInventory → 403 for a non-holder.
-//     • GET /inventory/stock/valuation and GET /inventory/vendors/catalog require
-//       viewInventory → 403 for a token lacking it.
 //
 // Live RLS row isolation + 200 happy-path = live-cert remainder.
 
@@ -58,7 +55,10 @@ async function call(
   return router(req, config, method, path);
 }
 
-// Full registered surface across the three composed sub-routers.
+// Registered surface OWNED by routeInventory: the base register + the
+// intelligence sub-router. ICA-F6: the procurement / vendor-catalog / stock
+// (inventory_finance) surface moved to routeInventoryFinance and is covered by
+// inventory_finance/inventory_finance_route_contract_test.ts.
 const REGISTERED: Array<[string, string]> = [
   // base reads
   ["GET", "/inventory/dashboard"],
@@ -75,27 +75,6 @@ const REGISTERED: Array<[string, string]> = [
   ["POST", "/inventory/intelligence/lifecycle/events"],
   ["GET", "/inventory/intelligence/procurement-workflow"],
   ["POST", `/inventory/intelligence/procurement-workflow/${UUID}/advance`],
-  // finance writes / procurement / valuation
-  ["GET", "/inventory/vendors/catalog"],
-  ["POST", "/inventory/vendors/catalog"],
-  ["GET", "/inventory/procurement/orders"],
-  ["POST", "/inventory/procurement/orders"],
-  ["GET", `/inventory/procurement/orders/${UUID}`],
-  ["POST", `/inventory/procurement/orders/${UUID}/approve`],
-  ["POST", `/inventory/procurement/orders/${UUID}/receive`],
-  ["GET", "/inventory/stock/valuation"],
-  // INV-1..7: store stock module
-  ["POST", "/inventory/stock/issue"],
-  ["POST", "/inventory/stock/adjust"],
-  ["POST", `/inventory/stock/adjustments/${UUID}/approve`],
-  ["POST", `/inventory/stock/adjustments/${UUID}/reject`],
-  ["GET", "/inventory/stock/adjustments"],
-  ["POST", "/inventory/stock/count"],
-  ["GET", "/inventory/stock/items"],
-  ["POST", "/inventory/stock/items"],
-  ["PUT", "/inventory/stock/items"],
-  ["GET", "/inventory/stock/register"],
-  ["GET", "/inventory/stock/low-stock"],
 ];
 
 Deno.test("QA-B-025: every registered inventory route path-matches to a handler (not 404)", async () => {
@@ -107,9 +86,9 @@ Deno.test("QA-B-025: every registered inventory route path-matches to a handler 
   }
 });
 
-Deno.test("QA-B-025: unregistered path under /inventory 404s; path outside prefix is null", async () => {
+Deno.test("QA-B-025: unregistered path under /inventory returns null (central dispatcher 404s); path outside prefix is null", async () => {
   const under = await call(routeInventory, "GET", "/inventory/not-a-route", ["viewInventory"]);
-  assertEquals(under?.status, 404);
+  assertEquals(under, null);
   const outside = await call(routeInventory, "GET", "/hostel/dashboard", ["viewInventory"]);
   assertEquals(outside, null);
 });
@@ -187,112 +166,21 @@ Deno.test("QA-B-025: GET /inventory/dashboard is 403 without viewInventory", asy
   assertEquals(denied?.status, 403);
 });
 
-// ─── QA-B-026 / QA-B-042 — procurement / vendor-catalog / valuation RBAC ──────
-
-Deno.test("QA-B-026: POST /inventory/procurement/orders is 403 without manageInventory", async () => {
-  const denied = await call(routeInventory, "POST", "/inventory/procurement/orders", ["viewInventory"], {
-    vendorId: "v1", poNumber: "PO-1", lines: [{ sku: "x", qty: 1 }],
-  });
-  assertEquals(denied?.status, 403);
-  assertEquals((await denied!.json()).error.code, "FORBIDDEN");
-  // Holder reaches the unconfigured tenant DB (gate + body validation passed).
-  const allowed = await call(routeInventory, "POST", "/inventory/procurement/orders", ["manageInventory"], {
-    vendorId: "v1", poNumber: "PO-1", lines: [{ sku: "x", qty: 1 }],
-  });
-  assertEquals(allowed?.status, 503);
-});
-
-Deno.test("QA-B-026: POST /inventory/vendors/catalog is 403 without manageInventory", async () => {
-  const denied = await call(routeInventory, "POST", "/inventory/vendors/catalog", ["viewInventory"], {
-    vendorCode: "VC1", displayName: "Acme",
-  });
-  assertEquals(denied?.status, 403);
-  const allowed = await call(routeInventory, "POST", "/inventory/vendors/catalog", ["manageInventory"], {
-    vendorCode: "VC1", displayName: "Acme",
-  });
-  assertEquals(allowed?.status, 503);
-});
-
-Deno.test("QA-B-042: GET /inventory/vendors/catalog requires viewInventory (403 otherwise)", async () => {
-  const denied = await call(routeInventory, "GET", "/inventory/vendors/catalog", ["viewFinance"]);
-  assertEquals(denied?.status, 403);
-  const allowed = await call(routeInventory, "GET", "/inventory/vendors/catalog", ["viewInventory"]);
-  assertEquals(allowed?.status, 503);
-});
-
-Deno.test("QA-B-042: GET /inventory/stock/valuation requires viewInventory (403 otherwise)", async () => {
-  const denied = await call(routeInventory, "GET", "/inventory/stock/valuation", ["viewFinance"]);
-  assertEquals(denied?.status, 403);
-  const allowed = await call(routeInventory, "GET", "/inventory/stock/valuation", ["viewInventory"]);
-  assertEquals(allowed?.status, 503);
-});
-
-Deno.test("QA-B-042: GET /inventory/procurement/orders requires viewInventory (403 otherwise)", async () => {
-  const denied = await call(routeInventory, "GET", "/inventory/procurement/orders", ["viewFinance"]);
-  assertEquals(denied?.status, 403);
-});
-
-Deno.test("QA-B-026: unauthenticated procurement write is 401", async () => {
-  const req = new Request("https://x/inventory/procurement/orders", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ vendorId: "v1", poNumber: "PO-1", lines: [{}] }),
-  });
-  const res = await routeInventory(req, config, "POST", "/inventory/procurement/orders");
-  assertEquals(res?.status, 401);
-});
-
-// ─── INV-1..7 — store stock module RBAC + contract (DB-free) ──────────────────
-
-Deno.test("INV: stock writes require manageInventory (403 without, 503 with valid body)", async () => {
-  const writes: Array<[string, string, unknown]> = [
-    ["POST", "/inventory/stock/issue", { issueNumber: "ISS-1", lines: [{ sku: "PEN-1", quantity: 2 }] }],
-    ["POST", "/inventory/stock/adjust", { sku: "PEN-1", quantity: 3, movementType: "adjust_in", reason: "restock" }],
-    ["POST", `/inventory/stock/adjustments/${UUID}/approve`, {}],
-    ["POST", `/inventory/stock/adjustments/${UUID}/reject`, { comment: "no" }],
-    ["POST", "/inventory/stock/count", { sessionNumber: "CNT-1", lines: [{ sku: "PEN-1", countedQty: 5 }] }],
-    ["POST", "/inventory/stock/items", { sku: "PEN-1", reorderLevel: 10 }],
-    ["PUT", "/inventory/stock/items", { sku: "PEN-1", reorderLevel: 10 }],
+// ICA-F6: routeInventory no longer owns the inventory_finance surface, so a
+// procurement / stock path is now an in-prefix no-match → routeInventory returns
+// null (the central dispatcher 404s), proving the delegation was removed. The
+// positive route/RBAC contract for those paths lives in
+// inventory_finance/inventory_finance_route_contract_test.ts.
+Deno.test("ICA-F6: procurement / stock paths are no longer owned by routeInventory (null)", async () => {
+  const movedOut: Array<[string, string]> = [
+    ["GET", "/inventory/vendors/catalog"],
+    ["POST", "/inventory/procurement/orders"],
+    ["GET", "/inventory/stock/valuation"],
+    ["POST", "/inventory/stock/adjust"],
+    ["GET", "/inventory/stock/register"],
   ];
-  for (const [method, path, body] of writes) {
-    const denied = await call(routeInventory, method, path, ["viewInventory"], body);
-    assertEquals(denied?.status, 403, `${method} ${path} should 403 without manageInventory`);
-    assertEquals((await denied!.json()).error.code, "FORBIDDEN");
-    // Holder with a valid body passes gate + validation → reaches unconfigured DB (503).
-    const allowed = await call(routeInventory, method, path, ["manageInventory"], body);
-    assertEquals(allowed?.status, 503, `${method} ${path} should reach DB (503) for a holder`);
+  for (const [method, path] of movedOut) {
+    const res = await call(routeInventory, method, path, ["viewInventory", "manageInventory"]);
+    assertEquals(res, null, `${method} ${path} should return null through routeInventory after ICA-F6`);
   }
-});
-
-Deno.test("INV: stock writes 422 on an invalid body before touching the DB", async () => {
-  // Holder, but missing required fields → 422 validation (not 503/500).
-  const badIssue = await call(routeInventory, "POST", "/inventory/stock/issue", ["manageInventory"], { issueNumber: "ISS-1" });
-  assertEquals(badIssue?.status, 422);
-  const badAdjust = await call(routeInventory, "POST", "/inventory/stock/adjust", ["manageInventory"], { sku: "PEN-1", movementType: "bogus", reason: "x" });
-  assertEquals(badAdjust?.status, 422);
-});
-
-Deno.test("INV: stock reads require viewInventory (403 without, 503 with)", async () => {
-  const reads = [
-    "/inventory/stock/adjustments",
-    "/inventory/stock/items",
-    "/inventory/stock/register",
-    "/inventory/stock/low-stock",
-  ];
-  for (const path of reads) {
-    const denied = await call(routeInventory, "GET", path, ["viewFinance"]);
-    assertEquals(denied?.status, 403, `${path} should 403 without viewInventory`);
-    const allowed = await call(routeInventory, "GET", path, ["viewInventory"]);
-    assertEquals(allowed?.status, 503, `${path} should reach DB (503) for a holder`);
-  }
-});
-
-Deno.test("INV: unauthenticated stock issue is 401", async () => {
-  const req = new Request("https://x/inventory/stock/issue", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ issueNumber: "ISS-1", lines: [{ sku: "PEN-1", quantity: 1 }] }),
-  });
-  const res = await routeInventory(req, config, "POST", "/inventory/stock/issue");
-  assertEquals(res?.status, 401);
 });

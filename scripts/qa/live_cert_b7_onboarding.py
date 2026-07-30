@@ -4,7 +4,7 @@ Real VPS + real OTP auth + real DB. Classifies each check PASS/FAIL/BLOCKED.
 DB verification runs via the active ssh ControlMaster socket (root @ VPS)."""
 import json, os, time, hashlib, subprocess, urllib.request, urllib.error
 
-BASE = "https://akshara.veloraunisexsalon.com"
+BASE = os.environ.get("API_BASE_URL", "https://api.nikshaos.in")
 SCHOOL = "a2000000-0000-4000-8000-000000000001"
 SOCK = os.path.expanduser("~/.ssh/akshara-cm.sock")
 ADMIN = "+919876543210"

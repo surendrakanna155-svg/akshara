@@ -23,10 +23,12 @@ import { scheduleReminder } from "../reminders/reminders_service.ts";
 import {
   adjustStock,
   approveStockAdjustment,
+  findScheduledStorekeeperBroadcast,
   InsufficientStockError,
   issueStock,
   listLowStock,
   listPendingAdjustments,
+  listStockAdjustments,
   listStockItems,
   listStockRegister,
   recordStockCount,
@@ -37,6 +39,7 @@ import {
   StockValidationError,
   upsertStockItem,
 } from "./inventory_stock_repository.ts";
+import { releaseSavepoint, rollbackToSavepoint, savepoint } from "../db_savepoint.ts";
 
 function requireInventoryWrite(claims: Parameters<typeof requirePermission>[0]): Response | null {
   return requirePermission(claims, "manageInventory") ??
@@ -97,22 +100,18 @@ export async function scheduleLowStockReminderIfNeeded(
   req?: Request,
 ): Promise<{ scheduled: boolean }> {
   if (input.lowStockCount <= 0) return { scheduled: false };
-  await db.queryObject("SAVEPOINT inv7_low_stock_reminder");
+  await savepoint(db, "inv7_low_stock_reminder");
   try {
     const orgId = organizationIdFromClaims(claims);
     const schoolId = schoolIdFromClaims(claims);
-    const pending = await db.queryObject<{ id: string }>(
-      `SELECT id FROM comm_broadcasts
-        WHERE organization_id = $1
-          AND school_id = $2
-          AND audience = 'storekeepers'
-          AND status = 'scheduled'
-          AND title = $3
-        LIMIT 1`,
-      [orgId, schoolId, LOW_STOCK_REMINDER_TITLE],
+    const pending = await findScheduledStorekeeperBroadcast(
+      db,
+      orgId,
+      schoolId,
+      LOW_STOCK_REMINDER_TITLE,
     );
     if (pending.length > 0) {
-      await db.queryObject("RELEASE SAVEPOINT inv7_low_stock_reminder");
+      await releaseSavepoint(db, "inv7_low_stock_reminder");
       return { scheduled: false };
     }
     await scheduleReminder(db, claims, {
@@ -135,12 +134,12 @@ export async function scheduleLowStockReminderIfNeeded(
       payload: { count: input.lowStockCount, trigger: "issue", issueId: input.issueId },
       idempotencyKey: `inventory.low_stock.alerted:${input.issueId}`,
     }, req);
-    await db.queryObject("RELEASE SAVEPOINT inv7_low_stock_reminder");
+    await releaseSavepoint(db, "inv7_low_stock_reminder");
     return { scheduled: true };
   } catch (error) {
     // Alerting is best-effort — roll back ONLY the reminder work and keep the
     // issue transaction healthy. The issue itself must never fail here.
-    await db.queryObject("ROLLBACK TO SAVEPOINT inv7_low_stock_reminder");
+    await rollbackToSavepoint(db, "inv7_low_stock_reminder");
     console.error("INV-7 low-stock reminder scheduling failed", error);
     return { scheduled: false };
   }
@@ -392,6 +391,40 @@ export async function handleListPendingAdjustments(req: Request, config: AppConf
     const mapped = mapStockError(error);
     if (mapped) return mapped;
     return errorEnvelope("INTERNAL_ERROR", "Failed to list pending adjustments", 500);
+  }
+}
+
+/**
+ * WEB-004 (ERP-WT-004) — GET /inventory/stock/approvals. The full maker-checker
+ * value-reducing stock register (pending + decided, newest first), for the web
+ * Stock-Approvals page. Optional ?status=pending|approved|rejected. Read gate.
+ */
+export async function handleStockApprovals(req: Request, config: AppConfig): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireInventoryRead(auth.claims);
+  if (denied) return denied;
+
+  const url = new URL(req.url);
+  const status = url.searchParams.get("status") ?? undefined;
+  if (status && !["pending", "approved", "rejected"].includes(status)) {
+    return errorEnvelope("VALIDATION_ERROR", "status must be pending|approved|rejected", 422);
+  }
+
+  try {
+    const items = await withTenantContext(config, auth.claims, async (db) =>
+      await listStockAdjustments(
+        db,
+        organizationIdFromClaims(auth.claims),
+        schoolIdFromClaims(auth.claims)!,
+        { status: status || undefined },
+      )
+    );
+    return jsonResponse(envelope({ items, count: items.length }));
+  } catch (error) {
+    const mapped = mapStockError(error);
+    if (mapped) return mapped;
+    return errorEnvelope("INTERNAL_ERROR", "Failed to list stock approvals", 500);
   }
 }
 

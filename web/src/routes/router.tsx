@@ -226,6 +226,13 @@ import {
   TeacherConversationPage,
   ParentConversationPage,
 } from '@/pages/detail/DetailPages';
+import {
+  SupportConsoleGate,
+  SupportQueuePage,
+  SupportIncidentPage,
+  SupportClustersPage,
+  SupportClusterDetailPage,
+} from '@/pages/support-console';
 import { ModuleScaffold } from '@/components/system/ModuleScaffold';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { ROLE_META } from '@/lib/auth/roles';
@@ -237,7 +244,7 @@ function Splash() {
     <div className="grid h-screen place-items-center bg-surface-low">
       <div className="flex flex-col items-center gap-s4">
         <span className="grid h-14 w-14 animate-pulse place-items-center rounded-2xl bg-primary text-2xl font-bold text-on-primary">A</span>
-        <span className="ak-label-md text-on-surface-variant">Loading Akshara…</span>
+        <span className="ak-label-md text-on-surface-variant">Loading NIKSHA OS…</span>
       </div>
     </div>
   );
@@ -546,6 +553,18 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <RootRedirect /> },
       ...navChildren,
+      // ASIP Support Console (scoped unfreeze) — gated on the platformSupport
+      // permission by SupportConsoleGate; additive, does not touch frozen pages.
+      {
+        path: 'support-console',
+        element: <SupportConsoleGate />,
+        children: [
+          { index: true, element: <SupportQueuePage /> },
+          { path: 'incidents/:id', element: <SupportIncidentPage /> },
+          { path: 'clusters', element: <SupportClustersPage /> },
+          { path: 'clusters/:id', element: <SupportClusterDetailPage /> },
+        ],
+      },
       // Parametric detail routes (deep-linkable record views)
       { path: 'sis/students/:id', element: <SisStudentDetailPage /> },
       { path: 'finance/collections/:id', element: <CollectionDetailPage /> },

@@ -198,6 +198,15 @@ class MockDb {
     if (sql.includes("SELECT * FROM finance_receipts") && sql.includes("collection_id = $1")) {
       return this.receipts.filter((r) => r.collection_id === args[0]) as T[];
     }
+    // PRA-P0-04 (S1): the cancel path now locks the collection row (SELECT ...
+    // FOR UPDATE) and reads its status under the lock before reversing money.
+    if (
+      sql.includes("SELECT * FROM finance_collections") &&
+      sql.includes("FOR UPDATE")
+    ) {
+      const row = this.collections.find((c) => c.id === args[0]);
+      return (row ? [row] : []) as T[];
+    }
     if (sql.includes("UPDATE finance_collections SET") && sql.includes("cancelled")) {
       const row = this.collections.find((c) => c.id === args[0]);
       if (row) {

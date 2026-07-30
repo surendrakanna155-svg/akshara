@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/errors/error_text.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../shared/forms/akshara_form_field.dart';
@@ -107,7 +108,9 @@ Future<void> showCreateSubjectDialog(
   } catch (error) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Could not add subject: $error')),
+      SnackBar(
+        content: Text('Could not add subject: ${aksharaErrorMessage(error)}'),
+      ),
     );
   }
 }
@@ -198,7 +201,9 @@ Future<void> showEditSubjectDialog(
   } catch (error) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Could not update subject: $error')),
+      SnackBar(
+        content: Text('Could not update subject: ${aksharaErrorMessage(error)}'),
+      ),
     );
   }
 }

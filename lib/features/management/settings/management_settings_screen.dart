@@ -136,7 +136,7 @@ class _ManagementSettingsScreenState
               leading: const Icon(Icons.tune_outlined),
               title: const Text('School setup & modules'),
               subtitle: const Text(
-                  'Tailor Akshara to your school — type, curriculum, and the '
+                  'Tailor NIKSHA OS to your school — type, curriculum, and the '
                   'modules you actually use'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => context.push(RouteNames.schoolDiscovery),

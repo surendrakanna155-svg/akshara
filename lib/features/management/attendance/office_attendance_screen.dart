@@ -7,8 +7,10 @@ import '../../../core/repositories/repository_providers.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../core/tenant/tenant_provider.dart';
 import '../../../shared/async/erp_async_state.dart';
+import '../../../theme/accessibility.dart';
 import '../../../shared/widgets/akshara_freshness_chip.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
+import '../../../shared/widgets/premium/akshara_premium_background.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -19,8 +21,7 @@ import '../../admin/admin_layout.dart';
 final officeAttendanceClassProvider = StateProvider<String>((ref) => '8-A');
 
 /// The date the register + pending tabs are viewing.
-final officeAttendanceDateProvider =
-    StateProvider<DateTime>((ref) => _today());
+final officeAttendanceDateProvider = StateProvider<DateTime>((ref) => _today());
 
 /// The month (YYYY-MM) the monthly tab is viewing.
 final officeAttendanceMonthProvider = StateProvider<String>((ref) {
@@ -105,6 +106,9 @@ class OfficeAttendanceScreen extends ConsumerWidget {
     return DefaultTabController(
       length: _tabs.length,
       child: Scaffold(
+        // DS V2 P4 — the persona (admin/indigo) premium canvas shows through
+        // behind the office-attendance workspace.
+        backgroundColor: Colors.transparent,
         appBar: AppBar(
           title: const Text('Office attendance'),
           actions: const [
@@ -124,13 +128,16 @@ class OfficeAttendanceScreen extends ConsumerWidget {
             ],
           ),
         ),
-        body: const TabBarView(
-          children: [
-            _RegisterTab(),
-            _MonthlyTab(),
-            _PendingTab(),
-            _AlertsTab(),
-          ],
+        body: const AksharaPremiumBackground(
+          showMotif: false,
+          child: TabBarView(
+            children: [
+              _RegisterTab(),
+              _MonthlyTab(),
+              _PendingTab(),
+              _AlertsTab(),
+            ],
+          ),
         ),
       ),
     );
@@ -210,8 +217,7 @@ class _ClassDateFilterBar extends ConsumerWidget {
   }
 }
 
-String _dateLabel(DateTime date) =>
-    '${date.year.toString().padLeft(4, '0')}-'
+String _dateLabel(DateTime date) => '${date.year.toString().padLeft(4, '0')}-'
     '${date.month.toString().padLeft(2, '0')}-'
     '${date.day.toString().padLeft(2, '0')}';
 
@@ -254,8 +260,7 @@ Widget _tabBody({required Widget child}) {
 }
 
 void _snack(BuildContext context, String message) {
-  ScaffoldMessenger.of(context)
-      .showSnackBar(SnackBar(content: Text(message)));
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
 }
 
 // --- ATT-1 Register tab ------------------------------------------------------
@@ -351,7 +356,8 @@ class _RegisterSummary extends StatelessWidget {
     return Wrap(
       spacing: AksharaSpacing.s2,
       children: [
-        _StatChip(label: 'Present', value: count('present'), color: Colors.green),
+        _StatChip(
+            label: 'Present', value: count('present'), color: Colors.green),
         _StatChip(label: 'Absent', value: count('absent'), color: Colors.red),
         _StatChip(label: 'Late', value: count('late'), color: Colors.orange),
         _StatChip(
@@ -362,7 +368,8 @@ class _RegisterSummary extends StatelessWidget {
 }
 
 class _StatChip extends StatelessWidget {
-  const _StatChip({required this.label, required this.value, required this.color});
+  const _StatChip(
+      {required this.label, required this.value, required this.color});
 
   final String label;
   final int value;
@@ -373,8 +380,14 @@ class _StatChip extends StatelessWidget {
     return Chip(
       avatar: CircleAvatar(
         backgroundColor: color,
+        // A11y-P2: a hardcoded `Colors.white` failed WCAG AA on these Material
+        // palette fills (white on Colors.orange is 2.16:1, on green 2.78:1, on
+        // red 3.68:1). The design system already solves this —
+        // `AksharaAccessibility.onColorFor` picks black or white by luminance —
+        // and this screen was bypassing it.
         child: Text('$value',
-            style: const TextStyle(fontSize: 11, color: Colors.white)),
+            style: TextStyle(
+                fontSize: 11, color: AksharaAccessibility.onColorFor(color))),
       ),
       label: Text(label),
     );
@@ -469,7 +482,8 @@ class _MonthlyTab extends ConsumerWidget {
         children: [
           const _ClassDateFilterBar(showDate: false, showMonth: true),
           const SizedBox(height: AksharaSpacing.s4),
-          AksharaSectionHeader(title: 'Monthly register · $classLabel · $month'),
+          AksharaSectionHeader(
+              title: 'Monthly register · $classLabel · $month'),
           const SizedBox(height: AksharaSpacing.s2),
           ErpAsyncBody(
             state: resolveErpAsync(
@@ -659,8 +673,8 @@ class _PendingTab extends ConsumerWidget {
         ],
     ];
     final service = ref.read(aksharaReportExportServiceProvider);
-    final base = 'attendance_pending_$date'
-        .replaceAll(RegExp(r'[^A-Za-z0-9_]+'), '_');
+    final base =
+        'attendance_pending_$date'.replaceAll(RegExp(r'[^A-Za-z0-9_]+'), '_');
     if (pdf) {
       await service.shareGridPdf(
         filename: base,
@@ -826,8 +840,9 @@ class _ShortAttendanceSection extends ConsumerWidget {
             onFieldSubmitted: (value) {
               final parsed = int.tryParse(value.trim());
               if (parsed != null && parsed >= 1 && parsed <= 100) {
-                ref.read(officeShortAttendanceThresholdProvider.notifier).state =
-                    parsed;
+                ref
+                    .read(officeShortAttendanceThresholdProvider.notifier)
+                    .state = parsed;
               }
             },
           ),
@@ -853,9 +868,16 @@ class _ShortAttendanceSection extends ConsumerWidget {
                     child: ListTile(
                       leading: CircleAvatar(
                         backgroundColor: _tierColor(r.percentPresent),
+                        // A11y-P2: was a hardcoded `Colors.white`, which fails
+                        // WCAG AA on every tier fill (2.16:1 on orange,
+                        // 2.78:1 on green, 3.68:1 on red).
+                        // `AksharaAccessibility.onColorFor` picks the
+                        // higher-contrast of black / white for the fill.
                         child: Text('${r.percentPresent}',
-                            style: const TextStyle(
-                                fontSize: 12, color: Colors.white)),
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: AksharaAccessibility.onColorFor(
+                                    _tierColor(r.percentPresent)))),
                       ),
                       title: Text(r.name),
                       subtitle: Text(

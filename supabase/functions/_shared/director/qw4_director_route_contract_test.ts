@@ -78,13 +78,12 @@ Deno.test("QA-B-027: all director routes match the router (never 404 NOT_FOUND)"
   assertEquals(metric.status, 503);
 });
 
-Deno.test("QA-B-027: an unregistered director POST path returns 404 NOT_FOUND", async () => {
-  // The router emits an explicit 404 envelope for an unhandled method/path that
-  // still falls under the /director prefix (e.g. an unregistered POST).
-  const res = await call("POST", "/director/does-not-exist", ["viewDirectorPortal"], {});
-  assertEquals(res.status, 404);
-  const env = await res.json();
-  assertEquals(env.error.code, "NOT_FOUND");
+Deno.test("QA-B-027: an unregistered director POST path returns null (central dispatcher 404s)", async () => {
+  // An unhandled method/path under the /director prefix (e.g. an unregistered
+  // POST) is an in-prefix no-match, so the router returns null and the central
+  // dispatcher owns the route-level 404.
+  const res = await raw("POST", "/director/does-not-exist", ["viewDirectorPortal"], {});
+  assertEquals(res, null);
 });
 
 Deno.test("QA-B-027: an unregistered director GET path returns null (→ 404 at dispatch)", async () => {

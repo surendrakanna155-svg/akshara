@@ -9,7 +9,7 @@
 
 ## Overview
 
-Akshara separates **who may speak to parents** from **who may raise academic concerns**. Class teachers own parent communication; subject teachers escalate through a review queue.
+NIKSHA OS separates **who may speak to parents** from **who may raise academic concerns**. Class teachers own parent communication; subject teachers escalate through a review queue.
 
 ---
 

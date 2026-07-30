@@ -90,7 +90,7 @@ abstract final class TeacherParentTemplates {
           ParentCommunicationTone.friendlyReminder =>
             'This is a friendly reminder that school fees are due soon. Kindly complete payment at your earliest convenience.',
           ParentCommunicationTone.dueSoon =>
-            'School fee payment is due within the next few days. Please use the Akshara parent app to pay.',
+            'School fee payment is due within the next few days. Please use the NIKSHA OS parent app to pay.',
           _ =>
             'School fees are overdue. Please clear the outstanding balance to avoid service interruption.',
         },

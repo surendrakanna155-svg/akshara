@@ -9,14 +9,26 @@ import {
   WriteValidationError,
 } from "../entity_write/module_write_handlers.ts";
 import { createEntityWriteStore } from "../entity_write/entity_write_store.ts";
+import {
+  closeOpenAllocation,
+  recordAllocationChange,
+} from "./transport_allocation_history_repository.ts";
 import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
-import { sendBroadcastMessage } from "../communication/communication_service.ts";
+import { guardianUserIdsForStudents } from "../communication/guardian_recipients.ts";
+import { enqueueDeliveriesBatch } from "../communication/communication_repository.ts";
+import { processDeliveryQueue } from "../communication/notification_service.ts";
 import { scheduleReminder } from "../reminders/reminders_service.ts";
 import type { AccessTokenClaims } from "../jwt.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 import { MAX_BULK_ITEMS } from "../http.ts";
 import { resolveStudentId } from "../sis/sis_student_resolver.ts";
 import { assignFeeStructure } from "../finance/finance_assignments_repository.ts";
+import {
+  cancelInvoice,
+  InvalidInvoiceTransitionError,
+} from "../finance/finance_invoices_repository.ts";
+import { listEnrollmentsForClassSection } from "./transport_read_repository.ts";
+import { releaseSavepoint, rollbackToSavepoint, savepoint } from "../db_savepoint.ts";
 
 const writeStore = createEntityWriteStore("transport_entities", "Transport");
 const { runWrite } = createModuleWriteHandlers("manageTransport");
@@ -173,6 +185,124 @@ export async function handleRecordAttendance(req: Request, config: AppConfig): P
   });
 }
 
+/**
+ * PRA-P1-43 — POST /transport/attendance/generate — build a route's attendance
+ * roster for a shift+date FROM ITS LIVE ALLOCATION ROWS.
+ *
+ * Previously the only write was {@link handleRecordAttendance}, which upserts one
+ * client-provided row — nothing ever derived the roster from who is actually
+ * allocated to the route, so a live attendance list could not be created (the
+ * mock seeded fakes). This reads the route's `allocation` rows (same shape as the
+ * TRN-3 roster read), filters to the requested shift (allocations flagged "both"
+ * always ride), and inserts a `waiting` `attendance` entity per student that the
+ * GET /transport/attendance list reads back. The scheduled pickup time is resolved
+ * from the route's own stop matching the student's pickup stop. Idempotent: a row
+ * already generated (same id `${routeId}:${sisStudentId}:${shift}:${date}`) is
+ * left untouched so a re-run never clobbers a status a driver already recorded.
+ * manageTransport.
+ */
+/**
+ * PRA-P1-43 (pure, exported for tests) — derive the `attendance` rows to create
+ * for a route+shift+date from its allocation rows. Allocations off the route, of
+ * the wrong shift (allocations flagged "both" always ride; a "both" shift request
+ * takes every allocation), or with no SIS id are dropped. Each row carries a
+ * stable idempotency id `${routeId}:${sisStudentId}:${shift}:${date}`, the
+ * student's pickup stop, the route name, and the scheduled pickup time resolved
+ * from the route's matching stop; status starts "waiting", parentNotified false.
+ */
+export function buildAttendanceRosterRows(
+  route: Record<string, unknown>,
+  allocations: Array<Record<string, unknown>>,
+  shift: string,
+  date: string,
+): Array<Record<string, unknown>> {
+  const routeId = String(route.id ?? "");
+  const routeName = (route.name as string | undefined) ?? routeId;
+  const stops = Array.isArray(route.stops)
+    ? (route.stops as Array<Record<string, unknown>>)
+    : [];
+  const scheduledForStop = (stopName: string): string => {
+    const s = stops.find((x) => String(x.name ?? "").trim() === stopName.trim());
+    if (!s) return "";
+    return String(s.pickupTime ?? s.scheduledTime ?? "");
+  };
+  const rows: Array<Record<string, unknown>> = [];
+  for (const a of allocations) {
+    if (String(a.routeId ?? "") !== routeId) continue;
+    const aShift = String(a.shift ?? "both");
+    if (!(aShift === shift || aShift === "both" || shift === "both")) continue;
+    const sisStudentId = String(a.sisStudentId ?? "");
+    if (sisStudentId.length === 0) continue;
+    const pickupStop = String(a.pickupStop ?? "");
+    rows.push({
+      id: `${routeId}:${sisStudentId}:${shift}:${date}`,
+      studentName: String(a.studentName ?? ""),
+      stopName: pickupStop,
+      routeName,
+      scheduledTime: scheduledForStop(pickupStop),
+      actualTime: "",
+      status: "waiting",
+      parentNotified: false,
+      shift,
+    });
+  }
+  return rows;
+}
+
+export async function handleGenerateAttendanceRoster(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  return await runWrite(req, config, async (ctx) => {
+    const { db, organizationId, schoolId, body, claims, req: request } = ctx;
+    const routeId = requireStr(body, "routeId", "route_id");
+    const shift = str(body, "shift") ?? "am";
+    const date = str(body, "date") ?? new Date().toISOString().slice(0, 10);
+
+    const route = await writeStore.find(db, organizationId, schoolId, "route", routeId);
+    if (!route) throw new WriteNotFoundError(`Transport route not found: ${routeId}`);
+
+    const allocations = await writeStore.findAll(db, organizationId, schoolId, "allocation");
+    const rows = buildAttendanceRosterRows(route, allocations, shift, date);
+
+    const generated: string[] = [];
+    const skipped: string[] = [];
+    for (const payload of rows) {
+      const attendanceId = String(payload.id);
+      const existing = await writeStore.find(
+        db,
+        organizationId,
+        schoolId,
+        "attendance",
+        attendanceId,
+      );
+      if (existing) {
+        skipped.push(attendanceId);
+        continue;
+      }
+      await writeStore.insert(db, organizationId, schoolId, "attendance", attendanceId, payload);
+      generated.push(attendanceId);
+    }
+
+    await emitMutationAudit(
+      db,
+      claims,
+      moduleEntityAudit("transport.attendance.generated", "transport_route", routeId, {
+        routeId,
+        shift,
+        date,
+        generated: generated.length,
+        skipped: skipped.length,
+      }),
+      request,
+    );
+    return {
+      payload: { routeId, shift, date, generatedCount: generated.length, generated, skipped },
+      status: 201,
+    };
+  });
+}
+
 /** POST /transport/routes/{id}/activate — activate an existing route. */
 export async function handleActivateRoute(req: Request, config: AppConfig): Promise<Response> {
   return await runWrite(req, config, async (ctx) => {
@@ -265,6 +395,29 @@ export async function handleAssignStudentTransport(
     const saved = existing
       ? (await writeStore.replace(db, organizationId, schoolId, "allocation", id, payload)) ?? payload
       : await writeStore.insert(db, organizationId, schoolId, "allocation", id, payload);
+    // W4 (Owner decision #5): record the assignment on the effective-dated
+    // history timeline — CLOSE the prior open period + OPEN a new one, never
+    // overwriting the historical route/stop. A re-assign to the SAME route/stop
+    // is a no-op on the timeline. An optional effectiveDate back-dates the change.
+    await recordAllocationChange(
+      db,
+      organizationId,
+      schoolId,
+      id,
+      {
+        sisStudentId,
+        routeId,
+        pickupStop: payload.pickupStop,
+        dropStop: payload.dropStop,
+        shift: payload.shift,
+        payload,
+      },
+      {
+        changeDate: isoDateField(body, "effectiveDate", "effective_date") ??
+          new Date().toISOString(),
+        changedBy: claims.sub ?? null,
+      },
+    );
     await emitMutationAudit(
       db,
       claims,
@@ -331,6 +484,29 @@ export async function handleTransferStudentTransport(
       allocationId,
       next,
     );
+    // W4 (Owner decision #5): a transfer to a different route opens a new
+    // effective-dated period on the timeline (prior route period is CLOSEd, never
+    // overwritten), so the student's route history is fully reconstructable.
+    await recordAllocationChange(
+      db,
+      organizationId,
+      schoolId,
+      allocationId,
+      {
+        sisStudentId: (allocation.sisStudentId as string | undefined) ?? null,
+        routeId: targetRouteId,
+        pickupStop: next.pickupStop,
+        dropStop: next.dropStop,
+        // A transfer moves route/stops but keeps the student's shift.
+        shift: (allocation.shift as string | undefined) ?? null,
+        payload: next,
+      },
+      {
+        changeDate: isoDateField(body, "effectiveDate", "effective_date") ??
+          new Date().toISOString(),
+        changedBy: claims.sub ?? null,
+      },
+    );
     await emitMutationAudit(
       db,
       claims,
@@ -343,47 +519,155 @@ export async function handleTransferStudentTransport(
   });
 }
 
-/** DELETE /transport/allocations/{id} — remove a student's transport allocation. */
+/**
+ * DELETE /transport/allocations/{id} — STOP a student's transport.
+ *
+ * PRC-A caps 4/9 (P0 — real-money over-billing + history loss). This previously
+ * hard-DELETED the allocation row and made NO finance call, so stopping transport
+ * (a) destroyed the enrolment history and (b) left the student's transport invoice
+ * open — the school kept billing a child who no longer rides. It is the exact
+ * inverse of the TRN-9 income seam (handleRaiseTransportDemand), so it now
+ * reverses it:
+ *   1. SOFT-STOP: the allocation row is PRESERVED and marked stopped with an
+ *      effective date (optional `effectiveDate`, defaults to today) — history and
+ *      audit survive, and the read side still sees the row as un-enrolled.
+ *   2. REVOKE THE FEE: every demand raised for this allocation has its invoice
+ *      cancelled via Finance's own cancelInvoice — which (since the PRC-A lockstep
+ *      fix) also releases the still-unpaid remainder from the student's account,
+ *      so they stop being billed AND stop reading as a defaulter.
+ *   3. RELEASE THE DEDUPE KEY: the demand's `dedupeKey` is moved to
+ *      `revokedDedupeKey`. transport_entities_demand_dedupe_key_uniq is a PARTIAL
+ *      index (`WHERE entity_type='demand' AND payload ? 'dedupeKey'`) and the
+ *      raise path dedupes on that same field — so leaving it in place would make a
+ *      later re-enrolment on the same route/year/term return the OLD demand as
+ *      "idempotent" and raise NO new fee (a free ride). Renaming the key drops the
+ *      row out of the index and out of the dedupe read while KEEPING the history.
+ *
+ * An already-PAID transport invoice is deliberately NOT cancelled: that is real
+ * money the parent paid, and reversing it is a Finance refund decision, not a
+ * transport side effect. Such invoices are reported back in `skippedInvoices`
+ * rather than silently ignored.
+ */
+export interface StopStudentTransportResult {
+  stopped: Record<string, unknown>;
+  cancelledInvoices: string[];
+  skippedInvoices: Array<{ invoiceId: string; reason: string }>;
+}
+
+/**
+ * The load-bearing half of {@link handleRemoveStudentTransport}, exported so the
+ * revoke + soft-stop + dedupe-release contract is directly testable without the
+ * handler's auth/tenant plumbing (same pattern as {@link insertDemandIdempotent}).
+ */
+export async function stopStudentTransport(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  allocationId: string,
+  options: { effectiveDate: string; actorId: string | null },
+): Promise<StopStudentTransportResult> {
+  const allocation = await writeStore.find(
+    db,
+    organizationId,
+    schoolId,
+    "allocation",
+    allocationId,
+  );
+  if (!allocation) {
+    throw new WriteNotFoundError(`Transport allocation not found: ${allocationId}`);
+  }
+
+  // ── Revoke the transport fee raised for this allocation ────────────────────
+  const demands = await writeStore.findAll(db, organizationId, schoolId, "demand");
+  const linked = demands.filter((d) =>
+    String(d.allocationId ?? "") === allocationId && d.cancelledAt == null
+  );
+  const cancelledInvoices: string[] = [];
+  const skippedInvoices: Array<{ invoiceId: string; reason: string }> = [];
+
+  for (const demand of linked) {
+    const invoiceId = String(demand.invoiceId ?? "");
+    if (invoiceId) {
+      try {
+        await cancelInvoice(db, organizationId, schoolId, invoiceId);
+        cancelledInvoices.push(invoiceId);
+      } catch (error) {
+        // Paid/already-cancelled is an EXPECTED outcome, not a failure — and it is
+        // thrown JS-side (before any failing statement), so the surrounding
+        // transaction stays clean and needs no savepoint.
+        if (error instanceof InvalidInvoiceTransitionError) {
+          skippedInvoices.push({ invoiceId, reason: error.message });
+        } else {
+          throw error;
+        }
+      }
+    }
+    const { dedupeKey: revokedKey, ...rest } = demand;
+    await writeStore.replace(db, organizationId, schoolId, "demand", String(demand.id), {
+      ...rest,
+      revokedDedupeKey: revokedKey ?? null,
+      cancelledAt: new Date().toISOString(),
+      cancelledEffectiveDate: options.effectiveDate,
+      cancelledBy: options.actorId,
+    });
+  }
+
+  // ── Soft-stop the allocation (row PRESERVED) ───────────────────────────────
+  const stopped = {
+    ...allocation,
+    routeId: "",
+    routeName: "",
+    busNumber: "",
+    transportEnrolled: false,
+    stoppedAt: options.effectiveDate,
+    stoppedBy: options.actorId,
+  };
+  await writeStore.replace(db, organizationId, schoolId, "allocation", allocationId, stopped);
+
+  // W4 (Owner decision #5): the student stops riding → CLOSE the currently-open
+  // effective-dated period at the stop date (the timeline simply ends; no new
+  // period). The historical route/stop snapshot is preserved, never overwritten.
+  await closeOpenAllocation(db, organizationId, schoolId, allocationId, options.effectiveDate);
+
+  return { stopped, cancelledInvoices, skippedInvoices };
+}
+
 export async function handleRemoveStudentTransport(
   req: Request,
   config: AppConfig,
 ): Promise<Response> {
   return await runWrite(req, config, async (ctx) => {
-    const { db, organizationId, schoolId, claims, req: request } = ctx;
+    const { db, organizationId, schoolId, body, claims, req: request } = ctx;
     const allocationId = pathSegment(request, 2);
     if (!allocationId) {
       throw new WriteNotFoundError("Allocation id is required");
     }
-    const allocation = await writeStore.find(
+    const effectiveDate = isoDateField(body, "effectiveDate", "effective_date") ??
+      new Date().toISOString().slice(0, 10);
+
+    const { stopped, cancelledInvoices, skippedInvoices } = await stopStudentTransport(
       db,
       organizationId,
       schoolId,
-      "allocation",
       allocationId,
+      { effectiveDate, actorId: claims.sub ?? null },
     );
-    if (!allocation) {
-      throw new WriteNotFoundError(`Transport allocation not found: ${allocationId}`);
-    }
-    await writeStore.remove(db, organizationId, schoolId, "allocation", allocationId);
-    // Clear the route association so the cleared allocation reads as "unassigned".
-    // Also drop the SIS transport-flag so the Student-360 read stops surfacing
-    // the student as transport-enrolled.
-    const cleared = {
-      ...allocation,
-      routeId: "",
-      routeName: "",
-      busNumber: "",
-      transportEnrolled: false,
-    };
+
     await emitMutationAudit(
       db,
       claims,
       moduleEntityAudit("transport.allocation.removed", "transport_allocation", allocationId, {
         removed: true,
+        effectiveDate,
+        cancelledInvoices,
+        skippedInvoices: skippedInvoices.map((s) => s.invoiceId),
       }),
       request,
     );
-    return { payload: cleared, status: 200 };
+    return {
+      payload: { ...stopped, cancelledInvoices, skippedInvoices },
+      status: 200,
+    };
   });
 }
 
@@ -485,6 +769,17 @@ export async function handleNotifyRouteDelay(
 
     const allocations = await writeStore.findAll(db, organizationId, schoolId, "allocation");
     const affected = allocations.filter((a) => String(a.routeId ?? "") === routeId);
+    const sisStudentIds = affected
+      .map((a) => String(a.sisStudentId ?? ""))
+      .filter((s) => s.length > 0);
+
+    // Resolve only THIS route's affected students' active guardians.
+    const guardianIds = await guardianUserIdsForStudents(
+      db,
+      organizationId,
+      schoolId,
+      sisStudentIds,
+    );
 
     // Nobody rides this route — notifying the school would be pure noise.
     if (affected.length === 0) {
@@ -685,6 +980,95 @@ export async function handleDeleteVehicle(req: Request, config: AppConfig): Prom
       request,
     );
     return { payload: { id, removed: true }, status: 200 };
+  });
+}
+
+/**
+ * PRA-P0-19 — PUT /transport/routes/{id}/vehicle — assign a vehicle to a route.
+ *
+ * This is the missing write that makes the TRN-7 capacity guard live: nothing
+ * else ever set a route's `assignedBus`, so {@link routeCapacityAndCount} always
+ * resolved a null capacity and {@link assertCapacity} early-returned — the guard
+ * was inert. Here we validate the target vehicle exists (by registration, mirror
+ * of the capacity lookup at line ~728, or by entity id) and that its capacity is
+ * not already below the route's current allocation count (a too-small bus cannot
+ * be assigned onto an over-subscribed route → 409), then set `assignedBus` to the
+ * vehicle's registration under the route row lock. Once written, the capacity
+ * guard on subsequent single/bulk assigns engages automatically. manageTransport.
+ */
+export async function handleAssignRouteVehicle(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  return await runWrite(req, config, async (ctx) => {
+    const { db, organizationId, schoolId, body, claims, req: request } = ctx;
+    const routeId = pathSegment(request, 2);
+    if (!routeId) throw new WriteNotFoundError("Route id is required");
+
+    const route = await writeStore.find(db, organizationId, schoolId, "route", routeId);
+    if (!route) throw new WriteNotFoundError(`Transport route not found: ${routeId}`);
+
+    // The caller identifies the target vehicle by registration (preferred, mirrors
+    // how the capacity lookup resolves the assigned bus) or by its entity id.
+    const registrationInput = str(
+      body,
+      "registration",
+      "registrationNumber",
+      "registration_number",
+      "busNumber",
+      "bus_number",
+      "number",
+    );
+    const vehicleId = str(body, "vehicleId", "vehicle_id");
+    if (registrationInput === undefined && vehicleId === undefined) {
+      throw new WriteValidationError(
+        "A vehicle registration or vehicleId is required to assign a vehicle",
+      );
+    }
+    const vehicles = await writeStore.findAll(db, organizationId, schoolId, "vehicle");
+    const vehicle = vehicles.find((v) =>
+      (registrationInput !== undefined &&
+        regKey(String(v.registration ?? "")) === regKey(registrationInput)) ||
+      (vehicleId !== undefined && String(v.id ?? "") === vehicleId)
+    );
+    if (!vehicle) {
+      throw new WriteNotFoundError(
+        `Transport vehicle not found: ${registrationInput ?? vehicleId}`,
+      );
+    }
+    const registration = String(vehicle.registration ?? "");
+
+    // Capacity sanity: the assigned vehicle must be able to hold the students
+    // already allocated to this route. capacity 0/absent = unbounded (skip).
+    const capacity = Number(vehicle.capacity ?? 0);
+    const allocations = await writeStore.findAll(db, organizationId, schoolId, "allocation");
+    const currentCount = allocations.filter((a) => String(a.routeId ?? "") === routeId).length;
+    if (Number.isFinite(capacity) && capacity > 0 && capacity < currentCount) {
+      throw new CapacityExceededError(
+        (route.name as string | undefined) ?? routeId,
+        capacity,
+        currentCount,
+      );
+    }
+
+    const saved = await writeStore.mutateEntity(
+      db,
+      organizationId,
+      schoolId,
+      "route",
+      routeId,
+      (r) => ({ ...r, assignedBus: registration }),
+    );
+    if (!saved) throw new WriteNotFoundError(`Transport route not found: ${routeId}`);
+    await emitMutationAudit(
+      db,
+      claims,
+      moduleEntityAudit("transport.route.vehicle_assigned", "transport_route", routeId, {
+        registration,
+      }),
+      request,
+    );
+    return { payload: saved, status: 200 };
   });
 }
 
@@ -1065,6 +1449,9 @@ export async function handleBulkAllocateTransport(
     const dropStop = requireStr(body, "dropStop", "drop_stop");
     const shift = str(body, "shift") ?? "both";
     const allowOverCapacity = boolOr(body, false, "allowOverCapacity", "allow_over_capacity");
+    // W4: one change instant for the whole batch (optional back-dating via effectiveDate).
+    const bulkChangeDate = isoDateField(body, "effectiveDate", "effective_date") ??
+      new Date().toISOString();
 
     const route = await writeStore.find(db, organizationId, schoolId, "route", routeId);
     if (!route) throw new WriteNotFoundError(`Transport route not found: ${routeId}`);
@@ -1095,21 +1482,12 @@ export async function handleBulkAllocateTransport(
         targets.push({ rawId, sisStudentId: rawId, studentName: "", classLabel: "", admissionNumber: "" });
       }
     } else if (className) {
-      const rows = await db.queryObject<{
-        student_id: string;
-        display_name: string | null;
-        class_name: string | null;
-        section_name: string | null;
-      }>(
-        `SELECT e.student_id, s.display_name, e.class_name, e.section_name
-         FROM sis_student_enrollments e
-         JOIN students s ON s.id = e.student_id
-           AND s.organization_id = e.organization_id AND s.school_id = e.school_id
-         WHERE e.organization_id = $1 AND e.school_id = $2 AND e.is_current = true
-           AND e.class_name = $3
-           AND ($4::text IS NULL OR e.section_name = $4)
-         ORDER BY e.student_id`,
-        [organizationId, schoolId, className, sectionName ?? null],
+      const rows = await listEnrollmentsForClassSection(
+        db,
+        organizationId,
+        schoolId,
+        className,
+        sectionName ?? null,
       );
       for (const r of rows) {
         targets.push({
@@ -1183,6 +1561,16 @@ export async function handleBulkAllocateTransport(
       } else {
         await writeStore.insert(db, organizationId, schoolId, "allocation", allocId, payload);
       }
+      // W4 (Owner decision #5): record each bulk assignment on the effective-dated
+      // timeline (close prior open period + open a new one), same as single assign.
+      await recordAllocationChange(
+        db,
+        organizationId,
+        schoolId,
+        allocId,
+        { sisStudentId, routeId, pickupStop, dropStop, shift, payload },
+        { changeDate: bulkChangeDate, changedBy: claims.sub ?? null },
+      );
       await emitMutationAudit(
         db,
         claims,
@@ -1405,7 +1793,7 @@ export async function insertDemandIdempotent(
   demandId: string,
   demandPayload: Record<string, unknown>,
 ): Promise<{ saved: Record<string, unknown>; idempotent: boolean }> {
-  await db.queryObject(`SAVEPOINT transport_demand_insert`);
+  await savepoint(db, "transport_demand_insert");
   try {
     const saved = await writeStore.insert(
       db,
@@ -1415,11 +1803,11 @@ export async function insertDemandIdempotent(
       demandId,
       demandPayload,
     );
-    await db.queryObject(`RELEASE SAVEPOINT transport_demand_insert`);
+    await releaseSavepoint(db, "transport_demand_insert");
     return { saved, idempotent: false };
   } catch (error) {
     if (!isUniqueViolation(error)) throw error;
-    await db.queryObject(`ROLLBACK TO SAVEPOINT transport_demand_insert`);
+    await rollbackToSavepoint(db, "transport_demand_insert");
     const existingDemands = await writeStore.findAll(db, organizationId, schoolId, "demand");
     const winner = existingDemands.find((d) => String(d.dedupeKey ?? "") === dedupeKey);
     // The unique index guarantees a winning row exists once 23505 fires; if it
@@ -1452,84 +1840,228 @@ export async function handleRaiseTransportDemand(
 ): Promise<Response> {
   return await runWrite(req, config, async (ctx) => {
     const { db, organizationId, schoolId, body, claims, req: request } = ctx;
-    const sisStudentId = requireStr(body, "sisStudentId", "sis_student_id", "studentId", "student_id");
-    const routeId = requireStr(body, "routeId", "route_id");
-    const feeStructureId = requireStr(body, "feeStructureId", "fee_structure_id");
-    const academicYear = requireStr(body, "academicYear", "academic_year");
-    const term = str(body, "term") ?? "annual";
-    const allocationId = str(body, "allocationId", "allocation_id") ?? "";
-
-    // Idempotency: dedupe on (sisStudentId, routeId, academicYear, term).
-    const dedupeKey = `${sisStudentId}::${routeId}::${academicYear}::${term}`;
-    const existingDemands = await writeStore.findAll(db, organizationId, schoolId, "demand");
-    const priorDemand = existingDemands.find((d) => String(d.dedupeKey ?? "") === dedupeKey);
-    if (priorDemand) {
-      // Re-raise is idempotent — return the existing demand, raise nothing new.
-      return { payload: { ...priorDemand, idempotent: true }, status: 200 };
-    }
-
-    // Resolve the student UUID (transport stores a display code, not the PK).
-    const studentUuid = await resolveStudentId(db, organizationId, schoolId, sisStudentId);
-    if (!studentUuid) {
-      throw new WriteNotFoundError(`Student not found for transport demand: ${sisStudentId}`);
-    }
-
-    // Raise the Finance demand ONLY (assignment + invoice + installments). Finance
-    // collects — Transport never does. assignFeeStructure creates NO collection.
-    const result = await assignFeeStructure(db, organizationId, schoolId, {
-      studentId: studentUuid,
-      feeStructureId,
-      academicYear,
-      assignedBy: claims.sub,
-    });
-
-    const demandId = crypto.randomUUID();
-    const demandPayload = {
-      id: demandId,
-      dedupeKey,
-      allocationId,
-      sisStudentId,
-      studentUuid,
-      routeId,
-      feeStructureId,
-      academicYear,
-      term,
-      invoiceId: result.invoice.id,
-      assignmentId: result.assignment.id,
-      accountId: result.account.id,
-      raisedAt: new Date().toISOString(),
-    };
-    // Backstop for the TOCTOU window above: a racing concurrent request for
-    // the SAME dedupeKey may have inserted between the read-check and here.
-    // insertDemandIdempotent catches the resulting 23505 (unique index
-    // transport_entities_demand_dedupe_key_uniq) and returns the WINNING row
-    // idempotently instead of surfacing a 500.
-    const { saved, idempotent } = await insertDemandIdempotent(
+    const { demand, created } = await raiseTransportDemandFor(
       db,
       organizationId,
       schoolId,
-      dedupeKey,
-      demandId,
-      demandPayload,
-    );
-    if (idempotent) {
-      // Same idempotent shape as the fast-path dedupe above — the racing
-      // loser's request is never a 500, and never audited as a fresh raise
-      // (the winner's insert already owns the audit trail).
-      return { payload: { ...saved, idempotent: true }, status: 200 };
-    }
-    await emitMutationAudit(
-      db,
       claims,
-      moduleEntityAudit("transport.demand.raised", "transport_demand", demandId, {
-        sisStudentId,
-        routeId,
-        academicYear,
-        term,
-        invoiceId: result.invoice.id,
-      }),
+      {
+        sisStudentId: requireStr(body, "sisStudentId", "sis_student_id", "studentId", "student_id"),
+        routeId: requireStr(body, "routeId", "route_id"),
+        feeStructureId: requireStr(body, "feeStructureId", "fee_structure_id"),
+        academicYear: requireStr(body, "academicYear", "academic_year"),
+        term: str(body, "term") ?? "annual",
+        allocationId: str(body, "allocationId", "allocation_id") ?? "",
+      },
       request,
     );
-    return { payload: saved, status: 201 };
+    // Created → 201 with the fresh demand; not created (fast-path dedupe OR a
+    // racing-loser idempotent recovery) → 200 with the idempotent flag.
+    return created
+      ? { payload: demand, status: 201 }
+      : { payload: { ...demand, idempotent: true }, status: 200 };
+  });
+}
+
+/** Fields defining one transport-fee demand (PRA-P0-20 reusable body). */
+export interface TransportDemandInput {
+  sisStudentId: string;
+  routeId: string;
+  feeStructureId: string;
+  academicYear: string;
+  term: string;
+  allocationId: string;
+}
+
+/**
+ * PRA-P0-20 — the reusable core of raising ONE transport-fee demand, factored out
+ * of {@link handleRaiseTransportDemand} so the single endpoint and the bulk
+ * endpoint ({@link handleBulkRaiseTransportDemand}) share exactly one code path.
+ *
+ * DEMAND ONLY — it calls Finance's `assignFeeStructure` (assignment + invoice +
+ * installments) and NEVER createCollection / finance_collections: Transport
+ * defines the fee and raises the demand; Finance collects. Idempotent on
+ * (sisStudentId, routeId, academicYear, term): a prior matching demand short-
+ * circuits (`created:false`, raising nothing new), and a racing concurrent
+ * double-submit is recovered via {@link insertDemandIdempotent} (also
+ * `created:false`) instead of a 500. Only a genuinely fresh raise audits
+ * `transport.demand.raised` and returns `created:true`.
+ */
+export async function raiseTransportDemandFor(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  claims: AccessTokenClaims,
+  input: TransportDemandInput,
+  request?: Request,
+): Promise<{ demand: Record<string, unknown>; created: boolean }> {
+  const { sisStudentId, routeId, feeStructureId, academicYear, term, allocationId } = input;
+
+  // Idempotency: dedupe on (sisStudentId, routeId, academicYear, term).
+  const dedupeKey = `${sisStudentId}::${routeId}::${academicYear}::${term}`;
+  const existingDemands = await writeStore.findAll(db, organizationId, schoolId, "demand");
+  const priorDemand = existingDemands.find((d) => String(d.dedupeKey ?? "") === dedupeKey);
+  if (priorDemand) {
+    // Re-raise is idempotent — return the existing demand, raise nothing new.
+    return { demand: priorDemand, created: false };
+  }
+
+  // Resolve the student UUID (transport stores a display code, not the PK).
+  const studentUuid = await resolveStudentId(db, organizationId, schoolId, sisStudentId);
+  if (!studentUuid) {
+    throw new WriteNotFoundError(`Student not found for transport demand: ${sisStudentId}`);
+  }
+
+  // Raise the Finance demand ONLY (assignment + invoice + installments). Finance
+  // collects — Transport never does. assignFeeStructure creates NO collection.
+  const result = await assignFeeStructure(db, organizationId, schoolId, {
+    studentId: studentUuid,
+    feeStructureId,
+    academicYear,
+    assignedBy: claims.sub,
+  });
+
+  const demandId = crypto.randomUUID();
+  const demandPayload = {
+    id: demandId,
+    dedupeKey,
+    allocationId,
+    sisStudentId,
+    studentUuid,
+    routeId,
+    feeStructureId,
+    academicYear,
+    term,
+    invoiceId: result.invoice.id,
+    assignmentId: result.assignment.id,
+    accountId: result.account.id,
+    raisedAt: new Date().toISOString(),
+  };
+  // Backstop for the TOCTOU window above: a racing concurrent request for the
+  // SAME dedupeKey may have inserted between the read-check and here.
+  // insertDemandIdempotent catches the resulting 23505 (unique index
+  // transport_entities_demand_dedupe_key_uniq) and returns the WINNING row
+  // idempotently instead of surfacing a 500.
+  const { saved, idempotent } = await insertDemandIdempotent(
+    db,
+    organizationId,
+    schoolId,
+    dedupeKey,
+    demandId,
+    demandPayload,
+  );
+  if (idempotent) {
+    // The racing loser never audits a fresh raise (the winner's insert owns it).
+    return { demand: saved, created: false };
+  }
+  await emitMutationAudit(
+    db,
+    claims,
+    moduleEntityAudit("transport.demand.raised", "transport_demand", demandId, {
+      sisStudentId,
+      routeId,
+      academicYear,
+      term,
+      invoiceId: result.invoice.id,
+    }),
+    request,
+  );
+  return { demand: saved, created: true };
+}
+
+/**
+ * PRA-P0-20 — POST /transport/demands/bulk — raise a transport-fee demand for
+ * every allocation on a route (or an explicit `sisStudentIds` list) that does not
+ * already have one, in ONE call. This closes the gap where allocating a student
+ * never raised the fee demand (the only path was a Settings dialog, one student
+ * at a time). DEMAND ONLY — each raise goes through {@link raiseTransportDemandFor}
+ * (assignFeeStructure, never a collection). Idempotent per allocation via the
+ * existing dedupe key, so a re-run bills nobody twice. Returns
+ * {raised, alreadyRaised, skipped}. manageTransport.
+ */
+export async function handleBulkRaiseTransportDemand(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  return await runWrite(req, config, async (ctx) => {
+    const { db, organizationId, schoolId, body, claims, req: request } = ctx;
+    const feeStructureId = requireStr(body, "feeStructureId", "fee_structure_id");
+    const academicYear = requireStr(body, "academicYear", "academic_year");
+    const term = str(body, "term") ?? "annual";
+    const routeId = str(body, "routeId", "route_id");
+    const explicitIds = Array.isArray(body.sisStudentIds)
+      ? (body.sisStudentIds as unknown[]).map((x) => String(x))
+      : Array.isArray(body.sis_student_ids)
+      ? (body.sis_student_ids as unknown[]).map((x) => String(x))
+      : [];
+    if (routeId === undefined && explicitIds.length === 0) {
+      throw new WriteValidationError(
+        "Provide a routeId or a sisStudentIds list to bulk-raise transport demands",
+      );
+    }
+    // ENG-8 (SEC-11): cap the bulk id array before any per-row DB work.
+    if (explicitIds.length > MAX_BULK_ITEMS) {
+      throw new WriteValidationError(`Maximum ${MAX_BULK_ITEMS} student ids per request`);
+    }
+
+    const allocations = await writeStore.findAll(db, organizationId, schoolId, "allocation");
+    const idSet = new Set(explicitIds);
+    const targets = allocations.filter((a) => {
+      const aRoute = String(a.routeId ?? "");
+      if (aRoute.length === 0) return false; // unassigned — nothing to bill
+      if (routeId !== undefined && aRoute !== routeId) return false;
+      if (idSet.size > 0 && !idSet.has(String(a.sisStudentId ?? ""))) return false;
+      return true;
+    });
+
+    const raised: string[] = [];
+    const alreadyRaised: string[] = [];
+    const skipped: Array<{ allocationId: string; reason: string }> = [];
+    for (const a of targets) {
+      const sisStudentId = String(a.sisStudentId ?? "");
+      const allocId = String(a.id ?? "");
+      if (sisStudentId.length === 0) {
+        skipped.push({ allocationId: allocId, reason: "missing sisStudentId" });
+        continue;
+      }
+      try {
+        const { created } = await raiseTransportDemandFor(
+          db,
+          organizationId,
+          schoolId,
+          claims,
+          {
+            sisStudentId,
+            routeId: String(a.routeId ?? ""),
+            feeStructureId,
+            academicYear,
+            term,
+            allocationId: allocId,
+          },
+          request,
+        );
+        if (created) raised.push(allocId);
+        else alreadyRaised.push(allocId);
+      } catch (error) {
+        // A single unresolvable student must not abort the whole batch — record
+        // it and continue. resolveStudentId failing throws before any write, so
+        // skipping here leaves no partial state. Non-not-found errors propagate.
+        if (error instanceof WriteNotFoundError) {
+          skipped.push({ allocationId: allocId, reason: "student not found" });
+          continue;
+        }
+        throw error;
+      }
+    }
+    return {
+      payload: {
+        routeId: routeId ?? "",
+        raisedCount: raised.length,
+        raised,
+        alreadyRaised,
+        skipped,
+      },
+      status: 200,
+    };
   });
 }

@@ -730,7 +730,7 @@ class MockManagementRepository implements ManagementRepository {
           ManagementSettingItem(
             id: 'name',
             label: 'School name',
-            value: 'Akshara International School',
+            value: 'NIKSHA International School',
             description: 'Displayed on reports and parent app',
             editable: true,
           ),

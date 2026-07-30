@@ -31,6 +31,7 @@ export 'akshara_insight_card.dart';
 export 'akshara_interactive_surface.dart';
 export 'akshara_key_value_card.dart';
 export 'akshara_kpi_card.dart';
+export 'akshara_progress_ring.dart';
 export 'akshara_loading_state.dart';
 export 'akshara_period_pill.dart';
 export 'akshara_quick_action_card.dart';

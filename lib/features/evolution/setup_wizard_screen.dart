@@ -16,7 +16,7 @@ class SetupWizardScreen extends ConsumerStatefulWidget {
 
 class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
   int _step = 0;
-  final _schoolName = TextEditingController(text: 'Akshara International School');
+  final _schoolName = TextEditingController(text: 'NIKSHA International School');
   final _curriculum = TextEditingController(text: 'CBSE');
   final _studentCount = TextEditingController(text: '350');
   final _teacherCount = TextEditingController(text: '18');

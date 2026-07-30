@@ -135,6 +135,15 @@ class _PendingLeaveList extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = context.aksharaText;
 
+    // A headed section with nothing under it reads as a broken screen. Say why
+    // it is empty instead of leaving a zero-height hole under the header.
+    if (items.isEmpty) {
+      return const AksharaSectionEmpty(
+        message: 'No leave requests are waiting for approval.',
+        icon: Icons.event_available_outlined,
+      );
+    }
+
     return Semantics(
       container: true,
       label: 'Pending leave queue, ${items.length} requests',
@@ -172,6 +181,14 @@ class _RecruitmentSnapshot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = context.aksharaText;
+
+    if (candidates.isEmpty) {
+      return const AksharaSectionEmpty(
+        message: 'No open vacancies — candidates appear here once you start '
+            'hiring.',
+        icon: Icons.person_search_outlined,
+      );
+    }
 
     return Semantics(
       container: true,

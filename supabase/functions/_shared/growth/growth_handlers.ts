@@ -12,6 +12,23 @@ import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { emitMutationAudit, growthPlatformAudit } from "../audit/mutation_audit_catalog.ts";
 import { createLead } from "../admissions/admissions_repository.ts";
+import {
+  getCampaignNameById,
+  getInquiryForConversion,
+  insertGrowthCampaign,
+  insertGrowthInquiry,
+  listCampaignAttribution,
+  listCampaignStatusChannelCounts,
+  listFunnelStageCounts,
+  listGrowthCampaignHistory,
+  listGrowthCampaigns,
+  listGrowthInquiries,
+  listInquiryStatusSourceCounts,
+  listSourceAttribution,
+  markGrowthInquiryConverted,
+  pauseGrowthCampaign,
+  updateGrowthCampaign,
+} from "./growth_repository.ts";
 
 export async function handleGrowthDashboard(req: Request, config: AppConfig): Promise<Response> {
   const auth = await authenticateRequest(req, config);
@@ -25,20 +42,8 @@ export async function handleGrowthDashboard(req: Request, config: AppConfig): Pr
 
   try {
     const data = await withTenantContext(config, auth.claims, async (db) => {
-      const campaigns = await db.queryObject<{ status: string; channel: string; count: string }>(
-        `SELECT status, channel, count(*)::text AS count
-         FROM growth_campaigns
-         WHERE organization_id = $1 AND school_id = $2
-         GROUP BY status, channel`,
-        [orgId, schoolId],
-      );
-      const inquiries = await db.queryObject<{ status: string; source: string; count: string }>(
-        `SELECT status, source, count(*)::text AS count
-         FROM growth_inquiries
-         WHERE organization_id = $1 AND school_id = $2
-         GROUP BY status, source`,
-        [orgId, schoolId],
-      );
+      const campaigns = await listCampaignStatusChannelCounts(db, orgId, schoolId);
+      const inquiries = await listInquiryStatusSourceCounts(db, orgId, schoolId);
       const converted = inquiries
         .filter((i) => i.status === "converted")
         .reduce((sum, i) => sum + Number(i.count), 0);
@@ -93,32 +98,25 @@ export async function handleCreateGrowthCampaign(req: Request, config: AppConfig
 
   try {
     const id = await withTenantContext(config, auth.claims, async (db) => {
-      const rows = await db.queryObject<{ id: string }>(
-        `INSERT INTO growth_campaigns (
-           organization_id, school_id, name, channel, budget_inr, start_date, end_date,
-           audience, scheduled_at, created_by
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-         RETURNING id`,
-        [
-          orgId,
-          schoolId,
-          body.name,
-          body.channel,
-          body.budgetInr ?? null,
-          body.startDate ?? null,
-          body.endDate ?? null,
-          body.audience ?? "all",
-          body.scheduledAt ?? null,
-          auth.claims.sub,
-        ],
-      );
+      const id = await insertGrowthCampaign(db, {
+        organizationId: orgId,
+        schoolId,
+        name: body.name,
+        channel: body.channel,
+        budgetInr: body.budgetInr ?? null,
+        startDate: body.startDate ?? null,
+        endDate: body.endDate ?? null,
+        audience: body.audience ?? "all",
+        scheduledAt: body.scheduledAt ?? null,
+        createdBy: auth.claims.sub,
+      });
       await emitMutationAudit(
         db,
         auth.claims,
-        growthPlatformAudit.campaignCreated(rows[0]!.id),
+        growthPlatformAudit.campaignCreated(id),
         req,
       );
-      return rows[0]!.id;
+      return id;
     });
     return jsonResponse(envelope({ id }), { status: 201 });
   } catch (error) {
@@ -151,30 +149,23 @@ export async function handleCreateGrowthInquiry(req: Request, config: AppConfig)
 
   try {
     const id = await withTenantContext(config, auth.claims, async (db) => {
-      const rows = await db.queryObject<{ id: string }>(
-        `INSERT INTO growth_inquiries (
-           organization_id, school_id, campaign_id, parent_name, phone,
-           grade_interest, source, notes
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         RETURNING id`,
-        [
-          orgId,
-          schoolId,
-          body.campaignId ?? null,
-          body.parentName,
-          body.phone ?? null,
-          body.gradeInterest ?? null,
-          body.source,
-          body.notes ?? null,
-        ],
-      );
+      const id = await insertGrowthInquiry(db, {
+        organizationId: orgId,
+        schoolId,
+        campaignId: body.campaignId ?? null,
+        parentName: body.parentName,
+        phone: body.phone ?? null,
+        gradeInterest: body.gradeInterest ?? null,
+        source: body.source,
+        notes: body.notes ?? null,
+      });
       await emitMutationAudit(
         db,
         auth.claims,
-        growthPlatformAudit.inquiryCreated(rows[0]!.id),
+        growthPlatformAudit.inquiryCreated(id),
         req,
       );
-      return rows[0]!.id;
+      return id;
     });
     return jsonResponse(envelope({ id }), { status: 201 });
   } catch (error) {
@@ -191,28 +182,13 @@ export async function handleListGrowthCampaigns(req: Request, config: AppConfig)
   if (denied) return denied;
 
   try {
-    const items = await withTenantContext(config, auth.claims, async (db) =>
-      db.queryObject<Record<string, unknown>>(
-        `SELECT id, name, channel, status, budget_inr AS "budgetInr",
-                start_date AS "startDate", end_date AS "endDate",
-                audience, scheduled_at AS "scheduledAt", created_at AS "createdAt"
-         FROM growth_campaigns
-         ORDER BY created_at DESC
-         LIMIT 50`,
-      )
-    );
+    const items = await withTenantContext(config, auth.claims, async (db) => listGrowthCampaigns(db));
     return jsonResponse(envelope({ items }));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
     return errorEnvelope("GROWTH_ERROR", String(error), 500);
   }
 }
-
-// Columns returned for a single campaign — keys match the Flutter
-// `toGrowthCampaign` mapper so update/pause responses hydrate the model directly.
-const CAMPAIGN_RETURNING =
-  `id, name, channel, status, budget_inr AS "budgetInr",
-   audience, scheduled_at AS "scheduledAt", created_at AS "createdAt", updated_at`;
 
 export async function handleUpdateGrowthCampaign(
   req: Request,
@@ -258,12 +234,7 @@ export async function handleUpdateGrowthCampaign(
 
   try {
     const campaign = await withTenantContext(config, auth.claims, async (db) => {
-      const rows = await db.queryObject<Record<string, unknown>>(
-        `UPDATE growth_campaigns SET ${sets.join(", ")}
-         WHERE id = $1
-         RETURNING ${CAMPAIGN_RETURNING}`,
-        params,
-      );
+      const rows = await updateGrowthCampaign(db, sets, params);
       if (rows.length === 0) throw new Error("Campaign not found");
       await emitMutationAudit(
         db,
@@ -293,12 +264,7 @@ export async function handlePauseGrowthCampaign(
 
   try {
     const campaign = await withTenantContext(config, auth.claims, async (db) => {
-      const rows = await db.queryObject<Record<string, unknown>>(
-        `UPDATE growth_campaigns SET status = 'paused'
-         WHERE id = $1
-         RETURNING ${CAMPAIGN_RETURNING}`,
-        [campaignId],
-      );
+      const rows = await pauseGrowthCampaign(db, campaignId);
       if (rows.length === 0) throw new Error("Campaign not found");
       await emitMutationAudit(
         db,
@@ -327,14 +293,10 @@ export async function handleListGrowthCampaignHistory(
 
   // History = past / inactive campaigns (paused or completed), most recent first.
   try {
-    const items = await withTenantContext(config, auth.claims, async (db) =>
-      db.queryObject<Record<string, unknown>>(
-        `SELECT ${CAMPAIGN_RETURNING}
-         FROM growth_campaigns
-         WHERE status IN ('paused', 'completed')
-         ORDER BY updated_at DESC
-         LIMIT 100`,
-      )
+    const items = await withTenantContext(
+      config,
+      auth.claims,
+      async (db) => listGrowthCampaignHistory(db),
     );
     return jsonResponse(envelope({ items }));
   } catch (error) {
@@ -355,40 +317,9 @@ export async function handleGrowthFunnel(req: Request, config: AppConfig): Promi
 
   try {
     const data = await withTenantContext(config, auth.claims, async (db) => {
-      const stages = await db.queryObject<{ status: string; count: string }>(
-        `SELECT status, count(*)::text AS count
-         FROM growth_inquiries
-         WHERE organization_id = $1 AND school_id = $2
-         GROUP BY status`,
-        [orgId, schoolId],
-      );
-      const campaignAttribution = await db.queryObject<{
-        campaign_name: string;
-        inquiries: string;
-        converted: string;
-      }>(
-        `SELECT coalesce(c.name, 'Unattributed') AS campaign_name,
-                count(i.id)::text AS inquiries,
-                count(i.id) FILTER (WHERE i.status = 'converted')::text AS converted
-         FROM growth_inquiries i
-         LEFT JOIN growth_campaigns c ON c.id = i.campaign_id
-         WHERE i.organization_id = $1 AND i.school_id = $2
-         GROUP BY c.name`,
-        [orgId, schoolId],
-      );
-      const sourceAttribution = await db.queryObject<{
-        source: string;
-        inquiries: string;
-        converted: string;
-      }>(
-        `SELECT source,
-                count(*)::text AS inquiries,
-                count(*) FILTER (WHERE status = 'converted')::text AS converted
-         FROM growth_inquiries
-         WHERE organization_id = $1 AND school_id = $2
-         GROUP BY source`,
-        [orgId, schoolId],
-      );
+      const stages = await listFunnelStageCounts(db, orgId, schoolId);
+      const campaignAttribution = await listCampaignAttribution(db, orgId, schoolId);
+      const sourceAttribution = await listSourceAttribution(db, orgId, schoolId);
       const total = stages.reduce((sum, s) => sum + Number(s.count), 0);
       const converted = stages
         .filter((s) => s.status === "converted")
@@ -433,29 +364,13 @@ export async function handleConvertGrowthInquiry(
 
   try {
     const leadId = await withTenantContext(config, auth.claims, async (db) => {
-      const rows = await db.queryObject<{
-        parent_name: string;
-        phone: string | null;
-        grade_interest: string | null;
-        source: string;
-        campaign_id: string | null;
-        lead_id: string | null;
-      }>(
-        `SELECT parent_name, phone, grade_interest, source, campaign_id, lead_id
-         FROM growth_inquiries WHERE id = $1`,
-        [inquiryId],
-      );
-      const inquiry = rows[0];
+      const inquiry = await getInquiryForConversion(db, inquiryId);
       if (!inquiry) throw new Error("Inquiry not found");
       if (inquiry.lead_id) return inquiry.lead_id;
 
       let campaignName: string | null = null;
       if (inquiry.campaign_id) {
-        const camp = await db.queryObject<{ name: string }>(
-          `SELECT name FROM growth_campaigns WHERE id = $1`,
-          [inquiry.campaign_id],
-        );
-        campaignName = camp[0]?.name ?? null;
+        campaignName = await getCampaignNameById(db, inquiry.campaign_id);
       }
 
       const lead = await createLead(db, orgId, schoolId, {
@@ -476,12 +391,7 @@ export async function handleConvertGrowthInquiry(
         notes: `Converted from growth inquiry ${inquiryId} by ${auth.claims.sub}`,
       });
 
-      await db.queryObject(
-        `UPDATE growth_inquiries
-         SET status = 'converted', lead_id = $2, updated_at = timezone('utc', now())
-         WHERE id = $1`,
-        [inquiryId, lead.id],
-      );
+      await markGrowthInquiryConverted(db, inquiryId, lead.id);
       await emitMutationAudit(
         db,
         auth.claims,
@@ -505,16 +415,7 @@ export async function handleListGrowthInquiries(req: Request, config: AppConfig)
   if (denied) return denied;
 
   try {
-    const items = await withTenantContext(config, auth.claims, async (db) =>
-      db.queryObject<Record<string, unknown>>(
-        `SELECT id, parent_name AS "parentName", phone, grade_interest AS "gradeInterest",
-                source, status, follow_up_at AS "followUpAt", campaign_id AS "campaignId",
-                lead_id AS "leadId"
-         FROM growth_inquiries
-         ORDER BY created_at DESC
-         LIMIT 100`,
-      )
-    );
+    const items = await withTenantContext(config, auth.claims, async (db) => listGrowthInquiries(db));
     return jsonResponse(envelope({ items }));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);

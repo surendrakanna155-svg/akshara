@@ -12,8 +12,9 @@ Covers the deployed backend changes:
          collision), and a class teacher cannot author a leadership remark.
 """
 import json, urllib.request, urllib.error, time
+import os
 
-BASE = "https://akshara.veloraunisexsalon.com"
+BASE = os.environ.get("API_BASE_URL", "https://api.nikshaos.in")
 SCHOOL_1 = "a2000000-0000-4000-8000-000000000001"
 STUDENT_UUID = "a4000000-0000-4000-8000-000000000001"  # seeded pilot student
 TS = str(int(time.time()))

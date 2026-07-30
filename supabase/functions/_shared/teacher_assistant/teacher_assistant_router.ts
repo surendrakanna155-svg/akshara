@@ -33,5 +33,5 @@ export async function routeTeacherAssistant(
     return handleUpdateIntervention(req, config, updateMatch[1]!);
   }
 
-  return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+  return null;
 }

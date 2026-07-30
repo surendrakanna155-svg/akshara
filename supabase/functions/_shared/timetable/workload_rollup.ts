@@ -49,6 +49,9 @@ export interface TeacherWorkloadRollup {
   teacherName: string;
   /** Scheduled periods per week (canonical: academic_timetable_periods). */
   periodCount: number;
+  /** Non-contact ("free") periods this week: working-week grid − periodCount,
+   * clamped ≥ 0 (PRC-A cap 130). 0 when no timetable / no grid exists. */
+  freePeriods: number;
   /** DISTINCT sections this teacher is scheduled to teach (was always empty). */
   sections: string[];
   /** DISTINCT subjects: union of scheduled subject labels + assignment catalog. */
@@ -76,6 +79,14 @@ export function classifyWorkload(periodCount: number): WorkloadStatus {
   if (periodCount > UNIFIED_OVERLOAD_THRESHOLD) return "over";
   if (periodCount < UNIFIED_UNDERLOAD_THRESHOLD) return "under";
   return "balanced";
+}
+
+/** Free (non-contact) periods = working-week grid slots − scheduled contact
+ * periods, never negative (PRC-A cap 130). Pure for unit testing. A teacher
+ * scheduled beyond the nominal grid (multi-section overlap edge) clamps to 0
+ * rather than reporting a negative "free" count. */
+export function computeFreePeriods(gridSlots: number, periodCount: number): number {
+  return Math.max(0, gridSlots - periodCount);
 }
 
 interface SchoolPeriodMetaRow {
@@ -120,6 +131,21 @@ export async function buildTeacherWorkloadRollup(
        AND t.status <> 'archived'`,
     [orgId, schoolId, academicYearId],
   );
+
+  // 1b. Working-week grid for free-period derivation (PRC-A cap 130). The grid is
+  //     periods_per_day × days_per_week; use the FULLEST grid across the year's
+  //     live timetables so a teacher's free periods are measured against the
+  //     largest working week they could be scheduled into. Honest 0 when no
+  //     timetable exists (grid 0 → every teacher's freePeriods is 0, same basis
+  //     as periodCount 0 — never a fabricated capacity).
+  const gridRows = await db.queryObject<{ grid_slots: string | null }>(
+    `SELECT MAX(periods_per_day * days_per_week) AS grid_slots
+       FROM academic_timetables
+      WHERE organization_id = $1 AND school_id = $2 AND academic_year_id = $3
+        AND status <> 'archived'`,
+    [orgId, schoolId, academicYearId],
+  );
+  const gridSlots = Number(gridRows[0]?.grid_slots ?? 0);
 
   // 2. Teacher display names (same source/shape as getSchoolWorkload).
   const teacherNameRows = await db.queryObject<TeacherNameRow>(
@@ -193,6 +219,7 @@ export async function buildTeacherWorkloadRollup(
         teacherId,
         teacherName: names.get(teacherId)?.trim() || teacherId,
         periodCount: acc.periodCount,
+        freePeriods: computeFreePeriods(gridSlots, acc.periodCount),
         sections: [...acc.sections].sort(),
         subjectIds: [...acc.subjectIds].sort(),
         status,

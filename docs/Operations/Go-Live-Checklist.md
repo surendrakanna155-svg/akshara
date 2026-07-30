@@ -15,7 +15,8 @@ Complete before any pilot user access. Reference: [`Production-Integrations.md`]
 - [ ] `ERP_TENANT_DATABASE_URL` — production Postgres pooler URL for `erp_tenant`
 - [ ] `JWT_SECRET` — unique production secret (not staging value)
 - [ ] `INTERNAL_HEALTH_TOKEN` — random high-entropy token for health endpoints
-- [ ] Supabase project linked to production (not staging ref)
+- [ ] Edge container recreated so it re-reads `.env.akshara` (env is NOT re-read on restart alone)
+      *(There is no hosted Supabase project in the production path — the stack is self-hosted on the VPS. See `docs/Operations/VPS-Deployment-Runbook.md`.)*
 
 ### Auth
 
@@ -27,20 +28,23 @@ Complete before any pilot user access. Reference: [`Production-Integrations.md`]
 
 - [ ] `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`
 - [ ] `RAZORPAY_STUB_MODE=false`
-- [ ] Webhook URL registered: `https://<project>.supabase.co/functions/v1/api/webhooks/razorpay`
+- [ ] Webhook URL registered: `<PUBLIC API HOST>/webhooks/razorpay` — the edge API is served at the ROOT of the VPS host, not at a hosted-Supabase `/functions/v1/` path
 - [ ] Test payment → webhook → finance collection verified
 
 ### Communication
 
 - [ ] `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`
 - [ ] `SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL`
-- [ ] `FCM_SERVER_KEY` (if push enabled)
+- [ ] `FCM_SERVICE_ACCOUNT_JSON` (if push enabled) — full service-account JSON, or base64 of it.
+      NOT `FCM_SERVER_KEY`: that is the retired legacy API and is read by nothing, so setting it leaves push silently stubbed
 - [ ] `SMS_STUB_MODE=false`, `EMAIL_STUB_MODE=false`, `FCM_STUB_MODE=false`
 
 ### AI Copilot (optional)
 
-- [ ] `OPENAI_API_KEY` set **or** stub mode documented and accepted for pilot
-- [ ] `OPENAI_MODEL` override reviewed (default `gpt-4o-mini`)
+- [ ] `AI_PROVIDER` chosen (`anthropic` default, or `openrouter`)
+- [ ] `ANTHROPIC_API_KEY` (or `OPENROUTER_API_KEY`) set **or** stub mode documented and accepted for pilot
+- [ ] Model override reviewed — `ANTHROPIC_MODEL` (default `claude-opus-4-8`) or `AI_MODEL` for OpenRouter
+      *(`OPENAI_API_KEY` / `OPENAI_MODEL` are read by nothing — the backend does not call OpenAI)*
 
 ---
 

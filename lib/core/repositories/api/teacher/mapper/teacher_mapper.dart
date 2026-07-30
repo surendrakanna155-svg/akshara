@@ -162,45 +162,68 @@ class TeacherMapper {
     );
   }
 
+  // PRA-P0-17 (S0/T2-F): extracted so the teacher→parent communication timeline
+  // can be mapped from the live `GET /teacher/parent-communication` response
+  // instead of the in-memory ParentCommunicationStore that is never populated in
+  // API mode. `deliveryStatus`/`readAt`/`acknowledgedAt` now read from the row
+  // when present (backward-compatible: the send-result raw lacks them → defaults).
+  ParentCommunicationRecord toParentCommunicationRecord(
+    Map<String, dynamic> recordRaw,
+  ) {
+    return ParentCommunicationRecord(
+      id: recordRaw['id'] as String? ?? '',
+      sisStudentId: recordRaw['sisStudentId'] as String? ?? '',
+      studentName: recordRaw['studentName'] as String? ?? '',
+      senderName: recordRaw['senderName'] as String? ?? '',
+      reason: ParentCommunicationReason.values.firstWhere(
+        (r) => r.name == recordRaw['reason'],
+        orElse: () => ParentCommunicationReason.attendanceLow,
+      ),
+      tone: ParentCommunicationTone.values.firstWhere(
+        (t) => t.name == recordRaw['tone'],
+        orElse: () => ParentCommunicationTone.polite,
+      ),
+      originalMessage: recordRaw['originalMessage'] as String? ?? '',
+      translatedMessage: recordRaw['translatedMessage'] as String? ?? '',
+      targetLanguage: AksharaLanguage.fromCode(
+        recordRaw['targetLanguage'] as String?,
+      ),
+      channels: [
+        for (final channel in recordRaw['channels'] as List<dynamic>? ?? const [])
+          ParentCommunicationChannel.values.firstWhere(
+            (c) => c.name == channel,
+            orElse: () => ParentCommunicationChannel.inApp,
+          ),
+      ],
+      sentAt: DateTime.tryParse(recordRaw['sentAt'] as String? ?? '') ??
+          DateTime.now(),
+      deliveryStatus: ParentCommunicationDeliveryStatus.values.firstWhere(
+        (s) => s.name == recordRaw['deliveryStatus'],
+        orElse: () => ParentCommunicationDeliveryStatus.delivered,
+      ),
+      readAt: DateTime.tryParse(recordRaw['readAt'] as String? ?? ''),
+      acknowledgedAt:
+          DateTime.tryParse(recordRaw['acknowledgedAt'] as String? ?? ''),
+      parentPhone: recordRaw['parentPhone'] as String?,
+      usedAi: recordRaw['usedAi'] as bool? ?? false,
+      sourceConcernId: recordRaw['sourceConcernId'] as String?,
+    );
+  }
+
   ParentCommunicationSendResult toParentCommunicationSendResult(
     Map<String, dynamic> raw,
   ) {
     final recordRaw = raw['record'] as Map<String, dynamic>? ?? raw;
     return ParentCommunicationSendResult(
-      record: ParentCommunicationRecord(
-        id: recordRaw['id'] as String? ?? '',
-        sisStudentId: recordRaw['sisStudentId'] as String? ?? '',
-        studentName: recordRaw['studentName'] as String? ?? '',
-        senderName: recordRaw['senderName'] as String? ?? '',
-        reason: ParentCommunicationReason.values.firstWhere(
-          (r) => r.name == recordRaw['reason'],
-          orElse: () => ParentCommunicationReason.attendanceLow,
-        ),
-        tone: ParentCommunicationTone.values.firstWhere(
-          (t) => t.name == recordRaw['tone'],
-          orElse: () => ParentCommunicationTone.polite,
-        ),
-        originalMessage: recordRaw['originalMessage'] as String? ?? '',
-        translatedMessage: recordRaw['translatedMessage'] as String? ?? '',
-        targetLanguage: AksharaLanguage.fromCode(
-          recordRaw['targetLanguage'] as String?,
-        ),
-        channels: [
-          for (final channel in recordRaw['channels'] as List<dynamic>? ?? const [])
-            ParentCommunicationChannel.values.firstWhere(
-              (c) => c.name == channel,
-              orElse: () => ParentCommunicationChannel.inApp,
-            ),
-        ],
-        sentAt: DateTime.tryParse(recordRaw['sentAt'] as String? ?? '') ??
-            DateTime.now(),
-        deliveryStatus: ParentCommunicationDeliveryStatus.delivered,
-        parentPhone: recordRaw['parentPhone'] as String?,
-        usedAi: recordRaw['usedAi'] as bool? ?? false,
-        sourceConcernId: recordRaw['sourceConcernId'] as String?,
-      ),
+      record: toParentCommunicationRecord(recordRaw),
       whatsAppLaunchUri: raw['whatsAppLaunchUri'] as String?,
     );
+  }
+
+  List<ParentCommunicationRecord> toParentCommunicationTimeline(
+    List<Map<String, dynamic>> items,
+  ) {
+    return [for (final item in items) toParentCommunicationRecord(item)];
   }
 
   SubjectTeacherConcernFlagResult toSubjectConcernFlagResult(

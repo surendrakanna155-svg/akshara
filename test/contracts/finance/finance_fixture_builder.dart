@@ -393,6 +393,36 @@ class FinanceFixtureBuilder {
         'invoiceId': refund.invoiceId,
       };
 
+  // STEP-5 — fee reductions (scholarship awards + discount applications).
+  Map<String, dynamic> feeReductionItem(FeeReduction reduction) => {
+        'id': reduction.id,
+        'sourceKind':
+            FinanceEnumCodec.feeReductionSourceKindToApi(reduction.sourceKind),
+        'scholarshipId':
+            reduction.scholarshipId.isEmpty ? null : reduction.scholarshipId,
+        'discountRuleId':
+            reduction.discountRuleId.isEmpty ? null : reduction.discountRuleId,
+        'studentId': reduction.studentId,
+        'invoiceId': reduction.invoiceId,
+        'studentAccountId': reduction.studentAccountId,
+        'reductionKind': reduction.reductionKind == FeeReductionKind.percent
+            ? 'percent'
+            : 'fixed',
+        'percent': reduction.percent.isEmpty ? null : reduction.percent,
+        'fixedAmount':
+            reduction.fixedAmount.isEmpty ? null : reduction.fixedAmount,
+        'appliedAmount': reduction.appliedAmount,
+        'status': reduction.status.name,
+        'reason': reduction.reason,
+        'createdBy': reduction.createdBy,
+        'approvedBy': reduction.approvedBy.isEmpty ? null : reduction.approvedBy,
+        'reversedBy': reduction.reversedBy.isEmpty ? null : reduction.reversedBy,
+        'appliedAt': reduction.appliedAt.isEmpty ? null : reduction.appliedAt,
+        'reversedAt': reduction.reversedAt.isEmpty ? null : reduction.reversedAt,
+        'createdAt': reduction.createdAt,
+        'updatedAt': reduction.updatedAt,
+      };
+
   Map<String, dynamic> discountsEnvelope(DiscountsDashboardData data) {
     return envelope({
       'impactSummary': data.impactSummary,

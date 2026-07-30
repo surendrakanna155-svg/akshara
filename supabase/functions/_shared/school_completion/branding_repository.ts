@@ -34,7 +34,7 @@ export interface BrandingInput {
 }
 
 const DEFAULT_BRANDING = {
-  displayName: "Akshara School",
+  displayName: "NIKSHA School",
   tagline: "Learning with purpose",
   primaryColor: "#1B4D89",
   secondaryColor: "#F5A623",

@@ -75,7 +75,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           content: Text(
             demoAuth
                 ? 'Enter a valid 10-digit mobile number'
-                : 'Unable to send OTP. Use a registered demo-school phone number.',
+                : 'Unable to send OTP. Please check your mobile number and try again.',
           ),
         ),
       );
@@ -156,7 +156,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         Text(
                           demoAuth
                               ? 'Testing mode — choose a demo account, then sign in with OTP 123456.'
-                              : 'Enter your registered mobile number. OTP is verified by the staging server.',
+                              : 'Enter your registered mobile number to receive a one-time password.',
                           style: text.bodyMedium.copyWith(
                             color: colors.onSurfaceVariant,
                           ),
@@ -190,52 +190,64 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           style: text.labelLarge,
                         ),
                         const SizedBox(height: AksharaSpacing.s2),
-                        TextFormField(
-                          key: QaTestKeys.loginPhoneField,
-                          controller: _phoneController,
-                          keyboardType: TextInputType.phone,
-                          textInputAction: TextInputAction.next,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                            LengthLimitingTextInputFormatter(10),
-                          ],
-                          decoration: InputDecoration(
-                            prefixIcon: Padding(
-                              padding: const EdgeInsets.only(
-                                left: AksharaSpacing.s4,
-                                right: AksharaSpacing.s2,
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    '+91',
-                                    style: text.bodyLarge.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                        AutofillGroup(
+                          child: Semantics(
+                            label: 'Mobile number',
+                            textField: true,
+                            child: TextFormField(
+                              key: QaTestKeys.loginPhoneField,
+                              controller: _phoneController,
+                              keyboardType: TextInputType.phone,
+                              textInputAction: TextInputAction.next,
+                              autofillHints: const [
+                                AutofillHints.telephoneNumber,
+                              ],
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                LengthLimitingTextInputFormatter(10),
+                              ],
+                              decoration: InputDecoration(
+                                prefixIcon: Padding(
+                                  padding: const EdgeInsets.only(
+                                    left: AksharaSpacing.s4,
+                                    right: AksharaSpacing.s2,
                                   ),
-                                  const SizedBox(width: AksharaSpacing.s2),
-                                  Container(
-                                    width: 1,
-                                    height: 24,
-                                    color: colors.outlineVariant,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        '+91',
+                                        style: text.bodyLarge.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(
+                                        width: AksharaSpacing.s2,
+                                      ),
+                                      Container(
+                                        width: 1,
+                                        height: 24,
+                                        color: colors.outlineVariant,
+                                      ),
+                                    ],
                                   ),
-                                ],
+                                ),
+                                hintText:
+                                    demoAuth ? '9000100001' : '9876543210',
+                                border: OutlineInputBorder(
+                                  borderRadius: AksharaRadius.inputBorder,
+                                ),
                               ),
-                            ),
-                            hintText: demoAuth ? '9000100001' : '9876543210',
-                            border: OutlineInputBorder(
-                              borderRadius: AksharaRadius.inputBorder,
+                              validator: (value) {
+                                final digits = (value ?? '')
+                                    .replaceAll(RegExp(r'\D'), '');
+                                if (digits.length != 10) {
+                                  return 'Enter a valid 10-digit number';
+                                }
+                                return null;
+                              },
                             ),
                           ),
-                          validator: (value) {
-                            final digits =
-                                (value ?? '').replaceAll(RegExp(r'\D'), '');
-                            if (digits.length != 10) {
-                              return 'Enter a valid 10-digit number';
-                            }
-                            return null;
-                          },
                         ),
                         const SizedBox(height: AksharaSpacing.s6),
                         FilledButton(

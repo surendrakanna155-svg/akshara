@@ -1,3 +1,4 @@
+import os
 #!/usr/bin/env python3
 """Live-mode certification for MODULE_JOURNEY_ROADMAP **Journey Wave 0** —
 "Stop showing fake data as real" (live-config drift + demo fallbacks) — against
@@ -8,7 +9,7 @@ real DB rows (verified by UUID identity / dashboard-vs-list consistency) + real
 entitlement gating. Wave 0 is entirely client + release-config (NO backend or
 migration change), so the certification has two honest halves:
 
-  • LIVE (this script, against https://akshara.veloraunisexsalon.com):
+  • LIVE (this script, against https://api.nikshaos.in):
       MJ-H2  EMPLOYEE_API_ENABLED — /employees + /employees/dashboard now return
              REAL employee rows (UUID ids; dashboard total == list length), not
              MockEmployeeRepository fixtures. The release build flag flip surfaces
@@ -40,7 +41,7 @@ cert; real OTP auth + UUID-shape + entitlement gate distinguish real backend fro
 mock without it.)"""
 import json, os, re, time, urllib.request, urllib.error
 
-BASE = "https://akshara.veloraunisexsalon.com"
+BASE = os.environ.get("API_BASE_URL", "https://api.nikshaos.in")
 PILOT = "+919876543210"
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$", re.I)

@@ -7,8 +7,8 @@ import {
 import { createServiceClient } from "../db.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
-import { loadRazorpayConfig } from "./razorpay_config.ts";
-import { verifyRazorpayWebhookSignature } from "./razorpay_client.ts";
+import { getPaymentProvider } from "./payment_provider_registry.ts";
+import { RAZORPAY_PROVIDER_ID } from "./razorpay_provider.ts";
 import {
   getPaymentIntent,
   PaymentIntentNotFoundError,
@@ -195,9 +195,14 @@ export async function handleRazorpayWebhook(
     return errorEnvelope("VALIDATION_ERROR", "Invalid webhook JSON", 422);
   }
 
-  const razorpay = loadRazorpayConfig();
+  // The /webhooks/razorpay route is Razorpay's own callback, so resolve the
+  // Razorpay provider from the registry (rather than importing the client
+  // directly) and verify the inbound signature through the same seam every other
+  // gateway would use. A second gateway with webhooks would add its own
+  // /webhooks/<gateway> route + handler.
+  const razorpayProvider = getPaymentProvider(RAZORPAY_PROVIDER_ID);
   const signature = req.headers.get("X-Razorpay-Signature");
-  const valid = await verifyRazorpayWebhookSignature(razorpay, rawBody, signature);
+  const valid = await razorpayProvider.verifyWebhookSignature(rawBody, signature);
   // RT-23 — fail-closed on the signature. Previously a forged webhook was
   // accepted whenever `stubMode` was on (the default, and live on the pilot),
   // which would let anyone forge payment events the moment real credentials
@@ -208,6 +213,18 @@ export async function handleRazorpayWebhook(
     (Deno.env.get("RAZORPAY_ALLOW_UNSIGNED") ?? "false").toLowerCase() === "true";
   if (!valid && !allowUnsigned) {
     return errorEnvelope("FORBIDDEN", "Invalid Razorpay webhook signature", 403);
+  }
+
+  // ICA-A5: while the provider is in stub mode (no live gateway — the pilot's
+  // current state) a webhook cannot carry a real cryptographic signature, so it
+  // MUST NOT post to the books. Real webhook captures are honoured only once live
+  // credentials + webhook secret exist. RAZORPAY_ALLOW_UNSIGNED opts local dev in.
+  if (!razorpayProvider.requiresGatewaySignature() && !allowUnsigned) {
+    return errorEnvelope(
+      "FORBIDDEN",
+      "Webhook capture is disabled while the payment gateway is in stub mode",
+      403,
+    );
   }
 
   const eventId = String(payload.id ?? `evt_${crypto.randomUUID()}`);
@@ -247,7 +264,10 @@ export async function handleRazorpayWebhook(
         child_ids: [],
         session_id: "webhook",
       };
-    } else if (razorpay.stubMode) {
+    } else if (!razorpayProvider.requiresGatewaySignature()) {
+      // Stub mode (no live Razorpay credentials): an order-less stub webhook is
+      // attributed to the seed tenant. requiresGatewaySignature()===false is the
+      // provider's stub signal (was `razorpay.stubMode`).
       tenantClaims = {
         sub: "00000000-0000-4000-8000-000000000000",
         tenant_id: "a1000000-0000-4000-8000-000000000001",

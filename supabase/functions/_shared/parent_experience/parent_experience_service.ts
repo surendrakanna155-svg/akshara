@@ -201,7 +201,7 @@ export function buildPrintableReport(summary: ReturnType<typeof parentSummaryToA
   // there is nothing to measure — render "—", never "null%" or "0%".
   const rateDisplay = att.ratePercent == null ? "—" : `${att.ratePercent}%`;
   return [
-    "AKSHARA SCHOOL — PARENT ACADEMIC REPORT",
+    "NIKSHA SCHOOL — PARENT ACADEMIC REPORT",
     "========================================",
     `Generated: ${summary.generatedAt}`,
     "",

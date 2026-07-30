@@ -2,7 +2,7 @@ import 'package:akshara_erp/core/communication/parent_communication_governance.d
 import 'package:akshara_erp/core/communication/parent_communication_models.dart';
 import 'package:akshara_erp/core/communication/teacher_parent_templates.dart';
 import 'package:akshara_erp/core/communication/subject_teacher_concern_store.dart';
-import 'package:akshara_erp/core/communication/teacher_student_risk_service.dart';
+import 'package:akshara_erp/core/repositories/mock/mock_student_risk_fixtures.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_canonical_student_registry.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_teacher_repository.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
@@ -104,7 +104,7 @@ void main() {
 
   group('Student risk identification', () {
     test('class teacher attention list identifies at-risk students', () {
-      final items = TeacherStudentRiskService.attentionForClass(
+      final items = MockStudentRiskFixtures.attentionForClass(
         TeacherTeachingContext.demoClassTeacher(),
       );
       expect(items, isNotEmpty);
@@ -113,7 +113,7 @@ void main() {
     });
 
     test('student 360 snapshot includes required domains', () {
-      final snap = TeacherStudentRiskService.snapshotForStudent(
+      final snap = MockStudentRiskFixtures.snapshotForStudent(
         MockCanonicalStudentRegistry.primaryMobileStudentId,
       );
       expect(snap.attendancePercent, greaterThan(0));
