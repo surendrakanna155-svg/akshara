@@ -242,7 +242,7 @@ Each phase is independently shippable and EOS-gated. Migration band starts at **
 | **2** | **Living feed UI** | ✅ **DONE.** Swipe-to-dismiss, snooze sheet (30m / tomorrow / today), promote-next, "came back" badge, teacher-tablet feed fix | Met. 45 Flutter tests. **Deferred:** consolidating the 5 ad-hoc deep-link resolvers → Phase 4 (it is composition work, not lifecycle) |
 | **3** | **Liveness** | ✅ **DONE** (`66b71747`). `LiveRefreshScope` + pure `LiveRefreshPolicy` on 5 dashboards (management, parent, teacher, student, director) | Refresh on resume + foreground tick, and provably NOT while offline/backgrounded. 15 tests |
 | **3b** | **Freshness state** | ✅ **DONE.** Five honest states end-to-end: interceptor → `DataFreshnessRecorder` → pure `classifyFreshness` → chip on all 5 dashboards | Cached data can never render as live — proven end-to-end from a real interceptor cache replay. 19 tests |
-| **4** | **Composition** | Re-skin `dynamic_widgets` renderer with DSV2; priority strip + stable body; user pinning on `dashboard_layouts` | A role dashboard renders from layout data; pins never move; ≤1 organic reposition/day |
+| **4** | **Composition** | ✅ **Unified deep-link resolver** (5 drifted copies → 1 tested resolver) · ✅ **Pinning** (mig `…410`; pins outrank score, lifecycle AND terminal state; un-swipeable). ⚠️ **Scope call: the `dynamic_widgets` DSV2 conversion was NOT done — see below** | Pins float to top, survive a swipe, and are never auto-hidden. 25 routing + 7 pin backend + 3 pin widget tests |
 | **5** | **Copilot hand-off** | Persona-memory/lifecycle context slot; persist `screenContext`; dismissed-item rehydration; clear `copilotPendingNavigationContextProvider` | Dismiss a widget → ask Copilot → full context restored |
 | **6** | **Deadline & coverage debt** | `due_at`/`sla_due_at` on the approval spine; wire `approval` + `opportunity` generators; populate `waitingDays` to make `ageBoost` live | `urgency` computed from real deadlines; "N approvals ≥48h old" exists; all four factors variable |
 
@@ -283,6 +283,32 @@ reports to on all three outcomes, and which surfaces read back through
 "Live" badge is noise users learn to ignore — and would then miss the one time it
 mattered — and rendering nothing in the healthy case means no dashboard layout or
 golden changes for fresh data.
+
+### Phase 4 scope call: the `dynamic_widgets` DSV2 conversion (owner decision)
+
+Phase 4 as designed included re-skinning the siloed `lib/features/dynamic_widgets/`
+renderer with DSV2 components and converting the 19 hardcoded dashboards to
+render from layout data. **That part was deliberately not done**, and it is a
+judgement call the owner should confirm rather than discover:
+
+**Why not.** The mission's own constraints are *"Do not redesign the existing UI
+unnecessarily"* and *"Preserve the current visual design"*. Converting 19 working,
+tested, DSV2-styled dashboards to a data-driven renderer is a large, high-
+regression-risk change whose entire user-visible benefit — priority-ordered
+content — **is already delivered by the priority strip**, which is live on five
+dashboards and now supports pins. The remaining gain is per-user reordering of
+*static module widgets*, which doc 04 §5 deliberately caps at "≤1 organic
+reposition per day" anyway. That is a lot of risk for an effect the design
+already agreed to keep almost invisible.
+
+**What was delivered instead** — the parts that change behaviour: pins that
+outrank everything, and one resolver where there were five.
+
+**If the owner wants the full conversion**, it is a clean standalone wave: the
+model (`DynamicWidgetItem.order`, `filterWidgetsByRbac`, `RoleDashboardLayout`,
+tenant overrides, versioning) already exists and is RBAC-correct; the work is
+re-skinning `_DynamicWidgetTile` with DSV2 and migrating dashboards one at a
+time behind their existing golden tests.
 
 ### Sequencing notes
 

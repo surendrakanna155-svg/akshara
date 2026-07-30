@@ -67,6 +67,7 @@ class HybridAdaptiveAiRepository implements AdaptiveAiRepository {
     required String itemType,
     AdaptiveFeedbackAction? action,
     AdaptiveLifecycleWrite? lifecycle,
+    bool? pinned,
   }) async {
     try {
       await _api.sendRecommendationFeedback(
@@ -75,6 +76,7 @@ class HybridAdaptiveAiRepository implements AdaptiveAiRepository {
         itemType: itemType,
         action: action,
         lifecycle: lifecycle,
+        pinned: pinned,
       );
     } catch (error, stack) {
       _logFailure('sendRecommendationFeedback', error, stack);
@@ -83,7 +85,9 @@ class HybridAdaptiveAiRepository implements AdaptiveAiRepository {
       // the screen, so swallowing the failure would leave them believing an
       // item is snoozed when the server never recorded it, and it would silently
       // return. Rethrow so the caller can undo the optimistic removal and say so.
-      if (lifecycle != null) rethrow;
+      // A lost pin is as user-visible as a lost snooze — the card stays put
+      // when they asked it to move, or vice versa.
+      if (lifecycle != null || pinned != null) rethrow;
     }
   }
 

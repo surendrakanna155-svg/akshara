@@ -4,10 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/liveness/live_refresh_scope.dart';
 import '../../../core/testing/qa_test_keys.dart';
-import '../../../router/route_names.dart';
 import '../../../shared/layout/mobile_dashboard_layout.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../adaptive_ai/adaptive_ai_models.dart';
+import '../../adaptive_ai/adaptive_action_routing.dart';
 import '../../adaptive_ai/widgets/adaptive_priority_feed.dart';
 import '../../auth/auth_provider.dart';
 import '../../notifications/notifications_provider.dart';
@@ -263,18 +263,9 @@ KpiAccent _accentForTone(DashboardChipTone tone) {
 }
 
 /// Soft rounded school badge for the hero trailing slot.
-/// Map an Adaptive AI recommendation's (logical) deep link to the parent route.
-/// The parent lands on the module and acts there — the AI only navigated.
+/// Navigate to the module a recommendation points at (shared resolver).
 void _openParentAdaptiveAction(BuildContext context, AdaptiveAction action) {
-  final link = action.deepLink;
-  final route = link.startsWith('/parent/fees')
-      ? RouteNames.parentFees
-      : link.startsWith('/parent/attendance')
-          ? RouteNames.parentAttendance
-          : link.startsWith('/parent/homework')
-              ? RouteNames.parentHomework
-              : RouteNames.parentDashboard;
-  context.go(route);
+  context.go(adaptiveActionRoute('parent', action.deepLink));
 }
 
 class _SchoolBadge extends StatelessWidget {

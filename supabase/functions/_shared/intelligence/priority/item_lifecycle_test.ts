@@ -321,3 +321,83 @@ Deno.test("the deprecated dismissedKeys hard filter still erases, unchanged", ()
   });
   assertEquals(feed.items.map((i) => i.itemKey), ["b"]);
 });
+
+// ---------------------------------------------------------------------------
+// Phase 4 — pins. Doc 04 §5: "user pins always win". A self-reordering feed is
+// only tolerable if the user can nail down what they are working on.
+// ---------------------------------------------------------------------------
+
+Deno.test("a pin outranks an acknowledgement", () => {
+  const rec = record({ state: "acknowledged", pinned: true });
+  const d = resolveVisibility(scored(), rec, NOW);
+  assertEquals(d.visible, true);
+  assertEquals(d.reason, "visible_pinned");
+});
+
+Deno.test("a pin outranks a live snooze", () => {
+  const rec = record({
+    state: "snoozed",
+    snoozedUntil: "2026-07-20T00:00:00.000Z",
+    pinned: true,
+  });
+  assertEquals(resolveVisibility(scored(), rec, NOW).visible, true);
+});
+
+Deno.test("a pin outranks even a terminal state", () => {
+  // Pinning after completing is the later, more deliberate signal. Swallowing
+  // it would read as the app ignoring the user.
+  const rec = record({ state: "completed", pinned: true });
+  const d = resolveVisibility(scored(), rec, NOW);
+  assertEquals(d.visible, true);
+  assertEquals(d.reason, "visible_pinned");
+});
+
+Deno.test("pinned:false behaves exactly as no pin at all", () => {
+  const rec = record({ state: "completed", pinned: false });
+  assertEquals(resolveVisibility(scored(), rec, NOW).visible, false);
+});
+
+Deno.test("pins float to the top of the feed, above higher-scoring items", () => {
+  const items = [
+    raw({ itemKey: "urgent", factors: { impactClass: "critical", dueInDays: 0 } }),
+    raw({ itemKey: "quiet", factors: { impactClass: "routine" } }),
+  ];
+  const lifecycle = lifecycleIndex([
+    record({ itemKey: "quiet", state: "new", pinned: true }),
+  ]);
+  const feed = buildFeed(items, "principal", NOW, { lifecycle });
+
+  assertEquals(feed.items.map((i) => i.itemKey), ["quiet", "urgent"]);
+  assertEquals(feed.items[0].pinned, true);
+});
+
+Deno.test("score order is preserved WITHIN the pinned and unpinned groups", () => {
+  const items = [
+    raw({ itemKey: "p-low", factors: { impactClass: "routine" } }),
+    raw({ itemKey: "p-high", factors: { impactClass: "critical", dueInDays: 0 } }),
+    raw({ itemKey: "u-low", factors: { impactClass: "routine" } }),
+    raw({ itemKey: "u-high", factors: { impactClass: "critical", dueInDays: 0 } }),
+  ];
+  const lifecycle = lifecycleIndex([
+    record({ itemKey: "p-low", state: "new", pinned: true }),
+    record({ itemKey: "p-high", state: "new", pinned: true }),
+  ]);
+  const feed = buildFeed(items, "principal", NOW, { lifecycle });
+
+  assertEquals(
+    feed.items.map((i) => i.itemKey),
+    ["p-high", "p-low", "u-high", "u-low"],
+    "pins first, but each group still ordered by score",
+  );
+});
+
+Deno.test("a pinned item consumes a limit slot — it is shown, not extra", () => {
+  const items = [
+    raw({ itemKey: "a", factors: { impactClass: "critical", dueInDays: 0 } }),
+    raw({ itemKey: "b", factors: { impactClass: "serious" } }),
+    raw({ itemKey: "z", factors: { impactClass: "routine" } }),
+  ];
+  const lifecycle = lifecycleIndex([record({ itemKey: "z", state: "new", pinned: true })]);
+  const feed = buildFeed(items, "principal", NOW, { lifecycle, limit: 2 });
+  assertEquals(feed.items.map((i) => i.itemKey), ["z", "a"]);
+});

@@ -51,6 +51,7 @@ class AdaptiveAiRemoteDataSource {
     required String itemType,
     String? action,
     Map<String, dynamic>? lifecycle,
+    bool? pinned,
   }) async {
     await _dio.post<Map<String, dynamic>>(
       AdaptiveAiApiPaths.recommendationFeedback,
@@ -64,6 +65,7 @@ class AdaptiveAiRemoteDataSource {
         // "not now" never down-weights the whole item type.
         if (action != null) 'action': action,
         if (lifecycle != null) 'lifecycle': lifecycle,
+        if (pinned != null) 'pinned': pinned,
       },
     );
   }

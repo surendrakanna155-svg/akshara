@@ -92,6 +92,7 @@ class AdaptivePriorityItemDto {
     required this.factorBreakdown,
     this.lifecycleState,
     this.visibilityReason,
+    this.pinned = false,
   });
 
   factory AdaptivePriorityItemDto.fromJson(Map<String, dynamic> json) {
@@ -117,6 +118,7 @@ class AdaptivePriorityItemDto {
       visibilityReason: json['visibilityReason'] is String
           ? json['visibilityReason'] as String
           : null,
+      pinned: json['pinned'] == true,
     );
   }
 
@@ -130,6 +132,7 @@ class AdaptivePriorityItemDto {
   final AdaptiveFactorBreakdownDto? factorBreakdown;
   final String? lifecycleState;
   final String? visibilityReason;
+  final bool pinned;
 }
 
 class AdaptiveFeedDto {

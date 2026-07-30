@@ -60,6 +60,7 @@ class AdaptivePriorityItem {
     this.factorBreakdown,
     this.lifecycleState,
     this.visibilityReason,
+    this.pinned = false,
   });
 
   final String itemKey;
@@ -90,6 +91,10 @@ class AdaptivePriorityItem {
   /// `visible_severity_increased` when it climbed back on its own. Lets the UI
   /// say "this came back because it got worse" instead of silently reappearing.
   final String? visibilityReason;
+
+  /// The user pinned this item: it sorts above every unpinned one and is never
+  /// auto-hidden. Doc 04 §5 — "user pins always win".
+  final bool pinned;
 
   bool get isCritical => score >= 75;
 

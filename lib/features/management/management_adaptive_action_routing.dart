@@ -1,22 +1,19 @@
-import '../../router/route_names.dart';
+import '../adaptive_ai/adaptive_action_routing.dart';
 
 /// Maps an Adaptive AI recommendation's (logical) deepLink — including the
 /// W2.7 ops-module worklists (`recommendation_actions.ts`) — to the principal's
-/// closest EXISTING management/module route. Pure + testable; the caller
-/// performs the actual `context.go(...)`. Unknown/unmapped deep links fall
-/// back to the management intelligence hub — the AI only ever navigated, it
-/// never executed the underlying action.
-String managementAdaptiveActionRoute(String deepLink) {
-  // More specific than the generic '/finance' prefix below: the recovery call
-  // queue IS the collection follow-up screen, not the finance overview tab.
-  if (deepLink.startsWith('/finance/recovery')) return RouteNames.financeDefaulters;
-  if (deepLink.startsWith('/finance')) return RouteNames.managementFinance;
-  if (deepLink.startsWith('/inventory/stock')) return RouteNames.inventoryStock;
-  if (deepLink.startsWith('/transport')) return RouteNames.transportVehicles;
-  if (deepLink.startsWith('/hr')) return RouteNames.hrReports;
-  if (deepLink.startsWith('/library')) return RouteNames.libraryOverdue;
-  if (deepLink.startsWith('/analytics')) return RouteNames.managementAnalytics;
-  if (deepLink.startsWith('/timetable')) return RouteNames.managementTimetable;
-  if (deepLink.contains('approval')) return RouteNames.managementApprovals;
-  return RouteNames.managementIntelligence;
-}
+/// closest EXISTING management/module route. Pure; the caller performs the
+/// actual `context.go(...)`. Unknown deep links fall back to the management
+/// intelligence hub — the AI only ever navigated, it never executed the
+/// underlying action.
+///
+/// Living Dashboard Phase 4: the implementation moved into the single shared
+/// resolver at `adaptive_ai/adaptive_action_routing.dart`, which now serves
+/// every persona. Five copies of this logic existed and had already drifted;
+/// this was the only one with tests, so it survives as a thin delegate and its
+/// existing suite becomes the regression proof that consolidating them did not
+/// change principal behaviour.
+///
+/// Prefer `adaptiveActionRoute('principal', link)` in new code.
+String managementAdaptiveActionRoute(String deepLink) =>
+    adaptiveActionRoute('principal', deepLink);

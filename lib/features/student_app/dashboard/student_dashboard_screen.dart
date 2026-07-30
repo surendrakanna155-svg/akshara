@@ -4,11 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/liveness/live_refresh_scope.dart';
 import '../../../core/testing/qa_test_keys.dart';
-import '../../../router/route_names.dart';
 import '../../../shared/layout/mobile_dashboard_layout.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../adaptive_ai/adaptive_ai_models.dart';
+import '../../adaptive_ai/adaptive_action_routing.dart';
 import '../../adaptive_ai/widgets/adaptive_priority_feed.dart';
 import 'student_dashboard_provider.dart';
 import 'widgets/attendance_kpi_card.dart';
@@ -229,15 +229,9 @@ class StudentDashboardScreen extends ConsumerWidget {
   }
 }
 
-/// Map an Adaptive AI recommendation's (logical) deep link to the student route.
+/// Navigate to the module a recommendation points at (shared resolver).
 void _openStudentAdaptiveAction(BuildContext context, AdaptiveAction action) {
-  final link = action.deepLink;
-  final route = link.startsWith('/student/attendance')
-      ? RouteNames.studentAttendance
-      : link.startsWith('/student/homework')
-          ? RouteNames.studentHomework
-          : RouteNames.studentDashboard;
-  context.go(route);
+  context.go(adaptiveActionRoute('student', action.deepLink));
 }
 
 class _StatusKpiRow extends StatelessWidget {

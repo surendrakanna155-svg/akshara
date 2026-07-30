@@ -35,6 +35,9 @@ export interface ItemActionInput {
   scoreAtAction?: number | null;
   /** `factors.dueInDays` right now — the deadline watermark. */
   dueAtAction?: number | null;
+  /** Set/clear the pin. Omit to leave whatever the row already has — pinning is
+   * orthogonal to acknowledging, so an ack must not silently unpin. */
+  pinned?: boolean;
 }
 
 interface LifecycleRow {
@@ -44,6 +47,7 @@ interface LifecycleRow {
   score_at_action: number | string | null;
   due_at_action: number | string | null;
   acted_at: string | Date;
+  pinned: boolean | null;
 }
 
 function toIso(v: string | Date): string {
@@ -68,7 +72,8 @@ export async function loadItemLifecycle(
   scope: ItemLifecycleScope,
 ): Promise<ItemLifecycleRecord[]> {
   const rows = await db.queryObject<LifecycleRow>(
-    `SELECT item_key, state, snoozed_until, score_at_action, due_at_action, acted_at
+    `SELECT item_key, state, snoozed_until, score_at_action, due_at_action,
+            acted_at, pinned
        FROM dashboard_item_state
       WHERE organization_id = $1
         AND school_id IS NOT DISTINCT FROM $2
@@ -86,6 +91,7 @@ export async function loadItemLifecycle(
       scoreAtAction: toIntOrNull(row.score_at_action),
       dueAtAction: toIntOrNull(row.due_at_action),
       actedAt: toIso(row.acted_at),
+      pinned: row.pinned === true,
     });
   }
   return records;
@@ -116,7 +122,9 @@ export async function recordItemAction(
        score_at_action = EXCLUDED.score_at_action,
        due_at_action   = EXCLUDED.due_at_action,
        acted_at        = timezone('utc', now()),
-       actor_id        = EXCLUDED.actor_id`,
+       actor_id        = EXCLUDED.actor_id,
+       -- NULL means "not part of this write": an acknowledge must not unpin.
+       pinned          = COALESCE($10::boolean, dashboard_item_state.pinned)`,
     [
       scope.organizationId,
       scope.schoolId,
@@ -127,6 +135,7 @@ export async function recordItemAction(
       snoozedUntil,
       input.scoreAtAction ?? null,
       input.dueAtAction ?? null,
+      input.pinned ?? null,
     ],
   );
 
@@ -137,5 +146,40 @@ export async function recordItemAction(
     scoreAtAction: input.scoreAtAction ?? null,
     dueAtAction: input.dueAtAction ?? null,
     actedAt: new Date().toISOString(),
+    pinned: input.pinned,
   };
+}
+
+/** Set or clear the pin on one item, without touching its lifecycle state.
+ *
+ * Pinning is orthogonal to acknowledging: a user can pin something they already
+ * put away (that is precisely the "actually, keep this in front of me" case), so
+ * this must not overwrite `state`, the watermarks, or `acted_at`. A fresh row
+ * created by a pin starts at `new` — the user has expressed interest, not a
+ * disposition.
+ */
+export async function setItemPinned(
+  db: TenantQueryClient,
+  scope: ItemLifecycleScope,
+  itemKey: string,
+  pinned: boolean,
+  itemType?: PriorityItemType | null,
+): Promise<void> {
+  await db.queryObject(
+    `INSERT INTO dashboard_item_state (
+       organization_id, school_id, user_id, item_key, item_type,
+       state, acted_at, actor_id, pinned
+     ) VALUES ($1,$2,$3,$4,$5,'new', timezone('utc', now()), $3, $6)
+     ON CONFLICT (organization_id, school_id, user_id, item_key) DO UPDATE SET
+       item_type = COALESCE(EXCLUDED.item_type, dashboard_item_state.item_type),
+       pinned    = EXCLUDED.pinned`,
+    [
+      scope.organizationId,
+      scope.schoolId,
+      scope.userId,
+      itemKey,
+      itemType ?? null,
+      pinned,
+    ],
+  );
 }

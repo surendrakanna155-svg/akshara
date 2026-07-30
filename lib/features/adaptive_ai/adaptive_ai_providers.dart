@@ -220,6 +220,27 @@ Future<void> recordAdaptiveFeedback(
   ref.invalidate(adaptivePriorityFeedProvider(persona));
 }
 
+/// Living Dashboard: pin or unpin an item.
+///
+/// Deliberately NOT a lifecycle transition — a user may pin something they have
+/// already put away, so this must not overwrite their acknowledge/snooze or the
+/// watermarks that decide when it comes back.
+Future<void> setAdaptivePinned(
+  WidgetRef ref, {
+  required String persona,
+  required AdaptivePriorityItem item,
+  required bool pinned,
+}) async {
+  await ref.read(adaptiveAiRepositoryProvider).sendRecommendationFeedback(
+        query: ref.read(repositoryQueryProvider),
+        itemKey: item.itemKey,
+        itemType: item.type,
+        pinned: pinned,
+      );
+  ref.invalidate(adaptiveRecommendationsProvider(persona));
+  ref.invalidate(adaptivePriorityFeedProvider(persona));
+}
+
 /// Living Dashboard: record a lifecycle change (acknowledge / snooze / complete)
 /// and refresh the persona's feed so the next item is promoted into view.
 ///

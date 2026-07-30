@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/liveness/live_refresh_scope.dart';
 import '../../core/testing/qa_test_keys.dart';
-import '../../router/route_names.dart';
 import '../adaptive_ai/adaptive_ai_models.dart';
+import '../adaptive_ai/adaptive_action_routing.dart';
 import '../adaptive_ai/widgets/adaptive_priority_feed.dart';
 import '../../shared/async/erp_async_state.dart';
 import '../../shared/widgets/widgets.dart';
@@ -111,13 +111,7 @@ class _DashboardBody extends StatelessWidget {
   }
 
   void _openDirectorAction(BuildContext context, AdaptiveAction action) {
-    final link = action.deepLink;
-    final route = link.startsWith('/finance')
-        ? RouteNames.directorRevenue
-        : link.contains('complian')
-            ? RouteNames.directorCompliance
-            : RouteNames.directorPortfolio;
-    context.go(route);
+    context.go(adaptiveActionRoute('director', action.deepLink));
   }
 }
 

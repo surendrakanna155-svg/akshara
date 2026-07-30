@@ -219,6 +219,8 @@ export interface BuildFeedOptions {
 export interface FeedItem extends ScoredPriorityItem {
   lifecycleState?: ItemLifecycleState;
   visibilityReason?: VisibilityReason;
+  /** The user pinned this item; it sorts above every unpinned one. */
+  pinned?: boolean;
 }
 
 /** Turn raw items into a scored, persona-filtered, sorted, deduped feed.
@@ -277,9 +279,25 @@ export function buildFeed(
     const enriched: FeedItem = {
       ...it,
       ...(record ? { lifecycleState: record.state } : {}),
+      ...(record?.pinned === true ? { pinned: true } : {}),
       visibilityReason: verdict.reason,
     };
     (verdict.visible ? visible : hidden).push(enriched);
+  }
+
+  // 4b) Pins float to the top, keeping score order within each group.
+  //
+  // Doc 04 §5's anti-disorientation rule is "user pins always win", and it is
+  // what makes a self-reordering feed tolerable: whatever the engine decides,
+  // the thing the user is actually working on stays where they put it. A stable
+  // partition (not a re-sort) preserves the score ordering already computed.
+  if (lifecycle) {
+    const pinned = visible.filter((it) => it.pinned === true);
+    if (pinned.length > 0) {
+      const rest = visible.filter((it) => it.pinned !== true);
+      visible.length = 0;
+      visible.push(...pinned, ...rest);
+    }
   }
 
   // 5) The limit applies to what is SHOWN. Slicing before the overlay would let

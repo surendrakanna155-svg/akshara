@@ -58,7 +58,7 @@ class _FakeAdaptiveAiRepository implements AdaptiveAiRepository {
   Future<AdaptiveFeed> getRecommendations({required RepositoryQuery query, required String persona, int? limit}) async =>
       AdaptiveFeed.empty(persona);
   @override
-  Future<void> sendRecommendationFeedback({required RepositoryQuery query, required String itemKey, required String itemType, AdaptiveFeedbackAction? action, AdaptiveLifecycleWrite? lifecycle}) async {}
+  Future<void> sendRecommendationFeedback({required RepositoryQuery query, required String itemKey, required String itemType, AdaptiveFeedbackAction? action, AdaptiveLifecycleWrite? lifecycle, bool? pinned}) async {}
   @override
   Future<List<AdaptiveQuickAction>> getQuickActions({required RepositoryQuery query, required String persona}) async => const [];
 }

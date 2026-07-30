@@ -30,7 +30,7 @@ class _FakeQuickActionsRepo implements AdaptiveAiRepository {
   Future<AdaptiveFeed> getRecommendations({required RepositoryQuery query, required String persona, int? limit}) async =>
       AdaptiveFeed.empty(persona);
   @override
-  Future<void> sendRecommendationFeedback({required RepositoryQuery query, required String itemKey, required String itemType, AdaptiveFeedbackAction? action, AdaptiveLifecycleWrite? lifecycle}) async {}
+  Future<void> sendRecommendationFeedback({required RepositoryQuery query, required String itemKey, required String itemType, AdaptiveFeedbackAction? action, AdaptiveLifecycleWrite? lifecycle, bool? pinned}) async {}
   @override
   Future<UniversalSearchResult> universalSearch({required RepositoryQuery query, required String term, int? limit, int? offset}) async =>
       UniversalSearchResult.empty(term);

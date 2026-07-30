@@ -21,7 +21,7 @@ import '../adaptive_lifecycle.dart';
 /// The overflow-menu choices on a feed row (P2-6 audit). Dismiss folds the
 /// former standalone icon button in here to keep the dense row compact; Mute
 /// records `suppress` (learn not to resurface this item TYPE for the persona).
-enum _FeedItemMenuChoice { dismiss, snooze, complete, suppress }
+enum _FeedItemMenuChoice { pin, dismiss, snooze, complete, suppress }
 
 /// Why a previously put-away item is on the list again, in the user's words.
 /// Null for an item they have never acted on — the common case, which needs no
@@ -135,7 +135,11 @@ class _AdaptivePriorityFeedSectionState
           // the item escalates or its deadline advances a band.
           Dismissible(
             key: ValueKey('adaptive-feed-item-${item.itemKey}'),
-            direction: DismissDirection.endToStart,
+            // A pinned card cannot be swiped away: the user asked for it to stay
+            // in front of them, and a stray swipe undoing that is worse than
+            // making them unpin first.
+            direction:
+                item.pinned ? DismissDirection.none : DismissDirection.endToStart,
             background: _SwipeBackground(colors: context.colors),
             onDismissed: (_) => _runLifecycle(
               context,
@@ -188,12 +192,29 @@ class _AdaptivePriorityFeedSectionState
                 item: item,
                 action: AdaptiveFeedbackAction.suppress,
               ),
+              onTogglePin: () => _togglePin(context, ref, persona: persona, item: item),
             ),
           ),
           const SizedBox(height: AksharaSpacing.s2),
         ],
       ],
     );
+  }
+
+  Future<void> _togglePin(
+    BuildContext context,
+    WidgetRef ref, {
+    required String persona,
+    required AdaptivePriorityItem item,
+  }) async {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    try {
+      await setAdaptivePinned(ref, persona: persona, item: item, pinned: !item.pinned);
+    } catch (_) {
+      messenger?.showSnackBar(
+        SnackBar(content: Text(item.pinned ? "Couldn't unpin that." : "Couldn't pin that.")),
+      );
+    }
   }
 
   /// Ask which snooze window, then record it. Returns without writing if the
@@ -316,6 +337,7 @@ class _AdaptiveRecommendationTile extends StatefulWidget {
     required this.onSnooze,
     required this.onComplete,
     required this.onSuppress,
+    required this.onTogglePin,
   });
 
   final AdaptivePriorityItem item;
@@ -324,6 +346,7 @@ class _AdaptiveRecommendationTile extends StatefulWidget {
   final VoidCallback onSnooze;
   final VoidCallback onComplete;
   final VoidCallback onSuppress;
+  final VoidCallback onTogglePin;
 
   @override
   State<_AdaptiveRecommendationTile> createState() => _AdaptiveRecommendationTileState();
@@ -350,7 +373,17 @@ class _AdaptiveRecommendationTileState extends State<_AdaptiveRecommendationTile
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(item.title, style: context.aksharaText.bodyMedium),
+                    Row(
+                      children: [
+                        if (item.pinned) ...[
+                          Icon(Icons.push_pin, size: 13, color: colors.primary),
+                          const SizedBox(width: AksharaSpacing.s1),
+                        ],
+                        Expanded(
+                          child: Text(item.title, style: context.aksharaText.bodyMedium),
+                        ),
+                      ],
+                    ),
                     // An item the user already put away does not reappear
                     // silently — say why it is back, or it reads as the app
                     // ignoring their dismissal.
@@ -377,6 +410,8 @@ class _AdaptiveRecommendationTileState extends State<_AdaptiveRecommendationTile
                 tooltip: 'More options',
                 onSelected: (choice) {
                   switch (choice) {
+                    case _FeedItemMenuChoice.pin:
+                      widget.onTogglePin();
                     case _FeedItemMenuChoice.dismiss:
                       widget.onDismiss();
                     case _FeedItemMenuChoice.snooze:
@@ -387,20 +422,24 @@ class _AdaptiveRecommendationTileState extends State<_AdaptiveRecommendationTile
                       widget.onSuppress();
                   }
                 },
-                itemBuilder: (context) => const [
+                itemBuilder: (context) => [
                   PopupMenuItem(
+                    value: _FeedItemMenuChoice.pin,
+                    child: Text(item.pinned ? 'Unpin' : 'Pin to top'),
+                  ),
+                  const PopupMenuItem(
                     value: _FeedItemMenuChoice.dismiss,
                     child: Text('Put away for today'),
                   ),
-                  PopupMenuItem(
+                  const PopupMenuItem(
                     value: _FeedItemMenuChoice.snooze,
                     child: Text('Remind me later'),
                   ),
-                  PopupMenuItem(
+                  const PopupMenuItem(
                     value: _FeedItemMenuChoice.complete,
                     child: Text('Mark done'),
                   ),
-                  PopupMenuItem(
+                  const PopupMenuItem(
                     value: _FeedItemMenuChoice.suppress,
                     child: Text('Mute this type'),
                   ),

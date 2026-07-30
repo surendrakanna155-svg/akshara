@@ -20,6 +20,7 @@ class _FakeAdaptiveAiRepository implements AdaptiveAiRepository {
 
   /// Living Dashboard: what lifecycle writes reached the repository.
   final List<String> lifecycleLog = [];
+  final List<String> pinnedLog = [];
   final Map<String, DateTime> snoozedUntilLog = {};
   final Map<String, int?> scoreAtActionLog = {};
 
@@ -52,7 +53,12 @@ class _FakeAdaptiveAiRepository implements AdaptiveAiRepository {
     required String itemType,
     AdaptiveFeedbackAction? action,
     AdaptiveLifecycleWrite? lifecycle,
+    bool? pinned,
   }) async {
+    if (pinned != null) {
+      pinnedLog.add('${pinned ? 'pin' : 'unpin'}:$itemKey');
+      return;
+    }
     if (lifecycleShouldFail && lifecycle != null) {
       throw StateError('lifecycle write failed');
     }
@@ -96,6 +102,7 @@ AdaptivePriorityItem _item(
   AdaptiveAction? action,
   AdaptiveFactorBreakdown? factorBreakdown,
   String? visibilityReason,
+  bool pinned = false,
 }) {
   return AdaptivePriorityItem(
     itemKey: key,
@@ -107,6 +114,7 @@ AdaptivePriorityItem _item(
     action: action,
     factorBreakdown: factorBreakdown,
     visibilityReason: visibilityReason,
+    pinned: pinned,
   );
 }
 
@@ -309,5 +317,53 @@ void main() {
     await tester.tap(find.textContaining('Why:'));
     await tester.pumpAndSettle();
     expect(find.textContaining('urgency'), findsNothing);
+  });
+
+  _pinTests();
+}
+
+// --- Phase 4: pinning -------------------------------------------------------
+
+void _pinTests() {
+  testWidgets('pinning records a pin and does not touch lifecycle state', (tester) async {
+    final repo = _FakeAdaptiveAiRepository([_item('a'), _item('b')]);
+    await _pump(tester, repo);
+
+    await tester.tap(find.byIcon(Icons.more_vert).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pin to top'));
+    await tester.pumpAndSettle();
+
+    expect(repo.pinnedLog, contains('pin:a'));
+    // A pin must not be recorded as an acknowledge — the user may well have
+    // pinned something they had already put away.
+    expect(repo.lifecycleLog, isEmpty);
+  });
+
+  testWidgets('an already-pinned item offers Unpin and shows the pin marker', (tester) async {
+    final repo = _FakeAdaptiveAiRepository([_item('a', pinned: true)]);
+    await _pump(tester, repo);
+
+    expect(find.byIcon(Icons.push_pin), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.more_vert).first);
+    await tester.pumpAndSettle();
+    expect(find.text('Unpin'), findsOneWidget);
+    expect(find.text('Pin to top'), findsNothing);
+
+    await tester.tap(find.text('Unpin'));
+    await tester.pumpAndSettle();
+    expect(repo.pinnedLog, contains('unpin:a'));
+  });
+
+  testWidgets('a pinned card cannot be swiped away by accident', (tester) async {
+    final repo = _FakeAdaptiveAiRepository([_item('a', pinned: true), _item('b')]);
+    await _pump(tester, repo);
+
+    await tester.drag(find.text('Item a'), const Offset(-500, 0));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Item a'), findsOneWidget, reason: 'the pin must survive a swipe');
+    expect(repo.lifecycleLog, isEmpty);
   });
 }

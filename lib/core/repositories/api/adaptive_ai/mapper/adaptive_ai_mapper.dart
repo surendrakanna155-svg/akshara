@@ -32,6 +32,7 @@ class AdaptiveAiMapper {
             dto.factorBreakdown == null ? null : toFactorBreakdown(dto.factorBreakdown!),
         lifecycleState: dto.lifecycleState,
         visibilityReason: dto.visibilityReason,
+        pinned: dto.pinned,
       );
 
   AdaptiveFeed toFeed(AdaptiveFeedDto dto) => AdaptiveFeed(

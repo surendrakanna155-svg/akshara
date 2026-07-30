@@ -15,7 +15,11 @@ class MockAdaptiveAiRepository implements AdaptiveAiRepository {
   /// a snooze EXPIRES, rather than hiding the item forever like a dismissal.
   final Map<String, DateTime> _snoozedUntil = {};
 
+  /// Pinned items are never hidden and sort first — mirrors the backend rule.
+  final Set<String> _pinned = {};
+
   bool _isHidden(String itemKey, DateTime now) {
+    if (_pinned.contains(itemKey)) return false;
     final until = _snoozedUntil[itemKey];
     if (until != null) return now.isBefore(until);
     return _dismissed.contains(itemKey);
@@ -60,7 +64,17 @@ class MockAdaptiveAiRepository implements AdaptiveAiRepository {
     required String itemType,
     AdaptiveFeedbackAction? action,
     AdaptiveLifecycleWrite? lifecycle,
+    bool? pinned,
   }) async {
+    if (pinned != null) {
+      if (pinned) {
+        _pinned.add(itemKey);
+        _dismissed.remove(itemKey);
+        _snoozedUntil.remove(itemKey);
+      } else {
+        _pinned.remove(itemKey);
+      }
+    }
     if (lifecycle != null) {
       switch (lifecycle.action) {
         case AdaptiveLifecycleAction.snooze:

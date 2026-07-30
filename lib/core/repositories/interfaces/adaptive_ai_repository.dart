@@ -39,6 +39,7 @@ abstract class AdaptiveAiRepository {
     required String itemType,
     AdaptiveFeedbackAction? action,
     AdaptiveLifecycleWrite? lifecycle,
+    bool? pinned,
   });
 
   /// The RBAC-filtered quick actions for a persona (action-first surface).

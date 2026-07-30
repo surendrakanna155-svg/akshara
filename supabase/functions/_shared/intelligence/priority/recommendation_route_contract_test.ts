@@ -234,3 +234,41 @@ Deno.test("W2.0b: an itemType is still required even for a lifecycle-only body (
   });
   assertEquals(res.status, 422);
 });
+
+// --- Phase 4: pinning on the same route -------------------------------------
+
+Deno.test("W2.0b: a pin-only body is accepted (no action, no lifecycle) — 503 at the DB", async () => {
+  // Pinning is orthogonal: it must not require the caller to invent a learning
+  // signal or a lifecycle transition it did not mean.
+  const res = await call("POST", FB, RUN, {
+    itemKey: "k",
+    itemType: "deadline",
+    pinned: true,
+  });
+  assertEquals(res.status, 503);
+});
+
+Deno.test("W2.0b: a non-boolean pinned is rejected (422)", async () => {
+  const res = await call("POST", FB, RUN, {
+    itemKey: "k",
+    itemType: "deadline",
+    pinned: "yes",
+  });
+  assertEquals(res.status, 422);
+});
+
+Deno.test("W2.0b: a body with none of action/lifecycle/pinned is still rejected (422)", async () => {
+  const res = await call("POST", FB, RUN, { itemKey: "k", itemType: "deadline" });
+  assertEquals(res.status, 422);
+});
+
+Deno.test("W2.0b: acknowledge + unpin in one body is authorized (503 at the DB)", async () => {
+  const res = await call("POST", FB, RUN, {
+    itemKey: "k",
+    itemType: "deadline",
+    action: "dismiss",
+    lifecycle: { state: "acknowledged", scoreAtAction: 40 },
+    pinned: false,
+  });
+  assertEquals(res.status, 503);
+});

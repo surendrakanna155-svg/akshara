@@ -44,6 +44,7 @@ class ApiAdaptiveAiRepository implements AdaptiveAiRepository {
     required String itemType,
     AdaptiveFeedbackAction? action,
     AdaptiveLifecycleWrite? lifecycle,
+    bool? pinned,
   }) {
     return _remote.sendFeedback(
       query: query,
@@ -51,6 +52,7 @@ class ApiAdaptiveAiRepository implements AdaptiveAiRepository {
       itemType: itemType,
       action: action?.name,
       lifecycle: lifecycle?.toJson(),
+      pinned: pinned,
     );
   }
 

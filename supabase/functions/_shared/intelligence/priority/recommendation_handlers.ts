@@ -31,7 +31,7 @@ import {
   ITEM_LIFECYCLE_STATES,
   type ItemLifecycleState,
 } from "./item_lifecycle.ts";
-import { recordItemAction } from "./item_lifecycle_repository.ts";
+import { recordItemAction, setItemPinned } from "./item_lifecycle_repository.ts";
 import { loadPersonaFeedContext } from "./priority_feed_service.ts";
 import { actionForItem } from "./recommendation_actions.ts";
 import { parseFeedLimit, requirePriorityFeedScope, resolvePersonaParam } from "./priority_handlers.ts";
@@ -103,11 +103,16 @@ export async function handleRecommendationFeedback(
       scoreAtAction?: number;
       dueAtAction?: number;
     };
+    /** Set/clear the pin. Independent of `action` and `lifecycle` — a user may
+     * pin something they already put away, which is exactly the "actually, keep
+     * this in front of me" case. */
+    pinned?: boolean;
   }>(req);
   const itemKey = body?.itemKey?.trim() ?? "";
   const itemType = body?.itemType;
   const action = body?.action;
   const lifecycle = body?.lifecycle;
+  const pinned = body?.pinned;
   if (!itemKey) return errorEnvelope("VALIDATION_ERROR", "itemKey required", 422);
   if (!isItemType(itemType)) {
     return errorEnvelope(
@@ -120,8 +125,11 @@ export async function handleRecommendationFeedback(
   // separable on purpose: snoozing is "not now", NOT "this was a bad
   // suggestion", so a snooze must be able to skip the learning signal entirely
   // rather than down-weighting the whole item type.
-  if (action === undefined && lifecycle === undefined) {
-    return errorEnvelope("VALIDATION_ERROR", "action or lifecycle required", 422);
+  if (action === undefined && lifecycle === undefined && pinned === undefined) {
+    return errorEnvelope("VALIDATION_ERROR", "action, lifecycle or pinned required", 422);
+  }
+  if (pinned !== undefined && typeof pinned !== "boolean") {
+    return errorEnvelope("VALIDATION_ERROR", "pinned must be a boolean", 422);
   }
   if (action !== undefined && !isFeedbackAction(action)) {
     return errorEnvelope(
@@ -173,6 +181,11 @@ export async function handleRecommendationFeedback(
           dueAtAction: lifecycle.dueAtAction ?? null,
         })
         : null;
+      // Applied after the state write so a combined body (e.g. acknowledge +
+      // unpin) ends in the caller's intended pin, not the upsert's default.
+      if (pinned !== undefined) {
+        await setItemPinned(db, scope, itemKey, pinned, itemType);
+      }
       return { memory, recorded };
     });
     return jsonResponse(envelope({
@@ -182,6 +195,7 @@ export async function handleRecommendationFeedback(
       lifecycle: result.recorded
         ? { state: result.recorded.state, snoozedUntil: result.recorded.snoozedUntil }
         : null,
+      pinned: pinned ?? null,
     }));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);

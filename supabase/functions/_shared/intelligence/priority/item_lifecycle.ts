@@ -91,9 +91,13 @@ export interface ItemLifecycleRecord {
   dueAtAction?: number | null;
   /** ISO instant of the user's action (drives the acknowledge day-boundary). */
   actedAt: string;
+  /** The user pinned this item. Outranks the score for ordering AND every
+   * suppression in `resolveVisibility` — doc 04 §5, "user pins always win". */
+  pinned?: boolean;
 }
 
 export type VisibilityReason =
+  | "visible_pinned"
   | "visible_new"
   | "visible_snooze_elapsed"
   | "visible_severity_increased"
@@ -143,7 +147,13 @@ export function resolveVisibility(
   // 1) Never acted on — the common case, and no row exists for it.
   if (!record) return { visible: true, reason: "visible_new" };
 
-  // 2) The user finished it. Nothing resurfaces work that is done; the item
+  // 2) A pin is the user saying "keep this in front of me". It outranks every
+  //    suppression below, including a terminal state: if they pinned it and
+  //    then marked it done, the pin is the more recent, more deliberate signal
+  //    and silently swallowing it would look like the app ignoring them.
+  if (record.pinned === true) return { visible: true, reason: "visible_pinned" };
+
+  // 3) The user finished it. Nothing resurfaces work that is done; the item
   //    vanishes when its generator stops emitting, which is the honest signal.
   if (TERMINAL_STATES.has(record.state)) {
     return { visible: false, reason: "hidden_terminal" };
@@ -161,12 +171,12 @@ export function resolveVisibility(
   const hasBaseline = typeof record.scoreAtAction === "number";
 
   if (hasBaseline) {
-    // 3) It got materially worse than when they put it away.
+    // 4) It got materially worse than when they put it away.
     if (item.score >= (record.scoreAtAction as number) + ESCALATION_DELTA) {
       return { visible: true, reason: "visible_severity_increased" };
     }
 
-    // 4) The deadline crossed into a more urgent band since they acted. Here a
+    // 5) The deadline crossed into a more urgent band since they acted. Here a
     //    null `dueAtAction` legitimately means "it had no clock then", so an
     //    item that has since acquired a deadline correctly resurfaces.
     if (urgencyBand(item.factors.dueInDays) > urgencyBand(record.dueAtAction)) {
@@ -174,7 +184,7 @@ export function resolveVisibility(
     }
   }
 
-  // 5) Snooze: comes back the moment the window closes — resolved at read time,
+  // 6) Snooze: comes back the moment the window closes — resolved at read time,
   //    so no scheduler is involved.
   if (record.state === "snoozed") {
     const until = record.snoozedUntil ? Date.parse(record.snoozedUntil) : NaN;
@@ -188,7 +198,7 @@ export function resolveVisibility(
     return { visible: false, reason: "hidden_snoozed" };
   }
 
-  // 6) Acknowledge is day-scoped, following the `operations_hub_item_actions`
+  // 7) Acknowledge is day-scoped, following the `operations_hub_item_actions`
   //    precedent: "I have seen this today". If the condition is still true
   //    tomorrow, it legitimately deserves the user's attention again.
   if (record.state === "acknowledged" || record.state === "escalated") {
@@ -198,7 +208,7 @@ export function resolveVisibility(
     return { visible: false, reason: "hidden_acknowledged" };
   }
 
-  // 7) `new` / `urgent` / `expired` carry no suppression.
+  // 8) `new` / `urgent` / `expired` carry no suppression.
   return { visible: true, reason: "visible_new" };
 }
 
