@@ -161,3 +161,76 @@ Deno.test("W2.0b: an unauthenticated caller is rejected (401)", async () => {
   );
   assertEquals(res?.status, 401);
 });
+
+// ---------------------------------------------------------------------------
+// Living Dashboard — lifecycle on the feedback route (validated BEFORE the DB).
+// ---------------------------------------------------------------------------
+
+const FB = "/intelligence/recommendations/feedback";
+const RUN = ["runAiCopilot", "viewAiCopilot"];
+
+Deno.test("W2.0b: a body with neither action nor lifecycle is rejected (422)", async () => {
+  const res = await call("POST", FB, RUN, { itemKey: "k", itemType: "deadline" });
+  assertEquals(res.status, 422);
+});
+
+Deno.test("W2.0b: an unknown lifecycle.state is rejected (422)", async () => {
+  const res = await call("POST", FB, RUN, {
+    itemKey: "k",
+    itemType: "deadline",
+    lifecycle: { state: "dismissed" }, // legacy vocabulary — not a lifecycle state
+  });
+  assertEquals(res.status, 422);
+});
+
+Deno.test("W2.0b: a snooze with no snoozedUntil is rejected (422) — never a permanent bury", async () => {
+  const res = await call("POST", FB, RUN, {
+    itemKey: "k",
+    itemType: "deadline",
+    lifecycle: { state: "snoozed" },
+  });
+  assertEquals(res.status, 422);
+});
+
+Deno.test("W2.0b: a snooze with an unparseable snoozedUntil is rejected (422)", async () => {
+  const res = await call("POST", FB, RUN, {
+    itemKey: "k",
+    itemType: "deadline",
+    lifecycle: { state: "snoozed", snoozedUntil: "tomorrow-ish" },
+  });
+  assertEquals(res.status, 422);
+});
+
+Deno.test("W2.0b: a valid snooze WITHOUT a learning signal is authorized and reaches the DB (503)", async () => {
+  // The point of separating action from lifecycle: "not now" must not
+  // down-weight the whole item type the way a dismissal does.
+  const res = await call("POST", FB, RUN, {
+    itemKey: "k",
+    itemType: "deadline",
+    lifecycle: {
+      state: "snoozed",
+      snoozedUntil: "2026-07-11T03:30:00.000Z",
+      scoreAtAction: 62,
+      dueAtAction: 3,
+    },
+  });
+  assertEquals(res.status, 503);
+});
+
+Deno.test("W2.0b: action + lifecycle together are authorized and reach the DB (503)", async () => {
+  const res = await call("POST", FB, RUN, {
+    itemKey: "k",
+    itemType: "deadline",
+    action: "dismiss",
+    lifecycle: { state: "acknowledged", scoreAtAction: 40, dueAtAction: null },
+  });
+  assertEquals(res.status, 503);
+});
+
+Deno.test("W2.0b: an itemType is still required even for a lifecycle-only body (422)", async () => {
+  const res = await call("POST", FB, RUN, {
+    itemKey: "k",
+    lifecycle: { state: "acknowledged" },
+  });
+  assertEquals(res.status, 422);
+});

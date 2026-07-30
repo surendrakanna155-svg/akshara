@@ -31,7 +31,7 @@
 -- because defect XMOD-016 records nine periodic jobs in this repo with zero
 -- schedulers actually installed.
 
-CREATE TABLE dashboard_item_state (
+CREATE TABLE IF NOT EXISTS dashboard_item_state (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES organizations (id),
   -- Nullable: org/director-scope users carry no school, same as legal_acceptances.
@@ -92,14 +92,15 @@ CREATE TABLE dashboard_item_state (
 );
 
 -- The feed read: every request loads this user's rows for the overlay pass.
-CREATE INDEX idx_dashboard_item_state_user
+CREATE INDEX IF NOT EXISTS idx_dashboard_item_state_user
   ON dashboard_item_state (organization_id, school_id, user_id);
 
 -- Lets a snoozed-item sweep or analytics query skip the settled rows.
-CREATE INDEX idx_dashboard_item_state_snoozed
+CREATE INDEX IF NOT EXISTS idx_dashboard_item_state_snoozed
   ON dashboard_item_state (organization_id, snoozed_until)
   WHERE state = 'snoozed';
 
+DROP TRIGGER IF EXISTS dashboard_item_state_updated_at ON dashboard_item_state;
 CREATE TRIGGER dashboard_item_state_updated_at
   BEFORE UPDATE ON dashboard_item_state
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
@@ -107,6 +108,7 @@ CREATE TRIGGER dashboard_item_state_updated_at
 ALTER TABLE dashboard_item_state ENABLE ROW LEVEL SECURITY;
 ALTER TABLE dashboard_item_state FORCE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS dashboard_item_state_self ON dashboard_item_state;
 CREATE POLICY dashboard_item_state_self ON dashboard_item_state
   FOR ALL
   USING (

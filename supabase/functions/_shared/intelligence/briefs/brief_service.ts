@@ -184,6 +184,18 @@ export async function loadDailyBrief(
   const istDate = istDateOf(nowIso);
 
   const ctx = await loadPersonaFeedContext(db, claims, persona, nowIso);
+  // DELIBERATELY NOT lifecycle-aware — do not "fix" this to match the dashboard.
+  //
+  // The principal pulse is generated ONCE per (school, permission-signature, day)
+  // and the resulting prose is cached under a SHARED `scopeKey = "school"` (see
+  // the cache key below). Per-user lifecycle state must therefore never reach
+  // these sections: one principal's snooze would be baked into the shared
+  // narrative and served to every other principal, and de-sharing the key to
+  // avoid that would multiply the governed call from 1/school/day to 1/user/day.
+  //
+  // The two surfaces also mean different things: the dashboard is a working
+  // QUEUE the user grooms, the brief is a daily DIGEST of what is true. Snoozing
+  // an item on the dashboard says "not now", not "pretend this isn't happening".
   const feed = buildFeed(ctx.rawItems, persona, nowIso, {
     weights: ctx.weights,
     dismissedKeys: ctx.dismissedKeys,

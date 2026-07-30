@@ -26,6 +26,12 @@ import {
   recordRecommendationFeedback,
 } from "../../ai/ai_persona_memory_repository.ts";
 import { buildFeed } from "./priority_engine.ts";
+import {
+  isItemLifecycleState,
+  ITEM_LIFECYCLE_STATES,
+  type ItemLifecycleState,
+} from "./item_lifecycle.ts";
+import { recordItemAction } from "./item_lifecycle_repository.ts";
 import { loadPersonaFeedContext } from "./priority_feed_service.ts";
 import { actionForItem } from "./recommendation_actions.ts";
 import { parseFeedLimit, requirePriorityFeedScope, resolvePersonaParam } from "./priority_handlers.ts";
