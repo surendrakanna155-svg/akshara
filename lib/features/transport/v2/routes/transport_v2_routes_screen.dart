@@ -14,6 +14,7 @@ import '../transport_v2_models.dart';
 import '../transport_v2_providers.dart';
 import '../assignment/transport_v2_assignment_sheet.dart';
 import 'transport_v2_route_form.dart';
+import 'transport_v2_route_stops_editor.dart';
 
 /// TR-02 v2 — Routes management on the relational API.
 ///
@@ -368,6 +369,14 @@ class _RouteActions extends ConsumerWidget {
               icon: const Icon(Icons.pause_outlined, size: 18),
               label: const Text('Deactivate'),
             ),
+          // BUS-038/039/040 — the route's stop sequence.
+          OutlinedButton.icon(
+            key: QaTestKeys.transportV2ManageStopsButton(route.id),
+            onPressed: () =>
+                showTransportV2RouteStopsEditor(context, ref, route: route),
+            icon: const Icon(Icons.place_outlined, size: 18),
+            label: Text('Stops (${route.stopCount})'),
+          ),
           // BUS-043/048 — the operation that did not exist pre-v2.
           OutlinedButton.icon(
             key: QaTestKeys.transportV2AssignButton(route.id),

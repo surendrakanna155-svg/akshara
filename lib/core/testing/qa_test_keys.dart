@@ -2191,6 +2191,37 @@ abstract final class QaTestKeys {
   static const transportV2DeactivateWarningSnackbar =
       ValueKey<String>('transport_v2_deactivate_warning_snackbar');
 
+  // ─── Transport v2 route-stop sequence (BUS-038/039/040) ───────────────────
+  static const transportV2AttachStopButton =
+      ValueKey<String>('transport_v2_attach_stop_button');
+  static const transportV2AttachStopDialog =
+      ValueKey<String>('transport_v2_attach_stop_dialog');
+  static const transportV2StopReorderList =
+      ValueKey<String>('transport_v2_stop_reorder_list');
+  static const transportV2StopOrderWarning =
+      ValueKey<String>('transport_v2_stop_order_warning');
+  static const transportV2StopTimesDialog =
+      ValueKey<String>('transport_v2_stop_times_dialog');
+  static const transportV2StopTimesSubmitButton =
+      ValueKey<String>('transport_v2_stop_times_submit_button');
+  static const transportV2StopPickupTimeButton =
+      ValueKey<String>('transport_v2_stop_pickup_time_button');
+  static const transportV2StopDropTimeButton =
+      ValueKey<String>('transport_v2_stop_drop_time_button');
+  static const transportV2DetachStopConfirmButton =
+      ValueKey<String>('transport_v2_detach_stop_confirm_button');
+
+  static ValueKey<String> transportV2RouteStopTile(String id) =>
+      ValueKey<String>('transport_v2_route_stop_tile_$id');
+  static ValueKey<String> transportV2EditStopTimesButton(String id) =>
+      ValueKey<String>('transport_v2_edit_stop_times_$id');
+  static ValueKey<String> transportV2DetachStopButton(String id) =>
+      ValueKey<String>('transport_v2_detach_stop_$id');
+  static ValueKey<String> transportV2AttachStopOption(String id) =>
+      ValueKey<String>('transport_v2_attach_stop_option_$id');
+  static ValueKey<String> transportV2ManageStopsButton(String id) =>
+      ValueKey<String>('transport_v2_manage_stops_$id');
+
   // ─── Transport v2 assignment (BUS-043…054) ────────────────────────────────
   static const transportV2AssignmentDialog =
       ValueKey<String>('transport_v2_assignment_dialog');
