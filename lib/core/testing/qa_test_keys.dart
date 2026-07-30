@@ -2191,6 +2191,41 @@ abstract final class QaTestKeys {
   static const transportV2DeactivateWarningSnackbar =
       ValueKey<String>('transport_v2_deactivate_warning_snackbar');
 
+  // ─── Transport v2 stops (BUS-036…040) ─────────────────────────────────────
+  static const transportV2CreateStopButton =
+      ValueKey<String>('transport_v2_create_stop_button');
+  static const transportV2NeedsLocationBanner =
+      ValueKey<String>('transport_v2_needs_location_banner');
+  static const transportV2StopFormDialog =
+      ValueKey<String>('transport_v2_stop_form_dialog');
+  static const transportV2StopFormSubmitButton =
+      ValueKey<String>('transport_v2_stop_form_submit_button');
+  static const transportV2StopNameField =
+      ValueKey<String>('transport_v2_stop_name_field');
+  static const transportV2StopLatField =
+      ValueKey<String>('transport_v2_stop_lat_field');
+  static const transportV2StopLngField =
+      ValueKey<String>('transport_v2_stop_lng_field');
+  static const transportV2StopLocationError =
+      ValueKey<String>('transport_v2_stop_location_error');
+  static const transportV2StopRadiusSlider =
+      ValueKey<String>('transport_v2_stop_radius_slider');
+  static const transportV2StopAddressField =
+      ValueKey<String>('transport_v2_stop_address_field');
+  static const transportV2StopLandmarkField =
+      ValueKey<String>('transport_v2_stop_landmark_field');
+  static const transportV2DeleteStopConfirmButton =
+      ValueKey<String>('transport_v2_delete_stop_confirm_button');
+
+  static ValueKey<String> transportV2StopCard(String id) =>
+      ValueKey<String>('transport_v2_stop_card_$id');
+  static ValueKey<String> transportV2EditStopButton(String id) =>
+      ValueKey<String>('transport_v2_edit_stop_$id');
+  static ValueKey<String> transportV2DeleteStopButton(String id) =>
+      ValueKey<String>('transport_v2_delete_stop_$id');
+  static ValueKey<String> transportV2NeedsLocationChip(String id) =>
+      ValueKey<String>('transport_v2_needs_location_chip_$id');
+
   static ValueKey<String> transportV2RouteCard(String id) =>
       ValueKey<String>('transport_v2_route_card_$id');
   static ValueKey<String> transportV2EditRouteButton(String id) =>
