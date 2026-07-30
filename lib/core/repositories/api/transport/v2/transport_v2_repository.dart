@@ -90,6 +90,21 @@ class TransportV2Repository {
     }
   }
 
+  /// Fleet and crew are NEVER cached: their compliance and availability state
+  /// gates an assignment decision, and a stale answer could let an admin put an
+  /// uninsured bus or an on-leave driver on a route.
+  Future<List<VehicleV2>> getVehicles({
+    required RepositoryQuery query,
+    String? serviceDate,
+  }) =>
+      _remote.fetchVehicles(query: query, serviceDate: serviceDate);
+
+  Future<List<DriverV2>> getDrivers({
+    required RepositoryQuery query,
+    String? serviceDate,
+  }) =>
+      _remote.fetchDrivers(query: query, serviceDate: serviceDate);
+
   /// Readiness and capacity are NEVER served from cache. Both gate a decision
   /// (publish a route / add a child to a bus) and a stale answer could authorise
   /// something the live state forbids.

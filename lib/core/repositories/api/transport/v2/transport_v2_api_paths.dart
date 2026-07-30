@@ -36,6 +36,8 @@ abstract final class TransportV2ApiPaths {
       '$base/routes/$routeId/stops/reorder';
 
   // Fleet & crew
+  static const String vehicles = '$base/vehicles';
+  static const String drivers = '$base/drivers';
   static String vehicle(String id) => '$base/vehicles/$id';
   static String driver(String id) => '$base/drivers/$id';
   static String driverAvailability(String id) => '$base/drivers/$id/availability';

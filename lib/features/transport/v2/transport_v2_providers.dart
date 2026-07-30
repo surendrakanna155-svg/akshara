@@ -77,6 +77,24 @@ final transportV2StopsProvider = FutureProvider<StopsResult>((ref) async {
       );
 });
 
+/// Vehicles for the selected service date, with compliance + commitment.
+final transportV2VehiclesProvider = FutureProvider<List<VehicleV2>>((ref) async {
+  if (!ref.watch(transportV2EnabledProvider)) return const [];
+  return ref.watch(transportV2RepositoryProvider).getVehicles(
+        query: ref.watch(repositoryQueryProvider),
+        serviceDate: ref.watch(transportV2ServiceDateIsoProvider),
+      );
+});
+
+/// Drivers for the selected service date, with licence + leave state.
+final transportV2DriversProvider = FutureProvider<List<DriverV2>>((ref) async {
+  if (!ref.watch(transportV2EnabledProvider)) return const [];
+  return ref.watch(transportV2RepositoryProvider).getDrivers(
+        query: ref.watch(repositoryQueryProvider),
+        serviceDate: ref.watch(transportV2ServiceDateIsoProvider),
+      );
+});
+
 /// Readiness for one route. Never cached — it gates publication (BUS-042).
 final transportV2ReadinessProvider =
     FutureProvider.family<RouteReadinessV2, String>((ref, routeId) async {
@@ -155,6 +173,10 @@ class TransportV2Mutations extends StateNotifier<TransportV2MutationState> {
       _ref.invalidate(transportV2RoutesProvider);
       _ref.invalidate(transportV2StopsProvider);
       _ref.invalidate(transportV2UnstaffedProvider);
+      // Assignment changes what each vehicle/driver is committed to, so the
+      // pickers must not keep showing them as free.
+      _ref.invalidate(transportV2VehiclesProvider);
+      _ref.invalidate(transportV2DriversProvider);
       state = TransportV2MutationState(successMessage: success);
       return result;
     } catch (error) {

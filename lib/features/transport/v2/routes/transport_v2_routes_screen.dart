@@ -12,6 +12,7 @@ import '../../transport_models.dart' show TransportScreen;
 import '../../widgets/transport_module_scaffold.dart';
 import '../transport_v2_models.dart';
 import '../transport_v2_providers.dart';
+import '../assignment/transport_v2_assignment_sheet.dart';
 import 'transport_v2_route_form.dart';
 
 /// TR-02 v2 — Routes management on the relational API.
@@ -367,6 +368,26 @@ class _RouteActions extends ConsumerWidget {
               icon: const Icon(Icons.pause_outlined, size: 18),
               label: const Text('Deactivate'),
             ),
+          // BUS-043/048 — the operation that did not exist pre-v2.
+          OutlinedButton.icon(
+            key: QaTestKeys.transportV2AssignButton(route.id),
+            onPressed: () =>
+                showTransportV2AssignmentSheet(context, ref, route: route),
+            icon: const Icon(Icons.directions_bus_outlined, size: 18),
+            label: Text(route.assignment == null ? 'Assign' : 'Reassign'),
+          ),
+          // BUS-051 — cover today without touching the permanent arrangement.
+          OutlinedButton.icon(
+            key: QaTestKeys.transportV2SubstituteButton(route.id),
+            onPressed: () => showTransportV2AssignmentSheet(
+              context,
+              ref,
+              route: route,
+              substituteMode: true,
+            ),
+            icon: const Icon(Icons.swap_horiz_outlined, size: 18),
+            label: const Text('Substitute'),
+          ),
           OutlinedButton.icon(
             key: QaTestKeys.transportV2ReadinessButton(route.id),
             onPressed: () => _showReadiness(context, ref),

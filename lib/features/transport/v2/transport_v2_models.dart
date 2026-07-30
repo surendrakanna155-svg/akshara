@@ -470,3 +470,107 @@ class UnstaffedRouteV2 {
         _ => 'Needs attention',
       };
 }
+
+// ─── Fleet & crew (BUS-043/048/054) ──────────────────────────────────────────
+
+/// A vehicle as the assignment picker needs it.
+///
+/// Carries compliance and current-commitment state so the picker can warn BEFORE
+/// the BUS-054 gate refuses. A picker that offers an uninsured bus and only fails
+/// on submit wastes the admin's time and teaches them to ignore the error.
+@immutable
+class VehicleV2 {
+  const VehicleV2({
+    required this.id,
+    required this.registration,
+    required this.model,
+    required this.capacity,
+    required this.status,
+    required this.expiredDocument,
+    required this.assignedRouteName,
+  });
+
+  factory VehicleV2.fromJson(Map<String, dynamic> json) => VehicleV2(
+        id: json['id'] as String? ?? '',
+        registration: json['registration'] as String? ?? '',
+        model: json['model'] as String? ?? '',
+        capacity: (json['capacity'] as num?)?.toInt() ?? 0,
+        status: json['status'] as String? ?? 'active',
+        // Which statutory document is expired ON the queried date, or null.
+        expiredDocument: json['expiredDocument'] as String?,
+        assignedRouteName: json['assignedRouteName'] as String?,
+      );
+
+  final String id;
+  final String registration;
+  final String model;
+  final int capacity;
+  final String status;
+  final String? expiredDocument;
+
+  /// The route this bus already runs on the queried date, if any.
+  final String? assignedRouteName;
+
+  bool get isCompliant => expiredDocument == null && status == 'active';
+  bool get isCommitted => (assignedRouteName ?? '').isNotEmpty;
+
+  /// Why this vehicle should not be picked, or null when it is fine.
+  String? get blockerLabel {
+    if (expiredDocument != null) return '$expiredDocument expired';
+    if (status != 'active') return status;
+    return null;
+  }
+
+  String get label => [
+        registration,
+        if (model.isNotEmpty) model,
+        if (capacity > 0) '$capacity seats',
+      ].join(' · ');
+}
+
+/// A driver or attendant as the assignment picker needs it.
+@immutable
+class DriverV2 {
+  const DriverV2({
+    required this.id,
+    required this.name,
+    required this.phone,
+    required this.licenceNumber,
+    required this.licenceExpired,
+    required this.unavailableKind,
+    required this.assignedRouteName,
+  });
+
+  factory DriverV2.fromJson(Map<String, dynamic> json) => DriverV2(
+        id: json['id'] as String? ?? '',
+        name: json['name'] as String? ?? '',
+        phone: json['phone'] as String? ?? '',
+        licenceNumber: json['licenceNumber'] as String? ?? '',
+        licenceExpired: json['licenceExpired'] == true,
+        // 'leave' | 'sick' | 'rest' | … on the queried date, else null.
+        unavailableKind: json['unavailableKind'] as String?,
+        assignedRouteName: json['assignedRouteName'] as String?,
+      );
+
+  final String id;
+  final String name;
+  final String phone;
+  final String licenceNumber;
+  final bool licenceExpired;
+  final String? unavailableKind;
+  final String? assignedRouteName;
+
+  bool get isOnLeave => (unavailableKind ?? '').isNotEmpty;
+  bool get isCommitted => (assignedRouteName ?? '').isNotEmpty;
+
+  /// True only when this person can actually be given the wheel on that date.
+  /// Offering an unavailable driver is how a school "arranges cover" and still
+  /// has no driver (BUS-050).
+  bool get isAssignable => !licenceExpired && !isOnLeave;
+
+  String? get blockerLabel {
+    if (licenceExpired) return 'licence expired';
+    if (isOnLeave) return 'on $unavailableKind';
+    return null;
+  }
+}

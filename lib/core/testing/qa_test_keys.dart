@@ -2191,6 +2191,33 @@ abstract final class QaTestKeys {
   static const transportV2DeactivateWarningSnackbar =
       ValueKey<String>('transport_v2_deactivate_warning_snackbar');
 
+  // ─── Transport v2 assignment (BUS-043…054) ────────────────────────────────
+  static const transportV2AssignmentDialog =
+      ValueKey<String>('transport_v2_assignment_dialog');
+  static const transportV2AssignmentSubmitButton =
+      ValueKey<String>('transport_v2_assignment_submit_button');
+  static const transportV2AssignVehicleField =
+      ValueKey<String>('transport_v2_assign_vehicle_field');
+  static const transportV2AssignDriverField =
+      ValueKey<String>('transport_v2_assign_driver_field');
+  static const transportV2AssignmentReasonField =
+      ValueKey<String>('transport_v2_assignment_reason_field');
+  static const transportV2AssignmentError =
+      ValueKey<String>('transport_v2_assignment_error');
+  static const transportV2AllowNonCompliantCheckbox =
+      ValueKey<String>('transport_v2_allow_non_compliant_checkbox');
+  static const transportV2SubstituteExplainer =
+      ValueKey<String>('transport_v2_substitute_explainer');
+  static const transportV2SubstituteFromField =
+      ValueKey<String>('transport_v2_substitute_from_field');
+  static const transportV2SubstituteToField =
+      ValueKey<String>('transport_v2_substitute_to_field');
+
+  static ValueKey<String> transportV2AssignButton(String id) =>
+      ValueKey<String>('transport_v2_assign_$id');
+  static ValueKey<String> transportV2SubstituteButton(String id) =>
+      ValueKey<String>('transport_v2_substitute_$id');
+
   // ─── Transport v2 stops (BUS-036…040) ─────────────────────────────────────
   static const transportV2CreateStopButton =
       ValueKey<String>('transport_v2_create_stop_button');

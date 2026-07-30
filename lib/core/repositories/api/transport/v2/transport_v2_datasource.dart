@@ -70,6 +70,42 @@ class TransportV2DataSource {
     ];
   }
 
+  /// BUS-043/054 — vehicles with compliance + commitment for the picker.
+  Future<List<VehicleV2>> fetchVehicles({
+    required RepositoryQuery query,
+    String? serviceDate,
+  }) async {
+    final data = await _get(
+      TransportV2ApiPaths.vehicles,
+      query: query,
+      extra: {if (serviceDate != null) 'serviceDate': serviceDate},
+    );
+    final items = data['items'];
+    return [
+      if (items is List)
+        for (final i in items)
+          if (i is Map<String, dynamic>) VehicleV2.fromJson(i),
+    ];
+  }
+
+  /// BUS-048/050/054 — drivers with licence, leave and commitment state.
+  Future<List<DriverV2>> fetchDrivers({
+    required RepositoryQuery query,
+    String? serviceDate,
+  }) async {
+    final data = await _get(
+      TransportV2ApiPaths.drivers,
+      query: query,
+      extra: {if (serviceDate != null) 'serviceDate': serviceDate},
+    );
+    final items = data['items'];
+    return [
+      if (items is List)
+        for (final i in items)
+          if (i is Map<String, dynamic>) DriverV2.fromJson(i),
+    ];
+  }
+
   Future<RouteReadinessV2> fetchRouteReadiness({
     required RepositoryQuery query,
     required String routeId,
