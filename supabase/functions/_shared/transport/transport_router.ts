@@ -14,6 +14,13 @@ import {
   handleVehicles,
 } from "./transport_handlers.ts";
 import {
+  handleGetRouteV2,
+  handleListDriversV2,
+  handleListRoutesV2,
+  handleListStopsV2,
+  handleListVehiclesV2,
+} from "./transport_v2_read_handlers.ts";
+import {
   handleCancelSubstituteV2,
   handleDeleteDriverV2,
   handleDeleteVehicleV2,
@@ -86,11 +93,34 @@ type RouteHandler = (req: Request, config: AppConfig) => Promise<Response>;
  * Matched BEFORE the legacy table so a v2 path can never fall through to a
  * handler that would write to the JSONB store.
  */
+/**
+ * Path segments under /transport/v2/routes/ that are ENDPOINT NAMES, not route
+ * ids. Any `{id}`-shaped matcher must exclude these, or it will happily treat
+ * the endpoint name as an identifier and return the wrong thing without error.
+ */
+const V2_RESERVED_ROUTE_SEGMENTS = new Set(["unstaffed"]);
+
 function matchTransportV2Route(
   method: string,
   path: string,
 ): { handler: RouteHandler } | null {
   if (!path.startsWith("/transport/v2/")) return null;
+
+  if (method === "GET") {
+    if (path === "/transport/v2/routes") return { handler: handleListRoutesV2 };
+    if (path === "/transport/v2/stops") return { handler: handleListStopsV2 };
+    if (path === "/transport/v2/vehicles") return { handler: handleListVehiclesV2 };
+    if (path === "/transport/v2/drivers") return { handler: handleListDriversV2 };
+    // Route detail LAST, and it must NOT swallow a reserved fixed segment.
+    // `/routes/unstaffed` is a real endpoint; without this exclusion a GET to it
+    // would be dispatched as "fetch the route whose id is 'unstaffed'" — a
+    // silent wrong answer rather than a 404.
+    const routeDetail = path.match(/^\/transport\/v2\/routes\/([^/]+)$/);
+    if (routeDetail && !V2_RESERVED_ROUTE_SEGMENTS.has(routeDetail[1])) {
+      return { handler: handleGetRouteV2 };
+    }
+    return null;
+  }
 
   if (method === "POST") {
     if (path === "/transport/v2/routes") return { handler: handleCreateRouteV2 };

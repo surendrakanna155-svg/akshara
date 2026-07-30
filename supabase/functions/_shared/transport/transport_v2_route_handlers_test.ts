@@ -396,3 +396,119 @@ Deno.test("Phase 3: shift and direction vocabularies are validated, not trusted"
   assert(SOURCE.includes('SHIFTS = new Set(["am", "pm"])'));
   assert(SOURCE.includes('DIRECTIONS = new Set(["pickup", "drop"])'));
 });
+
+// ── v2 READ surface (gap-fix) ────────────────────────────────────────────────
+//
+// The v2 write surface shipped before its reads, and the router had NO GET
+// branch at all — so the Flutter client's fetchRoutes/fetchStops had nothing to
+// route to. That is the same class of defect the audit found in the legacy
+// module (a field read by three subsystems and written by none), reintroduced by
+// building a client against endpoints that did not yet exist. These tests pin
+// the reads so it cannot recur.
+
+Deno.test("v2 reads: every collection GET is routed", () => {
+  const block = ROUTER_SOURCE.slice(
+    ROUTER_SOURCE.indexOf("function matchTransportV2Route"),
+    ROUTER_SOURCE.indexOf("function matchTransportRoute"),
+  );
+  assert(block.includes('method === "GET"'), "the v2 matcher MUST have a GET branch");
+  for (
+    const [path, handler] of [
+      ["/transport/v2/routes", "handleListRoutesV2"],
+      ["/transport/v2/stops", "handleListStopsV2"],
+      ["/transport/v2/vehicles", "handleListVehiclesV2"],
+      ["/transport/v2/drivers", "handleListDriversV2"],
+    ]
+  ) {
+    assert(block.includes(`path === "${path}"`), `${path} is not routed`);
+    assert(block.includes(handler), `${handler} is not wired`);
+  }
+});
+
+Deno.test("v2 reads: route detail is matched AFTER the fixed collection paths", () => {
+  const block = ROUTER_SOURCE.slice(
+    ROUTER_SOURCE.indexOf('if (method === "GET")'),
+    ROUTER_SOURCE.indexOf('if (method === "POST")'),
+  );
+  // Otherwise /routes/unstaffed-style fixed segments would be captured as ids.
+  assert(
+    block.indexOf('path === "/transport/v2/vehicles"') <
+      block.indexOf("handleGetRouteV2"),
+    "the {id} pattern must come last",
+  );
+});
+
+Deno.test("v2 reads: the route projection resolves the DATED assignment", async () => {
+  const src = await Deno.readTextFile(
+    new URL("./transport_v2_read_handlers.ts", import.meta.url),
+  );
+  assert(
+    src.includes("transport_effective_assignment(r.id, $3::date)"),
+    "a route read must resolve WHO drives it on the requested date, or today " +
+      "and tomorrow would wrongly return the same crew",
+  );
+  // An unassigned route must come back as NULL, not an empty object — the
+  // client distinguishes 'unstaffed' from 'not loaded' on exactly this.
+  assert(src.includes("CASE WHEN asg.id IS NULL THEN NULL"));
+});
+
+Deno.test("v2 reads: derived counts are SQL aggregates, not fetched rows", async () => {
+  const src = await Deno.readTextFile(
+    new URL("./transport_v2_read_handlers.ts", import.meta.url),
+  );
+  assert(src.includes("count(*) FROM transport_allocation"));
+  assert(src.includes("count(*) FROM transport_route_stop"));
+  // The banned shape is measuring a FETCHED result set. `s.length` inside a
+  // path-segment filter is unrelated, so match the actual anti-pattern.
+  assert(!/rows\.length|items\.length/.test(src),
+      "no count may be derived from a fetched row array");
+});
+
+Deno.test("v2 reads: pickers carry compliance state so they can warn early", async () => {
+  const src = await Deno.readTextFile(
+    new URL("./transport_v2_read_handlers.ts", import.meta.url),
+  );
+  // A picker that offers an uninsured bus and only fails on submit wastes the
+  // admin's time and teaches them to ignore the error (BUS-054).
+  assert(src.includes('AS "expiredDocument"'));
+  assert(src.includes('AS "licenceExpired"'));
+  // Offering a driver who is on leave is how a school "arranges cover" and
+  // still has no driver (BUS-050).
+  assert(src.includes('AS "unavailableKind"'));
+  assert(src.includes('AS "assignedRouteName"'));
+});
+
+Deno.test("v2 reads: coordinates are projected as lat/lng, null when absent", async () => {
+  const src = await Deno.readTextFile(
+    new URL("./transport_v2_read_handlers.ts", import.meta.url),
+  );
+  assert(src.includes("ST_Y(s.location::geometry)"));
+  assert(src.includes("ST_X(s.location::geometry)"));
+  // NEVER 0 for a missing location — that is the legacy default the client
+  // GeoPoint validator exists to reject.
+  assert(src.includes("WHEN s.location IS NULL THEN NULL"));
+});
+
+Deno.test("v2 reads: unlocated stops are returned FIRST", async () => {
+  const src = await Deno.readTextFile(
+    new URL("./transport_v2_read_handlers.ts", import.meta.url),
+  );
+  assert(src.includes("(s.status = 'needs_location') DESC"));
+});
+
+Deno.test("v2 reads: serviceDate is validated, never interpolated", async () => {
+  const src = await Deno.readTextFile(
+    new URL("./transport_v2_read_handlers.ts", import.meta.url),
+  );
+  assert(src.includes("test(raw)"), "serviceDate must be format-validated");
+  assert(src.includes("d{4}"), "the validator must pin a YYYY-MM-DD shape");
+  assert(src.includes("$3::date"), "the date must be a bound parameter");
+});
+
+Deno.test("v2 reads: transport read permission is required", async () => {
+  const src = await Deno.readTextFile(
+    new URL("./transport_v2_read_handlers.ts", import.meta.url),
+  );
+  assert(src.includes('requirePermission(claims, "viewTransport")'));
+  assert(src.includes("requireSchoolOperationalScope"));
+});
