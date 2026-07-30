@@ -86,7 +86,11 @@ export async function handlePriorityFeed(req: Request, config: AppConfig): Promi
       loadPersonaFeedContext(db, auth.claims, persona, nowIso));
     const feed = buildFeed(ctx.rawItems, persona, nowIso, {
       weights: ctx.weights,
-      dismissedKeys: ctx.dismissedKeys,
+      // Lifecycle replaces the legacy `dismissedKeys` hard filter: items are
+      // scored first and hidden second, so a put-away item can legitimately
+      // return when it escalates or its snooze elapses.
+      lifecycle: ctx.lifecycle,
+      nowIso,
       limit,
     });
     return jsonResponse(envelope({ ...feed, degraded: ctx.degraded }));

@@ -14,6 +14,14 @@ import {
   handleVehicles,
 } from "./transport_handlers.ts";
 import {
+  handleAllocateStudentV2,
+  handleBulkAllocateV2,
+  handleEndAllocationV2,
+  handleParentChildAllocationV2,
+  handleRouteRosterV2,
+  handleTransferAllocationV2,
+} from "./transport_v2_allocation_handlers.ts";
+import {
   handleGetRouteV2,
   handleListDriversV2,
   handleListRoutesV2,
@@ -111,6 +119,9 @@ function matchTransportV2Route(
     if (path === "/transport/v2/stops") return { handler: handleListStopsV2 };
     if (path === "/transport/v2/vehicles") return { handler: handleListVehiclesV2 };
     if (path === "/transport/v2/drivers") return { handler: handleListDriversV2 };
+    if (/^\/transport\/v2\/routes\/[^/]+\/roster$/.test(path)) {
+      return { handler: handleRouteRosterV2 };
+    }
     // Route detail LAST, and it must NOT swallow a reserved fixed segment.
     // `/routes/unstaffed` is a real endpoint; without this exclusion a GET to it
     // would be dispatched as "fetch the route whose id is 'unstaffed'" — a
@@ -124,6 +135,16 @@ function matchTransportV2Route(
 
   if (method === "POST") {
     if (path === "/transport/v2/routes") return { handler: handleCreateRouteV2 };
+    // Fixed sub-path before the {id} form.
+    if (path === "/transport/v2/allocations/bulk") {
+      return { handler: handleBulkAllocateV2 };
+    }
+    if (path === "/transport/v2/allocations") {
+      return { handler: handleAllocateStudentV2 };
+    }
+    if (/^\/transport\/v2\/allocations\/[^/]+\/transfer$/.test(path)) {
+      return { handler: handleTransferAllocationV2 };
+    }
     if (path === "/transport/v2/stops") return { handler: handleCreateStopV2 };
     if (/^\/transport\/v2\/routes\/[^/]+\/activate$/.test(path)) {
       return { handler: handleActivateRouteV2 };
@@ -181,6 +202,9 @@ function matchTransportV2Route(
     // More specific route-stop path before the bare route delete.
     if (/^\/transport\/v2\/routes\/[^/]+\/stops\/[^/]+$/.test(path)) {
       return { handler: handleDetachStopV2 };
+    }
+    if (/^\/transport\/v2\/allocations\/[^/]+$/.test(path)) {
+      return { handler: handleEndAllocationV2 };
     }
     if (/^\/transport\/v2\/assignments\/[^/]+$/.test(path)) {
       return { handler: handleCancelSubstituteV2 };
@@ -355,6 +379,13 @@ export async function routeTransport(
   method: string,
   path: string,
 ): Promise<Response | null> {
+  // BUS-059 — the parent-scoped single-child read. Deliberately NOT under
+  // /transport/*: that prefix is school-scoped, and mounting a parent endpoint
+  // inside it is how the legacy path ended up demanding school scope and 403ing
+  // every parent.
+  if (method === "GET" && path === "/parent/transport/allocation") {
+    return await handleParentChildAllocationV2(req, config);
+  }
   if (!path.startsWith("/transport")) return null;
 
   const match = matchTransportRoute(method, path);

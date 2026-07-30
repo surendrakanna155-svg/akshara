@@ -16,6 +16,8 @@ import {
   dismissedKeysOf,
   getPersonaMemory,
 } from "../../ai/ai_persona_memory_repository.ts";
+import { lifecycleIndex, type ItemLifecycleRecord } from "./item_lifecycle.ts";
+import { loadItemLifecycle } from "./item_lifecycle_repository.ts";
 import { collectRawItems, type PrioritySourceInputs } from "./priority_sources.ts";
 import { loadOpsWorklistSources } from "./ops_sources.ts";
 import { loadTeacherFeedSources } from "./teacher_sources.ts";
@@ -27,7 +29,19 @@ export interface PersonaFeedContext {
   persona: Persona;
   rawItems: RawPriorityItem[];
   weights: LearnedWeights;
+  /**
+   * LEGACY hard-filter keys from `ai_persona_memory.preferences.dismissedKeys`.
+   *
+   * @deprecated Superseded by `lifecycle`. Still loaded so the field stays
+   * populated for any caller reading it directly, but the feed routes now pass
+   * `lifecycle` to `buildFeed` instead — those same dismissals were copied into
+   * `dashboard_item_state` by migration 20260920000400, where they can expire
+   * and escalate instead of hiding work forever.
+   */
   dismissedKeys: Set<string>;
+  /** Living Dashboard: per-itemKey lifecycle rows for this user, indexed for
+   * the engine's visibility overlay. */
+  lifecycle: Map<string, ItemLifecycleRecord>;
   /** A source was skipped for lack of permission → this feed is a subset. */
   degraded: boolean;
 }
@@ -136,11 +150,24 @@ export async function loadPersonaFeedContext(
   // is identical to the un-personalized one for a first-time user.
   const memory = await getPersonaMemory(db, { organizationId: orgId, schoolId, userId: claims.sub });
 
+  // Living Dashboard: the per-item lifecycle rows. Unlike the legacy dismissed
+  // array these do NOT remove items from scoring — the engine scores everything
+  // and hides second, which is what lets a put-away item come back when it gets
+  // worse, when its deadline advances, or when a snooze elapses.
+  const lifecycle = lifecycleIndex(
+    await loadItemLifecycle(db, {
+      organizationId: orgId,
+      schoolId,
+      userId: claims.sub,
+    }),
+  );
+
   return {
     persona,
     rawItems: sources.rawItems,
     weights: deriveLearnedWeights(memory),
     dismissedKeys: dismissedKeysOf(memory),
+    lifecycle,
     degraded: sources.degraded,
   };
 }

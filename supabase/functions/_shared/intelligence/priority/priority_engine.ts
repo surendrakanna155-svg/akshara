@@ -9,6 +9,12 @@
 // Every factor is returned in the breakdown so the UI can always answer
 // "why is this first?" (explainability rail, doc 01 §6).
 
+import {
+  type ItemLifecycleRecord,
+  type ItemLifecycleState,
+  resolveVisibility,
+  type VisibilityReason,
+} from "./item_lifecycle.ts";
 import type {
   ImpactClass,
   LearnedWeights,
@@ -183,10 +189,36 @@ export function scorePriorityItem(
 export interface BuildFeedOptions {
   /** Per-item-type learned multipliers for this (school, persona). */
   weights?: LearnedWeights;
-  /** itemKeys the user dismissed/snoozed — filtered out of the feed. */
+  /**
+   * LEGACY hard filter — itemKeys erased from the feed before scoring.
+   *
+   * @deprecated Superseded by `lifecycle`. This is the old destructive
+   * dismissal: the item never gets scored, so it can never come back however
+   * urgent it becomes, and no other surface can learn it was put away. Retained
+   * only so callers not yet migrated off `ai_persona_memory.preferences
+   * .dismissedKeys` keep their exact current behaviour. Pass `lifecycle`
+   * instead.
+   */
   dismissedKeys?: Set<string>;
+  /** Living Dashboard: per-itemKey lifecycle rows for this user. Items are
+   * scored FIRST and hidden second, so escalation and snooze-expiry remain
+   * decidable (see item_lifecycle.ts). */
+  lifecycle?: Map<string, ItemLifecycleRecord>;
+  /** Caller's clock for lifecycle resolution. Required when `lifecycle` is
+   * supplied; the engine itself never reads a clock. Defaults to `generatedAt`. */
+  nowIso?: string;
+  /** Also return the items the lifecycle overlay hid — the Copilot rehydration
+   * path ("show me what I dismissed"). Off by default. */
+  includeHidden?: boolean;
   /** Max items returned (default 20). */
   limit?: number;
+}
+
+/** A scored item plus the lifecycle overlay's verdict. Both fields are absent
+ * for callers that pass no `lifecycle`, so the wire shape is unchanged for them. */
+export interface FeedItem extends ScoredPriorityItem {
+  lifecycleState?: ItemLifecycleState;
+  visibilityReason?: VisibilityReason;
 }
 
 /** Turn raw items into a scored, persona-filtered, sorted, deduped feed.
@@ -199,7 +231,8 @@ export function buildFeed(
 ): {
   persona: Persona;
   generatedAt: string;
-  items: ScoredPriorityItem[];
+  items: FeedItem[];
+  hidden?: FeedItem[];
   counts: {
     total: number;
     byType: Partial<Record<PriorityItemType, number>>;
@@ -208,8 +241,10 @@ export function buildFeed(
 } {
   const limit = Math.min(100, Math.max(1, Math.trunc(options.limit ?? 20)));
   const dismissed = options.dismissedKeys ?? new Set<string>();
+  const lifecycle = options.lifecycle;
+  const nowIso = options.nowIso ?? generatedAt;
 
-  // 1) persona relevance + dismissed filter
+  // 1) persona relevance (+ the deprecated hard filter, for unmigrated callers)
   const relevant = rawItems.filter(
     (it) => it.personas.includes(persona) && !dismissed.has(it.itemKey),
   );
@@ -221,15 +256,40 @@ export function buildFeed(
     if (!byKey.has(it.itemKey)) byKey.set(it.itemKey, it);
   }
 
-  // 3) score + sort (score desc, itemKey asc tie-break)
+  // 3) score EVERYTHING, then sort (score desc, itemKey asc tie-break).
+  //    Scoring precedes the lifecycle overlay on purpose: an item's current
+  //    score is what the overlay compares against its watermark to decide
+  //    whether it got worse. Filtering first would make that undecidable.
   const scored = [...byKey.values()]
     .map((it) => scorePriorityItem(it, options.weights))
-    .sort((a, b) => (b.rawScore - a.rawScore) || a.itemKey.localeCompare(b.itemKey))
-    .slice(0, limit);
+    .sort((a, b) => (b.rawScore - a.rawScore) || a.itemKey.localeCompare(b.itemKey));
+
+  // 4) lifecycle overlay — partition into what this user should see now.
+  const visible: FeedItem[] = [];
+  const hidden: FeedItem[] = [];
+  for (const it of scored) {
+    if (!lifecycle) {
+      visible.push(it);
+      continue;
+    }
+    const record = lifecycle.get(it.itemKey) ?? null;
+    const verdict = resolveVisibility(it, record, nowIso);
+    const enriched: FeedItem = {
+      ...it,
+      ...(record ? { lifecycleState: record.state } : {}),
+      visibilityReason: verdict.reason,
+    };
+    (verdict.visible ? visible : hidden).push(enriched);
+  }
+
+  // 5) The limit applies to what is SHOWN. Slicing before the overlay would let
+  //    hidden items silently consume the budget, so a user with many snoozed
+  //    items would see a short feed with real work missing from it.
+  const items = visible.slice(0, limit);
 
   const byType: Partial<Record<PriorityItemType, number>> = {};
   let critical = 0;
-  for (const it of scored) {
+  for (const it of items) {
     byType[it.type] = (byType[it.type] ?? 0) + 1;
     if (it.score >= 75) critical++;
   }
@@ -237,7 +297,8 @@ export function buildFeed(
   return {
     persona,
     generatedAt,
-    items: scored,
-    counts: { total: scored.length, byType, critical },
+    items,
+    ...(options.includeHidden ? { hidden } : {}),
+    counts: { total: items.length, byType, critical },
   };
 }

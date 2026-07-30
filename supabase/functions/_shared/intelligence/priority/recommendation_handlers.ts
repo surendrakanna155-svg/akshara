@@ -60,7 +60,9 @@ export async function handleRecommendationFeed(req: Request, config: AppConfig):
       loadPersonaFeedContext(db, auth.claims, persona, nowIso));
     const feed = buildFeed(ctx.rawItems, persona, nowIso, {
       weights: ctx.weights,
-      dismissedKeys: ctx.dismissedKeys,
+      // See priority_handlers.ts — lifecycle supersedes the legacy hard filter.
+      lifecycle: ctx.lifecycle,
+      nowIso,
       limit,
     });
     // Attach the pre-staged action to each item (undefined = informational only).
@@ -85,10 +87,21 @@ export async function handleRecommendationFeedback(
   const denied = requireFeedbackScope(auth.claims);
   if (denied) return denied;
 
-  const body = await readJson<{ itemKey?: string; itemType?: string; action?: string }>(req);
+  const body = await readJson<{
+    itemKey?: string;
+    itemType?: string;
+    action?: string;
+    lifecycle?: {
+      state?: string;
+      snoozedUntil?: string;
+      scoreAtAction?: number;
+      dueAtAction?: number;
+    };
+  }>(req);
   const itemKey = body?.itemKey?.trim() ?? "";
   const itemType = body?.itemType;
   const action = body?.action;
+  const lifecycle = body?.lifecycle;
   if (!itemKey) return errorEnvelope("VALIDATION_ERROR", "itemKey required", 422);
   if (!isItemType(itemType)) {
     return errorEnvelope(
@@ -97,25 +110,72 @@ export async function handleRecommendationFeedback(
       422,
     );
   }
-  if (!isFeedbackAction(action)) {
+  // `action` teaches the ranker; `lifecycle` manages the user's queue. They are
+  // separable on purpose: snoozing is "not now", NOT "this was a bad
+  // suggestion", so a snooze must be able to skip the learning signal entirely
+  // rather than down-weighting the whole item type.
+  if (action === undefined && lifecycle === undefined) {
+    return errorEnvelope("VALIDATION_ERROR", "action or lifecycle required", 422);
+  }
+  if (action !== undefined && !isFeedbackAction(action)) {
     return errorEnvelope(
       "VALIDATION_ERROR",
       `action must be one of: ${FEEDBACK_ACTIONS.join(", ")}`,
       422,
     );
   }
+  if (lifecycle !== undefined) {
+    if (!isItemLifecycleState(lifecycle.state ?? "")) {
+      return errorEnvelope(
+        "VALIDATION_ERROR",
+        `lifecycle.state must be one of: ${ITEM_LIFECYCLE_STATES.join(", ")}`,
+        422,
+      );
+    }
+    if (lifecycle.state === "snoozed") {
+      const until = Date.parse(lifecycle.snoozedUntil ?? "");
+      if (!Number.isFinite(until)) {
+        return errorEnvelope(
+          "VALIDATION_ERROR",
+          "lifecycle.snoozedUntil must be an ISO timestamp when state is 'snoozed'",
+          422,
+        );
+      }
+    }
+  }
 
   try {
-    const memory = await withTenantContext(config, auth.claims, (db) =>
-      recordRecommendationFeedback(db, {
-        organizationId: organizationIdFromClaims(auth.claims),
-        schoolId: schoolIdFromClaims(auth.claims),
-        userId: auth.claims.sub,
-      }, { itemKey, itemType, action }));
+    const scope = {
+      organizationId: organizationIdFromClaims(auth.claims),
+      schoolId: schoolIdFromClaims(auth.claims),
+      userId: auth.claims.sub,
+    };
+    // Both writes share ONE transaction: the ranker's memory and the user's
+    // queue must never diverge (an item recorded as dismissed-for-learning but
+    // still visible, or hidden with no learning signal).
+    const result = await withTenantContext(config, auth.claims, async (db) => {
+      const memory = action !== undefined
+        ? await recordRecommendationFeedback(db, scope, { itemKey, itemType, action })
+        : null;
+      const recorded = lifecycle !== undefined
+        ? await recordItemAction(db, scope, {
+          itemKey,
+          itemType,
+          state: lifecycle.state as ItemLifecycleState,
+          snoozedUntil: lifecycle.snoozedUntil ?? null,
+          scoreAtAction: lifecycle.scoreAtAction ?? null,
+          dueAtAction: lifecycle.dueAtAction ?? null,
+        })
+        : null;
+      return { memory, recorded };
+    });
     return jsonResponse(envelope({
       itemType,
-      action,
-      feedback: memory.recommendationFeedback[itemType] ?? null,
+      action: action ?? null,
+      feedback: result.memory?.recommendationFeedback[itemType] ?? null,
+      lifecycle: result.recorded
+        ? { state: result.recorded.state, snoozedUntil: result.recorded.snoozedUntil }
+        : null,
     }));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);

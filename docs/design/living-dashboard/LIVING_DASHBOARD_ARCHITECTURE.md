@@ -37,15 +37,31 @@ The engine is **built and good**. This is not a greenfield project; it is a delt
 
 ## 2. Gaps — ranked by whether they block the mission
 
-### 2.1 Blocking: the data is not honest yet
+### 2.1 ✅ CLOSED — the fabricated-data class
 
-Certification `9587ce76` (2026-07-29) — **NOT CERTIFIED, nothing fixed**:
+Certification `9587ce76` (2026-07-29 09:04) recorded WIDGET‑001/002/011 as open P0s and stated
+"Nothing fixed". **That verdict was superseded the same day.** Commit `80a2cd8d`
+*"fix(honest-state): one async contract replaces every fabricated-data fallback"* (2026-07-29 14:29,
+ancestor of this branch) retired **twelve** register defects at once — CERT‑001/002/006,
+JOURNEY‑001/007, WIDGET‑001/002/011, E2E‑005/011/012/021 — by fixing the *mechanism* rather than
+twelve screens:
 
-- **WIDGET‑001/002 (P0)** — parent and teacher dashboards render `.mock()` on **every cold open**, not merely on failure. `parentDashboardLoadingProvider` / `teacherDashboardLoadingProvider` are `StateProvider<bool>` defaulting to `false`, **never written outside tests**, so the skeleton path is dead code. A parent sees a fabricated child, `"₹4,200 due"`, `"Present · Marked 9:12 AM"`. A teacher sees `"9:02 AM · Geo+Face verified"` — a biometric assertion that never happened, on the record that feeds payroll.
-- **WIDGET‑011 (P0)** — the principal's School Health Score falls back to hard-coded components and reports a confident **51** for a school with no data.
-- **9 of 10 module dashboards** ship filter chips whose state the data fetch never reads.
+- Manual `*LoadingProvider` / `*ErrorProvider` flags are now only an **override on top of the real
+  `AsyncValue`**, never the state itself. The skeleton path is live code again.
+- `honestPayload<T>(state, neutralEmpty)` is the single sanctioned nullable→non-null bridge, and it
+  takes a neutral `.empty()` shape. `MobileAsyncBody.fromState` treats a null payload as empty,
+  never as data.
+- `.mock()` factories survive **only behind the mock repositories** (`mock_parent_repository.dart`
+  et al.) — unreachable when a real repository is resolved.
+- WIDGET‑011: `_healthScore` is now `int?`. Both inputs must be present *and* parse as a real
+  percentage, else the card renders "Not enough data yet". It also fixed a latent parser bug where
+  a `collectionRate` of `₹12,45,000` parsed as `1245000` and pegged the ring at 100.
 
-The mission's first principle is *live data only* and *every decision must be traceable*. **A priority engine ranking fabricated inputs ranks confidently and is wrong**, and it makes the fabrication far harder to spot. This is Phase 0.
+**Remaining from that cert (not blocking, carried into Phase 6):** WIDGET‑008 (P1) — 9 of 10 module
+dashboards ship filter chips whose state the data fetch never reads.
+
+> **Method note.** A certification verdict is a snapshot, not a standing fact. Re-verify against the
+> working tree before acting on any register entry.
 
 ### 2.2 Structural: deadlines barely exist
 
@@ -221,7 +237,7 @@ Each phase is independently shippable and EOS-gated. Migration band starts at **
 
 | # | Phase | Scope | Done-when |
 |---|---|---|---|
-| **0** | **Truth** *(blocking)* | Kill `.mock()` on the parent/teacher loading path; wire loading/error providers or adopt the student `ErpViewState` pattern; honest-empty the School Health Score; remove or wire the dead filter chips | WIDGET‑001/002/011 closed with tests; no dashboard renders demo data on any path |
+| **0** | **Truth** | ✅ **DONE before this lane opened** — closed by `80a2cd8d` (see §2.1). Verify only. | WIDGET‑001/002/011 closed; no dashboard renders demo data on any path |
 | **1** | **Lifecycle core** | `dashboard_item_state` migration + repo; `resolveVisibility` pure fn + tests; engine switches from pre-filter to post-score overlay; migrate `dismissedKeys`; snooze/ack/complete API | Dismissed item reappears when score crosses the delta; snooze expires at read time; determinism + purity tests still green |
 | **2** | **Living feed UI** | Swipe-to-dismiss (`Dismissible`), snooze sheet (30m / tomorrow / today), promote-next animation, lifecycle state chips; fix teacher tablet omission; consolidate 5 deep-link resolvers into one pure resolver | Swipe removes + promotes next; snoozed item returns; every item taps through to its module |
 | **3** | **Liveness & honesty** | Resume-refresh, foreground interval invalidate, `AksharaFreshnessChip` on dashboards wired to the existing cache header | Dashboard refreshes on resume; stale data is visibly labelled stale |
