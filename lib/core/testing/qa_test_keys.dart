@@ -2191,6 +2191,31 @@ abstract final class QaTestKeys {
   static const transportV2DeactivateWarningSnackbar =
       ValueKey<String>('transport_v2_deactivate_warning_snackbar');
 
+  // ─── Transport v2 drivers & availability (BUS-050) ─────────────────────────
+  static const transportV2DriversBlockedBanner =
+      ValueKey<String>('transport_v2_drivers_blocked_banner');
+  static const transportV2LeaveDialog =
+      ValueKey<String>('transport_v2_leave_dialog');
+  static const transportV2LeaveSubmitButton =
+      ValueKey<String>('transport_v2_leave_submit_button');
+  static const transportV2LeaveFromField =
+      ValueKey<String>('transport_v2_leave_from_field');
+  static const transportV2LeaveToField =
+      ValueKey<String>('transport_v2_leave_to_field');
+  static const transportV2LeaveKindField =
+      ValueKey<String>('transport_v2_leave_kind_field');
+  static const transportV2LeaveReasonField =
+      ValueKey<String>('transport_v2_leave_reason_field');
+  static const transportV2UncoveredRoutesDialog =
+      ValueKey<String>('transport_v2_uncovered_routes_dialog');
+
+  static ValueKey<String> transportV2DriverCard(String id) =>
+      ValueKey<String>('transport_v2_driver_card_$id');
+  static ValueKey<String> transportV2DriverBlockerChip(String id) =>
+      ValueKey<String>('transport_v2_driver_blocker_chip_$id');
+  static ValueKey<String> transportV2MarkLeaveButton(String id) =>
+      ValueKey<String>('transport_v2_mark_leave_$id');
+
   // ─── Transport v2 route-stop sequence (BUS-038/039/040) ───────────────────
   static const transportV2AttachStopButton =
       ValueKey<String>('transport_v2_attach_stop_button');
