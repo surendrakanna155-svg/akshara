@@ -14,6 +14,21 @@ import {
   handleVehicles,
 } from "./transport_handlers.ts";
 import {
+  handleActivateRouteV2,
+  handleAttachStopV2,
+  handleCreateRouteV2,
+  handleCreateStopV2,
+  handleDeactivateRouteV2,
+  handleDeleteRouteV2,
+  handleDeleteStopV2,
+  handleDetachStopV2,
+  handleReorderStopsV2,
+  handleRouteReadinessV2,
+  handleUpdateRouteStopV2,
+  handleUpdateRouteV2,
+  handleUpdateStopV2,
+} from "./transport_v2_route_handlers.ts";
+import {
   handleActivateRoute,
   handleAddStop,
   handleAssignRouteVehicle,
@@ -51,7 +66,78 @@ import {
 
 type RouteHandler = (req: Request, config: AppConfig) => Promise<Response>;
 
+/**
+ * BUS-033…BUS-042 — Transport v2 route & stop management.
+ *
+ * Mounted under /transport/v2/* so the relational handlers and the legacy
+ * transport_entities handlers coexist during the BUS-015 per-school rollout.
+ * BUS-031 removes the legacy paths once every reader is on v2.
+ *
+ * Matched BEFORE the legacy table so a v2 path can never fall through to a
+ * handler that would write to the JSONB store.
+ */
+function matchTransportV2Route(
+  method: string,
+  path: string,
+): { handler: RouteHandler } | null {
+  if (!path.startsWith("/transport/v2/")) return null;
+
+  if (method === "POST") {
+    if (path === "/transport/v2/routes") return { handler: handleCreateRouteV2 };
+    if (path === "/transport/v2/stops") return { handler: handleCreateStopV2 };
+    if (/^\/transport\/v2\/routes\/[^/]+\/activate$/.test(path)) {
+      return { handler: handleActivateRouteV2 };
+    }
+    if (/^\/transport\/v2\/routes\/[^/]+\/deactivate$/.test(path)) {
+      return { handler: handleDeactivateRouteV2 };
+    }
+    // Fixed sub-path first: reorder must not be matched as a stop id.
+    if (/^\/transport\/v2\/routes\/[^/]+\/stops\/reorder$/.test(path)) {
+      return { handler: handleReorderStopsV2 };
+    }
+    if (/^\/transport\/v2\/routes\/[^/]+\/stops$/.test(path)) {
+      return { handler: handleAttachStopV2 };
+    }
+    if (/^\/transport\/v2\/routes\/[^/]+\/readiness$/.test(path)) {
+      return { handler: handleRouteReadinessV2 };
+    }
+    return null;
+  }
+
+  if (method === "PUT") {
+    if (/^\/transport\/v2\/routes\/[^/]+\/stops\/[^/]+$/.test(path)) {
+      return { handler: handleUpdateRouteStopV2 };
+    }
+    if (/^\/transport\/v2\/routes\/[^/]+$/.test(path)) {
+      return { handler: handleUpdateRouteV2 };
+    }
+    if (/^\/transport\/v2\/stops\/[^/]+$/.test(path)) {
+      return { handler: handleUpdateStopV2 };
+    }
+    return null;
+  }
+
+  if (method === "DELETE") {
+    // More specific route-stop path before the bare route delete.
+    if (/^\/transport\/v2\/routes\/[^/]+\/stops\/[^/]+$/.test(path)) {
+      return { handler: handleDetachStopV2 };
+    }
+    if (/^\/transport\/v2\/routes\/[^/]+$/.test(path)) {
+      return { handler: handleDeleteRouteV2 };
+    }
+    if (/^\/transport\/v2\/stops\/[^/]+$/.test(path)) {
+      return { handler: handleDeleteStopV2 };
+    }
+    return null;
+  }
+
+  return null;
+}
+
 function matchTransportRoute(method: string, path: string): { handler: RouteHandler } | null {
+  const v2 = matchTransportV2Route(method, path);
+  if (v2) return v2;
+
   if (method === "GET") {
     const routes: Record<string, RouteHandler> = {
       "/transport/dashboard": handleDashboard,

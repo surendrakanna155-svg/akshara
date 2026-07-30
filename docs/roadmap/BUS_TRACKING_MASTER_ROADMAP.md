@@ -525,7 +525,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-033 — Route update endpoint & full edit UI
-**P0** · **2 d** · **Not Started** · **Deps:** BUS-032 · **Audit:** §2, §8 Critical #7
+**P0** · **2 d** · **In Progress** _(backend PUT + tests done; admin edit form pending)_ · **Deps:** BUS-032 · **Audit:** §2, §8 Critical #7
 
 - **Description:** Implement `PUT /transport/routes/{id}` and a complete edit form.
 - **Why it matters:** **There is no route update endpoint of any kind.** A route created with a typo in its name is permanent. Departure times can never be corrected. This is a hard functional gap that makes the module unusable for a real school, and it is one of the first things an evaluator will try.
@@ -536,7 +536,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-034 — Route deactivate & delete with guards
-**P0** · **1.5 d** · **Not Started** · **Deps:** BUS-033 · **Audit:** §2, §8 Critical #7
+**P0** · **1.5 d** · **In Progress** _(backend deactivate/delete + guards done; admin UI pending)_ · **Deps:** BUS-033 · **Audit:** §2, §8 Critical #7
 
 - **Description:** Implement route deactivation and deletion with referential guards.
 - **Why it matters:** A route can currently only be **activated** — never deactivated, never deleted. A discontinued route stays live forever, keeps counting toward KPIs, and remains selectable for allocation.
@@ -547,7 +547,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-035 — Complete route creation form
-**P1** · **1.5 d** · **Not Started** · **Deps:** BUS-033 · **Audit:** §2, §6
+**P1** · **1.5 d** · **In Progress** _(backend accepts every field; full admin create form pending)_ · **Deps:** BUS-033 · **Audit:** §2, §6
 
 - **Description:** Replace the single-field creation dialog with a full form.
 - **Why it matters:** Route creation is currently **one text field: "Route name"**. Distance, AM departure, PM departure and shift are silently hardcoded (`"0 km"`, `"7:00 AM"`, `"3:30 PM"`, `"am"`) and — because there is no update endpoint — permanently uncorrectable. The admin is not told any of this.
@@ -558,7 +558,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-036 — Stop CRUD as a first-class entity
-**P0** · **2 d** · **Not Started** · **Deps:** BUS-032 · **Audit:** §2, §7
+**P0** · **2 d** · **In Progress** _(backend stop CRUD done; admin stop manager UI pending)_ · **Deps:** BUS-032 · **Audit:** §2, §7
 
 - **Description:** School-level stop management independent of any route.
 - **Why it matters:** Stops embedded in a route's JSON array cannot be queried, indexed, referenced by foreign key, or shared. The same physical "Green Park Gate" exists as two independently-editable objects on the morning and afternoon routes — so correcting its location fixes only one of them.
@@ -569,7 +569,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-037 — Stop location capture (map picker + address search)
-**P0** · **3 d** · **Not Started** · **Deps:** BUS-036, BUS-086 (SDK wiring) · **Audit:** §1.5, §8 Critical #4
+**P0** · **3 d** · **Blocked** _(backend coordinate mandate + (0,0) rejection DONE; map picker UI needs BUS-086 (map SDK + API keys, owner-gated))_ · **Deps:** BUS-036, BUS-086 (SDK wiring) · **Audit:** §1.5, §8 Critical #4
 
 - **Description:** Admin sets a stop's real coordinate via a draggable map pin and address search, with geocoding performed once and cached.
 - **Why it matters:** **This is the gating task for the entire tracking feature.** No coordinates means no geofence, no distance-to-stop, no arrival detection, no ETA, no map. Until this ships, everything from Phase 9 onward is unbuildable. Enforces **P-5** and **P-7** (geocode once, store forever — never per view).
@@ -580,7 +580,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-038 — Structured stop times
-**P0** · **1.5 d** · **Not Started** · **Deps:** BUS-021, BUS-036 · **Audit:** §2, §8 Critical #8
+**P0** · **1.5 d** · **In Progress** _(backend TIME parse/validate done; admin time pickers pending)_ · **Deps:** BUS-021, BUS-036 · **Audit:** §2, §8 Critical #8
 
 - **Description:** Replace free-text stop times with typed `TIME` values and time pickers. Supersedes BUS-006.
 - **Why it matters:** Free-text times make schedule adherence, delay detection, and ETA baselines arithmetically impossible. Fixing the type removes that ceiling permanently and closes the `pickupTime`/`scheduledTime` divergence at the source.
@@ -591,7 +591,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-039 — Route-stop sequence management
-**P1** · **1.5 d** · **Not Started** · **Deps:** BUS-021, BUS-037 · **Audit:** §2 (strength to preserve)
+**P1** · **1.5 d** · **In Progress** _(backend attach/detach/reorder + lock done; drag-drop UI pending)_ · **Deps:** BUS-021, BUS-037 · **Audit:** §2 (strength to preserve)
 
 - **Description:** Attach, detach, and reorder stops on a route with drag-and-drop, preserving today's race-safe resequencing.
 - **Why it matters:** The existing `mutateRouteStops` implementation — row-locked read-modify-write, contiguous 1..N resequencing, permutation validation on reorder — is genuinely well-engineered and understands lost updates. That correctness must survive the schema change; only the storage beneath it changes.
@@ -602,7 +602,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-040 — Shared stops across AM/PM and multiple routes
-**P1** · **1 d** · **Not Started** · **Deps:** BUS-039 · **Audit:** §2; Additional requirement 3
+**P1** · **1 d** · **Verified** · **Deps:** BUS-039 · **Audit:** §2; Additional requirement 3
 
 - **Description:** One physical stop referenced by many route-stop rows with independent times per route.
 - **Why it matters:** Morning and afternoon routes serve the same physical locations at different times. Duplicating the stop duplicates the location, the geofence, and every future correction — and the additional requirements explicitly call for AM/PM route support without redesign.
@@ -613,7 +613,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-041 — Route geometry generation & caching
-**P1** · **2.5 d** · **Not Started** · **Deps:** BUS-039, BUS-090 · **Audit:** §1.4, §4
+**P1** · **2.5 d** · **Blocked** _(needs BUS-090 (routing-engine hosting, owner-gated infra))_ · **Deps:** BUS-039, BUS-090 · **Audit:** §1.4, §4
 
 - **Description:** Compute and cache the road-following polyline for each route from its ordered stops.
 - **Why it matters:** Routes have no geometry today, so nothing can be drawn on a map. Enforces **P-7**: geometry is computed once on route change and cached — never fetched per map render, which is how map bills explode.
@@ -624,7 +624,7 @@ PHASE 20  Production Validation & Certification                BUS-130 … BUS-1
 ---
 
 ### BUS-042 — Route completeness validation & publish gate
-**P0** · **1.5 d** · **Not Started** · **Deps:** BUS-033 … BUS-041 · **Audit:** §6
+**P0** · **1.5 d** · **In Progress** _(backend gate + readiness probe done; UI checklist is BUS-119)_ · **Deps:** BUS-033 … BUS-041 · **Audit:** §6
 
 - **Description:** A route cannot be activated until it is genuinely operable, and its gaps are always visible.
 - **Why it matters:** The audit's setup finding was that an admin can spend two hours configuring transport and end with a seating chart that can never be tracked — with nothing on screen indicating incompleteness. Make the incomplete state loud instead of letting an admin believe they are finished.
