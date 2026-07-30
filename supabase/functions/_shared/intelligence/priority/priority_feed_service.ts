@@ -20,6 +20,7 @@ import { lifecycleIndex, type ItemLifecycleRecord } from "./item_lifecycle.ts";
 import { loadItemLifecycle } from "./item_lifecycle_repository.ts";
 import { collectRawItems, type PrioritySourceInputs } from "./priority_sources.ts";
 import { loadOpsWorklistSources } from "./ops_sources.ts";
+import { loadApprovalFeedSources } from "./approval_sources.ts";
 import { loadTeacherFeedSources } from "./teacher_sources.ts";
 import { loadParentFeedSources } from "./parent_sources.ts";
 import { loadStudentFeedSources } from "./student_sources.ts";
@@ -106,14 +107,25 @@ async function loadSchoolFeedSources(
   // sources (audit round 2, P2-2).
   const ops = await loadOpsWorklistSources(db, claims, persona, nowIso);
 
+  // Phase 6a — the approval queue, the first source to carry a real wait clock.
+  // Per-type RBAC lives inside the loader (it reuses the same
+  // `approvalPermissionForType` map the approval routes enforce), so like ops
+  // this never flips `degraded`: not holding, say, refund-approval rights is
+  // entitlement-by-design, not a degraded feed.
+  const approvals = persona === "director"
+    // A director is org-scope and does not decide a school's approvals; surfacing
+    // a queue they cannot act on would be noise, not intelligence.
+    ? []
+    : await loadApprovalFeedSources(db, claims, orgId, schoolId, nowIso);
+
   // The analytics fee_collection card and the richer ops call-queue item
   // describe the same concern and share a deep-link — serve one, not two
   // (audit round 2, P3-5).
   const analyticsItems = collectRawItems(inputs);
   const hasOpsCallQueue = ops.rawItems.some((i) => i.itemKey === "ops:finance:call_queue");
   const merged = hasOpsCallQueue
-    ? [...analyticsItems.filter((i) => i.itemKey !== "fee:collection"), ...ops.rawItems]
-    : [...analyticsItems, ...ops.rawItems];
+    ? [...analyticsItems.filter((i) => i.itemKey !== "fee:collection"), ...ops.rawItems, ...approvals]
+    : [...analyticsItems, ...ops.rawItems, ...approvals];
 
   return {
     rawItems: merged,

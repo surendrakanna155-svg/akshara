@@ -1,6 +1,6 @@
 # Phase 6 — Deadline Debt: making `urgency` real
 
-**Status:** 🟡 Design ready · **Date:** 2026-07-30 · **Implement after Phase 4/5**
+**Status:** 🟢 **6a IMPLEMENTED** · 6b owner-gated · 6c product-gated · **Date:** 2026-07-30
 **Parent:** [`LIVING_DASHBOARD_ARCHITECTURE.md`](LIVING_DASHBOARD_ARCHITECTURE.md)
 
 > **The problem in one line.** The Priority Engine multiplies four factors, and
@@ -68,7 +68,7 @@ So Phase 6 lands in two waves, cheap-and-factual first:
 
 | Wave | Change | Schema? | Owner input? |
 |---|---|---|---|
-| **6a** | Populate `waitingDays` from existing `created_at` on every queue; add the `approval` generator | **No** | No |
+| **6a** | ✅ **DONE** — `waitingDaysSince()` + the `approval` generator | **No** | No |
 | **6b** | Add `sla_due_at` to the approval spine + a per-school SLA policy table | Yes | **Yes — the SLA values** |
 | **6c** | `opportunity` generator (needs 6a/6b signals to be worth anything) | No | Product |
 
@@ -111,13 +111,33 @@ move:
 | `teacher:attendance` | periods elapsed since the class ended |
 | `student_conduct_incidents` | `occurred_on` → days open |
 
-⚠ **Recalibration required.** `RAW_MAX` is currently computed with `AGE_MIN`
-*because* nothing set `waitingDays` — the comment in `priority_engine.ts` says so
-explicitly. The moment `ageBoost` can exceed 1.0, raw scores can reach 13.5 and
-every score above ~9.0 clamps to 100, flattening the top of the feed. **Wave 6a
-must recalibrate `RAW_MAX` to `URGENCY_MAX × IMPACT_MAX × AGE_MAX` in the same
-commit**, and the existing normalization tests must be updated deliberately, not
-mechanically. This is the single highest-risk item in Phase 6.
+### ✅ `RAW_MAX` — checked, and deliberately NOT changed
+
+An earlier draft of this design called recalibrating `RAW_MAX` the highest-risk
+item in Phase 6, reasoning that a live `ageBoost` lets raw scores reach 13.5
+while `RAW_MAX` is 9.0, so everything above 9.0 clamps to 100 and flattens the
+top of the feed. **That was wrong, and acting on it would have caused a
+regression.** Two facts settle it:
+
+1. **Ordering does not use the normalized score.** `buildFeed` sorts on
+   `rawScore` (`priority_engine.ts:267`), which stays fully discriminating up to
+   13.5. Display saturation cannot affect ranking.
+2. **The current calibration is deliberate and its rationale still holds.** The
+   comment at `priority_engine.ts:44-53` records that an earlier `AGE_MAX`
+   calibration made "critical" (≥75) *unreachable on every real feed*, because a
+   maximally-severe item mapped to only 64. Recalibrating to 13.5 now would
+   reintroduce exactly that bug: an overdue, critical, brand-new item would
+   display 64 and never count as critical.
+
+The intended model — stated in that same comment — is that **severity alone spans
+0–100, and age/learning are amplifiers that push into saturation**. A live
+`ageBoost` is what that design was always waiting for.
+
+**Real consequence of 6a, stated honestly:** more items will display 100 and the
+`counts.critical` (score ≥ 75) population will grow, because age now contributes.
+That is the intended behaviour, not flattening — but the critical *count* is
+surfaced in the UI, so 6a should re-check that it still reads as meaningful at
+pilot scale rather than becoming "everything is critical".
 
 ### 2.4 Wave 6b — SLA on the approval spine
 
@@ -176,8 +196,8 @@ Every invariant Phases 1–4 established still holds, and two are at direct risk
 ## 4. Sequencing
 
 ```
-6a  waitingDays + approval generator + RAW_MAX recalibration   ← no schema, no owner gate
-        ↓  (pilot observation: do scores spread sensibly?)
+6a  waitingDays + approval generator                            ← no schema, no owner gate
+        ↓  (pilot observation: does counts.critical stay meaningful?)
 6b  sla_due_at + policy table                                   ← ⛔ owner: SLA values
         ↓
 6c  opportunity generator                                       ← product decision

@@ -28,6 +28,29 @@ function istDayIndex(iso: string): number | undefined {
   return Math.floor((t + IST_OFFSET_MS) / DAY_MS);
 }
 
+/** How long something has been waiting, in whole days, measured on the IST
+ * calendar — the inverse direction of [dueInDaysFrom].
+ *
+ * This is the wait clock that revives the engine's `ageBoost` factor. Until
+ * Phase 6a nothing populated `factors.waitingDays`, so `ageBoostFactor` returned
+ * a constant 1.0 and the promise in its doc comment — "an approval nobody has
+ * touched in two weeks climbs above a fresh one" — never actually happened.
+ *
+ * Returns undefined for a missing/unparseable timestamp: no clock, rather than a
+ * fabricated zero. A `0` here would read as "just arrived", which is a claim we
+ * cannot support without a real created_at.
+ *
+ * Negative differences clamp to 0 — a row stamped in the future (clock skew) has
+ * not been waiting a negative amount of time. */
+export function waitingDaysSince(
+  nowIso: string,
+  createdIso: string | null | undefined,
+): number | undefined {
+  const days = dueInDaysFrom(createdIso ?? "", nowIso);
+  if (days === undefined) return undefined;
+  return Math.max(0, days);
+}
+
 /** Whole-date difference in days from `fromIso` to `toIso`, measured on the
  * school-local (IST) calendar. Returns undefined when either side is missing/
  * unparseable — the generators treat "no date" as "no clock" rather than
