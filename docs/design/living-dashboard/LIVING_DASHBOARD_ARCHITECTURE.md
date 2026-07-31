@@ -1,9 +1,16 @@
 # Living Dashboard — Architecture & Implementation Roadmap
 
-**Status:** 🟡 Design proposal (no code) · **Date:** 2026-07-30
+**Status:** 🔒 **WORKSTREAM CLOSED — owner-accepted 2026-07-31** · **EOS verdict: PASS**
+**Implemented:** Phases 0, 1, 2, 3, 3b, 4, 5, 6a · **Open:** 6b (owner), 6c (post-pilot)
+**Branch:** `feature/living-dashboard` (unpushed) · **Started:** 2026-07-30
+
 **Extends:** [`../adaptive-ai/04_EVENT_INTELLIGENCE_AND_PRIORITY_ENGINE.md`](../adaptive-ai/04_EVENT_INTELLIGENCE_AND_PRIORITY_ENGINE.md) (design-final, 2026-07-03)
 **Wave alignment:** `09_IMPLEMENTATION_WAVES_AND_METRICS.md` → **W2.0** (Priority + Recommendation engines)
 **LLM policy:** Tier‑1 only. The dashboard path must never call `callModelGateway` / `governedTextFor` / `governedModelText`.
+
+> Future changes come only through new feature requests, pilot feedback, or
+> release validation. See **§7** for the closure record (commits, migrations,
+> regression) and **§8** for the external dependencies that remain.
 
 > **Mission.** Turn the dashboard from a static collection of widgets into a dynamic,
 > priority-driven workspace that continuously answers *"what should this user do next?"* —
@@ -245,8 +252,8 @@ Each phase is independently shippable and EOS-gated. Migration band starts at **
 | **4** | **Composition** | ✅ **ENGINEERING COMPLETE** (`2dbd4d9d`, owner-marked 2026-07-30). Unified deep-link resolver (5 drifted copies → 1) · Pinning (mig `…410`). ⚠️ `dynamic_widgets` DSV2 conversion deliberately out of scope — see below | Met. 25 routing + 10 pin tests. **EOS: CONDITIONAL PASS** — on-device verification deferred to final system validation (no physical device / reachable backend available) |
 | **5** | **Copilot hand-off** | ✅ **DONE.** A `dashboard` context slot carrying BOTH what is on screen and what was put away (`buildFeed({includeHidden:true})`), message-gated like `studentLookup`; `screenContext` now persisted on the turn it belongs to | Dismiss a widget → ask Copilot → it can see the put-away item and why it is hidden. 6 tests. **Recomputed under current RBAC, never replayed from a stored snapshot** — see below |
 | **6a** | **Wait clock + approvals** | ✅ **DONE.** `waitingDaysSince()` + the `approval` generator (one item per queue, per-type RBAC). Revives `ageBoost` and produces the `approval` type for the first time | "N approvals pending, oldest waiting D days" exists; a stale approval outranks a fresh one; `reason` can say "waiting 12 days". 14 tests |
-| **6b** | **Approval SLAs** | ⛔ **OWNER-GATED.** `sla_due_at` + `approval_sla_policies`. Needs the target hours per approval type — shipping a guessed SLA would manufacture urgency | — |
-| **6c** | **`opportunity`** | ⬜ Product-gated; defer until 6a/6b have run in the pilot | — |
+| **6b** | **Approval SLAs** | ⛔ **OWNER DECISION — SLA targets pending (D1).** `sla_due_at` + `approval_sla_policies` are designed and ready to build; they need the target hours per approval type. Shipping a guessed SLA would manufacture urgency | Blocked, not started |
+| **6c** | **`opportunity`** | 🔵 **POST-PILOT PRODUCT DECISION (D4).** Defer until 6a has run live — an opportunity feed with nothing good to say is worse than none | Deferred by design |
 
 ### ✅ Phase 3b — freshness state (owner-prioritised, DONE)
 
@@ -378,3 +385,77 @@ mix both lanes:
 Cleanup happens after both workstreams finish. Until then every commit in this
 lane must be staged by explicit path and its staged diff verified to contain zero
 `transport/` or `bus` paths. Nothing is lost; the history is just muddled.
+
+---
+
+## 7. Closure record (owner-accepted 2026-07-31)
+
+**EOS verdict: PASS.** The remaining validation items are external dependencies
+(§8), not open engineering defects — the owner has accepted deferring them to
+final system validation, which converts Phase 4's earlier CONDITIONAL PASS into
+a PASS for the workstream.
+
+### Commits — all on `feature/living-dashboard`, none pushed
+
+| Commit | Phase | What it changed |
+|---|---|---|
+| `88e67712` | **1 — Lifecycle core** | `dashboard_item_state` (mig `…400`), pure `resolveVisibility`, engine inverted to score-then-overlay, `dismissedKeys` backfilled, snooze/ack/complete API |
+| `2c2a5ac6` | **2 — Living feed UI** | Swipe-to-dismiss, snooze sheet (IST-correct), promote-next, "came back" badge, teacher-tablet feed fix |
+| `66b71747` | **3 — Liveness** | `LiveRefreshScope` + pure `LiveRefreshPolicy` on 5 dashboards; resume-refresh + foreground poll |
+| `9a9a124e` | **3b — Freshness state** | 5 honest states end-to-end; cached data can never render as live |
+| `2dbd4d9d` | **4 — Composition** | One deep-link resolver replacing 5 drifted copies; pinning (mig `…410`) |
+| `390dd378` | **6a — Wait clock** | `waitingDaysSince()` + the `approval` generator; revived the dead `ageBoost` factor |
+| `47c6e6b3` | **5 — Copilot hand-off** | `dashboard` context slot (on-screen + put-away); `screenContext` persisted |
+
+Phase 0 (fabricated-data P0s) required no work in this lane — it was already
+closed by `80a2cd8d` before the lane opened (§2.1).
+
+### Migrations added
+
+`20260920000400_dashboard_item_state.sql` · `20260920000410_dashboard_item_pinning.sql`
+
+Both validated against a throwaway PostgreSQL 15: apply cleanly, are re-runnable,
+enforce their CHECK constraints, and prove per-user RLS isolation (0 rows
+cross-tenant; `WITH CHECK` blocks writing a row for another user).
+
+### Regression at closure
+
+| Suite | Result |
+|---|---|
+| Deno backend | **4438 passed / 3 failed / 3 ignored** |
+| Flutter | **4899 passed / 1 skipped / 7 failed** |
+
+**All 10 failures are pre-existing and belong to other lanes**, each proven so by
+re-running the clean baseline with this lane's work stashed:
+- Deno: migration re-runnability guard (pre-existing `edu_*`/`transport_*`
+  violations) and API-100 (10 missing `transport/v2` route rules — bus-tracking).
+- Flutter: roles/permissions and staff-attendance guards.
+
+Working tree clean at closure.
+
+### Lane hygiene
+
+Two commits from a parallel bus-tracking session (`7c1b209a`, `89dafc97`) mix
+both lanes — see §6. Per owner ruling they were left **frozen and untouched**: no
+rebase, reset, force-push or amend. Every commit in this lane was staged by
+explicit path and gated three times (working set, staged diff, post-commit) to
+contain **zero** `transport`/`bus` paths.
+
+---
+
+## 8. External dependencies (not engineering work)
+
+| # | Dependency | Blocks | Why it cannot be resolved in code |
+|---|---|---|---|
+| **D1** | **SLA target hours** per approval type (10 types: `staffLeave`, `refund`, `feeConcession`, `examResults`, …) | **Phase 6b** | A due-date on an approval is school *policy*, not a fact. Shipping a guessed SLA would manufacture urgency — the exact failure mode this lane was built to avoid. |
+| **D2** | **Real-device validation** | Final sign-off | No physical device was attachable. An Android emulator verified build, install, launch, render and 0 Flutter exceptions; the dashboard itself was never reached. |
+| **D3** | **Reachable backend** for the app under test | Final sign-off | Login needs a backend the emulator cannot reach, so swipe / snooze / pin / freshness were never exercised end-to-end on a device. They are covered by automated tests only. |
+| **D4** | **Pilot feedback** | Phase 6c, and a 6a check | 6c (`opportunity`) is a product call best made after 6a runs live. Separately, **`counts.critical` will grow now that age contributes to scoring** — intended, but it is user-facing and wants a look at pilot scale before it starts reading as "everything is critical". |
+
+### Known non-blocking observations (recorded, not fixed)
+
+- **Cold start ~16s** (debug build, emulator) is slow enough to trip Android's
+  ANR watchdog on first run. Pre-existing; unrelated to this lane.
+- **The freshness chip's payload-age source is now wired**, but the offline
+  read-cache's 24h TTL means a genuinely old cached body is labelled "Saved copy
+  · Nh ago" rather than refused. That is the honest behaviour, not a defect.

@@ -1,7 +1,10 @@
 # Phase 6 — Deadline Debt: making `urgency` real
 
-**Status:** 🟢 **6a IMPLEMENTED** · 6b owner-gated · 6c product-gated · **Date:** 2026-07-30
-**Parent:** [`LIVING_DASHBOARD_ARCHITECTURE.md`](LIVING_DASHBOARD_ARCHITECTURE.md)
+**Status:** 🟢 **6a IMPLEMENTED** (`390dd378`) · 🔴 **6b = OWNER DECISION, SLA targets pending** ·
+🔵 **6c = POST-PILOT PRODUCT DECISION** · **Date:** 2026-07-31
+**Parent workstream:** CLOSED 2026-07-31, EOS verdict PASS — see
+[`LIVING_DASHBOARD_ARCHITECTURE.md`](LIVING_DASHBOARD_ARCHITECTURE.md) §7/§8.
+This document stays open as the ready-to-build spec for 6b/6c.
 
 > **The problem in one line.** The Priority Engine multiplies four factors, and
 > today roughly one and a half of them vary. Everything built in Phases 1–4 ranks
