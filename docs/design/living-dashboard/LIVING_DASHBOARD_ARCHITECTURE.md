@@ -459,3 +459,28 @@ contain **zero** `transport`/`bus` paths.
 - **The freshness chip's payload-age source is now wired**, but the offline
   read-cache's 24h TTL means a genuinely old cached body is labelled "Saved copy
   · Nh ago" rather than refused. That is the honest behaviour, not a defect.
+
+---
+
+## 9. Freeze contract — re-open conditions (owner, 2026-07-31)
+
+This module is **frozen**. Re-open the lane **only** if one of these is true:
+
+| # | Trigger | What it would touch first |
+|---|---|---|
+| **R1** | **SLA policy changes** | Phase 6b — `sla_due_at` + `approval_sla_policies` (spec ready in `PHASE_6_DEADLINE_DEBT_DESIGN.md` §2.4). Also revisit `urgencyFactor`, which currently falls back to `impactClass` because no queue has a deadline. |
+| **R2** | **Widget scoring changes** | `priority_engine.ts` — the four factors and `normalizeScore`. ⚠ Read §2.6 and the `RAW_MAX` note in the Phase 6 doc first: ordering sorts on `rawScore`, not the display score, and recalibrating the ceiling would reintroduce the documented "critical unreachable" bug. |
+| **R3** | **Dashboard UX issues found in pilot** | `adaptive_priority_feed.dart` (swipe / snooze / pin / resurfaced badge) and the strip's placement on the 5 wired dashboards. |
+| **R4** | **Production telemetry indicates poor prioritization** | The generators (`*_sources.ts`) and `deriveLearnedWeights`. Poor ordering is far more likely to be a *missing or wrong factor input* than a scorer bug — the scorer is pure and pinned by tests; the inputs are where the ERP's data gaps live (§2.2). |
+| **R5** | **Freshness model requires redesign** | `core/liveness/data_freshness.dart` + `data_freshness_recorder.dart`. The invariant to preserve: **cached data must never render as live**, and a cache observation must carry the cache entry's timestamp, not the replay time. |
+
+**Anything else — new capability, new persona, new widget type — is a NEW feature
+request, not a re-open.** In particular the `dynamic_widgets` DSV2 conversion
+(deliberately out of scope, see above) is a standalone wave, not a continuation
+of this lane.
+
+Whoever re-opens: the load-bearing invariants are listed under "What must not
+regress" in the Phase 6 design doc, and the single most important one is that the
+engine **scores every item and resolves visibility as an overlay**. Reverting to
+a pre-score filter silently breaks escalation, snooze expiry and Copilot
+rehydration at once.
