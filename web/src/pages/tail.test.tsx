@@ -19,7 +19,7 @@ describe('Finance sub-screens', () => {
 });
 
 describe('Misc modules', () => {
-  it('Copilot', () => { renderWithProviders(<Misc.CopilotPage />); expect(screen.getAllByText('Akshara Copilot').length).toBeGreaterThan(0); });
+  it('Copilot', () => { renderWithProviders(<Misc.CopilotPage />); expect(screen.getAllByText('NIKSHA OS Copilot').length).toBeGreaterThan(0); });
   it('Predictions', () => { renderWithProviders(<Misc.PredictionsPage />); expect(screen.getByText('Predictions')).toBeInTheDocument(); });
   it('Admin hub', () => { renderWithProviders(<Misc.AdminHubPage />); expect(screen.getAllByText('Admin').length).toBeGreaterThan(0); });
   it('Legal', () => { renderWithProviders(<Misc.LegalAcceptancePage />); expect(screen.getByText('Policies')).toBeInTheDocument(); });

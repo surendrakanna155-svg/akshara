@@ -17,7 +17,7 @@ import { SupportClusterDetailPage } from './SupportClusterDetailPage';
 describe('Support Console — render (demo/no-backend honest states)', () => {
   it('Gate requires a live platform-support session', () => {
     renderWithProviders(<SupportConsoleGate />);
-    expect(screen.getByText(/Akshara Support Console/i)).toBeInTheDocument();
+    expect(screen.getByText(/NIKSHA OS Support Console/i)).toBeInTheDocument();
     expect(screen.getByText(/platform-support session/i)).toBeInTheDocument();
   });
 
