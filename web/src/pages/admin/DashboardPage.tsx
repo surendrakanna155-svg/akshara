@@ -32,7 +32,30 @@ export function DashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [range, setRange] = useState<'6m' | '12m' | 'ytd'>('6m');
-  const query = useModuleQuery(['dashboard', range], fetchDashboard);
+  const rawQuery = useModuleQuery(['dashboard', range], fetchDashboard);
+
+  // `/dashboard/overview` exists now, but it answers with `DashboardOverview`
+  // ({students, attendanceToday, finance, admissions, recentEnrollments}) — not
+  // the `DashboardData` shape below, which also needs kpis, enrollmentTrend,
+  // feeCollection, attendanceByGrade, activity and approvals. WEB-001 is only
+  // partially built.
+  //
+  // While the endpoint 500'd, the mismatch was invisible: the query errored and
+  // AsyncBoundary showed an error state. Answering 200 pushes the payload into
+  // the render path, where `d.kpis.students` dereferences undefined — and
+  // AsyncBoundary is a QUERY-state boundary with no componentDidCatch, so the
+  // page white-screens.
+  //
+  // Treat a payload that is not DashboardData as "not wired yet" so the existing
+  // honest state is shown instead. Deliberately NOT a partial mapping of the
+  // fields that do exist: that would render four populated KPI cards with no
+  // deltas beside four empty panels, which reads as real data and is not.
+  const isDashboardData =
+    !!rawQuery.data && typeof (rawQuery.data as Partial<DashboardData>).kpis === 'object';
+  const query = {
+    ...rawQuery,
+    unavailable: rawQuery.unavailable || (!rawQuery.isLoading && !rawQuery.error && !isDashboardData),
+  };
 
   const greeting = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening';
 
