@@ -15,8 +15,22 @@ ON CONFLICT (id) DO NOTHING;
 
 -- 2. The support role + its permission grant (permission 'platformSupport' is
 --    seeded by migration 20260920000040).
+--
+-- is_system MUST be true. Migration 20260920000200 enforces
+--   (organization_id IS NULL AND is_system) OR (organization_id IS NOT NULL AND NOT is_system)
+-- and this row is a PLATFORM role: it is granted only inside PLATFORM_ORG, it is
+-- shipped by us rather than created by a tenant, and its slug is camelCase (tenant
+-- custom slugs are generated as custom_<org>_<name>). Seeding it false left
+-- organization_id NULL and is_system false, which satisfies neither branch — on
+-- 2026-07-31 that blocked 20260920000200 on production and, because the resolver
+-- selects role_permissions.organization_id, kept every staff login returning 500.
+--
+-- Do NOT "fix" this by giving the row organization_id = PLATFORM_ORG instead:
+-- 20260920000200's tenant policies are USING (organization_id = app_current_tenant_id()
+-- AND is_system = false), so that would let support staff edit and delete their own
+-- role. NULL org + is_system true keeps it immutable to every tenant session.
 INSERT INTO role_definitions (slug, display_name, scope, is_system)
-VALUES ('aksharaSupport', 'Akshara Support', 'organization', false)
+VALUES ('aksharaSupport', 'Akshara Support', 'organization', true)
 ON CONFLICT (slug) DO NOTHING;
 
 INSERT INTO role_permissions (role_slug, permission_slug)
