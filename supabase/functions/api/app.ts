@@ -31,8 +31,16 @@ import {
 
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
+  // `x-user-id` sits alongside `x-tenant-id` / `x-school-id` because the web
+  // client sends all three once a session exists. Omitting it failed the browser
+  // preflight, so every authenticated cross-origin request from app.nikshaos.in
+  // was blocked — sign-in worked (no session header yet) and everything after it
+  // did not. Allowing a header only permits the BROWSER to send it; the server
+  // already accepted it from any non-browser client, and per the trust boundary
+  // documented on resolveRequestIdentity these three are recorded for logging
+  // only and never attribute an action.
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-api-version, x-correlation-id, x-tenant-id, x-school-id, x-organization-id, idempotency-key, x-internal-health-token",
+    "authorization, x-client-info, apikey, content-type, x-api-version, x-correlation-id, x-tenant-id, x-school-id, x-organization-id, x-user-id, idempotency-key, x-internal-health-token",
   "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, OPTIONS",
 };
 
