@@ -243,7 +243,7 @@ Each phase is independently shippable and EOS-gated. Migration band starts at **
 | **3** | **Liveness** | ✅ **DONE** (`66b71747`). `LiveRefreshScope` + pure `LiveRefreshPolicy` on 5 dashboards (management, parent, teacher, student, director) | Refresh on resume + foreground tick, and provably NOT while offline/backgrounded. 15 tests |
 | **3b** | **Freshness state** | ✅ **DONE.** Five honest states end-to-end: interceptor → `DataFreshnessRecorder` → pure `classifyFreshness` → chip on all 5 dashboards | Cached data can never render as live — proven end-to-end from a real interceptor cache replay. 19 tests |
 | **4** | **Composition** | ✅ **ENGINEERING COMPLETE** (`2dbd4d9d`, owner-marked 2026-07-30). Unified deep-link resolver (5 drifted copies → 1) · Pinning (mig `…410`). ⚠️ `dynamic_widgets` DSV2 conversion deliberately out of scope — see below | Met. 25 routing + 10 pin tests. **EOS: CONDITIONAL PASS** — on-device verification deferred to final system validation (no physical device / reachable backend available) |
-| **5** | **Copilot hand-off** | Persona-memory/lifecycle context slot; persist `screenContext`; dismissed-item rehydration; clear `copilotPendingNavigationContextProvider` | Dismiss a widget → ask Copilot → full context restored |
+| **5** | **Copilot hand-off** | ✅ **DONE.** A `dashboard` context slot carrying BOTH what is on screen and what was put away (`buildFeed({includeHidden:true})`), message-gated like `studentLookup`; `screenContext` now persisted on the turn it belongs to | Dismiss a widget → ask Copilot → it can see the put-away item and why it is hidden. 6 tests. **Recomputed under current RBAC, never replayed from a stored snapshot** — see below |
 | **6a** | **Wait clock + approvals** | ✅ **DONE.** `waitingDaysSince()` + the `approval` generator (one item per queue, per-type RBAC). Revives `ageBoost` and produces the `approval` type for the first time | "N approvals pending, oldest waiting D days" exists; a stale approval outranks a fresh one; `reason` can say "waiting 12 days". 14 tests |
 | **6b** | **Approval SLAs** | ⛔ **OWNER-GATED.** `sla_due_at` + `approval_sla_policies`. Needs the target hours per approval type — shipping a guessed SLA would manufacture urgency | — |
 | **6c** | **`opportunity`** | ⬜ Product-gated; defer until 6a/6b have run in the pilot | — |
@@ -285,6 +285,25 @@ reports to on all three outcomes, and which surfaces read back through
 "Live" badge is noise users learn to ignore — and would then miss the one time it
 mattered — and rendering nothing in the healthy case means no dashboard layout or
 golden changes for fresh data.
+
+### Phase 5 — why Copilot recomputes instead of remembering
+
+The brief says *"Copilot must remember every widget, even after dismissal"*. The
+obvious implementation is to snapshot each item's title when the user puts it
+away, then replay it. **Deliberately not done**, for one reason that outweighs
+the convenience: a stored title is a frozen copy of school data the user may
+since have lost the right to read, and Copilot is precisely the surface where
+that leak would be invisible. Recomputation cannot leak — an item the caller can
+no longer generate simply does not appear.
+
+**The trade-off, stated plainly:** if the underlying condition has *cleared*, the
+generator stops emitting the item and Copilot will not rehydrate it. That is the
+honest outcome — there is no live work left to restore, and inventing a card for
+a resolved condition would be fabrication.
+
+The slot is also **message-gated** (like the existing `studentLookup` slot),
+because computing a feed costs an analytics bundle plus risk plus ops worklists,
+and paying that on every conversational turn would be waste.
 
 ### Phase 4 scope call: the `dynamic_widgets` DSV2 conversion (owner decision)
 

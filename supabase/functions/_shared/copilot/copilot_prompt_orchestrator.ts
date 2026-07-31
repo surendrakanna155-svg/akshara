@@ -82,6 +82,10 @@ export function buildSystemPrompt(
     fenceUntrusted("Teacher operations", context.teacherOps),
     fenceUntrusted("Analytics context", context.analytics),
     fenceUntrusted("Student lookup", context.studentLookup),
+    // Living Dashboard: what is on the user's dashboard, and what they put
+    // away. Fenced like every other slot — an item title is user/school data
+    // and must never be read as instructions.
+    context.dashboard ? fenceUntrusted("Dashboard state", context.dashboard) : "",
     screenContext ? fenceUntrusted("Client screen context", screenContext) : "",
   ].filter(Boolean).join("\n");
 }

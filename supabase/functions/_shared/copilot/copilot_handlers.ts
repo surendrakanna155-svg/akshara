@@ -289,6 +289,12 @@ export async function handleSendMessage(
         },
       }, req);
 
+      // Living Dashboard Phase 5: persist the client's screen context ON the
+      // turn it belongs to. Previously it was read, passed to the prompt and
+      // then discarded — only a boolean `hasScreenContext` reached the audit —
+      // so a later turn could not tell what the user had been looking at.
+      // `ai_copilot_messages` is INSERT-only (no UPDATE grant), so this has to
+      // be written here or not at all.
       const userMessage = await appendCopilotMessage(
         db,
         orgId,
@@ -296,6 +302,7 @@ export async function handleSendMessage(
         sessionId,
         "user",
         content,
+        screenContext ? { screenContext } : {},
       );
 
       // W2-GATE (doc 10 §3, owner-locked rule 6): the school-only Domain Gate —

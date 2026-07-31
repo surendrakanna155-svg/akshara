@@ -10,6 +10,7 @@ import {
   getTimetableSummary,
 } from "../timetable/timetable_repository.ts";
 import { buildSchedulingRecommendations } from "../timetable/timetable_scheduling_advisor.ts";
+import { loadDashboardContext } from "./copilot_dashboard_context.ts";
 
 export interface CopilotContextBundle {
   school: Record<string, unknown>;
@@ -22,6 +23,14 @@ export interface CopilotContextBundle {
   teacherOps: Record<string, unknown>;
   analytics: Record<string, unknown>;
   studentLookup: Record<string, unknown>;
+  /** Living Dashboard Phase 5 — what is on the user's dashboard, AND what they
+   * put away. The put-away half is why Phase 1 inverted the engine: dismissed
+   * items are still scored, so Copilot can restore them.
+   *
+   * Optional: the slot is message-gated and absent for callers that build a
+   * bundle directly (tests, stub paths), so the prompt guards it the same way
+   * it guards `screenContext`. */
+  dashboard?: Record<string, unknown>;
 }
 
 export async function loadCopilotContext(
@@ -31,6 +40,7 @@ export async function loadCopilotContext(
   schoolId: string,
   assistantType: CopilotAssistantType,
   userMessage: string,
+  nowIso: string = new Date().toISOString(),
 ): Promise<CopilotContextBundle> {
   const [schoolRow] = await db.queryObject<{ name: string; code: string }>(
     `SELECT name, code FROM schools WHERE id = $1 AND organization_id = $2`,
@@ -94,6 +104,11 @@ export async function loadCopilotContext(
     ? await loadAnalyticsContext(db, organizationId, schoolId)
     : { access: "denied" };
 
+  // Living Dashboard: message-gated (the feed is not free to compute) and
+  // recomputed under the caller's CURRENT permissions, never replayed from a
+  // stored snapshot — see copilot_dashboard_context.ts for why.
+  const dashboard = await loadDashboardContext(db, claims, userMessage, nowIso);
+
   return {
     school,
     academicYear,
@@ -105,6 +120,7 @@ export async function loadCopilotContext(
     teacherOps,
     analytics,
     studentLookup,
+    dashboard,
   };
 }
 
