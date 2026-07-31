@@ -9,7 +9,14 @@ import { Icon } from '@/components/Icon';
 import { useTheme } from '@/theme/ThemeProvider';
 import { cn } from '@/lib/utils/cn';
 
-/** Login — ports login_screen.dart + the demo role picker (qa_login_screen.dart). */
+/**
+ * Login — ports login_screen.dart, plus the demo role picker (qa_login_screen.dart)
+ * which exists ONLY in demo builds.
+ *
+ * LIVE builds render exactly one path: mobile number → send verification code →
+ * OTP. No role explorer, no persona grid, no client-side identity. DEMO builds
+ * are untouched and keep both tabs.
+ */
 export function LoginPage() {
   const { loginAsRole, requestOtp } = useAuth();
   const navigate = useNavigate();
@@ -20,7 +27,13 @@ export function LoginPage() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
 
+  // In a live build `tab` is pinned to 'credentials': the tab strip is not
+  // rendered, so nothing can move it. Reading it through this guard means even a
+  // future stray setTab cannot surface the demo pane in production.
+  const showDemoPane = AUTH_IS_DEMO && tab === 'demo';
+
   function enter(role: ErpRole) {
+    if (!AUTH_IS_DEMO) return;
     const u = loginAsRole(role);
     navigate(ROLE_META[u.role].landing);
   }
@@ -31,11 +44,12 @@ export function LoginPage() {
     setSending(true);
     setError('');
     try {
-      const type = identifier.includes('@') ? 'email' : 'phone';
-      await requestOtp(identifier.trim(), type);
+      // The backend accepts phone (or student_id) only — an email identifier is
+      // rejected with 422, so production asks for a mobile number and nothing else.
+      await requestOtp(identifier.trim(), 'phone');
       navigate('/otp');
     } catch (err) {
-      setError((err as Error).message || 'Could not send code. Check the identifier and try again.');
+      setError((err as Error).message || 'Could not send code. Check the mobile number and try again.');
     } finally {
       setSending(false);
     }
@@ -94,22 +108,26 @@ export function LoginPage() {
             Sign in to your NIKSHA OS workspace.
           </Text>
 
-          <div className="mt-s6 inline-flex w-full rounded-lg border border-outline-variant bg-surface-low p-[3px]">
-            {(['demo', 'credentials'] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={cn(
-                  'flex-1 rounded-md px-s3 py-s2 ak-label-lg transition-colors',
-                  tab === t ? 'bg-surface text-primary shadow-ak-1' : 'text-on-surface-variant',
-                )}
-              >
-                {t === 'demo' ? 'Explore by role' : 'Sign in'}
-              </button>
-            ))}
-          </div>
+          {/* Tab strip is the demo-only entry to the role explorer — a live
+              build has a single sign-in path, so it renders no tabs at all. */}
+          {AUTH_IS_DEMO && (
+            <div className="mt-s6 inline-flex w-full rounded-lg border border-outline-variant bg-surface-low p-[3px]">
+              {(['demo', 'credentials'] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTab(t)}
+                  className={cn(
+                    'flex-1 rounded-md px-s3 py-s2 ak-label-lg transition-colors',
+                    tab === t ? 'bg-surface text-primary shadow-ak-1' : 'text-on-surface-variant',
+                  )}
+                >
+                  {t === 'demo' ? 'Explore by role' : 'Sign in'}
+                </button>
+              ))}
+            </div>
+          )}
 
-          {tab === 'demo' ? (
+          {showDemoPane ? (
             <div className="mt-s5">
               {AUTH_IS_DEMO && (
                 <div className="mb-s4 flex items-center gap-s2 rounded-md bg-primary-container/60 px-s3 py-s2 ak-body-sm text-on-primary-container">
@@ -156,12 +174,14 @@ export function LoginPage() {
           ) : (
             <form className="mt-s5 space-y-s4" onSubmit={sendCode}>
               <Input
-                label="Mobile number or email"
-                leadingIcon="person"
+                label={AUTH_IS_DEMO ? 'Mobile number or email' : 'Mobile number'}
+                leadingIcon={AUTH_IS_DEMO ? 'person' : 'smartphone'}
+                type={AUTH_IS_DEMO ? 'text' : 'tel'}
+                inputMode={AUTH_IS_DEMO ? undefined : 'tel'}
                 placeholder="9876543210"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                autoComplete="username"
+                autoComplete={AUTH_IS_DEMO ? 'username' : 'tel'}
                 error={error || undefined}
               />
               <Button type="submit" fullWidth size="lg" loading={sending} disabled={!AUTH_IS_DEMO && !identifier.trim()} trailingIcon="arrow_forward">

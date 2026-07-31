@@ -1,5 +1,7 @@
 node_modules
 dist
+# separate demo artifact (npm run build:demo -- --outDir dist-demo)
+dist-demo
 dist-ssr
 coverage
 *.tsbuildinfo

@@ -1,6 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { apiFetch, clearApiSession, setApiSession } from '@/lib/api/client';
-import { IS_DEMO } from '@/lib/api/config';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { apiFetch, clearApiSession, setApiSession, setSessionCallbacks } from '@/lib/api/client';
+import { IS_DEMO_AUTH } from '@/lib/api/config';
 import { ROLE_META, type ErpRole } from './roles';
 
 export interface AuthUser {
@@ -15,6 +15,11 @@ export interface AuthUser {
   avatarUrl?: string;
   /** Live bearer token (present only for real credential sign-in). */
   token?: string;
+  /** Rotating refresh token — live sessions only. */
+  refreshToken?: string;
+  /** ISO expiry of the access token. */
+  expiresAt?: string;
+  sessionId?: string;
 }
 
 export interface OtpRequest {
@@ -40,8 +45,17 @@ interface AuthContextValue {
   pendingOtp: OtpRequest | null;
 }
 
+/** Tokens returned by /auth/verify-otp and /auth/refresh. */
+interface SessionTokens {
+  token: string;
+  refreshToken?: string;
+  expiresAt?: string;
+  sessionId?: string;
+}
+
 /** Maps a live `/auth/me` payload to a web AuthUser. */
-function mapMeToUser(me: Record<string, unknown>, token: string): AuthUser {
+function mapMeToUser(me: Record<string, unknown>, tokens: SessionTokens): AuthUser {
+  const token = tokens.token;
   const roleStr = String(me.role ?? me.erpRole ?? 'schoolAdmin');
   const role: ErpRole = ErpRoleFromName(roleStr);
   return {
@@ -54,6 +68,9 @@ function mapMeToUser(me: Record<string, unknown>, token: string): AuthUser {
     schoolId: String(me.schoolId ?? ''),
     tenantId: String(me.organizationId ?? me.tenantId ?? ''),
     token,
+    refreshToken: tokens.refreshToken,
+    expiresAt: tokens.expiresAt,
+    sessionId: tokens.sessionId,
   };
 }
 function ErpRoleFromName(v: string): ErpRole {
@@ -64,13 +81,30 @@ function ErpRoleFromName(v: string): ErpRole {
 const AuthContext = createContext<AuthContextValue | null>(null);
 const STORAGE_KEY = 'akshara.session';
 
+/** Push a stored/minted user into the api client's request session. */
+function applyApiSession(u: AuthUser) {
+  setApiSession({
+    token: u.token,
+    refreshToken: u.refreshToken,
+    expiresAt: u.expiresAt,
+    sessionId: u.sessionId,
+    tenantId: u.tenantId,
+    schoolId: u.schoolId,
+    userId: u.id,
+  });
+}
+
 /**
  * A NEUTRAL preview identity for a role — NOT fabricated business data.
  * It carries only the role label (for the shell) + the NIKSHA OS brand name; it
  * invents no person, no institution, no records. Real identity is populated from
  * the live `/auth/me` endpoint once credential sign-in is wired.
+ *
+ * DEMO BUILDS ONLY. This is the one and only factory for a token-less identity,
+ * so gating it here closes every route into the app that skips the backend.
  */
 function buildPreviewUser(role: ErpRole): AuthUser {
+  assertDemoAuth('buildPreviewUser');
   return {
     id: `role_${role}`,
     name: ROLE_META[role].label,
@@ -81,18 +115,51 @@ function buildPreviewUser(role: ErpRole): AuthUser {
   };
 }
 
+/**
+ * Fail-closed guard. In a live build there is no legitimate caller, so this
+ * throws rather than silently returning — a preview identity reaching a
+ * production session is a security defect, not a degraded experience.
+ */
+function assertDemoAuth(what: string): void {
+  if (!IS_DEMO_AUTH) {
+    throw new Error(`${what} is disabled in this build: demo sign-in is not available in production.`);
+  }
+}
+
+/**
+ * A stored session is only usable in a live build if it carries a real bearer
+ * token. This rejects a demo/preview identity left in localStorage by a demo
+ * build served from the same origin — otherwise it would rehydrate straight
+ * into an authenticated-looking shell with no backend session behind it.
+ */
+function isUsableStoredSession(u: AuthUser | null): u is AuthUser {
+  if (!u || typeof u !== 'object' || !u.role) return false;
+  if (IS_DEMO_AUTH) return true;
+  return typeof u.token === 'string' && u.token.length > 0;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [ready, setReady] = useState(false);
   const [pendingOtp, setPendingOtp] = useState<OtpRequest | null>(null);
+
+  // `persist` is referenced by the session callbacks registered below, which are
+  // installed before it is declared — a ref keeps that wiring order legal.
+  const persistRef = useRef<(next: AuthUser | null) => void>(() => {});
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as AuthUser;
-        setUser(parsed);
-        setApiSession({ token: parsed.token, tenantId: parsed.tenantId, schoolId: parsed.schoolId, userId: parsed.id });
+        if (isUsableStoredSession(parsed)) {
+          setUser(parsed);
+          applyApiSession(parsed);
+        } else {
+          // Token-less identity in a live build → drop it rather than trust it.
+          localStorage.removeItem(STORAGE_KEY);
+          clearApiSession();
+        }
       }
     } catch {
       /* ignore */
@@ -100,16 +167,71 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setReady(true);
   }, []);
 
+  // Keep the api client's refresh outcomes in sync with React state + storage,
+  // so a token rotated during any data call is durably persisted and a dead
+  // refresh token ends the session instead of leaving a zombie one behind.
+  useEffect(() => {
+    setSessionCallbacks({
+      onTokensRefreshed: (t) => {
+        setUser((prev) => {
+          if (!prev) return prev;
+          const next: AuthUser = {
+            ...prev,
+            token: t.token,
+            refreshToken: t.refreshToken,
+            expiresAt: t.expiresAt,
+            sessionId: t.sessionId ?? prev.sessionId,
+          };
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+          } catch {
+            /* ignore */
+          }
+          return next;
+        });
+      },
+      onSessionExpired: () => persistRef.current(null),
+    });
+    return () => setSessionCallbacks({});
+  }, []);
+
+  // Cross-tab: refresh tokens are single-use, so a tab holding a stale copy
+  // would present a SPENT token and trip the backend's reuse detection — which
+  // revokes every session for that user. Adopting the newest stored session
+  // keeps sibling tabs from destroying a healthy login.
+  useEffect(() => {
+    function onStorage(e: StorageEvent) {
+      if (e.key !== null && e.key !== STORAGE_KEY) return;
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+          setUser(null);
+          clearApiSession();
+          return;
+        }
+        const parsed = JSON.parse(raw) as AuthUser;
+        if (!isUsableStoredSession(parsed)) return;
+        setUser(parsed);
+        applyApiSession(parsed);
+      } catch {
+        /* ignore */
+      }
+    }
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
   const persist = useCallback((next: AuthUser | null) => {
     setUser(next);
     if (next) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      setApiSession({ token: next.token, tenantId: next.tenantId, schoolId: next.schoolId, userId: next.id });
+      applyApiSession(next);
     } else {
       localStorage.removeItem(STORAGE_KEY);
       clearApiSession();
     }
   }, []);
+  persistRef.current = persist;
 
   const requestOtp = useCallback(async (identifier: string, type: 'phone' | 'email' = 'phone'): Promise<OtpRequest> => {
     const res = await apiFetch<{ sessionId: string; otp?: string }>('/auth/login', { method: 'POST', body: { identifier, type } });
@@ -124,11 +246,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const body: Record<string, unknown> = { identifier: pendingOtp.identifier, type: pendingOtp.type, otp, sessionId: pendingOtp.sessionId };
       if (scope) body.scope = scope;
       if (schoolId) body.schoolId = schoolId;
-      const res = await apiFetch<{ accessToken?: string; token?: string }>('/auth/verify-otp', { method: 'POST', body });
+      const res = await apiFetch<{
+        accessToken?: string;
+        token?: string;
+        refreshToken?: string;
+        expiresAt?: string;
+        sessionId?: string;
+      }>('/auth/verify-otp', { method: 'POST', body });
       const token = res.accessToken || res.token || '';
-      setApiSession({ token });
+      const tokens: SessionTokens = {
+        token,
+        refreshToken: res.refreshToken,
+        expiresAt: res.expiresAt,
+        sessionId: res.sessionId,
+      };
+      // Seed the client session BEFORE /auth/me so that call is authenticated —
+      // and carry the refresh token so even /auth/me can self-heal on a 401.
+      setApiSession(tokens);
       const me = await apiFetch<Record<string, unknown>>('/auth/me');
-      const u = mapMeToUser(me, token);
+      const u = mapMeToUser(me, tokens);
       setPendingOtp(null);
       persist(u);
       return u;
@@ -136,8 +272,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [pendingOtp, persist],
   );
 
+  // Both preview paths funnel through buildPreviewUser, which throws in a live
+  // build. The explicit assert here makes the refusal happen BEFORE anything is
+  // persisted, so a live build can never even briefly hold a preview session.
   const loginAsRole = useCallback(
     (role: ErpRole) => {
+      assertDemoAuth('loginAsRole');
       const u = buildPreviewUser(role);
       persist(u);
       return u;
@@ -147,6 +287,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const switchRole = useCallback(
     (role: ErpRole) => {
+      assertDemoAuth('switchRole');
       const u = buildPreviewUser(role);
       persist(u);
       return u;
@@ -154,7 +295,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [persist],
   );
 
-  const logout = useCallback(() => persist(null), [persist]);
+  const logout = useCallback(() => {
+    // Sign-out is now also a server-side concern: the browser holds a long-lived
+    // refresh token, so dropping it locally would leave a usable session behind.
+    // Best-effort and non-blocking — the local sign-out must never depend on the
+    // network. `/auth/logout` revokes this session only (never other devices).
+    if (user?.token) {
+      void apiFetch('/auth/logout', { method: 'POST' }).catch(() => {
+        /* already signed out locally; nothing actionable */
+      });
+    }
+    persist(null);
+  }, [persist, user]);
 
   const value = useMemo(
     () => ({ user, ready, loginAsRole, logout, switchRole, requestOtp, verifyOtp, pendingOtp }),
@@ -170,5 +322,10 @@ export function useAuth(): AuthContextValue {
   return ctx;
 }
 
-/** Exposed so the login page can note demo vs live mode. */
-export const AUTH_IS_DEMO = IS_DEMO;
+/**
+ * True only in a demo build. The role explorer, the persona switcher and every
+ * other preview-identity surface are rendered ONLY behind this flag; in a live
+ * build the same paths are additionally hard-blocked in this module (see
+ * `assertDemoAuth`), so hiding the UI is defence-in-depth, not the defence.
+ */
+export const AUTH_IS_DEMO = IS_DEMO_AUTH;

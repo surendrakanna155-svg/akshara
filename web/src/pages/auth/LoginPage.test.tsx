@@ -3,7 +3,9 @@ import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@/test/utils';
 import { LoginPage } from './LoginPage';
 
-describe('LoginPage', () => {
+// Runs under the default (demo) env. The live-build shape — mobile number +
+// OTP only, no role explorer — is covered in lib/auth/production-auth.test.tsx.
+describe('LoginPage (demo build)', () => {
   it('renders the welcome heading and role preview options', () => {
     renderWithProviders(<LoginPage />);
     expect(screen.getByText('Welcome back')).toBeInTheDocument();

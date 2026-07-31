@@ -234,7 +234,7 @@ import {
   SupportClusterDetailPage,
 } from '@/pages/support-console';
 import { ModuleScaffold } from '@/components/system/ModuleScaffold';
-import { useAuth } from '@/lib/auth/AuthContext';
+import { AUTH_IS_DEMO, useAuth } from '@/lib/auth/AuthContext';
 import { ROLE_META } from '@/lib/auth/roles';
 import { ERP_NAV, PORTAL_NAV } from '@/routes/navConfig';
 import type { NavItem } from '@/routes/navConfig';
@@ -540,7 +540,12 @@ const navChildren = Array.from(allPaths).map((path) => {
 export const router = createBrowserRouter([
   { path: '/login', element: <PublicOnly><LoginPage /></PublicOnly> },
   { path: '/staff/login', element: <PublicOnly><LoginPage /></PublicOnly> },
-  { path: '/qa-login', element: <PublicOnly><LoginPage /></PublicOnly> },
+  // /qa-login is the demo role-explorer entry point (ports qa_login_screen.dart).
+  // A live build does not register it at all — it 404s rather than rendering a
+  // login page whose only distinguishing purpose is demo sign-in.
+  ...(AUTH_IS_DEMO
+    ? [{ path: '/qa-login', element: <PublicOnly><LoginPage /></PublicOnly> }]
+    : []),
   { path: '/otp', element: <PublicOnly><OtpVerificationPage /></PublicOnly> },
   { path: '/staff/otp', element: <PublicOnly><OtpVerificationPage /></PublicOnly> },
   {
