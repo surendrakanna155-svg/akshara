@@ -74,8 +74,14 @@ export async function buildDashboardOverview(
     percent: number | null;
     sessions: string;
   }>(
+    // `denom` MUST carry an explicit cast. attendanceDenominatorSql is a bare
+    // count(*) expression, so Postgres returns int8 — which deno-postgres maps
+    // to a JS BigInt, and BigInt is not JSON-serializable. Without the cast the
+    // handler builds a valid overview object and then dies in JSON.stringify,
+    // surfacing as a 500 for every school-scoped user. `attended` is cast for
+    // the same reason; `percent` is safe because its helper ends in `::int`.
     `SELECT ${attendedDaysSql("r.mark")}::float8 AS attended,
-            ${attendanceDenominatorSql("r.mark")} AS denom,
+            ${attendanceDenominatorSql("r.mark")}::float8 AS denom,
             ${attendancePercentSql("r.mark")} AS percent,
             count(DISTINCT r.session_id)::text AS sessions
        FROM attendance_records r
